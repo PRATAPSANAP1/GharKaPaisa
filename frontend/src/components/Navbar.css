@@ -94,23 +94,22 @@
   display: block;
   width: 25px;
   height: 3px;
-  background-color: #0d47a1 !important;
+  background-color: #1565c0 !important;
   border-radius: 3px;
   transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
-  transform-origin: left center;
+  transform-origin: center;
 }
 
 .side-drawer.show1 .close-btn span:nth-child(1) {
-  transform: rotate(45deg) translateY(-1px);
+  transform: translateY(8px) rotate(45deg);
 }
 
 .side-drawer.show1 .close-btn span:nth-child(2) {
-  transform: rotate(-45deg) translateY(1px);
+  opacity: 0;
 }
 
 .side-drawer.show1 .close-btn span:nth-child(3) {
-  transform: translateX(25px) rotate(45deg);
-  width: 15px;
+  transform: translateY(-8px) rotate(-45deg);
 }
 
 .side-drawer button {
@@ -129,6 +128,7 @@
   background-color: #1565c0;
 }
 
+
 .hamburger {
   display: none;
   flex-direction: column;
@@ -141,30 +141,29 @@
   padding: 5px;
   width: 32px;
   height: 32px;
+  z-index: 105;
 }
 
 .hamburger span {
   display: block;
   width: 25px;
   height: 3px;
-  background-color: #0d47a1;
+  background-color: #1565c0 !important;
   border-radius: 3px;
   transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
-  transform-origin: left center;
+  transform-origin: center;
 }
 
 .hamburger.active span:nth-child(1) {
-  transform: rotate(45deg) translateY(-1px);
+  transform: translateY(8px) rotate(45deg);
 }
 
 .hamburger.active span:nth-child(2) {
-  transform: rotate(-45deg) translateY(1px);
+  opacity: 0;
 }
 
 .hamburger.active span:nth-child(3) {
-  transform: translateX(25px) rotate(45deg);
-  width: 15px;
-  color: #0d47a1;
+  transform: translateY(-8px) rotate(-45deg);
 }
 
 .overlay {
