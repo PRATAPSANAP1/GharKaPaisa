@@ -1,0 +1,54 @@
+import React, { useState } from 'react';
+import './Navbar.css';
+import logo from '../logo.jpeg';
+
+const Navbar = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const toggleLink = () => {
+    const next = !menuOpen;
+    setMenuOpen(next);
+    document.body.classList.toggle('no-scroll', next);
+  };
+
+  return (
+    <>
+      <div id="mainOverlay" className={`overlay ${menuOpen ? 'active' : ''}`} onClick={toggleLink} />
+
+      <div id="nav-menu" className={`side-drawer ${menuOpen ? 'show1' : ''}`}>
+        <button className="close-btn" onClick={toggleLink}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <button>Admin Login</button>
+        <button>Employee Login</button>
+        <button>Agent Login</button>
+      </div>
+
+      <nav className="navbar">
+        <div className="navbar-left">
+          <img src={logo} alt="logo" className="logo" />
+        </div>
+
+        <div className="navbar-center">
+          <h1>GharKaPaisa</h1>
+        </div>
+
+        <div className="navbar-right">
+          <button>Admin Login</button>
+          <button>Employee Login</button>
+          <button>Agent Login</button>
+        </div>
+
+        <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </nav>
+    </>
+  );
+};
+
+export default Navbar;
