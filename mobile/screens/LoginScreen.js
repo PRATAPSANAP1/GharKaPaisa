@@ -33,7 +33,7 @@ export default function LoginScreen({ route, navigation }) {
         style={styles.input}
         placeholder="Password"
         placeholderTextColor="#999"
-        secureTextEntry
+        secureTextEntry={true}
         value={password}
         onChangeText={setPassword}
       />
