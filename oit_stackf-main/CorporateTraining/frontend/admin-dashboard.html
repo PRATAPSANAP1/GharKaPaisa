@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIT_STACK - Admin Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- API Config -->
+    <script src="api.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-white font-sans overflow-hidden">
+    
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+            <div class="h-16 flex items-center gap-3 px-6 border-b border-gray-100 dark:border-slate-800">
+                <img src="../image/logo.jpg" alt="OIT_STACK" class="w-8 h-8 rounded-lg object-cover shadow-sm">
+                <div class="flex-1 min-w-0">
+                    <h1 class="font-bold text-gray-900 dark:text-white text-sm truncate">OIT_STACK</h1>
+                    <p class="text-[10px] text-gray-400 font-medium truncate">Admin Portal</p>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-400"></i>
+                </button>
+            </div>
+            
+            <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+                <a href="admin-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i> Dashboard
+                </a>
+                <a href="admin-students.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="users" class="w-5 h-5 shrink-0"></i> Students
+                </a>
+                <a href="admin-questions.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="database" class="w-5 h-5 shrink-0"></i> Questions
+                </a>
+                <a href="admin-tests.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="file-text" class="w-5 h-5 shrink-0"></i> Tests
+                </a>
+                <a href="admin-coding.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="code-2" class="w-5 h-5 shrink-0"></i> Coding
+                </a>
+                <a href="admin-categories.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="folder-tree" class="w-5 h-5 shrink-0"></i> Categories
+                </a>
+                <a href="admin-results.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="award" class="w-5 h-5 shrink-0"></i> Results
+                </a>
+                <a href="admin-analytics.html" class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white group">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 shrink-0"></i> Analytics
+                </a>
+            </nav>
+
+            <div class="p-3 border-t border-gray-100 dark:border-slate-800">
+                <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800/50">
+                    <div id="adminInitials" class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">A</div>
+                    <div class="flex-1 min-w-0">
+                        <p id="adminName" class="text-sm font-semibold text-gray-900 dark:text-white truncate">Admin</p>
+                        <p id="adminEmail" class="text-xs text-gray-400 truncate">admin@example.com</p>
+                    </div>
+                    <button onclick="logout()" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">
+                        <i data-lucide="log-out" class="w-4 h-4 text-gray-400"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Overlay for mobile sidebar -->
+        <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 h-full">
+            <!-- Topbar -->
+            <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-6 shrink-0 z-20">
+                <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                    <i data-lucide="menu" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+                </button>
+                <div class="flex lg:hidden items-center gap-2">
+                    <img src="../image/logo.jpg" alt="OIT_STACK" class="w-7 h-7 rounded-lg object-cover">
+                    <span class="font-bold text-gray-900 dark:text-white text-sm">OIT_STACK</span>
+                </div>
+                <div class="hidden lg:block"></div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                        <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+                        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    </button>
+                    <button class="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors relative">
+                        <i data-lucide="bell" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+                        <span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full"></span>
+                    </button>
+                    <button class="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                        <i data-lucide="settings" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="flex-1 overflow-y-auto p-4 lg:p-6">
+                <div id="loader" class="flex justify-center items-center h-full">
+                    <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+                </div>
+
+                <div id="dashboardContent" class="hidden flex flex-col gap-6">
+                    <!-- Page Title & Actions -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h1 class="text-2xl font-black text-slate-800 dark:text-white">Admin Dashboard</h1>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button onclick="window.location.href='admin-test-create.html'" class="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 hover:from-blue-700 hover:to-indigo-700">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Create Test
+                            </button>
+                            <button onclick="window.location.href='admin-question-create.html'" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Add MCQ
+                            </button>
+                            <button onclick="window.location.href='admin-coding-create.html'" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-white">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Code Challenge
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:border-indigo-500/40 transition-colors">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"><i data-lucide="users" class="w-6 h-6"></i></div>
+                            <div><p class="text-xs font-medium text-slate-500">Total Registered Students</p><p id="stat-students" class="text-2xl font-bold">0</p></div>
+                        </div>
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-500/40 transition-colors">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"><i data-lucide="clipboard-list" class="w-6 h-6"></i></div>
+                            <div><p class="text-xs font-medium text-slate-500">Active Placement Tests</p><p id="stat-tests" class="text-2xl font-bold">0</p></div>
+                        </div>
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:border-purple-500/40 transition-colors">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"><i data-lucide="file-question" class="w-6 h-6"></i></div>
+                            <div><p class="text-xs font-medium text-slate-500">MCQ Questions Pool</p><p id="stat-questions" class="text-2xl font-bold">0</p></div>
+                        </div>
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:border-emerald-500/40 transition-colors">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><i data-lucide="code-2" class="w-6 h-6"></i></div>
+                            <div><p class="text-xs font-medium text-slate-500">Coding Problems</p><p id="stat-coding" class="text-2xl font-bold">0</p></div>
+                        </div>
+                    </div>
+
+                    <!-- Today Activity cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:-translate-y-1 transition-transform">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="user-check" class="w-6 h-6 animate-pulse"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">New Students (Last 7 Days)</p>
+                                <h3 class="text-xl font-black text-slate-800 dark:text-white mt-1">+<span id="stat-recentReg">0</span> Registered</h3>
+                            </div>
+                        </div>
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 cursor-pointer hover:-translate-y-1 transition-transform">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="activity" class="w-6 h-6 animate-pulse"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Test Submissions Today</p>
+                                <h3 class="text-xl font-black text-slate-800 dark:text-white mt-1"><span id="stat-todayTests">0</span> Exam Submissions</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grid columns for listings -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Recent Submissions Feed -->
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col gap-4">
+                            <div class="flex justify-between items-center pb-3 border-b border-slate-50 dark:border-slate-800">
+                                <h3 class="font-bold text-slate-800 dark:text-white">Recent Student Submissions</h3>
+                                <a href="admin-results.html" class="text-xs font-bold text-indigo-500 hover:text-indigo-600">View All Submissions</a>
+                            </div>
+                            <div id="recentSubmissionsList" class="flex flex-col gap-3"></div>
+                        </div>
+
+                        <!-- Newly Registered Students -->
+                        <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex flex-col gap-4">
+                            <div class="flex justify-between items-center pb-3 border-b border-slate-50 dark:border-slate-800">
+                                <h3 class="font-bold text-slate-800 dark:text-white">Newly Registered Students</h3>
+                                <a href="admin-students.html" class="text-xs font-bold text-indigo-500 hover:text-indigo-600">Manage All Students</a>
+                            </div>
+                            <div id="recentStudentsList" class="flex flex-col gap-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function toggleSubmenu(menuId, iconId) {
+            const menu = document.getElementById(menuId);
+            const icon = document.getElementById(iconId);
+            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                icon.classList.remove('rotate-90');
+            } else {
+                icon.classList.add('rotate-90');
+            }
+        }
+
+        function logout() {
+            api.removeToken();
+            window.location.href = 'login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = api.getToken();
+            if (!token) { window.location.href = 'login.html'; return; }
+
+            try {
+                // Load User Data
+                const profileRes = await api.auth.getProfile();
+                const user = profileRes.data.user;
+                if (user.role !== 'admin') {
+                    window.location.href = 'student-dashboard.html';
+                    return;
+                }
+                const initials = user.name.charAt(0).toUpperCase();
+                document.getElementById('adminInitials').textContent = initials;
+                document.getElementById('adminName').textContent = user.name;
+                document.getElementById('adminEmail').textContent = user.email;
+
+                // Load Dashboard Stats
+                const res = await api.request('/admin/stats');
+                const stats = res.data.stats || {};
+                const recentStudents = res.data.recentStudents || [];
+                const recentSubmissions = res.data.recentSubmissions || [];
+
+                // Populate Stats
+                document.getElementById('stat-students').textContent = stats.totalStudents || 0;
+                document.getElementById('stat-tests').textContent = stats.totalTests || 0;
+                document.getElementById('stat-questions').textContent = stats.totalQuestions || 0;
+                document.getElementById('stat-coding').textContent = stats.totalCodingProblems || 0;
+                document.getElementById('stat-recentReg').textContent = stats.recentRegistrations || 0;
+                document.getElementById('stat-todayTests').textContent = stats.testsTakenToday || 0;
+
+                // Populate Submissions
+                const subsEl = document.getElementById('recentSubmissionsList');
+                if (recentSubmissions.length > 0) {
+                    subsEl.innerHTML = recentSubmissions.map(sub => `
+                        <div class="flex items-center justify-between p-3.5 border border-slate-100 dark:border-slate-800/60 rounded-xl bg-slate-50/20">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                    ${(sub.user?.name || '?').charAt(0).toUpperCase()}
+                                </span>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800 dark:text-white">${sub.user?.name || 'Deleted student'}</p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">${sub.test?.name || 'Deleted Exam'}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${sub.passed ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400'}">
+                                    ${sub.passed ? 'Passed' : 'Failed'}
+                                </span>
+                                <p class="text-[10px] text-slate-400 mt-1">Score: ${Math.round(sub.percentage)}%</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    subsEl.innerHTML = '<div class="py-8 text-center text-slate-400 text-sm">No exam submissions logged yet.</div>';
+                }
+
+                // Populate Students
+                const studEl = document.getElementById('recentStudentsList');
+                if (recentStudents.length > 0) {
+                    studEl.innerHTML = recentStudents.map(stud => `
+                        <div class="flex items-center justify-between p-3.5 border border-slate-100 dark:border-slate-800/60 rounded-xl bg-slate-50/20">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                    ${(stud.name || '?').charAt(0).toUpperCase()}
+                                </span>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800 dark:text-white">${stud.name}</p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">${stud.email}</p>
+                                </div>
+                            </div>
+                            <div class="text-right font-medium text-[10px] text-slate-400">
+                                <p class="font-bold text-slate-600 dark:text-slate-300">${stud.branch || 'CSE'}</p>
+                                <p class="mt-0.5">${stud.year || '4th Year'}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    studEl.innerHTML = '<div class="py-8 text-center text-slate-400 text-sm">No students registered yet.</div>';
+                }
+
+                // Show Dashboard
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('dashboardContent').classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                if (error.message.includes('Invalid token') || error.message.includes('Not authorized')) {
+                    logout();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

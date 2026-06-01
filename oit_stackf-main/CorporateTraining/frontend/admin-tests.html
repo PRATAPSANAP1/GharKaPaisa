@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIT_STACK - Manage Tests</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- API Config -->
+    <script src="api.js"></script>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 flex">
+
+    <!-- Admin Sidebar -->
+    <div id="sidebar" class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-40 transition-transform duration-300 -translate-x-full lg:translate-x-0 flex flex-col">
+        <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
+            <img src="../image/logo.jpg" alt="OIT_STACK" class="w-8 h-8 object-cover rounded-lg shadow-sm" />
+            <span class="font-bold text-slate-900 dark:text-white text-sm">OIT_STACK ADMIN</span>
+        </div>
+        <div class="p-4 flex flex-col gap-2 flex-1 overflow-y-auto">
+            <a href="admin-dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/50 transition-colors">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+            </a>
+            <a href="admin-students.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/50 transition-colors">
+                <i data-lucide="users" class="w-5 h-5"></i> Students
+            </a>
+            <a href="admin-tests.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 transition-colors">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Tests
+            </a>
+            <a href="admin-coding.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/50 transition-colors">
+                <i data-lucide="code-2" class="w-5 h-5"></i> Coding Problems
+            </a>
+        </div>
+        <div class="p-4 shrink-0">
+            <button onclick="logout()" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
+                <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content wrapper -->
+    <div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        
+        <!-- Topbar -->
+        <nav class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="p-2 lg:hidden rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <h1 class="font-bold text-slate-800 dark:text-white">Active Placement Tests</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='admin-test-create.html'" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Create Test
+                </button>
+                <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div id="loader" class="flex justify-center items-center h-64">
+            <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+        </div>
+
+        <div id="content" class="hidden flex-col gap-6 p-6 md:p-8 max-w-6xl mx-auto w-full">
+
+            <!-- Filters Card -->
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="relative w-full sm:w-80">
+                    <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="debounceFetch()" placeholder="Search by test name..." class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors">
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <select id="categoryFilter" onchange="fetchTests()" class="w-full sm:w-48 pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none">
+                        <option value="">All Categories</option>
+                    </select>
+                    <select id="difficultyFilter" onchange="fetchTests()" class="w-full sm:w-40 pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none">
+                        <option value="">All Difficulties</option>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="mixed">Mixed</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div id="emptyState" class="hidden py-12 px-4 flex-col items-center justify-center text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 text-slate-400 rounded-2xl flex items-center justify-center mb-4">
+                    <i data-lucide="alert-circle" class="w-8 h-8"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">No Tests Configured</h3>
+                <p class="text-slate-500 text-sm max-w-sm mb-6 leading-relaxed">There are no timed test sessions matching your search query or categories.</p>
+            </div>
+
+            <div id="tableContainer" class="hidden w-full flex-col gap-4">
+                <div class="w-full overflow-x-auto rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-xs">
+                                <th class="px-6 py-4">Test Name</th>
+                                <th class="px-6 py-4">Category</th>
+                                <th class="px-6 py-4 text-center">Questions</th>
+                                <th class="px-6 py-4 text-center">Duration</th>
+                                <th class="px-6 py-4">Difficulty</th>
+                                <th class="px-6 py-4 text-center">Status</th>
+                                <th class="px-6 py-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-200">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <h3 class="text-lg font-black mb-3">Delete Test Session</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                Are you sure you want to soft-delete this test session? Students will no longer see it, but their past attempt history remains intact.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="confirmDelete()" id="btnConfirmDelete" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors">
+                    Confirm Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border"></div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
+
+        function logout() {
+            api.logout();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border transition-opacity ${
+                type === 'success' 
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-800' 
+                : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+            }`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 5000);
+        }
+
+        let debounceTimer = null;
+        let deleteId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!api.getToken()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            try {
+                const catRes = await api.request('/admin/categories');
+                const catSelect = document.getElementById('categoryFilter');
+                catRes.data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c._id;
+                    opt.textContent = c.name;
+                    catSelect.appendChild(opt);
+                });
+            } catch(e) { console.error('Error fetching categories'); }
+
+            fetchTests();
+        });
+
+        function debounceFetch() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchTests();
+            }, 500);
+        }
+
+        async function fetchTests() {
+            const search = document.getElementById('searchInput').value;
+            const cat = document.getElementById('categoryFilter').value;
+            const diff = document.getElementById('difficultyFilter').value;
+            
+            let query = `?includeInactive=true`;
+            if (cat) query += `&category=${cat}`;
+            if (diff) query += `&difficulty=${diff}`;
+
+            try {
+                const res = await api.request(`/admin/tests${query}`);
+                let list = res.data || [];
+
+                if (search) {
+                    list = list.filter(t => t.name.toLowerCase().includes(search.toLowerCase()));
+                }
+
+                const tableContainer = document.getElementById('tableContainer');
+                const emptyState = document.getElementById('emptyState');
+
+                if (list.length === 0) {
+                    tableContainer.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    emptyState.classList.add('flex');
+                } else {
+                    tableContainer.classList.remove('hidden');
+                    tableContainer.classList.add('flex');
+                    emptyState.classList.add('hidden');
+
+                    const tbody = document.getElementById('tableBody');
+                    tbody.innerHTML = list.map(row => {
+                        let diffBadge = '<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400">INFO</span>';
+                        if (row.difficulty === 'easy') diffBadge = '<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">EASY</span>';
+                        if (row.difficulty === 'medium') diffBadge = '<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">MEDIUM</span>';
+                        if (row.difficulty === 'hard') diffBadge = '<span class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400">HARD</span>';
+
+                        const toggleIcon = row.isActive 
+                            ? `<i data-lucide="toggle-right" class="w-8 h-8 text-emerald-500"></i>`
+                            : `<i data-lucide="toggle-left" class="w-8 h-8 text-slate-300 dark:text-slate-700"></i>`;
+
+                        return `
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-200">
+                                <td class="px-6 py-4">
+                                    <p class="text-slate-800 dark:text-white text-sm font-bold truncate max-w-[200px]" title="${row.name}">${row.name}</p>
+                                </td>
+                                <td class="px-6 py-4 text-xs font-medium text-slate-500 dark:text-slate-400">${row.category?.name || 'Aptitude'}</td>
+                                <td class="px-6 py-4 text-center text-slate-600 dark:text-slate-300">
+                                    <span class="flex items-center justify-center gap-1.5"><i data-lucide="help-circle" class="w-4 h-4 text-slate-400"></i> ${row.questions?.length || 0}</span>
+                                </td>
+                                <td class="px-6 py-4 text-center text-slate-600 dark:text-slate-300">
+                                    <span class="flex items-center justify-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-slate-400"></i> ${row.totalTime} mins</span>
+                                </td>
+                                <td class="px-6 py-4">${diffBadge}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <button onclick="toggleStatus('${row._id}', ${row.isActive})" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors" title="Toggle active status">
+                                        ${toggleIcon}
+                                    </button>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex justify-center gap-2">
+                                        <button onclick="window.location.href='admin-test-create.html?id=${row._id}'" class="py-1.5 px-3 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                            <i data-lucide="edit-2" class="w-3.5 h-3.5"></i> Edit
+                                        </button>
+                                        <button onclick="openDeleteModal('${row._id}')" class="py-1.5 px-2 bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors" title="Delete Test">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    lucide.createIcons();
+                }
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+                document.getElementById('content').classList.add('flex');
+
+            } catch (err) {
+                showToast(err.message || 'Failed to load tests list', 'error');
+            }
+        }
+
+        async function toggleStatus(id, currentStatus) {
+            try {
+                await api.request(`/admin/tests/${id}/toggle`, { method: 'PATCH' });
+                showToast(`Test status toggled to ${!currentStatus ? 'Active' : 'Inactive'}.`);
+                fetchTests();
+            } catch(e) {
+                showToast(e.message || 'Failed to modify test active status.', 'error');
+            }
+        }
+
+        function openDeleteModal(id) {
+            deleteId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+        function closeDeleteModal() {
+            deleteId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+        async function confirmDelete() {
+            if (!deleteId) return;
+            const btn = document.getElementById('btnConfirmDelete');
+            btn.disabled = true;
+            btn.innerHTML = `<div class="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full mx-auto"></div>`;
+
+            try {
+                await api.request(`/admin/tests/${deleteId}`, { method: 'DELETE' });
+                showToast('Test soft-deleted successfully.');
+                closeDeleteModal();
+                fetchTests();
+            } catch(e) {
+                showToast(e.message || 'Failed to delete test', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Confirm Delete';
+            }
+        }
+    </script>
+</body>
+</html>

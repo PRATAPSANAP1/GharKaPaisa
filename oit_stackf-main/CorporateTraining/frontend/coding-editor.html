@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIT_STACK - Coding Editor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+    <!-- API Config -->
+    <script src="api.js"></script>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 pb-12">
+
+    <!-- Navbar -->
+    <nav class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between px-6 z-50 sticky top-0">
+        <div class="flex items-center gap-3">
+            <img src="../image/logo.jpg" alt="OIT_STACK" class="w-8 h-8 object-cover rounded-lg shadow-sm" />
+            <span class="font-bold text-slate-900 dark:text-white text-sm">OIT_STACK</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div id="loader" class="flex justify-center items-center h-64">
+        <div class="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+    </div>
+
+    <div id="content" class="hidden flex-col gap-5 h-full max-w-7xl mx-auto mt-6 px-4">
+        
+        <!-- Top action bar -->
+        <div class="flex items-center justify-between">
+            <a href="technical-hub.html" class="inline-flex items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors font-bold">
+                <i data-lucide="chevron-left" class="w-4 h-4 mr-1.5"></i> Back to Coding Problems
+            </a>
+            <span class="text-xs font-bold text-slate-400">
+                Earn points: <strong id="problemPoints" class="text-indigo-500">0 pts</strong>
+            </span>
+        </div>
+
+        <!-- Main split dashboard layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+
+            <!-- Left Side: Descriptions & Submissions tabs -->
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-col h-[650px] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm">
+                    
+                    <!-- Tabs -->
+                    <div class="flex border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/40">
+                        <button onclick="switchTab('description')" id="tabDesc" class="px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-blue-500 text-blue-600 dark:text-blue-400">
+                            Problem Description
+                        </button>
+                        <button onclick="switchTab('submissions')" id="tabSubs" class="px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white">
+                            Submission History (<span id="subsCount">0</span>)
+                        </button>
+                    </div>
+
+                    <!-- Description Tab Contents -->
+                    <div id="contentDesc" class="flex-1 overflow-y-auto p-6 space-y-6">
+                        <div>
+                            <div class="flex gap-2 mb-2.5">
+                                <span id="probCategory" class="px-2 py-1 text-[10px] font-bold uppercase rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300">Category</span>
+                                <span id="probDifficulty" class="px-2 py-1 text-[10px] font-bold uppercase rounded">Difficulty</span>
+                            </div>
+                            <h2 id="probTitle" class="text-xl font-extrabold text-slate-800 dark:text-white"></h2>
+                        </div>
+
+                        <div id="probDescription" class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed space-y-4 whitespace-pre-line"></div>
+
+                        <!-- Constraints & Limits -->
+                        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 dark:border-slate-800/80 text-xs font-bold">
+                            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/30 rounded-xl flex items-center gap-2">
+                                <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+                                <span>Time Limit: <span id="probTimeLimit">2</span>s</span>
+                            </div>
+                            <div class="p-3 bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/30 rounded-xl flex items-center gap-2">
+                                <i data-lucide="cpu" class="w-4 h-4 text-slate-400"></i>
+                                <span>Memory Limit: <span id="probMemLimit">256</span>MB</span>
+                            </div>
+                        </div>
+
+                        <div id="probInputFormatBox" class="hidden space-y-2">
+                            <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Input Format</h4>
+                            <p id="probInputFormat" class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/30 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/20"></p>
+                        </div>
+
+                        <div id="probOutputFormatBox" class="hidden space-y-2">
+                            <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Output Format</h4>
+                            <p id="probOutputFormat" class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/30 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/20"></p>
+                        </div>
+
+                        <div id="probConstraintsBox" class="hidden space-y-2">
+                            <h4 class="text-xs uppercase font-extrabold text-slate-400 tracking-wider">Constraints</h4>
+                            <pre id="probConstraints" class="text-[11px] font-mono leading-relaxed bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800/20"></pre>
+                        </div>
+
+                        <div id="probExamplesBox" class="space-y-4"></div>
+                    </div>
+
+                    <!-- Submissions Tab Contents -->
+                    <div id="contentSubs" class="hidden flex-1 overflow-y-auto p-6 space-y-3">
+                        <div id="subsEmpty" class="hidden py-12 text-center text-slate-400 text-sm">
+                            No submissions recorded yet for this problem. Write code and click 'Submit Code' to create one!
+                        </div>
+                        <div id="subsList" class="flex flex-col gap-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Monaco Code Editor -->
+            <div class="flex flex-col gap-4">
+                <div class="flex-1 flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden h-[400px]">
+                    <!-- Header controls -->
+                    <div class="flex items-center justify-between px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 shrink-0">
+                        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="code-2" class="w-4 h-4"></i> Code Editor
+                        </span>
+                        <select id="langSelect" onchange="changeLanguage()" class="w-40 py-1 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                            <option value="python">Python 3</option>
+                            <option value="javascript">JavaScript</option>
+                            <option value="java">Java</option>
+                            <option value="cpp">C++</option>
+                            <option value="c">C</option>
+                        </select>
+                    </div>
+
+                    <!-- Monaco Editor container -->
+                    <div id="editorContainer" class="flex-1 bg-[#1e1e1e]"></div>
+
+                    <!-- Bottom Panel compiler triggers -->
+                    <div class="px-6 py-4 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
+                        <span class="text-xs font-bold text-slate-400 flex items-center gap-1">
+                            <i data-lucide="terminal" class="w-4 h-4"></i> Ready to compile
+                        </span>
+
+                        <div class="flex gap-3">
+                            <button onclick="runCode()" id="btnRun" class="flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold py-1.5 px-4 text-xs rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i> <span>Run Code</span>
+                            </button>
+                            <button onclick="submitCode()" id="btnSubmit" class="flex items-center gap-1.5 bg-blue-600 text-white font-bold py-1.5 px-5 text-xs rounded-xl shadow-lg shadow-blue-500/10 hover:bg-blue-700 transition-colors">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> <span>Submit Code</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal output results -->
+                <div id="terminalOutput" class="hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-sm text-slate-100 max-h-[220px] overflow-y-auto p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="terminal" class="w-3.5 h-3.5"></i> Console Compiler Output
+                        </span>
+                        <span id="termStatusBadge" class="text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full"></span>
+                    </div>
+                    <div id="termContent" class="text-xs space-y-3 mt-2"></div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border"></div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const theme = html.classList.contains('dark') ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+            if (monacoEditor) {
+                monaco.editor.setTheme(theme === 'dark' ? 'vs-dark' : 'vs');
+            }
+        }
+
+        const initialTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (initialTheme === 'dark') document.documentElement.classList.add('dark');
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border transition-opacity ${
+                type === 'success' 
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-800' 
+                : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+            }`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 5000);
+        }
+
+        const DEFAULT_STARTER_CODE = {
+            javascript: `// JavaScript Starter Code\nfunction solve() {\n    const fs = require('fs');\n    const input = fs.readFileSync('/dev/stdin', 'utf-8').trim();\n    console.log(input);\n}\n\nsolve();`,
+            python: `# Python Starter Code\nimport sys\n\ndef solve():\n    lines = sys.stdin.read().trim().split('\\n')\n    for line in lines:\n        print(line)\n\nif __name__ == '__main__':\n    solve()`,
+            java: `// Java Starter Code\nimport java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (sc.hasNextLine()) {\n            System.out.println(sc.nextLine());\n        }\n    }\n}`,
+            cpp: `// C++ Starter Code\n#include <iostream>\nusing namespace std;\n\nint main() {\n    string s;\n    if (cin >> s) {\n        cout << s << endl;\n    }\n    return 0;\n}`,
+            c: `// C Starter Code\n#include <stdio.h>\n\nint main() {\n    char s[100];\n    if (scanf("%s", s) == 1) {\n        printf("%s\\n", s);\n    }\n    return 0;\n}`
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const problemId = urlParams.get('id');
+
+        let problem = null;
+        let submissions = [];
+        let monacoEditor = null;
+
+        function switchTab(tab) {
+            if (tab === 'description') {
+                document.getElementById('tabDesc').className = "px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-blue-500 text-blue-600 dark:text-blue-400";
+                document.getElementById('tabSubs').className = "px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white";
+                document.getElementById('contentDesc').classList.remove('hidden');
+                document.getElementById('contentSubs').classList.add('hidden');
+            } else {
+                document.getElementById('tabDesc').className = "px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white";
+                document.getElementById('tabSubs').className = "px-6 py-3.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-b-blue-500 text-blue-600 dark:text-blue-400";
+                document.getElementById('contentDesc').classList.add('hidden');
+                document.getElementById('contentSubs').classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!api.getToken() || !problemId) {
+                window.location.href = 'technical-hub.html';
+                return;
+            }
+            try {
+                const res = await api.request(`/coding/problems/${problemId}`);
+                problem = res.data;
+
+                const histRes = await api.request(`/coding/problems/${problemId}/submissions`);
+                submissions = histRes.data;
+
+                renderProblem();
+                renderSubmissions();
+                initMonaco();
+
+            } catch(e) {
+                showToast(e.message || 'Error fetching problem details', 'error');
+                setTimeout(() => window.location.href = 'technical-hub.html', 2000);
+            }
+        });
+
+        function renderProblem() {
+            document.getElementById('problemPoints').textContent = `${problem.points || 100} pts`;
+            document.getElementById('probCategory').textContent = problem.category?.name || 'Category';
+            
+            const diffEl = document.getElementById('probDifficulty');
+            diffEl.textContent = problem.difficulty;
+            if (problem.difficulty === 'easy') diffEl.className = "px-2 py-1 text-[10px] font-bold uppercase rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+            else if (problem.difficulty === 'medium') diffEl.className = "px-2 py-1 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+            else diffEl.className = "px-2 py-1 text-[10px] font-bold uppercase rounded bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400";
+
+            document.getElementById('probTitle').textContent = problem.title;
+            document.getElementById('probDescription').textContent = problem.description;
+            document.getElementById('probTimeLimit').textContent = problem.timeLimit || 2;
+            document.getElementById('probMemLimit').textContent = problem.memoryLimit || 256;
+
+            if(problem.inputFormat) {
+                document.getElementById('probInputFormatBox').classList.remove('hidden');
+                document.getElementById('probInputFormat').textContent = problem.inputFormat;
+            }
+            if(problem.outputFormat) {
+                document.getElementById('probOutputFormatBox').classList.remove('hidden');
+                document.getElementById('probOutputFormat').textContent = problem.outputFormat;
+            }
+            if(problem.constraints) {
+                document.getElementById('probConstraintsBox').classList.remove('hidden');
+                document.getElementById('probConstraints').textContent = problem.constraints;
+            }
+
+            if (problem.examples && problem.examples.length > 0) {
+                const exHtml = problem.examples.map((ex, idx) => `
+                    <div class="space-y-3 pt-4 border-t border-slate-50 dark:border-slate-800/80">
+                        <h4 class="text-xs font-extrabold text-slate-800 dark:text-white">Example Case ${idx + 1}</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Input</span>
+                                <pre class="bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/20 rounded-xl p-3 text-xs font-mono">${ex.input}</pre>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Expected Output</span>
+                                <pre class="bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/20 rounded-xl p-3 text-xs font-mono">${ex.output}</pre>
+                            </div>
+                        </div>
+                        ${ex.explanation ? `<p class="text-xs text-slate-500 dark:text-slate-400 italic"><strong>Explanation:</strong> ${ex.explanation}</p>` : ''}
+                    </div>
+                `).join('');
+                document.getElementById('probExamplesBox').innerHTML = exHtml;
+            }
+        }
+
+        function renderSubmissions() {
+            document.getElementById('subsCount').textContent = submissions.length;
+            if(submissions.length === 0) {
+                document.getElementById('subsEmpty').classList.remove('hidden');
+                document.getElementById('subsList').innerHTML = '';
+            } else {
+                document.getElementById('subsEmpty').classList.add('hidden');
+                const html = submissions.map(sub => {
+                    const isPassed = sub.status === 'accepted';
+                    const iconClass = isPassed ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400';
+                    const icon = isPassed ? '<i data-lucide="check-circle-2" class="w-5 h-5"></i>' : '<i data-lucide="x-circle" class="w-5 h-5"></i>';
+                    return `
+                        <div class="flex items-center justify-between p-4 border border-slate-100 dark:border-slate-800/80 rounded-xl bg-slate-50/20 hover:bg-slate-50/60 dark:hover:bg-slate-800/35 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center ${iconClass}">${icon}</div>
+                                <div>
+                                    <p class="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">${sub.status.replace('_', ' ')}</p>
+                                    <p class="text-[10px] text-slate-400 font-medium flex items-center gap-2 mt-0.5">
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                        ${new Date(sub.submittedAt).toLocaleDateString()} ${new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Language: <strong class="text-slate-800 dark:text-white capitalize">${sub.language}</strong></p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Passed: ${sub.testCasesPassed || 0}/${sub.totalTestCases || 0} Cases</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('subsList').innerHTML = html;
+                lucide.createIcons();
+            }
+        }
+
+        function initMonaco() {
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+            require(['vs/editor/editor.main'], function() {
+                const lang = document.getElementById('langSelect').value;
+                const savedCode = localStorage.getItem(`code_${problemId}_${lang}`);
+                const initCode = savedCode || problem?.starterCode?.[lang] || DEFAULT_STARTER_CODE[lang];
+
+                monacoEditor = monaco.editor.create(document.getElementById('editorContainer'), {
+                    value: initCode,
+                    language: lang,
+                    theme: initialTheme === 'dark' ? 'vs-dark' : 'vs',
+                    fontSize: 13,
+                    fontFamily: 'JetBrains Mono, Consolas, monospace',
+                    minimap: { enabled: false },
+                    automaticLayout: true,
+                    wordWrap: 'on'
+                });
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+                document.getElementById('content').classList.add('flex');
+            });
+        }
+
+        function changeLanguage() {
+            if(!monacoEditor) return;
+            const newLang = document.getElementById('langSelect').value;
+            const currentLang = monacoEditor.getModel().getLanguageId();
+            
+            // Save current code
+            localStorage.setItem(`code_${problemId}_${currentLang}`, monacoEditor.getValue());
+
+            // Load new code
+            const savedCode = localStorage.getItem(`code_${problemId}_${newLang}`);
+            const initCode = savedCode || problem?.starterCode?.[newLang] || DEFAULT_STARTER_CODE[newLang];
+
+            monaco.editor.setModelLanguage(monacoEditor.getModel(), newLang === 'c' ? 'cpp' : newLang);
+            monacoEditor.setValue(initCode);
+        }
+
+        async function runCode() {
+            const btn = document.getElementById('btnRun');
+            const btnSub = document.getElementById('btnSubmit');
+            const lang = document.getElementById('langSelect').value;
+            const code = monacoEditor.getValue();
+
+            localStorage.setItem(`code_${problemId}_${lang}`, code);
+
+            btn.disabled = true;
+            btnSub.disabled = true;
+            btn.innerHTML = `<div class="animate-spin h-3.5 w-3.5 border-2 border-slate-500 border-t-transparent rounded-full"></div> <span>Running...</span>`;
+
+            try {
+                const res = await api.request('/coding/run', {
+                    method: 'POST',
+                    body: JSON.stringify({ problemId, language: lang, code })
+                });
+
+                renderTerminal(res.data.results, false, res.data.allPassed);
+
+                if (res.data.allPassed) showToast('Example test cases passed successfully!');
+                else showToast('Some test cases failed.', 'error');
+            } catch (err) {
+                showToast(err.message || 'Error executing code in compiler', 'error');
+            } finally {
+                btn.disabled = false;
+                btnSub.disabled = false;
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> <span>Run Code</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function submitCode() {
+            const btn = document.getElementById('btnRun');
+            const btnSub = document.getElementById('btnSubmit');
+            const lang = document.getElementById('langSelect').value;
+            const code = monacoEditor.getValue();
+
+            localStorage.setItem(`code_${problemId}_${lang}`, code);
+
+            btn.disabled = true;
+            btnSub.disabled = true;
+            btnSub.innerHTML = `<div class="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></div> <span>Submitting...</span>`;
+
+            try {
+                const res = await api.request('/coding/submit', {
+                    method: 'POST',
+                    body: JSON.stringify({ problemId, language: lang, code })
+                });
+
+                const submission = res.data;
+                const passedAll = submission.status === 'accepted';
+
+                renderTerminal([{
+                    status: submission.status,
+                    time: submission.executionTime,
+                    memory: submission.memoryUsed,
+                    error: submission.error,
+                    testCasesPassed: submission.testCasesPassed,
+                    totalTestCases: submission.totalTestCases
+                }], true, passedAll, submission.status);
+
+                if (passedAll) showToast('Accepted! All test cases passed! 🎉');
+                else showToast(`Wrong Answer or Error: ${submission.status}`, 'error');
+
+                // refresh history
+                const histRes = await api.request(`/coding/problems/${problemId}/submissions`);
+                submissions = histRes.data;
+                renderSubmissions();
+
+            } catch (err) {
+                showToast(err.message || 'Error submitting code to compiler', 'error');
+            } finally {
+                btn.disabled = false;
+                btnSub.disabled = false;
+                btnSub.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i> <span>Submit Code</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        function renderTerminal(results, isSubmit, passedAll, finalStatus = null) {
+            const term = document.getElementById('terminalOutput');
+            const content = document.getElementById('termContent');
+            const badge = document.getElementById('termStatusBadge');
+
+            term.classList.remove('hidden');
+
+            if (isSubmit) {
+                badge.className = `text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full ${passedAll ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`;
+                badge.textContent = finalStatus.replace('_', ' ');
+
+                const res = results[0];
+                if (res.error) {
+                    content.innerHTML = `<pre class="text-rose-400 font-mono bg-rose-950/20 border border-rose-950/40 p-3 rounded-xl whitespace-pre-wrap">${res.error}</pre>`;
+                } else {
+                    content.innerHTML = `
+                        <div class="flex flex-col gap-2 font-semibold">
+                            <p>Status: <strong class="${passedAll ? 'text-emerald-400' : 'text-rose-400'}">${finalStatus.replace('_', ' ').toUpperCase()}</strong></p>
+                            <p>Test Cases Evaluated: <strong class="text-slate-200">${res.testCasesPassed} / ${res.totalTestCases} Passed</strong></p>
+                            <p>Max Run Duration: <strong class="text-slate-200">${res.time}s</strong></p>
+                            <p>Memory Overhead: <strong class="text-slate-200">${Math.round(res.memory / 1024)} MB</strong></p>
+                        </div>
+                    `;
+                }
+            } else {
+                badge.className = `text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-full ${passedAll ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`;
+                badge.textContent = passedAll ? 'All Passed' : 'Failed';
+
+                content.innerHTML = results.map((res, idx) => `
+                    <div class="border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
+                        <div class="flex items-center justify-between font-bold mb-1.5">
+                            <span>Example Test Case ${res.caseIndex || (idx+1)}</span>
+                            <span class="${res.status === 'accepted' ? 'text-emerald-400' : 'text-rose-400'}">${res.status.replace('_', ' ').toUpperCase()}</span>
+                        </div>
+                        ${res.error ? `
+                            <pre class="text-rose-400 font-mono bg-rose-950/20 p-2.5 rounded-lg border border-rose-950/30 whitespace-pre-wrap">${res.error}</pre>
+                        ` : `
+                            <div class="grid grid-cols-2 gap-3 text-[11px] font-mono leading-relaxed bg-slate-950/60 p-2.5 rounded-lg">
+                                <div><span class="text-slate-500 font-bold block mb-0.5">Input</span><pre class="text-slate-300">${res.input}</pre></div>
+                                <div><span class="text-slate-500 font-bold block mb-0.5">Actual Output</span><pre class="text-slate-300">${res.actualOutput || '<No stdout output>'}</pre></div>
+                            </div>
+                        `}
+                    </div>
+                `).join('');
+            }
+        }
+    </script>
+</body>
+</html>

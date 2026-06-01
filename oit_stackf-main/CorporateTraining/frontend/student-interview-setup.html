@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student - AI Interview Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="api.js"></script>
+</head>
+<body class="bg-slate-50 dark:bg-[#0a0f1e] text-slate-900 dark:text-white font-sans overflow-hidden">
+    
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 dark:bg-[#0d1117] border-r border-slate-800/60 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+            <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i data-lucide="graduation-cap" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-sm leading-none">OIT_STACK</h1>
+                        <p class="text-[10px] text-slate-500 font-medium mt-0.5">Student Portal</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-0.5">
+                <a href="student-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i> Dashboard
+                </a>
+                <a href="student-tests.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i> Placement Tests
+                </a>
+                <a href="student-coding.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="code" class="w-4 h-4 shrink-0"></i> Coding Challenges
+                </a>
+                <a href="student-interview-setup.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                    <i data-lucide="mic" class="w-4 h-4 shrink-0 text-blue-400"></i> AI Interview
+                </a>
+                <a href="student-leaderboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="trophy" class="w-4 h-4 shrink-0"></i> Leaderboard
+                </a>
+                <a href="student-profile.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="user" class="w-4 h-4 shrink-0"></i> Profile
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 h-full">
+            <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between px-4 lg:px-6 shrink-0 z-20">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i data-lucide="menu" class="w-5 h-5 text-slate-600 dark:text-slate-400"></i>
+                    </button>
+                    <h2 class="font-bold text-lg hidden sm:block">AI Interview Setup</h2>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                        <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/50 dark:bg-[#0a0f1e]/50">
+                <div class="flex flex-col gap-6 max-w-4xl mx-auto pb-12">
+                    <div>
+                        <h1 class="text-2xl font-black text-slate-800 dark:text-white">AI-Powered Mock Placement Interview</h1>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-extrabold text-slate-400 uppercase tracking-wider mb-4">Select Interview Type</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div id="cardHR" onclick="selectType('hr')" class="flex flex-col gap-4 p-6 cursor-pointer border-2 transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/80 hover:border-slate-200 hover:-translate-y-1 hover:shadow-xl shadow-sm">
+                                <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                    <i data-lucide="user-check" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-800 dark:text-white mb-1">Human Resources (HR) Round</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        Covers behavior questions, communication skills, situational scenarios, leadership abilities, strengths, weaknesses, and cultural compatibility.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div id="cardTech" onclick="selectType('technical')" class="flex flex-col gap-4 p-6 cursor-pointer border-2 transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/80 hover:border-slate-200 hover:-translate-y-1 hover:shadow-xl shadow-sm">
+                                <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                    <i data-lucide="code-2" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-800 dark:text-white mb-1">Technical Engineering Round</h3>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        Covers algorithms, data structures (arrays, trees, graphs), operating systems, object-oriented concepts, and relational databases.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-4 justify-between">
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-white mb-2">Hardware Check</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                                    We recommend using a microphone to answer dynamically and test your communication skills.
+                                </p>
+                                <div class="flex flex-col gap-3">
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/30 text-xs">
+                                        <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i> Speech Engine</span>
+                                        <span id="speechStatus" class="font-bold text-slate-800 dark:text-white">Checking...</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/30 text-xs">
+                                        <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><i data-lucide="mic" class="w-4 h-4 text-indigo-500"></i> Microphone</span>
+                                        <span id="micStatus" class="font-bold capitalize text-slate-800 dark:text-white">Prompt</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button id="reqMicBtn" onclick="requestMic()" class="w-full px-4 py-2 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-white font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="mic" class="w-4 h-4"></i> Request Access
+                            </button>
+                        </div>
+
+                        <div class="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-4">
+                            <h4 class="font-bold text-slate-800 dark:text-white">Guidelines for Best Outcome</h4>
+                            <ul class="list-disc pl-5 text-xs text-slate-600 dark:text-slate-400 flex flex-col gap-2.5 leading-relaxed">
+                                <li>Find a quiet space to attempt the session. Background ambient noise may distort transcription checks.</li>
+                                <li>The interview consists of <strong>5 sequential questions</strong>. The bot will automatically advance after you submit your answer.</li>
+                                <li>You can speak by clicking the <span class="font-bold text-blue-500">Microphone</span> icon and toggling recording. Click it again to stop and review your text before sending.</li>
+                                <li>If your mic fails or transcription is inaccurate, you can directly type your answer into the chat field.</li>
+                                <li>After the 5th response, click 'End Interview' to save the feedback session and view your score.</li>
+                            </ul>
+
+                            <div id="fallbackWarning" class="hidden p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-950/30 rounded-xl flex gap-2 text-amber-800 dark:text-amber-300">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 text-amber-600 dark:text-amber-500"></i>
+                                <p class="text-[11px] leading-relaxed">
+                                    Your browser does not support the Web Speech API (e.g. Firefox/Safari). The voice microphone recording will be disabled, but you can still fully type your answers using the text input field.
+                                </p>
+                            </div>
+
+                            <div class="flex gap-4 mt-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+                                <button id="startBtn" onclick="startInterview()" disabled class="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Start Session <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        }
+
+        let selectedType = null;
+        let speechSupported = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            speechSupported = !!SpeechRecognition;
+            document.getElementById('speechStatus').textContent = speechSupported ? 'Supported' : 'Not Supported';
+            if(!speechSupported) {
+                document.getElementById('fallbackWarning').classList.remove('hidden');
+            }
+
+            if(navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query({ name: 'microphone' }).then(status => {
+                    updateMicStatus(status.state);
+                    status.onchange = () => updateMicStatus(status.state);
+                }).catch(e => console.error(e));
+            }
+        });
+
+        function updateMicStatus(state) {
+            document.getElementById('micStatus').textContent = state;
+            if (state === 'granted') {
+                document.getElementById('reqMicBtn').classList.add('hidden');
+            } else {
+                document.getElementById('reqMicBtn').classList.remove('hidden');
+            }
+        }
+
+        async function requestMic() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(t => t.stop());
+                updateMicStatus('granted');
+            } catch(e) {
+                console.error(e);
+                updateMicStatus('denied');
+            }
+        }
+
+        function selectType(type) {
+            selectedType = type;
+            const cHR = document.getElementById('cardHR');
+            const cTech = document.getElementById('cardTech');
+
+            cHR.className = "flex flex-col gap-4 p-6 cursor-pointer border-2 transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900 shadow-sm";
+            cTech.className = "flex flex-col gap-4 p-6 cursor-pointer border-2 transition-all duration-300 rounded-3xl bg-white dark:bg-slate-900 shadow-sm";
+
+            if (type === 'hr') {
+                cHR.className += " border-blue-500 bg-blue-50/20 dark:bg-indigo-950/10 hover:-translate-y-0";
+                cTech.className += " border-slate-100 dark:border-slate-800/80 hover:border-slate-200 hover:-translate-y-1 hover:shadow-xl";
+            } else {
+                cTech.className += " border-blue-500 bg-blue-50/20 dark:bg-indigo-950/10 hover:-translate-y-0";
+                cHR.className += " border-slate-100 dark:border-slate-800/80 hover:border-slate-200 hover:-translate-y-1 hover:shadow-xl";
+            }
+
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function startInterview() {
+            if(!selectedType) return;
+            window.location.href = `student-interview-session.html?type=${selectedType}`;
+        }
+
+    </script>
+</body>
+</html>

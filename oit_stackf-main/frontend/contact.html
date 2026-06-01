@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | OIT_Stack</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css?v=light-theme">
+</head>
+
+<body>
+    <!-- Loader -->
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container navbar">
+            <a href="index.html" class="logo"
+                style="display:flex; align-items:center; gap:0.75rem; text-decoration:none;">
+                <img src="assets/Logo2.png" alt="OIT_Stack"
+                    style="height:45px; width:45px; object-fit:cover; border-radius:50%; box-shadow:0 0 10px rgba(0,191,255,0.5);">
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <span class="logo-text" style="line-height:1; margin-bottom:2px;">OIT_Stack</span>
+                    <span
+                        style="font-size:0.65rem; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">OnYX
+                        Integrated Tech Stack</span>
+                </div>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="contact.html" class="active">Contact</a></li>
+            </ul>
+            <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <section class="page-header"
+        style="background: url('https://images.unsplash.com/photo-1555421689-d68471e189f2?q=80&w=2070&auto=format&fit=crop') center/cover; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.85); z-index:0;">
+        </div>
+        <div class="container animate-on-scroll" style="position:relative; z-index:1;">
+            <h1>Get in Touch</h1>
+            <p style="font-size:1.25rem; color:rgba(255,255,255,0.9); max-width:600px; margin:0 auto;">Ready to
+                innovate? Reach out to our team of experts to discuss your tailored solution.</p>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="bg-gray">
+        <div class="container">
+            <div class="contact-grid">
+                <!-- Info -->
+                <div class="animate-on-scroll">
+                    <h2 style="color:var(--primary); margin-bottom:2rem;">Contact Information</h2>
+                    <p style="margin-bottom:2rem; color:var(--text-muted);">Fill out the form or use the contact details
+                        below to get connected with our experts.</p>
+
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon"><i class="fa-solid fa-location-dot"></i></div>
+                        <div>
+                            <h4 style="margin-bottom:0.25rem;">Head Office</h4>
+                            <p style="color:var(--text-muted); margin:0;">Flat No.307, 3rd Floor, Goldcliff Society,
+                                Parande Nagar, Alandi Road, Dighi, Pune- 411015, Maharashtra<br>India</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon"><i class="fa-solid fa-phone"></i></div>
+                        <div>
+                            <h4 style="margin-bottom:0.25rem;">Phone Number</h4>
+                            <p style="color:var(--text-muted); margin:0;">+91 8983461569</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon"><i class="fa-solid fa-envelope"></i></div>
+                        <div>
+                            <h4 style="margin-bottom:0.25rem;">Email Address</h4>
+                            <p style="color:var(--text-muted); margin:0;">onkarholkar@oitstack.com</p>
+                        </div>
+                    </div>
+
+                    <h3 style="color:var(--primary); margin-top:3rem; margin-bottom:1rem; font-size:1.2rem;">Follow Us
+                    </h3>
+                    <div class="social-links" style="margin-top:0;">
+                        <a href="#" class="social-link" style="background:var(--bg-light); color:var(--brand);"><i
+                                class="fa-brands fa-linkedin-in"></i></a>
+                        <a href="#" class="social-link" style="background:var(--bg-light); color:var(--brand);"><i
+                                class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="social-link" style="background:var(--bg-light); color:var(--brand);"><i
+                                class="fa-brands fa-facebook-f"></i></a>
+                        <a href="https://www.instagram.com/oit_stack?igsh=MTJ6Z29pdWJ3N2g3eg==" target="_blank" class="social-link" style="background:var(--bg-light); color:var(--brand);"><i
+                                class="fa-brands fa-instagram"></i></a>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <div class="animate-on-scroll">
+                    <form action="https://api.web3forms.com/submit" method="POST" class="contact-form">
+                        <input type="hidden" name="access_key" value="43854d24-94fc-48cb-a07b-91969afa27bc">
+                        <input type="hidden" name="subject" value="New Inquiry from OIT_STACK Website!">
+
+                        <h3 style="color:var(--primary); margin-bottom:2rem;">Send us a message</h3>
+                        <div class="grid grid-2" style="gap:1.5rem; margin-bottom:1.5rem;">
+                            <div class="form-group" style="margin:0;">
+                                <input type="text" name="name" class="form-control" placeholder="Your Name" required>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <input type="email" name="email" class="form-control" placeholder="Your Email" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" name="phone" class="form-control" placeholder="Phone Number" required>
+                        </div>
+                        <div class="form-group">
+                            <select name="service" class="form-control" style="color:var(--text-muted); cursor:pointer;"
+                                required>
+                                <option value="" disabled selected>Select Service Required</option>
+                                <option value="Software Development">Software Development</option>
+                                <option value="Data Analytics">Political Data Analytics</option>
+                                <option value="Campaign Management">Campaign Management</option>
+                                <option value="Surveys">Political Surveys</option>
+                                <option value="Training">Corporate Training</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <textarea name="message" class="form-control" placeholder="Your Message"
+                                required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%;">Send Message <i
+                                class="fa-solid fa-paper-plane" style="margin-left:0.5rem;"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Google Map (Optional Section) -->
+    <section style="padding:0;">
+        <div style="width:100%; height:400px; background-color:#eee; position:relative;">
+            <!-- Placeholder for map iframe -->
+            <iframe
+                src="https://maps.google.com/maps?q=Goldcliff%20Society,%20Vishrantwadi,%20Alandi%20Rd,%20Parande%20Nagar,%20Dighi,%20Pune,%20Maharashtra%20411015&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-about">
+                    <a href="index.html" class="logo" style="color:white;">
+                        <i class="fa-solid fa-cube logo-icon" style="color:var(--accent);"></i>
+                        <span class="logo-text" style="color:white;">OIT_STACK</span>
+                    </a>
+                    <p>OnYX Integrated Tech Stack providing cutting edge strategies for business
+                        and political entities globally.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><i class="fa-brands fa-linkedin-in"></i></a>
+                        <a href="#" class="social-link"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="social-link"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="https://www.instagram.com/oit_stack?igsh=MTJ6Z29pdWJ3N2g3eg==" class="social-link" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="footer-title">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="services.html">Services</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="footer-title">Services</h4>
+                    <ul class="footer-links">
+                        <li><a href="services.html">Software Development</a></li>
+                        <li><a href="services.html">Political Data Analytics</a></li>
+                        <li><a href="services.html">Campaign Management</a></li>
+                        <li><a href="services.html">Corporate Training</a></li>
+                        <li><a href="services.html">Political Surveys</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="footer-title">Contact Us</h4>
+                    <ul class="footer-links">
+                        <li style="display:flex; gap:0.5rem; color:var(--text-muted);"><i
+                                class="fa-solid fa-location-dot" style="margin-top:5px; color:var(--brand-light);"></i>
+                            <span>Flat No.307, 3rd Floor, Goldcliff Society, Parande Nagar, Alandi Road, Dighi, Pune-
+                                411015, Maharashtra<br>India</span>
+                        </li>
+                        <li style="display:flex; gap:0.5rem; color:var(--text-muted);"><i class="fa-solid fa-phone"
+                                style="margin-top:5px; color:var(--brand-light);"></i> +91 8983461569</li>
+                        <li style="display:flex; gap:0.5rem; color:var(--text-muted);"><i class="fa-solid fa-envelope"
+                                style="margin-top:5px; color:var(--brand-light);"></i> onkarholkar@oitstack.com
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                &copy; 2026 OIT_STACK - OnYX Integrated Tech Stack. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/918983461569" class="whatsapp-float" target="_blank" title="Chat with us on WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+
+</html>

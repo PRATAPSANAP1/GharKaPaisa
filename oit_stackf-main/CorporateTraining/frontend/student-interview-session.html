@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student - AI Interview Session</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="api.js"></script>
+</head>
+<body class="bg-slate-50 dark:bg-[#0a0f1e] text-slate-900 dark:text-white font-sans overflow-hidden">
+    
+    <div class="flex flex-col h-screen max-w-4xl mx-auto">
+        
+        <header class="h-16 shrink-0 flex items-center justify-between px-4 lg:px-0">
+            <div class="flex items-center gap-3">
+                <button onclick="window.location.href='student-interview-setup.html'" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <i data-lucide="chevron-left" class="w-5 h-5 text-slate-600 dark:text-slate-400"></i>
+                </button>
+                <h2 class="font-bold text-lg hidden sm:block">Interview Session</h2>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="loader" class="flex-1 flex items-center justify-center">
+            <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        </div>
+
+        <div id="sessionContent" class="flex-1 flex flex-col gap-6 p-4 lg:px-0 pb-6 hidden overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 px-6 py-4 rounded-3xl shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black">
+                        AI
+                    </div>
+                    <div>
+                        <h3 id="sessionTitle" class="font-extrabold text-slate-800 dark:text-white capitalize">
+                            AI Placement Round
+                        </h3>
+                        <p id="questionCounter" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                            Question 1 of 5
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span id="timerDisplay">00:00</span>
+                    </div>
+                    <button onclick="openEndConfirm()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-md transition-colors">
+                        <i data-lucide="stop-circle" class="w-4 h-4"></i> End
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="flex-1 flex flex-col justify-between overflow-hidden bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                
+                <div id="chatBox" class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/10 dark:bg-slate-900/10">
+                    <!-- Messages go here -->
+                </div>
+
+                <div id="aiLoadingIndicator" class="hidden p-6 pt-0 bg-slate-50/10 dark:bg-slate-900/10">
+                    <div class="flex gap-3 max-w-[80%] self-start">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4"></i>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800/80 text-slate-400 flex items-center gap-2 text-xs shadow-sm">
+                            <div class="animate-spin h-4 w-4 border-2 border-slate-400 border-t-transparent rounded-full"></div>
+                            <span>Interviewer is analyzing your response...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input box -->
+                <div class="p-4 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 shrink-0">
+                    
+                    <div id="completeState" class="hidden flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-blue-50 dark:bg-indigo-950/20 border border-blue-100/30 dark:border-indigo-950/40">
+                        <div class="flex items-center gap-2 text-blue-800 dark:text-indigo-300">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i>
+                            <p class="text-xs font-bold">
+                                All 5 rounds are completed! Please click 'Submit Now' to evaluate.
+                            </p>
+                        </div>
+                        <button onclick="submitInterview()" class="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-colors shrink-0">
+                            Submit Now
+                        </button>
+                    </div>
+
+                    <form id="chatForm" class="flex gap-3">
+                        <button type="button" id="micBtn" onclick="toggleMic()" class="p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700/80 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-300 flex items-center justify-center shrink-0">
+                            <i data-lucide="mic" id="micIcon" class="w-5 h-5"></i>
+                        </button>
+                        <input type="text" id="answerInput" placeholder="Type your interview response here..." class="flex-1 py-3 px-4 rounded-xl text-xs transition-all duration-300 bg-slate-50 dark:bg-slate-800/60 text-slate-950 dark:text-white border-2 border-slate-100 dark:border-slate-800/80 focus:border-blue-500 focus:outline-none placeholder-slate-400">
+                        <button type="submit" id="sendBtn" disabled class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="endModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-6 flex flex-col gap-4">
+                <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 flex items-center justify-center">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-bold text-lg text-slate-800 dark:text-white">End Interview</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Are you sure you want to end this interview round prematurely? Your transcript up to this point will be sent for evaluation and saved.
+                </p>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
+                <button onclick="closeEndConfirm()" class="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">Resume</button>
+                <button onclick="submitInterview()" class="px-6 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-md transition-colors">Yes, Submit & End</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        let type = new URLSearchParams(window.location.search).get('type') || 'hr';
+        let messages = [];
+        let questionCount = 1;
+        let sessionTimer = 0;
+        let timerInterval = null;
+        
+        let recognition = null;
+        let isRecording = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = api.getToken();
+            if(!token) { window.location.href='login.html'; return; }
+            
+            document.getElementById('sessionTitle').textContent = `AI ${type} Placement Round`;
+
+            // Init Speech
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(SpeechRec) {
+                recognition = new SpeechRec();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    isRecording = true;
+                    updateMicUI();
+                };
+                recognition.onresult = (e) => {
+                    let final = '';
+                    for(let i=e.resultIndex; i<e.results.length; ++i) {
+                        if(e.results[i].isFinal) final += e.results[i][0].transcript;
+                    }
+                    if(final) {
+                        const inp = document.getElementById('answerInput');
+                        inp.value += (inp.value ? ' ' : '') + final;
+                        checkInput();
+                    }
+                };
+                recognition.onerror = (e) => {
+                    if(e.error === 'not-allowed') {
+                        isRecording = false;
+                        updateMicUI();
+                    }
+                };
+                recognition.onend = () => {
+                    isRecording = false;
+                    updateMicUI();
+                }
+            }
+
+            try {
+                const res = await api.request('/interview/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ type })
+                });
+                messages = res.data.history || [];
+                renderMessages();
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('sessionContent').classList.remove('hidden');
+                document.getElementById('sessionContent').classList.add('flex');
+
+                timerInterval = setInterval(() => {
+                    sessionTimer++;
+                    document.getElementById('timerDisplay').textContent = formatTimer(sessionTimer);
+                }, 1000);
+
+            } catch(e) {
+                alert('Error starting interview.');
+                window.location.href = 'student-interview-setup.html';
+            }
+        });
+
+        function formatTimer(s) {
+            const m = Math.floor(s/60);
+            const rs = s%60;
+            return `${m.toString().padStart(2,'0')}:${rs.toString().padStart(2,'0')}`;
+        }
+
+        function updateMicUI() {
+            const btn = document.getElementById('micBtn');
+            const icon = document.getElementById('micIcon');
+            if(isRecording) {
+                btn.classList.add('bg-rose-500', 'border-rose-500', 'text-white', 'animate-pulse');
+                btn.classList.remove('border-slate-200', 'text-slate-500');
+                icon.setAttribute('data-lucide', 'mic-off');
+                document.getElementById('answerInput').placeholder = 'Listening... Speak now';
+            } else {
+                btn.classList.remove('bg-rose-500', 'border-rose-500', 'text-white', 'animate-pulse');
+                btn.classList.add('border-slate-200', 'text-slate-500');
+                icon.setAttribute('data-lucide', 'mic');
+                document.getElementById('answerInput').placeholder = 'Type your interview response here...';
+            }
+            lucide.createIcons();
+        }
+
+        function toggleMic() {
+            if(!recognition) { alert('Speech not supported'); return; }
+            if(isRecording) recognition.stop();
+            else recognition.start();
+        }
+
+        function renderMessages() {
+            const box = document.getElementById('chatBox');
+            box.innerHTML = messages.map(msg => {
+                const isBot = msg.role === 'assistant';
+                if(isBot) {
+                    return `
+                    <div class="flex gap-3 max-w-[80%] self-start">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4"></i>
+                        </div>
+                        <div class="p-4 rounded-2xl text-xs font-semibold leading-relaxed bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800/80 text-slate-800 dark:text-slate-200 shadow-sm">
+                            ${msg.content}
+                        </div>
+                    </div>`;
+                } else {
+                    return `
+                    <div class="flex gap-3 max-w-[80%] self-end flex-row-reverse ml-auto">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shrink-0">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                        <div class="p-4 rounded-2xl text-xs font-semibold leading-relaxed bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/10">
+                            ${msg.content}
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+            lucide.createIcons();
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function checkInput() {
+            const val = document.getElementById('answerInput').value.trim();
+            document.getElementById('sendBtn').disabled = !val;
+        }
+
+        document.getElementById('answerInput').addEventListener('input', checkInput);
+
+        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inp = document.getElementById('answerInput');
+            const answer = inp.value.trim();
+            if(!answer) return;
+
+            if(isRecording) recognition.stop();
+
+            inp.value = '';
+            checkInput();
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('answerInput').disabled = true;
+
+            const payload = [...messages];
+            messages.push({ role: 'user', content: answer });
+            questionCount++;
+            renderMessages();
+            document.getElementById('aiLoadingIndicator').classList.remove('hidden');
+            
+            document.getElementById('questionCounter').textContent = `Question ${Math.min(questionCount, 5)} of 5`;
+
+            try {
+                const res = await api.request('/interview/answer', {
+                    method: 'POST',
+                    body: JSON.stringify({ history: payload, answer, type })
+                });
+                messages = res.data.history || [];
+                renderMessages();
+            } catch(err) {
+                alert('Error sending answer.');
+            } finally {
+                document.getElementById('aiLoadingIndicator').classList.add('hidden');
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('answerInput').disabled = false;
+                
+                if (questionCount > 5) {
+                    document.getElementById('chatForm').classList.add('hidden');
+                    document.getElementById('completeState').classList.remove('hidden');
+                    document.getElementById('completeState').classList.add('flex');
+                } else {
+                    document.getElementById('answerInput').focus();
+                }
+            }
+        });
+
+        function openEndConfirm() {
+            document.getElementById('endModal').classList.remove('hidden');
+        }
+        function closeEndConfirm() {
+            document.getElementById('endModal').classList.add('hidden');
+        }
+
+        async function submitInterview() {
+            closeEndConfirm();
+            clearInterval(timerInterval);
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('sessionContent').classList.add('hidden');
+            document.getElementById('sessionContent').classList.remove('flex');
+
+            try {
+                const res = await api.request('/interview/end', {
+                    method: 'POST',
+                    body: JSON.stringify({ history: messages, duration: sessionTimer, type })
+                });
+                const record = res.data;
+                window.location.href = `student-interview-result.html?id=${record._id}`;
+            } catch(e) {
+                alert('Error submitting interview.');
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('sessionContent').classList.remove('hidden');
+                document.getElementById('sessionContent').classList.add('flex');
+            }
+        }
+
+    </script>
+</body>
+</html>

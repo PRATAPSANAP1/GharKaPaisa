@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIT_STACK - Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="api.js"></script>
+</head>
+<body class="h-[100dvh] flex flex-col bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
+    
+    <nav class="h-14 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between px-6 z-50 relative">
+        <div class="flex items-center gap-2.5">
+            <img src="../image/logo.jpg" alt="OIT_STACK" class="w-12 h-12 object-cover rounded-lg shadow-sm" />
+            <span class="font-bold text-slate-900 dark:text-white text-lg">OIT_STACK</span>
+        </div>
+        <button onclick="toggleTheme()" class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400">
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+        </button>
+    </nav>
+
+    <div class="flex-1 flex overflow-hidden">
+        <div class="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#2e1065]">
+            <div class="absolute top-20 right-20 w-72 h-72 bg-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
+            <div class="absolute bottom-20 left-20 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s"></div>
+
+            <div class="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white w-full">
+                <div class="flex items-center gap-3 mb-12">
+                    <img src="../image/logo.jpg" alt="OIT_STACK" class="w-14 h-14 object-cover rounded-2xl shadow-lg" />
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">OIT_STACK</h1>
+                        <p class="text-blue-200 text-sm">Your gateway to success</p>
+                    </div>
+                </div>
+
+                <h2 class="text-4xl xl:text-5xl font-extrabold leading-tight mb-6">
+                    Start Your
+                    <span class="block bg-gradient-to-r from-cyan-300 to-yellow-300 bg-clip-text text-transparent">Success Story</span>
+                </h2>
+                <p class="text-blue-100 text-lg mb-10 max-w-md leading-relaxed">
+                    Join thousands of students who are preparing smarter and landing their dream placements.
+                </p>
+                
+                <div class="space-y-4 max-w-sm">
+                    <div class="flex items-center gap-4">
+                        <div id="ind-1" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-blue-600 shadow-lg transition-all">1</div>
+                        <div>
+                            <p id="ind-text-1" class="font-semibold text-sm text-white">Create Account</p>
+                            <p id="ind-desc-1" class="text-xs text-blue-200">Set up your credentials</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div id="ind-2" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white/20 text-white/60 border border-white/20 transition-all">2</div>
+                        <div>
+                            <p id="ind-text-2" class="font-semibold text-sm text-white/50">Complete Profile</p>
+                            <p id="ind-desc-2" class="text-xs text-white/30">Tell us about yourself</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center p-6 sm:p-8 lg:p-12 overflow-y-auto">
+            <div class="w-full max-w-md">
+                
+                <div id="toast" class="hidden fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border"></div>
+
+                <div class="mb-8">
+                    <h2 id="stepTitle" class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Account</h2>
+                    <p id="stepDesc" class="text-slate-500 dark:text-slate-400">Enter your credentials to get started</p>
+                </div>
+
+                <form id="registerForm" class="space-y-5">
+                    
+                    <div id="step1">
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Name</label>
+                            <div class="relative">
+                                <i data-lucide="user" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <input id="name" type="text" placeholder="Enter your full name" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                            </div>
+                            <p id="err-name" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email Address</label>
+                            <div class="relative">
+                                <i data-lucide="mail" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <input id="email" type="email" placeholder="you@example.com" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                            </div>
+                            <p id="err-email" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label>
+                            <div class="relative">
+                                <i data-lucide="lock" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <input id="password" type="password" placeholder="Minimum 6 characters" class="w-full pl-12 pr-12 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                <button type="button" onclick="togglePassword('password', 'eye1')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                                    <i id="eye1" data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <p id="err-password" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Confirm Password</label>
+                            <div class="relative">
+                                <i data-lucide="lock" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <input id="confirmPassword" type="password" placeholder="Re-enter your password" class="w-full pl-12 pr-12 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                <button type="button" onclick="togglePassword('confirmPassword', 'eye2')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600">
+                                    <i id="eye2" data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <p id="err-confirmPassword" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <button type="button" onclick="goToStep2()" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center justify-center gap-2">
+                            <span>Continue</span>
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div id="step2" class="hidden">
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">College Name</label>
+                            <div class="relative">
+                                <i data-lucide="building-2" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <input id="college" type="text" placeholder="e.g. OIT_STACK" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                            </div>
+                            <p id="err-college" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Branch / Department</label>
+                            <div class="relative">
+                                <i data-lucide="git-branch" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <select id="branch" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none">
+                                    <option value="">Select Branch</option>
+                                    <option value="Computer Science & Engineering">Computer Science & Engineering</option>
+                                    <option value="Information Technology">Information Technology</option>
+                                    <option value="Electronics & Communication">Electronics & Communication</option>
+                                    <option value="Electrical Engineering">Electrical Engineering</option>
+                                    <option value="Mechanical Engineering">Mechanical Engineering</option>
+                                    <option value="Civil Engineering">Civil Engineering</option>
+                                    <option value="Chemical Engineering">Chemical Engineering</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <p id="err-branch" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Current Year</label>
+                            <div class="relative">
+                                <i data-lucide="calendar" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+                                <select id="year" class="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none">
+                                    <option value="">Select Year</option>
+                                    <option value="1st Year">1st Year</option>
+                                    <option value="2nd Year">2nd Year</option>
+                                    <option value="3rd Year">3rd Year</option>
+                                    <option value="4th Year">4th Year</option>
+                                </select>
+                            </div>
+                            <p id="err-year" class="mt-1.5 text-sm text-red-500 hidden"></p>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button type="button" onclick="goToStep1()" class="flex-1 py-3.5 px-6 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:border-blue-500 hover:text-blue-600 flex items-center justify-center gap-2">
+                                <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+                            </button>
+                            <button id="submitBtn" type="submit" class="flex-[2] py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-70">
+                                <span id="btnText" class="flex items-center gap-2"><i data-lucide="user-plus" class="w-5 h-5"></i> Create Account</span>
+                                <div id="btnSpinner" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                    Already have an account? 
+                    <a href="login.html" class="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Sign In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed top-4 right-4 z-50 p-4 rounded-xl text-sm font-semibold shadow-lg border ${
+                type === 'success' 
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-800' 
+                : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+            }`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function showError(id, message) {
+            const err = document.getElementById(`err-${id}`);
+            err.textContent = message;
+            err.classList.remove('hidden');
+            document.getElementById(id).classList.add('border-red-500');
+        }
+        function clearError(id) {
+            document.getElementById(`err-${id}`).classList.add('hidden');
+            document.getElementById(id).classList.remove('border-red-500');
+        }
+
+        function goToStep2() {
+            let valid = true;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+
+            ['name', 'email', 'password', 'confirmPassword'].forEach(clearError);
+
+            if (!name) { showError('name', 'Name required'); valid = false; }
+            if (!email || !email.includes('@')) { showError('email', 'Valid email required'); valid = false; }
+            if (password.length < 6) { showError('password', 'Min 6 chars'); valid = false; }
+            if (password !== confirm) { showError('confirmPassword', 'Passwords do not match'); valid = false; }
+
+            if (valid) {
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+                document.getElementById('stepTitle').textContent = 'Complete Profile';
+                document.getElementById('stepDesc').textContent = 'Tell us a bit about your academic background';
+                
+                document.getElementById('ind-2').className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white text-blue-600 shadow-lg transition-all';
+                document.getElementById('ind-text-2').className = 'font-semibold text-sm text-white';
+                document.getElementById('ind-desc-2').className = 'text-xs text-blue-200';
+            }
+        }
+
+        function goToStep1() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('stepTitle').textContent = 'Create Account';
+            document.getElementById('stepDesc').textContent = 'Enter your credentials to get started';
+            
+            document.getElementById('ind-2').className = 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white/20 text-white/60 border border-white/20 transition-all';
+            document.getElementById('ind-text-2').className = 'font-semibold text-sm text-white/50';
+            document.getElementById('ind-desc-2').className = 'text-xs text-white/30';
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let valid = true;
+            ['college', 'branch', 'year'].forEach(clearError);
+
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                college: document.getElementById('college').value,
+                branch: document.getElementById('branch').value,
+                year: document.getElementById('year').value,
+            };
+
+            if (!formData.college) { showError('college', 'Required'); valid = false; }
+            if (!formData.branch) { showError('branch', 'Required'); valid = false; }
+            if (!formData.year) { showError('year', 'Required'); valid = false; }
+
+            if (!valid) return;
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('btnSpinner').classList.remove('hidden');
+
+            try {
+                const res = await api.auth.register(formData);
+                api.setToken(res.data.token);
+                showToast('Account created successfully!');
+                setTimeout(() => window.location.href = 'student-dashboard.html', 1000);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false;
+                document.getElementById('btnText').classList.remove('hidden');
+                document.getElementById('btnSpinner').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

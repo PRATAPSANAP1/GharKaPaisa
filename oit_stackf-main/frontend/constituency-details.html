@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constituency Details | OIT_Stack</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css?v=light-theme">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+</head>
+
+<body>
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+
+    <header>
+        <div class="container navbar">
+            <a href="index.html" class="logo"
+                style="display:flex; align-items:center; gap:0.75rem; text-decoration:none;">
+                <img src="assets/Logo2.png" alt="OIT_Stack"
+                    style="height:45px; width:45px; object-fit:cover; border-radius:50%; box-shadow:0 0 10px rgba(0,191,255,0.5);">
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <span class="logo-text" style="line-height:1; margin-bottom:2px;">OIT_Stack</span>
+                    <span
+                        style="font-size:0.65rem; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">OnYX
+                        Integrated Tech Stack</span>
+                </div>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+            <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+        </div>
+    </header>
+
+    <section class="page-header"
+        style="background: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop') center/cover; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.85); z-index:0;">
+        </div>
+        <div class="container animate-on-scroll" style="position:relative; z-index:1;">
+            <h1 id="constituency-title">Constituency Data</h1>
+            <p style="font-size:1.25rem; color:rgba(255,255,255,0.9); max-width:600px; margin:0 auto;">Candidate
+                statistics for <span id="constituency-subtitle">Constituency</span></p>
+        </div>
+    </section>
+
+    <section>
+        <div class="container animate-on-scroll">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: -2rem; position: relative; z-index: 2;">
+                <button id="insightsBtn" class="btn btn-primary">Insights</button>
+            </div>
+            <h2 style="text-align:center; color:var(--primary); margin-bottom:1rem;">Candidate Performance Data</h2>
+            <p style="text-align:center; max-width:700px; margin:0 auto 3rem;">View comprehensive polling breakdown for
+                each candidate corresponding to this specific area.</p>
+
+            <!-- Table container where the JavaScript will insert data -->
+            <div class="record-year-box">
+                <h3 id="recordYearTitle2009">2009 Election Records</h3>
+            </div>
+            <div id="candidateTableContainer2009" class="table-container">
+                <p>Loading 2009 candidate details...</p>
+            </div>
+
+            <div class="record-year-box">
+                <h3 id="recordYearTitle2014">2014 Election Records</h3>
+            </div>
+            <div id="candidateTableContainer2014" class="table-container">
+                <p>Loading 2014 candidate details...</p>
+            </div>
+
+            <div class="record-year-box">
+                <h3 id="recordYearTitle2019">2019 Election Records</h3>
+            </div>
+            <div id="candidateTableContainer2019" class="table-container">
+                <p>Loading 2019 candidate details...</p>
+            </div>
+
+            <div class="record-year-box">
+                <h3 id="recordYearTitle2024">2024 Election Records</h3>
+            </div>
+            <div id="candidateTableContainer2024" class="table-container">
+                <p>Loading 2024 candidate details...</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 4rem;">
+                <a href="javascript:history.back()" class="btn"
+                    style="background:#f1f5f9; color:var(--text-main); text-decoration:none;">← Back
+                    to Constituencies</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Insights Modal -->
+    <div id="insightsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Election Performance Insights</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="charts-grid">
+                    <div class="chart-box">
+                        <h3>2009 Distribution</h3>
+                        <canvas id="chart2009"></canvas>
+                    </div>
+                    <div class="chart-box large-chart">
+                        <h3>2014 Distribution</h3>
+                        <canvas id="chart2014"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h3>2019 Distribution</h3>
+                        <canvas id="chart2019"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h3>2024 Distribution</h3>
+                        <canvas id="chart2024"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-about">
+                    <a href="index.html" class="logo" style="color:white;">
+                        <i class="fa-solid fa-cube logo-icon" style="color:var(--accent);"></i>
+                        <span class="logo-text" style="color:white;">OIT_STACK</span>
+                    </a>
+                    <p>OnYX Integrated Tech Stack providing cutting edge strategies for business and political entities
+                        globally.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">&copy; 2026 OIT_STACK - OnYX Integrated Tech Stack. All Rights Reserved.</div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Extract the 'id' and 'name' from the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const constituencyId = urlParams.get('id');
+            const constituencyName = urlParams.get('name');
+
+            if (constituencyId) {
+                // Update header titles
+                if (constituencyName) {
+                    document.getElementById('constituency-title').innerText = constituencyName;
+                    document.getElementById('constituency-subtitle').innerText = constituencyName;
+                    document.title = constituencyName + " | OIT_Stack";
+                }
+
+                // Call the existing function from script.js
+                if (typeof loadConstituencyData === 'function') {
+                    await loadConstituencyData(constituencyId);
+
+                    if (urlParams.get('insights') === 'true') {
+                        setTimeout(() => {
+                            const insightsBtn = document.getElementById('insightsBtn');
+                            if (insightsBtn) insightsBtn.click();
+                        }, 250);
+                    }
+                } else {
+                    document.getElementById('candidateTableContainer').innerHTML = "<p style='color:red;'>Error: Could not load the data fetcher.</p>";
+                }
+            } else {
+                document.getElementById('candidateTableContainer').innerHTML = "<p style='color:red;'>No constituency specified. Please go back and select one.</p>";
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student - AI Interview Result</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="api.js"></script>
+</head>
+<body class="bg-slate-50 dark:bg-[#0a0f1e] text-slate-900 dark:text-white font-sans overflow-hidden">
+    
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 dark:bg-[#0d1117] border-r border-slate-800/60 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+            <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800/60">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <i data-lucide="graduation-cap" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-sm leading-none">OIT_STACK</h1>
+                        <p class="text-[10px] text-slate-500 font-medium mt-0.5">Student Portal</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-0.5">
+                <a href="student-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i> Dashboard
+                </a>
+                <a href="student-tests.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i> Placement Tests
+                </a>
+                <a href="student-coding.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="code" class="w-4 h-4 shrink-0"></i> Coding Challenges
+                </a>
+                <a href="student-interview-setup.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium bg-blue-500/15 text-blue-400 border border-blue-500/20">
+                    <i data-lucide="mic" class="w-4 h-4 shrink-0 text-blue-400"></i> AI Interview
+                </a>
+                <a href="student-leaderboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="trophy" class="w-4 h-4 shrink-0"></i> Leaderboard
+                </a>
+                <a href="student-profile.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800/60 hover:text-slate-200">
+                    <i data-lucide="user" class="w-4 h-4 shrink-0"></i> Profile
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col min-w-0 h-full">
+            <header class="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between px-4 lg:px-6 shrink-0 z-20">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i data-lucide="menu" class="w-5 h-5 text-slate-600 dark:text-slate-400"></i>
+                    </button>
+                    <h2 class="font-bold text-lg hidden sm:block">AI Interview Results</h2>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="toggleTheme()" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                        <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/50 dark:bg-[#0a0f1e]/50">
+                <div id="loader" class="flex justify-center py-12">
+                    <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+
+                <div id="resultContent" class="flex flex-col gap-6 max-w-4xl mx-auto pb-12 hidden">
+                    <div>
+                        <button onclick="window.location.href='student-interview-setup.html'" class="inline-flex items-center text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors">
+                            <i data-lucide="chevron-left" class="w-4 h-4 mr-1.5"></i> Back to AI Interview Setup
+                        </button>
+                    </div>
+
+                    <!-- Hero -->
+                    <div class="bg-gradient-to-br from-indigo-950 to-slate-900 rounded-3xl border-none text-white shadow-xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full translate-x-14 -translate-y-14 blur-xl"></div>
+                        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div class="flex flex-col gap-3 text-center md:text-left">
+                                <span class="px-2 py-1 rounded bg-white/20 text-white text-[10px] font-bold uppercase w-max self-center md:self-start">AI Evaluation Completed</span>
+                                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Mock Interview Results</h1>
+                                <p class="text-slate-300 text-sm max-w-md leading-relaxed">
+                                    You completed a <strong id="typeLabel" class="text-indigo-400 uppercase"></strong> interview round. Here is your aggregated score analysis.
+                                </p>
+                                <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs text-slate-400 mt-2">
+                                    <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5"></i> Duration: <span id="durLabel"></span></span>
+                                    <span>•</span>
+                                    <span class="flex items-center gap-1.5"><i data-lucide="message-square" class="w-3.5 h-3.5"></i> Questions: <span id="qCountLabel"></span></span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="relative w-32 h-32 rounded-full border-[10px] border-white/25 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <span id="overallScore" class="text-3xl font-black">0%</span>
+                                        <p class="text-[9px] text-slate-300 uppercase tracking-widest font-bold mt-0.5">Overall Score</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Sliders -->
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white mb-6">Score Dimensions</h3>
+                            <div class="flex flex-col gap-6" id="scoreBarsContainer">
+                                <!-- JS Inject -->
+                            </div>
+                        </div>
+
+                        <!-- Suggestions -->
+                        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-5 h-5 text-indigo-500"></i> AI Suggestions for Improvement
+                            </h3>
+                            <ul id="feedbackList" class="flex flex-col gap-4 text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed list-none">
+                                <!-- JS Inject -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Transcripts -->
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 dark:text-white mb-4">Interview Transcript Review</h3>
+                        <div id="transcriptList" class="flex flex-col gap-5">
+                            <!-- JS Inject -->
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 items-center justify-center mt-4">
+                        <button onclick="window.location.href='student-interview-setup.html'" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-colors flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Start Another Mock Interview
+                        </button>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = api.getToken();
+            if(!token) { window.location.href='login.html'; return; }
+
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+
+            try {
+                const res = await api.request('/interview/history');
+                const records = res.data || [];
+                let record = records.find(r => r._id === id);
+                
+                // If not found by ID, get the latest one (which is index 0 typically)
+                if(!record && records.length > 0) record = records[0];
+
+                if(!record) {
+                    alert('No interview feedback session found.');
+                    window.location.href='student-interview-setup.html';
+                    return;
+                }
+
+                renderResult(record);
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('resultContent').classList.remove('hidden');
+
+            } catch(e) {
+                console.error(e);
+                alert('Error loading result');
+                window.location.href='student-interview-setup.html';
+            }
+        });
+
+        function renderResult(record) {
+            document.getElementById('typeLabel').textContent = record.type;
+            
+            const dm = Math.floor((record.duration || 0)/60);
+            const ds = (record.duration || 0)%60;
+            document.getElementById('durLabel').textContent = `${dm}m ${ds}s`;
+            
+            document.getElementById('qCountLabel').textContent = `${(record.questions || []).length} asked`;
+
+            const scores = record.scores || { communication: 0, confidence: 0, technical: 0, overall: 0 };
+            const overall = Math.round(scores.overall * 10);
+            document.getElementById('overallScore').textContent = `${overall}%`;
+
+            const scoreBars = [
+                { label: 'Communication Clarity', val: scores.communication || 0, color: 'from-blue-500 to-indigo-500' },
+                { label: 'Confidence & Delivery', val: scores.confidence || 0, color: 'from-indigo-500 to-purple-500' },
+                { label: 'Technical Accuracy / HR Flow', val: scores.technical || 0, color: 'from-purple-500 to-pink-500' },
+            ];
+
+            const sContainer = document.getElementById('scoreBarsContainer');
+            sContainer.innerHTML = scoreBars.map(bar => `
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <span>${bar.label}</span>
+                        <span class="text-slate-800 dark:text-white">${bar.val} / 10</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div class="bg-gradient-to-r ${bar.color} h-full rounded-full" style="width: ${bar.val * 10}%"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            const fList = document.getElementById('feedbackList');
+            fList.innerHTML = (record.feedback || []).map((item, idx) => `
+                <li class="flex gap-2.5 items-start">
+                    <span class="w-5 h-5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">
+                        ${idx + 1}
+                    </span>
+                    <p>${item.replace(/"/g, '&quot;')}</p>
+                </li>
+            `).join('');
+
+            const tList = document.getElementById('transcriptList');
+            tList.innerHTML = (record.questions || []).map((q, idx) => `
+                <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
+                            Q
+                        </div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-white leading-relaxed">
+                            ${q}
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 pl-4 border-l-2 border-slate-100 dark:border-slate-800">
+                        <div class="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
+                            A
+                        </div>
+                        <div class="text-xs font-medium text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                            "${record.answers?.[idx] || 'No answer recorded.'}"
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+    </script>
+</body>
+</html>

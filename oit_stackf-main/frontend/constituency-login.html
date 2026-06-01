@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constituency Login | OIT_Stack</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css?v=light-theme">
+    <style>
+        .login-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gradient-hero);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-section::before,
+        .login-section::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .login-section::before {
+            width: 400px;
+            height: 400px;
+            background: var(--accent);
+            top: -10%;
+            right: -5%;
+        }
+
+        .login-section::after {
+            width: 300px;
+            height: 300px;
+            background: #1D4ED8;
+            bottom: -5%;
+            left: -5%;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-lg);
+            padding: 3.5rem 2.5rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .login-card h2 {
+            color: #ffffff;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-card p {
+            color: var(--text-light);
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .login-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient-accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #ffffff;
+            margin: 0 auto 1.5rem;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .password-field {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-field i {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            transition: var(--transition);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 1.1rem 1.25rem 1.1rem 3.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: #ffffff;
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .login-input:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0, 191, 255, 0.15);
+        }
+
+        .login-input:focus+i {
+            color: var(--accent);
+        }
+
+        .error-message {
+            color: #ff4d4d;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            background: rgba(255, 77, 77, 0.1);
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 77, 77, 0.2);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1.1rem;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loader -->
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+    </div>
+
+    <main class="login-section">
+        <div class="login-card" style="animation: fadeIn 0.8s ease-out forwards;">
+            <div class="login-icon">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 id="constituency-name">Secure Access</h2>
+            <p>Please enter the password for this constituency dashboard.</p>
+
+            <form id="login-form">
+                <div class="password-field">
+                    <input type="password" id="password" class="login-input" placeholder="Enter Password" required>
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div id="error-msg" class="error-message">Invalid password. Please try again.</div>
+                <button type="submit" class="btn btn-primary btn-login">
+                    Access Dashboard <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        // Password Mapping - User can update these as needed
+        const PASSWORDS = {
+            'vadgaon-sheri-dashboard.html': 'VS@208$Pune#10',
+            'kasba-peth-dashboard.html': 'KP@215$Pune#08'
+        };
+
+        const NAMES = {
+            'vadgaon-sheri-dashboard.html': 'Pune-208 Vadgaon Sheri',
+            'kasba-peth-dashboard.html': 'Pune-215 Kasba Peth'
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const target = urlParams.get('target');
+
+        if (!target) {
+            window.location.href = 'service-campaign.html';
+        }
+
+        // Set constituency name if available
+        if (NAMES[target]) {
+            document.getElementById('constituency-name').innerText = NAMES[target];
+        }
+
+        document.getElementById('login-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            if (PASSWORDS[target] === password) {
+                // Successful login - using sessionStorage to "remember" for current session
+                sessionStorage.setItem('access_' + target, 'true');
+                window.location.href = target;
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }
+        });
+
+        // Loader hide
+        const hideLoader = () => {
+            const loader = document.querySelector('.loader-wrapper');
+            if (loader && loader.style.display !== 'none') {
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 500);
+                }, 500);
+            }
+        };
+
+        window.addEventListener('load', hideLoader);
+        // Safety fallback
+        setTimeout(hideLoader, 3000);
+    </script>
+    <script src="script.js"></script>
+</body>
+
+</html>
