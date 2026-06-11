@@ -25,7 +25,7 @@ const Navbar = () => {
        <button onclick="window.location.href='https://yohesa-test-three.vercel.app/dashboard'">
   Employee Login
 </button>
-        <button>Agent Login</button>
+      <button>Agent Login</button>
       </div>
 
       <nav className="navbar">
