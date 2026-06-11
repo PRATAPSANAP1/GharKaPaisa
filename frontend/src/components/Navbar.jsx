@@ -22,7 +22,9 @@ const Navbar = () => {
           <span></span>
         </button>
         <button>Admin Login</button>
-        <button>Employee Login</button>
+       <button onclick="window.location.href='https://yohesa-test-three.vercel.app/dashboard'">
+  Employee Login
+</button>
         <button>Agent Login</button>
       </div>
 
@@ -37,7 +39,7 @@ const Navbar = () => {
 
         <div className="navbar-right">
           <button>Admin Login</button>
-          <button>Employee Login</button>
+          <button href=">Employee Login</button>
           <button>Agent Login</button>
         </div>
 
