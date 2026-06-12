@@ -56,13 +56,11 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
             }} 
           />
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>GharKaPaisa</div>
-          <div style={{ fontSize: "12px", color: C.textLight, marginTop: "4px" }}>Agent Terminal</div>
         </div>
 
         {/* Card */}
         <div style={{ ...S.card, padding: "28px" }}>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>Agent Login</div>
-          <div style={{ fontSize: "13px", color: C.textLight, marginBottom: "24px" }}>Access your agent wallet & tools</div>
+          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "24px" }}>Agent Login</div>
 
           {/* Unified Login Form */}
           <form onSubmit={handleSubmit}>
@@ -112,7 +110,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
                   background: otpSent ? "#fff" : "#f1f3f5",
                   cursor: otpSent ? "text" : "not-allowed"
                 }} 
-                placeholder={otpSent ? "••••••" : "Click Verify Mobile first"} 
+                placeholder="••••••" 
                 maxLength={6}
                 disabled={!otpSent}
                 value={form.otp} 
