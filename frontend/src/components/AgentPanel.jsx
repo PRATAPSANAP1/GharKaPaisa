@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./Agent/AgentIcons";
 import { C, S } from "./Agent/AgentTheme";
+import logo from "../logo.jpeg";
 import AgentLogin from "./Agent/AgentLogin";
 import AgentRegister from "./Agent/AgentRegister";
 import AgentDashboard from "./Agent/AgentDashboard";
@@ -79,17 +80,18 @@ export default function AgentPanel({ onBackToMain }) {
         }}>
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "30px", padding: "0 6px" }}>
-            <div style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
-              background: `linear-gradient(135deg, ${C.teal}, ${C.tealDim})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <Icons.trending size={20} color="#fff" />
-            </div>
+            <img 
+              src={logo} 
+              alt="GharKaPaisa Logo" 
+              style={{ 
+                width: "36px", 
+                height: "36px", 
+                borderRadius: "8px", 
+                objectFit: "contain",
+                background: "#fff",
+                padding: "2px"
+              }} 
+            />
             <div>
               <div style={{ fontSize: "16px", fontWeight: 900 }}>GharKaPaisa</div>
               <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Agent Panel</div>
@@ -174,17 +176,18 @@ export default function AgentPanel({ onBackToMain }) {
           boxSizing: "border-box"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={{
-              width: "30px",
-              height: "30px",
-              borderRadius: "8px",
-              background: `linear-gradient(135deg, ${C.teal}, ${C.tealDim})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <Icons.trending size={16} color="#fff" />
-            </div>
+            <img 
+              src={logo} 
+              alt="GharKaPaisa Logo" 
+              style={{ 
+                width: "30px", 
+                height: "30px", 
+                borderRadius: "6px", 
+                objectFit: "contain",
+                background: "#fff",
+                padding: "2px"
+              }} 
+            />
             <span style={{ fontSize: "15px", fontWeight: 900 }}>GharKaPaisa Agent</span>
           </div>
 
