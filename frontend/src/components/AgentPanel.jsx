@@ -92,7 +92,7 @@ export default function AgentPanel({ onBackToMain }) {
             </div>
             <div>
               <div style={{ fontSize: "16px", fontWeight: 900 }}>GharKaPaisa</div>
-              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Agent Partner Panel</div>
+              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Agent Panel</div>
             </div>
           </div>
 
@@ -185,7 +185,7 @@ export default function AgentPanel({ onBackToMain }) {
             }}>
               <Icons.trending size={16} color="#fff" />
             </div>
-            <span style={{ fontSize: "15px", fontWeight: 900 }}>GharKaPaisa Partner</span>
+            <span style={{ fontSize: "15px", fontWeight: 900 }}>GharKaPaisa Agent</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

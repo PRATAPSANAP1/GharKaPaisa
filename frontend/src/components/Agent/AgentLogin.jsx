@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./AgentIcons";
 import { C, S } from "./AgentTheme";
+import logo from "../../logo.jpeg";
 
 export default function AgentLogin({ onLogin, onRegisterNav }) {
   const [form, setForm] = useState({ mobile: "", password: "", otp: "" });
@@ -42,27 +43,25 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
       <div style={{ width: "100%", maxWidth: "400px" }}>
         {/* Portal Header */}
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
-          <div style={{
-            display: "inline-flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            width: "56px", 
-            height: "56px", 
-            borderRadius: "16px",
-            background: `linear-gradient(135deg, ${C.teal}, ${C.tealDim})`,
-            boxShadow: `0 8px 30px ${C.teal}40`, 
-            marginBottom: "14px",
-            color: "#fff"
-          }}>
-            <Icons.trending size={28} />
-          </div>
+          <img 
+            src={logo} 
+            alt="GharKaPaisa Logo" 
+            style={{ 
+              width: "64px", 
+              height: "64px", 
+              borderRadius: "14px", 
+              objectFit: "contain", 
+              marginBottom: "14px",
+              boxShadow: "0 4px 12px rgba(10,17,40,0.06)" 
+            }} 
+          />
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>GharKaPaisa</div>
-          <div style={{ fontSize: "12px", color: C.textLight, marginTop: "4px" }}>Agent Partner Terminal</div>
+          <div style={{ fontSize: "12px", color: C.textLight, marginTop: "4px" }}>Agent Terminal</div>
         </div>
 
         {/* Card */}
         <div style={{ ...S.card, padding: "28px" }}>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>Partner Login</div>
+          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>Agent Login</div>
           <div style={{ fontSize: "13px", color: C.textLight, marginBottom: "24px" }}>Access your agent wallet & tools</div>
 
           {/* Unified Login Form */}

@@ -113,14 +113,14 @@ export default function AgentDashboard({ agent, onTabChange }) {
       </div>
 
       {/* Quick Actions Grid */}
-      <SectionTitle title="Partner Quick Actions" />
+      <SectionTitle title="Agent Quick Actions" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "14px", marginBottom: "28px" }}>
         {[
           { label: "Submit Lead", icon: <Icons.upload />, color: C.teal, tab: "home" },
           { label: "View Wallet", icon: <Icons.wallet />, color: C.green, tab: "wallet" },
           { label: "Withdraw Cash", icon: <Icons.withdraw />, color: C.goldDim, tab: "wallet" },
           { label: "Active Offers", icon: <Icons.star />, color: C.gold, tab: "home" },
-          { label: "Partner Profile", icon: <Icons.profile />, color: C.navyLight, tab: "profile" },
+          { label: "Agent Profile", icon: <Icons.profile />, color: C.navyLight, tab: "profile" },
         ].map(a => (
           <div 
             key={a.label} 
