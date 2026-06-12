@@ -57,13 +57,11 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
               boxShadow: "0 4px 12px rgba(10,17,40,0.06)" 
             }} 
           />
-          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>GharKaPaisa</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Agent Login</div>
         </div>
 
         {/* Card */}
         <div style={{ ...S.card, padding: "28px" }}>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "24px" }}>Agent Login</div>
-
           {/* Unified Login Form */}
           <form onSubmit={handleSubmit}>
             {/* Mobile Number with Verify Button */}
