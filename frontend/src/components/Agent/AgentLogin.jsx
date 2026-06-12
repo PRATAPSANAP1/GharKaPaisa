@@ -36,7 +36,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
   return (
     <div style={{
       minHeight: "100vh", 
-      background: `linear-gradient(135deg, ${C.navy} 0%, ${C.navyMid} 50%, #152A4A 100%)`,
+      background: C.bg,
       display: "flex", 
       alignItems: "center", 
       justifyContent: "center", 
@@ -60,8 +60,8 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
           }}>
             <Icons.trending size={28} />
           </div>
-          <div style={{ fontSize: "24px", fontWeight: 900, color: "#fff", letterSpacing: "-0.5px" }}>GharKaPaisa</div>
-          <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "4px" }}>Agent Partner Terminal</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>GharKaPaisa</div>
+          <div style={{ fontSize: "12px", color: C.textLight, marginTop: "4px" }}>Agent Partner Terminal</div>
         </div>
 
         {/* Card */}
