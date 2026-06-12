@@ -48,8 +48,8 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
             src={logo} 
             alt="GharKaPaisa Logo" 
             style={{ 
-              width: "64px", 
-              height: "64px", 
+              width: "100%", 
+              height: "auto", 
               borderRadius: "14px", 
               objectFit: "contain", 
               marginBottom: "14px",
