@@ -142,24 +142,31 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
                       type="button" 
                       onClick={handleSendOtp} 
                       disabled={timer > 0}
-                      style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "100px", padding: "0 10px" }}
+                      style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
                     >
-                      {timer > 0 ? `${timer}s` : otpSent ? "Resend" : "Send OTP"}
+                      {timer > 0 ? `${timer}s` : "Verify Mobile"}
                     </button>
                   </div>
                 </div>
-                {otpSent && (
-                  <div style={{ marginBottom: "20px" }}>
-                    <label style={S.label}>Enter 6-Digit OTP</label>
-                    <input 
-                      style={{ ...S.input, textAlign: "center", letterSpacing: "6px", fontSize: "18px", fontWeight: 700 }} 
-                      placeholder="••••••" 
-                      maxLength={6}
-                      value={form.otp} 
-                      onChange={e => setForm({ ...form, otp: e.target.value })} 
-                    />
-                  </div>
-                )}
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={S.label}>Enter 6-Digit OTP</label>
+                  <input 
+                    style={{ 
+                      ...S.input, 
+                      textAlign: "center", 
+                      letterSpacing: "6px", 
+                      fontSize: "18px", 
+                      fontWeight: 700,
+                      background: otpSent ? "#fff" : "#f1f3f5",
+                      cursor: otpSent ? "text" : "not-allowed"
+                    }} 
+                    placeholder={otpSent ? "••••••" : "Click Verify Mobile first"} 
+                    maxLength={6}
+                    disabled={!otpSent}
+                    value={form.otp} 
+                    onChange={e => setForm({ ...form, otp: e.target.value })} 
+                  />
+                </div>
               </>
             )}
 
