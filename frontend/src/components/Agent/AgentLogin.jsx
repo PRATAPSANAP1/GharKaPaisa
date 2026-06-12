@@ -3,8 +3,7 @@ import { Icons } from "./AgentIcons";
 import { C, S } from "./AgentTheme";
 
 export default function AgentLogin({ onLogin, onRegisterNav }) {
-  const [tab, setTab] = useState("pwd");
-  const [form, setForm] = useState({ email: "", password: "", mobile: "", otp: "" });
+  const [form, setForm] = useState({ mobile: "", password: "", otp: "" });
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
 
@@ -24,11 +23,8 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (tab === "pwd" && (!form.email || !form.password)) {
-      return alert("Please enter credentials.");
-    }
-    if (tab === "otp" && (!form.mobile || !form.otp)) {
-      return alert("Please enter mobile and OTP.");
+    if (!form.mobile || !form.password || !form.otp) {
+      return alert("Please fill in your mobile number, password, and OTP code.");
     }
     onLogin({ name: "Rajesh Kumar", id: "AG-00123" });
   };
@@ -69,106 +65,61 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
           <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>Partner Login</div>
           <div style={{ fontSize: "13px", color: C.textLight, marginBottom: "24px" }}>Access your agent wallet & tools</div>
 
-          {/* Login Tabs */}
-          <div style={{
-            display: "flex", 
-            background: C.bg, 
-            borderRadius: "10px", 
-            padding: "4px", 
-            marginBottom: "20px"
-          }}>
-            {["pwd", "otp"].map(t => (
-              <button 
-                key={t} 
-                type="button"
-                onClick={() => { setTab(t); setOtpSent(false); }} 
-                style={{
-                  flex: 1, 
-                  padding: "8px 0", 
-                  borderRadius: "8px", 
-                  border: "none", 
-                  cursor: "pointer",
-                  background: tab === t ? "#fff" : "transparent",
-                  color: tab === t ? C.navy : C.textLight,
-                  fontWeight: tab === t ? 700 : 500, 
-                  fontSize: "13px", 
-                  transition: "all 0.2s",
-                  boxShadow: tab === t ? "0 2px 4px rgba(10,17,40,0.06)" : "none",
-                }}
-              >
-                {t === "pwd" ? "Password" : "OTP Login"}
-              </button>
-            ))}
-          </div>
-
+          {/* Unified Login Form */}
           <form onSubmit={handleSubmit}>
-            {tab === "pwd" ? (
-              <>
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={S.label}>Email or Mobile</label>
-                  <input 
-                    style={S.input} 
-                    placeholder="example@gmail.com"
-                    value={form.email} 
-                    onChange={e => setForm({ ...form, email: e.target.value })} 
-                  />
-                </div>
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={S.label}>Password</label>
-                  <input 
-                    type="password" 
-                    style={S.input} 
-                    placeholder="••••••••"
-                    value={form.password} 
-                    onChange={e => setForm({ ...form, password: e.target.value })} 
-                  />
-                </div>
-                <div style={{ textAlign: "right", marginTop: "-12px", marginBottom: "20px" }}>
-                  <span style={{ fontSize: "12px", color: C.tealDim, cursor: "pointer", fontWeight: 600 }}>Forgot Password?</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={S.label}>Mobile Number</label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input 
-                      style={{ ...S.input, flex: 1 }} 
-                      placeholder="+91 Mobile Number"
-                      value={form.mobile} 
-                      onChange={e => setForm({ ...form, mobile: e.target.value })} 
-                    />
-                    <button 
-                      type="button" 
-                      onClick={handleSendOtp} 
-                      disabled={timer > 0}
-                      style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
-                    >
-                      {timer > 0 ? `${timer}s` : "Verify Mobile"}
-                    </button>
-                  </div>
-                </div>
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={S.label}>Enter 6-Digit OTP</label>
-                  <input 
-                    style={{ 
-                      ...S.input, 
-                      textAlign: "center", 
-                      letterSpacing: "6px", 
-                      fontSize: "18px", 
-                      fontWeight: 700,
-                      background: otpSent ? "#fff" : "#f1f3f5",
-                      cursor: otpSent ? "text" : "not-allowed"
-                    }} 
-                    placeholder={otpSent ? "••••••" : "Click Verify Mobile first"} 
-                    maxLength={6}
-                    disabled={!otpSent}
-                    value={form.otp} 
-                    onChange={e => setForm({ ...form, otp: e.target.value })} 
-                  />
-                </div>
-              </>
-            )}
+            {/* Mobile Number with Verify Button */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={S.label}>Mobile Number</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input 
+                  style={{ ...S.input, flex: 1 }} 
+                  placeholder="+91 Mobile Number"
+                  value={form.mobile} 
+                  onChange={e => setForm({ ...form, mobile: e.target.value })} 
+                />
+                <button 
+                  type="button" 
+                  onClick={handleSendOtp} 
+                  disabled={timer > 0}
+                  style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
+                >
+                  {timer > 0 ? `${timer}s` : "Verify Mobile"}
+                </button>
+              </div>
+            </div>
+
+            {/* Password */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={S.label}>Password</label>
+              <input 
+                type="password" 
+                style={S.input} 
+                placeholder="••••••••"
+                value={form.password} 
+                onChange={e => setForm({ ...form, password: e.target.value })} 
+              />
+            </div>
+
+            {/* OTP Verification */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={S.label}>Enter 6-Digit OTP</label>
+              <input 
+                style={{ 
+                  ...S.input, 
+                  textAlign: "center", 
+                  letterSpacing: "6px", 
+                  fontSize: "18px", 
+                  fontWeight: 700,
+                  background: otpSent ? "#fff" : "#f1f3f5",
+                  cursor: otpSent ? "text" : "not-allowed"
+                }} 
+                placeholder={otpSent ? "••••••" : "Click Verify Mobile first"} 
+                maxLength={6}
+                disabled={!otpSent}
+                value={form.otp} 
+                onChange={e => setForm({ ...form, otp: e.target.value })} 
+              />
+            </div>
 
             <button type="submit" style={{ ...S.btn("primary"), width: "100%", padding: "12px 0", fontSize: "14px", borderRadius: "10px", marginTop: "4px" }}>
               Secure Log In
