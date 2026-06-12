@@ -39,7 +39,7 @@ export default function AgentRegister({ onBack }) {
     if (step < 3) {
       setStep(step + 1);
     } else {
-      alert("Application Submitted Successfully! Our Admin team will review and approve your account within 24 hours.");
+      alert("Next process is coming soon");
       onBack();
     }
   };

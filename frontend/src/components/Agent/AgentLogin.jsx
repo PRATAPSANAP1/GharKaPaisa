@@ -27,7 +27,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
     if (!form.mobile || !form.password || !form.otp) {
       return alert("Please fill in your mobile number, password, and OTP code.");
     }
-    onLogin({ name: "Rajesh Kumar", id: "AG-00123" });
+    alert("Next process is coming soon");
   };
 
   return (
