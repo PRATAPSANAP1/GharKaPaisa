@@ -55,7 +55,6 @@ export default function AgentRegister({ onBack }) {
           </button>
           <div>
             <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Agent Request</div>
-            <div style={{ fontSize: "12px", color: C.textLight, marginTop: "2px" }}>Join the premium network</div>
           </div>
         </div>
 
