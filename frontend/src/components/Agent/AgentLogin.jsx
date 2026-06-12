@@ -108,7 +108,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
                   <label style={S.label}>Email or Mobile</label>
                   <input 
                     style={S.input} 
-                    placeholder="Enter registered email/mobile"
+                    placeholder="example@gmail.com"
                     value={form.email} 
                     onChange={e => setForm({ ...form, email: e.target.value })} 
                   />
