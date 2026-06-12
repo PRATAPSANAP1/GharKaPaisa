@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Navbar.css';
 import logo from '../logo.jpeg';
 
-const Navbar = () => {
+const Navbar = ({ onAgentLoginClick }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleLink = () => {
@@ -37,7 +37,7 @@ const Navbar = () => {
         >
           Employee Login
         </button>
-        <button>Agent Login</button>
+        <button onClick={() => { onAgentLoginClick(); toggleLink(); }}>Agent Login</button>
       </div>
 
       <nav className="navbar">
@@ -66,7 +66,7 @@ const Navbar = () => {
 >
   Employee Login
 </button>
-          <button>Agent Login</button>
+          <button onClick={onAgentLoginClick}>Agent Login</button>
         </div>
 
         <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink}>
