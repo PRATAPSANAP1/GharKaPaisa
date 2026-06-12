@@ -1,12 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icons } from "./AgentIcons";
 import { C, S } from "./AgentTheme";
 
 export default function AgentRegister({ onBack }) {
   const [step, setStep] = useState(0);
+  const [mobile, setMobile] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [timer, setTimer] = useState(0);
   const steps = ["Personal", "Business", "Bank", "KYC"];
 
+  useEffect(() => {
+    let t;
+    if (timer > 0) {
+      t = setTimeout(() => setTimer(timer - 1), 1000);
+    }
+    return () => clearTimeout(t);
+  }, [timer]);
+
+  const handleSendOtp = () => {
+    if (!mobile) return alert("Please enter mobile number.");
+    setOtpSent(true);
+    setTimer(30);
+  };
+
   const handleStepSubmit = () => {
+    if (step === 0) {
+      if (!mobile) {
+        return alert("Please enter mobile number.");
+      }
+      if (!otpSent) {
+        return alert("Please click 'Verify Mobile' to send the OTP.");
+      }
+      if (!otp || otp.length < 6) {
+        return alert("Please enter the 6-digit OTP.");
+      }
+    }
     if (step < 3) {
       setStep(step + 1);
     } else {
@@ -65,11 +94,35 @@ export default function AgentRegister({ onBack }) {
               </div>
               <div>
                 <label style={S.label}>Mobile Number</label>
-                <input style={S.input} />
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input 
+                    style={{ ...S.input, flex: 1 }} 
+                    value={mobile}
+                    onChange={e => setMobile(e.target.value)}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleSendOtp} 
+                    disabled={timer > 0}
+                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
+                  >
+                    {timer > 0 ? `${timer}s` : "Verify Mobile"}
+                  </button>
+                </div>
               </div>
               <div>
                 <label style={S.label}>Verify Mobile (OTP)</label>
-                <input style={S.input} maxLength={6} />
+                <input 
+                  style={{ 
+                    ...S.input,
+                    background: otpSent ? "#fff" : "#f1f3f5",
+                    cursor: otpSent ? "text" : "not-allowed"
+                  }} 
+                  maxLength={6} 
+                  disabled={!otpSent}
+                  value={otp}
+                  onChange={e => setOtp(e.target.value)}
+                />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Email Address</label>
