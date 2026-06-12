@@ -21,11 +21,23 @@ const Navbar = () => {
           <span></span>
           <span></span>
         </button>
-        <button>Admin Login</button>
-       <button onclick="window.location.href='https://yohesa-test-three.vercel.app/dashboard'">
-  Employee Login
-</button>
-      <button>Agent Login</button>
+        <button
+          onClick={() =>
+            window.location.href =
+              'https://yohesa-test-three.vercel.app/dashboard'
+          }
+        >
+          Admin Login
+        </button>
+        <button
+          onClick={() =>
+            window.location.href =
+              'https://yohesa-test-three.vercel.app/dashboard'
+          }
+        >
+          Employee Login
+        </button>
+        <button>Agent Login</button>
       </div>
 
       <nav className="navbar">
