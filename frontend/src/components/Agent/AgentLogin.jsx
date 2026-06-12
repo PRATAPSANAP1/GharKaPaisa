@@ -32,7 +32,8 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
 
   return (
     <div style={{
-      minHeight: "100vh", 
+      height: "100vh", 
+      overflow: "hidden",
       background: C.bg,
       display: "flex", 
       alignItems: "center", 
