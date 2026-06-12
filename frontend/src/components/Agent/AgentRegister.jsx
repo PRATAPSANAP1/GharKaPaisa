@@ -61,27 +61,27 @@ export default function AgentRegister({ onBack }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Agent Name (As on Aadhaar)</label>
-                <input style={S.input} placeholder="Rajesh Kumar" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Mobile Number</label>
-                <input style={S.input} placeholder="+91 98765 43210" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Verify Mobile (OTP)</label>
-                <input style={S.input} placeholder="6-digit OTP" maxLength={6} />
+                <input style={S.input} maxLength={6} />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Email Address</label>
-                <input type="email" style={S.input} placeholder="rajesh@gmail.com" />
+                <input type="email" style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Password</label>
-                <input type="password" style={S.input} placeholder="Create Secure Password" />
+                <input type="password" style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Confirm Password</label>
-                <input type="password" style={S.input} placeholder="Repeat Password" />
+                <input type="password" style={S.input} />
               </div>
             </div>
           )}
@@ -90,15 +90,15 @@ export default function AgentRegister({ onBack }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Current Full Address</label>
-                <input style={S.input} placeholder="Flat, Building, Street" />
+                <input style={S.input} />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Business Location</label>
-                <input style={S.input} placeholder="Office or Shop Address" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Company / Shop Name</label>
-                <input style={S.input} placeholder="Kumar Fin Advisory (Optional)" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Company Type</label>
@@ -111,7 +111,7 @@ export default function AgentRegister({ onBack }) {
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>GST Number (Optional)</label>
-                <input style={S.input} placeholder="27AAPFU0939F1ZV" />
+                <input style={S.input} />
               </div>
             </div>
           )}
@@ -120,19 +120,19 @@ export default function AgentRegister({ onBack }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Bank Name</label>
-                <input style={S.input} placeholder="HDFC Bank, SBI, ICICI" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>Account Number</label>
-                <input style={S.input} placeholder="5010023452132" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>IFSC Code</label>
-                <input style={S.input} placeholder="HDFC0001234" />
+                <input style={S.input} />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Account Holder Name</label>
-                <input style={S.input} placeholder="Rajesh Kumar" />
+                <input style={S.input} />
               </div>
             </div>
           )}
@@ -141,11 +141,11 @@ export default function AgentRegister({ onBack }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <label style={S.label}>Aadhaar Number</label>
-                <input style={S.input} placeholder="•••• •••• •••• 1234" />
+                <input style={S.input} />
               </div>
               <div>
                 <label style={S.label}>PAN Card Number</label>
-                <input style={S.input} placeholder="ABCDE1234F" />
+                <input style={S.input} />
               </div>
 
               {/* Uploads grid */}
