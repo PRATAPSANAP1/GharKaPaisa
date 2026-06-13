@@ -64,9 +64,12 @@ const verifyOTP = async (mobile, otp, purpose = 'login') => {
   const cleanMobile = sanitizeMobile(mobile);
 
   // In dev-bypass mode: accept the magic code
-  if (IS_DEV_BYPASS && otp === DEV_CODE) {
-    logger.warn(`[DEV BYPASS] OTP accepted for ${cleanMobile} (${purpose})`);
-    return true;
+  if (IS_DEV_BYPASS) {
+    if (otp === DEV_CODE) {
+      logger.warn(`[DEV BYPASS] OTP accepted for ${cleanMobile} purpose=${purpose}`);
+      return true;
+    }
+    return false;
   }
 
   if (!twilioClient || !VERIFY_SERVICE_SID) {
@@ -81,7 +84,7 @@ const verifyOTP = async (mobile, otp, purpose = 'login') => {
       .create({ to: cleanMobile, code: otp });
 
     logger.info(`OTP verify for ${cleanMobile}: status=${check.status}, valid=${check.valid}`);
-    return check.status === 'approved';
+    return check.status === 'approved' && check.valid === true;
   } catch (err) {
     logger.error(`Twilio Verify check failed for ${cleanMobile}`, err.message);
     return false;

@@ -63,6 +63,13 @@ const routes = require('./routes/routes');
 const authRoutes = require('./routes/auth.routes');
 const PartnerRoutes = require('./routes/partner.routes');
 
+// Start matured commission releases check
+const { releaseMaturedCommissions } = require('./services/wallet.service');
+releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
+setInterval(() => {
+  releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
+}, 15 * 60 * 1000);
+
 const API = '/api/v1';
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/Partners`, PartnerRoutes);

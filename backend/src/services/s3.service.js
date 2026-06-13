@@ -14,8 +14,19 @@ const s3Client = new S3Client({
 });
 
 const BUCKET = process.env.AWS_S3_BUCKET;
+if (!BUCKET) {
+  logger.error('AWS_S3_BUCKET not configured — file uploads will fail');
+}
+
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+const MIME_MAP = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.pdf': 'application/pdf',
+};
 
 // Multer memory storage (file goes to memory, then we push to S3)
 const storage = multer.memoryStorage();
@@ -44,11 +55,15 @@ const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
-    ContentType: ALLOWED_TYPES.find(t => t.includes(ext.replace('.', ''))) || 'application/octet-stream',
+    ContentType: MIME_MAP[ext.toLowerCase()] || 'application/octet-stream',
     ServerSideEncryption: 'AES256',
   }));
 
-  const url = `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  const region = process.env.AWS_REGION || 'ap-south-1';
+  const url = region === 'us-east-1'
+    ? `https://${BUCKET}.s3.amazonaws.com/${key}`
+    : `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`;
+
   logger.info(`Uploaded to S3: ${key}`);
   return { url, key };
 };

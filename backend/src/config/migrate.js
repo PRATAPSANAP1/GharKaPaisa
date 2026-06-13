@@ -346,6 +346,7 @@ const migrate = async () => {
     )
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_wallet ON wallet_transactions(wallet_id)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS release_at TIMESTAMPTZ`);
 
   // ── Withdrawal Requests ───────────────────────────────────────
   await query(`

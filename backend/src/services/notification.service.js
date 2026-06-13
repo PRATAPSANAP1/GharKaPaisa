@@ -7,15 +7,27 @@ const createNotification = async (userId, title, message, type = 'info', link = 
       `INSERT INTO notifications (user_id, title, message, type, link) VALUES ($1, $2, $3, $4, $5)`,
       [userId, title, message, type, link]
     );
+    return true;
   } catch (err) {
     logger.error('Failed to create notification', err.message);
+    return false;
   }
 };
 
 // Bulk notify (e.g. all Partners)
 const bulkNotify = async (userIds, title, message, type = 'info') => {
-  for (const uid of userIds) {
-    await createNotification(uid, title, message, type);
+  if (!userIds.length) return;
+  try {
+    const values = userIds.map((uid, i) => 
+      `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`
+    ).join(',');
+    const params = userIds.flatMap(uid => [uid, title, message, type, null]);
+    await query(
+      `INSERT INTO notifications (user_id, title, message, type, link) VALUES ${values}`,
+      params
+    );
+  } catch (err) {
+    logger.error('Failed to send bulk notifications', err.message);
   }
 };
 

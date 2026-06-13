@@ -16,6 +16,14 @@ const creditCommission = async (PartnerId, applicationId, amount, description, u
   try {
     await client.query('BEGIN');
 
+    // Guard against duplicate commission credits
+    const { rows: [app] } = await client.query(
+      `SELECT commission_status FROM applications WHERE id = $1`, [applicationId]
+    );
+    if (app && (app.commission_status === 'pending' || app.commission_status === 'approved' || app.commission_status === 'processed')) {
+      throw new Error(`Commission already credited for application ${applicationId}`);
+    }
+
     // Get wallet
     const { rows: [wallet] } = await client.query(
       `SELECT id, pending_amount, available_balance, total_earned FROM wallets WHERE Partner_id = $1 FOR UPDATE`,
@@ -32,10 +40,11 @@ const creditCommission = async (PartnerId, applicationId, amount, description, u
       WHERE Partner_id = $2
     `, [amount, PartnerId]);
 
-    // Log txn
+    // Log txn with release_at timestamp
+    const holdHours = parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48);
     const { rows: [txn] } = await client.query(`
-      INSERT INTO wallet_transactions (wallet_id, application_id, txn_type, amount, status, description, processed_by)
-      VALUES ($1, $2, 'credit', $3, 'pending', $4, $5)
+      INSERT INTO wallet_transactions (wallet_id, application_id, txn_type, amount, status, description, processed_by, release_at)
+      VALUES ($1, $2, 'credit', $3, 'pending', $4, $5, NOW() + INTERVAL '${holdHours} hours')
       RETURNING id
     `, [wallet.id, applicationId, amount, description, userId]);
 
@@ -45,12 +54,6 @@ const creditCommission = async (PartnerId, applicationId, amount, description, u
     `, [amount, applicationId]);
 
     await client.query('COMMIT');
-
-    // Schedule commission approval after hold period (48hrs in production)
-    // In production use a job queue (Bull/BullMQ). Here we auto-approve after timeout.
-    setTimeout(() => releaseCommission(PartnerId, wallet.id, txn.id, amount),
-      parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48) * 3600000
-    );
 
     logger.info(`Commission ₹${amount} credited (pending) to partner ${PartnerId}`);
     return txn;
@@ -85,7 +88,11 @@ const releaseCommission = async (PartnerId, walletId, txnId, amount) => {
 
     // Get user_id for notification
     const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
-    if (Partner) await notify.commissionCredited(Partner.user_id, amount);
+    try {
+      if (Partner) await notify.commissionCredited(Partner.user_id, amount);
+    } catch (notifyErr) {
+      logger.error('Commission notify failed', { error: notifyErr.message });
+    }
     logger.info(`Commission ₹${amount} released to available for partner ${PartnerId}`);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -110,10 +117,9 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
     if (wr.status !== 'pending') throw new Error('Withdrawal already processed');
 
     if (approved) {
-      // Deduct from available balance
+      // Increment total_withdrawn only (available balance is already deducted at request time)
       await client.query(`
         UPDATE wallets SET
-          available_balance = GREATEST(0, available_balance - $1),
           total_withdrawn = total_withdrawn + $1,
           last_updated = NOW()
         WHERE id = $2
@@ -145,9 +151,13 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
     // Notify Partner
     const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [wr.Partner_id]);
     if (Partner) {
-      approved
-        ? await notify.withdrawalApproved(Partner.user_id, wr.amount)
-        : await notify.withdrawalRejected(Partner.user_id, wr.amount, rejectionReason);
+      try {
+        approved
+          ? await notify.withdrawalApproved(Partner.user_id, wr.amount)
+          : await notify.withdrawalRejected(Partner.user_id, wr.amount, rejectionReason);
+      } catch (notifyErr) {
+        logger.error('Withdrawal notify failed', { error: notifyErr.message });
+      }
     }
 
     logger.info(`Withdrawal ${withdrawalId} ${approved ? 'approved' : 'rejected'}`);
@@ -161,12 +171,33 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
   }
 };
 
-// Get full wallet summary for an Partner
+// Get full wallet summary for a Partner
 const getWalletSummary = async (PartnerId) => {
-  const { rows: [wallet] } = await query(
-    `SELECT * FROM wallets WHERE Partner_id = $1`, [PartnerId]
-  );
+  const { rows: [wallet] } = await query(`
+    SELECT id, Partner_id, total_earned, total_withdrawn, pending_amount, available_balance, last_updated
+    FROM wallets WHERE Partner_id = $1
+  `, [PartnerId]);
   return wallet;
 };
 
-module.exports = { ensureWallet, creditCommission, releaseCommission, processWithdrawal, getWalletSummary };
+// Release matured commissions scheduler check
+const releaseMaturedCommissions = async () => {
+  try {
+    const { rows } = await query(`
+      SELECT wt.id, wt.wallet_id, wt.amount, w.Partner_id as partner_id
+      FROM wallet_transactions wt
+      JOIN wallets w ON w.id = wt.wallet_id
+      WHERE wt.status = 'pending' AND wt.txn_type = 'credit' AND wt.release_at <= NOW()
+    `);
+    if (rows.length > 0) {
+      logger.info(`Releasing ${rows.length} matured commission transaction(s)...`);
+      for (const txn of rows) {
+        await releaseCommission(txn.partner_id, txn.wallet_id, txn.id, txn.amount);
+      }
+    }
+  } catch (err) {
+    logger.error('releaseMaturedCommissions failed', { error: err.message });
+  }
+};
+
+module.exports = { ensureWallet, creditCommission, releaseCommission, processWithdrawal, getWalletSummary, releaseMaturedCommissions };
