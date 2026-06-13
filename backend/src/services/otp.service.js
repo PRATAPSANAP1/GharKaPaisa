@@ -81,7 +81,7 @@ const verifyOTP = async (mobile, otp, purpose = 'login') => {
       .create({ to: cleanMobile, code: otp });
 
     logger.info(`OTP verify for ${cleanMobile}: status=${check.status}, valid=${check.valid}`);
-    return check.status === 'approved' && check.valid === true;
+    return check.status === 'approved';
   } catch (err) {
     logger.error(`Twilio Verify check failed for ${cleanMobile}`, err.message);
     return false;

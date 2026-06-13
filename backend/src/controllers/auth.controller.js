@@ -107,6 +107,7 @@ const login = async (req, res, next) => {
 const sendOTPHandler = async (req, res, next) => {
   try {
     const { mobile, purpose = 'login' } = req.body;
+    if (!mobile) return error(res, 'Mobile required', 400);
     // For login, check user exists
     if (purpose === 'login') {
       const { rows: [user] } = await query(`SELECT id FROM users WHERE mobile = $1`, [mobile]);

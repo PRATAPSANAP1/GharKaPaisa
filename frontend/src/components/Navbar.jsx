@@ -28,6 +28,14 @@ const Navbar = ({ onPartnerLoginClick }) => {
               'https://yohesa-test-three.vercel.app/dashboard'
           }
         >
+          Admin Login
+        </button>
+        <button
+          onClick={() =>
+            window.location.href =
+              'https://yohesa-test-three.vercel.app/dashboard'
+          }
+        >
           Employee Login
         </button>
         <button onClick={() => { onPartnerLoginClick(); toggleLink(); }}>Partner Login</button>
@@ -43,6 +51,14 @@ const Navbar = ({ onPartnerLoginClick }) => {
         </div>
 
         <div className="navbar-right">
+          <button
+            onClick={() =>
+              window.location.href =
+                'https://yohesa-test-three.vercel.app/dashboard'
+            }
+          >
+            Admin Login
+          </button>
           <button
             onClick={() =>
               window.location.href =

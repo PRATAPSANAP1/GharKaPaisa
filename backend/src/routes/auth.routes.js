@@ -16,7 +16,8 @@ const loginLimiter = rateLimit({
 const otpLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 3,
-  message: { success: false, message: 'Too many OTP requests. Try again after 5 minutes.' }
+  message: { success: false, message: 'Too many OTP requests. Try again after 5 minutes.' },
+  keyGenerator: (req) => (req.body.mobile || '') + req.ip
 });
 
 router.post('/register',        registerRules,   validate, ctrl.register);
