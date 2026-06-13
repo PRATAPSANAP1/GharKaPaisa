@@ -19,6 +19,7 @@ router.get('/me',       firebaseAuth,                          ctrl.getMe);
 router.post('/register', authLimiter, firebaseAuth, registerRules, validate, ctrl.register);
 router.post('/logout',  firebaseAuth,   ctrl.logout);
 router.post('/lookup',   authLimiter,                           ctrl.lookupUser);
+router.post('/test-recaptcha',                                  ctrl.testRecaptcha);
 
 // Admin-only route to set role
 router.put('/admin/set-role', authLimiter, firebaseAuth, roleCheck('admin', 'super_admin'), ctrl.setRole);

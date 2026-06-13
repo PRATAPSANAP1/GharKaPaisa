@@ -1,6 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
+import partnerService from "../../api/partner.api";
+import walletService from "../../api/wallet.api";
+
+function QuickActionCard({ a, onTabChange, C, S }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={() => { if (onTabChange) onTabChange(a.tab); }}
+      style={{
+        ...S.card,
+        textAlign: "center",
+        cursor: "pointer",
+        padding: "16px 12px",
+        boxSizing: "border-box",
+        borderColor: hov ? a.color : C.border,
+        transform: hov ? "translateY(-3px)" : "none",
+        transition: "all 0.2s"
+      }}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+    >
+      <div style={{
+        width: "44px",
+        height: "44px",
+        borderRadius: "12px",
+        background: `${a.color}18`,
+        color: a.color,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0 auto 10px"
+      }}>{a.icon}</div>
+      <div style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>{a.label}</div>
+    </div>
+  );
+}
 
 function StatCard({ label, value, sub, accent, icon, C, S }) {
   const [hov, setHov] = useState(false);
@@ -31,11 +67,11 @@ function StatCard({ label, value, sub, accent, icon, C, S }) {
 
 function StatusBadge({ status, C, S }) {
   const map = {
-    Approved: [C.green, <Icons.check size={14} />],
-    Rejected: [C.red,   <Icons.x     size={14} />],
-    Pending:  [C.gold,  <Icons.clock size={14} />],
+    approved: [C.green, <Icons.check size={14} />],
+    rejected: [C.red,   <Icons.x     size={14} />],
+    pending:  [C.gold,  <Icons.clock size={14} />],
   };
-  const [color, icon] = map[status] || [C.textLight, null];
+  const [color, icon] = map[status?.toLowerCase()] || [C.textLight, null];
   return <span style={S.tag(color)}>{icon}{status}</span>;
 }
 
@@ -55,16 +91,77 @@ function SectionTitle({ title, sub, action, onActionClick, C, S }) {
   );
 }
 
-const WALLET_STMT = [
-  { app: "APP20260601", name: "Rahul Sharma", product: "HDFC NTB Credit Card", bank: "HDFC",  credit: "₹1,500", date: "12 Jun 2026", status: "Approved" },
-  { app: "APP20260602", name: "Priya Singh",  product: "SBI Personal Loan",    bank: "SBI",   credit: "₹3,500", date: "11 Jun 2026", status: "Approved" },
-  { app: "APP20260603", name: "Amit Patel",   product: "ICICI Credit Card",    bank: "ICICI", credit: "—",      date: "10 Jun 2026", status: "Pending"  },
-  { app: "APP20260604", name: "Sneha Roy",    product: "Axis Home Loan",       bank: "Axis",  credit: "₹4,850", date: "08 Jun 2026", status: "Approved" },
-];
-
 export default function PartnerDashboard({ partner, onTabChange }) {
   const { C } = useTheme();
   const S = makeS(C);
+
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [walletData, setWalletData] = useState(null);
+  const [recentApps, setRecentApps] = useState([]);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id || partner?.PartnerID;
+      if (!partnerId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+      try {
+        if (isMounted) setLoading(true);
+        const [dashRes, wallRes] = await Promise.all([
+          partnerService.getDashboard(partnerId).catch(() => null),
+          walletService.getWallet(partnerId).catch(() => null)
+        ]);
+        if (isMounted) {
+          if (dashRes?.data?.success) {
+            setDashboardData(dashRes.data.data);
+            setRecentApps(dashRes.data.data.recent_applications || []);
+          }
+          if (wallRes?.data?.success) {
+            setWalletData(wallRes.data.data);
+          }
+        }
+      } catch (err) {
+        if (isMounted) setErrorMsg("Something went wrong loading dashboard data.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { isMounted = false; };
+  }, [partner]);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "300px", gap: "12px" }}>
+        <span style={{
+          width: "24px", height: "24px", borderRadius: "50%",
+          border: `3px solid ${C.border}`,
+          borderTop: `3px solid ${C.teal}`,
+          animation: "spin 0.8s linear infinite",
+          display: "inline-block"
+        }} />
+        <div style={{ fontSize: "14px", color: C.textMid, fontWeight: 600 }}>Loading dashboard...</div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Fallbacks
+  const d = dashboardData || {};
+  const w = walletData || {};
+  const walletBalance = w.wallet_balance || "₹0";
+  const approvedAmount = w.approved_amount || "₹0";
+  const withdrawable = w.withdrawable || "₹0";
+  const pendingAmount = w.pending_amount || "₹0";
+
+  const totalSubmissions = d.total_submissions || "0";
+  const approvedCases = d.approved_cases || "0";
+  const earningsPaid = d.earnings_paid || "₹0";
+  const pendingApproval = d.pending_approval || "0";
 
   return (
     <div>
@@ -82,14 +179,14 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "120px", height: "120px", borderRadius: "50%", background: `${C.teal}20` }} />
         <div style={{ position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Welcome back,</div>
-          <div style={{ fontSize: "24px", fontWeight: 900, marginBottom: "20px", letterSpacing: "-0.5px" }}>{partner.name} 👋</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, marginBottom: "20px", letterSpacing: "-0.5px" }}>{partner?.name || "Partner"} 👋</div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             {[
-              { label: "Wallet Balance",   val: "₹38,600"   },
-              { label: "Approved Amount",  val: "₹1,24,800" },
-              { label: "Withdrawable",     val: "₹38,600"   },
-              { label: "Pending Amount",   val: "₹18,200"   },
+              { label: "Wallet Balance",   val: walletBalance   },
+              { label: "Approved Amount",  val: approvedAmount },
+              { label: "Withdrawable",     val: withdrawable   },
+              { label: "Pending Amount",   val: pendingAmount   },
             ].map(s => (
               <div key={s.label} style={{
                 flex: "1 1 120px",
@@ -109,11 +206,22 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
       {/* Main Metrics */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", marginBottom: "24px" }}>
-        <StatCard label="Total Submissions" value="52"       sub="All-time leads"           accent={C.teal}        icon={<Icons.upload size={18} />} C={C} S={S} />
-        <StatCard label="Approved Cases"    value="37"       sub="71% Success Rate"          accent={C.green}       icon={<Icons.check  size={18} />} C={C} S={S} />
-        <StatCard label="Earnings Paid"     value="₹68,000"  sub="Withdrawn directly"        accent={C.gold}        icon={<Icons.wallet size={18} />} C={C} S={S} />
-        <StatCard label="Pending Approval"  value="11"       sub="In verification pipeline"  accent={C.amber}       icon={<Icons.clock  size={18} />} C={C} S={S} />
+        <StatCard label="Total Submissions" value={totalSubmissions}  sub="All-time leads"           accent={C.teal}        icon={<Icons.upload size={18} />} C={C} S={S} />
+        <StatCard label="Approved Cases"    value={approvedCases}     sub="Success Cases"            accent={C.green}       icon={<Icons.check  size={18} />} C={C} S={S} />
+        <StatCard label="Earnings Paid"     value={earningsPaid}      sub="Withdrawn directly"       accent={C.gold}        icon={<Icons.wallet size={18} />} C={C} S={S} />
+        <StatCard label="Pending Approval"  value={pendingApproval}   sub="In verification pipeline" accent={C.amber}       icon={<Icons.clock  size={18} />} C={C} S={S} />
       </div>
+
+      {errorMsg && (
+        <div style={{
+          background: `${C.red}15`, border: `1px solid ${C.red}40`,
+          borderRadius: "10px", padding: "10px 14px",
+          fontSize: "13px", color: C.red,
+          marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+        }}>
+          <Icons.x size={14} /> {errorMsg}
+        </div>
+      )}
 
       {/* Quick Actions Grid */}
       <SectionTitle title="Partner Quick Actions" C={C} S={S} />
@@ -125,32 +233,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           { label: "Active Offers",   icon: <Icons.star    />, color: C.gold,        tab: "home"    },
           { label: "Partner Profile", icon: <Icons.profile />, color: C.primaryDark, tab: "profile" },
         ].map(a => (
-          <div
-            key={a.label}
-            onClick={() => onTabChange(a.tab)}
-            style={{
-              ...S.card,
-              textAlign: "center",
-              cursor: "pointer",
-              padding: "16px 12px",
-              boxSizing: "border-box"
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = a.color; e.currentTarget.style.transform = "translateY(-3px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}
-          >
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "12px",
-              background: `${a.color}18`,
-              color: a.color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 10px"
-            }}>{a.icon}</div>
-            <div style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>{a.label}</div>
-          </div>
+          <QuickActionCard key={a.label} a={a} onTabChange={onTabChange} C={C} S={S} />
         ))}
       </div>
 
@@ -166,13 +249,18 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           />
 
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            {WALLET_STMT.map((row, i) => (
+            {recentApps.length === 0 && (
+              <div style={{ padding: "16px 0", color: C.textLight, fontSize: "13px", textAlign: "center" }}>
+                No recent applications found.
+              </div>
+            )}
+            {recentApps.map((row, i) => (
               <div key={i} style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "12px 0",
-                borderBottom: i < WALLET_STMT.length - 1 ? `1px solid ${C.border}` : "none",
+                borderBottom: i < recentApps.length - 1 ? `1px solid ${C.border}` : "none",
                 flexWrap: "wrap",
                 gap: "8px"
               }}>
@@ -188,14 +276,14 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                     fontWeight: 800,
                     fontSize: "12px",
                     color: C.primary
-                  }}>{row.bank}</div>
+                  }}>{row.bank || row.bank_name || "🏦"}</div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "14px", color: C.text }}>{row.name}</div>
-                    <div style={{ fontSize: "11px", color: C.textLight }}>{row.product} · <b style={{ color: C.textMid }}>{row.app}</b></div>
+                    <div style={{ fontWeight: 700, fontSize: "14px", color: C.text }}>{row.name || row.customer_name || "Unknown"}</div>
+                    <div style={{ fontSize: "11px", color: C.textLight }}>{row.product || row.product_name || "Product"} · <b style={{ color: C.textMid }}>{row.app || row.app_id || row.id || "Lead"}</b></div>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: C.green }}>{row.credit !== "—" ? row.credit : "—"}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: C.green }}>{(row.credit && row.credit !== "—") ? row.credit : (row.credit_amount || "—")}</div>
                   <StatusBadge status={row.status} C={C} S={S} />
                 </div>
               </div>

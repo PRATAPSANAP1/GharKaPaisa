@@ -9,6 +9,7 @@ const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
 const { ensureWallet } = require('../services/wallet.service');
+const { verifyRecaptcha } = require('../services/recaptcha.service');
 const admin = require('../config/firebase');
 
 // ── POST /auth/register ────────────────────────────────────────────────────
@@ -198,10 +199,25 @@ const lookupUser = async (req, res, next) => {
   }
 };
 
+// ── POST /auth/test-recaptcha ───────────────────────────────────────────────
+const testRecaptcha = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) return error(res, 'Token is required', 400);
+
+    const score = await verifyRecaptcha(token, 'LOGIN');
+    
+    return success(res, { score }, `reCAPTCHA verified! Risk score: ${score}`);
+  } catch (err) {
+    return error(res, err.message, 400);
+  }
+};
+
 module.exports = {
   register,
   getMe,
   logout,
   setRole,
-  lookupUser
+  lookupUser,
+  testRecaptcha
 };

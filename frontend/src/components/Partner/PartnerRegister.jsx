@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, registerPartner } from "../../api/auth.api";
+import { sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
 import { auth } from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
 
@@ -26,6 +26,7 @@ export default function PartnerRegister({ onBack }) {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [verifiedMobile, setVerifiedMobile] = useState("");
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -114,6 +115,7 @@ export default function PartnerRegister({ onBack }) {
     try {
       await confirmationResult.confirm(form.otp);
       setPhoneVerified(true);
+      setVerifiedMobile(form.mobile);
       setInfoMsg("Mobile number verified successfully!");
     } catch (e) {
       setErr("Invalid OTP verification code. Please check and try again.");
@@ -126,10 +128,14 @@ export default function PartnerRegister({ onBack }) {
   const validateStep = () => {
     if (step === 0) {
       if (!form.firstName.trim()) return "Please enter your first name.";
+      if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return "First name can only contain letters.";
       if (!form.lastName.trim()) return "Please enter your last name.";
+      if (!/^[a-zA-Z\s]+$/.test(form.lastName.trim())) return "Last name can only contain letters.";
       if (!form.mobile.trim()) return "Please enter your mobile number.";
+      if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return "Please enter a valid 10-digit mobile number.";
       if (!otpSent) return "Please send OTP to verify your mobile number.";
       if (!phoneVerified) return "Please enter the OTP and click verify mobile.";
+      if (form.mobile !== verifiedMobile) return "Mobile number changed after verification. Please verify again.";
       if (!form.email.trim()) return "Please enter your email address.";
       if (!/\S+@\S+\.\S+/.test(form.email)) return "Please enter a valid email address.";
       if (form.password.length < 8) return "Password must be at least 8 characters.";
@@ -140,18 +146,25 @@ export default function PartnerRegister({ onBack }) {
     if (step === 1) {
       if (!form.address.trim()) return "Please enter your current address.";
       if (!form.shopName.trim()) return "Please enter your company/shop name.";
-      if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst)) {
+      if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst.trim())) {
         return "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).";
       }
     }
     if (step === 2) {
       if (!form.bankName.trim()) return "Please enter your bank name.";
       if (!form.accountNumber.trim()) return "Please enter your account number.";
+      if (!/^\d{9,18}$/.test(form.accountNumber.trim())) return "Please enter a valid 9 to 18-digit account number.";
       if (!form.ifsc.trim()) return "Please enter your IFSC code.";
-      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(form.ifsc)) {
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(form.ifsc.trim())) {
         return "Please enter a valid 11-digit IFSC code (e.g. HDFC0001234).";
       }
       if (!form.accountHolderName.trim()) return "Please enter account holder name.";
+    }
+    if (step === 3) {
+      if (!form.aadhaar.trim()) return "Please enter your Aadhaar number.";
+      if (!/^\d{12}$/.test(form.aadhaar.trim())) return "Please enter a valid 12-digit Aadhaar number.";
+      if (!form.pan.trim()) return "Please enter your PAN number.";
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return "Please enter a valid 10-character PAN number.";
     }
     return null;
   };
@@ -167,6 +180,27 @@ export default function PartnerRegister({ onBack }) {
       if (!phoneVerified) {
         return setErr("Please complete mobile verification first.");
       }
+      // Check duplicate email / mobile
+      setLoading(true);
+      try {
+        const lookupMobile = await lookupUser(form.mobile.trim());
+        if (lookupMobile.success && lookupMobile.data) {
+          setLoading(false);
+          return setErr("This mobile number is already registered.");
+        }
+      } catch (e) {
+        // If lookup fails because user not found, that's what we want
+      }
+      try {
+        const lookupEmail = await lookupUser(form.email.trim());
+        if (lookupEmail.success && lookupEmail.data) {
+          setLoading(false);
+          return setErr("This email address is already registered.");
+        }
+      } catch (e) {
+        // Ignored
+      }
+      setLoading(false);
     }
 
     if (step < STEPS.length - 1) {
@@ -177,7 +211,16 @@ export default function PartnerRegister({ onBack }) {
     // Final step — call the API
     setLoading(true);
     try {
-      const res = await registerPartner(form);
+      const normalizedForm = {
+        ...form,
+        gst: form.gst ? form.gst.trim().toUpperCase() : "",
+        pan: form.pan ? form.pan.trim().toUpperCase() : "",
+        ifsc: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        aadhaar: form.aadhaar.trim(),
+      };
+      const res = await registerPartner(normalizedForm);
       if (res.success) {
         setSuccess({ ...res.data, email: form.email });
       } else {
@@ -210,7 +253,7 @@ export default function PartnerRegister({ onBack }) {
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
               <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
-              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code}</div>
+              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code || success.partner_code}</div>
             </div>
             <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
               Go to Login
@@ -441,6 +484,17 @@ export default function PartnerRegister({ onBack }) {
           {/* ── Step 3: KYC — Info Screen ─────────────────────────────────── */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div>
+                  <label style={S.label}>Aadhaar Number</label>
+                  <input {...inputProps("aadhaar")} placeholder="12-digit number" />
+                </div>
+                <div>
+                  <label style={S.label}>PAN Number</label>
+                  <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} placeholder="10-char alphanumeric" />
+                </div>
+              </div>
+
               {/* Header */}
               <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
                 <div style={{

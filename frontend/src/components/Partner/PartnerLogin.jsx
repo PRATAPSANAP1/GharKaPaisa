@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, verifyOtpLogin, loginWithPassword, getMe, lookupUser } from "../../api/auth.api";
-import { saveSession } from "../../api/api";
 import { auth } from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
 import logo from "../../logo.jpeg";
@@ -18,6 +17,16 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
   const [err, setErr] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [resolvedCredentials, setResolvedCredentials] = useState(null);
+  const [otpSentTime, setOtpSentTime] = useState(null);
+  const [otpAttempts, setOtpAttempts] = useState(0);
+
+  // Clear OTP state on input change
+  useEffect(() => {
+    setOtpSent(false);
+    setTimer(0);
+    setConfirmationResult(null);
+    setOtpSentTime(null);
+  }, [form.identity, form.password]);
 
   useEffect(() => {
     let t;
@@ -43,27 +52,27 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
   const handleSendOtp = async () => {
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
     if (!form.password) return setErr("Please enter your password.");
+    
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identity.trim());
+    const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
+    if (!isEmail && !isMobile) return setErr("Please enter a valid email or 10-digit mobile number.");
+
+    if (otpAttempts >= 3) return setErr("Maximum OTP attempts reached for this session. Please try again later.");
+
     setErr("");
     setLoading(l => ({ ...l, otp: true }));
     try {
       // 1. Look up user by email or mobile to get their email and mobile
-      const lookupRes = await lookupUser(form.identity);
+      const lookupRes = await lookupUser(form.identity.trim());
       if (!lookupRes.success || !lookupRes.data) {
-        throw new Error("Account not found. Please register first.");
+        throw new Error("Invalid credentials. Please check your details and try again.");
       }
       const { email, mobile } = lookupRes.data;
       if (!email || !mobile) {
-        throw new Error("Your account is missing email or mobile configuration. Please contact support.");
+        throw new Error("Invalid credentials. Please check your details and try again.");
       }
 
-      // 2. Verify password first by performing Firebase email sign in
-      try {
-        await loginWithPassword(email, form.password);
-      } catch (passErr) {
-        throw new Error(passErr.message || "Incorrect password. Please try again.");
-      }
-
-      // 3. Send OTP to their registered mobile number
+      // 2. Send OTP to their registered mobile number
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           size: 'invisible',
@@ -75,9 +84,11 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       setConfirmationResult(confResult);
       setResolvedCredentials({ email, mobile });
       setOtpSent(true);
+      setOtpSentTime(Date.now());
+      setOtpAttempts(a => a + 1);
       setTimer(30);
     } catch (e) {
-      setErr(e.message || "Failed to send OTP. Please try again.");
+      setErr("Invalid credentials. Please check your details and try again.");
       if (window.recaptchaVerifier) {
         try {
           window.recaptchaVerifier.clear();
@@ -96,22 +107,62 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
     if (!form.password) return setErr("Please enter your password.");
-    if (!otpSent) return setErr("Please verify your password and click 'Send OTP' first.");
+    if (!otpSent) return setErr("Please click 'Send OTP' first.");
     if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    if (!confirmationResult) return setErr("OTP session expired. Please send OTP again.");
+    if (!otpSentTime || Date.now() - otpSentTime > 120000) return setErr("OTP expired. Please send a new one.");
 
     setLoading(l => ({ ...l, login: true }));
     try {
       const result = await verifyOtpLogin(confirmationResult, form.otp);
       if (result.success) {
+        try {
+          await loginWithPassword(resolvedCredentials.email, form.password);
+        } catch (passErr) {
+          auth.signOut();
+          throw new Error("Invalid credentials. Please check your details and try again.");
+        }
         const profile = await getMe(true);
         onLogin(profile);
       } else {
         setErr("OTP verification failed. Please try again.");
       }
     } catch (e) {
-      setErr(e.message || "Invalid OTP or login failed. Please try again.");
+      setErr(e.message || "Invalid credentials. Please check your details and try again.");
     } finally {
       setLoading(l => ({ ...l, login: false }));
+    }
+  };
+
+  // ── TEST reCAPTCHA ENTERPRISE ────────────────────────────────────────────────
+  const handleTestRecaptcha = async (e) => {
+    e.preventDefault();
+    try {
+      setErr("");
+      if (!window.grecaptcha || !window.grecaptcha.enterprise) {
+        return setErr("reCAPTCHA script not loaded yet.");
+      }
+      
+      window.grecaptcha.enterprise.ready(async () => {
+        try {
+          const token = await window.grecaptcha.enterprise.execute('6LcKdR0tAAAAADPWJWea62b4RcXG8hclvJN2Nr6q', {action: 'LOGIN'});
+          const response = await fetch("http://localhost:5000/api/auth/test-recaptcha", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+          });
+          const data = await response.json();
+          if (data.success) {
+            alert(`✅ reCAPTCHA Enterprise Verification Success!\n\nRisk Score: ${data.data.score}\n(1.0 is very safe, 0.0 is bot)`);
+          } else {
+            alert(`❌ Error: ${data.message}`);
+          }
+        } catch (execErr) {
+          setErr("Failed to execute reCAPTCHA frontend: " + execErr.message);
+        }
+      });
+    } catch (err) {
+      setErr("Failed to trigger reCAPTCHA: " + err.message);
     }
   };
 
@@ -288,6 +339,27 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
             >
               Register
             </span>
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: "24px", paddingTop: "20px", borderTop: `1px solid ${C.border}` }}>
+            <button
+              type="button"
+              onClick={handleTestRecaptcha}
+              style={{
+                ...S.btn("sm"),
+                background: "transparent",
+                color: C.textMid,
+                border: `1.5px solid ${C.border}`,
+                fontSize: "12px",
+                width: "100%",
+                padding: "8px 0"
+              }}
+            >
+              Test reCAPTCHA Enterprise End-to-End
+            </button>
+            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "8px" }}>
+              Click to generate token & verify via custom backend
+            </div>
           </div>
         </div>
       </div>

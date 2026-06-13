@@ -33,51 +33,66 @@ export default function PartnerProfile({ partner, onLogout }) {
     cancelled_cheque: false,
   });
 
-  const partnerId = partner?.Partner_id || partner?.id;
+  const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id || partner?.PartnerID;
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (isMounted = true) => {
     if (!partnerId) {
-      setErrorMsg("Partner ID is missing.");
-      setLoading(false);
+      if (isMounted) {
+        setErrorMsg("Partner ID is missing.");
+        setLoading(false);
+      }
       return;
     }
     try {
-      setLoading(true);
+      if (isMounted) setLoading(true);
       const res = await partnerService.getProfile(partnerId);
-      if (res.data?.success) {
-        setProfile(res.data.data);
-        const kycDocs = res.data.data.kyc_documents || [];
-        const adDoc = kycDocs.find(d => d.doc_type === "aadhaar");
-        const panDoc = kycDocs.find(d => d.doc_type === "pan");
-        setKycForm({
-          aadhaar_number: adDoc?.doc_number || "",
-          pan_number: panDoc?.doc_number || "",
-        });
-        // Reset reupload flags for files that exist
-        const initialReupload = {
-          aadhaar: false,
-          pan: false,
-          gst_cert: false,
-          cancelled_cheque: false,
-        };
-        setReupload(initialReupload);
-      } else {
-        setErrorMsg("Failed to load profile details.");
+      if (isMounted) {
+        if (res.data?.success) {
+          setProfile(res.data.data);
+          const kycDocs = res.data.data.kyc_documents || [];
+          const adDoc = kycDocs.find(d => d.doc_type === "aadhaar");
+          const panDoc = kycDocs.find(d => d.doc_type === "pan");
+          setKycForm({
+            aadhaar_number: adDoc?.doc_number || "",
+            pan_number: panDoc?.doc_number || "",
+          });
+          const initialReupload = {
+            aadhaar: false,
+            pan: false,
+            gst_cert: false,
+            cancelled_cheque: false,
+          };
+          setReupload(initialReupload);
+        } else {
+          setErrorMsg("Failed to load profile details.");
+        }
       }
     } catch (err) {
-      setErrorMsg(err.message || "Failed to retrieve profile.");
+      if (isMounted) setErrorMsg("Something went wrong. Please try again.");
     } finally {
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProfile();
+    let isMounted = true;
+    fetchProfile(isMounted);
+    return () => { isMounted = false; };
   }, [partnerId]);
 
   const handleFileChange = (field) => (e) => {
     const file = e.target.files[0];
     if (file) {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        setErrorMsg(`Invalid file type for ${field}. Only PDF, JPG, and PNG are allowed.`);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMsg(`File is too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Max size is 5MB.`);
+        return;
+      }
+      setErrorMsg("");
       setFiles(prev => ({ ...prev, [field]: file }));
     }
   };
@@ -94,10 +109,24 @@ export default function PartnerProfile({ partner, onLogout }) {
     const activeFiles = {};
     const activeNumbers = {};
 
+    // Issue 16: Enforce Aadhaar and PAN co-dependence if both are missing
+    const hasAadhaarOnServer = profile?.kyc_documents?.some(d => d.doc_type === "aadhaar");
+    const hasPanOnServer = profile?.kyc_documents?.some(d => d.doc_type === "pan");
+    
+    const needsAadhaar = !hasAadhaarOnServer || reupload.aadhaar;
+    const needsPan = !hasPanOnServer || reupload.pan;
+
+    if (needsAadhaar && needsPan) {
+      if ((files.aadhaar && !files.pan) || (!files.aadhaar && files.pan)) {
+        setErrorMsg("Both Aadhaar and PAN documents must be uploaded together for initial KYC.");
+        return;
+      }
+    }
+
     // Only upload files that are selected
     if (files.aadhaar) {
       activeFiles.aadhaar = files.aadhaar;
-      if (!kycForm.aadhaar_number.trim() || kycForm.aadhaar_number.trim().length !== 12) {
+      if (!/^\d{12}$/.test(kycForm.aadhaar_number.trim())) {
         setErrorMsg("Please enter a valid 12-digit Aadhaar Card number.");
         return;
       }
@@ -106,7 +135,7 @@ export default function PartnerProfile({ partner, onLogout }) {
 
     if (files.pan) {
       activeFiles.pan = files.pan;
-      if (!kycForm.pan_number.trim() || kycForm.pan_number.trim().length !== 10) {
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(kycForm.pan_number.trim())) {
         setErrorMsg("Please enter a valid 10-character PAN Card number.");
         return;
       }
@@ -137,7 +166,7 @@ export default function PartnerProfile({ partner, onLogout }) {
         setErrorMsg(res.data?.message || "KYC upload failed.");
       }
     } catch (err) {
-      setErrorMsg(err.message || "Failed to upload KYC documents.");
+      setErrorMsg("Something went wrong. Please try again.");
     } finally {
       setUploadLoading(false);
     }
@@ -206,7 +235,7 @@ export default function PartnerProfile({ partner, onLogout }) {
       title: "Settlement Bank Account",
       items: [
         ["Recipient Bank Name", profile?.bank_name || "Not Provided"],
-        ["Account Number", profile?.account_number || "Not Provided"],
+        ["Account Number", profile?.account_number ? `XXXXXX${profile.account_number.slice(-4)}` : "Not Provided"],
         ["RTGS / IFSC Code", profile?.ifsc_code || "Not Provided"],
         ["Beneficiary Name", profile?.account_holder_name || "Not Provided"]
       ]
