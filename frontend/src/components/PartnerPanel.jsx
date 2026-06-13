@@ -79,11 +79,17 @@ export default function PartnerPanel({ onBackToMain }) {
     );
   }
 
+  // ── Partner display info ────────────────────────────────────────────────────
+  const partnerName    = partner ? [partner.first_name, partner.last_name].filter(Boolean).join(" ") || partner.mobile || "Partner" : "Partner";
+  const partnerCode    = partner?.Partner_code || "";
+  const partnerInitials = partnerName.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "P";
+  const partnerId      = partner?.Partner_id || partner?.id || "";
+
   const views = {
-    dashboard: () => <PartnerDashboard partner={partner} onTabChange={setPage} />,
-    home: () => <PartnerOffers />,
-    wallet: () => <PartnerWallet partnerId={partner?.Partner_id || partner?.id} />,
-    profile: () => <PartnerProfile partner={partner} onLogout={handleLogout} />
+    dashboard: () => <PartnerDashboard partner={{ name: partnerName, id: partnerCode, ...partner }} onTabChange={setPage} />,
+    home:      () => <PartnerOffers />,
+    wallet:    () => <PartnerWallet partnerId={partnerId} />,
+    profile:   () => <PartnerProfile partner={{ name: partnerName, id: partnerCode, ...partner }} onLogout={handleLogout} />,
   };
 
   const RenderComp = views[page] || views.dashboard;
@@ -171,14 +177,14 @@ export default function PartnerPanel({ onBackToMain }) {
           {/* Small Partner Summary Card at footer */}
           <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "12px", padding: "12px", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>RK</div>
+              <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>{partnerInitials}</div>
               <div>
-                <div style={{ fontSize: "12px", fontWeight: 700 }}>Rajesh Kumar</div>
-                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>AG-00123</div>
+                <div style={{ fontSize: "12px", fontWeight: 700 }}>{partnerName}</div>
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>{partnerCode}</div>
               </div>
             </div>
             <button
-              onClick={() => { setAuth("login"); onBackToMain(); }}
+              onClick={handleLogout}
               style={{
                 width: "100%",
                 padding: "6px 0",
@@ -235,7 +241,7 @@ export default function PartnerPanel({ onBackToMain }) {
               onClick={() => setPage("profile")}
               style={{ width: "30px", height: "30px", borderRadius: "50%", background: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
             >
-              RK
+              {partnerInitials}
             </div>
           </div>
         </div>

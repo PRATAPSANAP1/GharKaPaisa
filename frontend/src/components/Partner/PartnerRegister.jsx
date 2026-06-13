@@ -3,7 +3,7 @@ import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, registerPartner } from "../../api/auth.api";
 import { auth } from "../../config/firebase";
-import { RecaptchaVerifier, EmailAuthProvider, linkWithCredential, sendEmailVerification } from "firebase/auth";
+import { RecaptchaVerifier } from "firebase/auth";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -26,9 +26,6 @@ export default function PartnerRegister({ onBack }) {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [emailLoading, setEmailLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -125,56 +122,6 @@ export default function PartnerRegister({ onBack }) {
     }
   };
 
-  // ── Email Verification Link Send ───────────────────────────────────────────
-  const handleSendEmailVerification = async () => {
-    if (!form.email.trim()) return setErr("Please enter your email address.");
-    if (form.password.length < 8) return setErr("Password must be at least 8 characters.");
-    if (form.password !== form.confirmPassword) return setErr("Passwords do not match.");
-    if (!auth.currentUser) return setErr("Please verify your mobile number first.");
-
-    setErr("");
-    setInfoMsg("");
-    setEmailLoading(true);
-    try {
-      const credential = EmailAuthProvider.credential(form.email, form.password);
-      try {
-        await linkWithCredential(auth.currentUser, credential);
-      } catch (linkErr) {
-        if (linkErr.code !== 'auth/provider-already-linked') {
-          throw linkErr;
-        }
-      }
-      await sendEmailVerification(auth.currentUser);
-      setEmailSent(true);
-      setInfoMsg("Verification link sent! Check your inbox.");
-    } catch (e) {
-      setErr(e.message || "Failed to send verification email.");
-    } finally {
-      setEmailLoading(false);
-    }
-  };
-
-  // ── Email Verification Check ────────────────────────────────────────────────
-  const handleConfirmEmailVerified = async () => {
-    if (!auth.currentUser) return setErr("Please verify your mobile number first.");
-    setErr("");
-    setInfoMsg("");
-    setLoading(true);
-    try {
-      await auth.currentUser.reload();
-      if (auth.currentUser.emailVerified) {
-        setEmailVerified(true);
-        setInfoMsg("Email verified successfully!");
-      } else {
-        setErr("Email is not verified yet. Click the link sent to your email, then click confirm.");
-      }
-    } catch (e) {
-      setErr(e.message || "Failed to confirm email verification.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) {
@@ -184,10 +131,11 @@ export default function PartnerRegister({ onBack }) {
       if (!otpSent) return "Please send OTP to verify your mobile number.";
       if (!phoneVerified) return "Please enter the OTP and click verify mobile.";
       if (!form.email.trim()) return "Please enter your email address.";
+      if (!/\S+@\S+\.\S+/.test(form.email)) return "Please enter a valid email address.";
       if (form.password.length < 8) return "Password must be at least 8 characters.";
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password))
+        return "Password must contain uppercase, lowercase and a number.";
       if (form.password !== form.confirmPassword) return "Passwords do not match.";
-      if (!emailSent) return "Please send email verification link.";
-      if (!emailVerified) return "Please click the link in your email and click confirm email verified.";
     }
     if (step === 1) {
       if (!form.address.trim()) return "Please enter your current address.";
@@ -214,10 +162,10 @@ export default function PartnerRegister({ onBack }) {
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // Ensure phone and email verified in Step 0
+    // Ensure phone verified in Step 0
     if (step === 0) {
-      if (!phoneVerified || !emailVerified) {
-        return setErr("Please complete mobile and email verification first.");
+      if (!phoneVerified) {
+        return setErr("Please complete mobile verification first.");
       }
     }
 
@@ -258,24 +206,7 @@ export default function PartnerRegister({ onBack }) {
               Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
             </div>
 
-            {/* Email verification notice (Part 3) */}
-            <div style={{
-              background: `${C.teal}12`,
-              border: `1px solid ${C.teal}30`,
-              borderRadius: "10px",
-              padding: "12px 16px",
-              marginBottom: "20px",
-              display: "flex",
-              gap: "10px",
-              alignItems: "flex-start",
-              textAlign: "left",
-            }}>
-              <span style={{ fontSize: "18px" }}>📧</span>
-              <div style={{ fontSize: "12px", color: C.teal, lineHeight: 1.6 }}>
-                <strong>Verify your email address.</strong><br />
-                A verification link has been sent to <strong>{success.email || "your email"}</strong>. You must verify before logging in with email/password.
-              </div>
-            </div>
+
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
               <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
@@ -434,53 +365,25 @@ export default function PartnerRegister({ onBack }) {
                 </div>
               )}
 
+              {/* Email */}
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Email Address</label>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    type="email"
-                    {...inputProps("email", { flex: 1 })}
-                    style={{ ...S.input, flex: 1 }}
-                    placeholder="name@domain.com"
-                    disabled={emailVerified}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendEmailVerification}
-                    disabled={emailLoading || emailVerified || !phoneVerified}
-                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: (!phoneVerified || emailVerified) ? 0.7 : 1 }}
-                  >
-                    {emailLoading ? "Sending…" : emailSent ? "Resend Link" : "Send Link"}
-                  </button>
-                </div>
-                {emailSent && !emailVerified && (
-                  <div style={{ fontSize: "12px", color: C.teal, marginTop: "6px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <span>📧</span> Verification link sent! Check your inbox, click the link, and click confirm below:
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleConfirmEmailVerified}
-                      style={{ ...S.btn("sm"), width: "160px", background: C.teal, color: "#fff", marginTop: "4px" }}
-                    >
-                      Confirm Verified
-                    </button>
-                  </div>
-                )}
-                {emailVerified && (
-                  <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontWeight: 700 }}>
-                    <Icons.check size={12} /> Email verified successfully!
-                  </div>
-                )}
+                <input
+                  type="email"
+                  {...inputProps("email")}
+                  placeholder="name@domain.com"
+                  autoComplete="email"
+                />
               </div>
 
+              {/* Password */}
               <div>
                 <label style={S.label}>Password</label>
-                <input type="password" {...inputProps("password")} placeholder="At least 8 chars" disabled={emailVerified} />
+                <input type="password" {...inputProps("password")} placeholder="Min 8 chars" autoComplete="new-password" />
               </div>
               <div>
                 <label style={S.label}>Confirm Password</label>
-                <input type="password" {...inputProps("confirmPassword")} placeholder="Confirm password" disabled={emailVerified} />
+                <input type="password" {...inputProps("confirmPassword")} placeholder="Repeat password" autoComplete="new-password" />
               </div>
             </div>
           )}

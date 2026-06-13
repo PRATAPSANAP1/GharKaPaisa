@@ -6,7 +6,7 @@
  */
 const { query, getClient } = require('../config/db');
 const { generatePartnerCode } = require('../utils/helpers');
-const { success, created, error } = require('../utils/response');
+const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
 const { ensureWallet } = require('../services/wallet.service');
 const { logAction } = require('../services/audit.service');
