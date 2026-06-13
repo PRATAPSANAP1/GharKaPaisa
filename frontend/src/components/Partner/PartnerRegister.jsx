@@ -84,8 +84,14 @@ export default function PartnerRegister({ onBack }) {
     setOtpLoading(true);
     try {
       if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-register', {
-          size: 'invisible',
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'normal',
+          callback: (response) => {
+            console.log("reCAPTCHA solved");
+          },
+          'expired-callback': () => {
+            console.log("reCAPTCHA expired");
+          }
         });
       }
 
@@ -292,9 +298,6 @@ export default function PartnerRegister({ onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
-      {/* Invisible reCAPTCHA Container */}
-      <div id="recaptcha-container-register"></div>
-
       <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
 
         {/* Theme toggle */}
@@ -401,6 +404,9 @@ export default function PartnerRegister({ onBack }) {
                   </div>
                 )}
               </div>
+
+              {/* Visible reCAPTCHA Container */}
+              <div id="recaptcha-container" style={{ marginTop: "12px", display: "flex", justifyContent: "center", gridColumn: "1/-1" }}></div>
 
               {otpSent && !phoneVerified && (
                 <div style={{ gridColumn: "1/-1" }}>

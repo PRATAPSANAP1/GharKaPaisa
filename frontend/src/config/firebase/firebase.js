@@ -19,10 +19,7 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Disable reCAPTCHA in development/testing (localhost) to prevent console warnings and ease testing.
-// In production/staging, ensure this is false if verifying real phone numbers.
-if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-  auth.settings.appVerificationDisabledForTesting = true;
-}
+// Force v2 verification mode
+auth.settings.appVerificationDisabledForTesting = false;
 
 export default app;
