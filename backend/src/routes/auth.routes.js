@@ -1,23 +1,18 @@
 /**
- * auth.routes.js
- * ──────────────────────────────────────────────────────────────────────────
- * Firebase Auth is the source of truth for credentials.
- * Backend routes only handle:
- *   GET  /me          — return user + firebase profile
- *   POST /register    — save extra profile data (business/bank) after Firebase signup
- *   POST /logout      — signal logout (Firebase token expires client-side)
- *
- * Legacy routes (login, otp, refresh) are retained as stubs so existing
- * clients don't get 404s during transition.
+ * auth.routes.js — Firebase Auth Only
+ * ─────────────────────────────────────────────────────────────────────────
+ * PHASE 6: Only 3 clean routes remain.
+ *   GET  /me       — verify token + return user profile
+ *   POST /register — save business/bank profile after Firebase signup
+ *   POST /logout   — client-side token cleanup signal
  */
 const express = require('express');
 const router  = express.Router();
 const rateLimit = require('express-rate-limit');
+const firebaseAuth = require('../middleware/firebaseAuth.middleware');
 const ctrl = require('../controllers/auth.controller');
-const { authenticate } = require('../middleware/auth.middleware');
 const { validate, registerRules } = require('../middleware/validation.middleware');
 
-// Rate limiters
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10,
@@ -25,25 +20,14 @@ const registerLimiter = rateLimit({
 });
 
 const meLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 min
+  windowMs: 60 * 1000,
   max: 60,
   message: { success: false, message: 'Too many requests.' }
 });
 
-// ── Primary Routes (Firebase Auth) ────────────────────────────────────────
-// GET /auth/me — called after Firebase login to get full user profile
-router.get('/me', meLimiter, authenticate, ctrl.getMe);
-
-// POST /auth/register — save business/bank profile after Firebase signup
-router.post('/register', registerLimiter, registerRules, validate, ctrl.register);
-
-// POST /auth/logout
-router.post('/logout', authenticate, ctrl.logout);
-
-// ── Legacy stub routes (kept to avoid 404 during transition) ──────────────
-router.post('/login',       ctrl.login);
-router.post('/otp/send',    ctrl.sendOTPHandler);
-router.post('/otp/verify',  ctrl.verifyOTPLogin);
-router.post('/refresh',     ctrl.refreshToken);
+// ── Primary Routes ──────────────────────────────────────────────────────────
+router.get('/me',       meLimiter,      firebaseAuth,                          ctrl.getMe);
+router.post('/register', registerLimiter, firebaseAuth, registerRules, validate, ctrl.register);
+router.post('/logout',  firebaseAuth,   ctrl.logout);
 
 module.exports = router;

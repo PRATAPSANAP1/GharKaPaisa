@@ -1,396 +1,287 @@
+/**
+ * auth.api.js — Firebase Auth (Phase 8 / 9 Final)
+ * ─────────────────────────────────────────────────────────────────────────
+ * ✔ Firebase handles: Email login, Phone OTP login, token management
+ * ✔ Backend handles: Profile storage (PostgreSQL), commission, wallets
+ *
+ * LOGIN FLOW:
+ *  1. User signs in via Firebase (phone OTP or email/password)
+ *  2. Firebase returns an ID token
+ *  3. Frontend sends token to GET /auth/me → backend returns DB profile
+ *  4. Session is stored in sessionStorage
+ */
 import { auth } from '../config/firebase';
-import { 
-  signInWithPhoneNumber, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  linkWithCredential, 
+import {
+  signInWithPhoneNumber,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  linkWithCredential,
   EmailAuthProvider,
   signOut,
   updateProfile,
-  onAuthStateChanged
-} from "firebase/auth";
+  onAuthStateChanged,
+} from 'firebase/auth';
 import api, { saveSession, clearSession } from './api';
 
-// Format Indian phone numbers with +91 if needed
+// ── Utility: format Indian phone numbers ───────────────────────────────────
 export function formatMobile(mobile) {
-  let clean = mobile.replace(/\D/g, '');
-  if (clean.length === 10) {
-    return `+91${clean}`;
-  }
-  if (clean.length === 12 && clean.startsWith('91')) {
-    return `+${clean}`;
-  }
+  const clean = mobile.replace(/\D/g, '');
+  if (clean.length === 10) return `+91${clean}`;
+  if (clean.length === 12 && clean.startsWith('91')) return `+${clean}`;
   return mobile.startsWith('+') ? mobile : `+${mobile}`;
 }
 
-// Dev OTP bypass dummy (retained for backward compatibility but unused with real Firebase)
-export const DEV_BYPASS = false;
-export const DEV_CODE = "";
-
-// Error normalization helper
-function normalizeError(err, defaultMsg = 'An error occurred') {
-  console.error("Firebase Auth/Firestore error:", err);
-  let message = err.message || defaultMsg;
-  if (err.code === 'auth/invalid-phone-number') {
-    message = 'Invalid phone number format. Please enter a valid 10-digit number.';
-  } else if (err.code === 'auth/invalid-verification-code') {
-    message = 'Invalid OTP code. Please check and try again.';
-  } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-    message = 'Invalid credentials. Please verify your email/password or mobile number.';
-  } else if (err.code === 'auth/email-already-in-use') {
-    message = 'This email address is already in use.';
-  } else if (err.code === 'auth/credential-already-in-use') {
-    message = 'This phone number or email is already linked to another account.';
-  } else if (err.code === 'auth/too-many-requests') {
-    message = 'Too many requests. Please try again later.';
-  }
-  return { message, status: 400, raw: err };
+// ── Firebase error → friendly message ─────────────────────────────────────
+function normalizeFirebaseError(err, defaultMsg = 'An error occurred') {
+  const map = {
+    'auth/invalid-phone-number':       'Invalid phone number. Enter a valid 10-digit number.',
+    'auth/invalid-verification-code':  'Invalid OTP. Please check and try again.',
+    'auth/code-expired':               'OTP expired. Please request a new one.',
+    'auth/user-not-found':             'No account found with these credentials.',
+    'auth/wrong-password':             'Incorrect password.',
+    'auth/invalid-credential':         'Invalid credentials. Please try again.',
+    'auth/email-already-in-use':       'This email is already in use.',
+    'auth/credential-already-in-use':  'This phone/email is already linked to another account.',
+    'auth/too-many-requests':          'Too many attempts. Please wait and try again.',
+    'auth/network-request-failed':     'Network error. Check your connection.',
+  };
+  const message = map[err.code] || err.message || defaultMsg;
+  return { message, code: err.code, status: 400, raw: err };
 }
 
-// Cache profile fetches (retained structure)
-let cachedUser = null;
-let lastFetched = 0;
-const USER_CACHE_MS = 5 * 60 * 1000;
+// ── Profile cache ──────────────────────────────────────────────────────────
+let cachedUser    = null;
+let lastFetched   = 0;
+const CACHE_MS    = 5 * 60 * 1000;
 
-// Listen to Firebase auth state changes to synchronize session storage
+// ── Sync Firebase session with backend profile ─────────────────────────────
+// Called automatically on every Firebase auth state change.
 if (typeof window !== 'undefined') {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
+  onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
       try {
-        // Always get a fresh token
-        const idToken = await user.getIdToken(true);
-        // Store token immediately so backend calls can use it
+        const idToken = await firebaseUser.getIdToken(true);
+
+        // Store token immediately (optimistic session)
         saveSession({
-          access_token: idToken,
-          refresh_token: user.refreshToken || idToken,
+          access_token:  idToken,
+          refresh_token: firebaseUser.refreshToken || idToken,
           user: {
-            id: user.uid,
-            email: user.email || '',
-            mobile: user.phoneNumber || '',
-            role: 'Partner',
-            status: 'pending',
-            first_name: '',
-            last_name: '',
+            id:           firebaseUser.uid,
+            email:        firebaseUser.email        || '',
+            mobile:       firebaseUser.phoneNumber  || '',
+            role:         'Partner',
+            status:       'pending',
+            first_name:   '',
+            last_name:    '',
             Partner_code: '',
-            Partner_id: '',
-            kyc_status: 'pending',
-          }
+            Partner_id:   '',
+            kyc_status:   'pending',
+          },
         });
 
-        // Fetch full profile from Express backend
+        // Enrich from Express backend (/auth/me)
         try {
-          const { data: meRes } = await api.get('/auth/me');
-          if (meRes.success && meRes.data) {
-            // Response shape: { user: {...}, firebase: {...} }
-            const p = meRes.data.user || meRes.data;
+          const { data } = await api.get('/auth/me');
+          // Response: { success, user, firebase }
+          if (data.success && data.user) {
+            const p = data.user;
             saveSession({
-              access_token: idToken,
-              refresh_token: user.refreshToken || idToken,
+              access_token:  idToken,
+              refresh_token: firebaseUser.refreshToken || idToken,
               user: {
-                id: p.id || user.uid,
-                email: p.email || user.email || '',
-                mobile: p.mobile || user.phoneNumber || '',
-                role: p.role || 'Partner',
-                status: p.status || 'pending',
-                first_name: p.first_name || '',
-                last_name: p.last_name || '',
+                id:           p.id           || firebaseUser.uid,
+                email:        p.email        || firebaseUser.email  || '',
+                mobile:       p.mobile       || firebaseUser.phoneNumber || '',
+                role:         p.role         || 'Partner',
+                status:       p.status       || 'pending',
+                first_name:   p.first_name   || '',
+                last_name:    p.last_name    || '',
                 Partner_code: p.Partner_code || '',
-                Partner_id: p.Partner_id || '',
-                kyc_status: p.kyc_status || 'pending',
-              }
+                Partner_id:   p.Partner_id   || '',
+                kyc_status:   p.kyc_status   || 'pending',
+              },
             });
           }
         } catch (backendErr) {
-          // Profile not yet registered — acceptable for new registrations
-          console.warn('Backend profile not found for Firebase user (may be registering):', backendErr?.response?.status);
+          // 401 = new user who hasn't registered yet — perfectly normal
+          if (backendErr?.response?.status !== 401) {
+            console.warn('Backend /auth/me error:', backendErr?.response?.status);
+          }
         }
       } catch (err) {
-        console.error("Error loading session on auth state change:", err);
+        console.error('Auth state change error:', err);
       }
     } else {
-      // Clear storage only if we had an active session
-      if (sessionStorage.getItem('gkp_access_token')) {
-        clearSession();
-      }
+      if (sessionStorage.getItem('gkp_access_token')) clearSession();
     }
   });
 }
 
+// ── PHONE OTP — SEND ───────────────────────────────────────────────────────
 /**
- * Send OTP to a mobile number using Firebase Phone Auth.
- * Returns the confirmationResult object.
+ * Send OTP to mobile using Firebase Phone Auth.
+ * @returns {ConfirmationResult} — pass to verifyOtpLogin()
  */
 export async function sendOtp(mobile, appVerifier) {
   try {
     const formatted = formatMobile(mobile);
-    const confirmationResult = await signInWithPhoneNumber(auth, formatted, appVerifier);
-    return confirmationResult;
+    return await signInWithPhoneNumber(auth, formatted, appVerifier);
   } catch (err) {
-    throw normalizeError(err, 'Failed to send OTP. Please try again.');
+    throw normalizeFirebaseError(err, 'Failed to send OTP. Please try again.');
   }
 }
 
+export const sendRegisterOtp = (mobile, appVerifier) => sendOtp(mobile, appVerifier);
+
+// ── PHONE OTP — VERIFY & LOGIN ─────────────────────────────────────────────
 /**
- * Verify OTP login — confirms the OTP code.
+ * Confirm OTP code. Returns Firebase user + ID token.
  */
 export async function verifyOtpLogin(confirmationResult, otp) {
   try {
     const userCredential = await confirmationResult.confirm(otp);
-    const user = userCredential.user;
-    
-    // Retrieve partner profile
-    const profileSnap = await getDoc(doc(db, "partner_profiles", user.uid));
-    let profileData = null;
-    if (profileSnap.exists()) {
-      profileData = profileSnap.data();
-    } else {
-      // Auto-create base profile if not registered yet (e.g. direct OTP sign-in)
-      const partnerCode = `PP-${Math.floor(1000 + Math.random() * 9000)}`;
-      profileData = {
-        id: user.uid,
-        user_id: user.uid,
-        first_name: 'Partner',
-        last_name: '',
-        mobile: user.phoneNumber || '',
-        email: '',
-        role: 'Partner',
-        status: 'pending',
-        kyc_status: 'pending',
-        Partner_code: partnerCode,
-        created_at: new Date().toISOString()
-      };
-      await setDoc(doc(db, "partner_profiles", user.uid), profileData);
-      await setDoc(doc(db, "users", user.uid), {
-        id: user.uid,
-        email: '',
-        mobile: user.phoneNumber || '',
-        role: 'Partner',
-        status: 'pending',
-        created_at: new Date().toISOString()
-      });
-    }
-
+    const user  = userCredential.user;
     const idToken = await user.getIdToken();
-    return {
-      success: true,
-      message: 'Login successful',
-      data: {
-        access_token: idToken,
-        refresh_token: user.refreshToken || idToken,
-        user: {
-          id: user.uid,
-          email: profileData.email || '',
-          mobile: user.phoneNumber || profileData.mobile || '',
-          role: profileData.role || 'Partner',
-          status: profileData.status || 'pending',
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
-          Partner_code: profileData.Partner_code || `PP-${user.uid.slice(0, 5).toUpperCase()}`,
-          Partner_id: user.uid,
-          kyc_status: profileData.kyc_status || 'pending',
-        }
-      }
-    };
+    return { success: true, user, idToken };
   } catch (err) {
-    throw normalizeError(err, 'Invalid OTP or verification failed.');
+    throw normalizeFirebaseError(err, 'Invalid OTP or verification failed.');
   }
 }
 
+// ── EMAIL — LOGIN ──────────────────────────────────────────────────────────
 /**
- * Password-based login.
+ * Sign in with email + password via Firebase.
  */
-export async function loginWithPassword(identifier, password) {
+export async function loginWithPassword(email, password) {
   try {
-    // Firebase auth signInWithEmailAndPassword expects an email address.
-    // If they input a mobile number, we look up the email from Firestore users collection first.
-    let email = identifier;
-    if (!identifier.includes('@')) {
-      const formatted = formatMobile(identifier);
-      // Search email from Firestore
-      // Note: In Firestore, simple field lookups can be done. For simple login, we can do a collection query.
-      // Wait, we can keep the email lookup simple: query users where mobile == formatted
-      // But since users can have a profile, we can fetch their email. Let's do a direct look up if possible,
-      // or simply expect email since username is standard.
-      // We will search for a user document with that mobile.
-      // To simplify, let's check if the identifier is email or phone.
-    }
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    
-    const profileSnap = await getDoc(doc(db, "partner_profiles", user.uid));
-    const profileData = profileSnap.exists() ? profileSnap.data() : {};
-
+    const user    = userCredential.user;
     const idToken = await user.getIdToken();
-    return {
-      success: true,
-      message: 'Login successful',
-      data: {
-        access_token: idToken,
-        refresh_token: user.refreshToken || idToken,
-        user: {
-          id: user.uid,
-          email: user.email || '',
-          mobile: user.phoneNumber || profileData.mobile || '',
-          role: profileData.role || 'Partner',
-          status: profileData.status || 'pending',
-          first_name: profileData.first_name || '',
-          last_name: profileData.last_name || '',
-          Partner_code: profileData.Partner_code || `PP-${user.uid.slice(0, 5).toUpperCase()}`,
-          Partner_id: user.uid,
-          kyc_status: profileData.kyc_status || 'pending',
-        }
-      }
-    };
+    return { success: true, user, idToken };
   } catch (err) {
-    throw normalizeError(err, 'Invalid credentials or login failed.');
+    throw normalizeFirebaseError(err, 'Login failed. Check your credentials.');
   }
 }
 
+// ── REGISTRATION ────────────────────────────────────────────────────────────
 /**
  * Full partner registration.
  * Flow:
- *  1. Firebase Auth: create account (email/pass) or link email to phone-verified account.
- *  2. Get Firebase ID Token.
- *  3. POST to Express backend /auth/register — backend stores profile in PostgreSQL.
+ *  1. Firebase: create account (email/pass) OR link email to phone-verified user
+ *  2. Get ID token
+ *  3. POST to Express /auth/register with business/bank profile data
  */
 export async function registerPartner(formData) {
   try {
     let user = auth.currentUser;
 
     if (!user) {
-      // No phone OTP done — create fresh Firebase account with email/password
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      user = userCredential.user;
+      // No phone OTP step — create fresh Firebase email/password account
+      const cred = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      user = cred.user;
     } else {
       // Phone already verified — link email/password credential
       try {
         const credential = EmailAuthProvider.credential(formData.email, formData.password);
         await linkWithCredential(user, credential);
       } catch (linkErr) {
-        // 'auth/provider-already-linked' is safe to ignore
         if (linkErr.code !== 'auth/provider-already-linked') {
-          console.warn('Linking email/password credential:', linkErr.code);
+          console.warn('Link credential warning:', linkErr.code);
         }
       }
     }
 
-    // Update Firebase display name
     await updateProfile(user, {
-      displayName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
+      displayName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
     });
 
-    // Get fresh ID token
     const idToken = await user.getIdToken(true);
 
-    // POST to Express backend — backend stores everything in PostgreSQL
-    const { data: regRes } = await api.post('/auth/register', {
-      email: formData.email || user.email || '',
-      mobile: formData.mobile ? formData.mobile.replace(/\D/g, '').slice(-10) : (user.phoneNumber || '').replace('+91', ''),
-      first_name: formData.firstName || '',
-      last_name: formData.lastName || '',
-      current_address: formData.address || '',
-      company_name: formData.shopName || '',
-      company_type: formData.companyType || 'proprietorship',
-      gst_number: formData.gst || '',
-      business_location: formData.businessCity || '',
-      bank_name: formData.bankName || '',
-      account_number: formData.accountNumber || '',
-      ifsc_code: formData.ifsc || '',
-      account_holder_name: formData.accountHolderName || '',
+    // POST profile to Express backend
+    const { data } = await api.post('/auth/register', {
+      email:                formData.email        || user.email || '',
+      mobile:               formData.mobile ? formData.mobile.replace(/\D/g, '').slice(-10) : (user.phoneNumber || '').replace('+91', ''),
+      first_name:           formData.firstName    || '',
+      last_name:            formData.lastName     || '',
+      current_address:      formData.address      || '',
+      company_name:         formData.shopName     || '',
+      company_type:         formData.companyType  || 'proprietorship',
+      gst_number:           formData.gst          || '',
+      business_location:    formData.businessCity || '',
+      bank_name:            formData.bankName     || '',
+      account_number:       formData.accountNumber || '',
+      ifsc_code:            formData.ifsc         || '',
+      account_holder_name:  formData.accountHolderName || '',
     }, {
-      headers: { Authorization: `Bearer ${idToken}` }
+      headers: { Authorization: `Bearer ${idToken}` },
     });
 
-    if (!regRes.success) {
-      throw new Error(regRes.message || 'Registration failed on the server');
-    }
+    if (!data.success) throw new Error(data.message || 'Registration failed on server');
 
     return {
       success: true,
-      message: regRes.message || 'Registration successful',
-      data: { Partner_code: regRes.data?.Partner_code }
+      message: data.message || 'Registration successful',
+      data:    { Partner_code: data.data?.Partner_code },
     };
   } catch (err) {
-    // If it's an Axios error, extract the server message
     if (err.response?.data?.message) {
       throw { message: err.response.data.message, status: err.response.status, raw: err };
     }
-    throw normalizeError(err, 'Registration failed. Check your details.');
+    throw normalizeFirebaseError(err, 'Registration failed. Check your details.');
   }
 }
 
+// ── GET ME ─────────────────────────────────────────────────────────────────
 /**
- * Get current user profile from Express backend.
+ * Fetch full profile from Express backend (/auth/me).
+ * Response: { success, user, firebase }
  */
 export async function getMe(bypassCache = false) {
-  const user = auth.currentUser;
-  if (!user) {
-    throw { message: 'Not authenticated', status: 401 };
-  }
-  if (!bypassCache && cachedUser && (Date.now() - lastFetched < USER_CACHE_MS)) {
+  const firebaseUser = auth.currentUser;
+  if (!firebaseUser) throw { message: 'Not authenticated', status: 401 };
+
+  if (!bypassCache && cachedUser && Date.now() - lastFetched < CACHE_MS) {
     return cachedUser;
   }
   try {
-    // Ensure we have a fresh token
-    const idToken = await user.getIdToken();
-    const { data: res } = await api.get('/auth/me', {
-      headers: { Authorization: `Bearer ${idToken}` }
+    const idToken = await firebaseUser.getIdToken();
+    const { data } = await api.get('/auth/me', {
+      headers: { Authorization: `Bearer ${idToken}` },
     });
-    if (!res.success) throw new Error(res.message);
-    // Response shape: { user: {...}, firebase: {...} }
-    const profile = res.data.user || res.data;
-    cachedUser = profile;
-    lastFetched = Date.now();
-    return profile;
+    if (!data.success) throw new Error(data.message);
+    // Return the DB user record (data.user)
+    cachedUser   = data.user;
+    lastFetched  = Date.now();
+    return data.user;
   } catch (err) {
     if (err.response?.data?.message) {
       throw { message: err.response.data.message, status: err.response.status, raw: err };
     }
-    throw normalizeError(err, 'Failed to retrieve profile.');
+    throw normalizeFirebaseError(err, 'Failed to retrieve profile.');
   }
 }
 
-/**
- * Logout.
- */
+// ── LOGOUT ─────────────────────────────────────────────────────────────────
 export async function logout() {
   try {
     await signOut(auth);
-  } catch (err) {
-    // Ignore error to clear local session anyway
+  } catch (_) {
+    // ignore Firebase errors on logout
   } finally {
+    cachedUser  = null;
+    lastFetched = 0;
     clearSession();
   }
 }
 
-/**
- * Send OTP specifically for registration.
- */
-export const sendRegisterOtp = (mobile, appVerifier) => sendOtp(mobile, appVerifier);
-
-/**
- * Change user password.
- */
-export async function changePassword(oldPassword, newPassword) {
-  // Firebase auth has its own password update logic, which requires re-authentication.
-  // To keep it simple, we can link/update, or we can use:
-  // updatePassword(auth.currentUser, newPassword)
-  throw { message: 'Password change not implemented yet.', status: 501 };
-}
-
-/**
- * Resend OTP with cooldown tracking.
- */
+// ── RESEND OTP ─────────────────────────────────────────────────────────────
 export async function resendOtp(mobile, appVerifier) {
   const lastSent = sessionStorage.getItem(`otp_sent_${mobile}`);
   if (lastSent && Date.now() - parseInt(lastSent) < 30000) {
     throw { message: 'Please wait 30 seconds before resending OTP', status: 429 };
   }
-  try {
-    const result = await sendOtp(mobile, appVerifier);
-    sessionStorage.setItem(`otp_sent_${mobile}`, Date.now().toString());
-    return result;
-  } catch (err) {
-    throw normalizeError(err, 'Resending OTP failed.');
-  }
+  const result = await sendOtp(mobile, appVerifier);
+  sessionStorage.setItem(`otp_sent_${mobile}`, Date.now().toString());
+  return result;
 }

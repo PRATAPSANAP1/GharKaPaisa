@@ -66,13 +66,15 @@ const migrate = async () => {
   // Create sequence for Partner code generation
   await query(`CREATE SEQUENCE IF NOT EXISTS partner_code_seq START 1000`);
 
-  // ── Users (all roles) ─────────────────────────────────────────
+  // ── Users (all roles) ─────────────────────────────────────────────────────
+  // firebase_uid is the primary identity — email/mobile may be null for
+  // phone-only or email-only Firebase accounts.
   await query(`
     CREATE TABLE IF NOT EXISTS users (
       id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      email         VARCHAR(255) UNIQUE NOT NULL,
-      mobile        VARCHAR(15) UNIQUE NOT NULL,
-      password_hash VARCHAR(255) NOT NULL,
+      firebase_uid  VARCHAR(255) UNIQUE,
+      email         VARCHAR(255) UNIQUE,
+      mobile        VARCHAR(15)  UNIQUE,
       role          user_role NOT NULL DEFAULT 'Partner',
       status        user_status NOT NULL DEFAULT 'pending',
       created_by    UUID REFERENCES users(id),
@@ -82,12 +84,16 @@ const migrate = async () => {
     )
   `);
 
-  // Remove dead otps table as Twilio Verify is used instead
+  // ── Firebase Auth migration ──────────────────────────────────────────────
+  // Drop legacy OTP table (no longer needed — Firebase handles OTP)
   await query(`DROP TABLE IF EXISTS otps CASCADE`);
 
-  // Add firebase_uid column for Firebase Auth integration
-  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128) UNIQUE`);
+  // Add firebase_uid for Firebase Auth integration (idempotent)
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE`);
   await query(`CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid) WHERE firebase_uid IS NOT NULL`);
+
+  // Drop password_hash — Firebase handles all credentials (idempotent)
+  await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
 
   // ── Partner Profiles ────────────────────────────────────────────
   await query(`

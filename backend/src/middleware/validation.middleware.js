@@ -1,3 +1,9 @@
+/**
+ * validation.middleware.js
+ * ─────────────────────────────────────────────────────────────────────────
+ * Firebase Auth handles all credential validation (OTP, passwords).
+ * Backend only validates business/bank profile fields on registration.
+ */
 const { body, param, query, validationResult } = require('express-validator');
 const { error } = require('../utils/response');
 
@@ -10,12 +16,9 @@ const validate = (req, res, next) => {
   next();
 };
 
-// ── Auth validators ────────────────────────────────────────────
-// registerRules: OTP & password validation is handled client-side by Firebase Auth.
-// Backend validates only business/bank fields.
+// ── Registration: business/bank profile fields ─────────────────────────────
+// Credential validation (email, phone, OTP) is handled by Firebase client-side.
 const registerRules = [
-  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-  body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
@@ -24,7 +27,8 @@ const registerRules = [
   body('ifsc_code').matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
   body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
   body('company_name').trim().notEmpty().withMessage('Company name required'),
-  body('company_type').isIn(['proprietorship','partnership','pvt_ltd','llp','other'])
+  body('company_type')
+    .isIn(['proprietorship', 'partnership', 'pvt_ltd', 'llp', 'other'])
     .withMessage('Valid company type required'),
   body('gst_number').optional()
     .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
@@ -32,22 +36,7 @@ const registerRules = [
   body('business_location').trim().notEmpty().withMessage('Business location required'),
 ];
 
-const loginRules = [
-  body('identifier').trim().notEmpty().withMessage('Email or mobile required'),
-  body('password').notEmpty().withMessage('Password required'),
-];
-
-// OTP send/verify rules retained for legacy compatibility but OTP is now handled by Firebase client-side.
-const otpSendRules = [
-  body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Valid mobile required'),
-];
-
-const otpVerifyRules = [
-  body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Valid mobile required'),
-  body('otp').isLength({ min: 6, max: 6 }).isNumeric().withMessage('Valid 6-digit OTP required'),
-];
-
-// ── Application validators ─────────────────────────────────────
+// ── Application validators ─────────────────────────────────────────────────
 const applicationRules = [
   body('product_id').isUUID().withMessage('Valid product ID required'),
   body('customer.full_name').trim().notEmpty().withMessage('Customer name required'),
@@ -59,12 +48,12 @@ const applicationRules = [
     .isIn(['salaried', 'self_employed', 'business']).withMessage('Invalid employment type'),
 ];
 
-// ── Withdrawal validators ──────────────────────────────────────
+// ── Withdrawal validators ──────────────────────────────────────────────────
 const withdrawalRules = [
   body('amount').isFloat({ min: 100, max: 500000 }).withMessage('Amount must be between ₹100 and ₹5,00,000'),
 ];
 
-// ── Commission structure validators ───────────────────────────
+// ── Commission structure validators ───────────────────────────────────────
 const commissionRules = [
   body('product_id').isUUID().withMessage('Valid product ID required'),
   body('commission_value').isFloat({ min: 0 }).withMessage('Commission value must be positive'),
@@ -82,9 +71,6 @@ const commissionRules = [
 module.exports = {
   validate,
   registerRules,
-  loginRules,
-  otpSendRules,
-  otpVerifyRules,
   applicationRules,
   withdrawalRules,
   commissionRules,
