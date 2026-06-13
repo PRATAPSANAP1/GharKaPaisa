@@ -13,17 +13,29 @@
  */
 import api, { saveSession } from './api';
 
+// ── Dev OTP Bypass ─────────────────────────────────────────────────────────────
+const DEV_BYPASS = import.meta.env.VITE_DEV_OTP_BYPASS === 'true';
+const DEV_CODE   = import.meta.env.VITE_DEV_OTP_CODE || '111111';
+
 // ── OTP ───────────────────────────────────────────────────────────────────────
 
 /**
  * Send OTP to a mobile number.
- * @param {string} mobile   - e.g. "+919876543210" or "9876543210"
+ * In DEV_BYPASS mode: skips the API call — backend will accept DEV_CODE anyway.
+ * @param {string} mobile
  * @param {'login'|'register'} purpose
  */
 export async function sendOtp(mobile, purpose = 'login') {
+  if (DEV_BYPASS) {
+    console.warn(`[DEV] OTP bypass active — use "${DEV_CODE}" for any number`);
+    return { success: true, message: `[DEV] Use OTP: ${DEV_CODE}`, dev: true };
+  }
   const { data } = await api.post('/auth/otp/send', { mobile, purpose });
-  return data; // { success, message, data }
+  return data;
 }
+
+export { DEV_BYPASS, DEV_CODE };
+
 
 /**
  * Verify OTP and login — returns tokens + user profile.

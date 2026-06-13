@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./AgentIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, registerAgent } from "../../api/auth.api";
+import { sendOtp, registerAgent, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -64,6 +64,8 @@ export default function AgentRegister({ onBack }) {
       await sendOtp(form.mobile, "register");
       setOtpSent(true);
       setTimer(30);
+      // Dev bypass: auto-fill magic code
+      if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
       setErr(e.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -161,12 +163,24 @@ export default function AgentRegister({ onBack }) {
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
           <button onClick={onBack} style={{ ...S.btn("ghost"), padding: "6px 8px" }}>
             <Icons.arrowLeft size={18} />
           </button>
           <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Agent Request</div>
         </div>
+
+        {/* Dev mode badge */}
+        {DEV_BYPASS && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            background: "#F59E0B18", border: "1px solid #F59E0B50",
+            borderRadius: "8px", padding: "4px 12px", marginBottom: "16px",
+            fontSize: "11px", fontWeight: 700, color: "#F59E0B"
+          }}>
+            🛠 DEV MODE — OTP auto-fills as <span style={{ fontFamily: "monospace", letterSpacing: "2px" }}>{DEV_CODE}</span>
+          </div>
+        )}
 
         {/* Step Progress Bar */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>

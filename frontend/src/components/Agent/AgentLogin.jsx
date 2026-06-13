@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./AgentIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, verifyOtpLogin } from "../../api/auth.api";
+import { sendOtp, verifyOtpLogin, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
 import logo from "../../logo.jpeg";
 
 export default function AgentLogin({ onLogin, onRegisterNav }) {
@@ -28,6 +28,8 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
       await sendOtp(form.mobile, "login");
       setOtpSent(true);
       setTimer(30);
+      // Dev bypass: auto-fill the magic OTP code
+      if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
       const msg = e.response?.data?.message || "Failed to send OTP. Please try again.";
       setErr(msg);
@@ -97,6 +99,16 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
             }}
           />
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Agent Login</div>
+          {DEV_BYPASS && (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              background: "#F59E0B18", border: "1px solid #F59E0B50",
+              borderRadius: "8px", padding: "4px 12px", marginTop: "8px",
+              fontSize: "11px", fontWeight: 700, color: "#F59E0B", letterSpacing: "0.3px"
+            }}>
+              🛠 DEV MODE — OTP auto-fills as <span style={{ fontFamily: "monospace", letterSpacing: "2px" }}>{DEV_CODE}</span>
+            </div>
+          )}
         </div>
 
         {/* Card */}
