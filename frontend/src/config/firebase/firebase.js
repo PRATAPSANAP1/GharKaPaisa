@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Force v2 verification mode
-auth.settings.appVerificationDisabledForTesting = false;
+// Force v2 verification mode - disabled for testing/mocking
+auth.settings.appVerificationDisabledForTesting = true;
 
 export default app;
