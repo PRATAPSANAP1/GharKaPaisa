@@ -124,7 +124,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
           </form>
 
           <div style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.textLight }}>
-            New GharKaPaisa Agent? <span onClick={onRegisterNav} style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}>Apply Now</span>
+            New GharKaPaisa Agent? <span onClick={onRegisterNav} style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}>Register</span>
           </div>
         </div>
       </div>

@@ -91,7 +91,7 @@ export default function AgentRegister({ onBack }) {
                 <label style={S.label}>Agent Name (As on Aadhaar)</label>
                 <input style={S.input} />
               </div>
-              <div>
+              <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Mobile Number</label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input 
@@ -109,7 +109,7 @@ export default function AgentRegister({ onBack }) {
                   </button>
                 </div>
               </div>
-              <div>
+              <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Verify Mobile (OTP)</label>
                 <input 
                   style={{ 
