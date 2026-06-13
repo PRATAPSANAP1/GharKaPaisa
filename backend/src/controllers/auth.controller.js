@@ -17,6 +17,7 @@ const register = async (req, res, next) => {
       email, mobile, password, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number,
       bank_name, account_number, ifsc_code, account_holder_name,
+      otp, aadhar_url, pan_url, gst_cert_url, cancel_cheque_url,
     } = req.body;
 
     // Check duplicates
@@ -24,6 +25,10 @@ const register = async (req, res, next) => {
       `SELECT id FROM users WHERE email = $1 OR mobile = $2`, [email, mobile]
     );
     if (exist.length) return error(res, 'Email or mobile already registered', 409);
+
+    // Verify OTP
+    const valid = await verifyOTP(mobile, otp, 'register');
+    if (!valid) return error(res, 'Invalid or expired OTP', 401);
 
     // Hash password
     const password_hash = await bcrypt.hash(password, 12);
@@ -40,9 +45,17 @@ const register = async (req, res, next) => {
 
     // Create Partner profile
     const { rows: [Partner] } = await client.query(`
-      INSERT INTO Partner_profiles (user_id, Partner_code, first_name, last_name, current_address, business_location, company_name, company_type, gst_number)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
-    `, [user.id, PartnerCode, first_name, last_name, current_address, business_location, company_name, company_type, gst_number]);
+      INSERT INTO Partner_profiles (
+        user_id, Partner_code, first_name, last_name, current_address, 
+        business_location, company_name, company_type, gst_number,
+        aadhar_url, pan_url, gst_cert_url, cancel_cheque_url
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+    `, [
+      user.id, PartnerCode, first_name, last_name, current_address, 
+      business_location, company_name, company_type, gst_number,
+      aadhar_url || '', pan_url || '', gst_cert_url || '', cancel_cheque_url || ''
+    ]);
 
     // Create bank details
     await client.query(`

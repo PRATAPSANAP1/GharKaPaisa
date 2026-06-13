@@ -101,10 +101,18 @@ const migrate = async () => {
       approved_by       UUID REFERENCES users(id),
       approved_at       TIMESTAMPTZ,
       rejection_reason  TEXT,
+      aadhar_url        VARCHAR(500),
+      pan_url           VARCHAR(500),
+      gst_cert_url      VARCHAR(500),
+      cancel_cheque_url VARCHAR(500),
       created_at        TIMESTAMPTZ DEFAULT NOW(),
       updated_at        TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS aadhar_url VARCHAR(500)`);
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS pan_url VARCHAR(500)`);
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS gst_cert_url VARCHAR(500)`);
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS cancel_cheque_url VARCHAR(500)`);
 
   // ── Partner Bank Details ────────────────────────────────────────
   await query(`

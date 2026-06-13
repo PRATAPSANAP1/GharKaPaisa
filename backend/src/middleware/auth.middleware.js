@@ -68,7 +68,7 @@ const selfOrAdmin = (paramField = 'PartnerId') => {
     const { rows: [Partner] } = await query(
       `SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]
     );
-    if (!Partner || Partner.id !== req.params[paramField]) {
+    if (!Partner || Partner.id.toString() !== req.params[paramField].toString()) {
       return forbidden(res, 'Access denied');
     }
     req.Partner = Partner;
