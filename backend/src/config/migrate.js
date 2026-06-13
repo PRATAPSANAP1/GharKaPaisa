@@ -136,7 +136,7 @@ const migrate = async () => {
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_profiles') THEN
         INSERT INTO Partner_profiles (id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
-        SELECT id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
+        SELECT id, user_id, agent_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
         FROM agent_profiles
         ON CONFLICT (id) DO NOTHING;
         
@@ -150,7 +150,7 @@ const migrate = async () => {
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_bank_details') THEN
         INSERT INTO Partner_bank_details (id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
-        SELECT id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
+        SELECT id, agent_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
         FROM agent_bank_details
         ON CONFLICT (id) DO NOTHING;
         
