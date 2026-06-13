@@ -15,6 +15,7 @@ import {
   signInWithPhoneNumber,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   linkWithCredential,
   EmailAuthProvider,
   signOut,
@@ -44,6 +45,7 @@ function normalizeFirebaseError(err, defaultMsg = 'An error occurred') {
     'auth/credential-already-in-use':  'This phone/email is already linked to another account.',
     'auth/too-many-requests':          'Too many attempts. Please wait and try again.',
     'auth/network-request-failed':     'Network error. Check your connection.',
+    'auth/email-not-verified':         'Please verify your email before logging in. Check your inbox.',
   };
   const message = map[err.code] || err.message || defaultMsg;
   return { message, code: err.code, status: 400, raw: err };
@@ -152,14 +154,29 @@ export async function verifyOtpLogin(confirmationResult, otp) {
 // ── EMAIL — LOGIN ──────────────────────────────────────────────────────────
 /**
  * Sign in with email + password via Firebase.
+ * Part 3: Checks emailVerified before returning — unverified users get
+ * a resend prompt instead of a broken session.
  */
 export async function loginWithPassword(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user    = userCredential.user;
+    const user = userCredential.user;
+
+    // Part 3 — check email verified
+    if (!user.emailVerified) {
+      // Resend verification email automatically
+      await sendEmailVerification(user);
+      await signOut(auth); // sign them out so no broken session
+      throw {
+        code:    'auth/email-not-verified',
+        message: 'Email not verified. A new verification link has been sent to your inbox.',
+      };
+    }
+
     const idToken = await user.getIdToken();
     return { success: true, user, idToken };
   } catch (err) {
+    if (err.code === 'auth/email-not-verified') throw err;
     throw normalizeFirebaseError(err, 'Login failed. Check your credentials.');
   }
 }
@@ -195,6 +212,16 @@ export async function registerPartner(formData) {
     await updateProfile(user, {
       displayName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
     });
+
+    // Part 3 — send email verification after account creation
+    if (user && !user.emailVerified) {
+      try {
+        await sendEmailVerification(user);
+      } catch (verifyErr) {
+        // Non-fatal — log and continue
+        console.warn('sendEmailVerification failed:', verifyErr.code);
+      }
+    }
 
     const idToken = await user.getIdToken(true);
 

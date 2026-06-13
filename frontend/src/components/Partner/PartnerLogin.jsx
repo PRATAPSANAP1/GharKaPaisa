@@ -102,6 +102,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       setLoading(l => ({ ...l, login: true }));
       try {
         // loginWithPassword returns { success, user, idToken }
+        // Throws auth/email-not-verified if email is unconfirmed
         const result = await loginWithPassword(form.email, form.password);
         if (result.success) {
           const profile = await getMe(true);
@@ -110,7 +111,11 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
           setErr("Login failed. Please check your credentials.");
         }
       } catch (e) {
-        setErr(e.message || "Login failed. Please check credentials and try again.");
+        if (e.code === 'auth/email-not-verified') {
+          setErr("📧 " + (e.message || "Please verify your email. Check your inbox for the verification link."));
+        } else {
+          setErr(e.message || "Login failed. Please check credentials and try again.");
+        }
       } finally {
         setLoading(l => ({ ...l, login: false }));
       }

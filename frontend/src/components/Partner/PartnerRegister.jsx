@@ -164,7 +164,7 @@ export default function PartnerRegister({ onBack }) {
     try {
       const res = await registerPartner(form);
       if (res.success) {
-        setSuccess(res.data);
+        setSuccess({ ...res.data, email: form.email });
       } else {
         setErr(res.message || "Registration failed. Please try again.");
       }
@@ -187,9 +187,29 @@ export default function PartnerRegister({ onBack }) {
             <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, marginBottom: "10px" }}>
               Registration Successful!
             </div>
-            <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>
+            <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "16px", lineHeight: 1.6 }}>
               Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
             </div>
+
+            {/* Email verification notice (Part 3) */}
+            <div style={{
+              background: `${C.teal}12`,
+              border: `1px solid ${C.teal}30`,
+              borderRadius: "10px",
+              padding: "12px 16px",
+              marginBottom: "20px",
+              display: "flex",
+              gap: "10px",
+              alignItems: "flex-start",
+              textAlign: "left",
+            }}>
+              <span style={{ fontSize: "18px" }}>📧</span>
+              <div style={{ fontSize: "12px", color: C.teal, lineHeight: 1.6 }}>
+                <strong>Verify your email address.</strong><br />
+                A verification link has been sent to <strong>{success.email || "your email"}</strong>. You must verify before logging in with email/password.
+              </div>
+            </div>
+
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
               <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
               <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code}</div>
