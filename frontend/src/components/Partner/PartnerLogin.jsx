@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, verifyOtpLogin, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
+import { sendOtp, verifyOtpLogin, loginWithPassword } from "../../api/auth.api";
 import { saveSession } from "../../api/api";
+import { auth } from "../../config/firebase";
+import { RecaptchaVerifier } from "firebase/auth";
 import logo from "../../logo.jpeg";
 
 export default function PartnerLogin({ onLogin, onRegisterNav }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
-  const [form, setForm] = useState({ mobile: "", password: "", otp: "" });
+  
+  const [form, setForm] = useState({ mobile: "", password: "", otp: "", email: "" });
+  const [loginMethod, setLoginMethod] = useState("otp"); // "otp" | "password"
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
   const [err, setErr] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
 
   useEffect(() => {
     let t;
@@ -20,46 +25,92 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
     return () => clearTimeout(t);
   }, [timer]);
 
+  // Cleanup recaptcha verifier on unmount
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {
+          // ignore
+        }
+        window.recaptchaVerifier = null;
+      }
+    };
+  }, []);
+
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
     if (!form.mobile) return setErr("Please enter your mobile number.");
     setErr("");
     setLoading(l => ({ ...l, otp: true }));
     try {
-      await sendOtp(form.mobile, "login");
+      // Initialize reCAPTCHA verifier if not exists
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
+          size: 'invisible',
+          callback: () => {}
+        });
+      }
+
+      const appVerifier = window.recaptchaVerifier;
+      const confResult = await sendOtp(form.mobile, appVerifier);
+      setConfirmationResult(confResult);
       setOtpSent(true);
       setTimer(30);
-      // Dev bypass: auto-fill the magic OTP code
-      if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
       setErr(e.message || "Failed to send OTP. Please try again.");
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (recaptchaErr) {}
+        window.recaptchaVerifier = null;
+      }
     } finally {
       setLoading(l => ({ ...l, otp: false }));
     }
   };
 
-  // ── Submit: OTP login flow ────────────────────────────────────────────────────
+  // ── Submit Login Form ────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr("");
 
-    if (!form.mobile)   return setErr("Please enter your mobile number.");
-    if (!otpSent)       return setErr("Please click 'Verify Mobile' to send the OTP first.");
-    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    if (loginMethod === "otp") {
+      if (!form.mobile) return setErr("Please enter your mobile number.");
+      if (!otpSent) return setErr("Please click 'Verify Mobile' to send the OTP first.");
+      if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
 
-    setLoading(l => ({ ...l, login: true }));
-    try {
-      const res = await verifyOtpLogin(form.mobile, form.otp);
-      if (res.success) {
-        saveSession(res.data);
-        onLogin(res.data.user);
-      } else {
-        setErr(res.message || "Login failed. Please try again.");
+      setLoading(l => ({ ...l, login: true }));
+      try {
+        const res = await verifyOtpLogin(confirmationResult, form.otp);
+        if (res.success) {
+          onLogin(res.data.user);
+        } else {
+          setErr(res.message || "Login failed. Please try again.");
+        }
+      } catch (e) {
+        setErr(e.message || "Invalid OTP or login failed. Please try again.");
+      } finally {
+        setLoading(l => ({ ...l, login: false }));
       }
-    } catch (e) {
-      setErr(e.message || "Invalid OTP or session expired. Please try again.");
-    } finally {
-      setLoading(l => ({ ...l, login: false }));
+    } else {
+      if (!form.email) return setErr("Please enter your registered email address.");
+      if (!form.password) return setErr("Please enter your password.");
+
+      setLoading(l => ({ ...l, login: true }));
+      try {
+        const res = await loginWithPassword(form.email, form.password);
+        if (res.success) {
+          onLogin(res.data.user);
+        } else {
+          setErr(res.message || "Login failed. Please check your credentials.");
+        }
+      } catch (e) {
+        setErr(e.message || "Login failed. Please check credentials and try again.");
+      } finally {
+        setLoading(l => ({ ...l, login: false }));
+      }
     }
   };
 
@@ -78,6 +129,9 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       boxSizing: "border-box",
       transition: "background 0.3s",
     }}>
+      {/* Invisible reCAPTCHA Container */}
+      <div id="recaptcha-container-login"></div>
+
       {/* Theme Toggle — top right */}
       <div style={{ position: "fixed", top: "16px", right: "16px", zIndex: 99 }}>
         <ThemeToggle />
@@ -85,7 +139,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
       <div style={{ width: "100%", maxWidth: "400px" }}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "30px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <img
             src={logo}
             alt="GharKaPaisa Logo"
@@ -100,20 +154,57 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
             }}
           />
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Partner Login</div>
-          {DEV_BYPASS && (
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: "6px",
-              background: "#F59E0B18", border: "1px solid #F59E0B50",
-              borderRadius: "8px", padding: "4px 12px", marginTop: "8px",
-              fontSize: "11px", fontWeight: 700, color: "#F59E0B", letterSpacing: "0.3px"
-            }}>
-              🛠 DEV MODE — OTP auto-fills as <span style={{ fontFamily: "monospace", letterSpacing: "2px" }}>{DEV_CODE}</span>
-            </div>
-          )}
         </div>
 
         {/* Card */}
         <div style={{ ...S.card, padding: "28px" }}>
+          {/* Tabs for Login Type */}
+          <div style={{
+            display: "flex",
+            background: C.bgSecondary,
+            borderRadius: "10px",
+            padding: "4px",
+            marginBottom: "20px",
+            border: `1.5px solid ${C.border}`
+          }}>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod("otp"); setErr(""); }}
+              style={{
+                flex: 1,
+                border: "none",
+                background: loginMethod === "otp" ? C.card : "transparent",
+                color: loginMethod === "otp" ? C.text : C.textLight,
+                padding: "8px 0",
+                fontSize: "13px",
+                fontWeight: 700,
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              OTP Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod("password"); setErr(""); }}
+              style={{
+                flex: 1,
+                border: "none",
+                background: loginMethod === "password" ? C.card : "transparent",
+                color: loginMethod === "password" ? C.text : C.textLight,
+                padding: "8px 0",
+                fontSize: "13px",
+                fontWeight: 700,
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              Password Log In
+            </button>
+          </div>
+
           {/* Error Banner */}
           {err && (
             <div style={{
@@ -133,65 +224,99 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Mobile Number */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={S.label}>Mobile Number</label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                  style={{ ...inputStyle, flex: 1 }}
-                  placeholder="+91 Mobile Number"
-                  value={form.mobile}
-                  onChange={e => setForm({ ...form, mobile: e.target.value })}
-                  onFocus={e => e.target.style.border = focusBorder}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
-                <button
-                  type="button"
-                  onClick={handleSendOtp}
-                  disabled={timer > 0 || loading.otp}
-                  style={{
-                    ...S.btn("sm"),
-                    whiteSpace: "nowrap",
-                    width: "110px",
-                    padding: "0 10px",
-                    opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
-                  }}
-                >
-                  {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Verify Mobile"}
-                </button>
-              </div>
-              {otpSent && (
-                <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Icons.check size={12} /> OTP sent to {form.mobile}
+            {loginMethod === "otp" ? (
+              <>
+                {/* Mobile Number */}
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={S.label}>Mobile Number</label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      style={{ ...inputStyle, flex: 1 }}
+                      placeholder="10-digit Mobile Number"
+                      value={form.mobile}
+                      onChange={e => setForm({ ...form, mobile: e.target.value })}
+                      onFocus={e => e.target.style.border = focusBorder}
+                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={timer > 0 || loading.otp}
+                      style={{
+                        ...S.btn("sm"),
+                        whiteSpace: "nowrap",
+                        width: "110px",
+                        padding: "0 10px",
+                        opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
+                      }}
+                    >
+                      {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Verify Mobile"}
+                    </button>
+                  </div>
+                  {otpSent && (
+                    <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Icons.check size={12} /> OTP sent to {form.mobile}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* OTP Verification */}
-            <div style={{ marginBottom: "20px" }}>
-              <label style={S.label}>Enter 6-Digit OTP</label>
-              <input
-                style={{
-                  ...inputStyle,
-                  textAlign: "center",
-                  letterSpacing: "8px",
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  background: otpSent ? C.inputBg : C.bg,
-                  color: otpSent ? C.text : C.textLight,
-                  cursor: otpSent ? "text" : "not-allowed",
-                  opacity: otpSent ? 1 : 0.55,
-                  border: `1.5px solid ${otpSent ? C.border : C.border}`,
-                }}
-                placeholder="••••••"
-                maxLength={6}
-                disabled={!otpSent}
-                value={form.otp}
-                onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
-                onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-              />
-            </div>
+                {/* OTP Verification */}
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={S.label}>Enter 6-Digit OTP</label>
+                  <input
+                    style={{
+                      ...inputStyle,
+                      textAlign: "center",
+                      letterSpacing: "8px",
+                      fontSize: "20px",
+                      fontWeight: 700,
+                      background: otpSent ? C.inputBg : C.bg,
+                      color: otpSent ? C.text : C.textLight,
+                      cursor: otpSent ? "text" : "not-allowed",
+                      opacity: otpSent ? 1 : 0.55,
+                      border: `1.5px solid ${C.border}`,
+                    }}
+                    placeholder="••••••"
+                    maxLength={6}
+                    disabled={!otpSent}
+                    value={form.otp}
+                    onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
+                    onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Email Address */}
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={S.label}>Email Address</label>
+                  <input
+                    style={inputStyle}
+                    type="email"
+                    placeholder="Enter email address"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    onFocus={e => e.target.style.border = focusBorder}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                </div>
+
+                {/* Password */}
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={S.label}>Password</label>
+                  <input
+                    style={inputStyle}
+                    type="password"
+                    placeholder="Enter password"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    onFocus={e => e.target.style.border = focusBorder}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Submit */}
             <button
@@ -208,7 +333,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
               }}
             >
               {loading.login ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
                   <span style={{
                     width: "14px", height: "14px", borderRadius: "50%",
                     border: "2px solid rgba(255,255,255,0.4)",

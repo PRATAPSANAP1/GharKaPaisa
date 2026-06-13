@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, registerPartner, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
+import { sendOtp, registerPartner } from "../../api/auth.api";
+import { auth } from "../../config/firebase";
+import { RecaptchaVerifier } from "firebase/auth";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -24,6 +26,7 @@ export default function PartnerRegister({ onBack }) {
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
+  const [confirmationResult, setConfirmationResult] = useState(null);
 
   // Flat form state for all steps
   const [form, setForm] = useState({
@@ -47,6 +50,18 @@ export default function PartnerRegister({ onBack }) {
     return () => clearTimeout(t);
   }, [timer]);
 
+  // Cleanup recaptcha verifier on unmount
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+    };
+  }, []);
+
   const focusBorder = `1.5px solid ${C.teal}`;
   const inputProps = (key, extra = {}) => ({
     style: { ...S.input, ...extra },
@@ -62,13 +77,26 @@ export default function PartnerRegister({ onBack }) {
     setErr("");
     setOtpLoading(true);
     try {
-      await sendOtp(form.mobile, "register");
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-register', {
+          size: 'invisible',
+          callback: () => {}
+        });
+      }
+
+      const appVerifier = window.recaptchaVerifier;
+      const confResult = await sendOtp(form.mobile, appVerifier);
+      setConfirmationResult(confResult);
       setOtpSent(true);
       setTimer(30);
-      // Dev bypass: auto-fill magic code
-      if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
       setErr(e.message || "Failed to send OTP. Please try again.");
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (recaptchaErr) {}
+        window.recaptchaVerifier = null;
+      }
     } finally {
       setOtpLoading(false);
     }
@@ -113,6 +141,18 @@ export default function PartnerRegister({ onBack }) {
     setErr("");
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
+
+    // If step 0, verify Phone OTP first
+    if (step === 0) {
+      setLoading(true);
+      try {
+        await confirmationResult.confirm(form.otp);
+      } catch (otpErr) {
+        setLoading(false);
+        return setErr("Invalid OTP verification code. Please check and try again.");
+      }
+      setLoading(false);
+    }
 
     if (step < STEPS.length - 1) {
       setStep(s => s + 1);
@@ -165,6 +205,9 @@ export default function PartnerRegister({ onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
+      {/* Invisible reCAPTCHA Container */}
+      <div id="recaptcha-container-register"></div>
+
       <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
 
         {/* Theme toggle */}
@@ -179,18 +222,6 @@ export default function PartnerRegister({ onBack }) {
           </button>
           <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Partner Request</div>
         </div>
-
-        {/* Dev mode badge */}
-        {DEV_BYPASS && (
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "6px",
-            background: "#F59E0B18", border: "1px solid #F59E0B50",
-            borderRadius: "8px", padding: "4px 12px", marginBottom: "16px",
-            fontSize: "11px", fontWeight: 700, color: "#F59E0B"
-          }}>
-            🛠 DEV MODE — OTP auto-fills as <span style={{ fontFamily: "monospace", letterSpacing: "2px" }}>{DEV_CODE}</span>
-          </div>
-        )}
 
         {/* Step Progress Bar */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
@@ -245,7 +276,7 @@ export default function PartnerRegister({ onBack }) {
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Mobile Number</label>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <input {...inputProps("mobile", { flex: 1 })} style={{ ...S.input, flex: 1 }} />
+                  <input {...inputProps("mobile", { flex: 1 })} style={{ ...S.input, flex: 1 }} placeholder="10-digit Mobile Number" />
                   <button
                     type="button"
                     onClick={handleSendOtp}
@@ -287,15 +318,15 @@ export default function PartnerRegister({ onBack }) {
 
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Email Address</label>
-                <input type="email" {...inputProps("email")} />
+                <input type="email" {...inputProps("email")} placeholder="name@domain.com" />
               </div>
               <div>
                 <label style={S.label}>Password</label>
-                <input type="password" {...inputProps("password")} />
+                <input type="password" {...inputProps("password")} placeholder="At least 8 chars" />
               </div>
               <div>
                 <label style={S.label}>Confirm Password</label>
-                <input type="password" {...inputProps("confirmPassword")} />
+                <input type="password" {...inputProps("confirmPassword")} placeholder="Confirm password" />
               </div>
             </div>
           )}
