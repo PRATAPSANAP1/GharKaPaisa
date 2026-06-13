@@ -1,6 +1,7 @@
 const { query } = require('../config/db');
 const { getPaginationParams } = require('../utils/helpers');
 const { success, created, error, notFound, paginate } = require('../utils/response');
+const { logAction } = require('../services/audit.service');
 
 // GET /products — list with filters
 const listProducts = async (req, res, next) => {
@@ -60,6 +61,10 @@ const createProduct = async (req, res, next) => {
       INSERT INTO products (bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
     `, [bank_id, name, category, description, JSON.stringify(features || []), JSON.stringify(eligibility || {}), commission_type || 'fixed', commission_value, min_age, max_age, min_income, display_order || 0]);
+
+    // Log the product creation
+    await logAction(req.user.id, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
+
     return created(res, { product_id: p.id }, 'Product created');
   } catch (err) {
     next(err);
@@ -102,6 +107,10 @@ const updateProduct = async (req, res, next) => {
         updated_at = NOW()
       WHERE id = $9
     `, [name, description, features ? JSON.stringify(features) : null, eligibility ? JSON.stringify(eligibility) : null, commission_type, commission_value, is_active, display_order, req.params.id]);
+
+    // Log product update
+    await logAction(req.user.id, 'UPDATE_PRODUCT', req.params.id, { name, commission_value, is_active });
+
     return success(res, {}, 'Product updated');
   } catch (err) {
     next(err);
@@ -161,6 +170,10 @@ const setCommission = async (req, res, next) => {
       INSERT INTO commission_structures (product_id, Partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
     `, [product_id, Partner_id || null, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
+
+    // Log setting of commission rule
+    await logAction(req.user.id, 'SET_COMMISSION_RULE', product_id, { Partner_id, commission_type, commission_value });
+
     return created(res, {}, 'Commission structure set');
   } catch (err) {
     next(err);
@@ -177,4 +190,75 @@ const listBanks = async (req, res, next) => {
   }
 };
 
-module.exports = { listProducts, getProduct, createProduct, updateProduct, getProductsByCategory, setCommission, listBanks };
+// GET /products/cards
+const getCards = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const [count, data] = await Promise.all([
+      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('credit_card', 'co_branded_card', 'fd_card')`),
+      query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+        FROM products p JOIN banks b ON b.id = p.bank_id
+        WHERE p.is_active = true AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
+        ORDER BY p.display_order ASC, p.commission_value DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset])
+    ]);
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /products/loans
+const getLoans = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const [count, data] = await Promise.all([
+      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
+      query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+        FROM products p JOIN banks b ON b.id = p.bank_id
+        WHERE p.is_active = true AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
+        ORDER BY p.display_order ASC, p.commission_value DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset])
+    ]);
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /products/insurance
+const getInsurance = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const [count, data] = await Promise.all([
+      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
+      query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+        FROM products p JOIN banks b ON b.id = p.bank_id
+        WHERE p.is_active = true AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
+        ORDER BY p.display_order ASC, p.commission_value DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset])
+    ]);
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  listProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  getProductsByCategory,
+  setCommission,
+  listBanks,
+  getCards,
+  getLoans,
+  getInsurance
+};

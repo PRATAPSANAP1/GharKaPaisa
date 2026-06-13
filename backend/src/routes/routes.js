@@ -27,7 +27,12 @@ walletRouter.use(authenticate);
 walletRouter.get('/withdrawals', authorize('super_admin', 'admin'), walletCtrl.listWithdrawals);
 walletRouter.patch('/withdrawals/:id/process', authorize('super_admin'), walletCtrl.processWithdrawalRequest);
 
-// Partner self or admin
+// Partner self-endpoints (no ID needed in URL)
+walletRouter.get('/balance', walletCtrl.getSelfWallet);
+walletRouter.get('/transactions', walletCtrl.getSelfTransactions);
+walletRouter.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestSelfWithdrawal);
+
+// Partner self or admin (with ID)
 walletRouter.get('/:PartnerId', selfOrAdmin('PartnerId'), walletCtrl.getWallet);
 walletRouter.get('/:PartnerId/transactions', selfOrAdmin('PartnerId'), walletCtrl.getTransactions);
 walletRouter.get('/:PartnerId/case-summary', selfOrAdmin('PartnerId'), walletCtrl.getCaseSummary);
@@ -43,8 +48,12 @@ productRouter.use(authenticate);
 
 productRouter.get('/categories', productCtrl.getProductsByCategory);
 productRouter.get('/banks', productCtrl.listBanks);
+productRouter.get('/cards', productCtrl.getCards);
+productRouter.get('/loans', productCtrl.getLoans);
+productRouter.get('/insurance', productCtrl.getInsurance);
 productRouter.get('/', productCtrl.listProducts);
 productRouter.get('/:id', productCtrl.getProduct);
+productRouter.post('/create', authorize('admin', 'super_admin'), productCtrl.createProduct);
 productRouter.post('/', authorize('admin', 'super_admin'), productCtrl.createProduct);
 productRouter.put('/:id', authorize('admin', 'super_admin'), productCtrl.updateProduct);
 productRouter.post('/commission', authorize('super_admin'), commissionRules, validate, productCtrl.setCommission);

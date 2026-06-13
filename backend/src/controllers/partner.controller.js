@@ -4,6 +4,7 @@ const { ensureWallet } = require('../services/wallet.service');
 const { notify } = require('../services/notification.service');
 const { getPaginationParams } = require('../utils/helpers');
 const { success, created, error, notFound, paginate } = require('../utils/response');
+const { logAction } = require('../services/audit.service');
 const logger = require('../utils/logger');
 
 // GET /Partners/:PartnerId/profile (Partner profile)
@@ -224,12 +225,14 @@ const approvePartner = async (req, res, next) => {
         ON CONFLICT (Partner_id) DO NOTHING
       `, [PartnerId]);
       await client.query('COMMIT');
+      await logAction(req.user.id, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
     } else {
       await client.query(`
         UPDATE Partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
       await client.query('COMMIT');
+      await logAction(req.user.id, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);
     }
 
@@ -242,4 +245,134 @@ const approvePartner = async (req, res, next) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, uploadKYCDocuments, getDashboardStats, listPartners, approvePartner };
+// GET /partner/profile (Self profile)
+const getSelfProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    // Find the partner profile associated with the user
+    const { rows: [Partner] } = await query(`
+      SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
+        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
+      FROM Partner_profiles ap
+      JOIN users u ON u.id = ap.user_id
+      LEFT JOIN Partner_bank_details abd ON abd.Partner_id = ap.id
+      WHERE ap.user_id = $1
+    `, [userId]);
+    if (!Partner) return notFound(res, 'Partner profile not found');
+
+    // Mask bank account number
+    if (Partner && Partner.account_number) {
+      const accLen = Partner.account_number.length;
+      if (accLen > 4) {
+        Partner.account_number = '*'.repeat(accLen - 4) + Partner.account_number.slice(-4);
+      } else {
+        Partner.account_number = '*'.repeat(accLen);
+      }
+    }
+
+    const { rows: kyc } = await query(
+      `SELECT doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [Partner.id]
+    );
+
+    return success(res, { ...Partner, kyc_documents: kyc });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/upload-docs (Self upload KYC)
+const uploadSelfKYC = async (req, res, next) => {
+  try {
+    if (!req.partner) {
+      return error(res, 'Partner profile not found. Please complete registration first.', 404);
+    }
+    const PartnerId = req.partner.id;
+    const { aadhaar_number, pan_number } = req.body;
+    const files = req.files;
+
+    // S3 configuration check
+    const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+    if (!isS3Configured) {
+      return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+    }
+
+    const uploaded = [];
+
+    const docMap = {
+      aadhaar: { number: aadhaar_number, label: 'Aadhaar' },
+      pan: { number: pan_number, label: 'PAN' },
+      gst_cert: { number: null, label: 'GST Certificate' },
+      cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
+    };
+
+    const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+
+    // Validate size and types before starting any upload
+    for (const [field, meta] of Object.entries(docMap)) {
+      if (files && files[field] && files[field][0]) {
+        const file = files[field][0];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return error(res, `Invalid file type for ${meta.label}. Only PDF, PNG, and JPEG are allowed.`, 400);
+        }
+        if (file.size > maxFileSize) {
+          return error(res, `File size too large for ${meta.label}. Maximum size is 5MB.`, 400);
+        }
+      }
+    }
+
+    for (const [field, meta] of Object.entries(docMap)) {
+      if (files && files[field] && files[field][0]) {
+        const file = files[field][0];
+        const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${PartnerId}`);
+        await query(`
+          INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+            doc_number = EXCLUDED.doc_number,
+            file_url = EXCLUDED.file_url,
+            s3_key = EXCLUDED.s3_key,
+            verified = false,
+            uploaded_at = NOW()
+        `, [PartnerId, field, meta.number || null, url, key]);
+        uploaded.push(field);
+      }
+    }
+
+    // Update KYC status to under_review
+    await query(`UPDATE Partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
+
+    // Log the KYC upload to audit logs
+    await logAction(req.user.id, 'UPLOAD_KYC', PartnerId, { uploaded });
+
+    return success(res, { uploaded }, `${uploaded.length} document(s) uploaded. KYC under review.`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /admin/approve-kyc (Admin)
+const approvePartnerKYC = async (req, res, next) => {
+  try {
+    const partnerId = req.body.partnerId || req.params.PartnerId;
+    if (!partnerId) {
+      return error(res, 'partnerId is required', 400);
+    }
+    req.params.PartnerId = partnerId;
+    return approvePartner(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  uploadKYCDocuments,
+  getDashboardStats,
+  listPartners,
+  approvePartner,
+  getSelfProfile,
+  uploadSelfKYC,
+  approvePartnerKYC
+};

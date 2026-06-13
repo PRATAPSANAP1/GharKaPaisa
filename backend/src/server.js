@@ -126,10 +126,16 @@ app.get('/health', async (req, res) => {
 const routes = require('./routes/routes');
 const authRoutes = require('./routes/auth.routes');
 const PartnerRoutes = require('./routes/partner.routes');
+const superadminRoutes = require('./routes/superadmin.routes');
+const adminRouter = require('./routes/admin.routes');
+const partnerSelfRouter = require('./routes/partner.self.routes');
 
 const API = '/api/v1';
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/Partners`, PartnerRoutes);
+app.use(`${API}/partner`, partnerSelfRouter);
+app.use(`${API}/admin`, adminRouter);
+app.use(`${API}/superadmin`, superadminRoutes);
 app.use(`${API}/applications`, routes.appRouter);
 app.use(`${API}/wallet`, routes.walletRouter);
 app.use(`${API}/products`, routes.productRouter);

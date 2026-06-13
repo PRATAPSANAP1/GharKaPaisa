@@ -5,6 +5,7 @@ const { notify } = require('../services/notification.service');
 const { uploadToS3 } = require('../services/s3.service');
 const { success, created, error, notFound, forbidden, paginate } = require('../utils/response');
 const logger = require('../utils/logger');
+const { logAction } = require('../services/audit.service');
 
 // POST /applications — Partner submits application
 const submitApplication = async (req, res, next) => {
@@ -100,6 +101,9 @@ const updateStatus = async (req, res, next) => {
     `, [status, bank_ref_number, approved_amount, rejection_reason, historyEntry, id]);
 
     await client.query('COMMIT');
+
+    // Log application status update to audit logs
+    await logAction(req.user.id, 'UPDATE_APPLICATION_STATUS', id, { status, bank_ref_number, approved_amount });
 
     // Credit commission on approval or disbursal, but only once
     if (status === 'approved' || status === 'disbursed') {

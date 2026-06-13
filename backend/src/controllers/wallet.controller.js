@@ -2,6 +2,7 @@ const { query, getClient } = require('../config/db');
 const { processWithdrawal, getWalletSummary } = require('../services/wallet.service');
 const { getPaginationParams } = require('../utils/helpers');
 const { success, error, notFound, paginate } = require('../utils/response');
+const { logAction } = require('../services/audit.service');
 
 // GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
@@ -153,6 +154,11 @@ const processWithdrawalRequest = async (req, res, next) => {
     const { id } = req.params;
     const { approved, utr_number, rejection_reason } = req.body;
     await processWithdrawal(id, approved, req.user.id, utr_number, rejection_reason);
+
+    // Log the withdrawal processing action
+    const actionName = approved ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL';
+    await logAction(req.user.id, actionName, id, { utr_number, rejection_reason });
+
     return success(res, {}, `Withdrawal ${approved ? 'approved' : 'rejected'}`);
   } catch (err) {
     next(err);
@@ -183,4 +189,47 @@ const getCaseSummary = async (req, res, next) => {
   }
 };
 
-module.exports = { getWallet, getTransactions, requestWithdrawal, listWithdrawals, processWithdrawalRequest, getCaseSummary };
+// GET /wallet/balance (Self)
+const getSelfWallet = async (req, res, next) => {
+  try {
+    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
+    req.params.PartnerId = req.partner.id;
+    return getWallet(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/transactions (Self)
+const getSelfTransactions = async (req, res, next) => {
+  try {
+    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
+    req.params.PartnerId = req.partner.id;
+    return getTransactions(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /wallet/withdraw (Self)
+const requestSelfWithdrawal = async (req, res, next) => {
+  try {
+    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
+    req.params.PartnerId = req.partner.id;
+    return requestWithdrawal(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getWallet,
+  getTransactions,
+  requestWithdrawal,
+  listWithdrawals,
+  processWithdrawalRequest,
+  getCaseSummary,
+  getSelfWallet,
+  getSelfTransactions,
+  requestSelfWithdrawal
+};

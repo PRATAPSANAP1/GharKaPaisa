@@ -10,6 +10,7 @@ const express = require('express');
 const router  = express.Router();
 const rateLimit = require('express-rate-limit');
 const firebaseAuth = require('../middleware/firebaseAuth.middleware');
+const roleCheck = require('../middleware/role.middleware');
 const ctrl = require('../controllers/auth.controller');
 const { validate, registerRules } = require('../middleware/validation.middleware');
 
@@ -29,5 +30,8 @@ const meLimiter = rateLimit({
 router.get('/me',       meLimiter,      firebaseAuth,                          ctrl.getMe);
 router.post('/register', registerLimiter, firebaseAuth, registerRules, validate, ctrl.register);
 router.post('/logout',  firebaseAuth,   ctrl.logout);
+
+// Admin-only route to set role
+router.put('/admin/set-role', firebaseAuth, roleCheck('admin', 'super_admin'), ctrl.setRole);
 
 module.exports = router;

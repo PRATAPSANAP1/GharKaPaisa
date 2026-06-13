@@ -9,6 +9,7 @@ const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error } = require('../utils/response');
 const logger = require('../utils/logger');
 const { ensureWallet } = require('../services/wallet.service');
+const { logAction } = require('../services/audit.service');
 
 // ── POST /auth/register ────────────────────────────────────────────────────
 // Called after Firebase signup to save business/bank profile in PostgreSQL.
@@ -133,4 +134,38 @@ const logout = async (req, res) => {
   return res.json({ success: true, message: 'Logged out successfully' });
 };
 
-module.exports = { register, getMe, logout };
+// ── PUT /auth/admin/set-role ────────────────────────────────────────────────
+const setRole = async (req, res, next) => {
+  try {
+    const { userId, role } = req.body;
+
+    if (!userId || !role) {
+      return error(res, 'userId and role are required', 400);
+    }
+
+    const validRoles = ['super_admin', 'admin', 'employee', 'Partner'];
+    if (!validRoles.includes(role)) {
+      return error(res, `Invalid role. Must be one of: ${validRoles.join(', ')}`, 400);
+    }
+
+    // Update the role of the user by ID or Firebase UID
+    const { rows: [updatedUser] } = await query(
+      `UPDATE users SET role = $1, updated_at = NOW() WHERE id::text = $2 OR firebase_uid = $2 RETURNING id, email`,
+      [role, userId]
+    );
+
+    if (!updatedUser) {
+      return error(res, 'User not found', 404);
+    }
+
+    // Write to audit logs
+    await logAction(req.user.id, 'UPDATE_ROLE', updatedUser.id, { email: updatedUser.email, role });
+
+    logger.info(`User role updated: user ${userId} set to ${role} by admin ${req.user.id}`);
+    return success(res, {}, `User role updated to ${role} successfully`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, getMe, logout, setRole };

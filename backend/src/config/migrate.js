@@ -421,6 +421,19 @@ const migrate = async () => {
   await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id, revoked)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON Partner_profiles(Partner_code)`);
 
+  // ── Audit Logs ────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+      action        VARCHAR(100) NOT NULL,
+      target_id     UUID,
+      details       JSONB,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
+
   // ── updated_at trigger function ───────────────────────────────
   await query(`
     CREATE OR REPLACE FUNCTION update_updated_at()

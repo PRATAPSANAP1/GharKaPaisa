@@ -31,7 +31,13 @@ export default function PartnerPanel({ onBackToMain }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
+  // Redirect non-Partner roles to the admin/employee portal
+  useEffect(() => {
+    const u = getStoredUser();
+    if (u && ['admin', 'super_admin', 'employee'].includes(u.role)) {
+      window.location.href = 'https://yohesa-test-three.vercel.app/dashboard';
+    }
+  }, []);
 
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: <Icons.dashboard size={18} /> },
@@ -41,6 +47,10 @@ export default function PartnerPanel({ onBackToMain }) {
   ];
 
   const handleLogin = (user) => {
+    if (user && ['admin', 'super_admin', 'employee'].includes(user.role)) {
+      window.location.href = 'https://yohesa-test-three.vercel.app/dashboard';
+      return;
+    }
     const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.mobile || "Partner";
     setPartner({ name, id: user?.Partner_code || "", ...user });
     setAuth("app");

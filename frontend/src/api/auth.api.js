@@ -41,6 +41,7 @@ function normalizeFirebaseError(err, defaultMsg = 'An error occurred') {
     'auth/user-not-found':             'No account found with these credentials.',
     'auth/wrong-password':             'Incorrect password.',
     'auth/invalid-credential':         'Invalid credentials. Please try again.',
+    'auth/invalid-email':              'Invalid email address. Please enter a valid email.',
     'auth/email-already-in-use':       'This email is already in use.',
     'auth/credential-already-in-use':  'This phone/email is already linked to another account.',
     'auth/too-many-requests':          'Too many attempts. Please wait and try again.',
