@@ -130,6 +130,71 @@ const migrate = async () => {
     )
   `);
 
+  // ── Database Schema Alignment (Migrate agent tables/columns to partner) ──
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_profiles') THEN
+        INSERT INTO Partner_profiles (id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
+        SELECT id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
+        FROM agent_profiles
+        ON CONFLICT (id) DO NOTHING;
+        
+        DROP TABLE agent_profiles CASCADE;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_bank_details') THEN
+        INSERT INTO Partner_bank_details (id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
+        SELECT id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
+        FROM agent_bank_details
+        ON CONFLICT (id) DO NOTHING;
+        
+        DROP TABLE agent_bank_details CASCADE;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='applications' AND column_name='agent_id') THEN
+        ALTER TABLE applications RENAME COLUMN agent_id TO Partner_id;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='agent_id') THEN
+        ALTER TABLE withdrawal_requests RENAME COLUMN agent_id TO Partner_id;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='agent_id') THEN
+        ALTER TABLE wallets RENAME COLUMN agent_id TO Partner_id;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='commission_structures' AND column_name='agent_id') THEN
+        ALTER TABLE commission_structures RENAME COLUMN agent_id TO Partner_id;
+      END IF;
+    END $$;
+  `);
+
   // ── KYC Documents ────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS kyc_documents (
