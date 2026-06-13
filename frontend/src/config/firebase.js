@@ -10,15 +10,14 @@ const firebaseConfig = {
   storageBucket: "yohesa-d313a.firebasestorage.app",
   messagingSenderId: "626910326089",
   appId: "1:626910326089:web:5634ec69735d9746617e98",
-  measurementId: "G-8XC4RR1113"
+  // measurementId removed — prevents auto-init of Firebase Analytics
+  // which was triggering the feature_collector.js deprecation warning
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const auth    = getAuth(app);
+export const db      = getFirestore(app);
 export const storage = getStorage(app);
 
 export default app;

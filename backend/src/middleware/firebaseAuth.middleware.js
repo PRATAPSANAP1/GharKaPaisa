@@ -68,8 +68,9 @@ const firebaseAuth = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Account rejected. Contact support.' });
     }
 
-    req.user = user;
-    req.firebaseUser = decoded;
+    req.user        = user;
+    req.firebase    = decoded;  // used by auth.controller.js getMe
+    req.firebaseUser = decoded; // backward compat with auth.middleware.js
 
     // Attach partner profile if Partner role
     if (user.role === 'Partner') {

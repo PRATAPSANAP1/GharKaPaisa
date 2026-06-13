@@ -77,10 +77,10 @@ export default function PartnerRegister({ onBack }) {
     setErr("");
     setOtpLoading(true);
     try {
+      // Firebase v12: RecaptchaVerifier takes a single config object
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-register', {
           size: 'invisible',
-          callback: () => {}
         });
       }
 
@@ -381,45 +381,58 @@ export default function PartnerRegister({ onBack }) {
             </div>
           )}
 
-          {/* ── Step 3: KYC ──────────────────────────────────────────────────── */}
+          {/* ── Step 3: KYC — Info Screen ─────────────────────────────────── */}
           {step === 3 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div>
-                <label style={S.label}>Aadhaar Number</label>
-                <input {...inputProps("aadhaar")} maxLength={12} />
-              </div>
-              <div>
-                <label style={S.label}>PAN Card Number</label>
-                <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} maxLength={10} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Header */}
+              <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: `${C.teal}15`, color: C.teal,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 14px',
+                }}>
+                  <Icons.shield size={28} />
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: C.text }}>KYC Documents</div>
+                <div style={{ fontSize: '13px', color: C.textMid, marginTop: '6px', lineHeight: 1.5 }}>
+                  Document verification is done after your account is activated.
+                </div>
               </div>
 
+              {/* Document list */}
               {[
-                { title: "Aadhaar Card", desc: "Front & Back (PDF/Image)" },
-                { title: "PAN Card", desc: "PDF or Image" },
-                { title: "GST Cert.", desc: "Optional" },
-                { title: "Cancelled Cheque", desc: "Image of cheque" },
-              ].map(u => (
-                <div key={u.title} style={{
-                  border: `2px dashed ${C.border}`,
-                  borderRadius: "12px",
-                  padding: "18px 12px",
-                  textAlign: "center",
-                  cursor: "pointer",
+                { icon: '🪪', title: 'Aadhaar Card', desc: 'Front & Back (PDF/Image) · Max 5MB' },
+                { icon: '🪄', title: 'PAN Card', desc: 'PDF or Image · Max 5MB' },
+                { icon: '🧾', title: 'GST Certificate', desc: 'Optional · Max 5MB' },
+                { icon: '🏦', title: 'Cancelled Cheque', desc: 'Image of cheque · Max 5MB' },
+              ].map(doc => (
+                <div key={doc.title} style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
                   background: C.bgSecondary,
-                  transition: "border-color 0.2s",
-                }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                >
-                  <div style={{ color: C.tealDim, marginBottom: "6px" }}><Icons.upload size={20} /></div>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>{u.title}</div>
-                  <div style={{ fontSize: "10px", color: C.textLight, marginTop: "3px" }}>{u.desc} · Max 5MB</div>
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: '12px', padding: '14px 16px',
+                  opacity: 0.7,
+                }}>
+                  <span style={{ fontSize: '22px' }}>{doc.icon}</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>{doc.title}</div>
+                    <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{doc.desc}</div>
+                  </div>
                 </div>
               ))}
 
-              <div style={{ gridColumn: "1/-1", background: `${C.gold}12`, border: `1px solid ${C.gold}30`, borderRadius: "10px", padding: "12px 14px" }}>
-                <div style={{ fontSize: "12px", color: C.gold, fontWeight: 600 }}>
-                  ℹ️ Document uploads will be available after initial registration. You can submit them from your Partner Profile dashboard.
+              {/* Info banner */}
+              <div style={{
+                background: `${C.gold}14`,
+                border: `1px solid ${C.gold}35`,
+                borderRadius: '10px', padding: '14px 16px',
+                display: 'flex', gap: '10px', alignItems: 'flex-start',
+              }}>
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>ℹ️</span>
+                <div style={{ fontSize: '13px', color: C.gold, lineHeight: 1.6 }}>
+                  <strong>Document uploads are available after activation.</strong><br />
+                  You can submit them from your <strong>Partner Profile dashboard</strong> once our team reviews your application (24–48 hours).
                 </div>
               </div>
             </div>

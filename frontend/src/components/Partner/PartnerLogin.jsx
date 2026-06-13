@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, verifyOtpLogin, loginWithPassword } from "../../api/auth.api";
+import { sendOtp, verifyOtpLogin, loginWithPassword, getMe } from "../../api/auth.api";
 import { saveSession } from "../../api/api";
 import { auth } from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
@@ -45,11 +45,10 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
     setErr("");
     setLoading(l => ({ ...l, otp: true }));
     try {
-      // Initialize reCAPTCHA verifier if not exists
+      // Firebase v12: RecaptchaVerifier takes a single config object
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
           size: 'invisible',
-          callback: () => {}
         });
       }
 
@@ -83,11 +82,13 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
       setLoading(l => ({ ...l, login: true }));
       try {
-        const res = await verifyOtpLogin(confirmationResult, form.otp);
-        if (res.success) {
-          onLogin(res.data.user);
+        // verifyOtpLogin returns { success, user, idToken }
+        const result = await verifyOtpLogin(confirmationResult, form.otp);
+        if (result.success) {
+          const profile = await getMe(true);
+          onLogin(profile);
         } else {
-          setErr(res.message || "Login failed. Please try again.");
+          setErr("OTP verification failed. Please try again.");
         }
       } catch (e) {
         setErr(e.message || "Invalid OTP or login failed. Please try again.");
@@ -100,11 +101,13 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
       setLoading(l => ({ ...l, login: true }));
       try {
-        const res = await loginWithPassword(form.email, form.password);
-        if (res.success) {
-          onLogin(res.data.user);
+        // loginWithPassword returns { success, user, idToken }
+        const result = await loginWithPassword(form.email, form.password);
+        if (result.success) {
+          const profile = await getMe(true);
+          onLogin(profile);
         } else {
-          setErr(res.message || "Login failed. Please check your credentials.");
+          setErr("Login failed. Please check your credentials.");
         }
       } catch (e) {
         setErr(e.message || "Login failed. Please check credentials and try again.");
