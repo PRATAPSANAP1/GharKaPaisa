@@ -8,7 +8,20 @@ const path = require('path');
 const fs = require('fs');
 
 const logger = require('./utils/logger');
+
+// Register process exception handlers early
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Rejection:', reason);
+  process.exit(1);
+});
+
 const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
+const db = require('./config/db');
 
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../logs');
@@ -19,10 +32,36 @@ const app = express();
 // ── Security Middleware ────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
 }));
 
+const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Whitelist in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS policy: origin ${origin} is not allowed`));
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -38,8 +77,8 @@ app.use(rateLimit({
 }));
 
 // ── Body Parsing ───────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
 // ── Logging ────────────────────────────────────────────────────
 app.use(morgan('combined', {
@@ -48,27 +87,35 @@ app.use(morgan('combined', {
 }));
 
 // ── Health Check ───────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'FinEdge Backend API',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-  });
+app.get('/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({
+      status: 'ok',
+      service: 'FinEdge Backend API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      database: 'connected',
+    });
+  } catch (err) {
+    logger.error('Health check failed: DB error', { error: err.message });
+    res.status(503).json({
+      status: 'error',
+      service: 'FinEdge Backend API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      database: 'disconnected',
+      error: err.message,
+    });
+  }
 });
 
 // ── API Routes ─────────────────────────────────────────────────
 const routes = require('./routes/routes');
 const authRoutes = require('./routes/auth.routes');
 const PartnerRoutes = require('./routes/partner.routes');
-
-// Start matured commission releases check
-const { releaseMaturedCommissions } = require('./services/wallet.service');
-releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
-setInterval(() => {
-  releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
-}, 15 * 60 * 1000);
 
 const API = '/api/v1';
 app.use(`${API}/auth`, authRoutes);
@@ -85,25 +132,78 @@ app.use(errorHandler);
 
 // ── Start Server ───────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  logger.info(`
-  ╔════════════════════════════════════════╗
-  ║  FinEdge API Server Running            ║
-  ║  Port    : ${PORT}                        ║
-  ║  Env     : ${(process.env.NODE_ENV || 'development').padEnd(12)}            ║
-  ║  Base URL: /api/v1 (behind reverse proxy) ║
-  ╚════════════════════════════════════════╝
-  `);
-});
+let server;
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received. Shutting down gracefully...');
-  process.exit(0);
-});
+const startServer = async () => {
+  try {
+    // Verify DB connectivity before listening
+    await db.query('SELECT 1');
+    logger.info('Database connection verified successfully.');
 
-process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled Rejection:', reason);
-});
+    // Start matured commission releases check
+    const { releaseMaturedCommissions } = require('./services/wallet.service');
+    releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
+    setInterval(() => {
+      releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
+    }, 15 * 60 * 1000);
+
+    server = app.listen(PORT, () => {
+      logger.info(`
+      ╔════════════════════════════════════════╗
+      ║  FinEdge API Server Running            ║
+      ║  Port    : ${PORT}                        ║
+      ║  Env     : ${(process.env.NODE_ENV || 'development').padEnd(12)}            ║
+      ║  Base URL: /api/v1 (behind reverse proxy) ║
+      ╚════════════════════════════════════════╝
+      `);
+    });
+  } catch (err) {
+    logger.error('Failed to start server due to database connectivity issue:', err);
+    process.exit(1);
+  }
+};
+
+startServer();
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} received. Shutting down gracefully...`);
+
+  // Force exit after 10s if hung
+  const timeoutId = setTimeout(() => {
+    logger.warn('Forced shutdown due to timeout during cleanup.');
+    process.exit(1);
+  }, 10000);
+
+  // Unref the timeout so it doesn't keep the process alive
+  timeoutId.unref();
+
+  if (server) {
+    server.close(async () => {
+      logger.info('HTTP server closed.');
+      try {
+        await db.pool.end();
+        logger.info('Database connection pool closed.');
+        clearTimeout(timeoutId);
+        process.exit(0);
+      } catch (err) {
+        logger.error('Error closing database connection pool:', err);
+        process.exit(1);
+      }
+    });
+  } else {
+    db.pool.end().then(() => {
+      logger.info('Database connection pool closed.');
+      clearTimeout(timeoutId);
+      process.exit(0);
+    }).catch((err) => {
+      logger.error('Error closing database connection pool:', err);
+      process.exit(1);
+    });
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 module.exports = app;
