@@ -7,9 +7,10 @@ const notFoundHandler = (req, res) => {
 };
 
 // Global error handler
+// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   logger.error(`${err.name}: ${err.message}`, {
-    stack: err.stack,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     path: req.path,
     method: req.method,
     ip: req.ip,
@@ -25,14 +26,31 @@ const errorHandler = (err, req, res, next) => {
 
   // PostgreSQL errors
   if (err.code === '23505') {  // unique violation
-    const field = err.detail?.match(/\((.+)\)/)?.[1] || 'field';
-    return error(res, `${field} already exists`, 409);
+    const uniqueFieldMap = {
+      'users_email_key': 'Email already registered',
+      'users_mobile_key': 'Mobile already registered',
+      'Partner_profiles_gst_number_key': 'GST number already registered',
+      'partner_profiles_gst_number_key': 'GST number already registered',
+    };
+    const safeMsg = uniqueFieldMap[err.constraint] || 'Record already exists';
+    return error(res, safeMsg, 409);
   }
   if (err.code === '23503') {  // foreign key violation
     return error(res, 'Referenced record not found', 400);
   }
   if (err.code === '22P02') {  // invalid UUID
     return error(res, 'Invalid ID format', 400);
+  }
+  if (err.code === '23502') { // not null violation
+    return error(res, 'Required field missing', 400);
+  }
+  if (err.code === '42P01') { // undefined table
+    logger.error('DB schema error — undefined table', { message: err.message });
+    return serverError(res);
+  }
+  if (err.code === 'ECONNREFUSED') { // DB connection lost
+    logger.error('DB connection refused');
+    return serverError(res, 'Database unavailable');
   }
 
   // Default

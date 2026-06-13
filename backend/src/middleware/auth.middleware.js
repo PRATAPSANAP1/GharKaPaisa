@@ -21,9 +21,27 @@ const authenticate = async (req, res, next) => {
     );
 
     if (!user) return unauthorized(res, 'User not found');
-    if (user.status !== 'active') return forbidden(res, `Account ${user.status}`);
+    
+    if (user.status === 'pending') {
+      return res.status(403).json({ 
+        success: false, 
+        code: 'PENDING_KYC', 
+        message: 'Account pending KYC approval' 
+      });
+    }
+    if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
+    if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
 
     req.user = user;
+
+    // Fetch and cache partner profile for Partner role
+    if (user.role === 'Partner') {
+      const { rows: [partner] } = await query(
+        `SELECT id, kyc_status FROM Partner_profiles WHERE user_id = $1`, [user.id]
+      );
+      req.partner = partner;
+    }
+
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') return unauthorized(res, 'Token expired');
@@ -45,33 +63,22 @@ const authorize = (...roles) => {
 };
 
 // Partner must be KYC approved
-const requireApprovedPartner = async (req, res, next) => {
-  try {
-    const { rows: [Partner] } = await query(
-      `SELECT id, kyc_status FROM Partner_profiles WHERE user_id = $1`,
-      [req.user.id]
-    );
-    if (!Partner) return forbidden(res, 'Partner profile not found');
-    if (Partner.kyc_status !== 'approved') return forbidden(res, 'KYC not yet approved. Please wait for verification.');
-    req.Partner = Partner;
-    next();
-  } catch (err) {
-    logger.error('requireApprovedPartner error', err);
-    next(err);
-  }
+const requireApprovedPartner = (req, res, next) => {
+  if (!req.partner) return forbidden(res, 'Partner profile not found');
+  if (req.partner.kyc_status !== 'approved') return forbidden(res, 'KYC not yet approved. Please wait for verification.');
+  req.Partner = req.partner;
+  next();
 };
 
 // Self or admin — partner can only access own resources
 const selfOrAdmin = (paramField = 'PartnerId') => {
-  return async (req, res, next) => {
+  return (req, res, next) => {
     if (['super_admin', 'admin'].includes(req.user.role)) return next();
-    const { rows: [Partner] } = await query(
-      `SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]
-    );
-    if (!Partner || Partner.id.toString() !== req.params[paramField].toString()) {
+    const partner = req.partner;
+    if (!partner || partner.id.toString() !== req.params[paramField].toString()) {
       return forbidden(res, 'Access denied');
     }
-    req.Partner = Partner;
+    req.Partner = partner;
     next();
   };
 };
