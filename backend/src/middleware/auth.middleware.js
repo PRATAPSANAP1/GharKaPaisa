@@ -1,9 +1,9 @@
-const { verifyAccessToken } = require('../utils/jwt');
+const admin = require('../config/firebase');
 const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-// Verify JWT and attach user to req
+// Verify Firebase ID Token and attach user to req
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -12,27 +12,43 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyAccessToken(token);
 
-    // Check user still exists and is active
+    // Verify Firebase ID Token
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(token);
+    } catch (firebaseErr) {
+      logger.warn('Firebase token verification failed:', firebaseErr.code);
+      if (firebaseErr.code === 'auth/id-token-expired') {
+        return unauthorized(res, 'Token expired. Please sign in again.');
+      }
+      return unauthorized(res, 'Invalid or expired token');
+    }
+
+    const firebaseUid = decoded.uid;
+
+    // Look up user in PostgreSQL by firebase_uid
     const { rows: [user] } = await query(
-      `SELECT id, email, mobile, role, status FROM users WHERE id = $1`,
-      [decoded.id]
+      `SELECT id, email, mobile, role, status, firebase_uid FROM users WHERE firebase_uid = $1`,
+      [firebaseUid]
     );
 
-    if (!user) return unauthorized(res, 'User not found');
-    
+    if (!user) {
+      return unauthorized(res, 'User not registered. Please complete registration first.');
+    }
+
     if (user.status === 'pending') {
-      return res.status(403).json({ 
-        success: false, 
-        code: 'PENDING_KYC', 
-        message: 'Account pending KYC approval' 
+      return res.status(403).json({
+        success: false,
+        code: 'PENDING_KYC',
+        message: 'Account pending KYC approval'
       });
     }
     if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
     if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
 
     req.user = user;
+    req.firebaseUser = decoded;
 
     // Fetch and cache partner profile for Partner role
     if (user.role === 'Partner') {
@@ -44,10 +60,8 @@ const authenticate = async (req, res, next) => {
 
     next();
   } catch (err) {
-    if (err.name === 'TokenExpiredError') return unauthorized(res, 'Token expired');
-    if (err.name === 'JsonWebTokenError') return unauthorized(res, 'Invalid token');
     logger.error('Auth middleware error', err.message);
-    return unauthorized(res);
+    return unauthorized(res, 'Authentication failed');
   }
 };
 

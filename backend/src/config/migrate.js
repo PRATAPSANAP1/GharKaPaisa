@@ -85,6 +85,10 @@ const migrate = async () => {
   // Remove dead otps table as Twilio Verify is used instead
   await query(`DROP TABLE IF EXISTS otps CASCADE`);
 
+  // Add firebase_uid column for Firebase Auth integration
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128) UNIQUE`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid) WHERE firebase_uid IS NOT NULL`);
+
   // ── Partner Profiles ────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS Partner_profiles (

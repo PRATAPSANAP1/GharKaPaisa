@@ -6,3 +6,5 @@ build/
 logs/
 .agents/
 skills-lock.json
+# Firebase service account private key — NEVER commit
+backend/firebase-service-account.json

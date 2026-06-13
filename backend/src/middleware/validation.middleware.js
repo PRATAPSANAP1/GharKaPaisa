@@ -11,11 +11,11 @@ const validate = (req, res, next) => {
 };
 
 // ── Auth validators ────────────────────────────────────────────
+// registerRules: OTP & password validation is handled client-side by Firebase Auth.
+// Backend validates only business/bank fields.
 const registerRules = [
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile required'),
-  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase and number'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
@@ -23,7 +23,6 @@ const registerRules = [
   body('account_number').trim().notEmpty().withMessage('Account number required'),
   body('ifsc_code').matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
   body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
-  body('otp').isLength({ min: 6, max: 6 }).isNumeric().withMessage('Valid 6-digit OTP required'),
   body('company_name').trim().notEmpty().withMessage('Company name required'),
   body('company_type').isIn(['proprietorship','partnership','pvt_ltd','llp','other'])
     .withMessage('Valid company type required'),
@@ -38,6 +37,7 @@ const loginRules = [
   body('password').notEmpty().withMessage('Password required'),
 ];
 
+// OTP send/verify rules retained for legacy compatibility but OTP is now handled by Firebase client-side.
 const otpSendRules = [
   body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Valid mobile required'),
 ];

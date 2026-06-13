@@ -1,47 +1,61 @@
 const bcrypt = require('bcryptjs');
 const { query, getClient } = require('../config/db');
-const { signAccessToken, signRefreshToken, verifyRefreshToken, storeRefreshToken, validateRefreshToken, revokeRefreshToken, revokeAllUserTokens } = require('../utils/jwt');
-const { sendOTP, verifyOTP } = require('../services/otp.service');
-const { ensureWallet } = require('../services/wallet.service');
+const admin = require('../config/firebase');
 const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, unauthorized } = require('../utils/response');
 const logger = require('../utils/logger');
+const { ensureWallet } = require('../services/wallet.service');
 
-// POST /auth/register (Partner self-registration)
+// POST /auth/register (Partner self-registration via Firebase Auth)
+// Expects: Authorization: Bearer <Firebase ID Token>
+// Body: Personal, business, bank details
 const register = async (req, res, next) => {
   try {
+    // Extract and verify Firebase ID token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return error(res, 'Firebase ID Token required in Authorization header', 401);
+    }
+    const idToken = authHeader.split(' ')[1];
+
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(idToken);
+    } catch (firebaseErr) {
+      logger.warn('Firebase token verification failed during register:', firebaseErr.code);
+      return error(res, 'Invalid or expired Firebase token. Please re-authenticate.', 401);
+    }
+
+    const firebaseUid = decoded.uid;
+
     const {
-      email, mobile, password, first_name, last_name,
+      email, mobile, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number,
       bank_name, account_number, ifsc_code, account_holder_name,
-      otp, aadhar_url, pan_url, gst_cert_url, cancel_cheque_url,
     } = req.body;
-
-    // Verify OTP first (outside transaction)
-    const valid = await verifyOTP(mobile, otp, 'register');
-    if (!valid) return error(res, 'Invalid or expired OTP', 401);
 
     const client = await getClient();
     try {
       await client.query('BEGIN');
 
-      // Check duplicates
+      // Check duplicates by email, mobile, or firebase_uid
       const { rows: exist } = await client.query(
-        `SELECT id FROM users WHERE email = $1 OR mobile = $2`, [email, mobile]
+        `SELECT id FROM users WHERE email = $1 OR mobile = $2 OR firebase_uid = $3`,
+        [email, mobile, firebaseUid]
       );
       if (exist.length) {
         await client.query('ROLLBACK');
-        return error(res, 'Email or mobile already registered', 409);
+        return error(res, 'Email, mobile or Firebase account already registered', 409);
       }
 
-      // Hash password
-      const password_hash = await bcrypt.hash(password, 12);
+      // Use a placeholder password_hash for Firebase-authenticated users
+      const password_hash = await bcrypt.hash(`firebase_${firebaseUid}`, 10);
 
-      // Create user
+      // Create user record
       const { rows: [user] } = await client.query(`
-        INSERT INTO users (email, mobile, password_hash, role, status)
-        VALUES ($1, $2, $3, 'Partner', 'pending') RETURNING id
-      `, [email, mobile, password_hash]);
+        INSERT INTO users (email, mobile, password_hash, role, status, firebase_uid)
+        VALUES ($1, $2, $3, 'Partner', 'pending', $4) RETURNING id
+      `, [email, mobile, password_hash, firebaseUid]);
 
       // Generate Partner code using atomic database sequence
       const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
@@ -50,15 +64,13 @@ const register = async (req, res, next) => {
       // Create Partner profile
       const { rows: [Partner] } = await client.query(`
         INSERT INTO Partner_profiles (
-          user_id, Partner_code, first_name, last_name, current_address, 
-          business_location, company_name, company_type, gst_number,
-          aadhar_url, pan_url, gst_cert_url, cancel_cheque_url
+          user_id, Partner_code, first_name, last_name, current_address,
+          business_location, company_name, company_type, gst_number
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
       `, [
-        user.id, PartnerCode, first_name, last_name, current_address, 
-        business_location, company_name, company_type, gst_number,
-        aadhar_url || null, pan_url || null, gst_cert_url || null, cancel_cheque_url || null
+        user.id, PartnerCode, first_name, last_name, current_address,
+        business_location || '', company_name, company_type, gst_number || null
       ]);
 
       // Create bank details
@@ -68,7 +80,11 @@ const register = async (req, res, next) => {
       `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
 
       await client.query('COMMIT');
-      logger.info(`New partner registered: ${email} (${PartnerCode})`);
+
+      // Create wallet for the partner
+      await ensureWallet(Partner.id);
+
+      logger.info(`New partner registered via Firebase: ${email} (${PartnerCode})`);
       return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
     } catch (err) {
       await client.query('ROLLBACK');
@@ -81,12 +97,10 @@ const register = async (req, res, next) => {
   }
 };
 
-// POST /auth/login (Password)
+// POST /auth/login — kept for legacy password-based admin access
 const login = async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
-
-    // Find by email or mobile
     const { rows: [user] } = await query(`
       SELECT u.*, ap.id as Partner_id, ap.first_name, ap.last_name, ap.Partner_code, ap.kyc_status
       FROM users u
@@ -98,28 +112,22 @@ const login = async (req, res, next) => {
     if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
     if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
     if (user.status === 'pending') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Account pending KYC approval.', 
+      return res.status(403).json({
+        success: false,
+        message: 'Account pending KYC approval.',
         status: 'pending',
-        kyc_status: user.kyc_status 
+        kyc_status: user.kyc_status
       });
     }
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return unauthorized(res, 'Invalid credentials');
 
-    // Update last login
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
 
-    const payload = { id: user.id, role: user.role, PartnerId: user.Partner_id };
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
-    await storeRefreshToken(user.id, refreshToken);
-
+    // For legacy admin users, return a custom token or just user data
+    // (Frontend should use Firebase for token generation)
     return success(res, {
-      access_token: accessToken,
-      refresh_token: refreshToken,
       user: {
         id: user.id, email: user.email, mobile: user.mobile, role: user.role,
         status: user.status, first_name: user.first_name, last_name: user.last_name,
@@ -131,110 +139,33 @@ const login = async (req, res, next) => {
   }
 };
 
-// POST /auth/otp/send
+// POST /auth/otp/send — retained for legacy, OTP is now managed by Firebase client-side
 const sendOTPHandler = async (req, res, next) => {
   try {
-    const { mobile, purpose = 'login' } = req.body;
-    if (!mobile) return error(res, 'Mobile required', 400);
-    // For login, check user exists
-    if (purpose === 'login') {
-      const { rows: [user] } = await query(`SELECT id FROM users WHERE mobile = $1`, [mobile]);
-      if (!user) return error(res, 'Mobile number not registered', 404);
-    }
-    await sendOTP(mobile, purpose);
-    return success(res, {}, 'OTP sent successfully');
+    return success(res, {}, 'OTP is now handled by Firebase client-side. Use Firebase Auth.');
   } catch (err) {
     next(err);
   }
 };
 
-// POST /auth/otp/verify (OTP Login)
+// POST /auth/otp/verify — retained for legacy, OTP is now managed by Firebase client-side
 const verifyOTPLogin = async (req, res, next) => {
   try {
-    const { mobile, otp } = req.body;
-    const valid = await verifyOTP(mobile, otp, 'login');
-    if (!valid) return error(res, 'Invalid or expired OTP', 401);
-
-    const { rows: [user] } = await query(`
-      SELECT u.*, ap.id as Partner_id, ap.first_name, ap.last_name, ap.Partner_code, ap.kyc_status
-      FROM users u LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
-      WHERE u.mobile = $1
-    `, [mobile]);
-
-    if (!user) return error(res, 'User not found', 404);
-    if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
-    if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
-    if (user.status === 'pending') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Account pending KYC approval.', 
-        status: 'pending',
-        kyc_status: user.kyc_status 
-      });
-    }
-
-    await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
-
-    const payload = { id: user.id, role: user.role, PartnerId: user.Partner_id };
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
-    await storeRefreshToken(user.id, refreshToken);
-
-    return success(res, {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      user: {
-        id: user.id, email: user.email, mobile: user.mobile, role: user.role,
-        first_name: user.first_name, last_name: user.last_name,
-        Partner_code: user.Partner_code, kyc_status: user.kyc_status,
-      },
-    }, 'OTP login successful');
+    return success(res, {}, 'OTP verification is now handled by Firebase client-side. Use Firebase ID Token.');
   } catch (err) {
     next(err);
   }
 };
 
-// POST /auth/refresh
+// POST /auth/refresh — legacy endpoint, not used with Firebase tokens
 const refreshToken = async (req, res, next) => {
-  try {
-    const { refresh_token } = req.body;
-    if (!refresh_token) return unauthorized(res, 'Refresh token required');
-
-    const decoded = verifyRefreshToken(refresh_token);
-    const valid = await validateRefreshToken(decoded.id, refresh_token);
-    if (!valid) return unauthorized(res, 'Invalid or expired refresh token');
-
-    // Revalidate user status against database
-    const { rows: [user] } = await query(
-      `SELECT status FROM users WHERE id = $1`, [decoded.id]
-    );
-    if (!user || user.status !== 'active') {
-      return unauthorized(res, 'Account is inactive, pending, or suspended.');
-    }
-
-    // Rotate tokens
-    await revokeRefreshToken(decoded.id, refresh_token);
-    const payload = { id: decoded.id, role: decoded.role, PartnerId: decoded.PartnerId };
-    const newAccess = signAccessToken(payload);
-    const newRefresh = signRefreshToken(payload);
-    await storeRefreshToken(decoded.id, newRefresh);
-
-    return success(res, { access_token: newAccess, refresh_token: newRefresh });
-  } catch (err) {
-    if (err.name === 'TokenExpiredError') return unauthorized(res, 'Refresh token expired. Please login again.');
-    next(err);
-  }
+  return success(res, {}, 'Token refresh is managed by Firebase. Use getIdToken() on the client.');
 };
 
 // POST /auth/logout
 const logout = async (req, res, next) => {
   try {
-    const { refresh_token, all_devices = false } = req.body;
-    if (all_devices) {
-      await revokeAllUserTokens(req.user.id);
-    } else if (refresh_token) {
-      await revokeRefreshToken(req.user.id, refresh_token);
-    }
+    // Firebase tokens expire automatically. We just signal success.
     return success(res, {}, 'Logged out successfully');
   } catch (err) {
     next(err);
@@ -245,21 +176,27 @@ const logout = async (req, res, next) => {
 const getMe = async (req, res, next) => {
   try {
     const { rows: [user] } = await query(`
-      SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login,
+      SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.firebase_uid,
         ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
-        ap.kyc_status, ap.company_name, ap.profile_photo_url,
-        w.available_balance, w.pending_amount
+        ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
+        ap.business_location, ap.gst_number, ap.company_type,
+        pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
+        w.available_balance, w.pending_amount, w.total_earned, w.total_withdrawn
       FROM users u
       LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
+      LEFT JOIN Partner_bank_details pbd ON pbd.Partner_id = ap.id
       LEFT JOIN wallets w ON w.Partner_id = ap.id
       WHERE u.id = $1
     `, [req.user.id]);
-    if (!user) return notFound(res, 'User not found');
+
+    if (!user) return error(res, 'User not found', 404);
 
     const response = { ...user };
     if (user.role !== 'Partner') {
       delete response.available_balance;
       delete response.pending_amount;
+      delete response.total_earned;
+      delete response.total_withdrawn;
       delete response.Partner_id;
       delete response.Partner_code;
       delete response.kyc_status;

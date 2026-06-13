@@ -7,6 +7,7 @@
  *  - Clears session and redirects/reloads to login on refresh failure
  */
 import axios from 'axios';
+import { getAuth } from 'firebase/auth';
 
 const BASE_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
 
@@ -96,36 +97,28 @@ api.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('gkp_refresh_token');
-      if (!refreshToken) {
-        isRefreshing = false;
-        clearSession();
-        return Promise.reject(err);
-      }
-
       try {
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
+        // Firebase manages token refresh internally — just request a fresh ID token
+        const firebaseAuth = getAuth();
+        const currentUser = firebaseAuth.currentUser;
 
-        const responseData = data?.data;
-        if (!responseData?.access_token || !responseData?.refresh_token) {
-          throw new Error('Invalid refresh response from server');
+        if (!currentUser) {
+          processQueue(new Error('No Firebase user'), null);
+          clearSession();
+          return Promise.reject(err);
         }
 
-        const newAccess = responseData.access_token;
-        const newRefresh = responseData.refresh_token;
+        const newToken = await currentUser.getIdToken(true);
+        setAccessToken(newToken);
+        localStorage.setItem('gkp_refresh_token', currentUser.refreshToken || newToken);
 
-        setAccessToken(newAccess);
-        localStorage.setItem('gkp_refresh_token', newRefresh);
-
-        processQueue(null, newAccess);
+        processQueue(null, newToken);
 
         return api({
           ...original,
           headers: {
             ...original.headers,
-            Authorization: `Bearer ${newAccess}`,
+            Authorization: `Bearer ${newToken}`,
           },
         });
       } catch (refreshErr) {

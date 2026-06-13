@@ -1,4 +1,4 @@
-import { auth, db } from '../config/firebase';
+import { auth } from '../config/firebase';
 import { 
   signInWithPhoneNumber, 
   signInWithEmailAndPassword, 
@@ -9,8 +9,7 @@ import {
   updateProfile,
   onAuthStateChanged
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { saveSession, clearSession } from './api';
+import api, { saveSession, clearSession } from './api';
 
 // Format Indian phone numbers with +91 if needed
 export function formatMobile(mobile) {
@@ -58,43 +57,52 @@ if (typeof window !== 'undefined') {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       try {
-        const idToken = await user.getIdToken();
-        const profileSnap = await getDoc(doc(db, "partner_profiles", user.uid));
-        
-        let profile = null;
-        if (profileSnap.exists()) {
-          profile = profileSnap.data();
-        } else {
-          // If profile doc doesn't exist yet, construct a basic mock one
-          profile = {
-            id: user.uid,
-            user_id: user.uid,
-            first_name: user.displayName?.split(' ')[0] || 'Partner',
-            last_name: user.displayName?.split(' ')[1] || '',
-            mobile: user.phoneNumber || '',
-            email: user.email || '',
-            role: 'Partner',
-            kyc_status: 'pending',
-            Partner_code: `PP-${user.uid.slice(0, 5).toUpperCase()}`
-          };
-        }
-
+        // Always get a fresh token
+        const idToken = await user.getIdToken(true);
+        // Store token immediately so backend calls can use it
         saveSession({
           access_token: idToken,
           refresh_token: user.refreshToken || idToken,
           user: {
             id: user.uid,
-            email: user.email || profile.email || '',
-            mobile: user.phoneNumber || profile.mobile || '',
-            role: profile.role || 'Partner',
-            status: profile.status || 'pending',
-            first_name: profile.first_name || '',
-            last_name: profile.last_name || '',
-            Partner_code: profile.Partner_code || `PP-${user.uid.slice(0, 5).toUpperCase()}`,
-            Partner_id: user.uid,
-            kyc_status: profile.kyc_status || 'pending',
+            email: user.email || '',
+            mobile: user.phoneNumber || '',
+            role: 'Partner',
+            status: 'pending',
+            first_name: '',
+            last_name: '',
+            Partner_code: '',
+            Partner_id: '',
+            kyc_status: 'pending',
           }
         });
+
+        // Fetch full profile from Express backend
+        try {
+          const { data: meRes } = await api.get('/auth/me');
+          if (meRes.success && meRes.data) {
+            const p = meRes.data;
+            saveSession({
+              access_token: idToken,
+              refresh_token: user.refreshToken || idToken,
+              user: {
+                id: p.id || user.uid,
+                email: p.email || user.email || '',
+                mobile: p.mobile || user.phoneNumber || '',
+                role: p.role || 'Partner',
+                status: p.status || 'pending',
+                first_name: p.first_name || '',
+                last_name: p.last_name || '',
+                Partner_code: p.Partner_code || '',
+                Partner_id: p.Partner_id || '',
+                kyc_status: p.kyc_status || 'pending',
+              }
+            });
+          }
+        } catch (backendErr) {
+          // Profile not yet registered — acceptable for new registrations
+          console.warn('Backend profile not found for Firebase user (may be registering):', backendErr?.response?.status);
+        }
       } catch (err) {
         console.error("Error loading session on auth state change:", err);
       }
@@ -238,43 +246,47 @@ export async function loginWithPassword(identifier, password) {
 }
 
 /**
- * Full partner registration using Firestore.
+ * Full partner registration.
+ * Flow:
+ *  1. Firebase Auth: create account (email/pass) or link email to phone-verified account.
+ *  2. Get Firebase ID Token.
+ *  3. POST to Express backend /auth/register — backend stores profile in PostgreSQL.
  */
 export async function registerPartner(formData) {
   try {
     let user = auth.currentUser;
-    
-    // If the user isn't authenticated yet (meaning they skipped OTP verification somehow),
-    // we create a credential using Email/Password.
+
     if (!user) {
+      // No phone OTP done — create fresh Firebase account with email/password
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       user = userCredential.user;
     } else {
-      // Link email/password credential to the phone-authenticated user
+      // Phone already verified — link email/password credential
       try {
         const credential = EmailAuthProvider.credential(formData.email, formData.password);
         await linkWithCredential(user, credential);
       } catch (linkErr) {
-        // If already linked or fails, log it and proceed
-        console.warn("Linking email/password credential failed or already linked:", linkErr);
+        // 'auth/provider-already-linked' is safe to ignore
+        if (linkErr.code !== 'auth/provider-already-linked') {
+          console.warn('Linking email/password credential:', linkErr.code);
+        }
       }
     }
 
-    // Update display name
+    // Update Firebase display name
     await updateProfile(user, {
       displayName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
     });
 
-    const partnerCode = `PP-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Get fresh ID token
+    const idToken = await user.getIdToken(true);
 
-    const profileData = {
-      id: user.uid,
-      user_id: user.uid,
-      Partner_code: partnerCode,
+    // POST to Express backend — backend stores everything in PostgreSQL
+    const { data: regRes } = await api.post('/auth/register', {
+      email: formData.email || user.email || '',
+      mobile: formData.mobile ? formData.mobile.replace(/\D/g, '').slice(-10) : (user.phoneNumber || '').replace('+91', ''),
       first_name: formData.firstName || '',
       last_name: formData.lastName || '',
-      mobile: user.phoneNumber || formatMobile(formData.mobile) || '',
-      email: formData.email || '',
       current_address: formData.address || '',
       company_name: formData.shopName || '',
       company_type: formData.companyType || 'proprietorship',
@@ -284,49 +296,30 @@ export async function registerPartner(formData) {
       account_number: formData.accountNumber || '',
       ifsc_code: formData.ifsc || '',
       account_holder_name: formData.accountHolderName || '',
-      kyc_status: 'pending',
-      status: 'pending',
-      role: 'Partner',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Save profile and user documents in Firestore
-    await setDoc(doc(db, "partner_profiles", user.uid), profileData);
-    await setDoc(doc(db, "users", user.uid), {
-      id: user.uid,
-      email: formData.email || '',
-      mobile: user.phoneNumber || formatMobile(formData.mobile) || '',
-      role: 'Partner',
-      status: 'pending',
-      created_at: new Date().toISOString()
+    }, {
+      headers: { Authorization: `Bearer ${idToken}` }
     });
 
-    // Create matching base wallet document in Firestore
-    await setDoc(doc(db, "wallets", user.uid), {
-      id: user.uid,
-      Partner_id: user.uid,
-      total_earned: 0,
-      total_withdrawn: 0,
-      pending_amount: 0,
-      available_balance: 0,
-      last_updated: new Date().toISOString()
-    });
+    if (!regRes.success) {
+      throw new Error(regRes.message || 'Registration failed on the server');
+    }
 
     return {
       success: true,
-      message: 'Registration successful',
-      data: {
-        Partner_code: partnerCode
-      }
+      message: regRes.message || 'Registration successful',
+      data: { Partner_code: regRes.data?.Partner_code }
     };
   } catch (err) {
-    throw normalizeError(err, 'Registration failed. Check details.');
+    // If it's an Axios error, extract the server message
+    if (err.response?.data?.message) {
+      throw { message: err.response.data.message, status: err.response.status, raw: err };
+    }
+    throw normalizeError(err, 'Registration failed. Check your details.');
   }
 }
 
 /**
- * Get current user profile.
+ * Get current user profile from Express backend.
  */
 export async function getMe(bypassCache = false) {
   const user = auth.currentUser;
@@ -337,15 +330,19 @@ export async function getMe(bypassCache = false) {
     return cachedUser;
   }
   try {
-    const profileSnap = await getDoc(doc(db, "partner_profiles", user.uid));
-    if (!profileSnap.exists()) {
-      throw new Error('Profile details not found in Firestore.');
-    }
-    const data = profileSnap.data();
-    cachedUser = data;
+    // Ensure we have a fresh token
+    const idToken = await user.getIdToken();
+    const { data: res } = await api.get('/auth/me', {
+      headers: { Authorization: `Bearer ${idToken}` }
+    });
+    if (!res.success) throw new Error(res.message);
+    cachedUser = res.data;
     lastFetched = Date.now();
-    return data;
+    return res.data;
   } catch (err) {
+    if (err.response?.data?.message) {
+      throw { message: err.response.data.message, status: err.response.status, raw: err };
+    }
     throw normalizeError(err, 'Failed to retrieve profile.');
   }
 }
