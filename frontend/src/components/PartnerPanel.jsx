@@ -48,10 +48,8 @@ export default function PartnerPanel({ onBackToMain }) {
 
   const handleLogout = async () => {
     try {
-      const rt = localStorage.getItem("gkp_refresh_token");
-      if (rt) await logout(rt);
+      await logout();
     } catch {/* ignore */ }
-    clearSession();
     setAuth("login");
     onBackToMain();
   };

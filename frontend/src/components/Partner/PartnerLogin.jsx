@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, verifyOtpLogin, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
+import { saveSession } from "../../api/api";
 import logo from "../../logo.jpeg";
 
 export default function PartnerLogin({ onLogin, onRegisterNav }) {
@@ -31,8 +32,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       // Dev bypass: auto-fill the magic OTP code
       if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
-      const msg = e.response?.data?.message || "Failed to send OTP. Please try again.";
-      setErr(msg);
+      setErr(e.message || "Failed to send OTP. Please try again.");
     } finally {
       setLoading(l => ({ ...l, otp: false }));
     }
@@ -51,12 +51,13 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
     try {
       const res = await verifyOtpLogin(form.mobile, form.otp);
       if (res.success) {
+        saveSession(res.data);
         onLogin(res.data.user);
       } else {
         setErr(res.message || "Login failed. Please try again.");
       }
     } catch (e) {
-      setErr(e.response?.data?.message || "Invalid OTP or session expired. Please try again.");
+      setErr(e.message || "Invalid OTP or session expired. Please try again.");
     } finally {
       setLoading(l => ({ ...l, login: false }));
     }

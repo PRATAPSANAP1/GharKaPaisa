@@ -6,10 +6,11 @@ import { sendOtp, registerPartner, DEV_BYPASS, DEV_CODE } from "../../api/auth.a
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
-  { label: "Individual / Freelancer", value: "individual" },
-  { label: "Sole Proprietorship", value: "sole_proprietor" },
+  { label: "Sole Proprietorship", value: "proprietorship" },
   { label: "Partnership Firm", value: "partnership" },
-  { label: "Private Limited Company", value: "private_limited" },
+  { label: "Private Limited Company", value: "pvt_ltd" },
+  { label: "Limited Liability Partnership (LLP)", value: "llp" },
+  { label: "Other", value: "other" },
 ];
 
 export default function PartnerRegister({ onBack }) {
@@ -31,7 +32,7 @@ export default function PartnerRegister({ onBack }) {
     email: "", password: "", confirmPassword: "",
     // Step 1 – Business
     address: "", businessCity: "", shopName: "",
-    companyType: "sole_proprietor", gst: "",
+    companyType: "proprietorship", gst: "",
     // Step 2 – Bank
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
@@ -67,7 +68,7 @@ export default function PartnerRegister({ onBack }) {
       // Dev bypass: auto-fill magic code
       if (DEV_BYPASS) setForm(f => ({ ...f, otp: DEV_CODE }));
     } catch (e) {
-      setErr(e.response?.data?.message || "Failed to send OTP. Please try again.");
+      setErr(e.message || "Failed to send OTP. Please try again.");
     } finally {
       setOtpLoading(false);
     }
@@ -119,7 +120,7 @@ export default function PartnerRegister({ onBack }) {
         setErr(res.message || "Registration failed. Please try again.");
       }
     } catch (e) {
-      setErr(e.response?.data?.message || "Registration failed. Please check your details.");
+      setErr(e.message || "Registration failed. Please check your details.");
     } finally {
       setLoading(false);
     }
