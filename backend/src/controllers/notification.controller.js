@@ -1,6 +1,6 @@
 const { query } = require('../config/db');
 const { getPaginationParams } = require('../utils/helpers');
-const { success, paginate } = require('../utils/response');
+const { success, paginate, error, notFound } = require('../utils/response');
 
 // GET /notifications
 const getNotifications = async (req, res, next) => {
@@ -31,7 +31,10 @@ const getNotifications = async (req, res, next) => {
 // PATCH /notifications/:id/read
 const markRead = async (req, res, next) => {
   try {
-    await query(`UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.id]);
+    const result = await query(`UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.id]);
+    if (result.rowCount === 0) {
+      return notFound(res, 'Notification not found');
+    }
     return success(res, {}, 'Marked as read');
   } catch (err) {
     next(err);

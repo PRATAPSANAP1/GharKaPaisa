@@ -76,6 +76,11 @@ const releaseCommission = async (PartnerId, walletId, txnId, amount) => {
       WHERE Partner_id = $2
     `, [amount, PartnerId]);
     await client.query(`UPDATE wallet_transactions SET status = 'approved', processed_at = NOW() WHERE id = $1`, [txnId]);
+    // Update application commission_status to approved
+    await client.query(`
+      UPDATE applications SET commission_status = 'approved' 
+      WHERE id = (SELECT application_id FROM wallet_transactions WHERE id = $1)
+    `, [txnId]);
     await client.query('COMMIT');
 
     // Get user_id for notification

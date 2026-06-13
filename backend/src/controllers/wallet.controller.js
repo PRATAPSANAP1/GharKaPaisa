@@ -1,4 +1,4 @@
-const { query } = require('../config/db');
+const { query, getClient } = require('../config/db');
 const { processWithdrawal, getWalletSummary } = require('../services/wallet.service');
 const { getPaginationParams } = require('../utils/helpers');
 const { success, error, notFound, paginate } = require('../utils/response');
@@ -22,11 +22,12 @@ const getTransactions = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { type, status, from_date, to_date } = req.query;
 
+    // Check if wallet exists
     const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE Partner_id = $1`, [PartnerId]);
     if (!wallet) return notFound(res, 'Wallet not found');
 
-    let where = `WHERE wt.wallet_id = $1`;
-    const values = [wallet.id];
+    let where = `WHERE w.Partner_id = $1`;
+    const values = [PartnerId];
     let idx = 2;
 
     if (type) { where += ` AND wt.txn_type = $${idx++}`; values.push(type); }
@@ -35,10 +36,16 @@ const getTransactions = async (req, res, next) => {
     if (to_date) { where += ` AND wt.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
 
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM wallet_transactions wt ${where}`, values),
+      query(`
+        SELECT COUNT(*) 
+        FROM wallet_transactions wt 
+        JOIN wallets w ON w.id = wt.wallet_id
+        ${where}
+      `, values),
       query(`
         SELECT wt.*, a.app_number, c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
         FROM wallet_transactions wt
+        JOIN wallets w ON w.id = wt.wallet_id
         LEFT JOIN applications a ON a.id = wt.application_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
@@ -57,38 +64,61 @@ const getTransactions = async (req, res, next) => {
 
 // POST /wallet/:PartnerId/withdraw
 const requestWithdrawal = async (req, res, next) => {
+  const client = await getClient();
   try {
     const { PartnerId } = req.params;
     const { amount } = req.body;
 
-    const wallet = await getWalletSummary(PartnerId);
-    if (!wallet) return notFound(res, 'Wallet not found');
-    if (parseFloat(wallet.available_balance) < parseFloat(amount)) {
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount < 100) {
+      return error(res, 'Minimum withdrawal amount is ₹100');
+    }
+
+    await client.query('BEGIN');
+
+    // Get wallet summary and lock the wallet row inside transaction
+    const { rows: [wallet] } = await client.query(
+      `SELECT id, available_balance FROM wallets WHERE Partner_id = $1 FOR UPDATE`, [PartnerId]
+    );
+    if (!wallet) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Wallet not found');
+    }
+
+    if (parseFloat(wallet.available_balance) < parsedAmount) {
+      await client.query('ROLLBACK');
       return error(res, `Insufficient balance. Available: ₹${wallet.available_balance}`);
     }
 
     // Check no pending withdrawal
-    const { rows: pending } = await query(
+    const { rows: pending } = await client.query(
       `SELECT id FROM withdrawal_requests WHERE Partner_id = $1 AND status = 'pending'`, [PartnerId]
     );
-    if (pending.length) return error(res, 'A withdrawal request is already pending');
+    if (pending.length) {
+      await client.query('ROLLBACK');
+      return error(res, 'A withdrawal request is already pending');
+    }
 
     // Get bank details
-    const { rows: [bank] } = await query(
+    const { rows: [bank] } = await client.query(
       `SELECT bank_name, account_number, ifsc_code FROM Partner_bank_details WHERE Partner_id = $1`, [PartnerId]
     );
 
     // Deduct from available (hold until processed)
-    await query(`UPDATE wallets SET available_balance = available_balance - $1 WHERE Partner_id = $2`, [amount, PartnerId]);
+    await client.query(`UPDATE wallets SET available_balance = available_balance - $1 WHERE Partner_id = $2`, [parsedAmount, PartnerId]);
 
-    const { rows: [wr] } = await query(`
+    const { rows: [wr] } = await client.query(`
       INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code)
       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
-    `, [wallet.id, PartnerId, amount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
+    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
 
+    await client.query('COMMIT');
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 

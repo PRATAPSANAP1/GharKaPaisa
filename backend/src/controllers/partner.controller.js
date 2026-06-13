@@ -1,9 +1,9 @@
-const { query } = require('../config/db');
+const { query, getClient } = require('../config/db');
 const { uploadToS3, getSignedDownloadUrl } = require('../services/s3.service');
 const { ensureWallet } = require('../services/wallet.service');
 const { notify } = require('../services/notification.service');
-const { getPaginationParams, paginate } = require('../utils/helpers');
-const { success, created, error, notFound } = require('../utils/response');
+const { getPaginationParams } = require('../utils/helpers');
+const { success, created, error, notFound, paginate } = require('../utils/response');
 const logger = require('../utils/logger');
 
 // GET /Partners/:PartnerId/profile (Partner profile)
@@ -19,6 +19,16 @@ const getProfile = async (req, res, next) => {
       WHERE ap.id = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
+
+    // Mask bank account number
+    if (Partner && Partner.account_number) {
+      const accLen = Partner.account_number.length;
+      if (accLen > 4) {
+        Partner.account_number = '*'.repeat(accLen - 4) + Partner.account_number.slice(-4);
+      } else {
+        Partner.account_number = '*'.repeat(accLen);
+      }
+    }
 
     const { rows: kyc } = await query(
       `SELECT doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
@@ -59,6 +69,13 @@ const uploadKYCDocuments = async (req, res, next) => {
     const { PartnerId } = req.params;
     const { aadhaar_number, pan_number } = req.body;
     const files = req.files;
+
+    // S3 configuration check
+    const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+    if (!isS3Configured) {
+      return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+    }
+
     const uploaded = [];
 
     const docMap = {
@@ -68,8 +85,24 @@ const uploadKYCDocuments = async (req, res, next) => {
       cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
     };
 
+    const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+
+    // Validate size and types before starting any upload
     for (const [field, meta] of Object.entries(docMap)) {
-      if (files[field] && files[field][0]) {
+      if (files && files[field] && files[field][0]) {
+        const file = files[field][0];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return error(res, `Invalid file type for ${meta.label}. Only PDF, PNG, and JPEG are allowed.`, 400);
+        }
+        if (file.size > maxFileSize) {
+          return error(res, `File size too large for ${meta.label}. Maximum size is 5MB.`, 400);
+        }
+      }
+    }
+
+    for (const [field, meta] of Object.entries(docMap)) {
+      if (files && files[field] && files[field][0]) {
         const file = files[field][0];
         const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${PartnerId}`);
         await query(`
@@ -171,30 +204,41 @@ const listPartners = async (req, res, next) => {
 
 // PATCH /Partners/:PartnerId/approve (Admin — approve partner)
 const approvePartner = async (req, res, next) => {
+  const client = await getClient();
   try {
     const { PartnerId } = req.params;
     const { approved, rejection_reason } = req.body;
 
-    const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
+    const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
     if (!Partner) return notFound(res, 'Partner not found');
 
+    await client.query('BEGIN');
+
     if (approved) {
-      await query(`
+      await client.query(`
         UPDATE Partner_profiles SET kyc_status = 'approved', approved_by = $1, approved_at = NOW() WHERE id = $2
       `, [req.user.id, PartnerId]);
-      await query(`UPDATE users SET status = 'active' WHERE id = $1`, [Partner.user_id]);
-      await ensureWallet(PartnerId);
+      await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [Partner.user_id]);
+      await client.query(`
+        INSERT INTO wallets (Partner_id) VALUES ($1)
+        ON CONFLICT (Partner_id) DO NOTHING
+      `, [PartnerId]);
+      await client.query('COMMIT');
       await notify.kycApproved(Partner.user_id);
     } else {
-      await query(`
+      await client.query(`
         UPDATE Partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
+      await client.query('COMMIT');
       await notify.kycRejected(Partner.user_id, rejection_reason);
     }
 
     return success(res, {}, `Partner ${approved ? 'approved' : 'rejected'} successfully`);
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 

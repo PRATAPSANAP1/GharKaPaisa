@@ -5,20 +5,23 @@ const { success } = require('../utils/response');
 const getOverview = async (req, res, next) => {
   try {
     const { from_date, to_date } = req.query;
-    const dateFilter = from_date && to_date
-      ? `AND created_at BETWEEN '${from_date}' AND '${to_date} 23:59:59'`
-      : '';
+    let sql = `
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
+        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
+        COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending,
+        COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as total_commission
+      FROM applications WHERE 1=1
+    `;
+    const values = [];
+    if (from_date && to_date) {
+      sql += ` AND created_at BETWEEN $1 AND $2`;
+      values.push(from_date, to_date + ' 23:59:59');
+    }
 
     const [apps, Partners, wallet] = await Promise.all([
-      query(`
-        SELECT
-          COUNT(*) as total,
-          COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
-          COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-          COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending,
-          COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as total_commission
-        FROM applications WHERE 1=1 ${dateFilter}
-      `),
+      query(sql, values),
       query(`
         SELECT
           COUNT(*) as total,

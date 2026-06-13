@@ -1,6 +1,6 @@
 const { query } = require('../config/db');
 const { getPaginationParams } = require('../utils/helpers');
-const { success, created, notFound, paginate } = require('../utils/response');
+const { success, created, error, notFound, paginate } = require('../utils/response');
 
 // GET /products — list with filters
 const listProducts = async (req, res, next) => {
@@ -51,6 +51,11 @@ const getProduct = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     const { bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order } = req.body;
+
+    // Bank existence check
+    const { rows: [bank] } = await query(`SELECT id FROM banks WHERE id = $1`, [bank_id]);
+    if (!bank) return error(res, 'Bank not found', 400);
+
     const { rows: [p] } = await query(`
       INSERT INTO products (bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
@@ -65,6 +70,25 @@ const createProduct = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   try {
     const { name, description, features, eligibility, commission_type, commission_value, is_active, display_order } = req.body;
+
+    if (features !== undefined) {
+      if (!Array.isArray(features)) {
+        return error(res, 'Features must be an array', 400);
+      }
+      if (features.length === 0) {
+        return error(res, 'Features cannot be empty', 400);
+      }
+    }
+
+    if (eligibility !== undefined) {
+      if (typeof eligibility !== 'object' || eligibility === null || Array.isArray(eligibility)) {
+        return error(res, 'Eligibility must be an object', 400);
+      }
+      if (Object.keys(eligibility).length === 0) {
+        return error(res, 'Eligibility cannot be empty', 400);
+      }
+    }
+
     await query(`
       UPDATE products SET
         name = COALESCE($1, name),
@@ -87,22 +111,38 @@ const updateProduct = async (req, res, next) => {
 // GET /products/categories — grouped by category for home page
 const getProductsByCategory = async (req, res, next) => {
   try {
-    const { rows } = await query(`
-      SELECT p.id, p.name, p.category, p.commission_type, p.commission_value, p.features, p.eligibility,
-        b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-      FROM products p JOIN banks b ON b.id = p.bank_id
-      WHERE p.is_active = true
-      ORDER BY p.category, p.display_order, p.commission_value DESC
-    `);
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const [count, data] = await Promise.all([
+      query(`SELECT COUNT(*) FROM products WHERE is_active = true`),
+      query(`
+        SELECT p.id, p.name, p.category, p.commission_type, p.commission_value, p.features, p.eligibility,
+          b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+        FROM products p JOIN banks b ON b.id = p.bank_id
+        WHERE p.is_active = true
+        ORDER BY p.category, p.display_order, p.commission_value DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset])
+    ]);
 
     // Group by category
-    const grouped = rows.reduce((acc, p) => {
+    const grouped = data.rows.reduce((acc, p) => {
       if (!acc[p.category]) acc[p.category] = [];
       acc[p.category].push(p);
       return acc;
     }, {});
 
-    return success(res, grouped);
+    return res.status(200).json({
+      success: true,
+      message: 'Success',
+      data: grouped,
+      pagination: {
+        total: parseInt(count.rows[0].count),
+        page,
+        limit,
+        totalPages: Math.ceil(parseInt(count.rows[0].count) / limit),
+      },
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     next(err);
   }
@@ -112,6 +152,11 @@ const getProductsByCategory = async (req, res, next) => {
 const setCommission = async (req, res, next) => {
   try {
     const { product_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+
+    if (effective_to && new Date(effective_from) > new Date(effective_to)) {
+      return error(res, 'effective_from cannot be greater than effective_to', 400);
+    }
+
     await query(`
       INSERT INTO commission_structures (product_id, Partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7)

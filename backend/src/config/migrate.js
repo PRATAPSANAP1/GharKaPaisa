@@ -53,6 +53,9 @@ const migrate = async () => {
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
 
+  // Create sequence for Partner code generation
+  await query(`CREATE SEQUENCE IF NOT EXISTS partner_code_seq START 1000`);
+
   // ── Users (all roles) ─────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS users (

@@ -9,10 +9,7 @@ const logger = require('../utils/logger');
 
 // POST /auth/register (Partner self-registration)
 const register = async (req, res, next) => {
-  const client = await getClient();
   try {
-    await client.query('BEGIN');
-
     const {
       email, mobile, password, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number,
@@ -20,57 +17,67 @@ const register = async (req, res, next) => {
       otp, aadhar_url, pan_url, gst_cert_url, cancel_cheque_url,
     } = req.body;
 
-    // Check duplicates
-    const { rows: exist } = await client.query(
-      `SELECT id FROM users WHERE email = $1 OR mobile = $2`, [email, mobile]
-    );
-    if (exist.length) return error(res, 'Email or mobile already registered', 409);
-
-    // Verify OTP
+    // Verify OTP first (outside transaction)
     const valid = await verifyOTP(mobile, otp, 'register');
     if (!valid) return error(res, 'Invalid or expired OTP', 401);
 
-    // Hash password
-    const password_hash = await bcrypt.hash(password, 12);
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
 
-    // Create user
-    const { rows: [user] } = await client.query(`
-      INSERT INTO users (email, mobile, password_hash, role, status)
-      VALUES ($1, $2, $3, 'Partner', 'pending') RETURNING id
-    `, [email, mobile, password_hash]);
+      // Check duplicates
+      const { rows: exist } = await client.query(
+        `SELECT id FROM users WHERE email = $1 OR mobile = $2`, [email, mobile]
+      );
+      if (exist.length) {
+        await client.query('ROLLBACK');
+        return error(res, 'Email or mobile already registered', 409);
+      }
 
-    // Generate Partner code
-    const { rows: [{ count }] } = await client.query(`SELECT COUNT(*) FROM Partner_profiles`);
-    const PartnerCode = generatePartnerCode(parseInt(count) + 1);
+      // Hash password
+      const password_hash = await bcrypt.hash(password, 12);
 
-    // Create Partner profile
-    const { rows: [Partner] } = await client.query(`
-      INSERT INTO Partner_profiles (
-        user_id, Partner_code, first_name, last_name, current_address, 
+      // Create user
+      const { rows: [user] } = await client.query(`
+        INSERT INTO users (email, mobile, password_hash, role, status)
+        VALUES ($1, $2, $3, 'Partner', 'pending') RETURNING id
+      `, [email, mobile, password_hash]);
+
+      // Generate Partner code using atomic database sequence
+      const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
+      const PartnerCode = generatePartnerCode(parseInt(nextval));
+
+      // Create Partner profile
+      const { rows: [Partner] } = await client.query(`
+        INSERT INTO Partner_profiles (
+          user_id, Partner_code, first_name, last_name, current_address, 
+          business_location, company_name, company_type, gst_number,
+          aadhar_url, pan_url, gst_cert_url, cancel_cheque_url
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
+      `, [
+        user.id, PartnerCode, first_name, last_name, current_address, 
         business_location, company_name, company_type, gst_number,
-        aadhar_url, pan_url, gst_cert_url, cancel_cheque_url
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
-    `, [
-      user.id, PartnerCode, first_name, last_name, current_address, 
-      business_location, company_name, company_type, gst_number,
-      aadhar_url || '', pan_url || '', gst_cert_url || '', cancel_cheque_url || ''
-    ]);
+        aadhar_url || null, pan_url || null, gst_cert_url || null, cancel_cheque_url || null
+      ]);
 
-    // Create bank details
-    await client.query(`
-      INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
-      VALUES ($1, $2, $3, $4, $5)
-    `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
+      // Create bank details
+      await client.query(`
+        INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
 
-    await client.query('COMMIT');
-    logger.info(`New partner registered: ${email} (${PartnerCode})`);
-    return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
+      await client.query('COMMIT');
+      logger.info(`New partner registered: ${email} (${PartnerCode})`);
+      return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
-    await client.query('ROLLBACK');
     next(err);
-  } finally {
-    client.release();
   }
 };
 
@@ -90,6 +97,14 @@ const login = async (req, res, next) => {
     if (!user) return unauthorized(res, 'Invalid credentials');
     if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
     if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
+    if (user.status === 'pending') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account pending KYC approval.', 
+        status: 'pending',
+        kyc_status: user.kyc_status 
+      });
+    }
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return unauthorized(res, 'Invalid credentials');
@@ -147,6 +162,17 @@ const verifyOTPLogin = async (req, res, next) => {
     `, [mobile]);
 
     if (!user) return error(res, 'User not found', 404);
+    if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
+    if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
+    if (user.status === 'pending') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account pending KYC approval.', 
+        status: 'pending',
+        kyc_status: user.kyc_status 
+      });
+    }
+
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
 
     const payload = { id: user.id, role: user.role, PartnerId: user.Partner_id };
@@ -177,6 +203,14 @@ const refreshToken = async (req, res, next) => {
     const decoded = verifyRefreshToken(refresh_token);
     const valid = await validateRefreshToken(decoded.id, refresh_token);
     if (!valid) return unauthorized(res, 'Invalid or expired refresh token');
+
+    // Revalidate user status against database
+    const { rows: [user] } = await query(
+      `SELECT status FROM users WHERE id = $1`, [decoded.id]
+    );
+    if (!user || user.status !== 'active') {
+      return unauthorized(res, 'Account is inactive, pending, or suspended.');
+    }
 
     // Rotate tokens
     await revokeRefreshToken(decoded.id, refresh_token);
@@ -220,7 +254,19 @@ const getMe = async (req, res, next) => {
       LEFT JOIN wallets w ON w.Partner_id = ap.id
       WHERE u.id = $1
     `, [req.user.id]);
-    return success(res, user);
+    if (!user) return notFound(res, 'User not found');
+
+    const response = { ...user };
+    if (user.role !== 'Partner') {
+      delete response.available_balance;
+      delete response.pending_amount;
+      delete response.Partner_id;
+      delete response.Partner_code;
+      delete response.kyc_status;
+      delete response.company_name;
+      delete response.profile_photo_url;
+    }
+    return success(res, response);
   } catch (err) {
     next(err);
   }

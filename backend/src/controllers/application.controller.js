@@ -3,8 +3,7 @@ const { generateAppNumber, calculateCommission, getPaginationParams } = require(
 const { creditCommission } = require('../services/wallet.service');
 const { notify } = require('../services/notification.service');
 const { uploadToS3 } = require('../services/s3.service');
-const { success, created, error, notFound } = require('../utils/response');
-const { paginate } = require('../utils/response');
+const { success, created, error, notFound, forbidden, paginate } = require('../utils/response');
 const logger = require('../utils/logger');
 
 // POST /applications — Partner submits application
@@ -56,9 +55,9 @@ const submitApplication = async (req, res, next) => {
         (app_number, customer_id, product_id, Partner_id, submitted_by, loan_amount, commission_amount, notes,
          status_history)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$5::text)))
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$9::text)))
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, PartnerId, req.user.id, loan_amount, commission, notes]);
+    `, [appNumber, customerId, product_id, PartnerId, req.user.id, loan_amount, commission, notes, req.user.id.toString()]);
 
     await client.query('COMMIT');
 
@@ -102,19 +101,24 @@ const updateStatus = async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    // Credit commission on approval
+    // Credit commission on approval or disbursal, but only once
     if (status === 'approved' || status === 'disbursed') {
-      const commission = app.commission_amount || 0;
-      if (commission > 0) {
-        await creditCommission(app.Partner_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
+      const { rows: [existingTx] } = await client.query(
+        `SELECT id FROM wallet_transactions WHERE application_id = $1 AND txn_type = 'credit'`, [app.id]
+      );
+      if (!existingTx) {
+        const commission = app.commission_amount || 0;
+        if (commission > 0) {
+          await creditCommission(app.Partner_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
+        }
+        // Get Partner user_id for notification
+        const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+        if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
       }
-      // Get Partner user_id for notification
-      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
-      if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
     }
 
     if (status === 'rejected') {
-      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+      const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
       if (Partner) await notify.applicationRejected(Partner.user_id, app.app_number, rejection_reason);
     }
 
@@ -206,6 +210,15 @@ const getApplication = async (req, res, next) => {
       WHERE a.id = $1
     `, [id]);
     if (!app) return notFound(res);
+
+    // Ownership check: Partner can only view their own applications
+    if (req.user.role === 'Partner') {
+      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!Partner || app.Partner_id !== Partner.id) {
+        return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
     return success(res, app);
   } catch (err) {
     next(err);
@@ -220,10 +233,24 @@ const uploadApplicationDoc = async (req, res, next) => {
     const file = req.file;
     if (!file) return error(res, 'No file uploaded');
 
-    const { url, key } = await uploadToS3(file.buffer, file.originalname, `applications/${id}`);
+    // S3 configuration check
+    const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+    if (!isS3Configured) {
+      return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+    }
 
-    const { rows: [app] } = await query(`SELECT documents FROM applications WHERE id = $1`, [id]);
+    const { rows: [app] } = await query(`SELECT documents, Partner_id FROM applications WHERE id = $1`, [id]);
     if (!app) return notFound(res);
+
+    // Ownership check: Partner can only upload docs for their own applications
+    if (req.user.role === 'Partner') {
+      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!Partner || app.Partner_id !== Partner.id) {
+        return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
+    const { url, key } = await uploadToS3(file.buffer, file.originalname, `applications/${id}`);
 
     const docs = app.documents || [];
     docs.push({ doc_type, url, key, uploaded_at: new Date(), uploaded_by: req.user.id });
