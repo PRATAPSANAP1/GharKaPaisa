@@ -17,8 +17,24 @@ router.use(authenticate);
 // Partner self-access or admin
 router.get('/:PartnerId/profile', selfOrAdmin('PartnerId'), ctrl.getProfile);
 router.put('/:PartnerId/profile', selfOrAdmin('PartnerId'), ctrl.updateProfile);
-router.post('/:PartnerId/kyc', selfOrAdmin('PartnerId'), kycUpload, ctrl.uploadKYCDocuments);
-router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), ctrl.getDashboardStats);
+router.post('/:PartnerId/kyc', 
+  selfOrAdmin('PartnerId'), 
+  kycUpload, 
+  (req, res, next) => {
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf', 'image/jpg'];
+    const files = Object.values(req.files || {}).flat();
+    const invalid = files.filter(f => !allowed.includes(f.mimetype));
+    if (invalid.length) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Only JPG, PNG, PDF files allowed' 
+      });
+    }
+    next();
+  },
+  ctrl.uploadKYCDocuments
+);
+router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.getDashboardStats);
 
 // Admin only — partner management
 router.get('/', authorize('admin', 'super_admin'), ctrl.listPartners);

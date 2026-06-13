@@ -12,7 +12,7 @@ appRouter.get('/', appCtrl.listApplications);
 appRouter.get('/:id', appCtrl.getApplication);
 appRouter.post('/', authorize('Partner'), requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
 appRouter.patch('/:id/status', authorize('admin', 'super_admin', 'employee'), appCtrl.updateStatus);
-appRouter.post('/:id/documents', upload.single('document'), appCtrl.uploadApplicationDoc);
+appRouter.post('/:id/documents', authorize('Partner', 'admin', 'super_admin'), upload.single('document'), appCtrl.uploadApplicationDoc);
 
 
 // ── wallet.routes.js ──────────────────────────────────────────────────────────
@@ -41,15 +41,13 @@ const { commissionRules } = require('../middleware/validation.middleware');
 
 productRouter.use(authenticate);
 
-productRouter.get('/', productCtrl.listProducts);
 productRouter.get('/categories', productCtrl.getProductsByCategory);
+productRouter.get('/banks', productCtrl.listBanks);
+productRouter.get('/', productCtrl.listProducts);
 productRouter.get('/:id', productCtrl.getProduct);
 productRouter.post('/', authorize('admin', 'super_admin'), productCtrl.createProduct);
 productRouter.put('/:id', authorize('admin', 'super_admin'), productCtrl.updateProduct);
 productRouter.post('/commission', authorize('super_admin'), commissionRules, validate, productCtrl.setCommission);
-
-// Banks
-productRouter.get('/banks', productCtrl.listBanks);
 
 
 // ── notification.routes.js ────────────────────────────────────────────────────

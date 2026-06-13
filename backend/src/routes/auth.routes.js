@@ -20,11 +20,23 @@ const otpLimiter = rateLimit({
   keyGenerator: (req) => (req.body.mobile || '') + req.ip
 });
 
-router.post('/register',        registerRules,   validate, ctrl.register);
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { success: false, message: 'Too many registration attempts. Try again after an hour.' }
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  message: { success: false, message: 'Too many token refresh requests. Try again after 15 minutes.' }
+});
+
+router.post('/register',        registerLimiter, registerRules,   validate, ctrl.register);
 router.post('/login',           loginLimiter, loginRules,  validate, ctrl.login);
 router.post('/otp/send',        otpLimiter,   otpSendRules,   validate, ctrl.sendOTPHandler);
 router.post('/otp/verify',      loginLimiter, otpVerifyRules, validate, ctrl.verifyOTPLogin);
-router.post('/refresh',         ctrl.refreshToken);
+router.post('/refresh',         refreshLimiter, ctrl.refreshToken);
 router.post('/logout',          authenticate, ctrl.logout);
 router.get('/me',               authenticate, ctrl.getMe);
 
