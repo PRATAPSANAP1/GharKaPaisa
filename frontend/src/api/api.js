@@ -152,6 +152,7 @@ export function saveSession({ access_token, refresh_token, user }) {
     last_name: user.last_name,
     role: user.role,
     Partner_code: user.Partner_code || user.id,
+    Partner_id: user.Partner_id,
   }));
 }
 
