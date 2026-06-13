@@ -66,13 +66,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       // 3. Send OTP to their registered mobile number
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'normal',
-          callback: (response) => {
-            console.log("reCAPTCHA solved");
-          },
-          'expired-callback': () => {
-            console.log("reCAPTCHA expired");
-          }
+          size: 'invisible',
         });
       }
 
@@ -253,8 +247,8 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
                   <Icons.check size={12} /> OTP sent to registered mobile {resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")}
                 </div>
               )}
-              {/* Visible reCAPTCHA Container */}
-              <div id="recaptcha-container" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
+              {/* Invisible reCAPTCHA Container */}
+              <div id="recaptcha-container" style={{ display: "none" }}></div>
             </div>
 
             {/* Submit */}
