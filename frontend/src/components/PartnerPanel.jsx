@@ -35,7 +35,7 @@ export default function PartnerPanel({ onBackToMain }) {
   useEffect(() => {
     const u = getStoredUser();
     if (u && ['admin', 'super_admin', 'employee'].includes(u.role)) {
-      window.location.href = 'https://yohesa-test-three.vercel.app/dashboard';
+      window.location.href = 'https://gharkapaisa.in/dashboard';
     }
   }, []);
 
@@ -48,7 +48,7 @@ export default function PartnerPanel({ onBackToMain }) {
 
   const handleLogin = (user) => {
     if (user && ['admin', 'super_admin', 'employee'].includes(user.role)) {
-      window.location.href = 'https://yohesa-test-three.vercel.app/dashboard';
+      window.location.href = 'https://gharkapaisa.in/dashboard';
       return;
     }
     const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.mobile || "Partner";
