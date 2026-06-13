@@ -27,7 +27,12 @@ let cachedUser = null;
 
 // Error normalization helper
 function normalizeError(err, defaultMsg = 'An error occurred') {
-  const message = err.response?.data?.message || err.message || defaultMsg;
+  let message = err.response?.data?.message || err.message || defaultMsg;
+  const errors = err.response?.data?.errors;
+  if (errors && Array.isArray(errors)) {
+    const details = errors.map(e => `${e.field}: ${e.message}`).join(', ');
+    message = `${message} (${details})`;
+  }
   const status = err.response?.status || 0;
   return { message, status, raw: err };
 }
@@ -86,53 +91,34 @@ export async function loginWithPassword(identifier, password) {
 // ── Register ──────────────────────────────────────────────────────────────────
 
 /**
- * Full partner registration using FormData for file uploads.
- * Maps the form data into FormData, ensuring company_type is aligned with enums.
+ * Full partner registration using JSON payload.
+ * Maps form fields into the expected backend schema structure.
  */
 export async function registerPartner(formData) {
   try {
-    const form = new FormData();
+    const body = {
+      first_name:          formData.firstName || '',
+      last_name:           formData.lastName || '',
+      mobile:              formData.mobile || '',
+      email:               formData.email || '',
+      password:            formData.password || '',
+      otp:                 formData.otp || '',
+      current_address:     formData.address || '',
+      company_name:        formData.shopName || '',
+      company_type:        formData.companyType || 'proprietorship',
+      gst_number:          formData.gst || undefined,
+      business_location:   formData.businessCity || '',
+      bank_name:           formData.bankName || '',
+      account_number:      formData.accountNumber || '',
+      ifsc_code:           formData.ifsc || '',
+      account_holder_name: formData.accountHolderName || '',
+    };
 
-    // Step 0 — Personal
-    form.append('first_name',       formData.firstName || '');
-    form.append('last_name',        formData.lastName || '');
-    form.append('mobile',           formData.mobile || '');
-    form.append('email',            formData.email || '');
-    form.append('password',         formData.password || '');
-    form.append('otp',              formData.otp || '');
-    form.append('current_address',  formData.address || '');
-
-    // Step 1 — Business
-    form.append('company_name',     formData.shopName || '');
-    
-    // Normalize sole_proprietor -> proprietorship to match backend ENUM
-    let companyType = formData.companyType || 'proprietorship';
-    if (companyType === 'sole_proprietor' || companyType === 'individual') {
-      companyType = 'proprietorship';
+    if (!body.gst_number) {
+      delete body.gst_number;
     }
-    form.append('company_type',     companyType);
-    
-    form.append('gst_number',       formData.gst || '');
-    form.append('business_location',formData.businessCity || '');
 
-    // Step 2 — Bank
-    form.append('bank_name',           formData.bankName || '');
-    form.append('account_number',      formData.accountNumber || '');
-    form.append('ifsc_code',           formData.ifsc || '');
-    form.append('account_holder_name', formData.accountHolderName || '');
-
-    // Step 3 — KYC Documents (File objects from input)
-    if (formData.aadharFile)       form.append('aadhaar',           formData.aadharFile);
-    if (formData.panFile)          form.append('pan',               formData.panFile);
-    if (formData.gstCertFile)      form.append('gst_cert',          formData.gstCertFile);
-    if (formData.cancelChequeFile) form.append('cancelled_cheque',  formData.cancelChequeFile);
-    
-    if (formData.aadhaar)          form.append('aadhaar_number',    formData.aadhaar);
-    if (formData.pan)              form.append('pan_number',        formData.pan);
-
-    const { data } = await api.post('/auth/register', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await api.post('/auth/register', body);
     return data;
   } catch (err) {
     throw normalizeError(err, 'Registration failed. Check details.');

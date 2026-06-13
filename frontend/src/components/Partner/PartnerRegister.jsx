@@ -83,17 +83,26 @@ export default function PartnerRegister({ onBack }) {
       if (!otpSent) return "Please click 'Verify Mobile' to send the OTP.";
       if (form.otp.length < 6) return "Please enter the 6-digit OTP.";
       if (!form.email.trim()) return "Please enter your email address.";
-      if (form.password.length < 6) return "Password must be at least 6 characters.";
+      if (form.password.length < 8) return "Password must be at least 8 characters.";
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
+        return "Password must contain at least one uppercase letter, one lowercase letter, and one number.";
+      }
       if (form.password !== form.confirmPassword) return "Passwords do not match.";
     }
     if (step === 1) {
       if (!form.address.trim()) return "Please enter your current address.";
       if (!form.shopName.trim()) return "Please enter your company/shop name.";
+      if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst)) {
+        return "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).";
+      }
     }
     if (step === 2) {
       if (!form.bankName.trim()) return "Please enter your bank name.";
       if (!form.accountNumber.trim()) return "Please enter your account number.";
       if (!form.ifsc.trim()) return "Please enter your IFSC code.";
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(form.ifsc)) {
+        return "Please enter a valid 11-digit IFSC code (e.g. HDFC0001234).";
+      }
       if (!form.accountHolderName.trim()) return "Please enter account holder name.";
     }
     return null;
