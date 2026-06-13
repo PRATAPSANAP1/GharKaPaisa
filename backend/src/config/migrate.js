@@ -335,12 +335,21 @@ const migrate = async () => {
 
   // ── Wallet ────────────────────────────────────────────────────
   await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='pending_amount') THEN
+        ALTER TABLE wallets RENAME COLUMN pending_amount TO hold_balance;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS wallets (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       Partner_id          UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
       total_earned      DECIMAL(15,2) DEFAULT 0,
       total_withdrawn   DECIMAL(15,2) DEFAULT 0,
-      pending_amount    DECIMAL(15,2) DEFAULT 0,
+      hold_balance      DECIMAL(15,2) DEFAULT 0,
       available_balance DECIMAL(15,2) DEFAULT 0,
       last_updated      TIMESTAMPTZ DEFAULT NOW()
     )
@@ -348,20 +357,50 @@ const migrate = async () => {
 
   // ── Wallet Transactions ───────────────────────────────────────
   await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_transactions' AND column_name='txn_type') THEN
+        ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS wallet_transactions (
       id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id      UUID NOT NULL REFERENCES wallets(id),
+      partner_id     UUID REFERENCES Partner_profiles(id),
       application_id UUID REFERENCES applications(id),
-      txn_type       wallet_txn_type NOT NULL,
+      type           VARCHAR(20) NOT NULL,
       amount         DECIMAL(12,2) NOT NULL,
-      status         wallet_txn_status DEFAULT 'pending',
+      status         VARCHAR(20) DEFAULT 'pending',
       description    VARCHAR(500),
+      reference_type VARCHAR(100),
+      reference_id   VARCHAR(255),
+      bank_name      VARCHAR(100),
+      product_type   VARCHAR(100),
       processed_by   UUID REFERENCES users(id),
       processed_at   TIMESTAMPTZ,
       created_at     TIMESTAMPTZ DEFAULT NOW()
     )
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_wallet ON wallet_transactions(wallet_id)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES Partner_profiles(id)`);
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_transactions' AND column_name='txn_type') THEN
+        ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type;
+      END IF;
+    END $$;
+  `);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS type VARCHAR(20)`);
+  await query(`ALTER TABLE wallet_transactions ALTER COLUMN type TYPE VARCHAR(20)`);
+  await query(`ALTER TABLE wallet_transactions ALTER COLUMN status TYPE VARCHAR(20)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS reference_type VARCHAR(100)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS reference_id VARCHAR(255)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS product_type VARCHAR(100)`);
   await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS release_at TIMESTAMPTZ`);
 
   // ── Withdrawal Requests ───────────────────────────────────────
@@ -371,7 +410,7 @@ const migrate = async () => {
       wallet_id       UUID NOT NULL REFERENCES wallets(id),
       Partner_id        UUID NOT NULL REFERENCES Partner_profiles(id),
       amount          DECIMAL(12,2) NOT NULL,
-      status          withdrawal_status DEFAULT 'pending',
+      status          VARCHAR(20) DEFAULT 'pending',
       bank_name       VARCHAR(100),
       account_number  VARCHAR(50),
       ifsc_code       VARCHAR(15),
@@ -379,10 +418,13 @@ const migrate = async () => {
       processed_by    UUID REFERENCES users(id),
       processed_at    TIMESTAMPTZ,
       rejection_reason TEXT,
+      admin_note      TEXT,
       created_at      TIMESTAMPTZ DEFAULT NOW(),
       updated_at      TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE withdrawal_requests ALTER COLUMN status TYPE VARCHAR(20)`);
+  await query(`ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS admin_note TEXT`);
 
   // ── Notifications ─────────────────────────────────────────────
   await query(`
@@ -436,14 +478,26 @@ const migrate = async () => {
 
   // ── Wallet Audit Logs ─────────────────────────────────────────
   await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_audit_logs' AND column_name='old_pending_amount') THEN
+        ALTER TABLE wallet_audit_logs RENAME COLUMN old_pending_amount TO old_hold_balance;
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_audit_logs' AND column_name='new_pending_amount') THEN
+        ALTER TABLE wallet_audit_logs RENAME COLUMN new_pending_amount TO new_hold_balance;
+      END IF;
+    END $$;
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS wallet_audit_logs (
       id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id              UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
       action                 VARCHAR(50) NOT NULL,
       old_available_balance  DECIMAL(15,2),
       new_available_balance  DECIMAL(15,2),
-      old_pending_amount     DECIMAL(15,2),
-      new_pending_amount     DECIMAL(15,2),
+      old_hold_balance       DECIMAL(15,2),
+      new_hold_balance       DECIMAL(15,2),
       created_at             TIMESTAMPTZ DEFAULT NOW()
     )
   `);
@@ -455,16 +509,16 @@ const migrate = async () => {
     RETURNS TRIGGER AS $$
     BEGIN
       IF TG_OP = 'INSERT' THEN
-        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
-        VALUES (NEW.id, 'INSERT', NULL, NEW.available_balance, NULL, NEW.pending_amount);
+        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_hold_balance, new_hold_balance)
+        VALUES (NEW.id, 'INSERT', NULL, NEW.available_balance, NULL, NEW.hold_balance);
       ELSIF TG_OP = 'UPDATE' THEN
-        IF OLD.available_balance <> NEW.available_balance OR OLD.pending_amount <> NEW.pending_amount THEN
-          INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
-          VALUES (NEW.id, 'UPDATE', OLD.available_balance, NEW.available_balance, OLD.pending_amount, NEW.pending_amount);
+        IF OLD.available_balance <> NEW.available_balance OR OLD.hold_balance <> NEW.hold_balance THEN
+          INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_hold_balance, new_hold_balance)
+          VALUES (NEW.id, 'UPDATE', OLD.available_balance, NEW.available_balance, OLD.hold_balance, NEW.hold_balance);
         END IF;
       ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
-        VALUES (OLD.id, 'DELETE', OLD.available_balance, NULL, OLD.pending_amount, NULL);
+        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_hold_balance, new_hold_balance)
+        VALUES (OLD.id, 'DELETE', OLD.available_balance, NULL, OLD.hold_balance, NULL);
       END IF;
       RETURN NEW;
     END;

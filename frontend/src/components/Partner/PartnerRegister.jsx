@@ -3,7 +3,7 @@ import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, registerPartner } from "../../api/auth.api";
 import { auth } from "../../config/firebase";
-import { RecaptchaVerifier } from "firebase/auth";
+import { RecaptchaVerifier, EmailAuthProvider, linkWithCredential, sendEmailVerification } from "firebase/auth";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -21,9 +21,14 @@ export default function PartnerRegister({ onBack }) {
 
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -75,9 +80,9 @@ export default function PartnerRegister({ onBack }) {
   const handleSendOtp = async () => {
     if (!form.mobile) return setErr("Please enter your mobile number.");
     setErr("");
+    setInfoMsg("");
     setOtpLoading(true);
     try {
-      // Firebase v12: RecaptchaVerifier takes a single config object
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-register', {
           size: 'invisible',
@@ -89,6 +94,7 @@ export default function PartnerRegister({ onBack }) {
       setConfirmationResult(confResult);
       setOtpSent(true);
       setTimer(30);
+      setInfoMsg("OTP code sent successfully to your mobile.");
     } catch (e) {
       setErr(e.message || "Failed to send OTP. Please try again.");
       if (window.recaptchaVerifier) {
@@ -102,17 +108,86 @@ export default function PartnerRegister({ onBack }) {
     }
   };
 
+  // ── OTP Verify ──────────────────────────────────────────────────────────────
+  const handleVerifyPhoneOtp = async () => {
+    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    setErr("");
+    setInfoMsg("");
+    setLoading(true);
+    try {
+      await confirmationResult.confirm(form.otp);
+      setPhoneVerified(true);
+      setInfoMsg("Mobile number verified successfully!");
+    } catch (e) {
+      setErr("Invalid OTP verification code. Please check and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Email Verification Link Send ───────────────────────────────────────────
+  const handleSendEmailVerification = async () => {
+    if (!form.email.trim()) return setErr("Please enter your email address.");
+    if (form.password.length < 8) return setErr("Password must be at least 8 characters.");
+    if (form.password !== form.confirmPassword) return setErr("Passwords do not match.");
+    if (!auth.currentUser) return setErr("Please verify your mobile number first.");
+
+    setErr("");
+    setInfoMsg("");
+    setEmailLoading(true);
+    try {
+      const credential = EmailAuthProvider.credential(form.email, form.password);
+      try {
+        await linkWithCredential(auth.currentUser, credential);
+      } catch (linkErr) {
+        if (linkErr.code !== 'auth/provider-already-linked') {
+          throw linkErr;
+        }
+      }
+      await sendEmailVerification(auth.currentUser);
+      setEmailSent(true);
+      setInfoMsg("Verification link sent! Check your inbox.");
+    } catch (e) {
+      setErr(e.message || "Failed to send verification email.");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  // ── Email Verification Check ────────────────────────────────────────────────
+  const handleConfirmEmailVerified = async () => {
+    if (!auth.currentUser) return setErr("Please verify your mobile number first.");
+    setErr("");
+    setInfoMsg("");
+    setLoading(true);
+    try {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) {
+        setEmailVerified(true);
+        setInfoMsg("Email verified successfully!");
+      } else {
+        setErr("Email is not verified yet. Click the link sent to your email, then click confirm.");
+      }
+    } catch (e) {
+      setErr(e.message || "Failed to confirm email verification.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) {
       if (!form.firstName.trim()) return "Please enter your first name.";
       if (!form.lastName.trim()) return "Please enter your last name.";
       if (!form.mobile.trim()) return "Please enter your mobile number.";
-      if (!otpSent) return "Please click 'Verify Mobile' to send the OTP.";
-      if (form.otp.length < 6) return "Please enter the 6-digit OTP.";
+      if (!otpSent) return "Please send OTP to verify your mobile number.";
+      if (!phoneVerified) return "Please enter the OTP and click verify mobile.";
       if (!form.email.trim()) return "Please enter your email address.";
       if (form.password.length < 8) return "Password must be at least 8 characters.";
       if (form.password !== form.confirmPassword) return "Passwords do not match.";
+      if (!emailSent) return "Please send email verification link.";
+      if (!emailVerified) return "Please click the link in your email and click confirm email verified.";
     }
     if (step === 1) {
       if (!form.address.trim()) return "Please enter your current address.";
@@ -139,16 +214,11 @@ export default function PartnerRegister({ onBack }) {
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // If step 0, verify Phone OTP first
+    // Ensure phone and email verified in Step 0
     if (step === 0) {
-      setLoading(true);
-      try {
-        await confirmationResult.confirm(form.otp);
-      } catch (otpErr) {
-        setLoading(false);
-        return setErr("Invalid OTP verification code. Please check and try again.");
+      if (!phoneVerified || !emailVerified) {
+        return setErr("Please complete mobile and email verification first.");
       }
-      setLoading(false);
     }
 
     if (step < STEPS.length - 1) {
@@ -278,6 +348,18 @@ export default function PartnerRegister({ onBack }) {
             </div>
           )}
 
+          {/* Info Message */}
+          {infoMsg && (
+            <div style={{
+              background: `${C.green}15`, border: `1px solid ${C.green}40`,
+              borderRadius: "10px", padding: "10px 14px",
+              fontSize: "13px", color: C.green,
+              marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+            }}>
+              <Icons.check size={14} /> {infoMsg}
+            </div>
+          )}
+
           {/* ── Step 0: Personal ──────────────────────────────────────────────── */}
           {step === 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -293,57 +375,112 @@ export default function PartnerRegister({ onBack }) {
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Mobile Number</label>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <input {...inputProps("mobile", { flex: 1 })} style={{ ...S.input, flex: 1 }} placeholder="10-digit Mobile Number" />
+                  <input
+                    {...inputProps("mobile", { flex: 1 })}
+                    style={{ ...S.input, flex: 1 }}
+                    placeholder="10-digit Mobile Number"
+                    disabled={phoneVerified}
+                  />
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    disabled={timer > 0 || otpLoading}
-                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: timer > 0 ? 0.7 : 1 }}
+                    disabled={timer > 0 || otpLoading || phoneVerified}
+                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: (timer > 0 || phoneVerified) ? 0.7 : 1 }}
                   >
-                    {otpLoading ? "Sending…" : timer > 0 ? `${timer}s` : "Verify Mobile"}
+                    {otpLoading ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
                   </button>
                 </div>
-                {otpSent && (
+                {otpSent && !phoneVerified && (
                   <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
                     <Icons.check size={12} /> OTP sent to {form.mobile}
                   </div>
                 )}
+                {phoneVerified && (
+                  <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontWeight: 700 }}>
+                    <Icons.check size={12} /> Mobile number verified successfully!
+                  </div>
+                )}
               </div>
 
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Enter OTP</label>
-                <input
-                  style={{
-                    ...S.input,
-                    background: otpSent ? C.inputBg : C.bg,
-                    color: otpSent ? C.text : C.textLight,
-                    cursor: otpSent ? "text" : "not-allowed",
-                    opacity: otpSent ? 1 : 0.55,
-                    letterSpacing: "6px",
-                    textAlign: "center",
-                    fontSize: "16px",
-                    fontWeight: 700,
-                  }}
-                  maxLength={6}
-                  disabled={!otpSent}
-                  value={form.otp}
-                  onChange={e => setForm(f => ({ ...f, otp: e.target.value.replace(/\D/g, "") }))}
-                  onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
-              </div>
+              {otpSent && !phoneVerified && (
+                <div style={{ gridColumn: "1/-1" }}>
+                  <label style={S.label}>Enter OTP</label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      style={{
+                        ...S.input,
+                        flex: 1,
+                        background: C.inputBg,
+                        color: C.text,
+                        letterSpacing: "6px",
+                        textAlign: "center",
+                        fontSize: "16px",
+                        fontWeight: 700,
+                      }}
+                      maxLength={6}
+                      value={form.otp}
+                      onChange={e => setForm(f => ({ ...f, otp: e.target.value.replace(/\D/g, "") }))}
+                      onFocus={e => { e.target.style.border = focusBorder; }}
+                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyPhoneOtp}
+                      style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
+                    >
+                      Verify OTP
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>Email Address</label>
-                <input type="email" {...inputProps("email")} placeholder="name@domain.com" />
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="email"
+                    {...inputProps("email", { flex: 1 })}
+                    style={{ ...S.input, flex: 1 }}
+                    placeholder="name@domain.com"
+                    disabled={emailVerified}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendEmailVerification}
+                    disabled={emailLoading || emailVerified || !phoneVerified}
+                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: (!phoneVerified || emailVerified) ? 0.7 : 1 }}
+                  >
+                    {emailLoading ? "Sending…" : emailSent ? "Resend Link" : "Send Link"}
+                  </button>
+                </div>
+                {emailSent && !emailVerified && (
+                  <div style={{ fontSize: "12px", color: C.teal, marginTop: "6px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <span>📧</span> Verification link sent! Check your inbox, click the link, and click confirm below:
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleConfirmEmailVerified}
+                      style={{ ...S.btn("sm"), width: "160px", background: C.teal, color: "#fff", marginTop: "4px" }}
+                    >
+                      Confirm Verified
+                    </button>
+                  </div>
+                )}
+                {emailVerified && (
+                  <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontWeight: 700 }}>
+                    <Icons.check size={12} /> Email verified successfully!
+                  </div>
+                )}
               </div>
+
               <div>
                 <label style={S.label}>Password</label>
-                <input type="password" {...inputProps("password")} placeholder="At least 8 chars" />
+                <input type="password" {...inputProps("password")} placeholder="At least 8 chars" disabled={emailVerified} />
               </div>
               <div>
                 <label style={S.label}>Confirm Password</label>
-                <input type="password" {...inputProps("confirmPassword")} placeholder="Confirm password" />
+                <input type="password" {...inputProps("confirmPassword")} placeholder="Confirm password" disabled={emailVerified} />
               </div>
             </div>
           )}

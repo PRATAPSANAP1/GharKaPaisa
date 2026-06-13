@@ -7,6 +7,7 @@ const partnerCtrl = require('../controllers/partner.controller');
 const authCtrl = require('../controllers/auth.controller');
 const appCtrl = require('../controllers/application.controller');
 const productCtrl = require('../controllers/product.controller');
+const walletCtrl = require('../controllers/wallet.controller');
 
 const { validate, commissionRules } = require('../middleware/validation.middleware');
 
@@ -27,5 +28,14 @@ router.get('/applications', roleCheck('admin', 'super_admin', 'employee'), appCt
 
 // ── POST /admin/commission-rule ──────────────────────────────────────────────
 router.post('/commission-rule', roleCheck('super_admin'), commissionRules, validate, productCtrl.setCommission);
+
+// ── POST /admin/withdrawal/approve ───────────────────────────────────────────
+router.post('/withdrawal/approve', roleCheck('admin', 'super_admin'), walletCtrl.approveWithdrawalController);
+
+// ── POST /admin/withdrawal/reject ────────────────────────────────────────────
+router.post('/withdrawal/reject', roleCheck('admin', 'super_admin'), walletCtrl.rejectWithdrawalController);
+
+// ── POST /admin/wallet/adjust ────────────────────────────────────────────────
+router.post('/wallet/adjust', roleCheck('admin', 'super_admin'), walletCtrl.adminAdjustWalletController);
 
 module.exports = router;

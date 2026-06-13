@@ -11,65 +11,63 @@ const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-// ── Core: verify token + auto-provision user ───────────────────────────────
+// ── Core: verify token ───────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
       return unauthorized(res, 'No token provided');
     }
 
-    const token = authHeader.split(' ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
 
-    // 1. Verify Firebase ID Token
-    let decoded;
-    try {
-      decoded = await admin.auth().verifyIdToken(token);
-    } catch (firebaseErr) {
-      logger.warn('Firebase token verification failed:', firebaseErr.code);
-      if (firebaseErr.code === 'auth/id-token-expired') {
-        return unauthorized(res, 'Token expired. Please sign in again.');
-      }
-      return unauthorized(res, 'Invalid or expired token');
-    }
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      phone: decodedToken.phone_number
+    };
 
-    const firebaseUid   = decoded.uid;
-    const email         = decoded.email        || null;
-    const phone         = decoded.phone_number || null;
+    next();
+  } catch (err) {
+    return unauthorized(res, 'Invalid Firebase token');
+  }
+};
 
-    // 2. Find user by firebase_uid, email, or mobile
+// ── Sync User: map Firebase user to PostgreSQL DB user ────────────────────
+const syncUser = async (req, res, next) => {
+  try {
+    const { uid, email, phone } = req.user;
+
     let { rows: [user] } = await query(
       `SELECT * FROM users WHERE firebase_uid = $1 OR email = $2 OR mobile = $3`,
-      [firebaseUid, email, phone]
+      [uid, email, phone]
     );
 
-    // 3. Auto-provision: create user row on very first login
     if (!user) {
-      logger.info(`Auto-provisioning new user for Firebase UID: ${firebaseUid}`);
-      const { rows: [newUser] } = await query(
+      logger.info(`Auto-provisioning new user for Firebase UID: ${uid}`);
+      const result = await query(
         `INSERT INTO users (firebase_uid, email, mobile, role, status)
-         VALUES ($1, $2, $3, 'Partner', 'pending')
+         VALUES ($1, $2, $3, 'Partner', 'active')
          RETURNING *`,
-        [firebaseUid, email, phone]
+        [uid, email, phone]
       );
-      user = newUser;
+      user = result.rows[0];
     } else if (!user.firebase_uid) {
-      // Existing user found by email/mobile — link firebase_uid
       await query(
         `UPDATE users SET firebase_uid = $1 WHERE id = $2`,
-        [firebaseUid, user.id]
+        [uid, user.id]
       );
-      user.firebase_uid = firebaseUid;
+      user.firebase_uid = uid;
     }
 
-    // 4. Status checks
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
     if (user.status === 'rejected')  return forbidden(res, 'Account rejected. Contact support.');
 
-    req.user        = user;
-    req.firebaseUser = decoded;
+    req.dbUser = user;
+    req.user = user;
 
-    // 5. Attach partner profile for Partner role
+    // Attach partner profile for Partner role
     if (user.role === 'Partner') {
       const { rows: [partner] } = await query(
         `SELECT id, kyc_status, first_name, last_name, Partner_code
@@ -77,12 +75,18 @@ const authenticate = async (req, res, next) => {
         [user.id]
       );
       req.partner = partner || null;
+      if (partner) {
+        req.dbUser.PartnerId = partner.id;
+        req.dbUser.partner_id = partner.id;
+        req.user.PartnerId = partner.id;
+        req.user.partner_id = partner.id;
+      }
     }
 
     next();
   } catch (err) {
-    logger.error('Auth middleware error:', err.message);
-    return unauthorized(res, 'Authentication failed');
+    logger.error('syncUser middleware error:', err.message);
+    return unauthorized(res, 'Failed to synchronize user profile');
   }
 };
 
@@ -120,4 +124,4 @@ const selfOrAdmin = (paramField = 'PartnerId') => {
   };
 };
 
-module.exports = { authenticate, authorize, requireApprovedPartner, selfOrAdmin };
+module.exports = { authenticate, syncUser, authorize, requireApprovedPartner, selfOrAdmin };

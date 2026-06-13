@@ -2,11 +2,11 @@
 const express = require('express');
 const appRouter = express.Router();
 const appCtrl = require('../controllers/application.controller');
-const { authenticate, authorize, requireApprovedPartner } = require('../middleware/auth.middleware');
+const { authenticate, syncUser, authorize, requireApprovedPartner } = require('../middleware/auth.middleware');
 const { upload } = require('../services/s3.service');
 const { applicationRules, validate } = require('../middleware/validation.middleware');
 
-appRouter.use(authenticate);
+appRouter.use(authenticate, syncUser);
 
 appRouter.get('/', appCtrl.listApplications);
 appRouter.get('/:id', appCtrl.getApplication);
@@ -21,16 +21,17 @@ const walletCtrl = require('../controllers/wallet.controller');
 const { selfOrAdmin } = require('../middleware/auth.middleware');
 const { withdrawalRules } = require('../middleware/validation.middleware');
 
-walletRouter.use(authenticate);
+walletRouter.use(authenticate, syncUser);
 
 // Admin: list/process withdrawals
 walletRouter.get('/withdrawals', authorize('super_admin', 'admin'), walletCtrl.listWithdrawals);
 walletRouter.patch('/withdrawals/:id/process', authorize('super_admin'), walletCtrl.processWithdrawalRequest);
 
 // Partner self-endpoints (no ID needed in URL)
-walletRouter.get('/balance', walletCtrl.getSelfWallet);
-walletRouter.get('/transactions', walletCtrl.getSelfTransactions);
-walletRouter.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestSelfWithdrawal);
+walletRouter.get('/', walletCtrl.getWallet);
+walletRouter.get('/balance', walletCtrl.getWallet);
+walletRouter.get('/transactions', walletCtrl.getTransactions);
+walletRouter.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 // Partner self or admin (with ID)
 walletRouter.get('/:PartnerId', selfOrAdmin('PartnerId'), walletCtrl.getWallet);
@@ -44,7 +45,7 @@ const productRouter = express.Router();
 const productCtrl = require('../controllers/product.controller');
 const { commissionRules } = require('../middleware/validation.middleware');
 
-productRouter.use(authenticate);
+productRouter.use(authenticate, syncUser);
 
 productRouter.get('/categories', productCtrl.getProductsByCategory);
 productRouter.get('/banks', productCtrl.listBanks);
@@ -63,7 +64,7 @@ productRouter.post('/commission', authorize('super_admin'), commissionRules, val
 const notifRouter = express.Router();
 const notifCtrl = require('../controllers/notification.controller');
 
-notifRouter.use(authenticate);
+notifRouter.use(authenticate, syncUser);
 notifRouter.get('/', notifCtrl.getNotifications);
 notifRouter.patch('/read-all', notifCtrl.markAllRead);
 notifRouter.patch('/:id/read', notifCtrl.markRead);
@@ -73,7 +74,7 @@ notifRouter.patch('/:id/read', notifCtrl.markRead);
 const reportRouter = express.Router();
 const reportCtrl = require('../controllers/report.controller');
 
-reportRouter.use(authenticate);
+reportRouter.use(authenticate, syncUser);
 reportRouter.use(authorize('admin', 'super_admin'));
 
 reportRouter.get('/overview', reportCtrl.getOverview);

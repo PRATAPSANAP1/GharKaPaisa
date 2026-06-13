@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, verifyOtpLogin, loginWithPassword, getMe } from "../../api/auth.api";
+import { sendOtp, verifyOtpLogin, loginWithPassword, getMe, lookupUser } from "../../api/auth.api";
 import { saveSession } from "../../api/api";
 import { auth } from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
@@ -11,13 +11,13 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   
-  const [form, setForm] = useState({ mobile: "", password: "", otp: "", email: "" });
-  const [loginMethod, setLoginMethod] = useState("otp"); // "otp" | "password"
+  const [form, setForm] = useState({ identity: "", password: "", otp: "" });
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
   const [err, setErr] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
+  const [resolvedCredentials, setResolvedCredentials] = useState(null);
 
   useEffect(() => {
     let t;
@@ -41,11 +41,29 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
-    if (!form.mobile) return setErr("Please enter your mobile number.");
+    if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
+    if (!form.password) return setErr("Please enter your password.");
     setErr("");
     setLoading(l => ({ ...l, otp: true }));
     try {
-      // Firebase v12: RecaptchaVerifier takes a single config object
+      // 1. Look up user by email or mobile to get their email and mobile
+      const lookupRes = await lookupUser(form.identity);
+      if (!lookupRes.success || !lookupRes.data) {
+        throw new Error("Account not found. Please register first.");
+      }
+      const { email, mobile } = lookupRes.data;
+      if (!email || !mobile) {
+        throw new Error("Your account is missing email or mobile configuration. Please contact support.");
+      }
+
+      // 2. Verify password first by performing Firebase email sign in
+      try {
+        await loginWithPassword(email, form.password);
+      } catch (passErr) {
+        throw new Error(passErr.message || "Incorrect password. Please try again.");
+      }
+
+      // 3. Send OTP to their registered mobile number
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-login', {
           size: 'invisible',
@@ -53,8 +71,9 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
       }
 
       const appVerifier = window.recaptchaVerifier;
-      const confResult = await sendOtp(form.mobile, appVerifier);
+      const confResult = await sendOtp(mobile, appVerifier);
       setConfirmationResult(confResult);
+      setResolvedCredentials({ email, mobile });
       setOtpSent(true);
       setTimer(30);
     } catch (e) {
@@ -75,50 +94,24 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
     e.preventDefault();
     setErr("");
 
-    if (loginMethod === "otp") {
-      if (!form.mobile) return setErr("Please enter your mobile number.");
-      if (!otpSent) return setErr("Please click 'Verify Mobile' to send the OTP first.");
-      if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
+    if (!form.password) return setErr("Please enter your password.");
+    if (!otpSent) return setErr("Please verify your password and click 'Send OTP' first.");
+    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
 
-      setLoading(l => ({ ...l, login: true }));
-      try {
-        // verifyOtpLogin returns { success, user, idToken }
-        const result = await verifyOtpLogin(confirmationResult, form.otp);
-        if (result.success) {
-          const profile = await getMe(true);
-          onLogin(profile);
-        } else {
-          setErr("OTP verification failed. Please try again.");
-        }
-      } catch (e) {
-        setErr(e.message || "Invalid OTP or login failed. Please try again.");
-      } finally {
-        setLoading(l => ({ ...l, login: false }));
+    setLoading(l => ({ ...l, login: true }));
+    try {
+      const result = await verifyOtpLogin(confirmationResult, form.otp);
+      if (result.success) {
+        const profile = await getMe(true);
+        onLogin(profile);
+      } else {
+        setErr("OTP verification failed. Please try again.");
       }
-    } else {
-      if (!form.email) return setErr("Please enter your registered email address.");
-      if (!form.password) return setErr("Please enter your password.");
-
-      setLoading(l => ({ ...l, login: true }));
-      try {
-        // loginWithPassword returns { success, user, idToken }
-        // Throws auth/email-not-verified if email is unconfirmed
-        const result = await loginWithPassword(form.email, form.password);
-        if (result.success) {
-          const profile = await getMe(true);
-          onLogin(profile);
-        } else {
-          setErr("Login failed. Please check your credentials.");
-        }
-      } catch (e) {
-        if (e.code === 'auth/email-not-verified') {
-          setErr("📧 " + (e.message || "Please verify your email. Check your inbox for the verification link."));
-        } else {
-          setErr(e.message || "Login failed. Please check credentials and try again.");
-        }
-      } finally {
-        setLoading(l => ({ ...l, login: false }));
-      }
+    } catch (e) {
+      setErr(e.message || "Invalid OTP or login failed. Please try again.");
+    } finally {
+      setLoading(l => ({ ...l, login: false }));
     }
   };
 
@@ -166,53 +159,6 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
 
         {/* Card */}
         <div style={{ ...S.card, padding: "28px" }}>
-          {/* Tabs for Login Type */}
-          <div style={{
-            display: "flex",
-            background: C.bgSecondary,
-            borderRadius: "10px",
-            padding: "4px",
-            marginBottom: "20px",
-            border: `1.5px solid ${C.border}`
-          }}>
-            <button
-              type="button"
-              onClick={() => { setLoginMethod("otp"); setErr(""); }}
-              style={{
-                flex: 1,
-                border: "none",
-                background: loginMethod === "otp" ? C.card : "transparent",
-                color: loginMethod === "otp" ? C.text : C.textLight,
-                padding: "8px 0",
-                fontSize: "13px",
-                fontWeight: 700,
-                borderRadius: "8px",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              OTP Log In
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginMethod("password"); setErr(""); }}
-              style={{
-                flex: 1,
-                border: "none",
-                background: loginMethod === "password" ? C.card : "transparent",
-                color: loginMethod === "password" ? C.text : C.textLight,
-                padding: "8px 0",
-                fontSize: "13px",
-                fontWeight: 700,
-                borderRadius: "8px",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              Password Log In
-            </button>
-          </div>
-
           {/* Error Banner */}
           {err && (
             <div style={{
@@ -232,99 +178,79 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
           )}
 
           <form onSubmit={handleSubmit}>
-            {loginMethod === "otp" ? (
-              <>
-                {/* Mobile Number */}
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={S.label}>Mobile Number</label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input
-                      style={{ ...inputStyle, flex: 1 }}
-                      placeholder="10-digit Mobile Number"
-                      value={form.mobile}
-                      onChange={e => setForm({ ...form, mobile: e.target.value })}
-                      onFocus={e => e.target.style.border = focusBorder}
-                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={timer > 0 || loading.otp}
-                      style={{
-                        ...S.btn("sm"),
-                        whiteSpace: "nowrap",
-                        width: "110px",
-                        padding: "0 10px",
-                        opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
-                      }}
-                    >
-                      {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Verify Mobile"}
-                    </button>
-                  </div>
-                  {otpSent && (
-                    <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Icons.check size={12} /> OTP sent to {form.mobile}
-                    </div>
-                  )}
-                </div>
+            {/* Email or Mobile */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={S.label}>Email or Mobile Number</label>
+              <input
+                style={inputStyle}
+                placeholder="Enter email or mobile number"
+                value={form.identity}
+                onChange={e => setForm({ ...form, identity: e.target.value })}
+                onFocus={e => e.target.style.border = focusBorder}
+                onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+              />
+            </div>
 
-                {/* OTP Verification */}
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={S.label}>Enter 6-Digit OTP</label>
-                  <input
-                    style={{
-                      ...inputStyle,
-                      textAlign: "center",
-                      letterSpacing: "8px",
-                      fontSize: "20px",
-                      fontWeight: 700,
-                      background: otpSent ? C.inputBg : C.bg,
-                      color: otpSent ? C.text : C.textLight,
-                      cursor: otpSent ? "text" : "not-allowed",
-                      opacity: otpSent ? 1 : 0.55,
-                      border: `1.5px solid ${C.border}`,
-                    }}
-                    placeholder="••••••"
-                    maxLength={6}
-                    disabled={!otpSent}
-                    value={form.otp}
-                    onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                    onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
-                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Email Address */}
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={S.label}>Email Address</label>
-                  <input
-                    style={inputStyle}
-                    type="email"
-                    placeholder="Enter email address"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    onFocus={e => e.target.style.border = focusBorder}
-                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                  />
-                </div>
+            {/* Password */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={S.label}>Password</label>
+              <input
+                style={inputStyle}
+                type="password"
+                placeholder="Enter password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                onFocus={e => e.target.style.border = focusBorder}
+                onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+              />
+            </div>
 
-                {/* Password */}
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={S.label}>Password</label>
-                  <input
-                    style={inputStyle}
-                    type="password"
-                    placeholder="Enter password"
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                    onFocus={e => e.target.style.border = focusBorder}
-                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                  />
+            {/* OTP Verification */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={S.label}>Enter 6-Digit OTP</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  style={{
+                    ...inputStyle,
+                    flex: 1,
+                    textAlign: "center",
+                    letterSpacing: "4px",
+                    fontWeight: 700,
+                    background: otpSent ? C.inputBg : C.bg,
+                    color: otpSent ? C.text : C.textLight,
+                    cursor: otpSent ? "text" : "not-allowed",
+                    opacity: otpSent ? 1 : 0.55,
+                    border: `1.5px solid ${C.border}`,
+                  }}
+                  placeholder="••••••"
+                  maxLength={6}
+                  disabled={!otpSent}
+                  value={form.otp}
+                  onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
+                  onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={timer > 0 || loading.otp}
+                  style={{
+                    ...S.btn("sm"),
+                    whiteSpace: "nowrap",
+                    width: "110px",
+                    padding: "0 10px",
+                    opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
+                  }}
+                >
+                  {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                </button>
+              </div>
+              {otpSent && resolvedCredentials && (
+                <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Icons.check size={12} /> OTP sent to registered mobile {resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")}
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
             {/* Submit */}
             <button

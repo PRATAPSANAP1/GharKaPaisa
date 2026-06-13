@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/partner.controller');
-const { authenticate, authorize, requireApprovedPartner, selfOrAdmin } = require('../middleware/auth.middleware');
+const { authenticate, syncUser, authorize, requireApprovedPartner, selfOrAdmin } = require('../middleware/auth.middleware');
 const { upload } = require('../services/s3.service');
 
 const kycUpload = upload.fields([
@@ -12,7 +12,7 @@ const kycUpload = upload.fields([
 ]);
 
 // All routes require auth
-router.use(authenticate);
+router.use(authenticate, syncUser);
 
 // Partner self-access or admin
 router.get('/:PartnerId/profile', selfOrAdmin('PartnerId'), ctrl.getProfile);

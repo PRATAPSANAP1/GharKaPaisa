@@ -1,25 +1,34 @@
 const { query, getClient } = require('../config/db');
-const { processWithdrawal, getWalletSummary } = require('../services/wallet.service');
+const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet } = require('../services/wallet.service');
 const { getPaginationParams } = require('../utils/helpers');
 const { success, error, notFound, paginate } = require('../utils/response');
 const { logAction } = require('../services/audit.service');
 
-// GET /wallet/:PartnerId
+// GET /wallet / GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
   try {
-    const { PartnerId } = req.params;
+    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    if (!PartnerId) return error(res, 'Partner ID is required');
+
     const wallet = await getWalletSummary(PartnerId);
     if (!wallet) return notFound(res, 'Wallet not found');
-    return success(res, wallet);
+
+    // Map hold_balance to pending_amount for backward compatibility
+    const mappedWallet = {
+      ...wallet,
+      pending_amount: wallet.hold_balance
+    };
+    return success(res, mappedWallet);
   } catch (err) {
     next(err);
   }
 };
 
-// GET /wallet/:PartnerId/transactions
+// GET /wallet/transactions / GET /wallet/:PartnerId/transactions
 const getTransactions = async (req, res, next) => {
   try {
-    const { PartnerId } = req.params;
+    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    if (!PartnerId) return error(res, 'Partner ID is required');
     const { page, limit, offset } = getPaginationParams(req.query);
     const { type, status, from_date, to_date } = req.query;
 
@@ -63,11 +72,12 @@ const getTransactions = async (req, res, next) => {
   }
 };
 
-// POST /wallet/:PartnerId/withdraw
+// POST /wallet/withdraw / POST /wallet/:PartnerId/withdraw
 const requestWithdrawal = async (req, res, next) => {
   const client = await getClient();
   try {
-    const { PartnerId } = req.params;
+    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    if (!PartnerId) return error(res, 'Partner ID is required');
     const { amount } = req.body;
 
     const parsedAmount = parseFloat(amount);
@@ -105,21 +115,29 @@ const requestWithdrawal = async (req, res, next) => {
       `SELECT bank_name, account_number, ifsc_code FROM Partner_bank_details WHERE Partner_id = $1`, [PartnerId]
     );
 
-    // Deduct from available (hold until processed)
-    await client.query(`UPDATE wallets SET available_balance = available_balance - $1 WHERE Partner_id = $2`, [parsedAmount, PartnerId]);
-
+    // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
-      INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code)
-      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
+      INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id
     `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
 
     await client.query('COMMIT');
+    client.release();
+
+    // Deduct available balance and record pending debit transaction using debitAvailable service
+    await debitAvailable(PartnerId, parsedAmount, {
+      reference_type: 'withdrawal',
+      reference_id: wr.id,
+      bank_name: bank?.bank_name,
+      description: `Withdrawal request for ₹${parsedAmount}`
+    });
+
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
-    await client.query('ROLLBACK');
+    try { await client.query('ROLLBACK'); } catch (_) {}
     next(err);
   } finally {
-    client.release();
+    try { client.release(); } catch (_) {}
   }
 };
 
@@ -148,16 +166,16 @@ const listWithdrawals = async (req, res, next) => {
   }
 };
 
-// PATCH /wallet/withdrawals/:id/process (Super Admin)
+// PATCH /wallet/withdrawals/:id/process (Super Admin / Admin approval)
 const processWithdrawalRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { approved, utr_number, rejection_reason } = req.body;
-    await processWithdrawal(id, approved, req.user.id, utr_number, rejection_reason);
+    const { approved, utr_number, rejection_reason, admin_note } = req.body;
+    await processWithdrawal(id, approved, req.user.id, utr_number, rejection_reason, admin_note);
 
     // Log the withdrawal processing action
     const actionName = approved ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL';
-    await logAction(req.user.id, actionName, id, { utr_number, rejection_reason });
+    await logAction(req.user.id, actionName, id, { utr_number, rejection_reason, admin_note });
 
     return success(res, {}, `Withdrawal ${approved ? 'approved' : 'rejected'}`);
   } catch (err) {
@@ -168,7 +186,8 @@ const processWithdrawalRequest = async (req, res, next) => {
 // GET /wallet/:PartnerId/case-summary — commission per product
 const getCaseSummary = async (req, res, next) => {
   try {
-    const { PartnerId } = req.params;
+    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    if (!PartnerId) return error(res, 'Partner ID is required');
     const { rows } = await query(`
       SELECT
         p.name as product_name, b.short_code as bank_code,
@@ -189,38 +208,69 @@ const getCaseSummary = async (req, res, next) => {
   }
 };
 
-// GET /wallet/balance (Self)
-const getSelfWallet = async (req, res, next) => {
+// POST /wallet/adjust (Admin balance adjustments)
+const adminAdjustWalletController = async (req, res, next) => {
   try {
-    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
-    req.params.PartnerId = req.partner.id;
-    return getWallet(req, res, next);
+    const { partner_id, amount, txn_type, description } = req.body;
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return error(res, 'Valid adjustment amount is required');
+    }
+    if (!['credit', 'debit'].includes(txn_type)) {
+      return error(res, 'Transaction type must be either credit or debit');
+    }
+    if (!partner_id) {
+      return error(res, 'Partner ID is required');
+    }
+
+    const txn = await adminAdjustWallet(partner_id, parsedAmount, txn_type, description || 'Manual admin adjustment', req.user.id);
+    
+    // Log manual adjustment to audit logs
+    await logAction(req.user.id, 'MANUAL_WALLET_ADJUSTMENT', partner_id, { amount: parsedAmount, txn_type, description });
+
+    return success(res, { transaction_id: txn.id }, `Wallet successfully adjusted by ₹${parsedAmount} (${txn_type})`);
   } catch (err) {
     next(err);
   }
 };
 
-// GET /wallet/transactions (Self)
-const getSelfTransactions = async (req, res, next) => {
+// POST /withdrawal/approve (Admin)
+const approveWithdrawalController = async (req, res, next) => {
   try {
-    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
-    req.params.PartnerId = req.partner.id;
-    return getTransactions(req, res, next);
+    const { id, utr_number, admin_note } = req.body;
+    if (!id) return error(res, 'Withdrawal request ID is required');
+    if (!utr_number) return error(res, 'UTR number is required to approve withdrawal');
+
+    await processWithdrawal(id, true, req.user.id, utr_number, null, admin_note);
+    await logAction(req.user.id, 'APPROVE_WITHDRAWAL', id, { utr_number, admin_note });
+
+    return success(res, {}, 'Withdrawal request successfully approved and processed');
   } catch (err) {
     next(err);
   }
 };
 
-// POST /wallet/withdraw (Self)
-const requestSelfWithdrawal = async (req, res, next) => {
+// POST /withdrawal/reject (Admin)
+const rejectWithdrawalController = async (req, res, next) => {
   try {
-    if (!req.partner) return res.status(404).json({ success: false, message: 'Partner profile not found' });
-    req.params.PartnerId = req.partner.id;
-    return requestWithdrawal(req, res, next);
+    const { id, rejection_reason, admin_note } = req.body;
+    if (!id) return error(res, 'Withdrawal request ID is required');
+    if (!rejection_reason) return error(res, 'Rejection reason is required to reject withdrawal');
+
+    await processWithdrawal(id, false, req.user.id, null, rejection_reason, admin_note);
+    await logAction(req.user.id, 'REJECT_WITHDRAWAL', id, { rejection_reason, admin_note });
+
+    return success(res, {}, 'Withdrawal request successfully rejected');
   } catch (err) {
     next(err);
   }
 };
+
+// Deprecated self-access wrappers (now main controllers handle parameterless requests natively)
+const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
+const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
+const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
 
 module.exports = {
   getWallet,
@@ -231,5 +281,8 @@ module.exports = {
   getCaseSummary,
   getSelfWallet,
   getSelfTransactions,
-  requestSelfWithdrawal
+  requestSelfWithdrawal,
+  adminAdjustWalletController,
+  approveWithdrawalController,
+  rejectWithdrawalController
 };

@@ -1,5 +1,4 @@
 require('dotenv').config();
-const bcrypt = require('bcryptjs');
 const { query } = require('./db');
 const logger = require('../utils/logger');
 
@@ -93,18 +92,13 @@ const seed = async () => {
   logger.info(`Seeded ${PRODUCTS.length} products`);
 
   // Super Admin
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
-  if (!adminPassword) {
-    throw new Error('SUPER_ADMIN_PASSWORD env var required for seeding');
-  }
-  const passwordHash = await bcrypt.hash(adminPassword, 12);
   const { rows: [superAdmin] } = await query(`
-    INSERT INTO users (email, mobile, password_hash, role, status)
-    VALUES ('superadmin@finedge.in', '9999999999', $1, 'super_admin', 'active')
-    ON CONFLICT (email) DO UPDATE SET password_hash = $1
+    INSERT INTO users (email, mobile, firebase_uid, role, status)
+    VALUES ('superadmin@finedge.in', '9999999999', 'seed-superadmin-uid', 'super_admin', 'active')
+    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid'
     RETURNING id
-  `, [passwordHash]);
-  logger.info('Super admin seeded — check SUPER_ADMIN_PASSWORD in env');
+  `);
+  logger.info('Super admin seeded with mock Firebase UID');
 
   logger.info('✅ Seeding complete');
   process.exit(0);

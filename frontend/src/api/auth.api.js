@@ -313,3 +313,16 @@ export async function resendOtp(mobile, appVerifier) {
   sessionStorage.setItem(`otp_sent_${mobile}`, Date.now().toString());
   return result;
 }
+
+// ── LOOKUP USER ────────────────────────────────────────────────────────────
+export async function lookupUser(identity) {
+  try {
+    const { data } = await api.post('/auth/lookup', { identity });
+    return data;
+  } catch (err) {
+    if (err.response?.data?.message) {
+      throw { message: err.response.data.message, status: err.response.status, raw: err };
+    }
+    throw { message: 'Failed to lookup user account.' };
+  }
+}

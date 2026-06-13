@@ -33,7 +33,7 @@ const getOverview = async (req, res, next) => {
         SELECT
           COALESCE(SUM(total_earned), 0) as total_earned,
           COALESCE(SUM(total_withdrawn), 0) as total_withdrawn,
-          COALESCE(SUM(pending_amount), 0) as total_pending,
+          COALESCE(SUM(hold_balance), 0) as total_pending,
           COALESCE(SUM(available_balance), 0) as total_available
         FROM wallets
       `),

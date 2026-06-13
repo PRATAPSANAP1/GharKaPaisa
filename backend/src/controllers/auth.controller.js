@@ -101,7 +101,7 @@ const getMe = async (req, res, next) => {
         ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
         ap.business_location, ap.gst_number, ap.company_type,
         pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
-        w.available_balance, w.pending_amount, w.total_earned, w.total_withdrawn
+        w.available_balance, w.hold_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
       FROM users u
       LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
       LEFT JOIN Partner_bank_details pbd ON pbd.Partner_id = ap.id
@@ -144,28 +144,52 @@ const setRole = async (req, res, next) => {
     }
 
     const validRoles = ['super_admin', 'admin', 'employee', 'Partner'];
-    if (!validRoles.includes(role)) {
-      return error(res, `Invalid role. Must be one of: ${validRoles.join(', ')}`, 400);
+    if (!['super_admin', 'admin', 'employee', 'Partner'].includes(role)) {
+      return error(res, 'Invalid role', 400);
     }
 
-    // Update the role of the user by ID or Firebase UID
-    const { rows: [updatedUser] } = await query(
-      `UPDATE users SET role = $1, updated_at = NOW() WHERE id::text = $2 OR firebase_uid = $2 RETURNING id, email`,
+    const { rowCount } = await query(
+      `UPDATE users SET role = $1, status = 'active' WHERE id = $2`,
       [role, userId]
     );
 
-    if (!updatedUser) {
-      return error(res, 'User not found', 404);
-    }
+    if (!rowCount) return error(res, 'User not found', 404);
 
-    // Write to audit logs
-    await logAction(req.user.id, 'UPDATE_ROLE', updatedUser.id, { email: updatedUser.email, role });
-
-    logger.info(`User role updated: user ${userId} set to ${role} by admin ${req.user.id}`);
-    return success(res, {}, `User role updated to ${role} successfully`);
+    return success(res, {}, `Role updated to ${role} successfully`);
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { register, getMe, logout, setRole };
+const lookupUser = async (req, res, next) => {
+  try {
+    const { identity } = req.body;
+    if (!identity) {
+      return error(res, 'Email or mobile is required', 400);
+    }
+
+    const trimmed = identity.trim();
+    const cleanMobile = trimmed.replace(/\D/g, '').slice(-10);
+
+    const { rows: [user] } = await query(
+      `SELECT email, mobile FROM users WHERE email = $1 OR mobile = $2 OR RIGHT(mobile, 10) = $3`,
+      [trimmed, trimmed, cleanMobile]
+    );
+
+    if (!user) {
+      return notFound(res, 'Account not found');
+    }
+
+    return success(res, { email: user.email, mobile: user.mobile });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  register,
+  getMe,
+  logout,
+  setRole,
+  lookupUser
+};

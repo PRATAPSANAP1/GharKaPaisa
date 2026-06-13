@@ -157,9 +157,14 @@ const getDashboardStats = async (req, res, next) => {
       `, [PartnerId]),
     ]);
 
+    const walletData = wallet.rows[0] ? {
+      ...wallet.rows[0],
+      pending_amount: wallet.rows[0].hold_balance
+    } : { total_earned: 0, available_balance: 0, hold_balance: 0, pending_amount: 0, total_withdrawn: 0 };
+
     return success(res, {
       applications: appStats.rows[0],
-      wallet: wallet.rows[0] || { total_earned: 0, available_balance: 0, pending_amount: 0, total_withdrawn: 0 },
+      wallet: walletData,
       recent_applications: recentApps.rows,
     });
   } catch (err) {
