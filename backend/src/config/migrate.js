@@ -434,6 +434,50 @@ const migrate = async () => {
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
 
+  // ── Wallet Audit Logs ─────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS wallet_audit_logs (
+      id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      wallet_id              UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+      action                 VARCHAR(50) NOT NULL,
+      old_available_balance  DECIMAL(15,2),
+      new_available_balance  DECIMAL(15,2),
+      old_pending_amount     DECIMAL(15,2),
+      new_pending_amount     DECIMAL(15,2),
+      created_at             TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_wallet_audit_logs_created_at ON wallet_audit_logs(created_at DESC)`);
+
+  // ── Wallet Trigger Function ───────────────────────────────────
+  await query(`
+    CREATE OR REPLACE FUNCTION log_wallet_changes()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF TG_OP = 'INSERT' THEN
+        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
+        VALUES (NEW.id, 'INSERT', NULL, NEW.available_balance, NULL, NEW.pending_amount);
+      ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.available_balance <> NEW.available_balance OR OLD.pending_amount <> NEW.pending_amount THEN
+          INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
+          VALUES (NEW.id, 'UPDATE', OLD.available_balance, NEW.available_balance, OLD.pending_amount, NEW.pending_amount);
+        END IF;
+      ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO wallet_audit_logs (wallet_id, action, old_available_balance, new_available_balance, old_pending_amount, new_pending_amount)
+        VALUES (OLD.id, 'DELETE', OLD.available_balance, NULL, OLD.pending_amount, NULL);
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  await query(`DROP TRIGGER IF EXISTS audit_wallet_trigger ON wallets`);
+  await query(`
+    CREATE TRIGGER audit_wallet_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON wallets
+    FOR EACH ROW EXECUTE FUNCTION log_wallet_changes()
+  `);
+
   // ── updated_at trigger function ───────────────────────────────
   await query(`
     CREATE OR REPLACE FUNCTION update_updated_at()

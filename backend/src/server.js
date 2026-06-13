@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+const { globalLimiter } = require('./middleware/rateLimit.middleware');
 const path = require('path');
 const fs = require('fs');
 
@@ -68,13 +68,7 @@ app.use(cors({
 }));
 
 // Global rate limiter
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please slow down.' }
-}));
+app.use(globalLimiter);
 
 // ── Body Parsing ───────────────────────────────────────────────
 app.use(express.json({ limit: '50kb' }));
