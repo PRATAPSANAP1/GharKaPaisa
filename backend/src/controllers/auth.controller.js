@@ -9,7 +9,7 @@ const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
 const { ensureWallet } = require('../services/wallet.service');
-const { logAction } = require('../services/audit.service');
+const admin = require('../config/firebase');
 
 // ── POST /auth/register ────────────────────────────────────────────────────
 // Called after Firebase signup to save business/bank profile in PostgreSQL.
@@ -54,31 +54,35 @@ const register = async (req, res, next) => {
         [email, mobile, req.user.id]
       );
 
-      // Create Partner profile
-      const { rows: [Partner] } = await client.query(`
-        INSERT INTO Partner_profiles (
-          user_id, Partner_code, first_name, last_name, current_address,
-          business_location, company_name, company_type, gst_number
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
-      `, [
-        req.user.id, PartnerCode, first_name, last_name, current_address,
-        business_location || '', company_name, company_type, gst_number || null
-      ]);
+        // Create Partner profile
+        const { rows: [Partner] } = await client.query(`
+          INSERT INTO Partner_profiles (
+            user_id, Partner_code, first_name, last_name, current_address,
+            business_location, company_name, company_type, gst_number,
+            aadhar_url, pan_url, gst_cert_url, cancel_cheque_url
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL, NULL, NULL, NULL) RETURNING id
+        `, [
+          req.user.id, PartnerCode, first_name, last_name, current_address,
+          business_location || '', company_name, company_type, gst_number || null
+        ]);
 
-      // Create bank details
-      await client.query(`
-        INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
+        // Create bank details
+        await client.query(`
+          INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
 
-      await client.query('COMMIT');
+        // Create wallet inside transaction
+        await client.query(`
+          INSERT INTO wallets (Partner_id) VALUES ($1)
+          ON CONFLICT (Partner_id) DO NOTHING
+        `, [Partner.id]);
 
-      // Create wallet
-      await ensureWallet(Partner.id);
+        await client.query('COMMIT');
 
-      logger.info(`Partner profile created: ${email} (${PartnerCode})`);
-      return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
+        logger.info(`Partner profile created: ${email} (${PartnerCode})`);
+        return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -95,19 +99,19 @@ const register = async (req, res, next) => {
 // As per the guide: { success, user, firebase }
 const getMe = async (req, res, next) => {
   try {
-    const { rows: [user] } = await query(`
-      SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.firebase_uid,
-        ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
-        ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
-        ap.business_location, ap.gst_number, ap.company_type,
-        pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
-        w.available_balance, w.hold_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
-      FROM users u
-      LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
-      LEFT JOIN Partner_bank_details pbd ON pbd.Partner_id = ap.id
-      LEFT JOIN wallets w ON w.Partner_id = ap.id
-      WHERE u.id = $1
-    `, [req.user.id]);
+      const { rows: [user] } = await query(`
+        SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.firebase_uid,
+          ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
+          ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
+          ap.business_location, ap.gst_number, ap.company_type,
+          pbd.bank_name, RIGHT(pbd.account_number, 4) as account_number_last4, CONCAT('XXXX', RIGHT(pbd.account_number, 4)) as account_number, pbd.ifsc_code, pbd.account_holder_name,
+          w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
+        FROM users u
+        LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
+        LEFT JOIN Partner_bank_details pbd ON pbd.Partner_id = ap.id
+        LEFT JOIN wallets w ON w.Partner_id = ap.id
+        WHERE u.id = $1
+      `, [req.user.id]);
 
     if (!user) return error(res, 'User not found', 404);
 
@@ -129,9 +133,16 @@ const getMe = async (req, res, next) => {
 };
 
 // ── POST /auth/logout ───────────────────────────────────────────────────────
-const logout = async (req, res) => {
-  // Firebase tokens expire automatically — nothing to invalidate server-side
-  return res.json({ success: true, message: 'Logged out successfully' });
+const logout = async (req, res, next) => {
+  try {
+    const firebaseUid = req.firebase?.uid || req.user?.firebase_uid;
+    if (firebaseUid) {
+      await admin.auth().revokeRefreshTokens(firebaseUid);
+    }
+    return res.json({ success: true, message: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ── PUT /auth/admin/set-role ────────────────────────────────────────────────
@@ -144,7 +155,7 @@ const setRole = async (req, res, next) => {
     }
 
     const validRoles = ['super_admin', 'admin', 'employee', 'Partner'];
-    if (!['super_admin', 'admin', 'employee', 'Partner'].includes(role)) {
+    if (!validRoles.includes(role)) {
       return error(res, 'Invalid role', 400);
     }
 
@@ -163,12 +174,13 @@ const setRole = async (req, res, next) => {
 
 const lookupUser = async (req, res, next) => {
   try {
-    const { identity } = req.body;
-    if (!identity) {
+    const { identity, identifier } = req.body;
+    const key = identity || identifier;
+    if (!key) {
       return error(res, 'Email or mobile is required', 400);
     }
 
-    const trimmed = identity.trim();
+    const trimmed = key.trim();
     const cleanMobile = trimmed.replace(/\D/g, '').slice(-10);
 
     const { rows: [user] } = await query(

@@ -7,7 +7,7 @@
  *  - Clears session and redirects/reloads to login on refresh failure
  */
 import axios from 'axios';
-import { getAuth } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 const BASE_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
 
@@ -99,8 +99,7 @@ api.interceptors.response.use(
 
       try {
         // Firebase manages token refresh internally — just request a fresh ID token
-        const firebaseAuth = getAuth();
-        const currentUser = firebaseAuth.currentUser;
+        const currentUser = auth.currentUser;
 
         if (!currentUser) {
           processQueue(new Error('No Firebase user'), null);

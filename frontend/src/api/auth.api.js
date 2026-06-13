@@ -317,7 +317,7 @@ export async function resendOtp(mobile, appVerifier) {
 // ── LOOKUP USER ────────────────────────────────────────────────────────────
 export async function lookupUser(identity) {
   try {
-    const { data } = await api.post('/auth/lookup', { identity });
+    const { data } = await api.post('/auth/lookup', { identifier: identity });
     return data;
   } catch (err) {
     if (err.response?.data?.message) {

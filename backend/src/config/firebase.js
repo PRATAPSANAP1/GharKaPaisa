@@ -8,9 +8,9 @@ try {
   const serviceAccount = require(serviceAccountPath);
 
   // Only initialize if not already initialized
-  if (!admin.apps.length) {
+  if (!admin.getApps().length) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.cert(serviceAccount),
     });
     logger.info('Firebase Admin SDK initialized successfully');
   }
