@@ -25,7 +25,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
         <button
           onClick={() =>
             window.location.href =
-              'https://yohesa-test-three.vercel.app/login'
+              'https://yohesa-test-three.vercel.app/dashboard'
           }
         >
           Admin Login
@@ -33,7 +33,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
         <button
           onClick={() =>
             window.location.href =
-              'https://yohesa-test-three.vercel.app/login'
+              'https://yohesa-test-three.vercel.app/dashboard'
           }
         >
           Employee Login
@@ -54,7 +54,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
           <button
             onClick={() =>
               window.location.href =
-                'https://yohesa-test-three.vercel.app/login'
+                'https://yohesa-test-three.vercel.app/dashboard'
             }
           >
             Admin Login
@@ -62,7 +62,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
           <button
             onClick={() =>
               window.location.href =
-                'https://yohesa-test-three.vercel.app/login'
+                'https://yohesa-test-three.vercel.app/dashboard'
             }
           >
             Employee Login
