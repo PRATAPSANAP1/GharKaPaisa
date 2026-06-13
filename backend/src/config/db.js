@@ -2,22 +2,38 @@ const { Pool } = require('pg');
 const logger = require('../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
-const connectionString = process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ? connectionString : undefined,
-  host: !process.env.DATABASE_URL ? process.env.DB_HOST : undefined,
-  port: !process.env.DATABASE_URL ? (parseInt(process.env.DB_PORT) || 5432) : undefined,
-  database: !process.env.DATABASE_URL ? process.env.DB_NAME : undefined,
-  user: !process.env.DATABASE_URL ? process.env.DB_USER : undefined,
-  password: !process.env.DATABASE_URL ? process.env.DB_PASSWORD : undefined,
-  ssl: (isProduction || process.env.DB_SSL === 'true') ? { rejectUnauthorized: false } : false,
-  max: 20,               // max pool connections
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+const sslConfig = isProduction
+  ? { rejectUnauthorized: true }
+  : process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: false }
+    : false;
+
+const poolOptions = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: sslConfig,
+    }
+  : {
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 5432,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      ssl: sslConfig,
+    };
+
+poolOptions.max = 20;
+poolOptions.idleTimeoutMillis = 30000;
+poolOptions.connectionTimeoutMillis = 5000;
+
+const pool = new Pool(poolOptions);
+
+pool.on('connect', () => {
+  if (process.env.NODE_ENV !== 'production') {
+    logger.debug(`New DB client connected. Pool size: ${pool.totalCount}/${pool.options.max}`);
+  }
 });
-
-pool.on('connect', () => logger.info('New DB client connected'));
 pool.on('error', (err) => logger.error('Unexpected DB client error', err));
 
 // Helper: run a query
@@ -26,10 +42,15 @@ const query = async (text, params) => {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug(`Query executed in ${duration}ms`, { text });
+    logger.debug(`Query executed in ${duration}ms`, {
+      query: text.substring(0, 80).replace(/\s+/g, ' ')
+    });
     return res;
   } catch (err) {
-    logger.error('Database query error', { text, error: err.message });
+    logger.error('Database query error', {
+      query: text.substring(0, 80).replace(/\s+/g, ' '),
+      error: err.message
+    });
     throw err;
   }
 };

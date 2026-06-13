@@ -97,6 +97,11 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       database: 'connected',
+      pool: {
+        total: db.pool.totalCount,
+        idle: db.pool.idleCount,
+        waiting: db.pool.waitingCount,
+      }
     });
   } catch (err) {
     logger.error('Health check failed: DB error', { error: err.message });
@@ -108,6 +113,11 @@ app.get('/health', async (req, res) => {
       environment: process.env.NODE_ENV,
       database: 'disconnected',
       error: err.message,
+      pool: {
+        total: db.pool ? db.pool.totalCount : 0,
+        idle: db.pool ? db.pool.idleCount : 0,
+        waiting: db.pool ? db.pool.waitingCount : 0,
+      }
     });
   }
 });

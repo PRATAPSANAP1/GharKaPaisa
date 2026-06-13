@@ -34,7 +34,12 @@ const migrate = async () => {
     DO $$ BEGIN
       CREATE TYPE product_category AS ENUM ('credit_card','personal_loan','home_loan','business_loan',
         'instant_loan','used_car_loan','education_loan','lac','health_insurance',
-        'life_insurance','general_insurance','fd_card','co_branded_card','investment');
+        'life_insurance','general_insurance','fd_card','co_branded_card','investment','card_on_loan');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$
+  `);
+  await query(`
+    DO $$ BEGIN
+      ALTER TYPE product_category ADD VALUE IF NOT EXISTS 'card_on_loan';
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await query(`
@@ -45,6 +50,11 @@ const migrate = async () => {
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_status AS ENUM ('pending','approved','rejected','processed');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$
+  `);
+  await query(`
+    DO $$ BEGIN
+      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await query(`
@@ -72,19 +82,8 @@ const migrate = async () => {
     )
   `);
 
-  // ── OTP Store ─────────────────────────────────────────────────
-  await query(`
-    CREATE TABLE IF NOT EXISTS otps (
-      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      mobile     VARCHAR(15) NOT NULL,
-      otp_hash   VARCHAR(255) NOT NULL,
-      purpose    VARCHAR(50) NOT NULL DEFAULT 'login',
-      expires_at TIMESTAMPTZ NOT NULL,
-      used       BOOLEAN DEFAULT FALSE,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-  await query(`CREATE INDEX IF NOT EXISTS idx_otps_mobile ON otps(mobile)`);
+  // Remove dead otps table as Twilio Verify is used instead
+  await query(`DROP TABLE IF EXISTS otps CASCADE`);
 
   // ── Partner Profiles ────────────────────────────────────────────
   await query(`
@@ -112,10 +111,7 @@ const migrate = async () => {
       updated_at        TIMESTAMPTZ DEFAULT NOW()
     )
   `);
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS aadhar_url VARCHAR(500)`);
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS pan_url VARCHAR(500)`);
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS gst_cert_url VARCHAR(500)`);
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS cancel_cheque_url VARCHAR(500)`);
+
 
   // ── Partner Bank Details ────────────────────────────────────────
   await query(`
@@ -308,14 +304,24 @@ const migrate = async () => {
       documents          JSONB DEFAULT '[]',
       status_history     JSONB DEFAULT '[]',
       commission_amount  DECIMAL(12,2),
-      commission_status  wallet_txn_status DEFAULT 'pending',
+      commission_status  commission_status DEFAULT 'pending',
       created_at         TIMESTAMPTZ DEFAULT NOW(),
       updated_at         TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // Migrate existing commission_status column if needed
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE applications ALTER COLUMN commission_status TYPE commission_status USING commission_status::text::commission_status;
+    EXCEPTION WHEN OTHERS THEN NULL; END $$
+  `);
+
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(Partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_customer ON applications(customer_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_product ON applications(product_id)`);
 
   // ── Wallet ────────────────────────────────────────────────────
   await query(`
@@ -395,6 +401,16 @@ const migrate = async () => {
     )
   `);
 
+  // ── Extra Indexes for Performance and Unique Constraints ──────────────────
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_mobile ON customers(mobile)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_customers_pan ON customers(pan_number)`);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_bank_name ON products(bank_id, name)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_status ON wallet_transactions(status) WHERE status = 'pending'`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_release ON wallet_transactions(release_at) WHERE status = 'pending'`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_withdrawal_partner ON withdrawal_requests(Partner_id, status)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id, revoked)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON Partner_profiles(Partner_code)`);
+
   // ── updated_at trigger function ───────────────────────────────
   await query(`
     CREATE OR REPLACE FUNCTION update_updated_at()
@@ -404,8 +420,8 @@ const migrate = async () => {
   `);
   const triggerTables = ['users', 'Partner_profiles', 'Partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests'];
   for (const t of triggerTables) {
+    await query(`DROP TRIGGER IF EXISTS set_updated_at ON ${t}`);
     await query(`
-      DROP TRIGGER IF EXISTS set_updated_at ON ${t};
       CREATE TRIGGER set_updated_at BEFORE UPDATE ON ${t}
       FOR EACH ROW EXECUTE FUNCTION update_updated_at()
     `);

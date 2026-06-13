@@ -22,6 +22,8 @@ const BANKS = [
   { name: 'Star Health', short_code: 'STARHEALTH' },
   { name: 'HDFC Ergo', short_code: 'HDFCERGO' },
   { name: 'ICICI Lombard', short_code: 'ICICILOMBARD' },
+  { name: 'Scapia', short_code: 'SCAPIA' },
+  { name: 'Tata', short_code: 'TATA' },
 ];
 
 const seed = async () => {
@@ -57,6 +59,8 @@ const seed = async () => {
     { bank: 'SBI', name: 'Tata Neu SBI', category: 'co_branded_card', commission: 1300, features: ['Tata ecosystem','NeuCoins rewards','Movie offers'] },
     { bank: 'FEDERAL', name: 'Scapia Federal', category: 'co_branded_card', commission: 1150, features: ['Zero forex','Travel rewards','Lounge access'] },
     { bank: 'YES', name: 'YES Novio', category: 'co_branded_card', commission: 1000, features: ['UPI credit','Lifestyle rewards','Movie benefits'] },
+    { bank: 'YES', name: 'YES ZAG', category: 'co_branded_card', commission: 950, features: ['Zero fuel surcharge','Reward points','Dining offers'] },
+    { bank: 'YES', name: 'YES POP Card', category: 'co_branded_card', commission: 900, features: ['Cashback on shopping','Welcome vouchers','Easy EMI'] },
     // FD Cards
     { bank: 'HDFC', name: 'HDFC MoneyBack+ FD Card', category: 'fd_card', commission: 700, features: ['FD-backed limit','Build credit score','No income proof'] },
     { bank: 'IDFC', name: 'IDFC FIRST WOW! Card', category: 'fd_card', commission: 650, features: ['FD-backed','Zero fees','Lifetime free'] },
@@ -83,20 +87,24 @@ const seed = async () => {
     await query(`
       INSERT INTO products (bank_id, name, category, commission_type, commission_value, features, is_active)
       VALUES ($1, $2, $3, 'fixed', $4, $5, true)
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (bank_id, name) DO NOTHING
     `, [bankMap[p.bank], p.name, p.category, p.commission, JSON.stringify(p.features)]);
   }
   logger.info(`Seeded ${PRODUCTS.length} products`);
 
   // Super Admin
-  const passwordHash = await bcrypt.hash('SuperAdmin@123', 12);
+  const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error('SUPER_ADMIN_PASSWORD env var required for seeding');
+  }
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
   const { rows: [superAdmin] } = await query(`
     INSERT INTO users (email, mobile, password_hash, role, status)
     VALUES ('superadmin@finedge.in', '9999999999', $1, 'super_admin', 'active')
     ON CONFLICT (email) DO UPDATE SET password_hash = $1
     RETURNING id
   `, [passwordHash]);
-  logger.info(`Super admin ready: superadmin@finedge.in / SuperAdmin@123`);
+  logger.info('Super admin seeded — check SUPER_ADMIN_PASSWORD in env');
 
   logger.info('✅ Seeding complete');
   process.exit(0);
