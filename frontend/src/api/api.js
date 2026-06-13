@@ -2,9 +2,9 @@
  * api.js — Central Axios instance for https://api.gharkapaisa.in/api/v1
  *
  * Features:
- *  - Injects Authorization header from localStorage on every request
+ *  - Injects Authorization header from in-memory / sessionStorage on every request
  *  - Auto-refreshes access token on 401 (single retry)
- *  - Clears session and redirects to login on refresh failure
+ *  - Clears session and redirects/reloads to login on refresh failure
  */
 import axios from 'axios';
 
@@ -16,9 +16,29 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let inMemoryAccessToken = sessionStorage.getItem('gkp_access_token') || null;
+
+export function setAccessToken(token) {
+  inMemoryAccessToken = token;
+  if (token) {
+    sessionStorage.setItem('gkp_access_token', token);
+  } else {
+    sessionStorage.removeItem('gkp_access_token');
+  }
+}
+
+export function getAccessToken() {
+  return inMemoryAccessToken;
+}
+
+export function clearAccessToken() {
+  inMemoryAccessToken = null;
+  sessionStorage.removeItem('gkp_access_token');
+}
+
 // ── Request: attach access token ──────────────────────────────────────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('gkp_access_token');
+  const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -38,6 +58,22 @@ const processQueue = (error, token = null) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    // Timeout error handling
+    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+      return Promise.reject({ 
+        message: 'Request timed out. Check your connection.', 
+        isTimeout: true 
+      });
+    }
+
+    // Network offline detection
+    if (!err.response) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return Promise.reject({ message: 'No internet connection', isOffline: true });
+      }
+      return Promise.reject({ message: 'Server unreachable', isNetworkError: true });
+    }
+
     const original = err.config;
 
     if (err.response?.status === 401 && !original._retry) {
@@ -46,8 +82,13 @@ api.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            original.headers.Authorization = `Bearer ${token}`;
-            return api(original);
+            return api({
+              ...original,
+              headers: {
+                ...original.headers,
+                Authorization: `Bearer ${token}`,
+              },
+            });
           })
           .catch((e) => Promise.reject(e));
       }
@@ -57,6 +98,7 @@ api.interceptors.response.use(
 
       const refreshToken = localStorage.getItem('gkp_refresh_token');
       if (!refreshToken) {
+        isRefreshing = false;
         clearSession();
         return Promise.reject(err);
       }
@@ -65,13 +107,27 @@ api.interceptors.response.use(
         const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
           refresh_token: refreshToken,
         });
-        const newAccess = data.data.access_token;
-        const newRefresh = data.data.refresh_token;
-        localStorage.setItem('gkp_access_token', newAccess);
+
+        const responseData = data?.data;
+        if (!responseData?.access_token || !responseData?.refresh_token) {
+          throw new Error('Invalid refresh response from server');
+        }
+
+        const newAccess = responseData.access_token;
+        const newRefresh = responseData.refresh_token;
+
+        setAccessToken(newAccess);
         localStorage.setItem('gkp_refresh_token', newRefresh);
+
         processQueue(null, newAccess);
-        original.headers.Authorization = `Bearer ${newAccess}`;
-        return api(original);
+
+        return api({
+          ...original,
+          headers: {
+            ...original.headers,
+            Authorization: `Bearer ${newAccess}`,
+          },
+        });
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         clearSession();
@@ -87,27 +143,45 @@ api.interceptors.response.use(
 
 // ── Session helpers ────────────────────────────────────────────────────────────
 export function saveSession({ access_token, refresh_token, user }) {
-  localStorage.setItem('gkp_access_token', access_token);
+  setAccessToken(access_token);
   localStorage.setItem('gkp_refresh_token', refresh_token);
-  localStorage.setItem('gkp_user', JSON.stringify(user));
+  
+  sessionStorage.setItem('gkp_user', JSON.stringify({
+    id: user.id,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    role: user.role,
+    Partner_code: user.Partner_code || user.id,
+  }));
 }
 
 export function clearSession() {
-  localStorage.removeItem('gkp_access_token');
+  clearAccessToken();
   localStorage.removeItem('gkp_refresh_token');
-  localStorage.removeItem('gkp_user');
+  sessionStorage.removeItem('gkp_user');
+
+  if (typeof window !== 'undefined') {
+    window.location.href = '/';
+  }
 }
 
 export function getStoredUser() {
   try {
-    return JSON.parse(localStorage.getItem('gkp_user') || 'null');
+    return JSON.parse(sessionStorage.getItem('gkp_user') || 'null');
   } catch {
     return null;
   }
 }
 
 export function isAuthenticated() {
-  return !!localStorage.getItem('gkp_access_token');
+  const token = sessionStorage.getItem('gkp_access_token');
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 export default api;
