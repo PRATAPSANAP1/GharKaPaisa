@@ -172,7 +172,7 @@ const logout = async (req, res, next) => {
   }
 };
 
-// GET /auth/me
+// GET /auth/me — returns full user + firebase decoded token
 const getMe = async (req, res, next) => {
   try {
     const { rows: [user] } = await query(`
@@ -191,19 +191,18 @@ const getMe = async (req, res, next) => {
 
     if (!user) return error(res, 'User not found', 404);
 
-    const response = { ...user };
-    if (user.role !== 'Partner') {
-      delete response.available_balance;
-      delete response.pending_amount;
-      delete response.total_earned;
-      delete response.total_withdrawn;
-      delete response.Partner_id;
-      delete response.Partner_code;
-      delete response.kyc_status;
-      delete response.company_name;
-      delete response.profile_photo_url;
-    }
-    return success(res, response);
+    // Update last_login timestamp
+    await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [req.user.id]);
+
+    return success(res, {
+      user,
+      firebase: {
+        uid:          req.firebaseUser.uid,
+        email:        req.firebaseUser.email        || null,
+        phone_number: req.firebaseUser.phone_number || null,
+        email_verified: req.firebaseUser.email_verified || false,
+      }
+    });
   } catch (err) {
     next(err);
   }

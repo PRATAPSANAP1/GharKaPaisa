@@ -81,7 +81,8 @@ if (typeof window !== 'undefined') {
         try {
           const { data: meRes } = await api.get('/auth/me');
           if (meRes.success && meRes.data) {
-            const p = meRes.data;
+            // Response shape: { user: {...}, firebase: {...} }
+            const p = meRes.data.user || meRes.data;
             saveSession({
               access_token: idToken,
               refresh_token: user.refreshToken || idToken,
@@ -336,9 +337,11 @@ export async function getMe(bypassCache = false) {
       headers: { Authorization: `Bearer ${idToken}` }
     });
     if (!res.success) throw new Error(res.message);
-    cachedUser = res.data;
+    // Response shape: { user: {...}, firebase: {...} }
+    const profile = res.data.user || res.data;
+    cachedUser = profile;
     lastFetched = Date.now();
-    return res.data;
+    return profile;
   } catch (err) {
     if (err.response?.data?.message) {
       throw { message: err.response.data.message, status: err.response.status, raw: err };

@@ -1,43 +1,49 @@
+/**
+ * auth.routes.js
+ * ──────────────────────────────────────────────────────────────────────────
+ * Firebase Auth is the source of truth for credentials.
+ * Backend routes only handle:
+ *   GET  /me          — return user + firebase profile
+ *   POST /register    — save extra profile data (business/bank) after Firebase signup
+ *   POST /logout      — signal logout (Firebase token expires client-side)
+ *
+ * Legacy routes (login, otp, refresh) are retained as stubs so existing
+ * clients don't get 404s during transition.
+ */
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const rateLimit = require('express-rate-limit');
 const ctrl = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
-const {
-  validate, registerRules, loginRules, otpSendRules, otpVerifyRules
-} = require('../middleware/validation.middleware');
+const { validate, registerRules } = require('../middleware/validation.middleware');
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 10,
-  message: { success: false, message: 'Too many login attempts. Try again after 15 minutes.' }
-});
-
-const otpLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 3,
-  message: { success: false, message: 'Too many OTP requests. Try again after 5 minutes.' },
-  keyGenerator: (req) => (req.body.mobile || '') + req.ip
-});
-
+// Rate limiters
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: 10,
   message: { success: false, message: 'Too many registration attempts. Try again after an hour.' }
 });
 
-const refreshLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30,
-  message: { success: false, message: 'Too many token refresh requests. Try again after 15 minutes.' }
+const meLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 60,
+  message: { success: false, message: 'Too many requests.' }
 });
 
-router.post('/register',        registerLimiter, registerRules,   validate, ctrl.register);
-router.post('/login',           loginLimiter, loginRules,  validate, ctrl.login);
-router.post('/otp/send',        otpLimiter,   otpSendRules,   validate, ctrl.sendOTPHandler);
-router.post('/otp/verify',      loginLimiter, otpVerifyRules, validate, ctrl.verifyOTPLogin);
-router.post('/refresh',         refreshLimiter, ctrl.refreshToken);
-router.post('/logout',          authenticate, ctrl.logout);
-router.get('/me',               authenticate, ctrl.getMe);
+// ── Primary Routes (Firebase Auth) ────────────────────────────────────────
+// GET /auth/me — called after Firebase login to get full user profile
+router.get('/me', meLimiter, authenticate, ctrl.getMe);
+
+// POST /auth/register — save business/bank profile after Firebase signup
+router.post('/register', registerLimiter, registerRules, validate, ctrl.register);
+
+// POST /auth/logout
+router.post('/logout', authenticate, ctrl.logout);
+
+// ── Legacy stub routes (kept to avoid 404 during transition) ──────────────
+router.post('/login',       ctrl.login);
+router.post('/otp/send',    ctrl.sendOTPHandler);
+router.post('/otp/verify',  ctrl.verifyOTPLogin);
+router.post('/refresh',     ctrl.refreshToken);
 
 module.exports = router;

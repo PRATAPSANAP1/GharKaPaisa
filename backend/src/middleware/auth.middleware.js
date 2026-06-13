@@ -1,9 +1,17 @@
+/**
+ * auth.middleware.js
+ * ──────────────────────────────────────────────────────────────────────────
+ * Primary auth middleware. Verifies Firebase ID Token, auto-provisions
+ * the user in PostgreSQL on first login, and attaches req.user.
+ *
+ * Also exports: authorize, requireApprovedPartner, selfOrAdmin helpers.
+ */
 const admin = require('../config/firebase');
 const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-// Verify Firebase ID Token and attach user to req
+// ── Core: verify token + auto-provision user ───────────────────────────────
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -13,7 +21,7 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify Firebase ID Token
+    // 1. Verify Firebase ID Token
     let decoded;
     try {
       decoded = await admin.auth().verifyIdToken(token);
@@ -25,47 +33,60 @@ const authenticate = async (req, res, next) => {
       return unauthorized(res, 'Invalid or expired token');
     }
 
-    const firebaseUid = decoded.uid;
+    const firebaseUid   = decoded.uid;
+    const email         = decoded.email        || null;
+    const phone         = decoded.phone_number || null;
 
-    // Look up user in PostgreSQL by firebase_uid
-    const { rows: [user] } = await query(
-      `SELECT id, email, mobile, role, status, firebase_uid FROM users WHERE firebase_uid = $1`,
-      [firebaseUid]
+    // 2. Find user by firebase_uid, email, or mobile
+    let { rows: [user] } = await query(
+      `SELECT * FROM users WHERE firebase_uid = $1 OR email = $2 OR mobile = $3`,
+      [firebaseUid, email, phone]
     );
 
+    // 3. Auto-provision: create user row on very first login
     if (!user) {
-      return unauthorized(res, 'User not registered. Please complete registration first.');
+      logger.info(`Auto-provisioning new user for Firebase UID: ${firebaseUid}`);
+      const { rows: [newUser] } = await query(
+        `INSERT INTO users (firebase_uid, email, mobile, role, status)
+         VALUES ($1, $2, $3, 'Partner', 'pending')
+         RETURNING *`,
+        [firebaseUid, email, phone]
+      );
+      user = newUser;
+    } else if (!user.firebase_uid) {
+      // Existing user found by email/mobile — link firebase_uid
+      await query(
+        `UPDATE users SET firebase_uid = $1 WHERE id = $2`,
+        [firebaseUid, user.id]
+      );
+      user.firebase_uid = firebaseUid;
     }
 
-    if (user.status === 'pending') {
-      return res.status(403).json({
-        success: false,
-        code: 'PENDING_KYC',
-        message: 'Account pending KYC approval'
-      });
-    }
-    if (user.status === 'suspended') return unauthorized(res, 'Account suspended. Contact support.');
-    if (user.status === 'rejected') return unauthorized(res, 'Account rejected. Contact support.');
+    // 4. Status checks
+    if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
+    if (user.status === 'rejected')  return forbidden(res, 'Account rejected. Contact support.');
 
-    req.user = user;
+    req.user        = user;
     req.firebaseUser = decoded;
 
-    // Fetch and cache partner profile for Partner role
+    // 5. Attach partner profile for Partner role
     if (user.role === 'Partner') {
       const { rows: [partner] } = await query(
-        `SELECT id, kyc_status FROM Partner_profiles WHERE user_id = $1`, [user.id]
+        `SELECT id, kyc_status, first_name, last_name, Partner_code
+         FROM Partner_profiles WHERE user_id = $1`,
+        [user.id]
       );
-      req.partner = partner;
+      req.partner = partner || null;
     }
 
     next();
   } catch (err) {
-    logger.error('Auth middleware error', err.message);
+    logger.error('Auth middleware error:', err.message);
     return unauthorized(res, 'Authentication failed');
   }
 };
 
-// Role-based access control
+// ── Role-based access control ──────────────────────────────────────────────
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) return unauthorized(res);
@@ -76,15 +97,17 @@ const authorize = (...roles) => {
   };
 };
 
-// Partner must be KYC approved
+// ── Partner must be KYC approved ───────────────────────────────────────────
 const requireApprovedPartner = (req, res, next) => {
-  if (!req.partner) return forbidden(res, 'Partner profile not found');
-  if (req.partner.kyc_status !== 'approved') return forbidden(res, 'KYC not yet approved. Please wait for verification.');
+  if (!req.partner) return forbidden(res, 'Partner profile not found. Please complete registration.');
+  if (req.partner.kyc_status !== 'approved') {
+    return forbidden(res, 'KYC not yet approved. Please wait for verification.');
+  }
   req.Partner = req.partner;
   next();
 };
 
-// Self or admin — partner can only access own resources
+// ── Self or admin guard ────────────────────────────────────────────────────
 const selfOrAdmin = (paramField = 'PartnerId') => {
   return (req, res, next) => {
     if (['super_admin', 'admin'].includes(req.user.role)) return next();
