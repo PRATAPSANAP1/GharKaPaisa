@@ -1,8 +1,10 @@
 import React from "react";
 import { Icons } from "./AgentIcons";
-import { C, S } from "./AgentTheme";
+import { useTheme, makeS } from "./ThemeContext";
 
 export default function AgentProfile({ agent, onLogout }) {
+  const { C } = useTheme();
+  const S = makeS(C);
   return (
     <div>
       {/* Visual top card */}

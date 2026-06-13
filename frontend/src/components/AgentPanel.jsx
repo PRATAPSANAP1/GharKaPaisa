@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "./Agent/AgentIcons";
-import { C, S } from "./Agent/AgentTheme";
+import { useTheme, makeS, ThemeToggle } from "./Agent/ThemeContext";
+import { clearSession, getStoredUser, isAuthenticated } from "../api/api";
+import { logout } from "../api/auth.api";
 import logo from "../logo.jpeg";
 import AgentLogin from "./Agent/AgentLogin";
 import AgentRegister from "./Agent/AgentRegister";
@@ -10,8 +12,17 @@ import AgentWallet from "./Agent/AgentWallet";
 import AgentProfile from "./Agent/AgentProfile";
 
 export default function AgentPanel({ onBackToMain }) {
-  const [auth, setAuth] = useState("login"); // login | register | app
-  const [page, setPage] = useState("dashboard");
+  const { C, isDark } = useTheme();
+  const S = makeS(C);
+  // Restore session from localStorage on mount
+  const [auth,  setAuth]  = useState(() => isAuthenticated() ? "app" : "login");
+  const [page,  setPage]  = useState("dashboard");
+  const [agent, setAgent] = useState(() => {
+    const u = getStoredUser();
+    if (!u) return { name: "Agent", id: "" };
+    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.mobile || "Agent";
+    return { name, id: u.agent_code || "", ...u };
+  });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -20,7 +31,7 @@ export default function AgentPanel({ onBackToMain }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const [agent] = useState({ name: "Rajesh Kumar", id: "AG-00123" });
+
 
   const NAV_ITEMS = [
     { id: "dashboard", label: "Dashboard", icon: <Icons.dashboard size={18} /> },
@@ -29,11 +40,27 @@ export default function AgentPanel({ onBackToMain }) {
     { id: "profile", label: "Profile", icon: <Icons.profile size={18} /> },
   ];
 
+  const handleLogin = (user) => {
+    const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.mobile || "Agent";
+    setAgent({ name, id: user?.agent_code || "", ...user });
+    setAuth("app");
+  };
+
+  const handleLogout = async () => {
+    try {
+      const rt = localStorage.getItem("gkp_refresh_token");
+      if (rt) await logout(rt);
+    } catch {/* ignore */}
+    clearSession();
+    setAuth("login");
+    onBackToMain();
+  };
+
   if (auth === "login") {
     return (
-      <AgentLogin 
-        onLogin={() => setAuth("app")} 
-        onRegisterNav={() => setAuth("register")} 
+      <AgentLogin
+        onLogin={handleLogin}
+        onRegisterNav={() => setAuth("register")}
       />
     );
   }
@@ -44,11 +71,11 @@ export default function AgentPanel({ onBackToMain }) {
     );
   }
 
-  const views = { 
-    dashboard: () => <AgentDashboard agent={agent} onTabChange={setPage} />, 
-    home: () => <AgentOffers />, 
-    wallet: () => <AgentWallet />, 
-    profile: () => <AgentProfile agent={agent} onLogout={() => { setAuth("login"); onBackToMain(); }} /> 
+  const views = {
+    dashboard: () => <AgentDashboard agent={agent} onTabChange={setPage} />,
+    home:      () => <AgentOffers />,
+    wallet:    () => <AgentWallet agentId={agent?.agent_id || agent?.id} />,
+    profile:   () => <AgentProfile agent={agent} onLogout={handleLogout} />
   };
 
   const RenderComp = views[page] || views.dashboard;
@@ -60,7 +87,8 @@ export default function AgentPanel({ onBackToMain }) {
       display: "flex", 
       flexDirection: isMobile ? "column" : "row",
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      boxSizing: "border-box"
+      boxSizing: "border-box",
+      transition: "background 0.3s",
     }}>
       {/* DESKTOP SIDEBAR */}
       {!isMobile && (
@@ -80,22 +108,23 @@ export default function AgentPanel({ onBackToMain }) {
         }}>
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "30px", padding: "0 6px" }}>
-            <img 
-              src={logo} 
-              alt="GharKaPaisa Logo" 
-              style={{ 
-                width: "36px", 
-                height: "36px", 
-                borderRadius: "8px", 
+            <img
+              src={logo}
+              alt="GharKaPaisa Logo"
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
                 objectFit: "contain",
                 background: "#fff",
                 padding: "2px"
-              }} 
+              }}
             />
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: "16px", fontWeight: 900 }}>GharKaPaisa</div>
               <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Agent Panel</div>
             </div>
+            <ThemeToggle style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", width: "30px", height: "30px", fontSize: "13px" }} />
           </div>
 
           {/* Nav Links */}
@@ -115,7 +144,7 @@ export default function AgentPanel({ onBackToMain }) {
                     borderRadius: "10px",
                     border: "none",
                     cursor: "pointer",
-                    background: active ? "rgba(0,180,216,0.15)" : "transparent",
+                    background: active ? `${C.teal}20` : "transparent",
                     color: active ? C.teal : "rgba(255,255,255,0.6)",
                     fontWeight: active ? 700 : 500,
                     fontSize: "13px",
@@ -192,8 +221,9 @@ export default function AgentPanel({ onBackToMain }) {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <ThemeToggle style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", width: "30px", height: "30px", fontSize: "13px" }} />
             <Icons.bell size={20} color="rgba(255,255,255,0.7)" />
-            <div 
+            <div
               onClick={() => setPage("profile")}
               style={{ width: "30px", height: "30px", borderRadius: "50%", background: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}
             >
@@ -221,7 +251,7 @@ export default function AgentPanel({ onBackToMain }) {
           bottom: 0,
           left: 0,
           right: 0,
-          background: "#fff",
+          background: C.card,
           borderTop: `1px solid ${C.border}`,
           display: "flex",
           justifyContent: "space-around",
