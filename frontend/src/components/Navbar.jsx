@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './Navbar.css';
 import logo from '../logo.jpeg';
 
-const Navbar = ({ onAgentLoginClick }) => {
+const Navbar = ({ onPartnerLoginClick }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleLink = () => {
@@ -15,6 +15,7 @@ const Navbar = ({ onAgentLoginClick }) => {
     <>
       <div id="mainOverlay" className={`overlay ${menuOpen ? 'active' : ''}`} onClick={toggleLink} />
 
+      {/* Mobile Side Drawer */}
       <div id="nav-menu" className={`side-drawer ${menuOpen ? 'show1' : ''}`}>
         <button className="close-btn" onClick={toggleLink}>
           <span></span>
@@ -27,17 +28,9 @@ const Navbar = ({ onAgentLoginClick }) => {
               'https://yohesa-test-three.vercel.app/dashboard'
           }
         >
-          Admin Login
-        </button>
-        <button
-          onClick={() =>
-            window.location.href =
-              'https://yohesa-test-three.vercel.app/dashboard'
-          }
-        >
           Employee Login
         </button>
-        <button onClick={() => { onAgentLoginClick(); toggleLink(); }}>Agent Login</button>
+        <button onClick={() => { onPartnerLoginClick(); toggleLink(); }}>Partner Login</button>
       </div>
 
       <nav className="navbar">
@@ -51,22 +44,14 @@ const Navbar = ({ onAgentLoginClick }) => {
 
         <div className="navbar-right">
           <button
-  onClick={() =>
-    window.location.href =
-      'https://yohesa-test-three.vercel.app/dashboard'
-  }
->
-  Admin Login
-</button>
-         <button
-  onClick={() =>
-    window.location.href =
-      'https://yohesa-test-three.vercel.app/dashboard'
-  }
->
-  Employee Login
-</button>
-          <button onClick={onAgentLoginClick}>Agent Login</button>
+            onClick={() =>
+              window.location.href =
+                'https://yohesa-test-three.vercel.app/dashboard'
+            }
+          >
+            Employee Login
+          </button>
+          <button onClick={onPartnerLoginClick}>Partner Login</button>
         </div>
 
         <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink}>

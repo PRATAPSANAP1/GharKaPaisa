@@ -59,22 +59,22 @@ app.get('/health', (req, res) => {
 });
 
 // ── API Routes ─────────────────────────────────────────────────
-const { appRouter }     = require('./routes/routes');
-const { walletRouter }  = require('./routes/routes');
+const { appRouter } = require('./routes/routes');
+const { walletRouter } = require('./routes/routes');
 const { productRouter } = require('./routes/routes');
-const { notifRouter }   = require('./routes/routes');
-const { reportRouter }  = require('./routes/routes');
-const authRoutes        = require('./routes/auth.routes');
-const agentRoutes       = require('./routes/agent.routes');
+const { notifRouter } = require('./routes/routes');
+const { reportRouter } = require('./routes/routes');
+const authRoutes = require('./routes/auth.routes');
+const PartnerRoutes = require('./routes/partner.routes');
 
 const API = '/api/v1';
-app.use(`${API}/auth`,          authRoutes);
-app.use(`${API}/agents`,        agentRoutes);
-app.use(`${API}/applications`,  appRouter);
-app.use(`${API}/wallet`,        walletRouter);
-app.use(`${API}/products`,      productRouter);
+app.use(`${API}/auth`, authRoutes);
+app.use(`${API}/Partners`, PartnerRoutes);
+app.use(`${API}/applications`, appRouter);
+app.use(`${API}/wallet`, walletRouter);
+app.use(`${API}/products`, productRouter);
 app.use(`${API}/notifications`, notifRouter);
-app.use(`${API}/reports`,       reportRouter);
+app.use(`${API}/reports`, reportRouter);
 
 // ── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);

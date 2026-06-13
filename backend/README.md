@@ -1,6 +1,6 @@
 # FinEdge Backend API
 
-Node.js + Express + PostgreSQL backend for the FinEdge Agent Panel.
+Node.js + Express + PostgreSQL backend for the FinEdge Partner Panel.
 
 ## Stack
 - **Runtime**: Node.js 18+
@@ -48,7 +48,7 @@ src/
 │   └── seed.js          # Initial data
 ├── controllers/
 │   ├── auth.controller.js
-│   ├── agent.controller.js
+│   ├── partner.controller.js
 │   ├── application.controller.js
 │   ├── wallet.controller.js
 │   ├── product.controller.js
@@ -61,7 +61,7 @@ src/
 ├── routes/
 │   ├── index.js
 │   ├── auth.routes.js
-│   ├── agent.routes.js
+│   ├── partner.routes.js
 │   └── routes.js        # app/wallet/product/notif/report
 ├── services/
 │   ├── otp.service.js
@@ -85,7 +85,7 @@ src/
 ### Authentication
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| POST | `/auth/register` | Agent self-registration | Public |
+| POST | `/auth/register` | Partner self-registration | Public |
 | POST | `/auth/login` | Password login | Public |
 | POST | `/auth/otp/send` | Send OTP to mobile | Public |
 | POST | `/auth/otp/verify` | OTP login | Public |
@@ -93,15 +93,15 @@ src/
 | POST | `/auth/logout` | Logout (revoke token) | Bearer |
 | GET  | `/auth/me` | Get current user | Bearer |
 
-### Agents
+### Partners
 | Method | Endpoint | Description | Roles |
 |--------|----------|-------------|-------|
-| GET | `/agents` | List all agents | admin, super_admin |
-| GET | `/agents/:id/profile` | Agent profile | self, admin |
-| PUT | `/agents/:id/profile` | Update profile | self, admin |
-| POST | `/agents/:id/kyc` | Upload KYC docs (multipart) | self, admin |
-| GET | `/agents/:id/dashboard` | Dashboard stats | self, admin |
-| PATCH | `/agents/:id/approve` | Approve/reject KYC | admin, super_admin |
+| GET | `/Partners` | List all Partners | admin, super_admin |
+| GET | `/Partners/:id/profile` | Partner profile | self, admin |
+| PUT | `/Partners/:id/profile` | Update profile | self, admin |
+| POST | `/Partners/:id/kyc` | Upload KYC docs (multipart) | self, admin |
+| GET | `/Partners/:id/dashboard` | Dashboard stats | self, admin |
+| PATCH | `/Partners/:id/approve` | Approve/reject KYC | admin, super_admin |
 
 **KYC Upload Fields** (multipart/form-data):
 - `aadhaar` — Aadhaar card image/PDF
@@ -116,7 +116,7 @@ src/
 |--------|----------|-------------|-------|
 | GET | `/applications` | List applications (filtered) | all |
 | GET | `/applications/:id` | Application detail | all |
-| POST | `/applications` | Submit new application | agent (KYC approved) |
+| POST | `/applications` | Submit new application | Partner (KYC approved) |
 | PATCH | `/applications/:id/status` | Update status | admin, employee |
 | POST | `/applications/:id/documents` | Upload doc | all |
 
@@ -156,10 +156,10 @@ Status values: `submitted` → `under_review` → `approved` / `rejected` / `dis
 ### Wallet
 | Method | Endpoint | Description | Roles |
 |--------|----------|-------------|-------|
-| GET | `/wallet/:agentId` | Wallet summary | self, admin |
-| GET | `/wallet/:agentId/transactions` | Statement | self, admin |
-| GET | `/wallet/:agentId/case-summary` | Per-product stats | self, admin |
-| POST | `/wallet/:agentId/withdraw` | Request withdrawal | self (KYC approved) |
+| GET | `/wallet/:PartnerId` | Wallet summary | self, admin |
+| GET | `/wallet/:PartnerId/transactions` | Statement | self, admin |
+| GET | `/wallet/:PartnerId/case-summary` | Per-product stats | self, admin |
+| POST | `/wallet/:PartnerId/withdraw` | Request withdrawal | self (KYC approved) |
 | GET | `/wallet/withdrawals` | All pending withdrawals | admin, super_admin |
 | PATCH | `/wallet/withdrawals/:id/process` | Approve/reject | super_admin |
 
@@ -205,9 +205,9 @@ Status values: `submitted` → `under_review` → `approved` / `rejected` / `dis
 ### Reports (Admin/Super Admin only)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/reports/overview` | KPIs — apps, agents, wallet totals |
+| GET | `/reports/overview` | KPIs — apps, Partners, wallet totals |
 | GET | `/reports/applications-by-product` | Per-product breakdown |
-| GET | `/reports/top-agents` | Top earning agents |
+| GET | `/reports/top-Partners` | Top earning Partners |
 | GET | `/reports/monthly-trend` | Last 12 months chart data |
 
 ---
@@ -246,7 +246,7 @@ Status values: `submitted` → `under_review` → `approved` / `rejected` / `dis
 
 ## Role Permissions Summary
 
-| Feature | Agent | Employee | Admin | Super Admin |
+| Feature | Partner | Employee | Admin | Super Admin |
 |---------|-------|----------|-------|-------------|
 | Register | ✅ | — | — | — |
 | Submit Application | ✅ (KYC approved) | ✅ | ✅ | ✅ |
@@ -254,7 +254,7 @@ Status values: `submitted` → `under_review` → `approved` / `rejected` / `dis
 | View Own Wallet | ✅ | ❌ | ✅ | ✅ |
 | Request Withdrawal | ✅ | ❌ | ❌ | ✅ |
 | Approve Withdrawal | ❌ | ❌ | ❌ | ✅ |
-| Manage Agents | ❌ | ❌ | ✅ | ✅ |
+| Manage Partners | ❌ | ❌ | ✅ | ✅ |
 | Manage Products | ❌ | ❌ | ✅ | ✅ |
 | Set Commission | ❌ | ❌ | ❌ | ✅ |
 | Reports | ❌ | ❌ | ✅ | ✅ |

@@ -3,11 +3,11 @@ const { query, getClient } = require('../config/db');
 const { signAccessToken, signRefreshToken, verifyRefreshToken, storeRefreshToken, validateRefreshToken, revokeRefreshToken, revokeAllUserTokens } = require('../utils/jwt');
 const { sendOTP, verifyOTP } = require('../services/otp.service');
 const { ensureWallet } = require('../services/wallet.service');
-const { generateAgentCode } = require('../utils/helpers');
+const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, unauthorized } = require('../utils/response');
 const logger = require('../utils/logger');
 
-// POST /auth/register (Agent self-registration)
+// POST /auth/register (Partner self-registration)
 const register = async (req, res, next) => {
   const client = await getClient();
   try {
@@ -31,28 +31,28 @@ const register = async (req, res, next) => {
     // Create user
     const { rows: [user] } = await client.query(`
       INSERT INTO users (email, mobile, password_hash, role, status)
-      VALUES ($1, $2, $3, 'agent', 'pending') RETURNING id
+      VALUES ($1, $2, $3, 'Partner', 'pending') RETURNING id
     `, [email, mobile, password_hash]);
 
-    // Generate agent code
-    const { rows: [{ count }] } = await client.query(`SELECT COUNT(*) FROM agent_profiles`);
-    const agentCode = generateAgentCode(parseInt(count) + 1);
+    // Generate Partner code
+    const { rows: [{ count }] } = await client.query(`SELECT COUNT(*) FROM Partner_profiles`);
+    const PartnerCode = generatePartnerCode(parseInt(count) + 1);
 
-    // Create agent profile
-    const { rows: [agent] } = await client.query(`
-      INSERT INTO agent_profiles (user_id, agent_code, first_name, last_name, current_address, business_location, company_name, company_type, gst_number)
+    // Create Partner profile
+    const { rows: [Partner] } = await client.query(`
+      INSERT INTO Partner_profiles (user_id, Partner_code, first_name, last_name, current_address, business_location, company_name, company_type, gst_number)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
-    `, [user.id, agentCode, first_name, last_name, current_address, business_location, company_name, company_type, gst_number]);
+    `, [user.id, PartnerCode, first_name, last_name, current_address, business_location, company_name, company_type, gst_number]);
 
     // Create bank details
     await client.query(`
-      INSERT INTO agent_bank_details (agent_id, bank_name, account_number, ifsc_code, account_holder_name)
+      INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
       VALUES ($1, $2, $3, $4, $5)
-    `, [agent.id, bank_name, account_number, ifsc_code, account_holder_name]);
+    `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
 
     await client.query('COMMIT');
-    logger.info(`New agent registered: ${email} (${agentCode})`);
-    return created(res, { agent_code: agentCode }, 'Registration successful. Awaiting KYC verification.');
+    logger.info(`New partner registered: ${email} (${PartnerCode})`);
+    return created(res, { Partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -68,9 +68,9 @@ const login = async (req, res, next) => {
 
     // Find by email or mobile
     const { rows: [user] } = await query(`
-      SELECT u.*, ap.id as agent_id, ap.first_name, ap.last_name, ap.agent_code, ap.kyc_status
+      SELECT u.*, ap.id as Partner_id, ap.first_name, ap.last_name, ap.Partner_code, ap.kyc_status
       FROM users u
-      LEFT JOIN agent_profiles ap ON ap.user_id = u.id
+      LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
       WHERE u.email = $1 OR u.mobile = $1
     `, [identifier]);
 
@@ -84,7 +84,7 @@ const login = async (req, res, next) => {
     // Update last login
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
 
-    const payload = { id: user.id, role: user.role, agentId: user.agent_id };
+    const payload = { id: user.id, role: user.role, PartnerId: user.Partner_id };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
     await storeRefreshToken(user.id, refreshToken);
@@ -95,7 +95,7 @@ const login = async (req, res, next) => {
       user: {
         id: user.id, email: user.email, mobile: user.mobile, role: user.role,
         status: user.status, first_name: user.first_name, last_name: user.last_name,
-        agent_code: user.agent_code, kyc_status: user.kyc_status,
+        Partner_code: user.Partner_code, kyc_status: user.kyc_status,
       },
     }, 'Login successful');
   } catch (err) {
@@ -127,15 +127,15 @@ const verifyOTPLogin = async (req, res, next) => {
     if (!valid) return error(res, 'Invalid or expired OTP', 401);
 
     const { rows: [user] } = await query(`
-      SELECT u.*, ap.id as agent_id, ap.first_name, ap.last_name, ap.agent_code, ap.kyc_status
-      FROM users u LEFT JOIN agent_profiles ap ON ap.user_id = u.id
+      SELECT u.*, ap.id as Partner_id, ap.first_name, ap.last_name, ap.Partner_code, ap.kyc_status
+      FROM users u LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
       WHERE u.mobile = $1
     `, [mobile]);
 
     if (!user) return error(res, 'User not found', 404);
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
 
-    const payload = { id: user.id, role: user.role, agentId: user.agent_id };
+    const payload = { id: user.id, role: user.role, PartnerId: user.Partner_id };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
     await storeRefreshToken(user.id, refreshToken);
@@ -146,7 +146,7 @@ const verifyOTPLogin = async (req, res, next) => {
       user: {
         id: user.id, email: user.email, mobile: user.mobile, role: user.role,
         first_name: user.first_name, last_name: user.last_name,
-        agent_code: user.agent_code, kyc_status: user.kyc_status,
+        Partner_code: user.Partner_code, kyc_status: user.kyc_status,
       },
     }, 'OTP login successful');
   } catch (err) {
@@ -166,7 +166,7 @@ const refreshToken = async (req, res, next) => {
 
     // Rotate tokens
     await revokeRefreshToken(decoded.id, refresh_token);
-    const payload = { id: decoded.id, role: decoded.role, agentId: decoded.agentId };
+    const payload = { id: decoded.id, role: decoded.role, PartnerId: decoded.PartnerId };
     const newAccess = signAccessToken(payload);
     const newRefresh = signRefreshToken(payload);
     await storeRefreshToken(decoded.id, newRefresh);
@@ -198,12 +198,12 @@ const getMe = async (req, res, next) => {
   try {
     const { rows: [user] } = await query(`
       SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login,
-        ap.id as agent_id, ap.agent_code, ap.first_name, ap.last_name,
+        ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
         ap.kyc_status, ap.company_name, ap.profile_photo_url,
         w.available_balance, w.pending_amount
       FROM users u
-      LEFT JOIN agent_profiles ap ON ap.user_id = u.id
-      LEFT JOIN wallets w ON w.agent_id = ap.id
+      LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
+      LEFT JOIN wallets w ON w.Partner_id = ap.id
       WHERE u.id = $1
     `, [req.user.id]);
     return success(res, user);

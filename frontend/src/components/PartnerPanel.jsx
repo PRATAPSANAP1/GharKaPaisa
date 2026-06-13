@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Icons } from "./Agent/AgentIcons";
-import { useTheme, makeS, ThemeToggle } from "./Agent/ThemeContext";
+import { Icons } from "./Partner/PartnerIcons";
+import { useTheme, makeS, ThemeToggle } from "./Partner/ThemeContext";
 import { clearSession, getStoredUser, isAuthenticated } from "../api/api";
 import { logout } from "../api/auth.api";
 import logo from "../logo.jpeg";
-import AgentLogin from "./Agent/AgentLogin";
-import AgentRegister from "./Agent/AgentRegister";
-import AgentDashboard from "./Agent/AgentDashboard";
-import AgentOffers from "./Agent/AgentOffers";
-import AgentWallet from "./Agent/AgentWallet";
-import AgentProfile from "./Agent/AgentProfile";
+import PartnerLogin from "./Partner/PartnerLogin";
+import PartnerRegister from "./Partner/PartnerRegister";
+import PartnerDashboard from "./Partner/PartnerDashboard";
+import PartnerOffers from "./Partner/PartnerOffers";
+import PartnerWallet from "./Partner/PartnerWallet";
+import PartnerProfile from "./Partner/PartnerProfile";
 
-export default function AgentPanel({ onBackToMain }) {
+export default function PartnerPanel({ onBackToMain }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   // Restore session from localStorage on mount
-  const [auth,  setAuth]  = useState(() => isAuthenticated() ? "app" : "login");
-  const [page,  setPage]  = useState("dashboard");
-  const [agent, setAgent] = useState(() => {
+  const [auth, setAuth] = useState(() => isAuthenticated() ? "app" : "login");
+  const [page, setPage] = useState("dashboard");
+  const [partner, setPartner] = useState(() => {
     const u = getStoredUser();
-    if (!u) return { name: "Agent", id: "" };
-    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.mobile || "Agent";
-    return { name, id: u.agent_code || "", ...u };
+    if (!u) return { name: "Partner", id: "" };
+    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.mobile || "Partner";
+    return { name, id: u.Partner_code || "", ...u };
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -41,8 +41,8 @@ export default function AgentPanel({ onBackToMain }) {
   ];
 
   const handleLogin = (user) => {
-    const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.mobile || "Agent";
-    setAgent({ name, id: user?.agent_code || "", ...user });
+    const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.mobile || "Partner";
+    setPartner({ name, id: user?.Partner_code || "", ...user });
     setAuth("app");
   };
 
@@ -50,7 +50,7 @@ export default function AgentPanel({ onBackToMain }) {
     try {
       const rt = localStorage.getItem("gkp_refresh_token");
       if (rt) await logout(rt);
-    } catch {/* ignore */}
+    } catch {/* ignore */ }
     clearSession();
     setAuth("login");
     onBackToMain();
@@ -58,7 +58,7 @@ export default function AgentPanel({ onBackToMain }) {
 
   if (auth === "login") {
     return (
-      <AgentLogin
+      <PartnerLogin
         onLogin={handleLogin}
         onRegisterNav={() => setAuth("register")}
       />
@@ -67,24 +67,24 @@ export default function AgentPanel({ onBackToMain }) {
 
   if (auth === "register") {
     return (
-      <AgentRegister onBack={() => setAuth("login")} />
+      <PartnerRegister onBack={() => setAuth("login")} />
     );
   }
 
   const views = {
-    dashboard: () => <AgentDashboard agent={agent} onTabChange={setPage} />,
-    home:      () => <AgentOffers />,
-    wallet:    () => <AgentWallet agentId={agent?.agent_id || agent?.id} />,
-    profile:   () => <AgentProfile agent={agent} onLogout={handleLogout} />
+    dashboard: () => <PartnerDashboard partner={partner} onTabChange={setPage} />,
+    home: () => <PartnerOffers />,
+    wallet: () => <PartnerWallet partnerId={partner?.Partner_id || partner?.id} />,
+    profile: () => <PartnerProfile partner={partner} onLogout={handleLogout} />
   };
 
   const RenderComp = views[page] || views.dashboard;
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      background: C.bg, 
-      display: "flex", 
+    <div style={{
+      minHeight: "100vh",
+      background: C.bg,
+      display: "flex",
       flexDirection: isMobile ? "column" : "row",
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       boxSizing: "border-box",
@@ -122,7 +122,7 @@ export default function AgentPanel({ onBackToMain }) {
             />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "16px", fontWeight: 900 }}>GharKaPaisa</div>
-              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Agent Panel</div>
+              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>Partner Panel</div>
             </div>
             <ThemeToggle style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", width: "30px", height: "30px", fontSize: "13px" }} />
           </div>
@@ -160,7 +160,7 @@ export default function AgentPanel({ onBackToMain }) {
             })}
           </div>
 
-          {/* Small Agent Summary Card at footer */}
+          {/* Small Partner Summary Card at footer */}
           <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "12px", padding: "12px", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
               <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>RK</div>
@@ -169,8 +169,8 @@ export default function AgentPanel({ onBackToMain }) {
                 <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>AG-00123</div>
               </div>
             </div>
-            <button 
-              onClick={() => { setAuth("login"); onBackToMain(); }} 
+            <button
+              onClick={() => { setAuth("login"); onBackToMain(); }}
               style={{
                 width: "100%",
                 padding: "6px 0",
@@ -205,19 +205,19 @@ export default function AgentPanel({ onBackToMain }) {
           boxSizing: "border-box"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <img 
-              src={logo} 
-              alt="GharKaPaisa Logo" 
-              style={{ 
-                width: "30px", 
-                height: "30px", 
-                borderRadius: "6px", 
+            <img
+              src={logo}
+              alt="GharKaPaisa Logo"
+              style={{
+                width: "30px",
+                height: "30px",
+                borderRadius: "6px",
                 objectFit: "contain",
                 background: "#fff",
                 padding: "2px"
-              }} 
+              }}
             />
-            <span style={{ fontSize: "15px", fontWeight: 900 }}>GharKaPaisa Agent</span>
+            <span style={{ fontSize: "15px", fontWeight: 900 }}>GharKaPaisa Partner</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -234,8 +234,8 @@ export default function AgentPanel({ onBackToMain }) {
       )}
 
       {/* MAIN CONTENT AREA */}
-      <div style={{ 
-        flex: 1, 
+      <div style={{
+        flex: 1,
         padding: isMobile ? "16px" : "32px",
         marginLeft: isMobile ? "0px" : "240px",
         paddingBottom: isMobile ? "80px" : "32px", // Safe area for mobile footer navigation

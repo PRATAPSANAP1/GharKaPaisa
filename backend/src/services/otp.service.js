@@ -1,6 +1,5 @@
 const twilio = require('twilio');
-const { query } = require('../config/db');
-const { generateOTP, hashOTP, sanitizeMobile } = require('../utils/helpers');
+const { sanitizeMobile } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
 // ── Dev OTP Bypass ─────────────────────────────────────────────────────────────
@@ -13,87 +12,80 @@ if (IS_DEV_BYPASS) {
   logger.warn(`[DEV] OTP bypass enabled — use "${DEV_CODE}" as OTP for all numbers`);
 }
 
-// ── Twilio client (only initialised when NOT in bypass mode) ──────────────────
+// ── Twilio Verify client ───────────────────────────────────────────────────────
 let twilioClient;
+let VERIFY_SERVICE_SID;
+
 try {
   if (!IS_DEV_BYPASS && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
     twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    VERIFY_SERVICE_SID = process.env.TWILIO_VERIFY_SERVICE_SID;
+    if (!VERIFY_SERVICE_SID) {
+      logger.warn('TWILIO_VERIFY_SERVICE_SID not set — OTPs will not be sent');
+    }
   }
 } catch (e) {
   logger.warn('Twilio not configured; OTPs will be logged only');
 }
 
 // ── sendOTP ───────────────────────────────────────────────────────────────────
+// Uses Twilio Verify API — no DB storage needed; Twilio manages OTP lifecycle.
 const sendOTP = async (mobile, purpose = 'login') => {
   const cleanMobile = sanitizeMobile(mobile);
 
-  // In dev-bypass mode: skip DB + Twilio entirely
+  // In dev-bypass mode: skip Twilio entirely
   if (IS_DEV_BYPASS) {
     logger.warn(`[DEV BYPASS] OTP send skipped for ${cleanMobile} (${purpose}). Use "${DEV_CODE}".`);
     return { sent: true, mobile: cleanMobile, dev: true };
   }
 
-  const otp      = generateOTP();
-  const otpHash  = hashOTP(otp);
-  const expiresAt = new Date(Date.now() + (parseInt(process.env.OTP_EXPIRES_MINUTES) || 10) * 60000);
-
-  // Invalidate previous OTPs for same mobile + purpose
-  await query(
-    `UPDATE otps SET used = true WHERE mobile = $1 AND purpose = $2 AND used = false`,
-    [cleanMobile, purpose]
-  );
-
-  // Store new OTP hash
-  await query(
-    `INSERT INTO otps (mobile, otp_hash, purpose, expires_at) VALUES ($1, $2, $3, $4)`,
-    [cleanMobile, otpHash, purpose, expiresAt]
-  );
-
-  // Send via Twilio
-  if (twilioClient) {
-    try {
-      await twilioClient.messages.create({
-        body: `Your GharKaPaisa OTP is ${otp}. Valid for ${process.env.OTP_EXPIRES_MINUTES || 10} minutes. Do not share this with anyone.`,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: cleanMobile,
-      });
-      logger.info(`OTP sent to ${cleanMobile} for ${purpose}`);
-    } catch (err) {
-      logger.error(`Twilio SMS failed for ${cleanMobile}`, err.message);
-    }
-  } else {
-    // No Twilio configured — log OTP for debugging
-    logger.warn(`[DEV] OTP for ${cleanMobile} (${purpose}): ${otp}`);
+  if (!twilioClient || !VERIFY_SERVICE_SID) {
+    logger.error('Twilio Verify not configured');
+    throw new Error('OTP service unavailable');
   }
 
-  return { sent: true, mobile: cleanMobile };
+  try {
+    const verification = await twilioClient.verify.v2
+      .services(VERIFY_SERVICE_SID)
+      .verifications
+      .create({ to: cleanMobile, channel: 'sms' });
+
+    logger.info(`OTP sent to ${cleanMobile} for ${purpose} — status: ${verification.status}`);
+    return { sent: true, mobile: cleanMobile };
+  } catch (err) {
+    logger.error(`Twilio Verify send failed for ${cleanMobile}`, err.message);
+    throw new Error(err.message || 'Failed to send OTP');
+  }
 };
 
 // ── verifyOTP ─────────────────────────────────────────────────────────────────
+// Delegates OTP check to Twilio Verify — no DB lookup required.
 const verifyOTP = async (mobile, otp, purpose = 'login') => {
   const cleanMobile = sanitizeMobile(mobile);
 
-  // In dev-bypass mode: accept the magic code without touching DB
+  // In dev-bypass mode: accept the magic code
   if (IS_DEV_BYPASS && otp === DEV_CODE) {
     logger.warn(`[DEV BYPASS] OTP accepted for ${cleanMobile} (${purpose})`);
     return true;
   }
 
-  // Production: hash and check DB
-  const otpHash = hashOTP(otp);
+  if (!twilioClient || !VERIFY_SERVICE_SID) {
+    logger.error('Twilio Verify not configured');
+    return false;
+  }
 
-  const { rows } = await query(`
-    SELECT id FROM otps
-    WHERE mobile = $1 AND otp_hash = $2 AND purpose = $3
-      AND used = false AND expires_at > NOW()
-    ORDER BY created_at DESC LIMIT 1
-  `, [cleanMobile, otpHash, purpose]);
+  try {
+    const check = await twilioClient.verify.v2
+      .services(VERIFY_SERVICE_SID)
+      .verificationChecks
+      .create({ to: cleanMobile, code: otp });
 
-  if (!rows.length) return false;
-
-  // Mark as used
-  await query(`UPDATE otps SET used = true WHERE id = $1`, [rows[0].id]);
-  return true;
+    logger.info(`OTP verify for ${cleanMobile}: status=${check.status}, valid=${check.valid}`);
+    return check.status === 'approved' && check.valid === true;
+  } catch (err) {
+    logger.error(`Twilio Verify check failed for ${cleanMobile}`, err.message);
+    return false;
+  }
 };
 
 module.exports = { sendOTP, verifyOTP };

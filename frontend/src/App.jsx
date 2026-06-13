@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import './App.css';
 import Navbar from './components/Navbar';
-import AgentPanel from './components/AgentPanel';
-import { ThemeProvider } from './components/Agent/ThemeContext';
+import PartnerPanel from './components/PartnerPanel';
+import { ThemeProvider } from './components/Partner/ThemeContext';
 
 function App() {
-  const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [showPartnerPanel, setShowPartnerPanel] = useState(false);
 
   return (
     <ThemeProvider>
       <div className="App">
-        {showAgentPanel ? (
-          <AgentPanel onBackToMain={() => setShowAgentPanel(false)} />
+        {showPartnerPanel ? (
+          <PartnerPanel onBackToMain={() => setShowPartnerPanel(false)} />
         ) : (
-          <Navbar onAgentLoginClick={() => setShowAgentPanel(true)} />
+          <Navbar onPartnerLoginClick={() => setShowPartnerPanel(true)} />
         )}
       </div>
     </ThemeProvider>

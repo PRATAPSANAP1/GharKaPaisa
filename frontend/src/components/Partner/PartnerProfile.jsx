@@ -1,8 +1,8 @@
 import React from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
 
-export default function AgentProfile({ agent, onLogout }) {
+export default function PartnerProfile({ partner, onLogout }) {
   const { C } = useTheme();
   const S = makeS(C);
   return (
@@ -30,8 +30,8 @@ export default function AgentProfile({ agent, onLogout }) {
           color: "#fff",
           boxShadow: `0 8px 24px rgba(0,180,216,0.3)`
         }}>RK</div>
-        <div style={{ fontSize: "18px", fontWeight: 800 }}>{agent.name}</div>
-        <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "4px" }}>Agent ID: {agent.id} · Mumbai Hub</div>
+        <div style={{ fontSize: "18px", fontWeight: 800 }}>{partner.name}</div>
+        <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", marginTop: "4px" }}>Partner ID: {partner.id} · Mumbai Hub</div>
         <div style={{ marginTop: "12px" }}>
           <span style={S.tag(C.teal)}>✓ KYC Approved</span>
         </div>

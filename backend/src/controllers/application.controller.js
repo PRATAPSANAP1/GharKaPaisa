@@ -7,14 +7,14 @@ const { success, created, error, notFound } = require('../utils/response');
 const { paginate } = require('../utils/response');
 const logger = require('../utils/logger');
 
-// POST /applications — Agent submits application
+// POST /applications — Partner submits application
 const submitApplication = async (req, res, next) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
 
     const { product_id, customer, loan_amount, notes } = req.body;
-    const agentId = req.agent.id;
+    const PartnerId = req.Partner.id;
 
     // Validate product
     const { rows: [product] } = await client.query(
@@ -35,14 +35,14 @@ const submitApplication = async (req, res, next) => {
         UPDATE customers SET full_name=$1, email=$2, pan_number=$3, monthly_income=$4,
           employment_type=$5, city=$6, updated_at=NOW() WHERE id=$7
       `, [customer.full_name, customer.email, customer.pan_number,
-        customer.monthly_income, customer.employment_type, customer.city, customerId]);
+      customer.monthly_income, customer.employment_type, customer.city, customerId]);
     } else {
       const { rows: [newCust] } = await client.query(`
         INSERT INTO customers (full_name, mobile, email, dob, pan_number, monthly_income, employment_type, city, state, pincode, employer, created_by)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
       `, [customer.full_name, customer.mobile, customer.email, customer.dob,
-        customer.pan_number, customer.monthly_income, customer.employment_type,
-        customer.city, customer.state, customer.pincode, customer.employer, req.user.id]);
+      customer.pan_number, customer.monthly_income, customer.employment_type,
+      customer.city, customer.state, customer.pincode, customer.employer, req.user.id]);
       customerId = newCust.id;
     }
 
@@ -53,19 +53,19 @@ const submitApplication = async (req, res, next) => {
     // Create application
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, agent_id, submitted_by, loan_amount, commission_amount, notes,
+        (app_number, customer_id, product_id, Partner_id, submitted_by, loan_amount, commission_amount, notes,
          status_history)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
         jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$5::text)))
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, agentId, req.user.id, loan_amount, commission, notes]);
+    `, [appNumber, customerId, product_id, PartnerId, req.user.id, loan_amount, commission, notes]);
 
     await client.query('COMMIT');
 
     // Notify
     await notify.applicationSubmitted(req.user.id, appNumber);
 
-    logger.info(`Application ${appNumber} submitted by agent ${agentId}`);
+    logger.info(`Application ${appNumber} submitted by Partner ${PartnerId}`);
     return created(res, { application_id: app.id, app_number: app.app_number, commission }, 'Application submitted successfully');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -106,16 +106,16 @@ const updateStatus = async (req, res, next) => {
     if (status === 'approved' || status === 'disbursed') {
       const commission = app.commission_amount || 0;
       if (commission > 0) {
-        await creditCommission(app.agent_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
+        await creditCommission(app.Partner_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
       }
-      // Get agent user_id for notification
-      const { rows: [agent] } = await query(`SELECT user_id FROM agent_profiles WHERE id = $1`, [app.agent_id]);
-      if (agent) await notify.applicationApproved(agent.user_id, app.app_number, commission);
+      // Get Partner user_id for notification
+      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+      if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
     }
 
     if (status === 'rejected') {
-      const { rows: [agent] } = await query(`SELECT user_id FROM agent_profiles WHERE id = $1`, [app.agent_id]);
-      if (agent) await notify.applicationRejected(agent.user_id, app.app_number, rejection_reason);
+      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+      if (Partner) await notify.applicationRejected(Partner.user_id, app.app_number, rejection_reason);
     }
 
     return success(res, {}, 'Application status updated');
@@ -131,21 +131,21 @@ const updateStatus = async (req, res, next) => {
 const listApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, agent_id, product_id, from_date, to_date, search } = req.query;
+    const { status, Partner_id, product_id, from_date, to_date, search } = req.query;
 
     let where = 'WHERE 1=1';
     const values = [];
     let idx = 1;
 
-    // Agents can only see their own applications
-    if (req.user.role === 'agent') {
-      const { rows: [agent] } = await query(`SELECT id FROM agent_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!agent) return error(res, 'Agent profile not found', 404);
-      where += ` AND a.agent_id = $${idx++}`;
-      values.push(agent.id);
-    } else if (agent_id) {
-      where += ` AND a.agent_id = $${idx++}`;
-      values.push(agent_id);
+    // Partners can only see their own applications
+    if (req.user.role === 'Partner') {
+      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!Partner) return error(res, 'Partner profile not found', 404);
+      where += ` AND a.Partner_id = $${idx++}`;
+      values.push(Partner.id);
+    } else if (Partner_id) {
+      where += ` AND a.Partner_id = $${idx++}`;
+      values.push(Partner_id);
     }
 
     if (status) { where += ` AND a.status = $${idx++}`; values.push(status); }
@@ -162,7 +162,7 @@ const listApplications = async (req, res, next) => {
       JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      JOIN agent_profiles ap ON ap.id = a.agent_id
+      JOIN Partner_profiles ap ON ap.id = a.Partner_id
       ${where}
     `;
 
@@ -174,7 +174,7 @@ const listApplications = async (req, res, next) => {
           c.full_name as customer_name, c.mobile as customer_mobile,
           p.name as product_name, p.category,
           b.name as bank_name, b.short_code as bank_code,
-          ap.agent_code, ap.first_name as agent_first_name, ap.last_name as agent_last_name
+          ap.Partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
         ${baseQuery}
         ORDER BY a.created_at DESC
         LIMIT $${idx} OFFSET $${idx + 1}
@@ -197,12 +197,12 @@ const getApplication = async (req, res, next) => {
         c.pan_number, c.monthly_income, c.employment_type, c.city, c.state,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
-        ap.agent_code, ap.first_name as agent_first_name, ap.last_name as agent_last_name
+        ap.Partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
       FROM applications a
       JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      JOIN agent_profiles ap ON ap.id = a.agent_id
+      JOIN Partner_profiles ap ON ap.id = a.Partner_id
       WHERE a.id = $1
     `, [id]);
     if (!app) return notFound(res);

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, verifyOtpLogin, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
 import logo from "../../logo.jpeg";
 
-export default function AgentLogin({ onLogin, onRegisterNav }) {
+export default function PartnerLogin({ onLogin, onRegisterNav }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const [form, setForm] = useState({ mobile: "", password: "", otp: "" });
@@ -98,7 +98,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
               boxShadow: "0 4px 12px rgba(10,17,40,0.12)"
             }}
           />
-          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Agent Login</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Partner Login</div>
           {DEV_BYPASS && (
             <div style={{
               display: "inline-flex", alignItems: "center", gap: "6px",
@@ -222,7 +222,7 @@ export default function AgentLogin({ onLogin, onRegisterNav }) {
           </form>
 
           <div style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.textLight }}>
-            New GharKaPaisa Agent?{" "}
+            New GharKaPaisa Partner?{" "}
             <span
               onClick={onRegisterNav}
               style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}

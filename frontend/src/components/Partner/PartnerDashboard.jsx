@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
 
 function StatCard({ label, value, sub, accent, icon, C, S }) {
@@ -62,7 +62,7 @@ const WALLET_STMT = [
   { app: "APP20260604", name: "Sneha Roy",    product: "Axis Home Loan",       bank: "Axis",  credit: "₹4,850", date: "08 Jun 2026", status: "Approved" },
 ];
 
-export default function AgentDashboard({ agent, onTabChange }) {
+export default function PartnerDashboard({ partner, onTabChange }) {
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -82,7 +82,7 @@ export default function AgentDashboard({ agent, onTabChange }) {
         <div style={{ position: "absolute", top: "-30px", right: "-30px", width: "120px", height: "120px", borderRadius: "50%", background: `${C.teal}20` }} />
         <div style={{ position: "relative", zIndex: 2 }}>
           <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Welcome back,</div>
-          <div style={{ fontSize: "24px", fontWeight: 900, marginBottom: "20px", letterSpacing: "-0.5px" }}>{agent.name} 👋</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, marginBottom: "20px", letterSpacing: "-0.5px" }}>{partner.name} 👋</div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
             {[
@@ -116,14 +116,14 @@ export default function AgentDashboard({ agent, onTabChange }) {
       </div>
 
       {/* Quick Actions Grid */}
-      <SectionTitle title="Agent Quick Actions" C={C} S={S} />
+      <SectionTitle title="Partner Quick Actions" C={C} S={S} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "14px", marginBottom: "28px" }}>
         {[
-          { label: "Submit Lead",   icon: <Icons.upload  />, color: C.teal,        tab: "home"    },
-          { label: "View Wallet",   icon: <Icons.wallet  />, color: C.green,       tab: "wallet"  },
-          { label: "Withdraw Cash", icon: <Icons.withdraw/>, color: C.amber,       tab: "wallet"  },
-          { label: "Active Offers", icon: <Icons.star    />, color: C.gold,        tab: "home"    },
-          { label: "Agent Profile", icon: <Icons.profile />, color: C.primaryDark, tab: "profile" },
+          { label: "Submit Lead",     icon: <Icons.upload  />, color: C.teal,        tab: "home"    },
+          { label: "View Wallet",     icon: <Icons.wallet  />, color: C.green,       tab: "wallet"  },
+          { label: "Withdraw Cash",   icon: <Icons.withdraw/>, color: C.amber,       tab: "wallet"  },
+          { label: "Active Offers",   icon: <Icons.star    />, color: C.gold,        tab: "home"    },
+          { label: "Partner Profile", icon: <Icons.profile />, color: C.primaryDark, tab: "profile" },
         ].map(a => (
           <div
             key={a.label}

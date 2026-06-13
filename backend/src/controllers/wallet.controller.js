@@ -3,11 +3,11 @@ const { processWithdrawal, getWalletSummary } = require('../services/wallet.serv
 const { getPaginationParams } = require('../utils/helpers');
 const { success, error, notFound, paginate } = require('../utils/response');
 
-// GET /wallet/:agentId
+// GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
   try {
-    const { agentId } = req.params;
-    const wallet = await getWalletSummary(agentId);
+    const { PartnerId } = req.params;
+    const wallet = await getWalletSummary(PartnerId);
     if (!wallet) return notFound(res, 'Wallet not found');
     return success(res, wallet);
   } catch (err) {
@@ -15,14 +15,14 @@ const getWallet = async (req, res, next) => {
   }
 };
 
-// GET /wallet/:agentId/transactions
+// GET /wallet/:PartnerId/transactions
 const getTransactions = async (req, res, next) => {
   try {
-    const { agentId } = req.params;
+    const { PartnerId } = req.params;
     const { page, limit, offset } = getPaginationParams(req.query);
     const { type, status, from_date, to_date } = req.query;
 
-    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE agent_id = $1`, [agentId]);
+    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE Partner_id = $1`, [PartnerId]);
     if (!wallet) return notFound(res, 'Wallet not found');
 
     let where = `WHERE wt.wallet_id = $1`;
@@ -55,13 +55,13 @@ const getTransactions = async (req, res, next) => {
   }
 };
 
-// POST /wallet/:agentId/withdraw
+// POST /wallet/:PartnerId/withdraw
 const requestWithdrawal = async (req, res, next) => {
   try {
-    const { agentId } = req.params;
+    const { PartnerId } = req.params;
     const { amount } = req.body;
 
-    const wallet = await getWalletSummary(agentId);
+    const wallet = await getWalletSummary(PartnerId);
     if (!wallet) return notFound(res, 'Wallet not found');
     if (parseFloat(wallet.available_balance) < parseFloat(amount)) {
       return error(res, `Insufficient balance. Available: ₹${wallet.available_balance}`);
@@ -69,22 +69,22 @@ const requestWithdrawal = async (req, res, next) => {
 
     // Check no pending withdrawal
     const { rows: pending } = await query(
-      `SELECT id FROM withdrawal_requests WHERE agent_id = $1 AND status = 'pending'`, [agentId]
+      `SELECT id FROM withdrawal_requests WHERE Partner_id = $1 AND status = 'pending'`, [PartnerId]
     );
     if (pending.length) return error(res, 'A withdrawal request is already pending');
 
     // Get bank details
     const { rows: [bank] } = await query(
-      `SELECT bank_name, account_number, ifsc_code FROM agent_bank_details WHERE agent_id = $1`, [agentId]
+      `SELECT bank_name, account_number, ifsc_code FROM Partner_bank_details WHERE Partner_id = $1`, [PartnerId]
     );
 
     // Deduct from available (hold until processed)
-    await query(`UPDATE wallets SET available_balance = available_balance - $1 WHERE agent_id = $2`, [amount, agentId]);
+    await query(`UPDATE wallets SET available_balance = available_balance - $1 WHERE Partner_id = $2`, [amount, PartnerId]);
 
     const { rows: [wr] } = await query(`
-      INSERT INTO withdrawal_requests (wallet_id, agent_id, amount, bank_name, account_number, ifsc_code)
+      INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code)
       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
-    `, [wallet.id, agentId, amount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
+    `, [wallet.id, PartnerId, amount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
 
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
@@ -101,9 +101,9 @@ const listWithdrawals = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM withdrawal_requests WHERE status = $1`, [status]),
       query(`
-        SELECT wr.*, ap.agent_code, ap.first_name, ap.last_name, u.mobile
+        SELECT wr.*, ap.Partner_code, ap.first_name, ap.last_name, u.mobile
         FROM withdrawal_requests wr
-        JOIN agent_profiles ap ON ap.id = wr.agent_id
+        JOIN Partner_profiles ap ON ap.id = wr.Partner_id
         JOIN users u ON u.id = ap.user_id
         WHERE wr.status = $1
         ORDER BY wr.created_at ASC
@@ -129,10 +129,10 @@ const processWithdrawalRequest = async (req, res, next) => {
   }
 };
 
-// GET /wallet/:agentId/case-summary — commission per product
+// GET /wallet/:PartnerId/case-summary — commission per product
 const getCaseSummary = async (req, res, next) => {
   try {
-    const { agentId } = req.params;
+    const { PartnerId } = req.params;
     const { rows } = await query(`
       SELECT
         p.name as product_name, b.short_code as bank_code,
@@ -143,10 +143,10 @@ const getCaseSummary = async (req, res, next) => {
       FROM applications a
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      WHERE a.agent_id = $1
+      WHERE a.Partner_id = $1
       GROUP BY p.id, p.name, b.short_code
       ORDER BY commission_earned DESC
-    `, [agentId]);
+    `, [PartnerId]);
     return success(res, rows);
   } catch (err) {
     next(err);

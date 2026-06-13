@@ -7,7 +7,7 @@
  *  POST /auth/otp/send      → Send OTP to mobile
  *  POST /auth/otp/verify    → Verify OTP and get tokens (OTP login)
  *  POST /auth/login         → Password login (identifier + password)
- *  POST /auth/register      → Agent self-registration
+ *  POST /auth/register      → Partner self-registration
  *  POST /auth/logout        → Revoke refresh token
  *  GET  /auth/me            → Get current user profile
  */
@@ -15,7 +15,7 @@ import api, { saveSession } from './api';
 
 // ── Dev OTP Bypass ─────────────────────────────────────────────────────────────
 const DEV_BYPASS = import.meta.env.VITE_DEV_OTP_BYPASS === 'true';
-const DEV_CODE   = import.meta.env.VITE_DEV_OTP_CODE || '111111';
+const DEV_CODE = import.meta.env.VITE_DEV_OTP_CODE || '111111';
 
 // ── OTP ───────────────────────────────────────────────────────────────────────
 
@@ -68,34 +68,34 @@ export async function loginWithPassword(identifier, password) {
 // ── Register ──────────────────────────────────────────────────────────────────
 
 /**
- * Full agent registration.
+ * Full partner registration.
  * Maps the 4-step form data into the API body shape.
  */
-export async function registerAgent(formData) {
+export async function registerPartner(formData) {
   const body = {
     // Step 0 – Personal
-    first_name:    formData.firstName,
-    last_name:     formData.lastName,
-    mobile:        formData.mobile,
-    email:         formData.email,
-    password:      formData.password,
+    first_name: formData.firstName,
+    last_name: formData.lastName,
+    mobile: formData.mobile,
+    email: formData.email,
+    password: formData.password,
     current_address: formData.address || '',
 
     // Step 1 – Business
-    company_name:      formData.shopName    || '',
-    company_type:      formData.companyType || 'sole_proprietor',
-    gst_number:        formData.gst         || '',
+    company_name: formData.shopName || '',
+    company_type: formData.companyType || 'sole_proprietor',
+    gst_number: formData.gst || '',
     business_location: formData.businessCity || '',
 
     // Step 2 – Bank
-    bank_name:            formData.bankName          || '',
-    account_number:       formData.accountNumber     || '',
-    ifsc_code:            formData.ifsc              || '',
-    account_holder_name:  formData.accountHolderName || '',
+    bank_name: formData.bankName || '',
+    account_number: formData.accountNumber || '',
+    ifsc_code: formData.ifsc || '',
+    account_holder_name: formData.accountHolderName || '',
   };
 
   const { data } = await api.post('/auth/register', body);
-  return data; // { success, message, data: { agent_code } }
+  return data; // { success, message, data: { Partner_code } }
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────

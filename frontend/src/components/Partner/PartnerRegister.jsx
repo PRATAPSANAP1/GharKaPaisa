@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, registerAgent, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
+import { sendOtp, registerPartner, DEV_BYPASS, DEV_CODE } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
-  { label: "Individual / Freelancer", value: "individual"         },
-  { label: "Sole Proprietorship",     value: "sole_proprietor"    },
-  { label: "Partnership Firm",        value: "partnership"        },
-  { label: "Private Limited Company", value: "private_limited"    },
+  { label: "Individual / Freelancer", value: "individual" },
+  { label: "Sole Proprietorship", value: "sole_proprietor" },
+  { label: "Partnership Firm", value: "partnership" },
+  { label: "Private Limited Company", value: "private_limited" },
 ];
 
-export default function AgentRegister({ onBack }) {
+export default function PartnerRegister({ onBack }) {
   const { C } = useTheme();
   const S = makeS(C);
 
-  const [step, setStep]       = useState(0);
-  const [err,  setErr]        = useState("");
+  const [step, setStep] = useState(0);
+  const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [timer,    setTimer]  = useState(0);
-  const [success,  setSuccess] = useState(null); // { agent_code }
+  const [timer, setTimer] = useState(0);
+  const [success, setSuccess] = useState(null); // { Partner_code }
 
   // Flat form state for all steps
   const [form, setForm] = useState({
@@ -52,7 +52,7 @@ export default function AgentRegister({ onBack }) {
     value: form[key],
     onChange: set(key),
     onFocus: e => (e.target.style.border = focusBorder),
-    onBlur:  e => (e.target.style.border = `1.5px solid ${C.border}`),
+    onBlur: e => (e.target.style.border = `1.5px solid ${C.border}`),
   });
 
   // ── OTP Send ────────────────────────────────────────────────────────────────
@@ -76,23 +76,23 @@ export default function AgentRegister({ onBack }) {
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) {
-      if (!form.firstName.trim())  return "Please enter your first name.";
-      if (!form.lastName.trim())   return "Please enter your last name.";
-      if (!form.mobile.trim())     return "Please enter your mobile number.";
-      if (!otpSent)                return "Please click 'Verify Mobile' to send the OTP.";
-      if (form.otp.length < 6)    return "Please enter the 6-digit OTP.";
-      if (!form.email.trim())      return "Please enter your email address.";
+      if (!form.firstName.trim()) return "Please enter your first name.";
+      if (!form.lastName.trim()) return "Please enter your last name.";
+      if (!form.mobile.trim()) return "Please enter your mobile number.";
+      if (!otpSent) return "Please click 'Verify Mobile' to send the OTP.";
+      if (form.otp.length < 6) return "Please enter the 6-digit OTP.";
+      if (!form.email.trim()) return "Please enter your email address.";
       if (form.password.length < 6) return "Password must be at least 6 characters.";
       if (form.password !== form.confirmPassword) return "Passwords do not match.";
     }
     if (step === 1) {
-      if (!form.address.trim())    return "Please enter your current address.";
-      if (!form.shopName.trim())   return "Please enter your company/shop name.";
+      if (!form.address.trim()) return "Please enter your current address.";
+      if (!form.shopName.trim()) return "Please enter your company/shop name.";
     }
     if (step === 2) {
-      if (!form.bankName.trim())          return "Please enter your bank name.";
-      if (!form.accountNumber.trim())     return "Please enter your account number.";
-      if (!form.ifsc.trim())              return "Please enter your IFSC code.";
+      if (!form.bankName.trim()) return "Please enter your bank name.";
+      if (!form.accountNumber.trim()) return "Please enter your account number.";
+      if (!form.ifsc.trim()) return "Please enter your IFSC code.";
       if (!form.accountHolderName.trim()) return "Please enter account holder name.";
     }
     return null;
@@ -112,7 +112,7 @@ export default function AgentRegister({ onBack }) {
     // Final step — call the API
     setLoading(true);
     try {
-      const res = await registerAgent(form);
+      const res = await registerPartner(form);
       if (res.success) {
         setSuccess(res.data);
       } else {
@@ -138,11 +138,11 @@ export default function AgentRegister({ onBack }) {
               Registration Successful!
             </div>
             <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>
-              Your agent application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
+              Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
             </div>
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
-              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Agent Code</div>
-              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.agent_code}</div>
+              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
+              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code}</div>
             </div>
             <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
               Go to Login
@@ -167,7 +167,7 @@ export default function AgentRegister({ onBack }) {
           <button onClick={onBack} style={{ ...S.btn("ghost"), padding: "6px 8px" }}>
             <Icons.arrowLeft size={18} />
           </button>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Agent Request</div>
+          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Partner Request</div>
         </div>
 
         {/* Dev mode badge */}
@@ -354,9 +354,9 @@ export default function AgentRegister({ onBack }) {
 
               {[
                 { title: "Aadhaar Card", desc: "Front & Back (PDF/Image)" },
-                { title: "PAN Card",     desc: "PDF or Image"             },
-                { title: "GST Cert.",    desc: "Optional"                 },
-                { title: "Cancelled Cheque", desc: "Image of cheque"     },
+                { title: "PAN Card", desc: "PDF or Image" },
+                { title: "GST Cert.", desc: "Optional" },
+                { title: "Cancelled Cheque", desc: "Image of cheque" },
               ].map(u => (
                 <div key={u.title} style={{
                   border: `2px dashed ${C.border}`,
@@ -378,7 +378,7 @@ export default function AgentRegister({ onBack }) {
 
               <div style={{ gridColumn: "1/-1", background: `${C.gold}12`, border: `1px solid ${C.gold}30`, borderRadius: "10px", padding: "12px 14px" }}>
                 <div style={{ fontSize: "12px", color: C.gold, fontWeight: 600 }}>
-                  ℹ️ Document uploads will be available after initial registration. You can submit them from your Agent Profile dashboard.
+                  ℹ️ Document uploads will be available after initial registration. You can submit them from your Partner Profile dashboard.
                 </div>
               </div>
             </div>

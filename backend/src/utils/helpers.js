@@ -4,13 +4,13 @@ const crypto = require('crypto');
 // Generate unique application number: APP + YYYYMMDD + random 4 digits
 const generateAppNumber = () => {
   const date = new Date();
-  const datePart = `${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}`;
+  const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `APP${datePart}${rand}`;
 };
 
-// Generate agent code: AG + 5-digit zero-padded sequence
-const generateAgentCode = (seq) => `AG${String(seq).padStart(5, '0')}`;
+// Generate Partner code: AG + 5-digit zero-padded sequence
+const generatePartnerCode = (seq) => `AG${String(seq).padStart(5, '0')}`;
 
 // Hash OTP
 const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
@@ -62,7 +62,7 @@ const sanitizeMobile = (mobile) => {
 
 module.exports = {
   generateAppNumber,
-  generateAgentCode,
+  generatePartnerCode,
   hashOTP,
   generateOTP,
   calculateCommission,

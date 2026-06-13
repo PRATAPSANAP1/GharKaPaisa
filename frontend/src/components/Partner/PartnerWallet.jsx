@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
 
 function StatCard({ label, value, sub, accent, icon, C, S }) {
@@ -71,7 +71,7 @@ const CASE_PRODUCTS = [
   { product: "Axis Home Loan",     total: 4,  approved: 3,  rejected: 0, commission: "₹14,550" },
 ];
 
-export default function AgentWallet() {
+export default function PartnerWallet() {
   const { C } = useTheme();
   const S = makeS(C);
   const [withdrawReq, setWithdrawReq] = useState(false);

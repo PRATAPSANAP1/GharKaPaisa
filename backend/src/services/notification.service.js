@@ -12,7 +12,7 @@ const createNotification = async (userId, title, message, type = 'info', link = 
   }
 };
 
-// Bulk notify (e.g. all agents)
+// Bulk notify (e.g. all Partners)
 const bulkNotify = async (userIds, title, message, type = 'info') => {
   for (const uid of userIds) {
     await createNotification(uid, title, message, type);

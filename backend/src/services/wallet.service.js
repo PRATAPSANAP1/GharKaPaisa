@@ -2,26 +2,26 @@ const { query, getClient } = require('../config/db');
 const { notify } = require('./notification.service');
 const logger = require('../utils/logger');
 
-// Ensure wallet exists for agent (called on agent approval)
-const ensureWallet = async (agentId) => {
+// Ensure wallet exists for partner (called on partner approval)
+const ensureWallet = async (PartnerId) => {
   await query(`
-    INSERT INTO wallets (agent_id) VALUES ($1)
-    ON CONFLICT (agent_id) DO NOTHING
-  `, [agentId]);
+    INSERT INTO wallets (Partner_id) VALUES ($1)
+    ON CONFLICT (Partner_id) DO NOTHING
+  `, [PartnerId]);
 };
 
-// Credit commission to agent wallet (with transaction)
-const creditCommission = async (agentId, applicationId, amount, description, userId) => {
+// Credit commission to partner wallet (with transaction)
+const creditCommission = async (PartnerId, applicationId, amount, description, userId) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
 
     // Get wallet
     const { rows: [wallet] } = await client.query(
-      `SELECT id, pending_amount, available_balance, total_earned FROM wallets WHERE agent_id = $1 FOR UPDATE`,
-      [agentId]
+      `SELECT id, pending_amount, available_balance, total_earned FROM wallets WHERE Partner_id = $1 FOR UPDATE`,
+      [PartnerId]
     );
-    if (!wallet) throw new Error('Wallet not found for agent');
+    if (!wallet) throw new Error('Wallet not found for partner');
 
     // Add to pending first (commission hold for 48hrs)
     await client.query(`
@@ -29,8 +29,8 @@ const creditCommission = async (agentId, applicationId, amount, description, use
         pending_amount = pending_amount + $1,
         total_earned = total_earned + $1,
         last_updated = NOW()
-      WHERE agent_id = $2
-    `, [amount, agentId]);
+      WHERE Partner_id = $2
+    `, [amount, PartnerId]);
 
     // Log txn
     const { rows: [txn] } = await client.query(`
@@ -48,11 +48,11 @@ const creditCommission = async (agentId, applicationId, amount, description, use
 
     // Schedule commission approval after hold period (48hrs in production)
     // In production use a job queue (Bull/BullMQ). Here we auto-approve after timeout.
-    setTimeout(() => releaseCommission(agentId, wallet.id, txn.id, amount), 
+    setTimeout(() => releaseCommission(PartnerId, wallet.id, txn.id, amount),
       parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48) * 3600000
     );
 
-    logger.info(`Commission ₹${amount} credited (pending) to agent ${agentId}`);
+    logger.info(`Commission ₹${amount} credited (pending) to partner ${PartnerId}`);
     return txn;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -64,7 +64,7 @@ const creditCommission = async (agentId, applicationId, amount, description, use
 };
 
 // Move from pending → available (after hold period)
-const releaseCommission = async (agentId, walletId, txnId, amount) => {
+const releaseCommission = async (PartnerId, walletId, txnId, amount) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -73,15 +73,15 @@ const releaseCommission = async (agentId, walletId, txnId, amount) => {
         pending_amount = GREATEST(0, pending_amount - $1),
         available_balance = available_balance + $1,
         last_updated = NOW()
-      WHERE agent_id = $2
-    `, [amount, agentId]);
+      WHERE Partner_id = $2
+    `, [amount, PartnerId]);
     await client.query(`UPDATE wallet_transactions SET status = 'approved', processed_at = NOW() WHERE id = $1`, [txnId]);
     await client.query('COMMIT');
 
     // Get user_id for notification
-    const { rows: [agent] } = await query(`SELECT user_id FROM agent_profiles WHERE id = $1`, [agentId]);
-    if (agent) await notify.commissionCredited(agent.user_id, amount);
-    logger.info(`Commission ₹${amount} released to available for agent ${agentId}`);
+    const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
+    if (Partner) await notify.commissionCredited(Partner.user_id, amount);
+    logger.info(`Commission ₹${amount} released to available for partner ${PartnerId}`);
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('releaseCommission failed', err.message);
@@ -98,7 +98,7 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
 
     const { rows: [wr] } = await client.query(
       `SELECT wr.*, w.id as wallet_id FROM withdrawal_requests wr
-       JOIN wallets w ON w.agent_id = wr.agent_id WHERE wr.id = $1 FOR UPDATE`,
+       JOIN wallets w ON w.Partner_id = wr.Partner_id WHERE wr.id = $1 FOR UPDATE`,
       [withdrawalId]
     );
     if (!wr) throw new Error('Withdrawal request not found');
@@ -137,12 +137,12 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
 
     await client.query('COMMIT');
 
-    // Notify agent
-    const { rows: [agent] } = await query(`SELECT user_id FROM agent_profiles WHERE id = $1`, [wr.agent_id]);
-    if (agent) {
+    // Notify Partner
+    const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [wr.Partner_id]);
+    if (Partner) {
       approved
-        ? await notify.withdrawalApproved(agent.user_id, wr.amount)
-        : await notify.withdrawalRejected(agent.user_id, wr.amount, rejectionReason);
+        ? await notify.withdrawalApproved(Partner.user_id, wr.amount)
+        : await notify.withdrawalRejected(Partner.user_id, wr.amount, rejectionReason);
     }
 
     logger.info(`Withdrawal ${withdrawalId} ${approved ? 'approved' : 'rejected'}`);
@@ -156,10 +156,10 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
   }
 };
 
-// Get full wallet summary for an agent
-const getWalletSummary = async (agentId) => {
+// Get full wallet summary for an Partner
+const getWalletSummary = async (PartnerId) => {
   const { rows: [wallet] } = await query(
-    `SELECT * FROM wallets WHERE agent_id = $1`, [agentId]
+    `SELECT * FROM wallets WHERE Partner_id = $1`, [PartnerId]
   );
   return wallet;
 };

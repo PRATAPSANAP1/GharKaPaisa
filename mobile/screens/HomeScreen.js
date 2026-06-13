@@ -35,8 +35,8 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.btnText}>Employee Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login', { role: 'Agent' })}>
-          <Text style={styles.btnText}>Agent Login</Text>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login', { role: 'Partner' })}>
+          <Text style={styles.btnText}>Partner Login</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

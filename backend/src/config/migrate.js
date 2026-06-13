@@ -12,7 +12,7 @@ const migrate = async () => {
   // ── ENUM types ────────────────────────────────────────────────
   await query(`
     DO $$ BEGIN
-      CREATE TYPE user_role AS ENUM ('super_admin','admin','employee','agent');
+      CREATE TYPE user_role AS ENUM ('super_admin','admin','employee','Partner');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await query(`
@@ -60,7 +60,7 @@ const migrate = async () => {
       email         VARCHAR(255) UNIQUE NOT NULL,
       mobile        VARCHAR(15) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
-      role          user_role NOT NULL DEFAULT 'agent',
+      role          user_role NOT NULL DEFAULT 'Partner',
       status        user_status NOT NULL DEFAULT 'pending',
       created_by    UUID REFERENCES users(id),
       created_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -83,12 +83,12 @@ const migrate = async () => {
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_otps_mobile ON otps(mobile)`);
 
-  // ── Agent Profiles ────────────────────────────────────────────
+  // ── Partner Profiles ────────────────────────────────────────────
   await query(`
-    CREATE TABLE IF NOT EXISTS agent_profiles (
+    CREATE TABLE IF NOT EXISTS Partner_profiles (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id           UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      agent_code        VARCHAR(20) UNIQUE NOT NULL,
+      Partner_code        VARCHAR(20) UNIQUE NOT NULL,
       first_name        VARCHAR(100) NOT NULL,
       last_name         VARCHAR(100) NOT NULL,
       profile_photo_url VARCHAR(500),
@@ -106,11 +106,11 @@ const migrate = async () => {
     )
   `);
 
-  // ── Agent Bank Details ────────────────────────────────────────
+  // ── Partner Bank Details ────────────────────────────────────────
   await query(`
-    CREATE TABLE IF NOT EXISTS agent_bank_details (
+    CREATE TABLE IF NOT EXISTS Partner_bank_details (
       id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      agent_id            UUID UNIQUE NOT NULL REFERENCES agent_profiles(id) ON DELETE CASCADE,
+      Partner_id            UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
       bank_name           VARCHAR(100) NOT NULL,
       account_number      VARCHAR(50) NOT NULL,
       ifsc_code           VARCHAR(15) NOT NULL,
@@ -126,7 +126,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS kyc_documents (
       id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      agent_id      UUID NOT NULL REFERENCES agent_profiles(id) ON DELETE CASCADE,
+      Partner_id      UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
       doc_type      VARCHAR(50) NOT NULL,  -- aadhaar, pan, gst_cert, cancelled_cheque
       doc_number    VARCHAR(50),
       file_url      VARCHAR(500) NOT NULL,
@@ -135,7 +135,7 @@ const migrate = async () => {
       verified_by   UUID REFERENCES users(id),
       verified_at   TIMESTAMPTZ,
       uploaded_at   TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(agent_id, doc_type)
+      UNIQUE(Partner_id, doc_type)
     )
   `);
 
@@ -173,12 +173,12 @@ const migrate = async () => {
     )
   `);
 
-  // ── Commission Structure (overrides per agent/product) ────────
+  // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
     CREATE TABLE IF NOT EXISTS commission_structures (
       id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       product_id       UUID NOT NULL REFERENCES products(id),
-      agent_id         UUID REFERENCES agent_profiles(id),  -- NULL = global default
+      Partner_id         UUID REFERENCES Partner_profiles(id),  -- NULL = global default
       commission_type  VARCHAR(20) DEFAULT 'fixed',
       commission_value DECIMAL(12,2) NOT NULL,
       effective_from   DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -217,7 +217,7 @@ const migrate = async () => {
       app_number         VARCHAR(20) UNIQUE NOT NULL,
       customer_id        UUID NOT NULL REFERENCES customers(id),
       product_id         UUID NOT NULL REFERENCES products(id),
-      agent_id           UUID NOT NULL REFERENCES agent_profiles(id),
+      Partner_id           UUID NOT NULL REFERENCES Partner_profiles(id),
       submitted_by       UUID NOT NULL REFERENCES users(id),
       status             application_status DEFAULT 'submitted',
       bank_ref_number    VARCHAR(100),
@@ -237,7 +237,7 @@ const migrate = async () => {
       updated_at         TIMESTAMPTZ DEFAULT NOW()
     )
   `);
-  await query(`CREATE INDEX IF NOT EXISTS idx_applications_agent ON applications(agent_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(Partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)`);
 
@@ -245,7 +245,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS wallets (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      agent_id          UUID UNIQUE NOT NULL REFERENCES agent_profiles(id) ON DELETE CASCADE,
+      Partner_id          UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
       total_earned      DECIMAL(15,2) DEFAULT 0,
       total_withdrawn   DECIMAL(15,2) DEFAULT 0,
       pending_amount    DECIMAL(15,2) DEFAULT 0,
@@ -276,7 +276,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS withdrawal_requests (
       id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id       UUID NOT NULL REFERENCES wallets(id),
-      agent_id        UUID NOT NULL REFERENCES agent_profiles(id),
+      Partner_id        UUID NOT NULL REFERENCES Partner_profiles(id),
       amount          DECIMAL(12,2) NOT NULL,
       status          withdrawal_status DEFAULT 'pending',
       bank_name       VARCHAR(100),
@@ -325,7 +325,7 @@ const migrate = async () => {
     BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
     $$ LANGUAGE plpgsql
   `);
-  const triggerTables = ['users','agent_profiles','agent_bank_details','products','customers','applications','withdrawal_requests'];
+  const triggerTables = ['users', 'Partner_profiles', 'Partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests'];
   for (const t of triggerTables) {
     await query(`
       DROP TRIGGER IF EXISTS set_updated_at ON ${t};

@@ -111,11 +111,11 @@ const getProductsByCategory = async (req, res, next) => {
 // POST /products/:id/commission (Super Admin — set commission)
 const setCommission = async (req, res, next) => {
   try {
-    const { product_id, agent_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+    const { product_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
     await query(`
-      INSERT INTO commission_structures (product_id, agent_id, commission_type, commission_value, effective_from, effective_to, created_by)
+      INSERT INTO commission_structures (product_id, Partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
-    `, [product_id, agent_id || null, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
+    `, [product_id, Partner_id || null, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
     return created(res, {}, 'Commission structure set');
   } catch (err) {
     next(err);

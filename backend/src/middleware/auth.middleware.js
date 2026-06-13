@@ -44,36 +44,36 @@ const authorize = (...roles) => {
   };
 };
 
-// Agent must be KYC approved
-const requireApprovedAgent = async (req, res, next) => {
+// Partner must be KYC approved
+const requireApprovedPartner = async (req, res, next) => {
   try {
-    const { rows: [agent] } = await query(
-      `SELECT id, kyc_status FROM agent_profiles WHERE user_id = $1`,
+    const { rows: [Partner] } = await query(
+      `SELECT id, kyc_status FROM Partner_profiles WHERE user_id = $1`,
       [req.user.id]
     );
-    if (!agent) return forbidden(res, 'Agent profile not found');
-    if (agent.kyc_status !== 'approved') return forbidden(res, 'KYC not yet approved. Please wait for verification.');
-    req.agent = agent;
+    if (!Partner) return forbidden(res, 'Partner profile not found');
+    if (Partner.kyc_status !== 'approved') return forbidden(res, 'KYC not yet approved. Please wait for verification.');
+    req.Partner = Partner;
     next();
   } catch (err) {
-    logger.error('requireApprovedAgent error', err);
+    logger.error('requireApprovedPartner error', err);
     next(err);
   }
 };
 
-// Self or admin — agent can only access own resources
-const selfOrAdmin = (paramField = 'agentId') => {
+// Self or admin — partner can only access own resources
+const selfOrAdmin = (paramField = 'PartnerId') => {
   return async (req, res, next) => {
     if (['super_admin', 'admin'].includes(req.user.role)) return next();
-    const { rows: [agent] } = await query(
-      `SELECT id FROM agent_profiles WHERE user_id = $1`, [req.user.id]
+    const { rows: [Partner] } = await query(
+      `SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]
     );
-    if (!agent || agent.id !== req.params[paramField]) {
+    if (!Partner || Partner.id !== req.params[paramField]) {
       return forbidden(res, 'Access denied');
     }
-    req.agent = agent;
+    req.Partner = Partner;
     next();
   };
 };
 
-module.exports = { authenticate, authorize, requireApprovedAgent, selfOrAdmin };
+module.exports = { authenticate, authorize, requireApprovedPartner, selfOrAdmin };

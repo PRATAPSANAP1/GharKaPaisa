@@ -9,7 +9,7 @@ const getOverview = async (req, res, next) => {
       ? `AND created_at BETWEEN '${from_date}' AND '${to_date} 23:59:59'`
       : '';
 
-    const [apps, agents, wallet] = await Promise.all([
+    const [apps, Partners, wallet] = await Promise.all([
       query(`
         SELECT
           COUNT(*) as total,
@@ -24,7 +24,7 @@ const getOverview = async (req, res, next) => {
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE u.status = 'active' AND ap.kyc_status = 'approved') as active,
           COUNT(*) FILTER (WHERE ap.kyc_status = 'pending' OR ap.kyc_status = 'under_review') as pending_kyc
-        FROM agent_profiles ap JOIN users u ON u.id = ap.user_id
+        FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id
       `),
       query(`
         SELECT
@@ -38,7 +38,7 @@ const getOverview = async (req, res, next) => {
 
     return success(res, {
       applications: apps.rows[0],
-      agents: agents.rows[0],
+      Partners: Partners.rows[0],
       wallet: wallet.rows[0],
     });
   } catch (err) {
@@ -66,19 +66,19 @@ const applicationsByProduct = async (req, res, next) => {
   }
 };
 
-// GET /reports/top-agents
-const topAgents = async (req, res, next) => {
+// GET /reports/top-partners
+const topPartners = async (req, res, next) => {
   try {
     const { limit = 10 } = req.query;
     const { rows } = await query(`
-      SELECT ap.agent_code, ap.first_name, ap.last_name,
+      SELECT ap.Partner_code, ap.first_name, ap.last_name,
         COUNT(a.id) as total_apps,
         COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved,
         COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved','disbursed')), 0) as commission_earned
-      FROM agent_profiles ap
-      LEFT JOIN applications a ON a.agent_id = ap.id
+      FROM Partner_profiles ap
+      LEFT JOIN applications a ON a.Partner_id = ap.id
       WHERE ap.kyc_status = 'approved'
-      GROUP BY ap.id, ap.agent_code, ap.first_name, ap.last_name
+      GROUP BY ap.id, ap.Partner_code, ap.first_name, ap.last_name
       ORDER BY commission_earned DESC
       LIMIT $1
     `, [parseInt(limit)]);
@@ -109,4 +109,4 @@ const monthlyTrend = async (req, res, next) => {
   }
 };
 
-module.exports = { getOverview, applicationsByProduct, topAgents, monthlyTrend };
+module.exports = { getOverview, applicationsByProduct, topPartners, monthlyTrend };

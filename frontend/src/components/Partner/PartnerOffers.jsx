@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Icons } from "./AgentIcons";
+import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
 
 const BANKS_CREDIT = [
@@ -101,7 +101,7 @@ function SectionTitle({ title, sub, C }) {
   );
 }
 
-export default function AgentOffers() {
+export default function PartnerOffers() {
   const { C } = useTheme();
   const S = makeS(C);
   const [activeTab, setActiveTab] = useState("credit");
@@ -139,7 +139,7 @@ export default function AgentOffers() {
         <div style={{ position: "absolute", bottom: "-40px", right: "-30px", width: "160px", height: "160px", borderRadius: "50%", background: `radial-gradient(circle, ${C.teal}25, transparent 75%)` }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <span style={S.tag(C.gold)}>🔥 Mega Agent Incentive</span>
+          <span style={S.tag(C.gold)}>🔥 Mega Partner Incentive</span>
           <div style={{ fontSize: "22px", fontWeight: 900, margin: "10px 0 6px", lineHeight: 1.2 }}>
             Refer Tata Neu HDFC Cards &amp; get <span style={{ color: C.gold }}>₹1,650</span> flat payout!
           </div>
