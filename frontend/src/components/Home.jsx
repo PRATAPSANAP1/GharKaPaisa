@@ -3,6 +3,7 @@ import { useTheme } from "./Partner/ThemeContext";
 import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
 import offerBannerImg from "../offerbanner.png";
 import offerBannerImg1 from "../offerbanner1.png";
+import offerBannerImg2 from "../offerbanner2.png";
 
 // Responsive grid component
 function ResponsiveGrid({ items, C }) {
@@ -67,7 +68,7 @@ export default function Home({ onNavigate }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const banners = [offerBannerImg, offerBannerImg1];
+  const banners = [offerBannerImg, offerBannerImg1, offerBannerImg2];
 
   useEffect(() => {
     if (isPaused) return;
@@ -77,9 +78,19 @@ export default function Home({ onNavigate }) {
     return () => clearInterval(interval);
   }, [isPaused, banners.length]);
 
-  const handleBannerClick = () => {
+  const handleBannerClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+
+    if (x < width / 3) {
+      setBannerIndex((prev) => (prev - 1 + banners.length) % banners.length);
+    } else if (x > (2 * width) / 3) {
+      setBannerIndex((prev) => (prev + 1) % banners.length);
+    }
+    
     setIsPaused(true);
-    setTimeout(() => setIsPaused(false), 10000);
+    setTimeout(() => setIsPaused(false), 5000);
   };
 
   useEffect(() => {
@@ -97,6 +108,22 @@ export default function Home({ onNavigate }) {
           {banners.map((src, idx) => (
             <img key={idx} src={src} alt={`Offer Banner ${idx + 1}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", opacity: idx === bannerIndex ? 1 : 0, transition: "opacity 0.6s ease-in-out" }} onError={(e) => e.target.style.display = 'none'} />
           ))}
+          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
+            {banners.map((_, idx) => (
+              <div 
+                key={idx} 
+                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+                style={{ 
+                  width: idx === bannerIndex ? "24px" : "8px", 
+                  height: "8px", 
+                  borderRadius: "4px", 
+                  background: idx === bannerIndex ? "#fff" : "rgba(255,255,255,0.5)", 
+                  transition: "all 0.3s ease",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
+                }} 
+              />
+            ))}
+          </div>
         </div>
 
         {/* Money Transfer */}
