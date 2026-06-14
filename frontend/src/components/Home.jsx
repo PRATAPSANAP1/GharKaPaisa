@@ -93,8 +93,10 @@ export default function Home({ onNavigate }) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Offer Banner */}
-        <div onClick={handleBannerClick} style={{ cursor: "pointer", width: "100%", height: isMobile ? "auto" : "250px", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
-          <img src={banners[bannerIndex]} alt="Offer Banner" style={{ width: "100%", height: isMobile ? "auto" : "100%", objectFit: "cover", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
+        <div onClick={handleBannerClick} style={{ cursor: "pointer", width: "100%", height: isMobile ? "140px" : "250px", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
+          {banners.map((src, idx) => (
+            <img key={idx} src={src} alt={`Offer Banner ${idx + 1}`} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", opacity: idx === bannerIndex ? 1 : 0, transition: "opacity 0.6s ease-in-out" }} onError={(e) => e.target.style.display = 'none'} />
+          ))}
         </div>
 
         {/* Money Transfer */}
