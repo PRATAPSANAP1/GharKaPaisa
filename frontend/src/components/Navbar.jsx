@@ -42,12 +42,14 @@ const Navbar = ({ onPartnerLoginClick }) => {
       </div>
 
       <nav className="navbar">
-        <div className="navbar-left">
+        <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink} style={{ margin: 0 }}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
           <img src={logo} alt="logo" className="logo" />
-        </div>
-
-        <div className="navbar-center">
-          <h1>GharKaPaisa</h1>
+          <h1 style={{ color: "#0d47a1", margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
         </div>
 
         <div className="navbar-right">
@@ -70,11 +72,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
           <button onClick={onPartnerLoginClick}>Partner Login</button>
         </div>
 
-        <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+
       </nav>
     </>
   );

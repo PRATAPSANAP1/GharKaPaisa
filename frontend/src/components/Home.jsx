@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "./Partner/ThemeContext";
 import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
 import offerBannerImg from "../offerbanner.png";
+import offerBannerImg1 from "../offerbanner1.png";
 
 // Responsive grid component
 function ResponsiveGrid({ items, C }) {
@@ -64,6 +65,22 @@ function Section({ title, C, children }) {
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const banners = [offerBannerImg, offerBannerImg1];
+
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isPaused, banners.length]);
+
+  const handleBannerClick = () => {
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 10000);
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -76,8 +93,8 @@ export default function Home({ onNavigate }) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Offer Banner */}
-        <div style={{ width: "100%", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
-          <img src={offerBannerImg} alt="Offer Banner" style={{ width: "100%", height: "auto", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
+        <div onClick={handleBannerClick} style={{ cursor: "pointer", width: "100%", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
+          <img src={banners[bannerIndex]} alt="Offer Banner" style={{ width: "100%", height: "auto", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
         </div>
 
         {/* Money Transfer */}
@@ -155,7 +172,7 @@ export default function Home({ onNavigate }) {
         <div style={{ marginTop: "48px", padding: "48px 32px", background: C.navy, color: "#fff", borderRadius: "32px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "40px" }}>
           <div>
             <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px" }}>GharKaPaisa</h2>
-            <p style={{ margin: "0 0 24px 0", fontSize: "15px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>Owned by: Sharad Kumar<br />Your complete financial portfolio.</p>
+            <p style={{ margin: "0 0 24px 0", fontSize: "15px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>Your trusted partner in financial growth.<br />Simplifying loans, insurance, and credit cards.</p>
             <div style={{ display: "flex", gap: "16px" }}>
               <div style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><FaFacebook size={18} /></div>
               <div style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><FaTwitter size={18} /></div>
