@@ -93,8 +93,8 @@ export default function Home({ onNavigate }) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Offer Banner */}
-        <div onClick={handleBannerClick} style={{ cursor: "pointer", width: "100%", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
-          <img src={banners[bannerIndex]} alt="Offer Banner" style={{ width: "100%", height: "auto", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
+        <div onClick={handleBannerClick} style={{ cursor: "pointer", width: "100%", height: isMobile ? "auto" : "250px", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
+          <img src={banners[bannerIndex]} alt="Offer Banner" style={{ width: "100%", height: isMobile ? "auto" : "100%", objectFit: "cover", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
         </div>
 
         {/* Money Transfer */}
