@@ -53,69 +53,18 @@ function Home() {
   return (
     <div className="home-dashboard">
 
-      {/* Header */}
 
-      <div className="header">
-        <div className="menu">☰</div>
 
-        <div className="logo">
-          <img
-            src="/logo.jpeg"
-            alt="logo"
-          />
-          <h2>GharKaPaisa</h2>
+      {/* Main Single Offer Banner */}
+
+      <div className="offer-container" style={{ display: 'block' }}>
+        <div className="offer-card" style={{ width: '100%', padding: '30px 20px', textAlign: 'center', background: 'linear-gradient(135deg, #0d6efd, #0a58ca)', boxShadow: '0 8px 20px rgba(13, 110, 253, 0.2)' }}>
+          <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>Exclusive Partner Offer</h2>
+          <p style={{ fontSize: '15px', marginBottom: '20px', opacity: 0.9 }}>Join GharKaPaisa today and earn guaranteed payouts on every successful lead!</p>
+          <button style={{ background: '#fff', color: '#0d6efd', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            Start Earning Now
+          </button>
         </div>
-
-        <div className="header-right">
-          <FaBell />
-          <FaUserCircle />
-        </div>
-      </div>
-
-      {/* Offer Banner */}
-
-      <div className="offer-container">
-
-        <div className="offer-card">
-          <h3>HDFC Credit Card Offer</h3>
-          <p>Earn payout upto ₹2500</p>
-        </div>
-
-        <div className="offer-card">
-          <h3>Personal Loan Offer</h3>
-          <p>Instant approval available</p>
-        </div>
-
-      </div>
-
-      {/* Wallet */}
-
-      <div className="wallet-card">
-
-        <p className="wallet-title">
-          Wallet Balance
-        </p>
-
-        <h1>₹1,25,000</h1>
-
-        <div className="wallet-row">
-
-          <div>
-            <span>Approved</span>
-            <h4>₹1,25,000</h4>
-          </div>
-
-          <div>
-            <span>Withdrawable</span>
-            <h4>₹80,000</h4>
-          </div>
-
-        </div>
-
-        <button>
-          View Wallet
-        </button>
-
       </div>
 
       {/* Services */}
