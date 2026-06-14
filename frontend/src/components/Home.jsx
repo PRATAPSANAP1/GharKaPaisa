@@ -1,221 +1,181 @@
-import React, { useState } from "react";
-import { Icons } from "./Partner/PartnerIcons";
-import { useTheme, makeS } from "./Partner/ThemeContext";
+import React, { useState, useEffect } from "react";
+import { useTheme } from "./Partner/ThemeContext";
+import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
 
-function BrandItem({ text, C }) {
+// Responsive grid component
+function ResponsiveGrid({ items, C }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const showSeeMore = isMobile && !expanded && items.length > 4;
+  const visibleItems = showSeeMore ? items.slice(0, 3) : items;
+
   return (
-    <span style={{
-      background: C.bgSecondary,
-      padding: "8px 18px",
-      borderRadius: "40px",
-      fontSize: "13px",
-      fontWeight: 600,
-      color: C.text,
-      border: `1px solid ${C.border}`,
-      display: "inline-block",
-      transition: "all 0.15s",
-      cursor: "default"
-    }}>
-      {text}
-    </span>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px", marginTop: "16px" }}>
+      {visibleItems.map((item, idx) => (
+        <div key={idx} style={{
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          background: C.bgSecondary, padding: "16px 12px", borderRadius: "16px",
+          border: `1px solid ${C.border}`, textAlign: "center", gap: "12px",
+          cursor: "pointer", transition: "all 0.2s"
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
+        onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
+        >
+          {item.icon && <div style={{ color: C.teal, fontSize: "26px" }}>{item.icon}</div>}
+          <div style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>{item.label}</div>
+        </div>
+      ))}
+      {showSeeMore && (
+        <div 
+          onClick={() => setExpanded(true)}
+          style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            background: `${C.teal}10`, padding: "16px 12px", borderRadius: "16px",
+            border: `1px dashed ${C.teal}`, textAlign: "center", gap: "12px",
+            cursor: "pointer", color: C.teal
+          }}
+        >
+          <div style={{ fontSize: "26px" }}><FaChevronRight /></div>
+          <div style={{ fontSize: "14px", fontWeight: 800 }}>See More</div>
+        </div>
+      )}
+    </div>
   );
 }
 
-function SectionCard({ icon, title, subtitle, C, children, badge }) {
-  const [hov, setHov] = useState(false);
+// Section wrapper
+function Section({ title, C, children }) {
   return (
-    <div 
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background: C.card,
-        borderRadius: "24px",
-        padding: "24px",
-        marginBottom: "24px",
-        boxShadow: hov ? `0 12px 24px rgba(0,0,0,0.05)` : `0 4px 12px rgba(0,0,0,0.02)`,
-        border: `1px solid ${hov ? C.teal : C.border}`,
-        transition: "all 0.2s ease"
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
-        <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
-          <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", 
-            background: `${C.teal}15`, color: C.teal,
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            {icon}
-          </div>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <h3 style={{ fontSize: "20px", fontWeight: 800, color: C.text, margin: 0 }}>{title}</h3>
-              {badge && <span style={{ background: `${C.gold}20`, color: C.gold, fontSize: "11px", padding: "2px 8px", borderRadius: "20px", fontWeight: 700 }}>{badge}</span>}
-            </div>
-            <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0", fontWeight: 500 }}>{subtitle}</p>
-          </div>
-        </div>
-        <button style={{ 
-          background: "transparent", border: "none", color: C.teal, 
-          fontSize: "13px", fontWeight: 600, cursor: "pointer",
-          display: "flex", alignItems: "center", gap: "4px",
-          padding: 0
-        }}>
-          See more <Icons.arrowRight size={14} />
-        </button>
-      </div>
+    <div style={{ background: C.card, padding: "28px 24px", borderRadius: "24px", border: `1px solid ${C.border}`, boxShadow: `0 4px 16px rgba(0,0,0,0.02)`, marginBottom: "24px" }}>
+      <h2 style={{ fontSize: "22px", fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.5px" }}>{title}</h2>
       {children}
     </div>
   );
 }
 
-export default function Home() {
+export default function Home({ onNavigate }) {
   const { C } = useTheme();
-  
-  // Use a simple state hook to track window width if needed, but flex wrap handles responsiveness naturally.
-  const isMobile = typeof window !== "undefined" ? window.innerWidth < 768 : false;
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", paddingBottom: "20px", paddingTop: "24px" }}>
-      
-      {/* Header Row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", marginBottom: "28px", gap: "16px", padding: "0 16px" }}>
-        <div>
-          <h1 style={{ fontSize: "26px", fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.5px" }}>Explore Offers</h1>
-          <p style={{ fontSize: "14px", color: C.textLight, marginTop: "4px", fontWeight: 500 }}>Your complete financial portfolio</p>
-        </div>
-      </div>
-
-      {/* Bank Strip */}
-      <div style={{
-        background: C.card,
-        borderRadius: "28px",
-        padding: "16px 24px",
-        marginBottom: "32px",
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "20px",
-        border: `1px solid ${C.border}`,
-        boxShadow: `0 4px 12px rgba(0,0,0,0.02)`,
-        margin: "0 16px 32px 16px"
-      }}>
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          {["PNB", "Union", "Canara", "Tata"].map(b => (
-            <span key={b} style={{ 
-              fontSize: "16px", fontWeight: 700, color: C.textMid, 
-              background: C.bgSecondary, padding: "6px 18px", borderRadius: "30px",
-              letterSpacing: "-0.2px"
-            }}>{b}</span>
-          ))}
-        </div>
-        <div style={{ 
-          background: `${C.teal}15`, color: C.teal, padding: "8px 16px", 
-          borderRadius: "30px", fontSize: "13px", fontWeight: 700, 
-          display: "flex", alignItems: "center", gap: "8px" 
-        }}>
-          <Icons.investment size={16} /> Partner Banks
-        </div>
-      </div>
-
-      {/* Two Columns Layout */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "28px", padding: "0 16px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "40px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
         
-        {/* Left Column */}
-        <div style={{ flex: "1.3", minWidth: "300px" }}>
-          
-          <SectionCard icon={<Icons.insurance size={20} />} title="Insurance" subtitle="Protect what matters most" C={C}>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "28px" }}>
-              {["Health", "Life Insurance", "General"].map(t => (
-                <span key={t} style={{ background: `${C.teal}10`, color: C.teal, padding: "8px 22px", borderRadius: "30px", fontSize: "14px", fontWeight: 600 }}>{t}</span>
-              ))}
-            </div>
-
-            <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, marginBottom: "14px" }}>Health Insurance <span style={{ fontSize: "13px", color: C.textLight, fontWeight: 500, marginLeft: "6px" }}>All major providers</span></div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", marginBottom: "28px" }}>
-              <BrandItem text="HDFC" C={C} />
-              <BrandItem text="SBI" C={C} />
-              <BrandItem text="ICICI" C={C} />
-              <BrandItem text="Axis" C={C} />
-              <BrandItem text="Kotak" C={C} />
-              <BrandItem text="Star Health" C={C} />
-              <BrandItem text="Care" C={C} />
-            </div>
-
-            <div style={{ width: "100%", height: "1px", background: C.border, margin: "24px 0" }} />
-
-            <div style={{ fontSize: "16px", fontWeight: 700, color: C.text, marginBottom: "14px" }}>General Insurance <span style={{ fontSize: "13px", color: C.textLight, fontWeight: 500, marginLeft: "6px" }}>Car, Bike & more</span></div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", background: C.bgSecondary, padding: "10px 22px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <Icons.dashboard size={18} color={C.textMid} /> <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Car Insurance</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", background: C.bgSecondary, padding: "10px 22px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <Icons.dashboard size={18} color={C.textMid} /> <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Bike Insurance</span>
-              </div>
-            </div>
-          </SectionCard>
-
+        {/* Offer Banner */}
+        <div style={{ width: "100%", height: "220px", borderRadius: "28px", background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
+          <img src="/offerbanner.png" alt="Offer Banner" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} onError={(e) => e.target.style.display = 'none'} />
+          <div style={{ position: "absolute", textAlign: "center", color: "#fff", padding: "20px" }}>
+            <h1 style={{ fontSize: "36px", fontWeight: 900, margin: "0 0 8px 0", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>Exclusive Offers</h1>
+            <p style={{ fontSize: "18px", fontWeight: 600, margin: 0, opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Get the best deals on your financial needs</p>
+          </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ flex: "1", minWidth: "300px" }}>
-          
-          <SectionCard icon={<Icons.creditCard size={20} />} title="Credit Cards" subtitle="Compare & apply for best cards" C={C}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px" }}>
-              {["HDFC", "SBI", "Axis", "ICICI", "Kotak", "Yes", "IndusInd", "Canara"].map(b => (
-                <BrandItem key={b} text={b} C={C} />
-              ))}
-            </div>
-          </SectionCard>
+        {/* Money Transfer */}
+        <Section title="Money Transfer & Payments" C={C}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "16px", marginTop: "20px" }}>
+            {[
+              { label: "To Mobile Number", icon: <FaMobileAlt /> },
+              { label: "Mobile Recharge", icon: <FaMobileAlt /> },
+              { label: "Electricity Bill", icon: <FaBolt /> },
+              { label: "Loan Repayment", icon: <FaMoneyBillWave /> },
+            ].map((item, idx) => (
+              <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", background: C.bgSecondary, padding: "24px 12px", borderRadius: "20px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-4px)"} onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
+                <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" }}>
+                  {item.icon}
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: 700, color: C.text, textAlign: "center" }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", marginBottom: "24px" }}>
-            <div style={{ flex: 1, minWidth: "200px" }}>
-              <SectionCard icon={<Icons.star size={20} />} title="Co-browsing Cards" subtitle="Tata Neu solutions" C={C}>
-                 <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                    <BrandItem text="Tata Neu HDFC" C={C} />
-                    <BrandItem text="Tata Neu SBI" C={C} />
-                 </div>
-              </SectionCard>
-            </div>
-            <div style={{ flex: 1, minWidth: "200px" }}>
-              <SectionCard icon={<Icons.wallet size={20} />} title="FD Based Cards" subtitle="Fixed deposit backed" C={C}>
-                 <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                    <BrandItem text="HDFC" C={C} />
-                    <BrandItem text="IDFC" C={C} />
-                    <BrandItem text="Tata" C={C} />
-                 </div>
-              </SectionCard>
+        {/* Credit Cards */}
+        <Section title="Credit Cards" C={C}>
+          <ResponsiveGrid C={C} items={[
+            { label: "HDFC Bank", icon: <FaRegCreditCard /> },
+            { label: "SBI Card", icon: <FaRegCreditCard /> },
+            { label: "Axis Bank", icon: <FaRegCreditCard /> },
+            { label: "ICICI Bank", icon: <FaRegCreditCard /> },
+            { label: "Kotak Bank", icon: <FaRegCreditCard /> },
+            { label: "Yes Bank", icon: <FaRegCreditCard /> },
+            { label: "IndusInd", icon: <FaRegCreditCard /> },
+          ]} />
+        </Section>
+
+        {/* Co-browsing Cards */}
+        <Section title="Co-Browsing Cards" C={C}>
+          <ResponsiveGrid C={C} items={[
+            { label: "Tata Neu HDFC", icon: <FaLaptopHouse /> },
+            { label: "Tata Neu SBI", icon: <FaLaptopHouse /> },
+          ]} />
+        </Section>
+
+        {/* FD Based Cards */}
+        <Section title="FD Based Cards" C={C}>
+          <ResponsiveGrid C={C} items={[
+            { label: "HDFC FD Card", icon: <FaUniversity /> },
+            { label: "IDFC First", icon: <FaUniversity /> },
+            { label: "Tata FD Card", icon: <FaUniversity /> },
+          ]} />
+        </Section>
+
+        {/* Loans */}
+        <Section title="Loans" C={C}>
+          <ResponsiveGrid C={C} items={[
+            { label: "Personal Loan (All Banks)", icon: <FaMoneyBillWave /> },
+            { label: "Instant Loan (App Loan)", icon: <FaMobileAlt /> },
+            { label: "Home Loan", icon: <FaBuilding /> },
+            { label: "Business Loan", icon: <FaBuilding /> },
+            { label: "Used Car Loan", icon: <FaCar /> },
+            { label: "Education Loan", icon: <FaGraduationCap /> },
+            { label: "Card on Loan", icon: <FaRegCreditCard /> },
+          ]} />
+        </Section>
+
+        {/* Insurance */}
+        <Section title="Insurance" C={C}>
+          <ResponsiveGrid C={C} items={[
+            { label: "Health (All Banks)", icon: <FaHeartbeat /> },
+            { label: "Life Insurance", icon: <FaShieldAlt /> },
+            { label: "General Insurance (Car, Bike)", icon: <FaUmbrella /> },
+          ]} />
+        </Section>
+
+        {/* Footer */}
+        <div style={{ marginTop: "48px", padding: "48px 32px", background: C.navy, color: "#fff", borderRadius: "32px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "40px" }}>
+          <div>
+            <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px" }}>GharKaPaisa</h2>
+            <p style={{ margin: "0 0 24px 0", fontSize: "15px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>Owned by: Pratap Sanap<br/>Your complete financial portfolio.</p>
+            <div style={{ display: "flex", gap: "16px" }}>
+              <div style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><FaFacebook size={18} /></div>
+              <div style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><FaTwitter size={18} /></div>
+              <div style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", padding: "10px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><FaInstagram size={18} /></div>
             </div>
           </div>
-
-          <SectionCard icon={<Icons.loan size={20} />} title="Loans" subtitle="Get instant loans at best rates" C={C}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "14px", marginBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", background: C.bgSecondary, padding: "10px 18px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>📄 Personal Loan</span>
-                <span style={{ background: `${C.green}20`, color: C.green, fontSize: "11px", padding: "3px 8px", borderRadius: "12px", fontWeight: 700 }}>NEW</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", background: C.bgSecondary, padding: "10px 18px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>🏠 Home Loan</span>
-                <span style={{ background: `${C.green}20`, color: C.green, fontSize: "11px", padding: "3px 8px", borderRadius: "12px", fontWeight: 700 }}>NEW</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", background: C.bgSecondary, padding: "10px 18px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Car Loan</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", background: C.bgSecondary, padding: "10px 18px", borderRadius: "30px", border: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: C.text }}>Education Loan</span>
-              </div>
+          <div style={{ minWidth: "250px" }}>
+            <h3 style={{ margin: "0 0 20px 0", fontSize: "18px", fontWeight: 800 }}>Contact Details</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", fontSize: "15px", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
+              <FaEnvelope size={16} /> support@gharkapaisa.in
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-              {["SBI", "HDFC", "ICICI", "Axis Bank"].map(b => (
-                <BrandItem key={b} text={b} C={C} />
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "28px", fontSize: "15px", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>
+              <FaPhoneAlt size={16} /> +91 98765 43210
             </div>
-          </SectionCard>
-
+            <button 
+              onClick={() => onNavigate && onNavigate('contact')}
+              style={{ background: C.teal, color: "#fff", border: "none", padding: "14px 28px", borderRadius: "14px", fontWeight: 800, fontSize: "15px", cursor: "pointer", display: "inline-block", boxShadow: `0 4px 12px ${C.teal}40`, transition: "all 0.2s" }}
+            >
+              Contact Us
+            </button>
+          </div>
         </div>
 
       </div>
-
     </div>
   );
 }
