@@ -42,7 +42,7 @@ export default function Contact({ onNavigate }) {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", color: C.textLight, fontWeight: 600, marginBottom: "4px" }}>Email Us</div>
-                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>support@gharkapaisa.in</div>
+                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>sharadyohesa@gmail.com</div>
                 </div>
               </div>
 
@@ -52,7 +52,7 @@ export default function Contact({ onNavigate }) {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", color: C.textLight, fontWeight: 600, marginBottom: "4px" }}>Call Us</div>
-                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>+91 98765 43210</div>
+                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>+91 8087179438</div>
                 </div>
               </div>
 
@@ -62,7 +62,7 @@ export default function Contact({ onNavigate }) {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", color: C.textLight, fontWeight: 600, marginBottom: "4px" }}>Visit Us</div>
-                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600, lineHeight: 1.4 }}>123 Financial Hub, Sector 4<br/>Mumbai, India 400001</div>
+                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600, lineHeight: 1.4 }}>rajnandini tower, dighi,<br/>pune</div>
                 </div>
               </div>
 
