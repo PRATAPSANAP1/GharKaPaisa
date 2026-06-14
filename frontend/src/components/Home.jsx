@@ -76,12 +76,8 @@ export default function Home({ onNavigate }) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Offer Banner */}
-        <div style={{ width: "100%", height: "220px", borderRadius: "28px", background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
-          <img src={offerBannerImg} alt="Offer Banner" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} onError={(e) => e.target.style.display = 'none'} />
-          <div style={{ position: "absolute", textAlign: "center", color: "#fff", padding: "20px" }}>
-            <h1 style={{ fontSize: "36px", fontWeight: 900, margin: "0 0 8px 0", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>Exclusive Offers</h1>
-            <p style={{ fontSize: "18px", fontWeight: 600, margin: 0, opacity: 0.9, textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>Get the best deals on your financial needs</p>
-          </div>
+        <div style={{ width: "100%", borderRadius: "28px", marginBottom: "32px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxShadow: `0 8px 24px ${C.primary}30` }}>
+          <img src={offerBannerImg} alt="Offer Banner" style={{ width: "100%", height: "auto", display: "block" }} onError={(e) => e.target.style.display = 'none'} />
         </div>
 
         {/* Money Transfer */}

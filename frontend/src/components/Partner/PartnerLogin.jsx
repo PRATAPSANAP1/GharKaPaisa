@@ -134,37 +134,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
     }
   };
 
-  // ── TEST reCAPTCHA ENTERPRISE ────────────────────────────────────────────────
-  const handleTestRecaptcha = async (e) => {
-    e.preventDefault();
-    try {
-      setErr("");
-      if (!window.grecaptcha || !window.grecaptcha.enterprise) {
-        return setErr("reCAPTCHA script not loaded yet.");
-      }
-      
-      window.grecaptcha.enterprise.ready(async () => {
-        try {
-          const token = await window.grecaptcha.enterprise.execute('6LcKdR0tAAAAADPWJWea62b4RcXG8hclvJN2Nr6q', {action: 'LOGIN'});
-          const response = await fetch("http://localhost:5000/api/auth/test-recaptcha", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-          });
-          const data = await response.json();
-          if (data.success) {
-            alert(`✅ reCAPTCHA Enterprise Verification Success!\n\nRisk Score: ${data.data.score}\n(1.0 is very safe, 0.0 is bot)`);
-          } else {
-            alert(`❌ Error: ${data.message}`);
-          }
-        } catch (execErr) {
-          setErr("Failed to execute reCAPTCHA frontend: " + execErr.message);
-        }
-      });
-    } catch (err) {
-      setErr("Failed to trigger reCAPTCHA: " + err.message);
-    }
-  };
+
 
   const inputStyle = { ...S.input };
   const focusBorder = `1.5px solid ${C.teal}`;
@@ -341,26 +311,7 @@ export default function PartnerLogin({ onLogin, onRegisterNav }) {
             </span>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: "24px", paddingTop: "20px", borderTop: `1px solid ${C.border}` }}>
-            <button
-              type="button"
-              onClick={handleTestRecaptcha}
-              style={{
-                ...S.btn("sm"),
-                background: "transparent",
-                color: C.textMid,
-                border: `1.5px solid ${C.border}`,
-                fontSize: "12px",
-                width: "100%",
-                padding: "8px 0"
-              }}
-            >
-              Test reCAPTCHA Enterprise End-to-End
-            </button>
-            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "8px" }}>
-              Click to generate token & verify via custom backend
-            </div>
-          </div>
+
         </div>
       </div>
 
