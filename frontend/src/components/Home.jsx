@@ -18,19 +18,19 @@ function ResponsiveGrid({ items, C }) {
   const visibleItems = showSeeMore ? items.slice(0, 3) : items;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "16px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
       {visibleItems.map((item, idx) => (
         <div key={idx} style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-          background: C.bgSecondary, padding: isMobile ? "12px 4px" : "16px 12px", borderRadius: isMobile ? "12px" : "16px",
-          border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "8px" : "12px",
+          background: C.bgSecondary, padding: isMobile ? "8px 4px" : "12px 8px", borderRadius: isMobile ? "10px" : "14px",
+          border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "6px" : "10px",
           cursor: "pointer", transition: "all 0.2s"
         }}
           onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
           onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
         >
-          {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "20px" : "26px" }}>{item.icon}</div>}
-          <div style={{ fontSize: isMobile ? "10px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+          {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>}
+          <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
         </div>
       ))}
       {showSeeMore && (
@@ -38,13 +38,13 @@ function ResponsiveGrid({ items, C }) {
           onClick={() => setExpanded(true)}
           style={{
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            background: `${C.teal}10`, padding: isMobile ? "12px 4px" : "16px 12px", borderRadius: isMobile ? "12px" : "16px",
-            border: `1px dashed ${C.teal}`, textAlign: "center", gap: isMobile ? "8px" : "12px",
+            background: `${C.teal}10`, padding: isMobile ? "8px 4px" : "12px 8px", borderRadius: isMobile ? "10px" : "14px",
+            border: `1px dashed ${C.teal}`, textAlign: "center", gap: isMobile ? "6px" : "10px",
             cursor: "pointer", color: C.teal
           }}
         >
-          <div style={{ fontSize: isMobile ? "20px" : "26px" }}><FaChevronRight /></div>
-          <div style={{ fontSize: isMobile ? "10px" : "14px", fontWeight: 800 }}>See More</div>
+          <div style={{ fontSize: isMobile ? "18px" : "22px" }}><FaChevronRight /></div>
+          <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 800 }}>See More</div>
         </div>
       )}
     </div>
@@ -54,8 +54,8 @@ function ResponsiveGrid({ items, C }) {
 // Section wrapper
 function Section({ title, C, children }) {
   return (
-    <div style={{ background: C.card, padding: "28px 24px", borderRadius: "24px", border: `1px solid ${C.border}`, boxShadow: `0 4px 16px rgba(0,0,0,0.02)`, marginBottom: "24px" }}>
-      <h2 style={{ fontSize: "22px", fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.5px" }}>{title}</h2>
+    <div style={{ background: C.card, padding: "16px 20px", borderRadius: "20px", border: `1px solid ${C.border}`, boxShadow: `0 4px 16px rgba(0,0,0,0.02)`, marginBottom: "16px" }}>
+      <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.5px" }}>{title}</h2>
       {children}
     </div>
   );
@@ -82,18 +82,18 @@ export default function Home({ onNavigate }) {
 
         {/* Money Transfer */}
         <Section title="Money Transfer & Payments" C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "8px" : "16px", marginTop: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
             {[
               { label: "To Mobile", icon: <FaMobileAlt /> },
               { label: "Recharge", icon: <FaMobileAlt /> },
               { label: "Electricity", icon: <FaBolt /> },
               { label: "Loan Repay", icon: <FaMoneyBillWave /> },
             ].map((item, idx) => (
-              <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "8px" : "14px", background: C.bgSecondary, padding: isMobile ? "16px 4px" : "24px 12px", borderRadius: isMobile ? "16px" : "20px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
-                <div style={{ width: isMobile ? "40px" : "56px", height: isMobile ? "40px" : "56px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "18px" : "24px", flexShrink: 0 }}>
+              <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "6px" : "10px", background: C.bgSecondary, padding: isMobile ? "8px 4px" : "16px 8px", borderRadius: isMobile ? "10px" : "14px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
+                <div style={{ width: isMobile ? "32px" : "44px", height: isMobile ? "32px" : "44px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "16px" : "20px", flexShrink: 0 }}>
                   {item.icon}
                 </div>
-                <div style={{ fontSize: isMobile ? "10px" : "14px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{item.label}</div>
+                <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{item.label}</div>
               </div>
             ))}
           </div>
