@@ -1,0 +1,181 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:Inter,sans-serif;
+  background:#f5f7fb;
+}
+
+.home-dashboard{
+  min-height:100vh;
+  padding-bottom:90px;
+}
+
+/* Header */
+
+.header{
+  height:70px;
+  background:#0d6efd;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 15px;
+  color:white;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.logo img{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+}
+
+.header-right{
+  display:flex;
+  gap:15px;
+  font-size:22px;
+}
+
+/* Offers */
+
+.offer-container{
+  display:flex;
+  overflow-x:auto;
+  gap:12px;
+  padding:15px;
+}
+
+.offer-card{
+  min-width:280px;
+  background:linear-gradient(
+  135deg,
+  #0d6efd,
+  #00c2ff
+  );
+  color:white;
+  border-radius:18px;
+  padding:20px;
+}
+
+/* Wallet */
+
+.wallet-card{
+  background:white;
+  margin:15px;
+  border-radius:20px;
+  padding:20px;
+  box-shadow:
+  0 2px 15px rgba(0,0,0,.08);
+}
+
+.wallet-title{
+  color:#666;
+}
+
+.wallet-card h1{
+  margin-top:10px;
+  color:#0d6efd;
+}
+
+.wallet-row{
+  display:flex;
+  justify-content:space-between;
+  margin:20px 0;
+}
+
+.wallet-card button{
+  width:100%;
+  border:none;
+  background:#0d6efd;
+  color:white;
+  padding:12px;
+  border-radius:12px;
+  cursor:pointer;
+}
+
+/* Services */
+
+.service-section{
+  padding:15px;
+}
+
+.service-grid{
+  display:grid;
+  grid-template-columns:
+  repeat(4,1fr);
+  gap:12px;
+  margin-top:15px;
+}
+
+.service-card{
+  background:white;
+  border-radius:16px;
+  text-align:center;
+  padding:15px 8px;
+  box-shadow:
+  0 2px 8px rgba(0,0,0,.05);
+}
+
+.service-icon{
+  font-size:28px;
+  color:#0d6efd;
+  margin-bottom:8px;
+}
+
+.service-card p{
+  font-size:13px;
+  font-weight:600;
+}
+
+/* Footer */
+
+.footer-nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:70px;
+  background:#001f54;
+  color:white;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+}
+
+.footer-nav div{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  font-size:12px;
+}
+
+.footer-nav span{
+  margin-top:4px;
+}
+
+/* Mobile */
+
+@media(max-width:500px){
+
+.service-grid{
+grid-template-columns:
+repeat(4,1fr);
+}
+
+.service-card{
+padding:12px 5px;
+}
+
+.service-icon{
+font-size:24px;
+}
+
+}
