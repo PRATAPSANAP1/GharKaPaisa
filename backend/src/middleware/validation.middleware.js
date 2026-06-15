@@ -28,7 +28,7 @@ const registerRules = [
   body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
   body('company_name').trim().notEmpty().withMessage('Company name required'),
   body('company_type')
-    .isIn(['proprietorship', 'partnership', 'pvt_ltd', 'llp', 'other'])
+    .isIn(['individual', 'proprietorship', 'partnership', 'pvt_ltd', 'llp', 'other'])
     .withMessage('Valid company type required'),
   body('gst_number').optional()
     .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)

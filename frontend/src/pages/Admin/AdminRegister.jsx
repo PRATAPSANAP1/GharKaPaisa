@@ -7,11 +7,10 @@ import { sendRegisterOtp as sendOtp, registerPartner, lookupUser } from "../../a
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
-  { label: "Sole Proprietorship", value: "proprietorship" },
-  { label: "Partnership Firm", value: "partnership" },
+  { label: "Individual", value: "individual" },
+  { label: "Proprietorship", value: "proprietorship" },
+  { label: "Partnership", value: "partnership" },
   { label: "Private Limited Company", value: "pvt_ltd" },
-  { label: "Limited Liability Partnership (LLP)", value: "llp" },
-  { label: "Other", value: "other" },
 ];
 
 export default function AdminRegister() {
@@ -40,7 +39,7 @@ export default function AdminRegister() {
     email: "", password: "", confirmPassword: "",
     // Step 1 – Business
     address: "", businessCity: "", shopName: "",
-    companyType: "proprietorship", gst: "",
+    companyType: "individual", gst: "",
     // Step 2 – Bank
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
@@ -194,16 +193,26 @@ export default function AdminRegister() {
     // Final step — call the API
     setLoading(true);
     try {
-      const normalizedForm = {
-        ...form,
-        gst: form.gst ? form.gst.trim().toUpperCase() : "",
-        pan: form.pan ? form.pan.trim().toUpperCase() : "",
-        ifsc: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
+      const payload = {
+        email: form.email.trim(),
+        mobile: form.mobile.trim(),
+        password: form.password,
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+        current_address: form.address.trim(),
+        business_location: form.businessCity.trim(),
+        company_name: form.shopName.trim(),
+        company_type: form.companyType,
+        gst_number: form.gst ? form.gst.trim().toUpperCase() : null,
+        bank_name: form.bankName.trim(),
+        account_number: form.accountNumber.trim(),
+        ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
+        account_holder_name: form.accountHolderName.trim(),
         aadhaar: form.aadhaar.trim(),
+        pan: form.pan ? form.pan.trim().toUpperCase() : "",
+        role: "admin",
       };
-      const res = await registerPartner(normalizedForm);
+      const res = await registerPartner(payload);
       if (res.success) {
         setSuccess({ ...res.data, email: form.email });
       } else {
@@ -427,7 +436,7 @@ export default function AdminRegister() {
                 <input {...inputProps("shopName")} />
               </div>
               <div>
-                <label style={S.label}>Company Type</label>
+                <label style={S.label}>Partner Type</label>
                 <select style={S.input} value={form.companyType} onChange={set("companyType")}>
                   {COMPANY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
