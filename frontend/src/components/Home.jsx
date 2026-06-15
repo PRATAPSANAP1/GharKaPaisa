@@ -245,7 +245,6 @@ export default function Home({ onNavigate }) {
         title: item.label,
         parentId: "credit-cards",
         items: [
-          { id: `cc-${item.id}`, label: "Credit Card", icon: <FaRegCreditCard /> },
           { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
           { id: `fd-${item.id}`, label: "FD Based Cards", icon: <FaUniversity /> }
         ]
