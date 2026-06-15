@@ -145,6 +145,10 @@ app.use(`${API}/notifications`, routes.notifRouter);
 app.use(`${API}/reports`, routes.reportRouter);
 app.use(`${API}/kyc`, require('./routes/kyc.routes'));
 
+// ── Test Routes ────────────────────────────────────────────────
+const testEmailRoutes = require("./routes/testEmail.routes");
+app.use("/api/test-email", testEmailRoutes);
+
 // ── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
