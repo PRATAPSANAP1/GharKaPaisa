@@ -7,7 +7,6 @@
  *  - Clears session and redirects/reloads to login on refresh failure
  */
 import axios from 'axios';
-import { auth } from '../config/firebase';
 
 const BASE_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
 
@@ -75,60 +74,9 @@ api.interceptors.response.use(
       return Promise.reject({ message: 'Server unreachable', isNetworkError: true });
     }
 
-    const original = err.config;
-
-    if (err.response?.status === 401 && !original._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            return api({
-              ...original,
-              headers: {
-                ...original.headers,
-                Authorization: `Bearer ${token}`,
-              },
-            });
-          })
-          .catch((e) => Promise.reject(e));
-      }
-
-      original._retry = true;
-      isRefreshing = true;
-
-      try {
-        // Firebase manages token refresh internally — just request a fresh ID token
-        const currentUser = auth.currentUser;
-
-        if (!currentUser) {
-          processQueue(new Error('No Firebase user'), null);
-          clearSession();
-          return Promise.reject(err);
-        }
-
-        const newToken = await currentUser.getIdToken(true);
-        setAccessToken(newToken);
-        localStorage.setItem('gkp_refresh_token', currentUser.refreshToken || newToken);
-
-        processQueue(null, newToken);
-
-        return api({
-          ...original,
-          headers: {
-            ...original.headers,
-            Authorization: `Bearer ${newToken}`,
-          },
-        });
-      } catch (refreshErr) {
-        processQueue(refreshErr, null);
-        clearSession();
-        return Promise.reject(refreshErr);
-      } finally {
-        isRefreshing = false;
-      }
+    if (err.response?.status === 401) {
+      clearSession();
     }
-
     return Promise.reject(err);
   }
 );
