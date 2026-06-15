@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { useTheme } from "./Partner/ThemeContext";
+import { useTheme } from "../Partner/ThemeContext";
 import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt, FaHandshake, FaBook, FaCertificate, FaIdCard, FaHandsHelping, FaIndustry } from "react-icons/fa";
-import offerBannerImg from "../offerbanner.png";
-import offerBannerImg1 from "../offerbanner1.png";
-import offerBannerImg2 from "../offerbanner2.png";
+import offerBannerImg from "../../offerbanner.png";
+import offerBannerImg1 from "../../offerbanner1.png";
+import offerBannerImg2 from "../../offerbanner2.png";
+
+// Import modular data lists
+import { bankCardsDetails } from "./CreditCards";
+import { loansData } from "./Loans";
+import { insuranceData } from "./Insurance";
+import { servicesData } from "./Services";
 
 // Responsive grid component
 function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
@@ -358,120 +364,6 @@ const attractiveCategories = [
   }
 ];
 
-const bankCardsDetails = {
-  hdfc: {
-    title: "HDFC Bank Credit Cards",
-    type: "bank-detail",
-    sections: [
-      {
-        title: "Core Cards",
-        cards: [
-          { name: "Freedom Credit Card", desc: "Perfect entry-level card for daily spends" },
-          { name: "MoneyBack+ Credit Card", desc: "10X CashPoints on popular online merchants" },
-          { name: "Millennia Credit Card", desc: "5% cashback on top online shopping brands" },
-          { name: "Regalia Gold Credit Card", desc: "Premium travel and luxury lifestyle card" },
-          { name: "BizGrow Credit Card", desc: "Tailored for growing business expenses" },
-          { name: "BizPower Credit Card", desc: "Powering business spends with premium rewards" },
-          { name: "BizFirst Credit Card", desc: "Smart cashbacks on business utilities and supplies" }
-        ]
-      },
-      {
-        title: "Co-Branded Cards",
-        cards: [
-          { name: "Pixel Play Credit Card", desc: "Customizable benefits in a digital-first avatar" },
-          { name: "Pixel Go Credit Card", desc: "Smart lifestyle benefits on the go" },
-          { name: "Tata Neu Plus Credit Card", desc: "2% NeuCoins back on Neu spend and partners" },
-          { name: "Tata Neu Infinity Credit Card", desc: "5% NeuCoins back on Neu spend and partners" },
-          { name: "Swiggy HDFC Bank Credit Card", desc: "10% cashback on Swiggy spends" },
-          { name: "IndianOil HDFC Bank Credit Card", desc: "Earn up to 50 Liters of free fuel annually" },
-          { name: "IRCTC HDFC Bank Credit Card", desc: "Save on railway tickets booking via IRCTC" },
-          { name: "Diners Club Privilege Credit Card", desc: "Exclusive global lounge access and dining benefits" },
-          { name: "Diners Club Black Credit Card", desc: "Super premium card for global travelers" },
-          { name: "Marriott Bonvoy HDFC Bank Credit Card", desc: "Complimentary hotel nights and loyalty points" },
-          { name: "Shoppers Stop Black HDFC Bank Credit Card", desc: "Elite membership and premium rewards at Shoppers Stop" },
-          { name: "Shoppers Stop Credit Card", desc: "Accelerated reward points on fashion shopping" }
-        ]
-      },
-      {
-        title: "Secured Cards",
-        cards: [
-          { name: "Against Existing FD", desc: "Get credit limit mapped directly against your existing FD" },
-          { name: "New FD Based Credit Card", desc: "Open a new FD instantly to unlock HDFC credit power" }
-        ]
-      }
-    ]
-  },
-  sbi: {
-    title: "SBI Credit Cards",
-    type: "bank-detail",
-    sections: [
-      {
-        title: "Core Cards",
-        cards: [
-          { name: "SimplySAVE Credit Card", desc: "10X points on dining, movies, grocery and department stores" },
-          { name: "SimplyCLICK Credit Card", desc: "10X points on Amazon, BookMyShow, Cleartrip, Lenskart" },
-          { name: "BPCL SBI Card OCTANE", desc: "7.25% value back on BPCL fuel purchases" },
-          { name: "BPCL SBI Card", desc: "4.25% value back on fuel spends" },
-          { name: "SBI Card PULSE", desc: "Stay fit with complimentary Noise smartwatch & health benefits" },
-          { name: "Tata Neu SBI Card", desc: "Co-branded shopping rewards on the Neu app" }
-        ]
-      },
-      {
-        title: "Co-Branded Cards",
-        cards: [
-          { name: "IRCTC SBI Card Premier", desc: "Up to 10% value back on AC ticket bookings" },
-          { name: "Apollo SBI Card", desc: "Accelerated points on Apollo pharmacy & healthcare" },
-          { name: "Air India SBI Signature Card", desc: "Earn Air India flying returns miles on every spend" },
-          { name: "Air India SBI Platinum Card", desc: "Save on domestic and international air travel" },
-          { name: "Club Vistara SBI Prime Card", desc: "Complimentary premium economy tickets on Vistara" },
-          { name: "Club Vistara SBI Card", desc: "Complimentary tickets and Club Vistara membership" }
-        ]
-      }
-    ]
-  },
-  axis: {
-    title: "Axis Bank Credit Cards",
-    type: "bank-detail",
-    sections: [
-      {
-        title: "Available Credit Cards",
-        cards: [
-          { name: "Axis Bank Neo Credit Card", desc: "Zomato, BookMyShow and utility bill discounts" },
-          { name: "Axis Bank ACE Credit Card", desc: "2% unlimited cashback on Google Pay spends" },
-          { name: "Axis Bank MY Zone Credit Card", desc: "Buy 1 Get 1 Free on movie tickets" },
-          { name: "Axis Bank Rewards Credit Card", desc: "10X reward points on department stores and apparel" },
-          { name: "Axis Bank Flipkart Credit Card", desc: "5% unlimited cashback on Flipkart purchases" },
-          { name: "Axis Bank IndianOil Credit Card", desc: "Accelerated reward points on fuel purchases" },
-          { name: "Axis Bank Atlas Credit Card", desc: "Miles-focused premium card for frequent flyers" },
-          { name: "Axis Bank Select Credit Card", desc: "Elite lifestyle rewards with priority pass lounge access" },
-          { name: "Axis Bank Privilege Credit Card", desc: "Double activation benefits and milestone rewards" },
-          { name: "Axis Bank Vistara Credit Card", desc: "Complimentary economy flight tickets" },
-          { name: "Axis Bank Vistara Infinite Credit Card", desc: "Complimentary business class ticket and gold membership" },
-          { name: "Axis Bank Aura Credit Card", desc: "Health and wellness focused credit card" }
-        ]
-      }
-    ]
-  },
-  bob: {
-    title: "Bank of Baroda Credit Cards",
-    type: "bank-detail",
-    sections: [
-      {
-        title: "Available Credit Cards",
-        cards: [
-          { name: "BOB Eterna Credit Card", desc: "Premium travel and dining rewards with lounge access" },
-          { name: "BOB Premier Credit Card", desc: "5X rewards on travel and dining" },
-          { name: "BOB Easy Credit Card", desc: "5X rewards on grocery and department stores" },
-          { name: "BOB Select Credit Card", desc: "Accelerated points on dining and online shopping" },
-          { name: "BOB HPCL Energy Card", desc: "Save on fuel and LPG cylinder bookings" },
-          { name: "BOB Prime Credit Card", desc: "FD-backed credit card with zero joining fee" },
-          { name: "BOB Snapdeal Credit Card", desc: "Up to 5% cashback on Snapdeal shopping" }
-        ]
-      }
-    ]
-  }
-};
-
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
@@ -506,39 +398,7 @@ export default function Home({ onNavigate }) {
     { id: "equitas", label: "Equitas", icon: <FaUniversity /> },
   ];
 
-  const loans = [
-    { label: "Personal Loan", icon: <FaMoneyBillWave /> },
-    { label: "Instant Loan", icon: <FaMobileAlt /> },
-    { label: "Home Loan", icon: <FaBuilding /> },
-    { label: "Business Loan", icon: <FaBuilding /> },
-    { label: "Used Car Loan", icon: <FaCar /> },
-    { label: "Education Loan", icon: <FaGraduationCap /> },
-    { label: "Card on Loan", icon: <FaRegCreditCard /> },
-  ];
-
-  const insurance = [
-    { label: "Health", icon: <FaHeartbeat /> },
-    { label: "Life", icon: <FaShieldAlt /> },
-    { label: "General", icon: <FaUmbrella /> },
-    { label: "LAP", icon: <FaBuilding /> },
-  ];
-
   const investment = []; // Placeholder
-
-  const services = [
-    { label: "GST Returns & Reg", icon: <FaFileInvoiceDollar /> },
-    { label: "Company Incorporation", icon: <FaBuilding /> },
-    { label: "Income Tax (ITR)", icon: <FaCalculator /> },
-    { label: "PF/ESIC Services", icon: <FaUsers /> },
-    { label: "TDS & Assessment", icon: <FaMoneyCheckAlt /> },
-    { label: "Partnership Reg", icon: <FaHandshake /> },
-    { label: "Accounting", icon: <FaBook /> },
-    { label: "Company Reg", icon: <FaBuilding /> },
-    { label: "DSC / CMA Report", icon: <FaCertificate /> },
-    { label: "Trade Licence", icon: <FaIdCard /> },
-    { label: "NGO/Trust Reg", icon: <FaHandsHelping /> },
-    { label: "MSME Returns", icon: <FaIndustry /> },
-  ];
 
   useEffect(() => {
     if (isPaused) return;
@@ -572,10 +432,10 @@ export default function Home({ onNavigate }) {
   const handleBottomNavClick = (id) => {
     if (id === "home") setActiveCategory(null);
     else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
-    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loans });
-    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insurance });
+    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loansData });
+    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData });
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: investment });
-    else if (id === "services") setActiveCategory({ id: "services", title: "Services", items: services });
+    else if (id === "services") setActiveCategory({ id: "services", title: "Services", items: servicesData });
   };
 
   const handleItemClick = (item) => {
@@ -734,17 +594,17 @@ export default function Home({ onNavigate }) {
 
         {/* Loans */}
         <Section title="Loans" C={C}>
-          <ResponsiveGrid C={C} items={loans} onSeeMore={() => setActiveCategory({ id: "loans", title: "Loans", items: loans })} />
+          <ResponsiveGrid C={C} items={loansData} onSeeMore={() => setActiveCategory({ id: "loans", title: "Loans", items: loansData })} />
         </Section>
 
         {/* Insurance */}
         <Section title="Insurance" C={C}>
-          <ResponsiveGrid C={C} items={insurance} onSeeMore={() => setActiveCategory({ id: "insurance", title: "Insurance", items: insurance })} />
+          <ResponsiveGrid C={C} items={insuranceData} onSeeMore={() => setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData })} />
         </Section>
 
         {/* Services */}
         <Section title="Services" C={C}>
-          <ResponsiveGrid C={C} items={services} onSeeMore={() => setActiveCategory({ id: "services", title: "Services", items: services })} />
+          <ResponsiveGrid C={C} items={servicesData} onSeeMore={() => setActiveCategory({ id: "services", title: "Services", items: servicesData })} />
         </Section>
 
         {/* Footer */}
