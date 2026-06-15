@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../logo.jpeg';
+import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { C } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleLink = () => {
@@ -18,8 +20,8 @@ const Navbar = () => {
       <div id="mainOverlay" className={`overlay ${menuOpen ? 'active' : ''}`} onClick={toggleLink} />
 
       {/* Mobile Side Drawer */}
-      <div id="nav-menu" className={`side-drawer ${menuOpen ? 'show1' : ''}`}>
-        <button className="close-btn" onClick={toggleLink}>
+      <div id="nav-menu" className={`side-drawer ${menuOpen ? 'show1' : ''}`} style={{ background: C.bg }}>
+        <button className="close-btn" onClick={toggleLink} style={{ filter: C.text === '#fff' ? 'invert(1)' : 'none' }}>
           <span></span>
           <span></span>
           <span></span>
@@ -38,18 +40,19 @@ const Navbar = () => {
         <button onClick={() => { navigate('/login'); toggleLink(); }}>Partner Login</button>
       </div>
 
-      <nav className="navbar">
+      <nav className="navbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}` }}>
         <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink} style={{ margin: 0 }}>
+          <button id="toggle-Link" className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink} style={{ margin: 0, filter: C.text === '#fff' ? 'invert(1)' : 'none' }}>
             <span></span>
             <span></span>
             <span></span>
           </button>
           <img src={logo} alt="logo" className="logo" />
-          <h1 style={{ color: "#0d47a1", margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
+          <h1 style={{ color: C.text, margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
         </div>
 
-        <div className="navbar-right">
+        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <ThemeToggle />
           <button onClick={() => navigate('/admin-login')}>
             Admin Login
           </button>

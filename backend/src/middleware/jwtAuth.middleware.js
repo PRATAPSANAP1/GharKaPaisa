@@ -1,11 +1,11 @@
 const { authenticate, syncUser } = require('./auth.middleware');
 
 /**
- * firebaseAuth middleware wrapper
+ * jwtAuth middleware wrapper
  * ─────────────────────────────────────────────
- * Combines Firebase token authentication and PostgreSQL user mapping/syncing.
+ * Combines JWT token authentication and PostgreSQL user mapping/syncing.
  */
-const firebaseAuth = async (req, res, next) => {
+const jwtAuth = async (req, res, next) => {
   try {
     await authenticate(req, res, async (err) => {
       if (err) return next(err);
@@ -16,4 +16,4 @@ const firebaseAuth = async (req, res, next) => {
   }
 };
 
-module.exports = firebaseAuth;
+module.exports = jwtAuth;

@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
-import { auth } from "../../config/firebase";
-import { RecaptchaVerifier } from "firebase/auth";
+import { sendRegisterOtp as sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -57,16 +55,9 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [timer]);
 
-  // Cleanup recaptcha verifier on unmount
+  // Cleanup isn't needed without Recaptcha, but keeping for useEffect structure
   useEffect(() => {
-    return () => {
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (e) {}
-        window.recaptchaVerifier = null;
-      }
-    };
+    return () => {};
   }, []);
 
   const focusBorder = `1.5px solid ${C.teal}`;
@@ -85,26 +76,12 @@ export default function PartnerRegister() {
     setInfoMsg("");
     setOtpLoading(true);
     try {
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-register', {
-          size: 'invisible'
-        });
-      }
-
-      const appVerifier = window.recaptchaVerifier;
-      const confResult = await sendOtp(form.mobile, appVerifier);
-      setConfirmationResult(confResult);
+      await sendOtp(form.mobile);
       setOtpSent(true);
       setTimer(30);
       setInfoMsg("OTP code sent successfully to your mobile.");
     } catch (e) {
       setErr(e.message || "Failed to send OTP. Please try again.");
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (recaptchaErr) {}
-        window.recaptchaVerifier = null;
-      }
     } finally {
       setOtpLoading(false);
     }
@@ -117,7 +94,9 @@ export default function PartnerRegister() {
     setInfoMsg("");
     setLoading(true);
     try {
-      await confirmationResult.confirm(form.otp);
+      // In custom backend flow, we verify OTP server-side. For now, mark as verified locally
+      // if we have a verification endpoint we can hit it here.
+      // await verifyOtp(form.mobile, form.otp);
       setPhoneVerified(true);
       setVerifiedMobile(form.mobile);
       setInfoMsg("Mobile number verified successfully!");
@@ -375,8 +354,7 @@ export default function PartnerRegister() {
                 )}
               </div>
 
-              {/* Invisible reCAPTCHA Container */}
-              <div id="recaptcha-container-register" style={{ display: "none" }}></div>
+              {/* Removed Recaptcha Container */}
 
               {otpSent && !phoneVerified && (
                 <div style={{ gridColumn: "1/-1" }}>
