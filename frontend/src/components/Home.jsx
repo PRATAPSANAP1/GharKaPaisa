@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "./Partner/ThemeContext";
-import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine, FaFileInvoiceDollar, FaCalculator } from "react-icons/fa";
+import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt, FaHandshake, FaBook, FaCertificate, FaIdCard, FaHandsHelping, FaIndustry } from "react-icons/fa";
 import offerBannerImg from "../offerbanner.png";
 import offerBannerImg1 from "../offerbanner1.png";
 import offerBannerImg2 from "../offerbanner2.png";
@@ -110,7 +110,7 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
     { id: "loans", label: "Loan", icon: <FaMoneyBillWave /> },
     { id: "insurance", label: "Insurance", icon: <FaShieldAlt /> },
     { id: "investment", label: "Investment", icon: <FaChartLine /> },
-    { id: "tax", label: "GST & Tax", icon: <FaFileInvoiceDollar /> }
+    { id: "services", label: "Services", icon: <FaFileInvoiceDollar /> }
   ];
 
   return (
@@ -184,9 +184,19 @@ export default function Home({ onNavigate }) {
 
   const investment = []; // Placeholder
 
-  const tax = [
-    { label: "GST Filing", icon: <FaFileInvoiceDollar /> },
-    { label: "Income Tax", icon: <FaCalculator /> },
+  const services = [
+    { label: "GST Returns & Reg", icon: <FaFileInvoiceDollar /> },
+    { label: "Company Incorporation", icon: <FaBuilding /> },
+    { label: "Income Tax (ITR)", icon: <FaCalculator /> },
+    { label: "PF/ESIC Services", icon: <FaUsers /> },
+    { label: "TDS & Assessment", icon: <FaMoneyCheckAlt /> },
+    { label: "Partnership Reg", icon: <FaHandshake /> },
+    { label: "Accounting", icon: <FaBook /> },
+    { label: "Company Reg", icon: <FaBuilding /> },
+    { label: "DSC / CMA Report", icon: <FaCertificate /> },
+    { label: "Trade Licence", icon: <FaIdCard /> },
+    { label: "NGO/Trust Reg", icon: <FaHandsHelping /> },
+    { label: "MSME Returns", icon: <FaIndustry /> },
   ];
 
   useEffect(() => {
@@ -224,7 +234,7 @@ export default function Home({ onNavigate }) {
     else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loans });
     else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insurance });
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: investment });
-    else if (id === "tax") setActiveCategory({ id: "tax", title: "GST & Income Tax", items: tax });
+    else if (id === "services") setActiveCategory({ id: "services", title: "Services", items: services });
   };
 
   const handleItemClick = (item) => {
@@ -328,9 +338,9 @@ export default function Home({ onNavigate }) {
           <ResponsiveGrid C={C} items={insurance} onSeeMore={() => setActiveCategory({ id: "insurance", title: "Insurance", items: insurance })} />
         </Section>
 
-        {/* GST & Income Tax */}
-        <Section title="GST & Income Tax" C={C}>
-          <ResponsiveGrid C={C} items={tax} onSeeMore={() => setActiveCategory({ id: "tax", title: "GST & Income Tax", items: tax })} />
+        {/* Services */}
+        <Section title="Services" C={C}>
+          <ResponsiveGrid C={C} items={services} onSeeMore={() => setActiveCategory({ id: "services", title: "Services", items: services })} />
         </Section>
 
         {/* Footer */}
