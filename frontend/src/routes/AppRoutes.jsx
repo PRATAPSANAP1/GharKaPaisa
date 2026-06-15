@@ -7,6 +7,7 @@ import RoleRoute from './RoleRoute';
 import AdminLayout from '../layouts/AdminLayout';
 import PartnerLayout from '../layouts/PartnerLayout';
 import SuperAdminLayout from '../layouts/SuperAdminLayout';
+import PublicLayout from '../layouts/PublicLayout';
 
 // Public Pages
 import Home from '../components/Home';
@@ -21,8 +22,10 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={<Home />} />
-      <Route path="/contact" element={<Contact />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/contact" element={<Contact />} />
+      </Route>
       <Route path="/login" element={<PartnerLogin />} />
       <Route path="/admin-login" element={<AdminLogin />} />
 
