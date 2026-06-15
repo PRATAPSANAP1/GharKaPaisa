@@ -27,11 +27,11 @@ const AppRoutes = () => {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/login" element={<PartnerLogin />} />
+        <Route path="/register" element={<PartnerRegister />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin-register" element={<AdminRegister />} />
       </Route>
-      <Route path="/login" element={<PartnerLogin />} />
-      <Route path="/register" element={<PartnerRegister />} />
-      <Route path="/admin-login" element={<AdminLogin />} />
-      <Route path="/admin-register" element={<AdminRegister />} />
 
       {/* Partner Routes */}
       <Route 
