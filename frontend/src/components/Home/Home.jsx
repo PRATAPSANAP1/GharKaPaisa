@@ -6,7 +6,7 @@ import offerBannerImg1 from "../../offerbanner1.png";
 import offerBannerImg2 from "../../offerbanner2.png";
 
 // Import modular data lists
-import { bankCardsDetails } from "./CreditCards";
+import { bankCardsDetails, ltfCards, cardRankings } from "./CreditCards";
 import { loansData } from "./Loans";
 import { insuranceData } from "./Insurance";
 import { servicesData } from "./Services";
@@ -70,7 +70,7 @@ function Section({ title, C, children }) {
 }
 
 // Full Category Page
-function CategoryPage({ category, onBack, C, onItemClick }) {
+function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
   
   useEffect(() => {
@@ -79,13 +79,114 @@ function CategoryPage({ category, onBack, C, onItemClick }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const renderBreadcrumbs = () => {
+    if (!breadcrumbs) return null;
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600 }}>
+        {breadcrumbs.map((crumb, idx) => (
+          <React.Fragment key={idx}>
+            {idx > 0 && <span style={{ color: C.textLight }}>/</span>}
+            {crumb.action ? (
+              <span 
+                onClick={crumb.action} 
+                style={{ color: C.teal, cursor: "pointer" }}
+                onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                onMouseLeave={(e) => e.target.style.textDecoration = "none"}
+              >
+                {crumb.label}
+              </span>
+            ) : (
+              <span style={{ color: C.textLight }}>{crumb.label}</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  if (category.id === "credit-cards") {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.text }}>
+              <FaArrowLeft size={16} />
+            </div>
+            {renderBreadcrumbs()}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: "24px" }}>
+            {/* Left Column: Banks List */}
+            <div>
+              <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "16px" }}>Select Partner Bank</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px" }}>
+                {category.items.map((item, idx) => (
+                  <div key={idx} style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+                    background: C.bgSecondary, padding: "16px 12px", borderRadius: "14px",
+                    border: `1px solid ${C.border}`, textAlign: "center", gap: "10px",
+                    cursor: "pointer", transition: "all 0.2s"
+                  }}
+                  onClick={() => onItemClick && onItemClick(item)}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
+                  >
+                    {item.icon && <div style={{ color: C.teal, fontSize: "24px" }}>{item.icon}</div>}
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column: Lifetime Free Credit Cards (LTF) and rankings */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {/* LTF Cards */}
+              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: C.teal }}>Lifetime Free Credit Cards (LTF)</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "350px", overflowY: "auto", paddingRight: "4px" }}>
+                  {ltfCards.map((card, cIdx) => (
+                    <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
+                      <span style={{ fontSize: "11px", color: C.textLight }}>{card.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Rankings */}
+              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: C.teal }}>Top Card Rankings</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {cardRankings.map((rankItem, rIdx) => (
+                    <div key={rIdx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.bgSecondary, padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 800, color: C.teal }}>#{rankItem.rank}</span>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{rankItem.name}</span>
+                      </div>
+                      <span style={{ fontSize: "12px", color: C.gold, fontWeight: "bold" }}>{rankItem.rating}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
   if (category.type === "hierarchy") {
     return (
       <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
         <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
-            <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
-            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.text }}>
+              <FaArrowLeft size={16} />
+            </div>
+            {renderBreadcrumbs()}
           </div>
           
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -129,9 +230,11 @@ function CategoryPage({ category, onBack, C, onItemClick }) {
     return (
       <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
         <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
-            <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
-            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.text }}>
+              <FaArrowLeft size={16} />
+            </div>
+            {renderBreadcrumbs()}
           </div>
           
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -161,9 +264,11 @@ function CategoryPage({ category, onBack, C, onItemClick }) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
-          <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
-          <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+          <div onClick={onBack} style={{ cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.text }}>
+            <FaArrowLeft size={16} />
+          </div>
+          {renderBreadcrumbs()}
         </div>
         
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px" }}>
@@ -232,24 +337,6 @@ const attractiveCategories = [
           { name: "Kotak League Platinum Card", desc: "Premium benefits with zero annual fee" },
           { name: "ICICI Platinum Chip Credit Card", desc: "Classic lifetime free shopping card" },
           { name: "AU LIT Credit Card", desc: "Customizable features with no annual fee" }
-        ]
-      }
-    ]
-  },
-  {
-    id: "cibil-loans",
-    title: "CIBIL Score Based Loan",
-    label: "CIBIL Score Based Loan",
-    description: "Get personalized loan offers tailored specifically to your credit profile.",
-    icon: <FaMoneyCheckAlt />,
-    type: "hierarchy",
-    items: [
-      {
-        section: "Loan Categories",
-        subcategories: [
-          "Personal Loan based on CIBIL Score",
-          "Pre-approved Personal Loan",
-          "Instant Personal Loan"
         ]
       }
     ]
@@ -370,6 +457,40 @@ export default function Home({ onNavigate }) {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [isTickerPaused, setIsTickerPaused] = useState(false);
+
+  const getBreadcrumbs = (cat) => {
+    const crumbs = [{ label: "Home", action: () => setActiveCategory(null) }];
+    
+    if (!cat) return crumbs;
+
+    if (cat.id.startsWith("cobrand-") || cat.id.startsWith("fd-")) {
+      const bankId = cat.id.split("-")[1];
+      const bankName = banksList.find(b => b.id === bankId)?.label || "Bank";
+      crumbs.push({ label: "Credit Cards", action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList }) });
+      crumbs.push({ 
+        label: bankName, 
+        action: () => handleItemClick({ id: bankId, label: bankName }) 
+      });
+      crumbs.push({ label: cat.id.startsWith("cobrand-") ? "Co-Brand" : "FD Based Cards", action: null });
+    } else if (cat.parentId === "credit-cards" || cat.id.startsWith("bank-")) {
+      crumbs.push({ label: "Credit Cards", action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList }) });
+      crumbs.push({ label: cat.title, action: null });
+    } else if (cat.id === "credit-cards") {
+      crumbs.push({ label: "Credit Cards", action: null });
+    } else if (cat.id === "loans") {
+      crumbs.push({ label: "Loans", action: null });
+    } else if (cat.id === "insurance") {
+      crumbs.push({ label: "Insurance", action: null });
+    } else if (cat.id === "services") {
+      crumbs.push({ label: "Services", action: null });
+    } else {
+      crumbs.push({ label: "Attractive Sections", action: () => setActiveCategory(null) });
+      crumbs.push({ label: cat.title, action: null });
+    }
+    
+    return crumbs;
+  };
   
   const banners = [offerBannerImg, offerBannerImg1, offerBannerImg2];
 
@@ -484,7 +605,7 @@ export default function Home({ onNavigate }) {
   if (activeCategory) {
     return (
       <>
-        <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} />
+        <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} />
         {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
       </>
     );
@@ -544,46 +665,79 @@ export default function Home({ onNavigate }) {
 
         {/* Attractive Cards/Loans */}
         <Section title="Attractive Cards/Loans" C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(240px, 1fr))", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
-            {attractiveCategories.map((cat, idx) => (
-              <div key={idx} style={{
-                background: C.bgSecondary,
-                padding: isMobile ? "12px" : "20px",
-                borderRadius: "16px",
-                border: `1px solid ${C.border}`,
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                position: "relative",
-                overflow: "hidden"
-              }}
-              onClick={() => handleAttractiveCategoryClick(cat)}
-              onMouseEnter={(e) => {
-                if (!isMobile) {
-                  e.currentTarget.style.transform = "translateY(-4px)";
+          <style>{`
+            @keyframes ticker-scroll {
+              0% {
+                transform: translateX(0);
+              }
+              100% {
+                transform: translateX(-50%);
+              }
+            }
+            .ticker-wrap {
+              display: flex;
+              gap: 16px;
+              width: max-content;
+              animation: ticker-scroll 35s linear infinite;
+            }
+            .ticker-wrap.paused {
+              animation-play-state: paused !important;
+            }
+          `}</style>
+          <div 
+            onMouseEnter={() => setIsTickerPaused(true)}
+            onMouseLeave={() => setIsTickerPaused(false)}
+            onTouchStart={() => setIsTickerPaused(true)}
+            onTouchEnd={() => setIsTickerPaused(false)}
+            style={{
+              overflow: "hidden",
+              width: "100%",
+              padding: "12px 0",
+              position: "relative",
+              display: "flex",
+              maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+              WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
+            }}
+          >
+            <div 
+              className={`ticker-wrap ${isTickerPaused ? "paused" : ""}`}
+            >
+              {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
+                <div key={`${cat.id}-${idx}`} style={{
+                  background: C.bgSecondary,
+                  padding: isMobile ? "12px" : "20px",
+                  borderRadius: "16px",
+                  border: `1px solid ${C.border}`,
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  position: "relative",
+                  overflow: "hidden",
+                  width: isMobile ? "200px" : "280px",
+                  flexShrink: 0
+                }}
+                onClick={() => handleAttractiveCategoryClick(cat)}
+                onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = C.teal;
                   e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isMobile) {
-                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = C.border;
                   e.currentTarget.style.boxShadow = "none";
-                }
-              }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
-                  <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
+                }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
+                  </div>
+                  <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                    Explore <FaChevronRight size={isMobile ? 8 : 10} />
+                  </div>
                 </div>
-                <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                  Explore <FaChevronRight size={isMobile ? 8 : 10} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Section>
 
