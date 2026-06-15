@@ -73,6 +73,85 @@ function CategoryPage({ category, onBack, C, onItemClick }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  if (category.type === "hierarchy") {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
+            <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
+            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {category.items.map((sec, sIdx) => (
+              <div key={sIdx} style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+                <h3 style={{ margin: "0 0 14px 0", fontSize: "16px", fontWeight: 800, color: C.teal }}>{sec.section}</h3>
+                
+                {sec.subcategories && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {sec.subcategories.map((sub, subIdx) => (
+                      <div key={subIdx} style={{ display: "flex", alignItems: "center", gap: "12px", background: C.bgSecondary, padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
+                        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.teal }} />
+                        <span style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{sub}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {sec.cards && (
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", marginTop: sec.subcategories ? "14px" : "0" }}>
+                    {sec.cards.map((card, cIdx) => (
+                      <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
+                        <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
+                        <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
+                          Apply Now
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (category.type === "bank-detail") {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
+            <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
+            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {category.sections.map((sec, sIdx) => (
+              <div key={sIdx} style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+                <h3 style={{ margin: "0 0 14px 0", fontSize: "16px", fontWeight: 800, color: C.teal }}>{sec.title}</h3>
+                
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px" }}>
+                  {sec.cards.map((card, cIdx) => (
+                    <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
+                      <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
+                      <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
+                        Apply Now
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
@@ -130,6 +209,268 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
     </div>
   );
 }
+
+const attractiveCategories = [
+  {
+    id: "ltf-cards",
+    title: "Lifetime Free Credit Cards (LTF)",
+    label: "Lifetime Free Credit Cards (LTF)",
+    description: "Enjoy zero annual fees and lifetime free benefits on premium credit cards.",
+    icon: <FaRegCreditCard />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Popular Lifetime Free Cards",
+        cards: [
+          { name: "IDFC FIRST Millennia Credit Card", desc: "Lifetime free with high rewards on online spends" },
+          { name: "Kotak League Platinum Card", desc: "Premium benefits with zero annual fee" },
+          { name: "ICICI Platinum Chip Credit Card", desc: "Classic lifetime free shopping card" },
+          { name: "AU LIT Credit Card", desc: "Customizable features with no annual fee" }
+        ]
+      }
+    ]
+  },
+  {
+    id: "cibil-loans",
+    title: "CIBIL Score Based Loan",
+    label: "CIBIL Score Based Loan",
+    description: "Get personalized loan offers tailored specifically to your credit profile.",
+    icon: <FaMoneyCheckAlt />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Loan Categories",
+        subcategories: [
+          "Personal Loan based on CIBIL Score",
+          "Pre-approved Personal Loan",
+          "Instant Personal Loan"
+        ]
+      }
+    ]
+  },
+  {
+    id: "hdfc-cc-loan",
+    title: "HDFC Loan on Credit Card",
+    label: "HDFC Loan on Credit Card",
+    description: "Unlock instant cash or loans against your existing HDFC bank credit card limit.",
+    icon: <FaRegCreditCard />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Loan Options",
+        subcategories: [
+          "Loan on Existing HDFC Credit Card",
+          "Pre-approved Loan on Credit Card",
+          "Cash on Credit Card"
+        ]
+      }
+    ]
+  },
+  {
+    id: "smart-emi",
+    title: "Smart EMI Card",
+    label: "Smart EMI Card",
+    description: "Split your purchases into easy no-cost EMIs with instant approval.",
+    icon: <FaIdCard />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "EMI Card Options",
+        subcategories: [
+          "Bajaj Finserv EMI Card",
+          "HDFC Consumer Durable Loan",
+          "ICICI EMI Card"
+        ]
+      }
+    ]
+  },
+  {
+    id: "secured-cards",
+    title: "Secured Credit Cards",
+    label: "Secured Credit Cards",
+    description: "Build or rebuild your credit score with high-approval FD-backed credit cards.",
+    icon: <FaShieldAlt />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Features & Categories",
+        subcategories: [
+          "FD-backed Credit Cards",
+          "Low CIBIL Credit Cards"
+        ]
+      },
+      {
+        section: "Available Cards",
+        cards: [
+          { name: "IDFC FIRST WOW Credit Card", desc: "100% limit against FD with zero documentation" },
+          { name: "Kotak 811 Dream Different Credit Card", desc: "Interest on FD and zero annual fee" },
+          { name: "OneCard Secured Credit Card", desc: "Metal card backed by FD with premium rewards" },
+          { name: "HDFC Secured Credit Card", desc: "Build credit relationship with India's largest bank" }
+        ]
+      }
+    ]
+  },
+  {
+    id: "hdfc-express",
+    title: "HDFC Express Loan",
+    label: "HDFC Express Loan",
+    description: "Fast-tracked personal loans with minimal documentation and instant payouts.",
+    icon: <FaBolt />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Loan Types",
+        subcategories: [
+          "Express Personal Loan",
+          "Pre-approved Loan",
+          "Instant Loan"
+        ]
+      }
+    ]
+  },
+  {
+    id: "upi-cards",
+    title: "UPI Credit Cards",
+    label: "UPI Credit Cards",
+    description: "Make merchant payments directly via UPI using your RuPay credit card.",
+    icon: <FaMobileAlt />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Card Types",
+        subcategories: [
+          "RuPay Credit Cards",
+          "UPI Linked Credit Cards"
+        ]
+      },
+      {
+        section: "Available Cards",
+        cards: [
+          { name: "HDFC Tata Neu Plus RuPay", desc: "2% back on Tata Neu spend via UPI" },
+          { name: "HDFC Tata Neu Infinity RuPay", desc: "5% back on Tata Neu spend via UPI" },
+          { name: "Kiwi RuPay Credit Card", desc: "UPI-first credit card with instant rewards" },
+          { name: "IndusInd Platinum RuPay Card", desc: "Premium lounge access and RuPay benefits" },
+          { name: "BOB Snapdeal RuPay Card", desc: "Co-branded shopping rewards on RuPay network" },
+          { name: "ICICI Coral RuPay Card", desc: "BookMyShow discounts and dining rewards" }
+        ]
+      }
+    ]
+  }
+];
+
+const bankCardsDetails = {
+  hdfc: {
+    title: "HDFC Bank Credit Cards",
+    type: "bank-detail",
+    sections: [
+      {
+        title: "Core Cards",
+        cards: [
+          { name: "Freedom Credit Card", desc: "Perfect entry-level card for daily spends" },
+          { name: "MoneyBack+ Credit Card", desc: "10X CashPoints on popular online merchants" },
+          { name: "Millennia Credit Card", desc: "5% cashback on top online shopping brands" },
+          { name: "Regalia Gold Credit Card", desc: "Premium travel and luxury lifestyle card" },
+          { name: "BizGrow Credit Card", desc: "Tailored for growing business expenses" },
+          { name: "BizPower Credit Card", desc: "Powering business spends with premium rewards" },
+          { name: "BizFirst Credit Card", desc: "Smart cashbacks on business utilities and supplies" }
+        ]
+      },
+      {
+        title: "Co-Branded Cards",
+        cards: [
+          { name: "Pixel Play Credit Card", desc: "Customizable benefits in a digital-first avatar" },
+          { name: "Pixel Go Credit Card", desc: "Smart lifestyle benefits on the go" },
+          { name: "Tata Neu Plus Credit Card", desc: "2% NeuCoins back on Neu spend and partners" },
+          { name: "Tata Neu Infinity Credit Card", desc: "5% NeuCoins back on Neu spend and partners" },
+          { name: "Swiggy HDFC Bank Credit Card", desc: "10% cashback on Swiggy spends" },
+          { name: "IndianOil HDFC Bank Credit Card", desc: "Earn up to 50 Liters of free fuel annually" },
+          { name: "IRCTC HDFC Bank Credit Card", desc: "Save on railway tickets booking via IRCTC" },
+          { name: "Diners Club Privilege Credit Card", desc: "Exclusive global lounge access and dining benefits" },
+          { name: "Diners Club Black Credit Card", desc: "Super premium card for global travelers" },
+          { name: "Marriott Bonvoy HDFC Bank Credit Card", desc: "Complimentary hotel nights and loyalty points" },
+          { name: "Shoppers Stop Black HDFC Bank Credit Card", desc: "Elite membership and premium rewards at Shoppers Stop" },
+          { name: "Shoppers Stop Credit Card", desc: "Accelerated reward points on fashion shopping" }
+        ]
+      },
+      {
+        title: "Secured Cards",
+        cards: [
+          { name: "Against Existing FD", desc: "Get credit limit mapped directly against your existing FD" },
+          { name: "New FD Based Credit Card", desc: "Open a new FD instantly to unlock HDFC credit power" }
+        ]
+      }
+    ]
+  },
+  sbi: {
+    title: "SBI Credit Cards",
+    type: "bank-detail",
+    sections: [
+      {
+        title: "Core Cards",
+        cards: [
+          { name: "SimplySAVE Credit Card", desc: "10X points on dining, movies, grocery and department stores" },
+          { name: "SimplyCLICK Credit Card", desc: "10X points on Amazon, BookMyShow, Cleartrip, Lenskart" },
+          { name: "BPCL SBI Card OCTANE", desc: "7.25% value back on BPCL fuel purchases" },
+          { name: "BPCL SBI Card", desc: "4.25% value back on fuel spends" },
+          { name: "SBI Card PULSE", desc: "Stay fit with complimentary Noise smartwatch & health benefits" },
+          { name: "Tata Neu SBI Card", desc: "Co-branded shopping rewards on the Neu app" }
+        ]
+      },
+      {
+        title: "Co-Branded Cards",
+        cards: [
+          { name: "IRCTC SBI Card Premier", desc: "Up to 10% value back on AC ticket bookings" },
+          { name: "Apollo SBI Card", desc: "Accelerated points on Apollo pharmacy & healthcare" },
+          { name: "Air India SBI Signature Card", desc: "Earn Air India flying returns miles on every spend" },
+          { name: "Air India SBI Platinum Card", desc: "Save on domestic and international air travel" },
+          { name: "Club Vistara SBI Prime Card", desc: "Complimentary premium economy tickets on Vistara" },
+          { name: "Club Vistara SBI Card", desc: "Complimentary tickets and Club Vistara membership" }
+        ]
+      }
+    ]
+  },
+  axis: {
+    title: "Axis Bank Credit Cards",
+    type: "bank-detail",
+    sections: [
+      {
+        title: "Available Credit Cards",
+        cards: [
+          { name: "Axis Bank Neo Credit Card", desc: "Zomato, BookMyShow and utility bill discounts" },
+          { name: "Axis Bank ACE Credit Card", desc: "2% unlimited cashback on Google Pay spends" },
+          { name: "Axis Bank MY Zone Credit Card", desc: "Buy 1 Get 1 Free on movie tickets" },
+          { name: "Axis Bank Rewards Credit Card", desc: "10X reward points on department stores and apparel" },
+          { name: "Axis Bank Flipkart Credit Card", desc: "5% unlimited cashback on Flipkart purchases" },
+          { name: "Axis Bank IndianOil Credit Card", desc: "Accelerated reward points on fuel purchases" },
+          { name: "Axis Bank Atlas Credit Card", desc: "Miles-focused premium card for frequent flyers" },
+          { name: "Axis Bank Select Credit Card", desc: "Elite lifestyle rewards with priority pass lounge access" },
+          { name: "Axis Bank Privilege Credit Card", desc: "Double activation benefits and milestone rewards" },
+          { name: "Axis Bank Vistara Credit Card", desc: "Complimentary economy flight tickets" },
+          { name: "Axis Bank Vistara Infinite Credit Card", desc: "Complimentary business class ticket and gold membership" },
+          { name: "Axis Bank Aura Credit Card", desc: "Health and wellness focused credit card" }
+        ]
+      }
+    ]
+  },
+  bob: {
+    title: "Bank of Baroda Credit Cards",
+    type: "bank-detail",
+    sections: [
+      {
+        title: "Available Credit Cards",
+        cards: [
+          { name: "BOB Eterna Credit Card", desc: "Premium travel and dining rewards with lounge access" },
+          { name: "BOB Premier Credit Card", desc: "5X rewards on travel and dining" },
+          { name: "BOB Easy Credit Card", desc: "5X rewards on grocery and department stores" },
+          { name: "BOB Select Credit Card", desc: "Accelerated points on dining and online shopping" },
+          { name: "BOB HPCL Energy Card", desc: "Save on fuel and LPG cylinder bookings" },
+          { name: "BOB Prime Credit Card", desc: "FD-backed credit card with zero joining fee" },
+          { name: "BOB Snapdeal Credit Card", desc: "Up to 5% cashback on Snapdeal shopping" }
+        ]
+      }
+    ]
+  }
+};
 
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
@@ -240,16 +581,35 @@ export default function Home({ onNavigate }) {
   const handleItemClick = (item) => {
     // If it's a bank, show its specific card categories
     if (activeCategory?.id === "credit-cards" || banksList.find(b => b.id === item.id)) {
-      setActiveCategory({
-        id: `bank-${item.id}`,
-        title: item.label,
-        parentId: "credit-cards",
-        items: [
-          { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
-          { id: `fd-${item.id}`, label: "FD Based Cards", icon: <FaUniversity /> }
-        ]
-      });
+      if (bankCardsDetails[item.id]) {
+        setActiveCategory({
+          id: `bank-${item.id}`,
+          title: bankCardsDetails[item.id].title,
+          parentId: "credit-cards",
+          type: "bank-detail",
+          sections: bankCardsDetails[item.id].sections
+        });
+      } else {
+        setActiveCategory({
+          id: `bank-${item.id}`,
+          title: item.label,
+          parentId: "credit-cards",
+          items: [
+            { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
+            { id: `fd-${item.id}`, label: "FD Based Cards", icon: <FaUniversity /> }
+          ]
+        });
+      }
     }
+  };
+
+  const handleAttractiveCategoryClick = (cat) => {
+    setActiveCategory({
+      id: cat.id,
+      title: cat.title,
+      type: "hierarchy",
+      items: cat.items
+    });
   };
 
   const handleBack = () => {
@@ -317,6 +677,52 @@ export default function Home({ onNavigate }) {
                   {item.icon}
                 </div>
                 <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* Attractive Cards/Loans */}
+        <Section title="Attractive Cards/Loans" C={C}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(240px, 1fr))", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {attractiveCategories.map((cat, idx) => (
+              <div key={idx} style={{
+                background: C.bgSecondary,
+                padding: isMobile ? "12px" : "20px",
+                borderRadius: "16px",
+                border: `1px solid ${C.border}`,
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                position: "relative",
+                overflow: "hidden"
+              }}
+              onClick={() => handleAttractiveCategoryClick(cat)}
+              onMouseEnter={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.transform = "translateY(-4px)";
+                  e.currentTarget.style.borderColor = C.teal;
+                  e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.boxShadow = "none";
+                }
+              }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
+                  <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
+                </div>
+                <p style={{ margin: 0, fontSize: isMobile ? "10px" : "12px", color: C.textLight, lineHeight: 1.4 }}>{cat.description}</p>
+                <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                  Explore <FaChevronRight size={isMobile ? 8 : 10} />
+                </div>
               </div>
             ))}
           </div>
