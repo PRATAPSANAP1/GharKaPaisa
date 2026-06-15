@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const firebaseAuth = require('../middleware/firebaseAuth.middleware');
+const jwtAuth = require('../middleware/jwtAuth.middleware');
 const roleCheck = require('../middleware/role.middleware');
 
 const partnerCtrl = require('../controllers/partner.controller');
@@ -12,7 +12,7 @@ const walletCtrl = require('../controllers/wallet.controller');
 const { validate, commissionRules } = require('../middleware/validation.middleware');
 
 // All admin routes require authenticated Firebase token
-router.use(firebaseAuth);
+router.use(jwtAuth);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
 router.get('/partners', roleCheck('admin', 'super_admin'), partnerCtrl.listPartners);

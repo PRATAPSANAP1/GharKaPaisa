@@ -96,10 +96,10 @@ const requireApprovedPartner = (req, res, next) => {
   next();
 };
 
-const selfOrAdmin = (req, res, next) => {
-  const { id } = req.params;
+const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
+  const targetId = req.params[paramName];
   if (req.user.role === 'admin' || req.user.role === 'superadmin') return next();
-  if (req.user.id.toString() === id) return next();
+  if (req.user.id.toString() === targetId) return next();
   return forbidden(res);
 };
 

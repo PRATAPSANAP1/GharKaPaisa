@@ -1,4 +1,4 @@
-const admin = require('../config/firebase');
+
 const { query } = require('../config/db');
 const { logAction } = require('../services/audit.service');
 const { getPaginationParams, sanitizeMobile } = require('../utils/helpers');
@@ -23,69 +23,45 @@ const createAdmin = async (req, res, next) => {
     }
 
     const formattedMobile = mobile ? sanitizeMobile(mobile) : null;
-    let firebaseUser;
-    let firebaseUid;
 
-    try {
-      // 1. Attempt to create the user in Firebase Auth
-      firebaseUser = await admin.auth().createUser({
-        email,
-        emailVerified: true,
-        phoneNumber: formattedMobile || undefined,
-        displayName: name || undefined,
-      });
-      firebaseUid = firebaseUser.uid;
-      logger.info(`Successfully created Firebase user for administrative role: ${email} (UID: ${firebaseUid})`);
-    } catch (fbErr) {
-      // 2. If user already exists in Firebase, retrieve their details
-      if (fbErr.code === 'auth/email-already-exists') {
-        logger.info(`User ${email} already exists in Firebase. Retrieving existing UID.`);
-        firebaseUser = await admin.auth().getUserByEmail(email);
-        firebaseUid = firebaseUser.uid;
-      } else {
-        logger.error('Firebase user creation failed:', fbErr.message);
-        return error(res, `Firebase registration failed: ${fbErr.message}`, 400);
-      }
-    }
 
     // 3. Insert or update user in PostgreSQL
     let { rows: [dbUser] } = await query(
-      `SELECT * FROM users WHERE firebase_uid = $1 OR email = $2`,
-      [firebaseUid, email]
+      `SELECT * FROM users WHERE email = $1`,
+      [email]
     );
 
     if (dbUser) {
       // Update role and status to active
       const result = await query(
         `UPDATE users 
-         SET role = $1, firebase_uid = $2, status = 'active', updated_at = NOW() 
-         WHERE id = $3 
+         SET role = $1, status = 'active', updated_at = NOW() 
+         WHERE id = $2 
          RETURNING *`,
-        [role, firebaseUid, dbUser.id]
+        [role, dbUser.id]
       );
       dbUser = result.rows[0];
       logger.info(`Updated existing PostgreSQL user role to ${role}: ${email}`);
     } else {
       // Insert new administrative user
       const result = await query(
-        `INSERT INTO users (firebase_uid, email, mobile, role, status)
-         VALUES ($1, $2, $3, $4, 'active')
+        `INSERT INTO users (email, mobile, role, status)
+         VALUES ($1, $2, $3, 'active')
          RETURNING *`,
-        [firebaseUid, email, formattedMobile, role]
+        [email, formattedMobile, role]
       );
       dbUser = result.rows[0];
       logger.info(`Created new PostgreSQL user with role ${role}: ${email}`);
     }
 
     // 4. Record the action in audit logs
-    await logAction(req.user.id, 'CREATE_ADMIN', dbUser.id, { email, role, firebaseUid });
+    await logAction(req.user.id, 'CREATE_ADMIN', dbUser.id, { email, role });
 
     return created(res, {
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role,
-      status: dbUser.status,
-      firebaseUid
+      status: dbUser.status
     }, `Administrative user (${role}) provisioned successfully.`);
   } catch (err) {
     next(err);
@@ -105,13 +81,13 @@ const blockUser = async (req, res, next) => {
     }
 
     // Prevent blocking oneself
-    if (userId === req.user.id || userId === req.user.firebase_uid) {
+    if (userId === req.user.id) {
       return error(res, 'You are not permitted to block yourself.', 400);
     }
 
     // 1. Check if user exists in database
     const { rows: [targetUser] } = await query(
-      `SELECT id, firebase_uid, email, role, status FROM users WHERE id::text = $1 OR firebase_uid = $1`,
+      `SELECT id, email, role, status FROM users WHERE id::text = $1`,
       [userId]
     );
 
@@ -128,15 +104,7 @@ const blockUser = async (req, res, next) => {
       [newStatus, targetUser.id]
     );
 
-    // 3. If blocking, revoke Firebase refresh tokens to immediately terminate active sessions
-    if (block && targetUser.firebase_uid) {
-      try {
-        await admin.auth().revokeRefreshTokens(targetUser.firebase_uid);
-        logger.info(`Revoked Firebase refresh tokens for user UID: ${targetUser.firebase_uid}`);
-      } catch (fbErr) {
-        logger.warn(`Failed to revoke Firebase tokens for ${targetUser.email}: ${fbErr.message}`);
-      }
-    }
+    // 3. Removed Firebase token revocation
 
     // 4. Log to audit logs
     await logAction(req.user.id, actionName, targetUser.id, { email: targetUser.email, role: targetUser.role });

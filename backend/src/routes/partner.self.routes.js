@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const firebaseAuth = require('../middleware/firebaseAuth.middleware');
+const jwtAuth = require('../middleware/jwtAuth.middleware');
 const partnerCtrl = require('../controllers/partner.controller');
 const authCtrl = require('../controllers/auth.controller');
 const { upload } = require('../services/s3.service');
@@ -14,7 +14,7 @@ const kycUpload = upload.fields([
 ]);
 
 // All routes require authenticated Firebase token
-router.use(firebaseAuth);
+router.use(jwtAuth);
 
 router.post('/register', registerRules, validate, authCtrl.register);
 router.post('/upload-docs', kycUpload, partnerCtrl.uploadSelfKYC);
