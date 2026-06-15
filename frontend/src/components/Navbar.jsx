@@ -24,12 +24,7 @@ const Navbar = () => {
           <span></span>
           <span></span>
         </button>
-        <button
-          onClick={() =>
-            window.location.href =
-              'https://gharkapaisa.in/dashboard'
-          }
-        >
+        <button onClick={() => { navigate('/admin-login'); toggleLink(); }}>
           Admin Login
         </button>
         <button
@@ -55,12 +50,7 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-right">
-          <button
-            onClick={() =>
-              window.location.href =
-                'https://gharkapaisa.in/dashboard'
-            }
-          >
+          <button onClick={() => navigate('/admin-login')}>
             Admin Login
           </button>
           <button

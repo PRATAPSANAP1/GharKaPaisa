@@ -12,6 +12,7 @@ import SuperAdminLayout from '../layouts/SuperAdminLayout';
 import Home from '../components/Home';
 import Contact from '../components/Contact';
 import PartnerLogin from '../components/Partner/PartnerLogin';
+import AdminLogin from '../pages/Admin/AdminLogin';
 
 // Protected Pages (Placeholders for now)
 import PartnerDashboard from '../pages/Partner/PartnerDashboard';
@@ -23,6 +24,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Home />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/login" element={<PartnerLogin />} />
+      <Route path="/admin-login" element={<AdminLogin />} />
 
       {/* Partner Routes */}
       <Route 
