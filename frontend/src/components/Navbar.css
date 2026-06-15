@@ -200,7 +200,7 @@ body.no-scroll {
     display: flex;
   }
 
-  .navbar-right {
+  .navbar-right button {
     display: none;
   }
 }
