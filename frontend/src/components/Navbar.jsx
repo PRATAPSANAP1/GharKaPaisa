@@ -61,7 +61,10 @@ const Navbar = () => {
 
         <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <ThemeToggle />
-          <button onClick={() => navigate('/admin-login')}>
+          <button 
+            onClick={() => navigate('/admin-login')}
+            style={{ color: C.text, '--underline-color': C.teal }}
+          >
             Admin Login
           </button>
           <button
@@ -69,11 +72,17 @@ const Navbar = () => {
               window.location.href =
                 'https://gharkapaisa.in/dashboard'
             }
+            style={{ color: C.text, '--underline-color': C.teal }}
           >
             Employee Login
           </button>
           {!isAuthPage && (
-            <button onClick={() => navigate('/login')}>Partner Login</button>
+            <button 
+              onClick={() => navigate('/login')}
+              style={{ color: C.text, '--underline-color': C.teal }}
+            >
+              Partner Login
+            </button>
           )}
         </div>
 
