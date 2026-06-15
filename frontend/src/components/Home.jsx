@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "./Partner/ThemeContext";
-import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine } from "react-icons/fa";
+import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine, FaFileInvoiceDollar, FaCalculator } from "react-icons/fa";
 import offerBannerImg from "../offerbanner.png";
 import offerBannerImg1 from "../offerbanner1.png";
 import offerBannerImg2 from "../offerbanner2.png";
@@ -109,18 +109,20 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
     { id: "credit-cards", label: "Credit Card", icon: <FaRegCreditCard /> },
     { id: "loans", label: "Loan", icon: <FaMoneyBillWave /> },
     { id: "insurance", label: "Insurance", icon: <FaShieldAlt /> },
-    { id: "investment", label: "Investment", icon: <FaChartLine /> }
+    { id: "investment", label: "Investment", icon: <FaChartLine /> },
+    { id: "tax", label: "GST & Tax", icon: <FaFileInvoiceDollar /> }
   ];
 
   return (
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0,
       background: C.card, borderTop: `1px solid ${C.border}`,
-      display: "flex", justifyContent: "space-around", padding: "10px 0",
+      display: "flex", justifyContent: "flex-start", padding: "10px 16px", gap: "24px",
+      overflowX: "auto", whiteSpace: "nowrap", WebkitOverflowScrolling: "touch",
       zIndex: 100, boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
     }}>
       {navItems.map(item => (
-        <div key={item.id} onClick={() => onNavigate(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: activeTab === item.id ? C.teal : C.textLight, cursor: "pointer" }}>
+        <div key={item.id} onClick={() => onNavigate(item.id)} style={{ flexShrink: 0, minWidth: "50px", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: activeTab === item.id ? C.teal : C.textLight, cursor: "pointer" }}>
           <div style={{ fontSize: "20px" }}>{item.icon}</div>
           <div style={{ fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap" }}>{item.label}</div>
         </div>
@@ -177,9 +179,15 @@ export default function Home({ onNavigate }) {
     { label: "Health", icon: <FaHeartbeat /> },
     { label: "Life", icon: <FaShieldAlt /> },
     { label: "General", icon: <FaUmbrella /> },
+    { label: "LAP", icon: <FaBuilding /> },
   ];
 
   const investment = []; // Placeholder
+
+  const tax = [
+    { label: "GST Filing", icon: <FaFileInvoiceDollar /> },
+    { label: "Income Tax", icon: <FaCalculator /> },
+  ];
 
   useEffect(() => {
     if (isPaused) return;
@@ -216,6 +224,7 @@ export default function Home({ onNavigate }) {
     else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loans });
     else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insurance });
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: investment });
+    else if (id === "tax") setActiveCategory({ id: "tax", title: "GST & Income Tax", items: tax });
   };
 
   const handleItemClick = (item) => {
@@ -317,6 +326,11 @@ export default function Home({ onNavigate }) {
         {/* Insurance */}
         <Section title="Insurance" C={C}>
           <ResponsiveGrid C={C} items={insurance} onSeeMore={() => setActiveCategory({ id: "insurance", title: "Insurance", items: insurance })} />
+        </Section>
+
+        {/* GST & Income Tax */}
+        <Section title="GST & Income Tax" C={C}>
+          <ResponsiveGrid C={C} items={tax} onSeeMore={() => setActiveCategory({ id: "tax", title: "GST & Income Tax", items: tax })} />
         </Section>
 
         {/* Footer */}
