@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import api from "../../api/api";
 import logo from "../../logo.jpeg";
@@ -15,7 +15,9 @@ export default function PartnerLogin() {
   const login = useAuthStore((state) => state.login);
   
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [err, setErr] = useState("");
 
   const handleSubmit = async (e) => {
@@ -56,6 +58,22 @@ export default function PartnerLogin() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!form.email.trim()) {
+      return setErr("Please enter your email address first to reset your password.");
+    }
+    setResetLoading(true);
+    setErr("");
+    try {
+      await sendPasswordResetEmail(auth, form.email.trim());
+      setErr("Password reset email sent! Please check your inbox.");
+    } catch (e) {
+      setErr(e.code ? e.message.replace("Firebase: ", "") : "Failed to send reset email.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const inputStyle = { ...S.input };
 
   return (
@@ -91,18 +109,35 @@ export default function PartnerLogin() {
           </div>
 
           <div style={{ marginBottom: "24px" }}>
-            <label style={S.label}>Password</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={S.label}>Password</label>
+              <button 
+                type="button" 
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
+                style={{ background: "none", border: "none", color: C.teal, fontSize: "12px", cursor: "pointer", padding: 0 }}
+              >
+                {resetLoading ? "Sending..." : "Forgot Password?"}
+              </button>
+            </div>
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
                 <Icons.Lock size={18} />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
-                style={{ ...inputStyle, paddingLeft: "42px" }}
+                style={{ ...inputStyle, paddingLeft: "42px", paddingRight: "42px" }}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
+              </button>
             </div>
           </div>
 
