@@ -6,7 +6,7 @@ const { sendEmail } = require("../services/email.service");
 router.get("/send", async (req, res) => {
   try {
     await sendEmail({
-      to: "YOUR_EMAIL@gmail.com",
+      to: "pratapsanap14@gmail.com",
       subject: "AWS SES Test",
       html: `
         <h1>GharKaPaisa</h1>
