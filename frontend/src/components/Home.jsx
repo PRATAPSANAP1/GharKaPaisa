@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useTheme } from "./Partner/ThemeContext";
-import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt } from "react-icons/fa";
+import { FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaFacebook, FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome, FaChartLine } from "react-icons/fa";
 import offerBannerImg from "../offerbanner.png";
 import offerBannerImg1 from "../offerbanner1.png";
 import offerBannerImg2 from "../offerbanner2.png";
 
 // Responsive grid component
-function ResponsiveGrid({ items, C }) {
-  const [expanded, setExpanded] = useState(false);
+function ResponsiveGrid({ items, C, onSeeMore }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -16,7 +15,7 @@ function ResponsiveGrid({ items, C }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const showSeeMore = isMobile && !expanded && items.length > 4;
+  const showSeeMore = isMobile && items.length > 4;
   const visibleItems = showSeeMore ? items.slice(0, 3) : items;
 
   return (
@@ -37,7 +36,7 @@ function ResponsiveGrid({ items, C }) {
       ))}
       {showSeeMore && (
         <div
-          onClick={() => setExpanded(true)}
+          onClick={onSeeMore}
           style={{
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             background: `${C.teal}10`, padding: isMobile ? "8px 4px" : "12px 8px", borderRadius: isMobile ? "10px" : "14px",
@@ -63,12 +62,126 @@ function Section({ title, C, children }) {
   );
 }
 
+// Full Category Page
+function CategoryPage({ category, onBack, C }) {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "24px", cursor: "pointer" }} onClick={onBack}>
+          <FaArrowLeft style={{ fontSize: "20px", color: C.text }} />
+          <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: C.text }}>{category.title}</h2>
+        </div>
+        
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px" }}>
+          {category.items && category.items.length > 0 ? category.items.map((item, idx) => (
+            <div key={idx} style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+              background: C.bgSecondary, padding: isMobile ? "12px 8px" : "16px 12px", borderRadius: "14px",
+              border: `1px solid ${C.border}`, textAlign: "center", gap: "10px",
+              cursor: "pointer", transition: "all 0.2s"
+            }}>
+              {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "20px" : "24px" }}>{item.icon}</div>}
+              <div style={{ fontSize: isMobile ? "12px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+            </div>
+          )) : (
+            <div style={{ color: C.textLight, gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}>No items available in this category.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mobile Bottom Navigation
+function MobileBottomNav({ C, onNavigate, activeTab }) {
+  const navItems = [
+    { id: "home", label: "Dashboard", icon: <FaHome /> },
+    { id: "credit-cards", label: "Credit Card", icon: <FaRegCreditCard /> },
+    { id: "loans", label: "Loan", icon: <FaMoneyBillWave /> },
+    { id: "insurance", label: "Insurance", icon: <FaShieldAlt /> },
+    { id: "investment", label: "Investment", icon: <FaChartLine /> }
+  ];
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      background: C.card, borderTop: `1px solid ${C.border}`,
+      display: "flex", justifyContent: "space-around", padding: "10px 0",
+      zIndex: 100, boxShadow: "0 -4px 12px rgba(0,0,0,0.05)"
+    }}>
+      {navItems.map(item => (
+        <div key={item.id} onClick={() => onNavigate(item.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", color: activeTab === item.id ? C.teal : C.textLight, cursor: "pointer" }}>
+          <div style={{ fontSize: "20px" }}>{item.icon}</div>
+          <div style={{ fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap" }}>{item.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(null);
+  
   const banners = [offerBannerImg, offerBannerImg1, offerBannerImg2];
+
+  // Define data directly to easily pass it to category pages
+  const moneyTransfer = [
+    { label: "To Mobile", icon: <FaMobileAlt /> },
+    { label: "Recharge", icon: <FaMobileAlt /> },
+    { label: "Electricity", icon: <FaBolt /> },
+    { label: "Loan Repay", icon: <FaMoneyBillWave /> },
+  ];
+
+  const creditCards = [
+    { label: "HDFC Bank", icon: <FaRegCreditCard /> },
+    { label: "SBI Card", icon: <FaRegCreditCard /> },
+    { label: "Axis Bank", icon: <FaRegCreditCard /> },
+    { label: "ICICI Bank", icon: <FaRegCreditCard /> },
+    { label: "Kotak Bank", icon: <FaRegCreditCard /> },
+    { label: "Yes Bank", icon: <FaRegCreditCard /> },
+    { label: "IndusInd", icon: <FaRegCreditCard /> },
+  ];
+
+  const cobrowsingCards = [
+    { label: "Tata Neu HDFC", icon: <FaLaptopHouse /> },
+    { label: "Tata Neu SBI", icon: <FaLaptopHouse /> },
+  ];
+
+  const fdCards = [
+    { label: "HDFC FD", icon: <FaUniversity /> },
+    { label: "IDFC First", icon: <FaUniversity /> },
+    { label: "Tata FD", icon: <FaUniversity /> },
+  ];
+
+  const loans = [
+    { label: "Personal Loan", icon: <FaMoneyBillWave /> },
+    { label: "Instant Loan", icon: <FaMobileAlt /> },
+    { label: "Home Loan", icon: <FaBuilding /> },
+    { label: "Business Loan", icon: <FaBuilding /> },
+    { label: "Used Car Loan", icon: <FaCar /> },
+    { label: "Education Loan", icon: <FaGraduationCap /> },
+    { label: "Card on Loan", icon: <FaRegCreditCard /> },
+  ];
+
+  const insurance = [
+    { label: "Health", icon: <FaHeartbeat /> },
+    { label: "Life", icon: <FaShieldAlt /> },
+    { label: "General", icon: <FaUmbrella /> },
+  ];
+
+  const investment = []; // Placeholder
 
   useEffect(() => {
     if (isPaused) return;
@@ -99,8 +212,27 @@ export default function Home({ onNavigate }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const handleBottomNavClick = (id) => {
+    if (id === "home") setActiveCategory(null);
+    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: creditCards });
+    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loans });
+    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insurance });
+    else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: investment });
+  };
+
+  // If a category page is active, render it
+  if (activeCategory) {
+    return (
+      <>
+        <CategoryPage category={activeCategory} onBack={() => setActiveCategory(null)} C={C} />
+        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
+      </>
+    );
+  }
+
+  // Main Home Page Render
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "40px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "80px" : "40px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Offer Banner */}
@@ -129,12 +261,7 @@ export default function Home({ onNavigate }) {
         {/* Money Transfer */}
         <Section title="Money Transfer & Payments" C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
-            {[
-              { label: "To Mobile", icon: <FaMobileAlt /> },
-              { label: "Recharge", icon: <FaMobileAlt /> },
-              { label: "Electricity", icon: <FaBolt /> },
-              { label: "Loan Repay", icon: <FaMoneyBillWave /> },
-            ].map((item, idx) => (
+            {moneyTransfer.map((item, idx) => (
               <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "6px" : "10px", background: C.bgSecondary, padding: isMobile ? "8px 4px" : "16px 8px", borderRadius: isMobile ? "10px" : "14px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
                 <div style={{ width: isMobile ? "32px" : "44px", height: isMobile ? "32px" : "44px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "16px" : "20px", flexShrink: 0 }}>
                   {item.icon}
@@ -147,54 +274,27 @@ export default function Home({ onNavigate }) {
 
         {/* Credit Cards */}
         <Section title="Credit Cards" C={C}>
-          <ResponsiveGrid C={C} items={[
-            { label: "HDFC Bank", icon: <FaRegCreditCard /> },
-            { label: "SBI Card", icon: <FaRegCreditCard /> },
-            { label: "Axis Bank", icon: <FaRegCreditCard /> },
-            { label: "ICICI Bank", icon: <FaRegCreditCard /> },
-            { label: "Kotak Bank", icon: <FaRegCreditCard /> },
-            { label: "Yes Bank", icon: <FaRegCreditCard /> },
-            { label: "IndusInd", icon: <FaRegCreditCard /> },
-          ]} />
+          <ResponsiveGrid C={C} items={creditCards} onSeeMore={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: creditCards })} />
         </Section>
 
         {/* Co-browsing Cards */}
         <Section title="Co-Browsing Cards" C={C}>
-          <ResponsiveGrid C={C} items={[
-            { label: "Tata Neu HDFC", icon: <FaLaptopHouse /> },
-            { label: "Tata Neu SBI", icon: <FaLaptopHouse /> },
-          ]} />
+          <ResponsiveGrid C={C} items={cobrowsingCards} onSeeMore={() => setActiveCategory({ id: "cobrowsing-cards", title: "Co-Browsing Cards", items: cobrowsingCards })} />
         </Section>
 
         {/* FD Based Cards */}
         <Section title="FD Based Cards" C={C}>
-          <ResponsiveGrid C={C} items={[
-            { label: "HDFC FD", icon: <FaUniversity /> },
-            { label: "IDFC First", icon: <FaUniversity /> },
-            { label: "Tata FD", icon: <FaUniversity /> },
-          ]} />
+          <ResponsiveGrid C={C} items={fdCards} onSeeMore={() => setActiveCategory({ id: "fd-cards", title: "FD Based Cards", items: fdCards })} />
         </Section>
 
         {/* Loans */}
         <Section title="Loans" C={C}>
-          <ResponsiveGrid C={C} items={[
-            { label: "Personal Loan", icon: <FaMoneyBillWave /> },
-            { label: "Instant Loan", icon: <FaMobileAlt /> },
-            { label: "Home Loan", icon: <FaBuilding /> },
-            { label: "Business Loan", icon: <FaBuilding /> },
-            { label: "Used Car Loan", icon: <FaCar /> },
-            { label: "Education Loan", icon: <FaGraduationCap /> },
-            { label: "Card on Loan", icon: <FaRegCreditCard /> },
-          ]} />
+          <ResponsiveGrid C={C} items={loans} onSeeMore={() => setActiveCategory({ id: "loans", title: "Loans", items: loans })} />
         </Section>
 
         {/* Insurance */}
         <Section title="Insurance" C={C}>
-          <ResponsiveGrid C={C} items={[
-            { label: "Health", icon: <FaHeartbeat /> },
-            { label: "Life", icon: <FaShieldAlt /> },
-            { label: "General", icon: <FaUmbrella /> },
-          ]} />
+          <ResponsiveGrid C={C} items={insurance} onSeeMore={() => setActiveCategory({ id: "insurance", title: "Insurance", items: insurance })} />
         </Section>
 
         {/* Footer */}
@@ -226,6 +326,9 @@ export default function Home({ onNavigate }) {
         </div>
 
       </div>
+      
+      {/* Show Bottom Nav only on Mobile */}
+      {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
     </div>
   );
 }
