@@ -6,7 +6,7 @@ import offerBannerImg1 from "../offerbanner1.png";
 import offerBannerImg2 from "../offerbanner2.png";
 
 // Responsive grid component
-function ResponsiveGrid({ items, C, onSeeMore }) {
+function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -27,6 +27,7 @@ function ResponsiveGrid({ items, C, onSeeMore }) {
           border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "6px" : "10px",
           cursor: "pointer", transition: "all 0.2s"
         }}
+          onClick={() => onItemClick && onItemClick(item)}
           onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
           onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
         >
@@ -63,7 +64,7 @@ function Section({ title, C, children }) {
 }
 
 // Full Category Page
-function CategoryPage({ category, onBack, C }) {
+function CategoryPage({ category, onBack, C, onItemClick }) {
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
   
   useEffect(() => {
@@ -87,7 +88,8 @@ function CategoryPage({ category, onBack, C }) {
               background: C.bgSecondary, padding: isMobile ? "12px 8px" : "16px 12px", borderRadius: "14px",
               border: `1px solid ${C.border}`, textAlign: "center", gap: "10px",
               cursor: "pointer", transition: "all 0.2s"
-            }}>
+            }}
+            onClick={() => onItemClick && onItemClick(item)}>
               {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "20px" : "24px" }}>{item.icon}</div>}
               <div style={{ fontSize: isMobile ? "12px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
             </div>
@@ -144,25 +146,21 @@ export default function Home({ onNavigate }) {
     { label: "Loan Repay", icon: <FaMoneyBillWave /> },
   ];
 
-  const creditCards = [
-    { label: "HDFC Bank", icon: <FaRegCreditCard /> },
-    { label: "SBI Card", icon: <FaRegCreditCard /> },
-    { label: "Axis Bank", icon: <FaRegCreditCard /> },
-    { label: "ICICI Bank", icon: <FaRegCreditCard /> },
-    { label: "Kotak Bank", icon: <FaRegCreditCard /> },
-    { label: "Yes Bank", icon: <FaRegCreditCard /> },
-    { label: "IndusInd", icon: <FaRegCreditCard /> },
-  ];
-
-  const cobrowsingCards = [
-    { label: "Tata Neu HDFC", icon: <FaLaptopHouse /> },
-    { label: "Tata Neu SBI", icon: <FaLaptopHouse /> },
-  ];
-
-  const fdCards = [
-    { label: "HDFC FD", icon: <FaUniversity /> },
-    { label: "IDFC First", icon: <FaUniversity /> },
-    { label: "Tata FD", icon: <FaUniversity /> },
+  const banksList = [
+    { id: "hdfc", label: "HDFC Bank", icon: <FaUniversity /> },
+    { id: "sbi", label: "SBI Card", icon: <FaUniversity /> },
+    { id: "axis", label: "Axis Bank", icon: <FaUniversity /> },
+    { id: "icici", label: "ICICI Bank", icon: <FaUniversity /> },
+    { id: "kotak", label: "Kotak Bank", icon: <FaUniversity /> },
+    { id: "yes", label: "Yes Bank", icon: <FaUniversity /> },
+    { id: "indusind", label: "IndusInd", icon: <FaUniversity /> },
+    { id: "bob", label: "BOB", icon: <FaUniversity /> },
+    { id: "dcb", label: "DCB", icon: <FaUniversity /> },
+    { id: "federal", label: "FEDERAL", icon: <FaUniversity /> },
+    { id: "sbm", label: "SBM", icon: <FaUniversity /> },
+    { id: "idfc", label: "IDFC", icon: <FaUniversity /> },
+    { id: "rbl", label: "RBL", icon: <FaUniversity /> },
+    { id: "equitas", label: "Equitas", icon: <FaUniversity /> },
   ];
 
   const loans = [
@@ -214,17 +212,41 @@ export default function Home({ onNavigate }) {
 
   const handleBottomNavClick = (id) => {
     if (id === "home") setActiveCategory(null);
-    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: creditCards });
+    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
     else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loans });
     else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insurance });
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: investment });
+  };
+
+  const handleItemClick = (item) => {
+    // If it's a bank, show its specific card categories
+    if (activeCategory?.id === "credit-cards" || banksList.find(b => b.id === item.id)) {
+      setActiveCategory({
+        id: `bank-${item.id}`,
+        title: item.label,
+        parentId: "credit-cards",
+        items: [
+          { id: `cc-${item.id}`, label: "Credit Card", icon: <FaRegCreditCard /> },
+          { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
+          { id: `fd-${item.id}`, label: "FD Based Cards", icon: <FaUniversity /> }
+        ]
+      });
+    }
+  };
+
+  const handleBack = () => {
+    if (activeCategory?.parentId === "credit-cards") {
+      setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
+    } else {
+      setActiveCategory(null);
+    }
   };
 
   // If a category page is active, render it
   if (activeCategory) {
     return (
       <>
-        <CategoryPage category={activeCategory} onBack={() => setActiveCategory(null)} C={C} />
+        <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} />
         {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
       </>
     );
@@ -282,19 +304,9 @@ export default function Home({ onNavigate }) {
           </div>
         </Section>
 
-        {/* Credit Cards */}
+        {/* Credit Cards / Banks */}
         <Section title="Credit Cards" C={C}>
-          <ResponsiveGrid C={C} items={creditCards} onSeeMore={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: creditCards })} />
-        </Section>
-
-        {/* Co-browsing Cards */}
-        <Section title="Co-Browsing Cards" C={C}>
-          <ResponsiveGrid C={C} items={cobrowsingCards} onSeeMore={() => setActiveCategory({ id: "cobrowsing-cards", title: "Co-Browsing Cards", items: cobrowsingCards })} />
-        </Section>
-
-        {/* FD Based Cards */}
-        <Section title="FD Based Cards" C={C}>
-          <ResponsiveGrid C={C} items={fdCards} onSeeMore={() => setActiveCategory({ id: "fd-cards", title: "FD Based Cards", items: fdCards })} />
+          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })} onItemClick={handleItemClick} />
         </Section>
 
         {/* Loans */}
