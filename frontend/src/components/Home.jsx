@@ -719,7 +719,6 @@ export default function Home({ onNavigate }) {
                   <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
                   <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
                 </div>
-                <p style={{ margin: 0, fontSize: isMobile ? "10px" : "12px", color: C.textLight, lineHeight: 1.4 }}>{cat.description}</p>
                 <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
                   Explore <FaChevronRight size={isMobile ? 8 : 10} />
                 </div>
