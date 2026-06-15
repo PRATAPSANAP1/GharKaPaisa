@@ -77,6 +77,12 @@ const migrate = async () => {
       mobile        VARCHAR(15)  UNIQUE,
       role          user_role NOT NULL DEFAULT 'Partner',
       status        user_status NOT NULL DEFAULT 'pending',
+      password_hash VARCHAR(255),
+      full_name     VARCHAR(255),
+      employee_id   VARCHAR(50) UNIQUE,
+      department    VARCHAR(100),
+      designation   VARCHAR(100),
+      is_active     BOOLEAN DEFAULT TRUE,
       created_by    UUID REFERENCES users(id),
       created_at    TIMESTAMPTZ DEFAULT NOW(),
       updated_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -92,8 +98,16 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(255) UNIQUE`);
   await query(`CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid) WHERE firebase_uid IS NOT NULL`);
 
+  // Add new schema columns dynamically if table exists (idempotent)
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50) UNIQUE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100)`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+
   // Drop password_hash — Firebase handles all credentials (idempotent)
-  await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
+  // await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
 
   // ── Partner Profiles ────────────────────────────────────────────
   await query(`
@@ -550,6 +564,26 @@ const migrate = async () => {
       CREATE TRIGGER set_updated_at BEFORE UPDATE ON ${t}
       FOR EACH ROW EXECUTE FUNCTION update_updated_at()
     `);
+  }
+
+  // Seed Super Admin Pratap Sanap if not exists
+  const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['admin@gharkapaisa.in']);
+  if (!existingSuper) {
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash('Admin@123', 10);
+    await query(`
+      INSERT INTO users (email, role, status, full_name, password_hash, is_active)
+      VALUES ($1, $2, 'active', $3, $4, true)
+    `, ['admin@gharkapaisa.in', 'super_admin', 'Pratap Sanap', hashedPassword]);
+    logger.info('Super admin Pratap Sanap seeded successfully');
+  } else {
+    // Make sure role and status are set correctly
+    await query(`
+      UPDATE users 
+      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Pratap Sanap'
+      WHERE email = 'admin@gharkapaisa.in'
+    `);
+    logger.info('Super admin Pratap Sanap configuration verified');
   }
 
   logger.info('✅ All migrations completed successfully');

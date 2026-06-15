@@ -1,4 +1,4 @@
-
+const bcrypt = require('bcrypt');
 const { query } = require('../config/db');
 const { logAction } = require('../services/audit.service');
 const { getPaginationParams, sanitizeMobile } = require('../utils/helpers');
@@ -11,58 +11,95 @@ const logger = require('../utils/logger');
  */
 const createAdmin = async (req, res, next) => {
   try {
-    const { email, mobile, role, name } = req.body;
+    const { 
+      fullName, email, mobile, employeeId, 
+      password, confirmPassword, department, designation 
+    } = req.body;
 
-    if (!email || !role) {
-      return error(res, 'Email and role are required', 400);
+    if (!fullName || !email || !mobile || !employeeId || !password || !confirmPassword || !department || !designation) {
+      return error(res, 'All required fields must be provided', 400);
     }
 
-    const validRoles = ['admin', 'employee'];
-    if (!validRoles.includes(role)) {
-      return error(res, 'Invalid role. Must be either admin or employee', 400);
+    if (password !== confirmPassword) {
+      return error(res, 'Passwords do not match', 400);
     }
 
-    const formattedMobile = mobile ? sanitizeMobile(mobile) : null;
+    const validDepartments = ['Operations', 'Sales', 'Credit', 'Collection', 'Support', 'Accounts', 'Marketing'];
+    if (!validDepartments.includes(department)) {
+      return error(res, `Invalid department. Must be one of: ${validDepartments.join(', ')}`, 400);
+    }
 
+    const formattedMobile = sanitizeMobile(mobile);
 
-    // 3. Insert or update user in PostgreSQL
-    let { rows: [dbUser] } = await query(
-      `SELECT * FROM users WHERE email = $1`,
-      [email]
+    // Check if email already exists
+    const { rows: [existingEmail] } = await query(`SELECT id FROM users WHERE email = $1`, [email]);
+    if (existingEmail) {
+      return error(res, 'A user with this email address already exists', 400);
+    }
+
+    // Check if mobile already exists
+    const { rows: [existingMobile] } = await query(`SELECT id FROM users WHERE mobile = $1`, [formattedMobile]);
+    if (existingMobile) {
+      return error(res, 'A user with this mobile number already exists', 400);
+    }
+
+    // Check if employeeId already exists
+    const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [employeeId]);
+    if (existingEmployee) {
+      return error(res, 'An administrative user with this Employee ID already exists', 400);
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new Administrative User (ADMIN role)
+    const { rows: [dbUser] } = await query(
+      `INSERT INTO users (
+        email, mobile, password_hash, role, status, 
+        full_name, employee_id, department, designation, created_by, is_active
+      )
+      VALUES ($1, $2, $3, 'admin', 'active', $4, $5, $6, $7, $8, true)
+      RETURNING id, email, role, status`,
+      [email, formattedMobile, hashedPassword, fullName, employeeId, department, designation, req.user.id]
     );
 
-    if (dbUser) {
-      // Update role and status to active
-      const result = await query(
-        `UPDATE users 
-         SET role = $1, status = 'active', updated_at = NOW() 
-         WHERE id = $2 
-         RETURNING *`,
-        [role, dbUser.id]
-      );
-      dbUser = result.rows[0];
-      logger.info(`Updated existing PostgreSQL user role to ${role}: ${email}`);
-    } else {
-      // Insert new administrative user
-      const result = await query(
-        `INSERT INTO users (email, mobile, role, status)
-         VALUES ($1, $2, $3, 'active')
-         RETURNING *`,
-        [email, formattedMobile, role]
-      );
-      dbUser = result.rows[0];
-      logger.info(`Created new PostgreSQL user with role ${role}: ${email}`);
-    }
+    logger.info(`Super admin ${req.user.email} created new Admin user: ${email}`);
 
-    // 4. Record the action in audit logs
-    await logAction(req.user.id, 'CREATE_ADMIN', dbUser.id, { email, role });
+    // Record the action in audit logs
+    await logAction(req.user.id, 'CREATE_ADMIN', dbUser.id, { email, role: 'admin' });
 
     return created(res, {
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role,
       status: dbUser.status
-    }, `Administrative user (${role}) provisioned successfully.`);
+    }, `Administrative user provisioned successfully.`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const listAdmins = async (req, res, next) => {
+  try {
+    const { rows: admins } = await query(`
+      SELECT 
+        id as _id, 
+        email, 
+        mobile, 
+        role, 
+        status, 
+        full_name as "fullName", 
+        employee_id as "employeeId", 
+        department, 
+        designation, 
+        is_active as "isActive", 
+        created_by as "createdBy", 
+        created_at as "createdAt"
+      FROM users 
+      WHERE role = 'admin'
+      ORDER BY created_at DESC
+    `);
+    return success(res, admins);
   } catch (err) {
     next(err);
   }
@@ -180,6 +217,7 @@ const getAuditLogs = async (req, res, next) => {
 
 module.exports = {
   createAdmin,
+  listAdmins,
   blockUser,
   getAuditLogs,
 };

@@ -9,6 +9,7 @@ router.use(jwtAuth);
 router.use(roleCheck('super_admin'));
 
 router.post('/create-admin', ctrl.createAdmin);
+router.get('/admins', ctrl.listAdmins);
 router.post('/block-user', ctrl.blockUser);
 router.get('/audit-logs', ctrl.getAuditLogs);
 

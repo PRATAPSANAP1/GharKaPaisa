@@ -122,7 +122,7 @@ export default function AdminLogin() {
       
       const role = profile.role.toLowerCase();
       if (role === 'admin') navigate('/admin/dashboard');
-      else if (role === 'superadmin') navigate('/superadmin/dashboard');
+      else if (role === 'superadmin' || role === 'super_admin') navigate('/superadmin/dashboard');
       else navigate('/partner/dashboard');
       
     } catch (e) {
@@ -328,15 +328,7 @@ export default function AdminLogin() {
             </button>
           </form>
 
-          <div style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.textLight }}>
-            New Admin?{" "}
-            <span
-              onClick={() => navigate('/admin-register')}
-              style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}
-            >
-              Register
-            </span>
-          </div>
+
 
         </div>
       </div>
