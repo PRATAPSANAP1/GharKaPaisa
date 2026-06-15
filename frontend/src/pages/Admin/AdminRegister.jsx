@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Icons } from "./PartnerIcons";
-import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
+import { Icons } from "../../components/Partner/PartnerIcons";
+import { useTheme, makeS, ThemeToggle } from "../../components/Partner/ThemeContext";
 import { sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
 import { auth } from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
@@ -16,9 +16,9 @@ const COMPANY_TYPES = [
   { label: "Other", value: "other" },
 ];
 
-export default function PartnerRegister() {
+export default function AdminRegister() {
   const navigate = useNavigate();
-  const onBack = () => navigate('/login');
+  const onBack = () => navigate('/admin-login');
   
   const { C } = useTheme();
   const S = makeS(C);
@@ -250,11 +250,11 @@ export default function PartnerRegister() {
               Registration Successful!
             </div>
             <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "16px", lineHeight: 1.6 }}>
-              Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
+              Your admin application has been submitted. Our team will review your details and activate your account within 24-48 hours.
             </div>
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
-              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
+              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Admin Code</div>
               <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code || success.partner_code}</div>
             </div>
             <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
@@ -280,7 +280,7 @@ export default function PartnerRegister() {
           <button onClick={onBack} style={{ ...S.btn("ghost"), padding: "6px 8px" }}>
             <Icons.arrowLeft size={18} />
           </button>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Partner Request</div>
+          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Admin Registration</div>
         </div>
 
         {/* Step Progress Bar */}
@@ -545,7 +545,7 @@ export default function PartnerRegister() {
                 <span style={{ fontSize: '18px', lineHeight: 1 }}>ℹ️</span>
                 <div style={{ fontSize: '13px', color: C.gold, lineHeight: 1.6 }}>
                   <strong>Document uploads are available after activation.</strong><br />
-                  You can submit them from your <strong>Partner Profile dashboard</strong> once our team reviews your application (24–48 hours).
+                  You can submit them from your <strong>Admin Profile dashboard</strong> once our team reviews your application (24–48 hours).
                 </div>
               </div>
             </div>

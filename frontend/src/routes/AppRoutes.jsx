@@ -15,6 +15,7 @@ import Contact from '../components/Contact';
 import PartnerLogin from '../components/Partner/PartnerLogin';
 import PartnerRegister from '../components/Partner/PartnerRegister';
 import AdminLogin from '../pages/Admin/AdminLogin';
+import AdminRegister from '../pages/Admin/AdminRegister';
 
 // Protected Pages (Placeholders for now)
 import PartnerDashboard from '../pages/Partner/PartnerDashboard';
@@ -30,6 +31,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<PartnerLogin />} />
       <Route path="/register" element={<PartnerRegister />} />
       <Route path="/admin-login" element={<AdminLogin />} />
+      <Route path="/admin-register" element={<AdminRegister />} />
 
       {/* Partner Routes */}
       <Route 
