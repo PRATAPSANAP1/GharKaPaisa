@@ -165,6 +165,7 @@ export function ThemeToggle({ style = {} }) {
   const { isDark, toggle, C } = useTheme();
   return (
     <button
+      className="theme-toggle-btn"
       onClick={toggle}
       title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
       style={{

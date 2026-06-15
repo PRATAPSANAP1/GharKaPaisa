@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../logo.jpeg';
 import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { C } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const path = location.pathname.toLowerCase().replace(/\/$/, '');
+  const isAuthPage = path === '/login' || path === '/register';
 
   const toggleLink = () => {
     const next = !menuOpen;
@@ -37,7 +41,9 @@ const Navbar = () => {
         >
           Employee Login
         </button>
-        <button onClick={() => { navigate('/login'); toggleLink(); }}>Partner Login</button>
+        {!isAuthPage && (
+          <button onClick={() => { navigate('/login'); toggleLink(); }}>Partner Login</button>
+        )}
       </div>
 
       <nav className="navbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}` }}>
@@ -47,8 +53,10 @@ const Navbar = () => {
             <span></span>
             <span></span>
           </button>
-          <img src={logo} alt="logo" className="logo" />
-          <h1 style={{ color: C.text, margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
+          <div onClick={() => navigate('/')} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
+            <img src={logo} alt="logo" className="logo" />
+            <h1 style={{ color: C.text, margin: 0, fontSize: "22px", fontWeight: "bold" }}>GharKaPaisa</h1>
+          </div>
         </div>
 
         <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -64,7 +72,9 @@ const Navbar = () => {
           >
             Employee Login
           </button>
-          <button onClick={() => navigate('/login')}>Partner Login</button>
+          {!isAuthPage && (
+            <button onClick={() => navigate('/login')}>Partner Login</button>
+          )}
         </div>
 
 

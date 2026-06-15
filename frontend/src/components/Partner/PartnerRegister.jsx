@@ -246,13 +246,8 @@ export default function PartnerRegister() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
+    <div style={{ minHeight: "calc(100vh - 110px)", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
       <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
-
-        {/* Theme toggle */}
-        <div style={{ position: "fixed", top: "16px", right: "16px", zIndex: 99 }}>
-          <ThemeToggle />
-        </div>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
