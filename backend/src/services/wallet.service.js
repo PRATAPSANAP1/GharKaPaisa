@@ -42,13 +42,14 @@ const creditHold = async (partnerId, amount, meta = {}) => {
     const holdHours = parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48);
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_transactions (
-        wallet_id, partner_id, application_id, txn_type, amount, status, description, 
+        wallet_id, partner_id, application_id, type, amount, balance_before, balance_after, status, description, 
         reference_type, reference_id, bank_name, product_type, processed_by, release_at
       )
-      VALUES ($1, $2, $3, 'credit', $4, 'pending', $5, $6, $7, $8, $9, $10, NOW() + INTERVAL '${holdHours} hours')
+      VALUES ($1, $2, $3, 'credit', $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, NOW() + INTERVAL '${holdHours} hours')
       RETURNING id
     `, [
-      wallet.id, partnerId, meta.application_id || null, amount, meta.description || 'Commission credit on hold',
+      wallet.id, partnerId, meta.application_id || null, amount, wallet.hold_balance, parseFloat(wallet.hold_balance) + parseFloat(amount),
+      meta.description || 'Commission credit on hold',
       meta.reference_type || 'commission', meta.reference_id || meta.application_id || null,
       meta.bank_name || null, meta.product_type || null, meta.processed_by || null
     ]);
@@ -100,12 +101,13 @@ const releaseHold = async (partnerId, amount, meta = {}) => {
     } else {
       await client.query(`
         INSERT INTO wallet_transactions (
-          wallet_id, partner_id, txn_type, amount, status, description, 
+          wallet_id, partner_id, type, amount, balance_before, balance_after, status, description, 
           reference_type, reference_id, processed_by, processed_at
         )
-        VALUES ($1, $2, 'credit', $3, 'approved', $4, $5, $6, $7, NOW())
+        VALUES ($1, $2, 'credit', $3, $4, $5, 'approved', $6, $7, $8, $9, NOW())
       `, [
-        wallet.id, partnerId, amount, meta.description || 'Hold released',
+        wallet.id, partnerId, amount, wallet.available_balance, parseFloat(wallet.available_balance) + parseFloat(amount),
+        meta.description || 'Hold released',
         meta.reference_type || 'hold_release', meta.reference_id || null, meta.processed_by || null
       ]);
     }
@@ -160,13 +162,14 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
     const status = meta.status || 'pending';
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_transactions (
-        wallet_id, partner_id, txn_type, amount, status, description, 
+        wallet_id, partner_id, type, amount, balance_before, balance_after, status, description, 
         reference_type, reference_id, bank_name, processed_by, processed_at, created_at
       )
-      VALUES ($1, $2, 'debit', $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      VALUES ($1, $2, 'debit', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
       RETURNING id
     `, [
-      wallet.id, partnerId, amount, status, meta.description || 'Withdrawal request debit',
+      wallet.id, partnerId, amount, wallet.available_balance, parseFloat(wallet.available_balance) - parseFloat(amount),
+      status, meta.description || 'Withdrawal request debit',
       meta.reference_type || 'withdrawal', meta.reference_id || null, meta.bank_name || null,
       meta.processed_by || null, status === 'processed' ? new Date() : null
     ]);

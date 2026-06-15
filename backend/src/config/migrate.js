@@ -373,6 +373,8 @@ const migrate = async () => {
       application_id UUID REFERENCES applications(id),
       type           VARCHAR(20) NOT NULL,
       amount         DECIMAL(12,2) NOT NULL,
+      balance_before DECIMAL(15,2),
+      balance_after  DECIMAL(15,2),
       status         VARCHAR(20) DEFAULT 'pending',
       description    VARCHAR(500),
       reference_type VARCHAR(100),
@@ -402,6 +404,8 @@ const migrate = async () => {
   await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`);
   await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS product_type VARCHAR(100)`);
   await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS release_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS balance_before DECIMAL(15,2)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS balance_after DECIMAL(15,2)`);
 
   // ── Withdrawal Requests ───────────────────────────────────────
   await query(`

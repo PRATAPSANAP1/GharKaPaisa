@@ -143,6 +143,7 @@ app.use(`${API}/wallet`, routes.walletRouter);
 app.use(`${API}/products`, routes.productRouter);
 app.use(`${API}/notifications`, routes.notifRouter);
 app.use(`${API}/reports`, routes.reportRouter);
+app.use(`${API}/kyc`, require('./routes/kyc.routes'));
 
 // ── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);
