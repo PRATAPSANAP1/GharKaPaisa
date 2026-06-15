@@ -31,6 +31,18 @@ const logger = winston.createLogger({
       maxsize: 10 * 1024 * 1024,
       maxFiles: 10,
     }),
+    new winston.transports.File({
+      filename: path.join(__dirname, '../../logs/audit.log'),
+      level: 'info',
+      maxsize: 5 * 1024 * 1024,
+      maxFiles: 5,
+    }),
+    new winston.transports.File({
+      filename: path.join(__dirname, '../../logs/payment.log'),
+      level: 'info',
+      maxsize: 5 * 1024 * 1024,
+      maxFiles: 5,
+    }),
   ],
 });
 

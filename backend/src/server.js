@@ -6,6 +6,8 @@ const morgan = require('morgan');
 const { globalLimiter } = require('./middleware/rateLimit.middleware');
 const path = require('path');
 const fs = require('fs');
+const xss = require('xss-clean');
+const mongoSanitize = require('express-mongo-sanitize');
 
 const logger = require('./utils/logger');
 
@@ -73,6 +75,12 @@ app.use(globalLimiter);
 // ── Body Parsing ───────────────────────────────────────────────
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
+
+// ── Data Sanitization ──────────────────────────────────────────
+// Data sanitization against NoSQL query injection (included as per request)
+app.use(mongoSanitize());
+// Data sanitization against XSS
+app.use(xss());
 
 // ── Logging ────────────────────────────────────────────────────
 app.use(morgan('combined', {

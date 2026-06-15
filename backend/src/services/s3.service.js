@@ -32,6 +32,13 @@ const MIME_MAP = {
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const FORBIDDEN_EXTS = ['.exe', '.bat', '.js', '.zip', '.rar', '.sh'];
+
+  if (FORBIDDEN_EXTS.includes(ext)) {
+    return cb(new Error('Forbidden file type detected'), false);
+  }
+
   if (ALLOWED_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
