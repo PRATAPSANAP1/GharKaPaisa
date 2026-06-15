@@ -1,32 +1,15 @@
-import { useState } from 'react';
-import './App.css';
-import Navbar from './components/Navbar';
-import PartnerPanel from './components/PartnerPanel';
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from './routes/AppRoutes';
 import { ThemeProvider } from './components/Partner/ThemeContext';
-
-import Home from './components/Home';
-import Contact from './components/Contact';
+import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home');
-
   return (
     <ThemeProvider>
-      <div className="App">
-        {currentPage === 'partner' ? (
-          <PartnerPanel onBackToMain={() => setCurrentPage('home')} />
-        ) : currentPage === 'contact' ? (
-          <>
-            <Navbar onPartnerLoginClick={() => setCurrentPage('partner')} onNavigate={setCurrentPage} />
-            <Contact onNavigate={setCurrentPage} />
-          </>
-        ) : (
-          <>
-            <Navbar onPartnerLoginClick={() => setCurrentPage('partner')} onNavigate={setCurrentPage} />
-            <Home onNavigate={setCurrentPage} />
-          </>
-        )}
-      </div>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </ThemeProvider>
   );
 }

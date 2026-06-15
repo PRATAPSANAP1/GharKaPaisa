@@ -166,6 +166,12 @@ const startServer = async () => {
       releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
     }, 15 * 60 * 1000);
 
+    // Initialize scheduled CRON jobs
+    const { initCommissionJobs } = require('./jobs/commission.job');
+    const { initReportJobs } = require('./jobs/report.job');
+    initCommissionJobs();
+    initReportJobs();
+
     server = app.listen(PORT, () => {
       logger.info(`
       ╔════════════════════════════════════════╗

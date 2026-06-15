@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "./Partner/ThemeContext";
 import { FaArrowLeft, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaPaperPlane, FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 
-export default function Contact({ onNavigate }) {
+export default function Contact() {
+  const navigate = useNavigate();
   const { C } = useTheme();
 
   const handleFormSubmit = (e) => {
@@ -17,7 +19,7 @@ export default function Contact({ onNavigate }) {
         {/* Back Button & Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "40px" }}>
           <button 
-            onClick={() => onNavigate('home')}
+            onClick={() => navigate('/')}
             style={{ 
               background: C.card, border: `1px solid ${C.border}`, borderRadius: "50%", 
               width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center",

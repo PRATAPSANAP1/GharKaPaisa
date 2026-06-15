@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../logo.jpeg';
 
-const Navbar = ({ onPartnerLoginClick }) => {
+const Navbar = () => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleLink = () => {
@@ -38,7 +40,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
         >
           Employee Login
         </button>
-        <button onClick={() => { onPartnerLoginClick(); toggleLink(); }}>Partner Login</button>
+        <button onClick={() => { navigate('/login'); toggleLink(); }}>Partner Login</button>
       </div>
 
       <nav className="navbar">
@@ -69,7 +71,7 @@ const Navbar = ({ onPartnerLoginClick }) => {
           >
             Employee Login
           </button>
-          <button onClick={onPartnerLoginClick}>Partner Login</button>
+          <button onClick={() => navigate('/login')}>Partner Login</button>
         </div>
 
 
