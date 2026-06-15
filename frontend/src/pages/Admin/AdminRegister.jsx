@@ -255,12 +255,28 @@ export default function AdminRegister() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
+    <div style={{ minHeight: "calc(100vh - 110px)", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
       <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
 
-        {/* Theme toggle */}
-        <div style={{ position: "fixed", top: "16px", right: "16px", zIndex: 99 }}>
-          <ThemeToggle />
+        {/* Back to Home */}
+        <div style={{ marginBottom: "16px", textAlign: "left" }}>
+          <button 
+            onClick={() => navigate('/')}
+            style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: "6px", 
+              background: "none", 
+              border: "none", 
+              color: C.teal, 
+              cursor: "pointer", 
+              fontSize: "14px", 
+              fontWeight: 600,
+              padding: 0
+            }}
+          >
+            <Icons.arrowLeft size={14} /> Back to Home
+          </button>
         </div>
 
         {/* Header */}

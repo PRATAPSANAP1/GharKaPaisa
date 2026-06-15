@@ -137,8 +137,7 @@ export default function AdminLogin() {
 
   return (
     <div style={{
-      height: "100vh",
-      overflow: "hidden",
+      minHeight: "calc(100vh - 110px)",
       background: C.bg,
       display: "flex",
       alignItems: "center",
@@ -147,34 +146,30 @@ export default function AdminLogin() {
       boxSizing: "border-box",
       transition: "background 0.3s",
     }}>
-      <button 
-        onClick={() => navigate('/')}
-        style={{ position: "fixed", top: "16px", left: "16px", zIndex: 99, display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", color: C.text, cursor: "pointer", fontSize: "14px", fontWeight: 600 }}
-      >
-        <Icons.arrowLeft size={16} /> Home
-      </button>
-
-      {/* Theme Toggle — top right */}
-      <div style={{ position: "fixed", top: "16px", right: "16px", zIndex: 99 }}>
-        <ThemeToggle />
-      </div>
-
       <div style={{ width: "100%", maxWidth: "400px" }}>
+        {/* Back to Home */}
+        <div style={{ marginBottom: "16px", textAlign: "left" }}>
+          <button 
+            onClick={() => navigate('/')}
+            style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: "6px", 
+              background: "none", 
+              border: "none", 
+              color: C.teal, 
+              cursor: "pointer", 
+              fontSize: "14px", 
+              fontWeight: 600,
+              padding: 0
+            }}
+          >
+            <Icons.arrowLeft size={14} /> Back to Home
+          </button>
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <img
-            src={logo}
-            alt="GharKaPaisa Logo"
-            style={{
-              width: "100%",
-              maxWidth: "100px",
-              height: "auto",
-              borderRadius: "10px",
-              objectFit: "contain",
-              marginBottom: "14px",
-              boxShadow: "0 4px 12px rgba(10,17,40,0.12)"
-            }}
-          />
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Admin Login</div>
         </div>
 

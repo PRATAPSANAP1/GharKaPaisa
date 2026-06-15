@@ -147,6 +147,27 @@ export default function PartnerLogin() {
       transition: "background 0.3s",
     }}>
       <div style={{ width: "100%", maxWidth: "400px" }}>
+        {/* Back to Home */}
+        <div style={{ marginBottom: "16px", textAlign: "left" }}>
+          <button 
+            onClick={() => navigate('/')}
+            style={{ 
+              display: "inline-flex", 
+              alignItems: "center", 
+              gap: "6px", 
+              background: "none", 
+              border: "none", 
+              color: C.teal, 
+              cursor: "pointer", 
+              fontSize: "14px", 
+              fontWeight: 600,
+              padding: 0
+            }}
+          >
+            <Icons.arrowLeft size={14} /> Back to Home
+          </button>
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Partner Login</div>
