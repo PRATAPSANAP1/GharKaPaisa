@@ -78,15 +78,33 @@ export default function PartnerLogin() {
 
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <button 
+        onClick={() => navigate('/')}
+        style={{ position: "fixed", top: "16px", left: "16px", zIndex: 99, display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", color: C.text, cursor: "pointer", fontSize: "14px", fontWeight: 600 }}
+      >
+        <Icons.arrowLeft size={16} /> Home
+      </button>
+
       <div style={{ position: "fixed", top: "16px", right: "16px", zIndex: 99 }}>
         <ThemeToggle />
       </div>
 
-      <div style={{ width: "100%", maxWidth: "400px" }}>
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <img src={logo} alt="Logo" style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.teal}`, marginBottom: "16px" }} />
-          <h2 style={{ fontSize: "28px", fontWeight: 800, color: C.text, margin: 0 }}>Welcome Back</h2>
-          <p style={{ color: C.textSecondary, marginTop: "8px" }}>Sign in to your Partner portal</p>
+      <div style={{ width: "100%", maxWidth: "400px", marginTop: "40px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
+          <img
+            src={logo}
+            alt="GharKaPaisa Logo"
+            style={{
+              width: "100%",
+              maxWidth: "100px",
+              height: "auto",
+              borderRadius: "10px",
+              objectFit: "contain",
+              marginBottom: "14px",
+              boxShadow: "0 4px 12px rgba(10,17,40,0.12)"
+            }}
+          />
+          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Partner Login</div>
         </div>
 
         <form onSubmit={handleSubmit} style={S.card}>
@@ -144,6 +162,17 @@ export default function PartnerLogin() {
           <button type="submit" disabled={loading} style={{ ...S.buttonPrimary, opacity: loading ? 0.7 : 1 }}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
+          
+          <div style={{ textAlign: "center", marginTop: "20px", fontSize: "14px", color: C.textSecondary }}>
+            Don't have an account?{" "}
+            <button 
+              type="button" 
+              onClick={() => navigate('/register')} 
+              style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer", padding: 0 }}
+            >
+              Sign Up
+            </button>
+          </div>
         </form>
       </div>
     </div>
