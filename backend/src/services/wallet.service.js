@@ -132,10 +132,11 @@ const releaseHold = async (partnerId, amount, meta = {}) => {
 };
 
 // Deduct money from Available Balance (e.g. withdrawal request)
-const debitAvailable = async (partnerId, amount, meta = {}) => {
-  const client = await getClient();
+const debitAvailable = async (partnerId, amount, meta = {}, existingClient = null) => {
+  const client = existingClient || await getClient();
+  const isInternalTxn = !existingClient;
   try {
-    await client.query('BEGIN');
+    if (isInternalTxn) await client.query('BEGIN');
 
     // Get wallet
     const { rows: [wallet] } = await client.query(
@@ -170,15 +171,15 @@ const debitAvailable = async (partnerId, amount, meta = {}) => {
       meta.processed_by || null, status === 'processed' ? new Date() : null
     ]);
 
-    await client.query('COMMIT');
+    if (isInternalTxn) await client.query('COMMIT');
     logger.info(`debitAvailable: Debited ₹${amount} from partner ${partnerId}, status: ${status}`);
     return txn;
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (isInternalTxn) await client.query('ROLLBACK');
     logger.error('debitAvailable failed', err.message);
     throw err;
   } finally {
-    client.release();
+    if (isInternalTxn) client.release();
   }
 };
 

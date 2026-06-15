@@ -121,16 +121,17 @@ const requestWithdrawal = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id
     `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
 
-    await client.query('COMMIT');
-    client.release();
-
     // Deduct available balance and record pending debit transaction using debitAvailable service
+    // PASS THE CLIENT explicitly so it runs in the same transaction
     await debitAvailable(PartnerId, parsedAmount, {
       reference_type: 'withdrawal',
       reference_id: wr.id,
       bank_name: bank?.bank_name,
       description: `Withdrawal request for ₹${parsedAmount}`
-    });
+    }, client);
+
+    await client.query('COMMIT');
+    client.release();
 
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
