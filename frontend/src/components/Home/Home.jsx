@@ -116,10 +116,30 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
             {renderBreadcrumbs()}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: "24px" }}>
-            {/* Left Column: Banks List */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div>
-              <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginBottom: "16px" }}>Select Partner Bank</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
+                <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, margin: 0 }}>Select Partner Bank</h2>
+                <button 
+                  onClick={() => onItemClick && onItemClick({ id: "ltf-detail-page-trigger" })}
+                  style={{
+                    background: C.teal,
+                    color: "#fff",
+                    border: "none",
+                    padding: "8px 16px",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: `0 4px 12px ${C.teal}30`,
+                    transition: "opacity 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = 0.9}
+                  onMouseLeave={(e) => e.target.style.opacity = 1}
+                >
+                  Lifetime Free Credit Cards (LTF)
+                </button>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px" }}>
                 {category.items.map((item, idx) => (
                   <div key={idx} style={{
@@ -138,39 +158,6 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 ))}
               </div>
             </div>
-
-            {/* Right Column: Lifetime Free Credit Cards (LTF) and rankings */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              {/* LTF Cards */}
-              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
-                <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: C.teal }}>Lifetime Free Credit Cards (LTF)</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "350px", overflowY: "auto", paddingRight: "4px" }}>
-                  {ltfCards.map((card, cIdx) => (
-                    <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
-                      <span style={{ fontSize: "11px", color: C.textLight }}>{card.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Card Rankings */}
-              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
-                <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: C.teal }}>Top Card Rankings</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {cardRankings.map((rankItem, rIdx) => (
-                    <div key={rIdx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.bgSecondary, padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 800, color: C.teal }}>#{rankItem.rank}</span>
-                        <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{rankItem.name}</span>
-                      </div>
-                      <span style={{ fontSize: "12px", color: C.gold, fontWeight: "bold" }}>{rankItem.rating}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
           </div>
 
         </div>
@@ -342,9 +329,27 @@ const attractiveCategories = [
     ]
   },
   {
+    id: "cibil-loans",
+    title: "CIBIL Based Loan",
+    label: "CIBIL Based Loan",
+    description: "Get personalized loan offers tailored specifically to your credit profile.",
+    icon: <FaMoneyCheckAlt />,
+    type: "hierarchy",
+    items: [
+      {
+        section: "Loan Categories",
+        subcategories: [
+          "Personal Loan based on CIBIL Score",
+          "Pre-approved Personal Loan",
+          "Instant Personal Loan"
+        ]
+      }
+    ]
+  },
+  {
     id: "hdfc-cc-loan",
-    title: "HDFC Loan on Credit Card",
-    label: "HDFC Loan on Credit Card",
+    title: "Loan on credit card",
+    label: "Loan on credit card",
     description: "Unlock instant cash or loans against your existing HDFC bank credit card limit.",
     icon: <FaRegCreditCard />,
     type: "hierarchy",
@@ -361,8 +366,8 @@ const attractiveCategories = [
   },
   {
     id: "smart-emi",
-    title: "Smart EMI Card",
-    label: "Smart EMI Card",
+    title: "Smart Emi on hdfc credit card",
+    label: "Smart Emi on hdfc credit card",
     description: "Split your purchases into easy no-cost EMIs with instant approval.",
     icon: <FaIdCard />,
     type: "hierarchy",
@@ -379,8 +384,8 @@ const attractiveCategories = [
   },
   {
     id: "secured-cards",
-    title: "Secured Credit Cards",
-    label: "Secured Credit Cards",
+    title: "FD/Secured card(no Cibil required)",
+    label: "FD/Secured card(no Cibil required)",
     description: "Build or rebuild your credit score with high-approval FD-backed credit cards.",
     icon: <FaShieldAlt />,
     type: "hierarchy",
@@ -423,8 +428,8 @@ const attractiveCategories = [
   },
   {
     id: "upi-cards",
-    title: "UPI Credit Cards",
-    label: "UPI Credit Cards",
+    title: "All Rupey Upi credit card",
+    label: "All Rupey Upi credit card",
     description: "Make merchant payments directly via UPI using your RuPay credit card.",
     icon: <FaMobileAlt />,
     type: "hierarchy",
@@ -560,6 +565,19 @@ export default function Home({ onNavigate }) {
   };
 
   const handleItemClick = (item) => {
+    if (item.id === "ltf-detail-page-trigger") {
+      setActiveCategory({
+        id: "ltf-detail-page",
+        title: "Lifetime Free Credit Cards (LTF)",
+        parentId: "credit-cards",
+        items: ltfCards.map(card => ({
+          id: card.name.toLowerCase().replace(/\s+/g, "-"),
+          label: card.name,
+          icon: <FaRegCreditCard />
+        }))
+      });
+      return;
+    }
     // If it's a bank, show its specific card categories
     if (activeCategory?.id === "credit-cards" || banksList.find(b => b.id === item.id)) {
       if (bankCardsDetails[item.id]) {

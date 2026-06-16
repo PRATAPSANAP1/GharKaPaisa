@@ -9,4 +9,5 @@ export const loansData = [
   { label: "Used Car Loan", icon: <FaCar /> },
   { label: "Education Loan", icon: <FaGraduationCap /> },
   { label: "Card on Loan", icon: <FaRegCreditCard /> },
+  { label: "LAP", icon: <FaBuilding /> },
 ];
