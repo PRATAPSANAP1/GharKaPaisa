@@ -161,30 +161,66 @@ export function makeS(C) {
 }
 
 // ── Toggle Button Component ────────────────────────────────────────────────────
-export function ThemeToggle({ style = {} }) {
-  const { isDark, toggle, C } = useTheme();
+export function ThemeToggle({ style = {}, onChange }) {
+  const { isDark, toggle } = useTheme();
+  const isLight = !isDark;
+
+  const handleToggle = () => {
+    toggle();
+    if (onChange) {
+      onChange(isLight ? "dark" : "light");
+    }
+  };
+
   return (
-    <button
+    <div
       className="theme-toggle-btn"
-      onClick={toggle}
-      title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      onClick={handleToggle}
+      role="switch"
+      aria-checked={isLight}
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: "36px",
-        height: "36px",
-        borderRadius: "50%",
-        border: `1.5px solid ${C.border}`,
-        background: C.card,
-        cursor: "pointer",
-        fontSize: "16px",
-        transition: "all 0.2s",
+        width: 140, height: 64, borderRadius: 999,
+        display: "flex", alignItems: "center",
+        padding: 6, cursor: "pointer", position: "relative",
+        transition: "background 0.35s",
+        justifyContent: isLight ? "flex-start" : "flex-end",
+        background: isLight ? "#e8e8e8" : "#2e3250",
+        boxShadow: isLight
+          ? "inset 4px 4px 10px #c8c8c8, inset -4px -4px 10px #ffffff"
+          : "inset 4px 4px 10px #1a1d30, inset -4px -4px 10px #424870",
         flexShrink: 0,
         ...style,
       }}
     >
-      {isDark ? "☀️" : "🌙"}
-    </button>
+      {/* Label text */}
+      <span style={{
+        position: "absolute",
+        fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+        lineHeight: 1.2, textAlign: "center", pointerEvents: "none",
+        ...(isLight
+          ? { right: 14, color: "#999" }
+          : { left: 14, color: "#6a70a0" })
+      }}>
+        {isLight ? "LIGHT\nMODE" : "DARK\nMODE"}
+      </span>
+
+      {/* Thumb */}
+      <div style={{
+        width: 52, height: 52, borderRadius: "50%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 22,
+        background: isLight ? "#f0f0f0" : "#3c4168",
+        boxShadow: isLight
+          ? "4px 4px 10px #c0c0c0, -3px -3px 8px #ffffff"
+          : "4px 4px 10px #1a1d30, -3px -3px 8px #5a60a0",
+        color: isLight ? "#888" : "#aab0d8",
+        transition: "all 0.3s",
+      }}>
+        {isLight ? "☀️" : "🌙"}
+      </div>
+    </div>
   );
 }
+
+export const LightDarkToggle = ThemeToggle;
+
