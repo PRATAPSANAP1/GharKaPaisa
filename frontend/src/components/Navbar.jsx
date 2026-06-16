@@ -203,8 +203,6 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px", flex: "0 0 auto", justifyContent: "flex-end" }}>
-          <LanguageSwitcher />
-          <ThemeToggle />
           <button 
             onClick={() => navigate('/admin-login')}
             style={{ color: C.text, '--underline-color': C.teal }}
@@ -225,6 +223,8 @@ const Navbar = () => {
               Partner
             </button>
           )}
+          <LanguageSwitcher />
+          <ThemeToggle />
         </div>
       </nav>
     </>
