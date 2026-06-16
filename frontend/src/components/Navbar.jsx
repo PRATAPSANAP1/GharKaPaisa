@@ -31,6 +31,7 @@ const searchCatalog = [
   { type: "loan", label: "Home Loan", target: { id: "loans" } },
   { type: "loan", label: "Business Loan", target: { id: "loans" } },
   { type: "loan", label: "Education Loan", target: { id: "loans" } },
+  { type: "loan", label: "Car Loan", target: { id: "loans" } },
   { type: "loan", label: "Used Car Loan", target: { id: "loans" } },
   { type: "loan", label: "Instant Loan", target: { id: "loans" } },
 

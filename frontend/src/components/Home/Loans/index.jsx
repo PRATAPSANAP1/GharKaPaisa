@@ -6,6 +6,7 @@ export const loansData = [
   { label: "Home Loan", icon: <FaBuilding /> },
   { label: "Business Loan", icon: <FaBuilding /> },
   { label: "Education Loan", icon: <FaGraduationCap /> },
+  { label: "Car Loan", icon: <FaCar /> },
   { label: "Used Car Loan", icon: <FaCar /> },
   { label: "Instant Loan", icon: <FaMobileAlt /> },
   { label: "Loan Against Property (LAP)", icon: <FaBuilding /> },
