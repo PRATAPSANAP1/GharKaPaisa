@@ -26,20 +26,27 @@ import yesImg from "./CreditCards/image/yes bank.png";
 import kotakImg from "./CreditCards/image/KOTAK.png";
 
 // Import bank logo images
-import hdfcLogo from "./banks/hdfc.png";
-import sbiLogo from "./banks/SBI.png";
-import axisLogo from "./banks/axis.png";
-import iciciLogo from "./banks/icici.png";
-import kotakLogo from "./banks/kotak.png";
-import yesLogo from "./banks/yes.png";
-import bobLogo from "./banks/BOB.png";
-import dcbLogo from "./banks/dcb.png";
-import federalLogo from "./banks/federal.png";
-import sbmLogo from "./banks/sbm.png";
-import idfcLogo from "./banks/dfc.png";
-import rblLogo from "./banks/rbl.png";
-import equitasLogo from "./banks/equitos.png";
+import hdfcLogo from "./banks/hdfc_bank.png";
+import sbiLogo from "./banks/sbi_card.png";
+import axisLogo from "./banks/axis_bank.png";
+import iciciLogo from "./banks/icici_bank.png";
+import kotakLogo from "./banks/kotak_bank.png";
+import yesLogo from "./banks/yes_bank.png";
+import bobLogo from "./banks/bank_of_baroda.png";
+import dcbLogo from "./banks/dcb_bank.png";
+import federalLogo from "./banks/federal_bank.png";
+import sbmLogo from "./banks/sbm_bank.png";
+import idfcLogo from "./banks/idfc_first_bank.png";
+import rblLogo from "./banks/rbl_bank.png";
+import equitasLogo from "./banks/equitas.png";
 
+// Import banner images
+import banner1 from "./banner/banner_1.png";
+import banner2 from "./banner/banner_2.png";
+import banner3 from "./banner/banner_3.png";
+import banner4 from "./banner/banner_4.png";
+import banner5 from "./banner/banner_5.png";
+import hdfcBanner from "./banner/hdfc.jpeg";
 
 
 // ── Responsive Hook ──────────────────────────────────────────────
@@ -575,38 +582,52 @@ export default function Home({ onNavigate }) {
       title: "Lifetime Free Credit Cards", 
       subtitle: "Zero Joining Fee • Zero Annual Fee", 
       btnText: "Explore Now",
-      gradient: "linear-gradient(135deg, #166397 0%, #0B1622 100%)",
+      bgImage: banner1,
       action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
     },
     { 
       title: "Personal Loans", 
       subtitle: "Low Interest Rates • Quick Disbursal", 
       btnText: "Apply Now",
-      gradient: "linear-gradient(135deg, #27ae60 0%, #0F4F7A 100%)",
+      bgImage: banner2,
       action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
     },
     { 
       title: "Business Loans", 
       subtitle: "Flexible repayment options for growing businesses", 
       btnText: "Check Eligibility",
-      gradient: "linear-gradient(135deg, #8e44ad 0%, #112035 100%)",
+      bgImage: banner3,
       action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
     },
     { 
       title: "Insurance Plans", 
       subtitle: "Comprehensive health, life and general insurance cover", 
       btnText: "Get Quotes",
-      gradient: "linear-gradient(135deg, #f39c12 0%, #4b1220 100%)",
+      bgImage: banner4,
       action: () => setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData })
     },
     { 
       title: "EMI Cards", 
       subtitle: "Convert purchases to no-cost EMIs instantly", 
       btnText: "Get EMI Card",
-      gradient: "linear-gradient(135deg, #16a085 0%, #091320 100%)",
+      bgImage: banner5,
       action: () => handleAttractiveCategoryClick(attractiveCategories.find(c => c.id === "smart-emi"))
+    },
+    { 
+      title: "HDFC Pixel Credit Cards", 
+      subtitle: "Customizable rewards on dining, shopping & entertainment", 
+      btnText: "Explore Pixel Cards",
+      bgImage: hdfcBanner,
+      action: () => setActiveCategory({
+        id: "bank-hdfc",
+        title: bankCardsDetails.hdfc.title,
+        parentId: "credit-cards",
+        type: "bank-detail",
+        sections: bankCardsDetails.hdfc.sections
+      })
     }
   ];
+
 
   useEffect(() => {
     if (isPaused) return;
@@ -777,24 +798,29 @@ export default function Home({ onNavigate }) {
 
         {/* ── HERO BANNER OVERHAUL ── */}
         <div 
-          onClick={handleBannerClick}
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           style={{ 
-            cursor: "pointer", width: "100%", height: isMobile ? "180px" : "320px", 
+            width: "100%", height: isMobile ? "180px" : "320px", 
             borderRadius: "20px", marginBottom: "32px", display: "flex", 
             alignItems: "center", justifyContent: "center", overflow: "hidden", 
             position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)` 
           }}
         >
           {bannerSlides.map((slide, idx) => (
-            <div key={idx} style={{
-              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              background: slide.gradient, opacity: idx === bannerIndex ? 1 : 0,
-              transition: "opacity 0.6s ease-in-out", display: "flex",
-              flexDirection: "column", justifyContent: "center",
-              padding: isMobile ? "0 24px" : "0 60px", color: "#fff"
-            }}>
+            <div key={idx} 
+              onClick={() => slide.action()}
+              style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+                background: `linear-gradient(90deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0.15) 100%), url(${slide.bgImage}) center/cover no-repeat`,
+                opacity: idx === bannerIndex ? 1 : 0,
+                pointerEvents: idx === bannerIndex ? "auto" : "none",
+                transition: "opacity 0.6s ease-in-out", display: "flex",
+                flexDirection: "column", justifyContent: "center",
+                padding: isMobile ? "0 24px" : "0 60px", color: "#fff",
+                cursor: "pointer"
+              }}
+            >
               <h2 style={{ fontSize: isMobile ? "20px" : "36px", fontWeight: 900, margin: "0 0 8px 0", letterSpacing: "-0.5px" }}>{slide.title}</h2>
               <p style={{ fontSize: isMobile ? "12px" : "16px", margin: "0 0 20px 0", color: "rgba(255,255,255,0.85)" }}>{slide.subtitle}</p>
               <button 
@@ -815,14 +841,21 @@ export default function Home({ onNavigate }) {
           ))}
 
           {/* Left Arrow */}
-          <div style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
             <FaChevronLeft size={14} />
           </div>
 
           {/* Right Arrow */}
-          <div style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
             <FaChevronRight size={14} />
           </div>
+
 
           {/* Slider Indicators */}
           <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
