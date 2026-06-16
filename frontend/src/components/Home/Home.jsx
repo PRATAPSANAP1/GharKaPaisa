@@ -604,7 +604,7 @@ export default function Home({ onNavigate }) {
               onClick={() => slide.action()}
               style={{
                 position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                background: `url(${slide.bgImage}) center/cover no-repeat`,
+                background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
                 opacity: idx === bannerIndex ? 1 : 0,
                 pointerEvents: idx === bannerIndex ? "auto" : "none",
                 transition: "opacity 0.6s ease-in-out",
