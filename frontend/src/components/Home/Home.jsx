@@ -555,6 +555,10 @@ export default function Home({ onNavigate }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeCategory]);
+
   const handleBottomNavClick = (id) => {
     if (id === "home") setActiveCategory(null);
     else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
