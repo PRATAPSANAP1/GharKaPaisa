@@ -16,29 +16,10 @@ import { bankCardsDetails, ltfCards } from "./CreditCards";
 import { loansData } from "./Loans";
 import { insuranceData } from "./Insurance";
 import { servicesData } from "./Services";
-
-// Import popular credit card images
-import hdfcImg from "./CreditCards/image/hdfc.png";
-import sbiImg from "./CreditCards/image/SBI.png";
-import axisImg from "./CreditCards/image/AXIS.png";
-import iciciImg from "./CreditCards/image/ICICI.png";
-import yesImg from "./CreditCards/image/yes bank.png";
-import kotakImg from "./CreditCards/image/KOTAK.png";
-
-// Import bank logo images
-import hdfcLogo from "./banks/hdfc_bank.png";
-import sbiLogo from "./banks/sbi_card.png";
-import axisLogo from "./banks/axis_bank.png";
-import iciciLogo from "./banks/icici_bank.png";
-import kotakLogo from "./banks/kotak_bank.png";
-import yesLogo from "./banks/yes_bank.png";
-import bobLogo from "./banks/bank_of_baroda.png";
-import dcbLogo from "./banks/dcb_bank.png";
-import federalLogo from "./banks/federal_bank.png";
-import sbmLogo from "./banks/sbm_bank.png";
-import idfcLogo from "./banks/idfc_first_bank.png";
-import rblLogo from "./banks/rbl_bank.png";
-import equitasLogo from "./banks/equitas.png";
+import { banksList, trustBanks } from "./banks/banksData";
+import { moneyTransfer } from "./MoneyTransfer";
+import { attractiveCategories } from "./AttractiveSections";
+import { popularCards } from "./PopularCards";
 
 // Import banner images
 import banner1 from "./banner/banner_1.png";
@@ -366,204 +347,7 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
   );
 }
 
-// ── Attractive Categories Ticker Array ─────────────────────────────
-const attractiveCategories = [
-  {
-    id: "ltf-cards",
-    title: "Lifetime Free Cards",
-    label: "Lifetime Free Cards",
-    description: "Enjoy zero annual fees and lifetime free benefits on premium credit cards.",
-    icon: <FaRegCreditCard />,
-    gradient: "linear-gradient(135deg, #166397 0%, #0F4F7A 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "Popular Lifetime Free Cards",
-        cards: [
-          { name: "IDFC FIRST Millennia Credit Card", desc: "Lifetime free with high rewards on online spends" },
-          { name: "Kotak League Platinum Card", desc: "Premium benefits with zero annual fee" },
-          { name: "ICICI Platinum Chip Credit Card", desc: "Classic lifetime free shopping card" },
-          { name: "AU LIT Credit Card", desc: "Customizable features with no annual fee" }
-        ]
-      }
-    ]
-  },
-  {
-    id: "cibil-loans",
-    title: "CIBIL Loan",
-    label: "CIBIL Loan",
-    description: "Get personalized loan offers tailored specifically to your credit profile.",
-    icon: <FaMoneyCheckAlt />,
-    gradient: "linear-gradient(135deg, #27ae60 0%, #0c6b30 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "Loan Categories",
-        subcategories: [
-          "Personal Loan based on CIBIL Score",
-          "Pre-approved Personal Loan",
-          "Instant Personal Loan"
-        ]
-      }
-    ]
-  },
-  {
-    id: "hdfc-cc-loan",
-    title: "Loan on Credit Card",
-    label: "Loan on Credit Card",
-    description: "Unlock instant cash or loans against your existing credit card limit.",
-    icon: <FaRegCreditCard />,
-    gradient: "linear-gradient(135deg, #8e44ad 0%, #5b2c6f 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "Loan Options",
-        subcategories: [
-          "Loan on Existing Credit Card",
-          "Pre-approved Loan on Credit Card",
-          "Cash on Credit Card"
-        ]
-      }
-    ]
-  },
-  {
-    id: "smart-emi",
-    title: "Smart EMI Card",
-    label: "Smart EMI Card",
-    description: "Split your purchases into easy no-cost EMIs with instant approval.",
-    icon: <FaIdCard />,
-    gradient: "linear-gradient(135deg, #f39c12 0%, #d35400 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "EMI Card Options",
-        subcategories: [
-          "Bajaj Finserv EMI Card",
-          "HDFC Consumer Durable Loan",
-          "ICICI EMI Card"
-        ]
-      }
-    ]
-  },
-  {
-    id: "secured-cards",
-    title: "FD Backed Card",
-    label: "FD Backed Card",
-    description: "Build or rebuild your credit score with high-approval FD-backed credit cards.",
-    icon: <FaShieldAlt />,
-    gradient: "linear-gradient(135deg, #16a085 0%, #117864 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "Available Cards",
-        cards: [
-          { name: "IDFC FIRST WOW Credit Card", desc: "100% limit against FD with zero documentation" },
-          { name: "Kotak 811 Dream Different Credit Card", desc: "Interest on FD and zero annual fee" },
-          { name: "OneCard Secured Credit Card", desc: "Metal card backed by FD with premium rewards" },
-          { name: "HDFC Secured Credit Card", desc: "Build credit relationship with India's largest bank" }
-        ]
-      }
-    ]
-  },
-  {
-    id: "upi-cards",
-    title: "UPI Credit Card",
-    label: "UPI Credit Card",
-    description: "Make merchant payments directly via UPI using your RuPay credit card.",
-    icon: <FaMobileAlt />,
-    gradient: "linear-gradient(135deg, #c0392b 0%, #962d22 100%)",
-    type: "hierarchy",
-    items: [
-      {
-        section: "Card Types",
-        subcategories: [
-          "RuPay Credit Cards",
-          "UPI Linked Credit Cards"
-        ]
-      },
-      {
-        section: "Available Cards",
-        cards: [
-          { name: "HDFC Tata Neu Plus RuPay", desc: "2% back on Tata Neu spend via UPI" },
-          { name: "HDFC Tata Neu Infinity RuPay", desc: "5% back on Tata Neu spend via UPI" },
-          { name: "Kiwi RuPay Credit Card", desc: "UPI-first credit card with instant rewards" },
-          { name: "IndusInd Platinum RuPay Card", desc: "Premium lounge access and RuPay benefits" },
-          { name: "BOB Snapdeal RuPay Card", desc: "Co-branded shopping rewards on RuPay network" },
-          { name: "ICICI Coral RuPay Card", desc: "BookMyShow discounts and dining rewards" }
-        ]
-      }
-    ]
-  }
-];
 
-const banksList = [
-  { id: "hdfc", label: "HDFC Bank", image: hdfcLogo },
-  { id: "sbi", label: "SBI Card", image: sbiLogo },
-  { id: "axis", label: "Axis Bank", image: axisLogo },
-  { id: "icici", label: "ICICI Bank", image: iciciLogo },
-  { id: "kotak", label: "Kotak Bank", image: kotakLogo },
-  { id: "yes", label: "Yes Bank", image: yesLogo },
-  { id: "indusind", label: "IndusInd", icon: <FaUniversity /> },
-  { id: "bob", label: "BOB", image: bobLogo },
-  { id: "dcb", label: "DCB", image: dcbLogo },
-  { id: "federal", label: "FEDERAL", image: federalLogo },
-  { id: "sbm", label: "SBM", image: sbmLogo },
-  { id: "idfc", label: "IDFC", image: idfcLogo },
-  { id: "rbl", label: "RBL", image: rblLogo },
-  { id: "equitas", label: "Equitas", image: equitasLogo }
-];
-
-
-const popularCards = [
-  { 
-    name: "HDFC Millennia", 
-    bank: "HDFC Bank", 
-    benefit: "5% Cashback on online shopping", 
-    image: hdfcImg
-  },
-  { 
-    name: "SBI SimplyCLICK", 
-    bank: "SBI Card", 
-    benefit: "10X Rewards on online partners", 
-    image: sbiImg
-  },
-  { 
-    name: "Axis Neo", 
-    bank: "Axis Bank", 
-    benefit: "10% off on Zomato & BookMyShow", 
-    image: axisImg
-  },
-  { 
-    name: "ICICI Coral", 
-    bank: "ICICI Bank", 
-    benefit: "BookMyShow discounts & dining rewards", 
-    image: iciciImg
-  },
-  { 
-    name: "Yes Bank BYOC", 
-    bank: "Yes Bank", 
-    benefit: "Choose your own rewards category", 
-    image: yesImg
-  },
-  { 
-    name: "Kotak League", 
-    bank: "Kotak Bank", 
-    benefit: "Premium rewards with zero annual fee", 
-    image: kotakImg
-  }
-];
-
-
-const trustBanks = [
-  { name: "HDFC", color: "#166397" },
-  { name: "SBI", color: "#2980b9" },
-  { name: "Axis", color: "#a22c54" },
-  { name: "ICICI", color: "#e67e22" },
-  { name: "BOB", color: "#d35400" },
-  { name: "IDFC FIRST", color: "#8b1014" },
-  { name: "IndusInd", color: "#d4af37" },
-  { name: "Kotak", color: "#c0392b" }
-];
 
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
@@ -767,6 +551,13 @@ export default function Home({ onNavigate }) {
     });
   };
 
+  const handleTrustBankClick = (bankId) => {
+    const bankItem = banksList.find(b => b.id === bankId);
+    if (bankItem) {
+      handleItemClick(bankItem);
+    }
+  };
+
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
       setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
@@ -785,12 +576,7 @@ export default function Home({ onNavigate }) {
     );
   }
 
-  const moneyTransfer = [
-    { label: "To Mobile", icon: <FaMobileAlt />, desc: "Send money instantly", color: "#27ae60" },
-    { label: "Recharge", icon: <FaMobileAlt />, desc: "Mobile, DTH, FASTag", color: "#2980b9" },
-    { label: "Electricity", icon: <FaBolt />, desc: "Pay electricity bills", color: "#f39c12" },
-    { label: "Loan Repay", icon: <FaMoneyBillWave />, desc: "EMI & Loan Payments", color: "#8e44ad" }
-  ];
+
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "80px" : "40px" }}>
@@ -1109,13 +895,28 @@ export default function Home({ onNavigate }) {
           }}>
             <div className="bank-ticker-wrap">
               {[...trustBanks, ...trustBanks].map((bank, idx) => (
-                <div key={`${bank.name}-${idx}`} style={{
-                  background: C.bgSecondary, border: `1px solid ${C.border}`,
-                  borderRadius: "10px", padding: "10px 20px", fontSize: "14px",
-                  fontWeight: 900, color: bank.color, whiteSpace: "nowrap", cursor: "default",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-                }}>
-                  {bank.name}
+                <div key={`${bank.id}-${idx}`} 
+                  onClick={() => handleTrustBankClick(bank.id)}
+                  style={{
+                    background: C.bgSecondary, border: `1px solid ${C.border}`,
+                    borderRadius: "12px", padding: "8px 16px", display: "flex",
+                    alignItems: "center", justifyContent: "center", height: "45px",
+                    width: "120px", cursor: "pointer", transition: "all 0.2s ease",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
+                >
+                  <img 
+                    src={bank.logo} 
+                    alt={bank.name} 
+                    style={{ 
+                      maxWidth: "100%", 
+                      maxHeight: "100%", 
+                      objectFit: "contain",
+                      filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                    }} 
+                  />
                 </div>
               ))}
             </div>
