@@ -22,12 +22,18 @@ import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 
 // Import banner images
-import banner1 from "./banner/banner_1.png";
-import banner2 from "./banner/banner_2.png";
-import banner3 from "./banner/banner_3.png";
-import banner4 from "./banner/banner_4.png";
-import banner5 from "./banner/banner_5.png";
-import hdfcBanner from "./banner/hdfc.jpeg";
+import ltfDesktop from "./banner/Lifetime Free Credit Cards.png";
+import ltfMobile from "./banner/Lifetime Free Credit Cards-m.png";
+import personalDesktop from "./banner/Personal Loans.png";
+import personalMobile from "./banner/Personal Loans-m.png";
+import businessDesktop from "./banner/Business Loans.png";
+import businessMobile from "./banner/Business Loans-m.png";
+import insuranceDesktop from "./banner/Insurance Plans.png";
+import insuranceMobile from "./banner/Insurance Plans-m.png";
+import emiDesktop from "./banner/EMI Cards.png";
+import emiMobile from "./banner/EMI Cards-m.png";
+import hdfcDesktop from "./banner/HDFC pixel.png";
+import hdfcMobile from "./banner/hdfc pixel-m.png";
 
 
 // ── Responsive Hook ──────────────────────────────────────────────
@@ -366,42 +372,42 @@ export default function Home({ onNavigate }) {
       title: "Lifetime Free Credit Cards", 
       subtitle: "Zero Joining Fee • Zero Annual Fee", 
       btnText: "Explore Now",
-      bgImage: banner1,
+      bgImage: isMobile ? ltfMobile : ltfDesktop,
       action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
     },
     { 
       title: "Personal Loans", 
       subtitle: "Low Interest Rates • Quick Disbursal", 
       btnText: "Apply Now",
-      bgImage: banner2,
+      bgImage: isMobile ? personalMobile : personalDesktop,
       action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
     },
     { 
       title: "Business Loans", 
       subtitle: "Flexible repayment options for growing businesses", 
       btnText: "Check Eligibility",
-      bgImage: banner3,
+      bgImage: isMobile ? businessMobile : businessDesktop,
       action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
     },
     { 
       title: "Insurance Plans", 
       subtitle: "Comprehensive health, life and general insurance cover", 
       btnText: "Get Quotes",
-      bgImage: banner4,
+      bgImage: isMobile ? insuranceMobile : insuranceDesktop,
       action: () => setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData })
     },
     { 
       title: "EMI Cards", 
       subtitle: "Convert purchases to no-cost EMIs instantly", 
       btnText: "Get EMI Card",
-      bgImage: banner5,
+      bgImage: isMobile ? emiMobile : emiDesktop,
       action: () => handleAttractiveCategoryClick(attractiveCategories.find(c => c.id === "smart-emi"))
     },
     { 
       title: "HDFC Pixel Credit Cards", 
       subtitle: "Customizable rewards on dining, shopping & entertainment", 
       btnText: "Explore Pixel Cards",
-      bgImage: hdfcBanner,
+      bgImage: isMobile ? hdfcMobile : hdfcDesktop,
       action: () => setActiveCategory({
         id: "bank-hdfc",
         title: bankCardsDetails.hdfc.title,
@@ -598,32 +604,13 @@ export default function Home({ onNavigate }) {
               onClick={() => slide.action()}
               style={{
                 position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                background: `linear-gradient(90deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 60%, rgba(0, 0, 0, 0.15) 100%), url(${slide.bgImage}) center/cover no-repeat`,
+                background: `url(${slide.bgImage}) center/cover no-repeat`,
                 opacity: idx === bannerIndex ? 1 : 0,
                 pointerEvents: idx === bannerIndex ? "auto" : "none",
-                transition: "opacity 0.6s ease-in-out", display: "flex",
-                flexDirection: "column", justifyContent: "center",
-                padding: isMobile ? "0 24px" : "0 60px", color: "#fff",
+                transition: "opacity 0.6s ease-in-out",
                 cursor: "pointer"
               }}
-            >
-              <h2 style={{ fontSize: isMobile ? "20px" : "36px", fontWeight: 900, margin: "0 0 8px 0", letterSpacing: "-0.5px" }}>{slide.title}</h2>
-              <p style={{ fontSize: isMobile ? "12px" : "16px", margin: "0 0 20px 0", color: "rgba(255,255,255,0.85)" }}>{slide.subtitle}</p>
-              <button 
-                onClick={(e) => { e.stopPropagation(); slide.action(); }}
-                style={{
-                  alignSelf: "flex-start", background: C.teal, color: "#fff",
-                  border: "none", padding: isMobile ? "8px 16px" : "12px 24px",
-                  borderRadius: "10px", fontSize: isMobile ? "11px" : "14px",
-                  fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  transition: "opacity 0.2s"
-                }}
-                onMouseEnter={(e) => e.target.style.opacity = 0.9}
-                onMouseLeave={(e) => e.target.style.opacity = 1}
-              >
-                {slide.btnText}
-              </button>
-            </div>
+            />
           ))}
 
           {/* Left Arrow */}
