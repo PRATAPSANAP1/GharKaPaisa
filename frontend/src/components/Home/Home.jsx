@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../Partner/ThemeContext";
 import { useSearchStore } from "../../store/searchStore";
 import {
@@ -387,6 +388,7 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -778,69 +780,96 @@ export default function Home({ onNavigate }) {
           onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
           C={C}
         >
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
-            {attractiveCategories.map((cat) => (
-              <div key={cat.id} 
-                onClick={() => handleAttractiveCategoryClick(cat)}
-                style={{ 
-                  display: "flex", 
-                  flexDirection: "row", 
-                  alignItems: "center", 
-                  gap: "12px", 
-                  background: C.bgSecondary, 
-                  padding: isMobile ? "10px 12px" : "14px 16px", 
-                  borderRadius: "14px", 
-                  cursor: "pointer", 
-                  border: `1px solid ${C.border}`, 
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
-                }} 
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = C.teal;
-                  e.currentTarget.style.boxShadow = `0 6px 16px ${C.teal}15`;
-                }} 
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
-                }}
-              >
-                {/* Left side Image Box */}
-                <div style={{ 
-                  width: isMobile ? "36px" : "44px", 
-                  height: isMobile ? "36px" : "44px", 
-                  borderRadius: "10px", 
-                  background: C.bg, 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  flexShrink: 0,
-                  padding: "6px",
-                  boxSizing: "border-box",
-                  border: `1px solid ${C.border}`
-                }}>
-                  <img 
-                    src={attractiveImages[cat.id]} 
-                    alt={cat.label} 
-                    style={{ 
-                      width: "100%", 
-                      height: "100%", 
-                      objectFit: "contain",
-                      filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
-                    }} 
-                  />
-                </div>
-                
-                {/* Right side Text & Arrow */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {t('attractiveCards.' + cat.id, cat.label)}
+          <style>{`
+            @keyframes attractive-ticker-scroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .attractive-ticker-wrap {
+              display: flex; gap: 16px; width: max-content;
+              animation: attractive-ticker-scroll 30s linear infinite;
+            }
+            .attractive-ticker-wrap.paused {
+              animation-play-state: paused !important;
+            }
+          `}</style>
+          <div 
+            onMouseEnter={() => setIsTickerPaused(true)}
+            onMouseLeave={() => setIsTickerPaused(false)}
+            onTouchStart={() => setIsTickerPaused(true)}
+            onTouchEnd={() => setIsTickerPaused(false)}
+            style={{
+              overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
+              maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+              WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
+            }}
+          >
+            <div className={`attractive-ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
+              {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
+                <div key={`${cat.id}-${idx}`} 
+                  onClick={() => handleAttractiveCategoryClick(cat)}
+                  style={{ 
+                    display: "flex", 
+                    flexDirection: "row", 
+                    alignItems: "center", 
+                    gap: "12px", 
+                    background: C.bgSecondary, 
+                    padding: isMobile ? "10px 12px" : "14px 16px", 
+                    borderRadius: "14px", 
+                    cursor: "pointer", 
+                    border: `1px solid ${C.border}`, 
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                    width: isMobile ? "190px" : "250px",
+                    flexShrink: 0
+                  }} 
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = C.teal;
+                    e.currentTarget.style.boxShadow = `0 6px 16px ${C.teal}15`;
+                  }} 
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
+                  }}
+                >
+                  {/* Left side Image Box */}
+                  <div style={{ 
+                    width: isMobile ? "36px" : "44px", 
+                    height: isMobile ? "36px" : "44px", 
+                    borderRadius: "10px", 
+                    background: C.bg, 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    flexShrink: 0,
+                    padding: "6px",
+                    boxSizing: "border-box",
+                    border: `1px solid ${C.border}`
+                  }}>
+                    <img 
+                      src={attractiveImages[cat.id]} 
+                      alt={cat.label} 
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "contain",
+                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                      }} 
+                    />
                   </div>
-                  <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                    <FaChevronRight size={isMobile ? 10 : 12} />
+                  
+                  {/* Right side Text & Arrow */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t('attractiveCards.' + cat.id, cat.label)}
+                    </div>
+                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                      <FaChevronRight size={isMobile ? 10 : 12} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Section>
 
@@ -1064,25 +1093,24 @@ export default function Home({ onNavigate }) {
             <div>
               <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.company', 'Company')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.aboutUs', 'About Us')}</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.careers', 'Careers')}</span>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.contactUs', 'Contact Us')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.aboutUs', 'About Us')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.careers', 'Careers')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.contactUs', 'Contact Us')}</span>
               </div>
             </div>
 
             <div>
               <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.support', 'Support')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.privacy', 'Privacy Policy')}</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.terms', 'Terms & Conditions')}</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.refund', 'Refund Policy')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.privacy', 'Privacy Policy')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.terms', 'Terms & Conditions')}</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.refund', 'Refund Policy')}</span>
               </div>
             </div>
           </div>
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-            <span>{t('footer.rights', '© 2026 GharKaPaisa. All rights reserved.')}</span>
-            <span>{t('footer.made', 'Made with ♥ in India')}</span>
+            <span>{t('footer.rights', '© 2026 OIT_stack. All rights reserved.')}</span>
           </div>
         </div>
 
