@@ -179,9 +179,9 @@ export function ThemeToggle({ style = {}, onChange }) {
       role="switch"
       aria-checked={isLight}
       style={{
-        width: 90, height: 38, borderRadius: 999,
+        width: 72, height: 30, borderRadius: 999,
         display: "flex", alignItems: "center",
-        padding: 4, cursor: "pointer", position: "relative",
+        padding: 3, cursor: "pointer", position: "relative",
         transition: "background 0.35s",
         justifyContent: isLight ? "flex-start" : "flex-end",
         background: isLight ? "#e8e8e8" : "#2e3250",
@@ -195,24 +195,24 @@ export function ThemeToggle({ style = {}, onChange }) {
       {/* Label text */}
       <span style={{
         position: "absolute",
-        fontSize: 8, fontWeight: 700, letterSpacing: "0.04em",
-        lineHeight: 1.1, textAlign: "center", pointerEvents: "none",
+        fontSize: 7, fontWeight: 700, letterSpacing: "0.02em",
+        lineHeight: 1.0, textAlign: "center", pointerEvents: "none",
         ...(isLight
-          ? { right: 10, color: "#999" }
-          : { left: 10, color: "#6a70a0" })
+          ? { right: 8, color: "#999" }
+          : { left: 8, color: "#6a70a0" })
       }}>
-        {isLight ? "LIGHT\nMODE" : "DARK\nMODE"}
+        {isLight ? "LIGHT" : "DARK"}
       </span>
 
       {/* Thumb */}
       <div style={{
-        width: 30, height: 30, borderRadius: "50%",
+        width: 24, height: 24, borderRadius: "50%",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 14,
+        fontSize: 12,
         background: isLight ? "#f0f0f0" : "#3c4168",
         boxShadow: isLight
-          ? "2px 2px 5px #c0c0c0, -2px -2px 5px #ffffff"
-          : "2px 2px 5px #1a1d30, -2px -2px 5px #5a60a0",
+          ? "1px 1px 3px #c0c0c0, -1px -1px 3px #ffffff"
+          : "1px 1px 3px #1a1d30, -1px -1px 3px #5a60a0",
         color: isLight ? "#888" : "#aab0d8",
         transition: "all 0.3s",
       }}>
