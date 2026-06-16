@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaSearch } from 'react-icons/fa';
 import './Navbar.css';
-import logo from '../logo.svg';
+import logo from '../logo.png';
 import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 import { useSearchStore } from '../store/searchStore';
 
