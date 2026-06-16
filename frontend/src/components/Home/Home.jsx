@@ -810,18 +810,16 @@ export default function Home({ onNavigate }) {
                   onClick={() => handleAttractiveCategoryClick(cat)}
                   style={{
                     background: C.bgSecondary,
-                    padding: isMobile ? "12px" : "20px",
-                    borderRadius: "16px",
+                    borderRadius: "20px",
                     border: `1px solid ${C.border}`,
                     cursor: "pointer",
                     transition: "all 0.3s ease",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "8px",
-                    position: "relative",
-                    overflow: "hidden",
                     width: isMobile ? "200px" : "280px",
-                    flexShrink: 0
+                    flexShrink: 0,
+                    overflow: "hidden",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = C.teal;
@@ -829,15 +827,26 @@ export default function Home({ onNavigate }) {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{t('attractiveCards.' + cat.id, cat.label)}</h3>
+                  {/* Image Header */}
+                  <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
+                    <img 
+                      src={attractiveImages[cat.id]} 
+                      alt={cat.label} 
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
+                    />
                   </div>
-                  <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                    {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                  
+                  {/* Card Body */}
+                  <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
+                      {t('attractiveCards.' + cat.id, cat.label)}
+                    </h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                      {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                    </div>
                   </div>
                 </div>
               ))}
