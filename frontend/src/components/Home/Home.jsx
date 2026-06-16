@@ -37,6 +37,20 @@ import emiMobile from "./banner/EMI Cards-m.png";
 import hdfcDesktop from "./banner/HDFC pixel.png";
 import hdfcMobile from "./banner/hdfc pixel-m.png";
 
+// Import attractive section card images
+import ltfImg from "./AttractiveSections/lifetimefree.png";
+import cibilImg from "./AttractiveSections/cibilbased.png";
+import hdfcCcLoanImg from "./AttractiveSections/loan on credit card.png";
+import smartEmiImg from "./AttractiveSections/smart emi.png";
+import securedImg from "./AttractiveSections/fd backed.png";
+import upiImg from "./AttractiveSections/upi.png";
+
+// Import money transfer images
+import toMobileImg from "./MoneyTransfer/tomobile.png";
+import rechargeImg from "./MoneyTransfer/recharge.png";
+import electricityImg from "./MoneyTransfer/electricitybill.png";
+import loanRepayImg from "./MoneyTransfer/loan.png";
+
 
 // ── Responsive Hook ──────────────────────────────────────────────
 function useIsMobile() {
@@ -113,8 +127,9 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
 
 // ── Section Component ──────────────────────────────────────────────
 function Section({ title, viewAllLabel, onViewAll, C, children }) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ marginBottom: "32px" }}>
+    <div style={{ marginBottom: isMobile ? "20px" : "24px" }}>
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         marginBottom: "16px"
@@ -380,6 +395,22 @@ export default function Home({ onNavigate }) {
   const searchItem = useSearchStore(state => state.searchItem);
   const setSearchItem = useSearchStore(state => state.setSearchItem);
 
+  const attractiveImages = {
+    "ltf-cards": ltfImg,
+    "cibil-loans": cibilImg,
+    "hdfc-cc-loan": hdfcCcLoanImg,
+    "smart-emi": smartEmiImg,
+    "secured-cards": securedImg,
+    "upi-cards": upiImg
+  };
+
+  const moneyTransferImages = {
+    "to mobile": toMobileImg,
+    "recharge": rechargeImg,
+    "electricity": electricityImg,
+    "loan repay": loanRepayImg
+  };
+
   // Auto rotate banner slides (height 320px)
   const bannerSlides = [
     { 
@@ -604,8 +635,8 @@ export default function Home({ onNavigate }) {
 
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "80px" : "40px" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: isMobile ? "60px" : "30px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px 16px" }}>
 
         {/* ── HERO BANNER OVERHAUL ── */}
         <div 
@@ -613,7 +644,7 @@ export default function Home({ onNavigate }) {
           onMouseLeave={() => setIsPaused(false)}
           style={{ 
             width: "100%", height: isMobile ? "180px" : "320px", 
-            borderRadius: "20px", marginBottom: "32px", display: "flex", 
+            borderRadius: "20px", marginBottom: isMobile ? "20px" : "24px", display: "flex", 
             alignItems: "center", justifyContent: "center", overflow: "hidden", 
             position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)` 
           }}
@@ -669,15 +700,65 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         <Section title={t('sections.moneyTransfer')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
-            {moneyTransfer.map((item, idx) => (
-              <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "6px" : "10px", background: C.bgSecondary, padding: isMobile ? "8px 4px" : "16px 8px", borderRadius: isMobile ? "10px" : "14px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
-                <div style={{ width: isMobile ? "32px" : "44px", height: isMobile ? "32px" : "44px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "16px" : "20px", flexShrink: 0 }}>
-                  {item.icon}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {moneyTransfer.map((item, idx) => {
+              const imgKey = item.label.toLowerCase();
+              const img = moneyTransferImages[imgKey] || toMobileImg;
+              return (
+                <div key={idx} 
+                  style={{ 
+                    display: "flex", 
+                    flexDirection: "row", 
+                    alignItems: "center", 
+                    gap: "12px", 
+                    background: C.bgSecondary, 
+                    padding: isMobile ? "10px 12px" : "14px 16px", 
+                    borderRadius: "14px", 
+                    cursor: "pointer", 
+                    border: `1px solid ${C.border}`, 
+                    transition: "all 0.2s ease" 
+                  }} 
+                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
+                  onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
+                >
+                  {/* Left side Image Box */}
+                  <div style={{ 
+                    width: isMobile ? "36px" : "44px", 
+                    height: isMobile ? "36px" : "44px", 
+                    borderRadius: "10px", 
+                    background: C.bg, 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    flexShrink: 0,
+                    padding: "6px",
+                    boxSizing: "border-box",
+                    border: `1px solid ${C.border}`
+                  }}>
+                    <img 
+                      src={img} 
+                      alt={item.label} 
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "contain",
+                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                      }} 
+                    />
+                  </div>
+                  
+                  {/* Right side Text & Arrow */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                    </div>
+                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                      <FaChevronRight size={isMobile ? 10 : 12} />
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Section>
 
@@ -701,7 +782,7 @@ export default function Home({ onNavigate }) {
             onTouchStart={() => setIsTickerPaused(true)}
             onTouchEnd={() => setIsTickerPaused(false)}
             style={{
-              overflow: "hidden", width: "100%", padding: "12px 0", position: "relative", display: "flex",
+              overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
               maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
               WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
             }}
@@ -710,18 +791,16 @@ export default function Home({ onNavigate }) {
               {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
                 <div key={`${cat.id}-${idx}`} style={{
                   background: C.bgSecondary,
-                  padding: isMobile ? "12px" : "20px",
-                  borderRadius: "16px",
+                  borderRadius: "20px",
                   border: `1px solid ${C.border}`,
                   cursor: "pointer",
                   transition: "all 0.3s ease",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
-                  position: "relative",
-                  overflow: "hidden",
                   width: isMobile ? "200px" : "280px",
-                  flexShrink: 0
+                  flexShrink: 0,
+                  overflow: "hidden",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
                 }}
                 onClick={() => handleAttractiveCategoryClick(cat)}
                 onMouseEnter={(e) => {
@@ -730,15 +809,26 @@ export default function Home({ onNavigate }) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
                 }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{t('attractiveCards.' + cat.id, cat.label)}</h3>
+                  {/* Image Header */}
+                  <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
+                    <img 
+                      src={attractiveImages[cat.id]} 
+                      alt={cat.label} 
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
+                    />
                   </div>
-                  <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                    {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                  
+                  {/* Card Body */}
+                  <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
+                      {t('attractiveCards.' + cat.id, cat.label)}
+                    </h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                      {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -932,7 +1022,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── MODERN FOOTER ── */}
         <div style={{ 
-          marginTop: "48px", padding: isMobile ? "32px 20px" : "48px 48px", 
+          marginTop: isMobile ? "24px" : "32px", padding: isMobile ? "32px 20px" : "48px 48px", 
           background: "#081424", color: "#ffffff", borderRadius: "24px" 
         }}>
           <div style={{

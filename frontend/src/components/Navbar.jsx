@@ -120,6 +120,16 @@ const Navbar = () => {
         {!isAuthPage && (
           <button onClick={() => { navigate('/login'); toggleLink(); }}>{t('nav.partner', 'Partner')}</button>
         )}
+        <div className="mobile-widgets" style={{ marginTop: "24px", borderTop: `1px solid ${C.border}`, paddingTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: C.text, fontSize: "14px", fontWeight: 600 }}>{t('drawer.language', 'Language')}</span>
+            <LanguageSwitcher />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: C.text, fontSize: "14px", fontWeight: 600 }}>{t('drawer.theme', 'Theme')}</span>
+            <ThemeToggle />
+          </div>
+        </div>
       </div>
 
       <nav className="navbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}` }}>
@@ -223,8 +233,10 @@ const Navbar = () => {
               {t('nav.partner', 'Partner')}
             </button>
           )}
-          <LanguageSwitcher />
-          <ThemeToggle />
+          <div className="desktop-widgets" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
     </>
