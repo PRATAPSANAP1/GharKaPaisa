@@ -1008,40 +1008,54 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 8: Partner Banks (Logo strip) ── */}
         <Section title="Partner Banks" C={C}>
-          <div style={{ 
-            display: "flex", flexWrap: "wrap", justifyContent: "space-between", 
-            alignItems: "center", gap: "16px", padding: "16px 0" 
+          <style>{`
+            @keyframes bank-ticker-scroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .bank-ticker-wrap {
+              display: flex; gap: 16px; width: max-content;
+              animation: bank-ticker-scroll 25s linear infinite;
+            }
+          `}</style>
+          <div style={{
+            overflow: "hidden", width: "100%", padding: "12px 0", position: "relative", display: "flex",
+            maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
           }}>
-            {trustBanks.map((bank, idx) => (
-              <div key={idx} style={{
-                background: C.bgSecondary, border: `1px solid ${C.border}`,
-                borderRadius: "10px", padding: "10px 20px", fontSize: "14px",
-                fontWeight: 900, color: bank.color, whiteSpace: "nowrap", cursor: "default",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-              }}>
-                {bank.name}
-              </div>
-            ))}
+            <div className="bank-ticker-wrap">
+              {[...trustBanks, ...trustBanks].map((bank, idx) => (
+                <div key={`${bank.name}-${idx}`} style={{
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  borderRadius: "10px", padding: "10px 20px", fontSize: "14px",
+                  fontWeight: 900, color: bank.color, whiteSpace: "nowrap", cursor: "default",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                }}>
+                  {bank.name}
+                </div>
+              ))}
+            </div>
           </div>
         </Section>
+
 
         {/* ── MODERN FOOTER ── */}
         <div style={{ 
           marginTop: "48px", padding: isMobile ? "32px 20px" : "48px 48px", 
-          background: C.navy, color: "#fff", borderRadius: "24px" 
+          background: "#081424", color: "#ffffff", borderRadius: "24px" 
         }}>
           <div style={{
             display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr",
             gap: "40px", marginBottom: "32px"
           }}>
             <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
-              <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px" }}>GharKaPaisa</h2>
-              <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>
+              <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>GharKaPaisa</h2>
+              <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
                 India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.
               </p>
               <div style={{ display: "flex", gap: "12px" }}>
                 {[FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaYoutube].map((Icon, i) => (
-                  <div key={i} style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.1)", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div key={i} style={{ cursor: "pointer", color: "#ffffff", background: "rgba(255,255,255,0.15)", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Icon size={16} />
                   </div>
                 ))}
@@ -1049,38 +1063,39 @@ export default function Home({ onNavigate }) {
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: C.teal }}>Products</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Products</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => handleBottomNavClick("credit-cards")} style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>Credit Cards</span>
-                <span onClick={() => handleBottomNavClick("loans")} style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>Loans</span>
-                <span onClick={() => handleBottomNavClick("insurance")} style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>Insurance</span>
+                <span onClick={() => handleBottomNavClick("credit-cards")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Credit Cards</span>
+                <span onClick={() => handleBottomNavClick("loans")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Loans</span>
+                <span onClick={() => handleBottomNavClick("insurance")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Insurance</span>
               </div>
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: C.teal }}>Company</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Company</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>About Us</span>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "default" }}>Careers</span>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}>Contact Us</span>
+                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>About Us</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Careers</span>
+                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Contact Us</span>
               </div>
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: C.teal }}>Support</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Support</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "default" }}>Privacy Policy</span>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "default" }}>Terms & Conditions</span>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", cursor: "default" }}>Refund Policy</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Privacy Policy</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Terms & Conditions</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Refund Policy</span>
               </div>
             </div>
           </div>
 
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
             <span>© 2026 GharKaPaisa. All rights reserved.</span>
             <span>Made with ♥ in India</span>
           </div>
         </div>
+
 
       </div>
       

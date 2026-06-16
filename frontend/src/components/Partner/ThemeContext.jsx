@@ -179,15 +179,15 @@ export function ThemeToggle({ style = {}, onChange }) {
       role="switch"
       aria-checked={isLight}
       style={{
-        width: 140, height: 64, borderRadius: 999,
+        width: 90, height: 38, borderRadius: 999,
         display: "flex", alignItems: "center",
-        padding: 6, cursor: "pointer", position: "relative",
+        padding: 4, cursor: "pointer", position: "relative",
         transition: "background 0.35s",
         justifyContent: isLight ? "flex-start" : "flex-end",
         background: isLight ? "#e8e8e8" : "#2e3250",
         boxShadow: isLight
-          ? "inset 4px 4px 10px #c8c8c8, inset -4px -4px 10px #ffffff"
-          : "inset 4px 4px 10px #1a1d30, inset -4px -4px 10px #424870",
+          ? "inset 2px 2px 5px #c8c8c8, inset -2px -2px 5px #ffffff"
+          : "inset 2px 2px 5px #1a1d30, inset -2px -2px 5px #424870",
         flexShrink: 0,
         ...style,
       }}
@@ -195,24 +195,24 @@ export function ThemeToggle({ style = {}, onChange }) {
       {/* Label text */}
       <span style={{
         position: "absolute",
-        fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
-        lineHeight: 1.2, textAlign: "center", pointerEvents: "none",
+        fontSize: 8, fontWeight: 700, letterSpacing: "0.04em",
+        lineHeight: 1.1, textAlign: "center", pointerEvents: "none",
         ...(isLight
-          ? { right: 14, color: "#999" }
-          : { left: 14, color: "#6a70a0" })
+          ? { right: 10, color: "#999" }
+          : { left: 10, color: "#6a70a0" })
       }}>
         {isLight ? "LIGHT\nMODE" : "DARK\nMODE"}
       </span>
 
       {/* Thumb */}
       <div style={{
-        width: 52, height: 52, borderRadius: "50%",
+        width: 30, height: 30, borderRadius: "50%",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 22,
+        fontSize: 14,
         background: isLight ? "#f0f0f0" : "#3c4168",
         boxShadow: isLight
-          ? "4px 4px 10px #c0c0c0, -3px -3px 8px #ffffff"
-          : "4px 4px 10px #1a1d30, -3px -3px 8px #5a60a0",
+          ? "2px 2px 5px #c0c0c0, -2px -2px 5px #ffffff"
+          : "2px 2px 5px #1a1d30, -2px -2px 5px #5a60a0",
         color: isLight ? "#888" : "#aab0d8",
         transition: "all 0.3s",
       }}>
