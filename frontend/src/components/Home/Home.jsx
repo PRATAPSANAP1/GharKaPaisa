@@ -808,64 +808,36 @@ export default function Home({ onNavigate }) {
               {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
                 <div key={`${cat.id}-${idx}`} 
                   onClick={() => handleAttractiveCategoryClick(cat)}
-                  style={{ 
-                    display: "flex", 
-                    flexDirection: "row", 
-                    alignItems: "center", 
-                    gap: "12px", 
-                    background: C.bgSecondary, 
-                    padding: isMobile ? "10px 12px" : "14px 16px", 
-                    borderRadius: "14px", 
-                    cursor: "pointer", 
-                    border: `1px solid ${C.border}`, 
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
-                    width: isMobile ? "190px" : "250px",
+                  style={{
+                    background: C.bgSecondary,
+                    padding: isMobile ? "12px" : "20px",
+                    borderRadius: "16px",
+                    border: `1px solid ${C.border}`,
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    position: "relative",
+                    overflow: "hidden",
+                    width: isMobile ? "200px" : "280px",
                     flexShrink: 0
-                  }} 
+                  }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = C.teal;
-                    e.currentTarget.style.boxShadow = `0 6px 16px ${C.teal}15`;
-                  }} 
+                    e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
+                  }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
-                  {/* Left side Image Box */}
-                  <div style={{ 
-                    width: isMobile ? "36px" : "44px", 
-                    height: isMobile ? "36px" : "44px", 
-                    borderRadius: "10px", 
-                    background: C.bg, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    flexShrink: 0,
-                    padding: "6px",
-                    boxSizing: "border-box",
-                    border: `1px solid ${C.border}`
-                  }}>
-                    <img 
-                      src={attractiveImages[cat.id]} 
-                      alt={cat.label} 
-                      style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        objectFit: "contain",
-                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
-                      }} 
-                    />
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{t('attractiveCards.' + cat.id, cat.label)}</h3>
                   </div>
-                  
-                  {/* Right side Text & Arrow */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {t('attractiveCards.' + cat.id, cat.label)}
-                    </div>
-                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                      <FaChevronRight size={isMobile ? 10 : 12} />
-                    </div>
+                  <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                    {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
                   </div>
                 </div>
               ))}
