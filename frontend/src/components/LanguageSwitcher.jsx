@@ -20,8 +20,15 @@ export default function LanguageSwitcher() {
   const { C } = useTheme();
 
   return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
-      <FaGlobe style={{ color: C.teal, fontSize: '15px' }} />
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <FaGlobe style={{ 
+        position: 'absolute', 
+        left: '8px', 
+        color: C.teal, 
+        fontSize: '14px', 
+        pointerEvents: 'none',
+        zIndex: 2
+      }} />
       <select
         value={i18n.language || 'en'}
         onChange={(e) => i18n.changeLanguage(e.target.value)}
@@ -30,7 +37,7 @@ export default function LanguageSwitcher() {
           color: C.text,
           border: `1px solid ${C.border}`,
           borderRadius: '8px',
-          padding: '4px 20px 4px 6px', // Extra padding right to make room for default select arrow
+          padding: '4px 20px 4px 28px', // Room on right for ▼ and room on left for globe
           fontSize: '13px',
           fontWeight: 600,
           outline: 'none',
@@ -59,7 +66,8 @@ export default function LanguageSwitcher() {
         transform: 'translateY(-50%)',
         fontSize: '8px',
         color: C.textLight,
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        zIndex: 2
       }}>
         ▼
       </span>
