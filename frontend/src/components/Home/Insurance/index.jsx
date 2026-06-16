@@ -1,8 +1,9 @@
 import React from 'react';
-import { FaHeartbeat, FaShieldAlt, FaUmbrella } from "react-icons/fa";
+import { FaHeartbeat, FaShieldAlt, FaUmbrella, FaHandsHelping } from "react-icons/fa";
 
 export const insuranceData = [
-  { label: "Health", icon: <FaHeartbeat /> },
-  { label: "Life", icon: <FaShieldAlt /> },
-  { label: "General", icon: <FaUmbrella /> },
+  { label: "Health Insurance", icon: <FaHeartbeat /> },
+  { label: "Life Insurance", icon: <FaShieldAlt /> },
+  { label: "General Insurance", icon: <FaUmbrella /> },
+  { label: "Loan Protection Insurance", icon: <FaHandsHelping /> },
 ];

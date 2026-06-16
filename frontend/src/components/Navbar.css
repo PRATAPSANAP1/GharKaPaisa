@@ -203,6 +203,7 @@ body.no-scroll {
 @media (max-width: 768px) {
   .navbar {
     padding: 10px 15px;
+    flex-wrap: wrap;
   }
 
   .logo {
@@ -220,5 +221,12 @@ body.no-scroll {
 
   .navbar-right button:not(.theme-toggle-btn) {
     display: none;
+  }
+
+  .navbar-search-container {
+    margin: 8px 0 0 0 !important;
+    order: 3;
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
   }
 }
