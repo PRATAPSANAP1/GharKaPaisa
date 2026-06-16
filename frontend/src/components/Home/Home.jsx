@@ -17,6 +17,15 @@ import { loansData } from "./Loans";
 import { insuranceData } from "./Insurance";
 import { servicesData } from "./Services";
 
+// Import popular credit card images
+import hdfcImg from "./CreditCards/image/hdfc.png";
+import sbiImg from "./CreditCards/image/SBI.png";
+import axisImg from "./CreditCards/image/AXIS.png";
+import iciciImg from "./CreditCards/image/ICICI.png";
+import yesImg from "./CreditCards/image/yes bank.png";
+import kotakImg from "./CreditCards/image/KOTAK.png";
+
+
 // ── Responsive Hook ──────────────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
@@ -452,45 +461,40 @@ const popularCards = [
     name: "HDFC Millennia", 
     bank: "HDFC Bank", 
     benefit: "5% Cashback on online shopping", 
-    gradientStart: "#166397", 
-    gradientEnd: "#0B1622" 
-  },
-  { 
-    name: "HDFC Swiggy", 
-    bank: "HDFC Bank", 
-    benefit: "10% Swiggy Cashback", 
-    gradientStart: "#f27a1a", 
-    gradientEnd: "#e65c00" 
+    image: hdfcImg
   },
   { 
     name: "SBI SimplyCLICK", 
     bank: "SBI Card", 
     benefit: "10X Rewards on online partners", 
-    gradientStart: "#00a8cc", 
-    gradientEnd: "#112035" 
+    image: sbiImg
   },
   { 
-    name: "Axis ACE", 
+    name: "Axis Neo", 
     bank: "Axis Bank", 
-    benefit: "2% Cashback on all spends", 
-    gradientStart: "#a22c54", 
-    gradientEnd: "#4b1220" 
+    benefit: "10% off on Zomato & BookMyShow", 
+    image: axisImg
   },
   { 
-    name: "IDFC FIRST Select", 
-    bank: "IDFC Bank", 
-    benefit: "Buy 1 Get 1 Movie Ticket Free", 
-    gradientStart: "#8b1014", 
-    gradientEnd: "#240304" 
+    name: "ICICI Coral", 
+    bank: "ICICI Bank", 
+    benefit: "BookMyShow discounts & dining rewards", 
+    image: iciciImg
   },
   { 
-    name: "IndusInd Legend", 
-    bank: "IndusInd", 
-    benefit: "Zero joining fee, double rewards", 
-    gradientStart: "#d4af37", 
-    gradientEnd: "#8a6d1c" 
+    name: "Yes Bank BYOC", 
+    bank: "Yes Bank", 
+    benefit: "Choose your own rewards category", 
+    image: yesImg
+  },
+  { 
+    name: "Kotak League", 
+    bank: "Kotak Bank", 
+    benefit: "Premium rewards with zero annual fee", 
+    image: kotakImg
   }
 ];
+
 
 const trustBanks = [
   { name: "HDFC", color: "#166397" },
@@ -789,30 +793,18 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         <Section title="Money Transfer & Payments" C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "10px" : "16px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
             {moneyTransfer.map((item, idx) => (
-              <div key={idx} style={{ 
-                display: "flex", flexDirection: "column", 
-                justifyContent: "center", height: "120px", 
-                background: C.bgSecondary, borderLeft: `5px solid ${item.color}`, 
-                padding: "16px 20px", borderRadius: "14px", cursor: "pointer", 
-                borderTop: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, 
-                borderBottom: `1px solid ${C.border}`, transition: "transform 0.2s" 
-              }} 
-                onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} 
-                onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                  <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: `${item.color}15`, color: item.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
-                    {item.icon}
-                  </div>
-                  <div style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{item.label}</div>
+              <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "6px" : "10px", background: C.bgSecondary, padding: isMobile ? "8px 4px" : "16px 8px", borderRadius: isMobile ? "10px" : "14px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
+                <div style={{ width: isMobile ? "32px" : "44px", height: isMobile ? "32px" : "44px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "16px" : "20px", flexShrink: 0 }}>
+                  {item.icon}
                 </div>
-                <div style={{ fontSize: "11px", color: C.textLight, lineHeight: 1.3 }}>{item.desc}</div>
+                <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{item.label}</div>
               </div>
             ))}
           </div>
         </Section>
+
 
         {/* ── SECTION 2: Attractive Cards/Loans (ticker) ── */}
         <Section title="Attractive Cards/Loans" C={C}>
@@ -841,9 +833,19 @@ export default function Home({ onNavigate }) {
             <div className={`ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
               {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
                 <div key={`${cat.id}-${idx}`} style={{
-                  background: C.bgSecondary, borderRadius: "16px", border: `1px solid ${C.border}`,
-                  cursor: "pointer", transition: "all 0.3s ease", display: "flex", flexDirection: "column",
-                  width: isMobile ? "200px" : "260px", height: "260px", overflow: "hidden", flexShrink: 0
+                  background: C.bgSecondary,
+                  padding: isMobile ? "12px" : "20px",
+                  borderRadius: "16px",
+                  border: `1px solid ${C.border}`,
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  position: "relative",
+                  overflow: "hidden",
+                  width: isMobile ? "200px" : "280px",
+                  flexShrink: 0
                 }}
                 onClick={() => handleAttractiveCategoryClick(cat)}
                 onMouseEnter={(e) => {
@@ -855,25 +857,16 @@ export default function Home({ onNavigate }) {
                   e.currentTarget.style.boxShadow = "none";
                 }}
                 >
-                  {/* Image Panel */}
-                  <div style={{
-                    height: "110px", background: cat.gradient, display: "flex",
-                    alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "32px"
-                  }}>
-                    {cat.icon}
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
                   </div>
-                  {/* Content Area */}
-                  <div style={{ padding: "14px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
-                    <div>
-                      <h3 style={{ margin: "0 0 6px 0", fontSize: "14px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
-                      <p style={{ margin: 0, fontSize: "11px", color: C.textLight, lineHeight: 1.3 }}>{cat.description}</p>
-                    </div>
-                    <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 800, color: C.teal }}>
-                      Explore <FaChevronRight size={8} />
-                    </div>
+                  <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                    Explore <FaChevronRight size={isMobile ? 8 : 10} />
                   </div>
                 </div>
               ))}
+
             </div>
           </div>
         </Section>
@@ -897,19 +890,29 @@ export default function Home({ onNavigate }) {
               >
                 {/* Visual Card Card */}
                 <div style={{
-                  background: `linear-gradient(135deg, ${card.gradientStart}, ${card.gradientEnd})`,
-                  borderRadius: "12px", padding: "12px", color: "#fff", height: "100px",
-                  position: "relative", display: "flex", flexDirection: "column",
-                  justifyContent: "space-between", boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                  overflow: "hidden"
+                  height: "100px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  background: C.bgSecondary,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
                 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ width: "24px", height: "18px", borderRadius: "3px", background: "linear-gradient(135deg, #e0a96d, #cf8a4f)" }} />
-                    <span style={{ fontSize: "8px", fontWeight: 800, letterSpacing: "0.5px" }}>{card.bank}</span>
-                  </div>
-                  <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.5px" }}>{card.name}</div>
-                  <div style={{ position: "absolute", right: "-10px", bottom: "-10px", width: "50px", height: "50px", borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+                  <img 
+                    src={card.image} 
+                    alt={card.name} 
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: "contain",
+                      transition: "transform 0.3s"
+                    }} 
+                    onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
+                    onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
+                  />
                 </div>
+
                 {/* Details */}
                 <div>
                   <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
