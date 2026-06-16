@@ -25,18 +25,11 @@ import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 
 // Import banner images
-import ltfDesktop from "./banner/Lifetime Free Credit Cards.png";
-import ltfMobile from "./banner/Lifetime Free Credit Cards-m.png";
-import personalDesktop from "./banner/Personal Loans.png";
-import personalMobile from "./banner/Personal Loans-m.png";
-import businessDesktop from "./banner/Business Loans.png";
-import businessMobile from "./banner/Business Loans-m.png";
-import insuranceDesktop from "./banner/Insurance Plans.png";
-import insuranceMobile from "./banner/Insurance Plans-m.png";
-import emiDesktop from "./banner/EMI Cards.png";
-import emiMobile from "./banner/EMI Cards-m.png";
-import hdfcDesktop from "./banner/HDFC pixel.png";
-import hdfcMobile from "./banner/hdfc pixel-m.png";
+import ltfBanner from "./banner/lifetimefree card.png";
+import loanBanner from "./banner/loan.png";
+import insuranceBanner from "./banner/insurance.png";
+import emiBanner from "./banner/smart emi.png";
+import hdfcBanner from "./banner/hdfc pixel card.png";
 import offerBanner from "./banner/offerbanner.png";
 
 // Import attractive section card images
@@ -427,42 +420,42 @@ export default function Home({ onNavigate }) {
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
-      bgImage: isMobile ? ltfMobile : ltfDesktop,
+      bgImage: ltfBanner,
       action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
     },
     { 
       title: t('home.banners.slide1.title', 'Personal Loans'), 
       subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
       btnText: t('home.banners.slide1.btn', 'Apply Now'),
-      bgImage: isMobile ? personalMobile : personalDesktop,
+      bgImage: loanBanner,
       action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
     },
     { 
       title: t('home.banners.slide2.title', 'Business Loans'), 
       subtitle: t('home.banners.slide2.subtitle', 'Flexible repayment options for growing businesses'), 
       btnText: t('home.banners.slide2.btn', 'Check Eligibility'),
-      bgImage: isMobile ? businessMobile : businessDesktop,
+      bgImage: loanBanner,
       action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
     },
     { 
       title: t('home.banners.slide3.title', 'Insurance Plans'), 
       subtitle: t('home.banners.slide3.subtitle', 'Comprehensive health, life and general insurance cover'), 
       btnText: t('home.banners.slide3.btn', 'Get Quotes'),
-      bgImage: isMobile ? insuranceMobile : insuranceDesktop,
+      bgImage: insuranceBanner,
       action: () => setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData })
     },
     { 
       title: t('home.banners.slide4.title', 'EMI Cards'), 
       subtitle: t('home.banners.slide4.subtitle', 'Convert purchases to no-cost EMIs instantly'), 
       btnText: t('home.banners.slide4.btn', 'Get EMI Card'),
-      bgImage: isMobile ? emiMobile : emiDesktop,
+      bgImage: emiBanner,
       action: () => handleAttractiveCategoryClick(attractiveCategories.find(c => c.id === "smart-emi"))
     },
     { 
       title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
       subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
       btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
-      bgImage: isMobile ? hdfcMobile : hdfcDesktop,
+      bgImage: hdfcBanner,
       action: () => setActiveCategory({
         id: "bank-hdfc",
         title: bankCardsDetails.hdfc.title,
