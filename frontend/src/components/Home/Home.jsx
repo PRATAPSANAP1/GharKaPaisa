@@ -36,6 +36,7 @@ import emiDesktop from "./banner/EMI Cards.png";
 import emiMobile from "./banner/EMI Cards-m.png";
 import hdfcDesktop from "./banner/HDFC pixel.png";
 import hdfcMobile from "./banner/hdfc pixel-m.png";
+import offerBanner from "./banner/offerbanner.png";
 
 // Import attractive section card images
 import ltfImg from "./AttractiveSections/lifetimefree.png";
@@ -413,6 +414,13 @@ export default function Home({ onNavigate }) {
 
   // Auto rotate banner slides (height 320px)
   const bannerSlides = [
+    { 
+      title: t('home.banners.slideOffer.title', 'Special Offer'), 
+      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
+      btnText: t('home.banners.slideOffer.btn', 'View Offers'),
+      bgImage: offerBanner,
+      action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList })
+    },
     { 
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
