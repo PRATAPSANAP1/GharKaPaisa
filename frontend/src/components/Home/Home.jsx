@@ -25,6 +25,22 @@ import iciciImg from "./CreditCards/image/ICICI.png";
 import yesImg from "./CreditCards/image/yes bank.png";
 import kotakImg from "./CreditCards/image/KOTAK.png";
 
+// Import bank logo images
+import hdfcLogo from "./banks/hdfc.png";
+import sbiLogo from "./banks/SBI.png";
+import axisLogo from "./banks/axis.png";
+import iciciLogo from "./banks/icici.png";
+import kotakLogo from "./banks/kotak.png";
+import yesLogo from "./banks/yes.png";
+import bobLogo from "./banks/BOB.png";
+import dcbLogo from "./banks/dcb.png";
+import federalLogo from "./banks/federal.png";
+import sbmLogo from "./banks/sbm.png";
+import idfcLogo from "./banks/dfc.png";
+import rblLogo from "./banks/rbl.png";
+import equitasLogo from "./banks/equitos.png";
+
+
 
 // ── Responsive Hook ──────────────────────────────────────────────
 function useIsMobile() {
@@ -49,19 +65,36 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
       {visibleItems.map((item, idx) => (
         <div key={idx} style={{
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           background: C.bgSecondary, padding: isMobile ? "8px 4px" : "12px 8px", borderRadius: isMobile ? "10px" : "14px",
           border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "6px" : "10px",
-          cursor: "pointer", transition: "all 0.2s"
+          cursor: "pointer", transition: "all 0.2s",
+          height: item.image ? (isMobile ? "55px" : "75px") : "auto"
         }}
           onClick={() => onItemClick && onItemClick(item)}
           onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
           onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
         >
-          {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>}
-          <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+          {item.image ? (
+            <img 
+              src={item.image} 
+              alt={item.label} 
+              style={{ 
+                maxWidth: "85%", 
+                maxHeight: "85%", 
+                objectFit: "contain",
+                filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+              }} 
+            />
+          ) : (
+            <>
+              {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>}
+              <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+            </>
+          )}
         </div>
       ))}
+
       {showSeeMore && (
         <div
           onClick={onSeeMore}
@@ -165,18 +198,35 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               <div key={idx}
                 onClick={() => onItemClick && onItemClick(item)}
                 style={{
-                  display: "flex", flexDirection: "column", alignItems: "center",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                   background: C.bgSecondary, padding: "16px 10px", borderRadius: "14px",
                   border: `1px solid ${C.border}`, textAlign: "center", gap: "10px", cursor: "pointer",
-                  transition: "all 0.2s"
+                  transition: "all 0.2s",
+                  height: item.image ? (isMobile ? "55px" : "75px") : "auto"
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
               >
-                {item.icon && <div style={{ color: C.teal, fontSize: "24px" }}>{item.icon}</div>}
-                <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                {item.image ? (
+                  <img 
+                    src={item.image} 
+                    alt={item.label} 
+                    style={{ 
+                      maxWidth: "85%", 
+                      maxHeight: "85%", 
+                      objectFit: "contain",
+                      filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                    }} 
+                  />
+                ) : (
+                  <>
+                    {item.icon && <div style={{ color: C.teal, fontSize: "24px" }}>{item.icon}</div>}
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                  </>
+                )}
               </div>
             ))}
+
           </div>
         </div>
       </div>
@@ -440,21 +490,22 @@ const attractiveCategories = [
 ];
 
 const banksList = [
-  { id: "hdfc", label: "HDFC Bank", icon: <FaUniversity /> },
-  { id: "sbi", label: "SBI Card", icon: <FaUniversity /> },
-  { id: "axis", label: "Axis Bank", icon: <FaUniversity /> },
-  { id: "icici", label: "ICICI Bank", icon: <FaUniversity /> },
-  { id: "kotak", label: "Kotak Bank", icon: <FaUniversity /> },
-  { id: "yes", label: "Yes Bank", icon: <FaUniversity /> },
+  { id: "hdfc", label: "HDFC Bank", image: hdfcLogo },
+  { id: "sbi", label: "SBI Card", image: sbiLogo },
+  { id: "axis", label: "Axis Bank", image: axisLogo },
+  { id: "icici", label: "ICICI Bank", image: iciciLogo },
+  { id: "kotak", label: "Kotak Bank", image: kotakLogo },
+  { id: "yes", label: "Yes Bank", image: yesLogo },
   { id: "indusind", label: "IndusInd", icon: <FaUniversity /> },
-  { id: "bob", label: "BOB", icon: <FaUniversity /> },
-  { id: "dcb", label: "DCB", icon: <FaUniversity /> },
-  { id: "federal", label: "FEDERAL", icon: <FaUniversity /> },
-  { id: "sbm", label: "SBM", icon: <FaUniversity /> },
-  { id: "idfc", label: "IDFC", icon: <FaUniversity /> },
-  { id: "rbl", label: "RBL", icon: <FaUniversity /> },
-  { id: "equitas", label: "Equitas", icon: <FaUniversity /> }
+  { id: "bob", label: "BOB", image: bobLogo },
+  { id: "dcb", label: "DCB", image: dcbLogo },
+  { id: "federal", label: "FEDERAL", image: federalLogo },
+  { id: "sbm", label: "SBM", image: sbmLogo },
+  { id: "idfc", label: "IDFC", image: idfcLogo },
+  { id: "rbl", label: "RBL", image: rblLogo },
+  { id: "equitas", label: "Equitas", image: equitasLogo }
 ];
+
 
 const popularCards = [
   { 
