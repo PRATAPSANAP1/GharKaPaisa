@@ -14,6 +14,7 @@ import {
 
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./CreditCards";
+import { HDFCCardsPage } from "./CreditCards/HDFCCardsPage";
 import { loansData } from "./Loans";
 import { insuranceData } from "./Insurance";
 import { servicesData } from "./Services";
@@ -266,6 +267,10 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
         </div>
       </div>
     );
+  }
+
+  if (category.id === "bank-hdfc") {
+    return <HDFCCardsPage onBack={onBack} C={C} isMobile={isMobile} breadcrumbs={breadcrumbs} />;
   }
 
   if (category.type === "bank-detail") {
