@@ -1,0 +1,20 @@
+{
+  "welcome": "ઘર કા પૈસામાં આપનું સ્વાગત છે",
+  "tagline": "હોમ લોન માટે તમારું વિશ્વસનીય પ્લેટફોર્મ",
+  "searchPlaceholder": "કાર્ડ, લોન, વીમો અને સેવાઓ માટે શોધો",
+  "nav": {
+    "home": "Home",
+    "about": "અમારા વિશે",
+    "contact": "સંપર્ક કરો"
+  },
+  "sections": {
+    "moneyTransfer": "મની ટ્રાન્સફર અને ચૂકવણીઓ",
+    "attractiveCards": "આકર્ષક કાર્ડ્સ / લોન",
+    "popularCards": "લોકપ્રિય ક્રેડિટ કાર્ડ્સ",
+    "popularBanks": "લોકપ્રિય ક્રેડિટ કાર્ડ બેંકો",
+    "loans": "લોન",
+    "insurance": "વીમો",
+    "businessServices": "વ્યવસાય સેવાઓ",
+    "partnerBanks": "ભાગીદાર બેંકો"
+  }
+}

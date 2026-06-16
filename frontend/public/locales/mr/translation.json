@@ -1,0 +1,20 @@
+{
+  "welcome": "घर का पैसा मध्ये आपले स्वागत आहे",
+  "tagline": "गृह कर्जासाठी आपले विश्वसनीय व्यासपीठ",
+  "searchPlaceholder": "कार्ड, कर्जे, विमा आणि सेवा शोधा",
+  "nav": {
+    "home": "होम",
+    "about": "आमच्याबद्दल",
+    "contact": "संपर्क"
+  },
+  "sections": {
+    "moneyTransfer": "मनी ट्रान्सफर आणि पेमेंट",
+    "attractiveCards": "आकर्षक कार्डे / कर्जे",
+    "popularCards": "लोकप्रिय क्रेडिट कार्डे",
+    "popularBanks": "लोकप्रिय क्रेडिट कार्ड बँका",
+    "loans": "कर्जे",
+    "insurance": "विमा",
+    "businessServices": "व्यवसाय सेवा",
+    "partnerBanks": "भागीदार बँका"
+  }
+}

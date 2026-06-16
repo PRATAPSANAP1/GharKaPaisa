@@ -1,0 +1,20 @@
+{
+  "welcome": "Welcome to GharKaPaisa",
+  "tagline": "Your trusted platform for home loans",
+  "searchPlaceholder": "Search for cards, loans, insurance & services",
+  "nav": {
+    "home": "Home",
+    "about": "About Us",
+    "contact": "Contact Us"
+  },
+  "sections": {
+    "moneyTransfer": "Money Transfer & Payments",
+    "attractiveCards": "Attractive Cards/Loans",
+    "popularCards": "Popular Credit Cards",
+    "popularBanks": "Popular Credit Card Banks",
+    "loans": "Loans",
+    "insurance": "Insurance",
+    "businessServices": "Business Services",
+    "partnerBanks": "Partner Banks"
+  }
+}

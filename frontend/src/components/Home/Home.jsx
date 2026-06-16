@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../Partner/ThemeContext";
 import { useSearchStore } from "../../store/searchStore";
 import {
@@ -357,6 +358,7 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
 
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -649,7 +651,7 @@ export default function Home({ onNavigate }) {
         </div>
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
-        <Section title="Money Transfer & Payments" C={C}>
+        <Section title={t('sections.moneyTransfer')} C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
             {moneyTransfer.map((item, idx) => (
               <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: isMobile ? "6px" : "10px", background: C.bgSecondary, padding: isMobile ? "8px 4px" : "16px 8px", borderRadius: isMobile ? "10px" : "14px", cursor: "pointer", border: `1px solid ${C.border}`, transition: "transform 0.2s" }} onMouseEnter={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(-4px)")} onMouseLeave={(e) => !isMobile && (e.currentTarget.style.transform = "translateY(0)")}>
@@ -664,7 +666,7 @@ export default function Home({ onNavigate }) {
 
 
         {/* ── SECTION 2: Attractive Cards/Loans (ticker) ── */}
-        <Section title="Attractive Cards/Loans" C={C}>
+        <Section title={t('sections.attractiveCards')} C={C}>
           <style>{`
             @keyframes ticker-scroll {
               0% { transform: translateX(0); }
@@ -730,7 +732,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 3: Popular Credit Cards ── */}
         <Section 
-          title="Popular Credit Cards" 
+          title={t('sections.popularCards')} 
           viewAllLabel="View All Cards" 
           onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
           C={C}
@@ -793,12 +795,12 @@ export default function Home({ onNavigate }) {
         </Section>
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
-        <Section title="Popular Credit Card Banks" C={C}>
+        <Section title={t('sections.popularBanks')} C={C}>
           <ResponsiveGrid C={C} items={banksList} onSeeMore={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })} onItemClick={handleItemClick} />
         </Section>
 
         {/* ── SECTION 5: Loans ── */}
-        <Section title="Loans" C={C}>
+        <Section title={t('sections.loans')} C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
             {loansData.slice(0, 6).map((item, idx) => (
               <div key={idx}
@@ -820,7 +822,7 @@ export default function Home({ onNavigate }) {
         </Section>
 
         {/* ── SECTION 6: Insurance ── */}
-        <Section title="Insurance" C={C}>
+        <Section title={t('sections.insurance')} C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
             {insuranceData.map((item, idx) => (
               <div key={idx}
@@ -842,7 +844,7 @@ export default function Home({ onNavigate }) {
         </Section>
 
         {/* ── SECTION 7: Business Services ── */}
-        <Section title="Business Services" C={C}>
+        <Section title={t('sections.businessServices')} C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(8, 1fr)", gap: "10px" }}>
             {servicesData.map((item, idx) => (
               <div key={idx}
@@ -864,7 +866,7 @@ export default function Home({ onNavigate }) {
         </Section>
 
         {/* ── SECTION 8: Partner Banks (Logo strip) ── */}
-        <Section title="Partner Banks" C={C}>
+        <Section title={t('sections.partnerBanks')} C={C}>
           <style>{`
             @keyframes bank-ticker-scroll {
               0% { transform: translateX(0); }

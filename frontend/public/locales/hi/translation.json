@@ -1,0 +1,20 @@
+{
+  "welcome": "घर का पैसा में आपका स्वागत है",
+  "tagline": "होम लोन के लिए आपका विश्वसनीय मंच",
+  "searchPlaceholder": "कार्ड, ऋण, बीमा और सेवाओं की खोज करें",
+  "nav": {
+    "home": "होम",
+    "about": "हमारे बारे में",
+    "contact": "संपर्क करें"
+  },
+  "sections": {
+    "moneyTransfer": "मनी ट्रांसफर और भुगतान",
+    "attractiveCards": "आकर्षक कार्ड / ऋण",
+    "popularCards": "लोकप्रिय क्रेडिट कार्ड",
+    "popularBanks": "लोकप्रिय क्रेडिट कार्ड बैंक",
+    "loans": "ऋण",
+    "insurance": "बीमा",
+    "businessServices": "व्यावसायिक सेवाएं",
+    "partnerBanks": "साझेदार बैंक"
+  }
+}

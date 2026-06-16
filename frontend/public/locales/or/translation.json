@@ -1,0 +1,20 @@
+{
+  "welcome": "ଘରକାପଇସାକୁ ସ୍ୱାଗତ",
+  "tagline": "ଗୃହ ଋଣ ପାଇଁ ଆପଣଙ୍କର ବିଶ୍ୱସ୍ତ ପ୍ଲାଟଫର୍ମ",
+  "searchPlaceholder": "କାର୍ଡ, ଋଣ, ବୀମା ଏବଂ ସେବା ସନ୍ଧାନ କରନ୍ତୁ",
+  "nav": {
+    "home": "ହୋମ୍",
+    "about": "ଆମ ବିଷୟରେ",
+    "contact": "ଯୋଗାଯୋଗ"
+  },
+  "sections": {
+    "moneyTransfer": "ଅର୍ଥ ସ୍ଥାନାନ୍ତର ଏବଂ ଦେୟ",
+    "attractiveCards": "ଆକର୍ଷଣୀୟ କାର୍ଡ / ଋଣ",
+    "popularCards": "ଲୋକପ୍ରିୟ କ୍ରେଡିଟ୍ କାର୍ଡ",
+    "popularBanks": "ଲୋକପ୍ରିୟ କ୍ରେଡିଟ୍ କାର୍ଡ ବ୍ୟାଙ୍କ",
+    "loans": "ଋଣ",
+    "insurance": "ବୀମା",
+    "businessServices": "ବ୍ୟବସାୟ ସେବା",
+    "partnerBanks": "ଅଂଶୀଦାର ବ୍ୟାଙ୍କ"
+  }
+}

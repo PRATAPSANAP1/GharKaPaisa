@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FaSearch } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../logo.png';
 import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 import { useSearchStore } from '../store/searchStore';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const searchCatalog = [
   // Categories/Banks
@@ -56,6 +58,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { C } = useTheme();
+  const { t } = useTranslation();
   const setSearchItem = useSearchStore(state => state.setSearchItem);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,7 +141,7 @@ const Navbar = () => {
             <FaSearch style={{ position: "absolute", left: "12px", color: C.textLight }} />
             <input
               type="text"
-              placeholder="Search for cards, loans, insurance & services"
+              placeholder={t('searchPlaceholder', 'Search for cards, loans, insurance & services')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -200,6 +203,7 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px", flex: "0 0 auto", justifyContent: "flex-end" }}>
+          <LanguageSwitcher />
           <ThemeToggle />
           <button 
             onClick={() => navigate('/admin-login')}
