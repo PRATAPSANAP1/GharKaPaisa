@@ -4,7 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
 import { sendOtp, verifyOtpLogin, loginWithPassword, getMe, lookupUser } from "../../api/auth.api";
-import logo from "../../logo.jpeg";
+import logo from "../../logo.svg";
 
 export default function PartnerLogin() {
   const { C } = useTheme();
