@@ -56,6 +56,7 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
   const isMobile = useIsMobile();
   const showSeeMore = isMobile && items.length > 4;
   const visibleItems = showSeeMore ? items.slice(0, 3) : items;
+  const { t } = useTranslation();
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: isMobile ? "6px" : "12px", marginTop: "12px" }}>
@@ -74,7 +75,7 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
           {item.image ? (
             <img 
               src={item.image} 
-              alt={item.label} 
+              alt={t('banks.' + item.id, item.label)} 
               style={{ 
                 maxWidth: "85%", 
                 maxHeight: "85%", 
@@ -85,7 +86,7 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
           ) : (
             <>
               {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>}
-              <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+              <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('banks.' + item.id, item.label)}</div>
             </>
           )}
         </div>
@@ -102,7 +103,7 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
           }}
         >
           <div style={{ fontSize: isMobile ? "18px" : "22px" }}><FaChevronRight /></div>
-          <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 800 }}>See More</div>
+          <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 800 }}>{t('home.seeMore', 'See More')}</div>
         </div>
       )}
     </div>
@@ -136,6 +137,7 @@ function Section({ title, viewAllLabel, onViewAll, C, children }) {
 // ── CategoryPage Component ──────────────────────────────────────────
 function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const renderBreadcrumbs = () => {
     if (!breadcrumbs) return null;
@@ -175,7 +177,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
           <BackRow />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, margin: 0 }}>Select Partner Bank</h2>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: C.text, margin: 0 }}>{t('home.selectPartnerBank', 'Select Partner Bank')}</h2>
             <button
               onClick={() => onItemClick && onItemClick({ id: "ltf-detail-page-trigger" })}
               style={{
@@ -186,7 +188,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               onMouseEnter={(e) => e.target.style.opacity = 0.9}
               onMouseLeave={(e) => e.target.style.opacity = 1}
             >
-              Lifetime Free Credit Cards (LTF)
+              {t('home.ltfCardsTitle', 'Lifetime Free Credit Cards (LTF)')}
             </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px" }}>
@@ -206,7 +208,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 {item.image ? (
                   <img 
                     src={item.image} 
-                    alt={item.label} 
+                    alt={t('banks.' + item.id, item.label)} 
                     style={{ 
                       maxWidth: "85%", 
                       maxHeight: "85%", 
@@ -217,7 +219,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 ) : (
                   <>
                     {item.icon && <div style={{ color: C.teal, fontSize: "24px" }}>{item.icon}</div>}
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('banks.' + item.id, item.label)}</div>
                   </>
                 )}
               </div>
@@ -255,7 +257,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                         <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
                         <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
                         <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
-                          Apply Now
+                          {t('popularCardsList.applyNow', 'Apply Now')}
                         </button>
                       </div>
                     ))}
@@ -288,7 +290,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                       <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
                       <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
                       <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
-                        Apply Now
+                        {t('popularCardsList.applyNow', 'Apply Now')}
                       </button>
                     </div>
                   ))}
@@ -319,10 +321,14 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
             >
               {item.icon && <div style={{ color: C.teal, fontSize: isMobile ? "20px" : "24px" }}>{item.icon}</div>}
-              <div style={{ fontSize: isMobile ? "12px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+              <div style={{ fontSize: isMobile ? "12px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+                {item.label === "Co-Brand" ? t('home.breadcrumbs.cobrand', 'Co-Brand') : 
+                 item.label === "FD Based Cards" ? t('home.breadcrumbs.fdBasedCards', 'FD Based Cards') : 
+                 t(category.id + 'List.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+              </div>
             </div>
           )) : (
-            <div style={{ color: C.textLight, gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}>No items available in this category.</div>
+            <div style={{ color: C.textLight, gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}>{t('home.noItems', 'No items available in this category.')}</div>
           )}
         </div>
       </div>
@@ -332,13 +338,14 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
 
 // ── Mobile Bottom Navigation ────────────────────────────────────────
 function MobileBottomNav({ C, onNavigate, activeTab }) {
+  const { t } = useTranslation();
   const navItems = [
-    { id: "home", label: "Dashboard", icon: <FaHome /> },
-    { id: "credit-cards", label: "Credit Card", icon: <FaRegCreditCard /> },
-    { id: "loans", label: "Loan", icon: <FaMoneyBillWave /> },
-    { id: "insurance", label: "Insurance", icon: <FaShieldAlt /> },
-    { id: "investment", label: "Investment", icon: <FaChartLine /> },
-    { id: "services", label: "Services", icon: <FaFileInvoiceDollar /> }
+    { id: "home", label: t('home.dashboard', 'Dashboard'), icon: <FaHome /> },
+    { id: "credit-cards", label: t('home.creditCard', 'Credit Card'), icon: <FaRegCreditCard /> },
+    { id: "loans", label: t('home.loan', 'Loan'), icon: <FaMoneyBillWave /> },
+    { id: "insurance", label: t('home.insurance', 'Insurance'), icon: <FaShieldAlt /> },
+    { id: "investment", label: t('home.investment', 'Investment'), icon: <FaChartLine /> },
+    { id: "services", label: t('home.services', 'Services'), icon: <FaFileInvoiceDollar /> }
   ];
 
   return (
@@ -376,48 +383,49 @@ export default function Home({ onNavigate }) {
   // Auto rotate banner slides (height 320px)
   const bannerSlides = [
     { 
-      title: "Lifetime Free Credit Cards", 
-      subtitle: "Zero Joining Fee • Zero Annual Fee", 
-      btnText: "Explore Now",
+      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
+      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
+      btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: isMobile ? ltfMobile : ltfDesktop,
-      action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
+      action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
     },
     { 
-      title: "Personal Loans", 
-      subtitle: "Low Interest Rates • Quick Disbursal", 
-      btnText: "Apply Now",
+      title: t('home.banners.slide1.title', 'Personal Loans'), 
+      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
+      btnText: t('home.banners.slide1.btn', 'Apply Now'),
       bgImage: isMobile ? personalMobile : personalDesktop,
-      action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
+      action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
     },
     { 
-      title: "Business Loans", 
-      subtitle: "Flexible repayment options for growing businesses", 
-      btnText: "Check Eligibility",
+      title: t('home.banners.slide2.title', 'Business Loans'), 
+      subtitle: t('home.banners.slide2.subtitle', 'Flexible repayment options for growing businesses'), 
+      btnText: t('home.banners.slide2.btn', 'Check Eligibility'),
       bgImage: isMobile ? businessMobile : businessDesktop,
-      action: () => setActiveCategory({ id: "loans", title: "Loans", items: loansData })
+      action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
     },
     { 
-      title: "Insurance Plans", 
-      subtitle: "Comprehensive health, life and general insurance cover", 
-      btnText: "Get Quotes",
+      title: t('home.banners.slide3.title', 'Insurance Plans'), 
+      subtitle: t('home.banners.slide3.subtitle', 'Comprehensive health, life and general insurance cover'), 
+      btnText: t('home.banners.slide3.btn', 'Get Quotes'),
       bgImage: isMobile ? insuranceMobile : insuranceDesktop,
-      action: () => setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData })
+      action: () => setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData })
     },
     { 
-      title: "EMI Cards", 
-      subtitle: "Convert purchases to no-cost EMIs instantly", 
-      btnText: "Get EMI Card",
+      title: t('home.banners.slide4.title', 'EMI Cards'), 
+      subtitle: t('home.banners.slide4.subtitle', 'Convert purchases to no-cost EMIs instantly'), 
+      btnText: t('home.banners.slide4.btn', 'Get EMI Card'),
       bgImage: isMobile ? emiMobile : emiDesktop,
       action: () => handleAttractiveCategoryClick(attractiveCategories.find(c => c.id === "smart-emi"))
     },
     { 
-      title: "HDFC Pixel Credit Cards", 
-      subtitle: "Customizable rewards on dining, shopping & entertainment", 
-      btnText: "Explore Pixel Cards",
+      title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
+      subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
+      btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
       bgImage: isMobile ? hdfcMobile : hdfcDesktop,
       action: () => setActiveCategory({
         id: "bank-hdfc",
         title: bankCardsDetails.hdfc.title,
+        titleKey: "hdfc.title",
         parentId: "credit-cards",
         type: "bank-detail",
         sections: bankCardsDetails.hdfc.sections
@@ -443,15 +451,15 @@ export default function Home({ onNavigate }) {
     if (searchItem) {
       if (searchItem.type === "category") {
         if (searchItem.target.id === "credit-cards") {
-          setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
+          setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
         } else if (searchItem.target.id === "loans") {
-          setActiveCategory({ id: "loans", title: "Loans", items: loansData });
+          setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
         } else if (searchItem.target.id === "insurance") {
-          setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData });
+          setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
         } else if (searchItem.target.id === "services") {
-          setActiveCategory({ id: "services", title: "Services", items: servicesData });
+          setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
         } else if (searchItem.target.id === "ltf-detail-page") {
-          setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) });
+          setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) });
         } else if (searchItem.target.id.startsWith("bank-")) {
           const bankId = searchItem.target.id.split("-")[1];
           const bankItem = banksList.find(b => b.id === bankId);
@@ -461,11 +469,11 @@ export default function Home({ onNavigate }) {
           if (attractiveCat) handleAttractiveCategoryClick(attractiveCat);
         }
       } else if (searchItem.type === "loan") {
-        setActiveCategory({ id: "loans", title: "Loans", items: loansData });
+        setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
       } else if (searchItem.type === "insurance") {
-        setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData });
+        setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
       } else if (searchItem.type === "service") {
-        setActiveCategory({ id: "services", title: "Services", items: servicesData });
+        setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
       }
       setSearchItem(null); // Reset store
     }
@@ -477,33 +485,33 @@ export default function Home({ onNavigate }) {
   };
 
   const getBreadcrumbs = (cat) => {
-    const crumbs = [{ label: "Home", action: () => setActiveCategory(null) }];
+    const crumbs = [{ label: t('home.breadcrumbs.home', 'Home'), action: () => setActiveCategory(null) }];
     
     if (!cat) return crumbs;
 
     if (cat.id.startsWith("cobrand-") || cat.id.startsWith("fd-")) {
       const bankId = cat.id.split("-")[1];
       const bankName = banksList.find(b => b.id === bankId)?.label || "Bank";
-      crumbs.push({ label: "Credit Cards", action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList }) });
+      crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList }) });
       crumbs.push({ 
-        label: bankName, 
+        label: t('banks.' + bankId, bankName), 
         action: () => handleItemClick({ id: bankId, label: bankName }) 
       });
-      crumbs.push({ label: cat.id.startsWith("cobrand-") ? "Co-Brand" : "FD Based Cards", action: null });
+      crumbs.push({ label: cat.id.startsWith("cobrand-") ? t('home.breadcrumbs.cobrand', 'Co-Brand') : t('home.breadcrumbs.fdBasedCards', 'FD Based Cards'), action: null });
     } else if (cat.parentId === "credit-cards" || cat.id.startsWith("bank-")) {
-      crumbs.push({ label: "Credit Cards", action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList }) });
-      crumbs.push({ label: cat.title, action: null });
+      crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList }) });
+      crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     } else if (cat.id === "credit-cards") {
-      crumbs.push({ label: "Credit Cards", action: null });
+      crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: null });
     } else if (cat.id === "loans") {
-      crumbs.push({ label: "Loans", action: null });
+      crumbs.push({ label: t('sections.loans', 'Loans'), action: null });
     } else if (cat.id === "insurance") {
-      crumbs.push({ label: "Insurance", action: null });
+      crumbs.push({ label: t('sections.insurance', 'Insurance'), action: null });
     } else if (cat.id === "services") {
-      crumbs.push({ label: "Services", action: null });
+      crumbs.push({ label: t('sections.businessServices', 'Services'), action: null });
     } else {
-      crumbs.push({ label: "Attractive Sections", action: () => setActiveCategory(null) });
-      crumbs.push({ label: cat.title, action: null });
+      crumbs.push({ label: t('home.breadcrumbs.attractiveSections', 'Attractive Sections'), action: () => setActiveCategory(null) });
+      crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     }
     
     return crumbs;
@@ -511,11 +519,11 @@ export default function Home({ onNavigate }) {
 
   const handleBottomNavClick = (id) => {
     if (id === "home") setActiveCategory(null);
-    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
-    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", items: loansData });
-    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", items: insuranceData });
-    else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", items: [] });
-    else if (id === "services") setActiveCategory({ id: "services", title: "Services", items: servicesData });
+    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
+    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+    else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", titleKey: "home.investment", items: [] });
+    else if (id === "services") setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
   };
 
   const handleItemClick = (item) => {
@@ -523,6 +531,7 @@ export default function Home({ onNavigate }) {
       setActiveCategory({
         id: "ltf-detail-page",
         title: "Lifetime Free Credit Cards (LTF)",
+        titleKey: "home.ltfCardsTitle",
         parentId: "credit-cards",
         items: ltfCards.map(card => ({
           id: card.name.toLowerCase().replace(/\s+/g, "-"),
@@ -537,6 +546,7 @@ export default function Home({ onNavigate }) {
         setActiveCategory({
           id: `bank-${item.id}`,
           title: bankCardsDetails[item.id].title,
+          titleKey: `${item.id}.title`,
           parentId: "credit-cards",
           type: "bank-detail",
           sections: bankCardsDetails[item.id].sections
@@ -545,6 +555,7 @@ export default function Home({ onNavigate }) {
         setActiveCategory({
           id: `bank-${item.id}`,
           title: item.label,
+          titleKey: `banks.${item.id}`,
           parentId: "credit-cards",
           items: [
             { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
@@ -559,6 +570,7 @@ export default function Home({ onNavigate }) {
     setActiveCategory({
       id: cat.id,
       title: cat.title,
+      titleKey: `attractiveCards.${cat.id}`,
       type: "hierarchy",
       items: cat.items
     });
@@ -573,7 +585,7 @@ export default function Home({ onNavigate }) {
 
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
-      setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList });
+      setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
     } else {
       setActiveCategory(null);
     }
@@ -663,7 +675,7 @@ export default function Home({ onNavigate }) {
                 <div style={{ width: isMobile ? "32px" : "44px", height: isMobile ? "32px" : "44px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? "16px" : "20px", flexShrink: 0 }}>
                   {item.icon}
                 </div>
-                <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{item.label}</div>
+                <div style={{ fontSize: isMobile ? "10px" : "13px", fontWeight: 700, color: C.text, textAlign: "center", lineHeight: 1.2 }}>{t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
               </div>
             ))}
           </div>
@@ -723,10 +735,10 @@ export default function Home({ onNavigate }) {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "24px", display: "flex" }}>{cat.icon}</div>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cat.label}</h3>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "15px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{t('attractiveCards.' + cat.id, cat.label)}</h3>
                   </div>
                   <div style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                    Explore <FaChevronRight size={isMobile ? 8 : 10} />
+                    {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
                   </div>
                 </div>
               ))}
@@ -738,7 +750,7 @@ export default function Home({ onNavigate }) {
         {/* ── SECTION 3: Popular Credit Cards ── */}
         <Section 
           title={t('sections.popularCards')} 
-          viewAllLabel="View All Cards" 
+          viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
           onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
           C={C}
         >
@@ -780,7 +792,7 @@ export default function Home({ onNavigate }) {
                 {/* Details */}
                 <div>
                   <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
-                  <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{card.benefit}</p>
+                  <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
                   <button 
                     onClick={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
                     style={{
@@ -791,7 +803,7 @@ export default function Home({ onNavigate }) {
                     onMouseEnter={(e) => { e.target.style.background = C.teal; e.target.style.color = "#fff"; }}
                     onMouseLeave={(e) => { e.target.style.background = `${C.teal}15`; e.target.style.color = C.teal; }}
                   >
-                    Apply Now
+                    {t('popularCardsList.applyNow', 'Apply Now')}
                   </button>
                 </div>
               </div>
@@ -820,7 +832,7 @@ export default function Home({ onNavigate }) {
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
               >
                 <div style={{ color: C.teal, fontSize: "22px" }}>{item.icon}</div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('loansList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
               </div>
             ))}
           </div>
@@ -842,7 +854,7 @@ export default function Home({ onNavigate }) {
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
               >
                 <div style={{ color: C.teal, fontSize: "22px" }}>{item.icon}</div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('insuranceList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
               </div>
             ))}
           </div>
@@ -864,7 +876,7 @@ export default function Home({ onNavigate }) {
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
               >
                 <div style={{ color: C.teal, fontSize: "20px" }}>{item.icon}</div>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.label}</div>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('servicesList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
               </div>
             ))}
           </div>
@@ -930,7 +942,7 @@ export default function Home({ onNavigate }) {
             <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
               <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>GharKaPaisa</h2>
               <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
-                India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.
+                {t('footer.desc', "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.")}
               </p>
               <div style={{ display: "flex", gap: "12px" }}>
                 {[FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaYoutube].map((Icon, i) => (
@@ -942,36 +954,36 @@ export default function Home({ onNavigate }) {
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Products</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.products', 'Products')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => handleBottomNavClick("credit-cards")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Credit Cards</span>
-                <span onClick={() => handleBottomNavClick("loans")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Loans</span>
-                <span onClick={() => handleBottomNavClick("insurance")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Insurance</span>
+                <span onClick={() => handleBottomNavClick("credit-cards")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.creditCards', 'Credit Cards')}</span>
+                <span onClick={() => handleBottomNavClick("loans")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.loans', 'Loans')}</span>
+                <span onClick={() => handleBottomNavClick("insurance")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.insurance', 'Insurance')}</span>
               </div>
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Company</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.company', 'Company')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>About Us</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Careers</span>
-                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Contact Us</span>
+                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.aboutUs', 'About Us')}</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.careers', 'Careers')}</span>
+                <span onClick={() => onNavigate && onNavigate("contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.contactUs', 'Contact Us')}</span>
               </div>
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Support</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.support', 'Support')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Privacy Policy</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Terms & Conditions</span>
-                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>Refund Policy</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.privacy', 'Privacy Policy')}</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.terms', 'Terms & Conditions')}</span>
+                <span style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "default" }}>{t('footer.refund', 'Refund Policy')}</span>
               </div>
             </div>
           </div>
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-            <span>© 2026 GharKaPaisa. All rights reserved.</span>
-            <span>Made with ♥ in India</span>
+            <span>{t('footer.rights', '© 2026 GharKaPaisa. All rights reserved.')}</span>
+            <span>{t('footer.made', 'Made with ♥ in India')}</span>
           </div>
         </div>
 

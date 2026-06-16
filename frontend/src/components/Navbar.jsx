@@ -108,17 +108,17 @@ const Navbar = () => {
           <span></span>
         </button>
         <button onClick={() => { navigate('/admin-login'); toggleLink(); }}>
-          Admin
+          {t('nav.admin', 'Admin')}
         </button>
         <button
           onClick={() =>
             window.location.href = 'https://gharkapaisa.in/dashboard'
           }
         >
-          Employee
+          {t('nav.employee', 'Employee')}
         </button>
         {!isAuthPage && (
-          <button onClick={() => { navigate('/login'); toggleLink(); }}>Partner</button>
+          <button onClick={() => { navigate('/login'); toggleLink(); }}>{t('nav.partner', 'Partner')}</button>
         )}
       </div>
 
@@ -207,20 +207,20 @@ const Navbar = () => {
             onClick={() => navigate('/admin-login')}
             style={{ color: C.text, '--underline-color': C.teal }}
           >
-            Admin
+            {t('nav.admin', 'Admin')}
           </button>
           <button
             onClick={() => window.location.href = 'https://gharkapaisa.in/dashboard'}
             style={{ color: C.text, '--underline-color': C.teal }}
           >
-            Employee
+            {t('nav.employee', 'Employee')}
           </button>
           {!isAuthPage && (
             <button 
               onClick={() => navigate('/login')}
               style={{ color: C.text, '--underline-color': C.teal }}
             >
-              Partner
+              {t('nav.partner', 'Partner')}
             </button>
           )}
           <LanguageSwitcher />

@@ -1,11 +1,14 @@
 {
-  "welcome": "ઘર કા પૈસામાં આપનું સ્વાગત છે",
+  "welcome": "ઘરકાપૈસામાં આપનું સ્વાગત છે",
   "tagline": "હોમ લોન માટે તમારું વિશ્વસનીય પ્લેટફોર્મ",
   "searchPlaceholder": "કાર્ડ, લોન, વીમો અને સેવાઓ માટે શોધો",
   "nav": {
-    "home": "Home",
+    "home": "હોમ",
     "about": "અમારા વિશે",
-    "contact": "સંપર્ક કરો"
+    "contact": "સંપર્ક કરો",
+    "admin": "Admin",
+    "employee": "Employee",
+    "partner": "Partner"
   },
   "sections": {
     "moneyTransfer": "મની ટ્રાન્સફર અને ચૂકવણીઓ",
@@ -16,5 +19,356 @@
     "insurance": "વીમો",
     "businessServices": "વ્યવસાય સેવાઓ",
     "partnerBanks": "ભાગીદાર બેંકો"
+  },
+  "moneyTransfer": {
+    "tomobile": "To Mobile",
+    "recharge": "Recharge",
+    "electricity": "Electricity",
+    "loanrepay": "Loan Repay"
+  },
+  "attractiveCards": {
+    "ltf-cards": "Lifetime Free Cards",
+    "cibil-loans": "CIBIL Loan",
+    "hdfc-cc-loan": "Loan on Credit Card",
+    "smart-emi": "Smart EMI Card",
+    "secured-cards": "FD Backed Card",
+    "upi-cards": "UPI Credit Card",
+    "explore": "Explore"
+  },
+  "popularCardsList": {
+    "hdfcmillennia": "5% Cashback on online shopping",
+    "sbisimplyclick": "10X Rewards on online partners",
+    "axisneo": "10% off on Zomato & BookMyShow",
+    "icicicoral": "BookMyShow discounts & dining rewards",
+    "yesbankbyoc": "Choose your own rewards category",
+    "kotakleague": "Premium rewards with zero annual fee",
+    "applyNow": "Apply Now",
+    "viewAll": "બધા કાર્ડ જુઓ"
+  },
+  "loansList": {
+    "personalloan": "Personal Loan",
+    "homeloan": "Home Loan",
+    "businessloan": "Business Loan",
+    "educationloan": "Education Loan",
+    "carloan": "Car Loan",
+    "usedcarloan": "Used Car Loan",
+    "instantloan": "ઇન્સ્ટન્ટ લોન",
+    "loanagainstpropertylap": "પ્રોપર્ટી સામે લોન (LAP)"
+  },
+  "insuranceList": {
+    "healthinsurance": "Health Insurance",
+    "lifeinsurance": "Life Insurance",
+    "generalinsurance": "General Insurance",
+    "loanprotectioninsurance": "Loan Protection Insurance"
+  },
+  "servicesList": {
+    "gstreturns": "GST Returns",
+    "companyregistration": "Company Registration",
+    "itrfiling": "ITR Filing",
+    "pfesic": "PF & ESIC",
+    "tdsfiling": "TDS Filing",
+    "tradelicense": "Trade License",
+    "msmeregistration": "MSME Registration",
+    "dscservices": "DSC Services"
+  },
+  "footer": {
+    "desc": "ક્રેડિટ કાર્ડ, લોન, વીમો અને નાણાકીય સેવાઓ માટે ભારતનું વિશ્વસનીય પ્લેટફોર્મ.",
+    "products": "પ્રોડક્ટ્સ",
+    "creditCards": "ક્રેડિટ કાર્ડ્સ",
+    "loans": "લોન",
+    "insurance": "વીમો",
+    "company": "કંપની",
+    "aboutUs": "અમારા વિશે",
+    "careers": "કરીઅર",
+    "contactUs": "સંપર્ક કરો",
+    "support": "સપોર્ટ",
+    "privacy": "પ્રાઇવસી પોલિસી",
+    "terms": "નિયમો અને શરતો",
+    "refund": "રીફંડ પોલિસી",
+    "rights": "© 2026 GharKaPaisa. બધા હકો સ્વાધીન.",
+    "made": "ભારતમાં ♥ સાથે બનાવેલ"
+  },
+  "partner": {
+    "backToHome": "હોમ પર પાછા જાઓ",
+    "partnerLogin": "પાર્ટનર લોગિન",
+    "emailOrMobile": "ઇમેઇલ અથવા મોબાઇલ નંબર",
+    "enterEmailOrMobile": "ઇમેઇલ અથવા મોબાઇલ નંબર દાખલ કરો",
+    "password": "પાસવર્ડ",
+    "enterPassword": "પાસવર્ડ દાખલ કરો",
+    "forgotPassword": "પાસવર્ડ ભૂલી ગયા છો?",
+    "sendingResetLink": "રીસેટ લિંક મોકલી રહ્યાં છે...",
+    "enterOtp": "6-આંકડાનો OTP દાખલ કરો",
+    "sendOtp": "OTP મોકલો",
+    "sending": "મોકલી રહ્યાં છે...",
+    "secureLogIn": "સુરક્ષિત લોગિન",
+    "verifying": "ચકાસી રહ્યાં છે...",
+    "newPartner": "નવા ઘરકાપૈસા પાર્ટનર છો?",
+    "register": "રજીસ્ટર કરો",
+    "partnerRequest": "પાર્ટનર વિનંતી",
+    "information": "માહિતી",
+    "firstName": "પ્રથમ નામ",
+    "lastName": "છેલ્લું નામ",
+    "mobileNumber": "મોબાઇલ નંબર",
+    "mobilePlaceholder": "10-આંકડાનો મોબાઇલ નંબર",
+    "otpSentMobile": "તમારા મોબાઇલ પર OTP મોકલવામાં આવ્યો છે",
+    "verifiedMobile": "મોબાઇલ નંબર સફળતાપૂર્વક ચકાસવામાં આવ્યો છે!",
+    "emailAddress": "ઇમેઇલ સરનામું",
+    "confirmPassword": "પાસવર્ડની પુષ્ટિ કરો",
+    "currentAddress": "હાલનું પૂરું સરનામું",
+    "businessLocation": "વ્યવસાય સ્થાન (શહેર)",
+    "companyShopName": "કંપની / દુકાનનું નામ",
+    "partnerType": "પાર્ટનર પ્રકાર",
+    "gstNumber": "GST નંબર",
+    "optional": "વૈકલ્પિક",
+    "bankName": "બેંકનું નામ",
+    "accountNumber": "ખાતા નંબર",
+    "ifscCode": "IFSC કોડ",
+    "accountHolderName": "ખાતાધારકનું નામ",
+    "aadhaarNumber": "આધાર નંબર",
+    "panNumber": "PAN નંબર",
+    "kycDocuments": "KYC દસ્તાવેજો",
+    "docVerificationDesc": "તમારું ખાતું સક્રિય થયા પછી દસ્તાવેજ ચકાસણી કરવામાં આવશે.",
+    "cancel": "← રદ કરો",
+    "back": "← પાછા",
+    "next": "આગળનું પગલું →",
+    "submitRegistration": "નોંધણી સબમિટ કરો",
+    "submitting": "સબમિટ કરી રહ્યાં છે...",
+    "registrationSuccessful": "નોંધણી સફળ રહી!",
+    "partnerSubmittedDesc": "તમારી પાર્ટનર એપ્લિકેશન સબમિટ કરવામાં આવી છે. અમારી ટીમ તમારા KYC ની સમીક્ષા કરશે અને 24-48 કલાકમાં તમારું ખાતું સક્રિય કરશે.",
+    "partnerCode": "તમારો પાર્ટનર કોડ",
+    "goToLogin": "લોગિન પર જાઓ",
+    "verifyOtp": "OTP ચકાસો",
+    "steps": {
+      "personal": "વ્યક્તિગત",
+      "business": "વ્યવસાય",
+      "bank": "બેંક",
+      "kyc": "KYC"
+    },
+    "errors": {
+      "enterEmailOrMobile": "ઇમેઇલ અથવા મોબાઇલ નંબર દાખલ કરો",
+      "enterPassword": "પાસવર્ડ દાખલ કરો",
+      "validEmailMobile": "કૃપા કરીને માન્ય ઇમેઇલ અથવા 10-આંકડાનો મોબાઇલ નંબર દાખલ કરો.",
+      "maxOtpAttempts": "આ સત્ર માટે મહત્તમ OTP પ્રયાસો પૂર્ણ થયા છે. કૃપા કરીને પછીથી ફરી પ્રયાસ કરો.",
+      "clickSendOtp": "કૃપા કરીને પહેલા 'OTP મોકલો' પર ક્લિક કરો.",
+      "enterOtpCode": "કૃપા કરીને 6-આંકડાનો OTP દાખલ કરો.",
+      "otpExpired": "OTP ની સમયસીમા સમાપ્ત થઈ ગઈ છે. કૃપા કરીને નવો મોકલો.",
+      "firstNameRequired": "કૃપા કરીને તમારું પ્રથમ નામ દાખલ કરો.",
+      "firstNameLettersOnly": "પ્રથમ નામમાં ફક્ત અક્ષરો હોઈ શકે છે.",
+      "lastNameRequired": "કૃપા કરીને તમારૂં છેલ્લું નામ દાખલ કરો.",
+      "lastNameLettersOnly": "છેલ્લું નામમાં ફક્ત અક્ષરો હોઈ શકે છે.",
+      "mobileRequired": "કૃપા કરીને તમારો મોબાઇલ નંબર દાખલ કરો.",
+      "mobileInvalid": "કૃપા કરીને 10-આંકડાનો મોબાઇલ નંબર દાખલ કરો.",
+      "mobileSendOtp": "તમારા મોબાઇલ નંબરની ચકાસણી કરવા માટે કૃપા કરીને OTP મોકલો.",
+      "mobileVerifyFirst": "કૃપા કરીને OTP દાખલ કરો અને મોબાઇલ ચકાસો પર ક્લિક કરો.",
+      "mobileChanged": "ચકાસણી પછી મોબાઇલ નંબર બદલાયો છે. કૃપા કરીને ફરીથી ચકાસો.",
+      "emailRequired": "કૃપા કરીને તમારું ઇમેઇલ સરનામું દાખલ કરો.",
+      "emailInvalid": "કૃપા કરીને માન્ય ઇમેઇલ સરનામું દાખલ કરો.",
+      "passwordMinLength": "પાસવર્ડ ઓછામાં ઓછો 8 અક્ષરોનો હોવો જોઈએ.",
+      "passwordStrength": "પાસવર્ડમાં અપરકેસ, લોઅરકેस અને એક નંબર હોવો જોઈએ.",
+      "passwordsMismatch": "પાસવર્ડ્સ મેળ ખાતા નથી.",
+      "addressRequired": "કૃપા કરીને તમારું હાલનું સરનામું દાખલ કરો.",
+      "shopNameRequired": "કૃપા કરીને તમારી કંપની / દુકાનનું નામ દાખલ કરો.",
+      "gstInvalid": "કૃપા કરીને માન્ય 15-અક્ષરનો GSTIN દાખલ કરો (દા.ત. 27AAPFU0939F1ZV).",
+      "bankNameRequired": "કૃપા કરીને તમારી બેંકનું નામ દાખલ કરો.",
+      "accountNumberRequired": "કૃપા કરીને તમારો ખાતા નંબર દાખલ કરો.",
+      "accountNumberInvalid": "કૃપા કરીને માન્ય 9 થી 18-આંકડાનો ખાતા નંબર દાખલ કરો.",
+      "ifscRequired": "કૃપા કરીને તમારો IFSC કોડ દાખલ કરો.",
+      "ifscInvalid": "કૃપા કરીને માન્ય 11-અક્ષરનો IFSC કોડ દાખલ કરો (દા.ત. HDFC0001234).",
+      "accountHolderRequired": "કૃપા કરીને ખાતાધારકનું નામ દાખલ કરો.",
+      "aadhaarRequired": "કૃપા કરીને તમારો આધાર નંબર દાખલ કરો.",
+      "aadhaarInvalid": "કૃપા કરીને માન્ય 12-આંકડાનો આધાર નંબર દાખલ કરો.",
+      "panRequired": "કૃપા કરીને તમારો PAN નંબર દાખલ કરો.",
+      "panInvalid": "કૃપા કરીને માન્ય 10-અક્ષરનો PAN નંબર દાખલ કરો.",
+      "mobileExists": "આ મોબાઇલ નંબર પહેલેથી જ નોંધાયેલ છે.",
+      "emailExists": "આ ઇમેઇલ સરનામું પહેલેથી જ નોંધાયેલ છે.",
+      "mobileVerifyFirstMsg": "કૃપા કરીને પહેલા મોબાઇલ વેરિફિકેશન પૂર્ણ કરો.",
+      "otpSentSuccess": "તમારા મોબાઇલ પર OTP સફળતાપૂર્વક મોકલવામાં આવ્યો છે."
+    },
+    "warnings": {
+      "docUploadTitle": "એક્ટિવેશન પછી ડોક્યુમેન્ટ અપલોડ ઉપલબ્ધ થશે.",
+      "docUploadDesc": "અમારી ટીમ તમારી અરજીની સમીક્ષા કરી લે (24-48 કલાક) પછી તમે તેને તમારા પાર્ટનર પ્રોફાઇલ ડૅશબોર્ડ પરથી સબમિટ કરી શકો છો."
+    },
+    "placeholders": {
+      "email": "name@domain.com",
+      "min8chars": "ઓછામાં ઓછા 8 અક્ષરો",
+      "repeatPassword": "પાસવર્ડ ફરીથી દાખલ કરો",
+      "aadhaar": "12-આંકડાનો નંબર",
+      "pan": "10-અક્ષરનો નંબર"
+    }
+  },
+  "banks": {
+    "hdfc": "HDFC બેંક",
+    "sbi": "SBI કાર્ડ",
+    "axis": "એક્સિસ બેંક",
+    "icici": "ICICI બેંક",
+    "kotak": "કોટક બેંક",
+    "yes": "યસ બેંક",
+    "bob": "બેંક ઓફ બરોડા (BOB)",
+    "dcb": "DCB બેંક",
+    "federal": "ફેડરલ બેંક",
+    "sbm": "SBM બેંક",
+    "idfc": "IDFC FIRST બેંક",
+    "rbl": "RBL બેંક",
+    "equitas": "ઇક્વિટાસ બેંક"
+  },
+  "home": {
+    "selectPartnerBank": "ભાગીદાર બેંક પસંદ કરો",
+    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
+    "noItems": "આ કેટેગરીમાં કોઈ વસ્તુ ઉપલબ્ધ નથી.",
+    "seeMore": "વધુ જુઓ",
+    "dashboard": "ડૅશબોર્ડ",
+    "creditCard": "ક્રેડિટ કાર્ડ",
+    "loan": "લોન",
+    "insurance": "વીમો",
+    "investment": "રોકાણ",
+    "services": "સેવાઓ",
+    "applyNow": "Apply Now",
+    "banners": {
+      "slide0": {
+        "title": "Lifetime Free Credit Cards",
+        "subtitle": "Lifetime Free Cards",
+        "btn": "Explore"
+      },
+      "slide1": {
+        "title": "Personal Loan",
+        "subtitle": "Personal Loan",
+        "btn": "Apply Now"
+      },
+      "slide2": {
+        "title": "Business Loan",
+        "subtitle": "Business Loan",
+        "btn": "Check Eligibility"
+      },
+      "slide3": {
+        "title": "Insurance Plans",
+        "subtitle": "Insurance Plans",
+        "btn": "Get Quotes"
+      },
+      "slide4": {
+        "title": "EMI Cards",
+        "subtitle": "EMI Cards",
+        "btn": "Get EMI Card"
+      },
+      "slide5": {
+        "title": "HDFC Pixel Credit Cards",
+        "subtitle": "HDFC Pixel Credit Cards",
+        "btn": "Explore Pixel Cards"
+      }
+    },
+    "breadcrumbs": {
+      "home": "હોમ",
+      "creditCards": "ક્રેડિટ કાર્ડ્સ",
+      "attractiveSections": "આકર્ષક વિભાગો",
+      "fdBasedCards": "FD Backed Card",
+      "cobrand": "Co-Brand"
+    }
+  },
+  "companyTypes": {
+    "individual": "વ્યક્તિગત",
+    "proprietorship": "પ્રોપ્રાઇટરશીપ",
+    "partnership": "ભાગીદારી",
+    "pvt_ltd": "પ્રાઇવેટ લિમિટેડ કંપની"
+  },
+  "kycDocs": {
+    "aadhaarCard": "આધાર કાર્ડ",
+    "aadhaarDesc": "આગળ અને પાછળ (PDF/ઇમેજ) · મહત્તમ 5MB",
+    "panCard": "PAN કાર્ડ",
+    "panDesc": "PDF અથવા ઇમેજ · મહત્તમ 5MB",
+    "gstCert": "GST પ્રમાણપત્ર",
+    "gstDesc": "વૈકલ્પિક · મહત્તમ 5MB",
+    "cheque": "કેન્સલ ચેક",
+    "chequeDesc": "ચેકની ઇમેજ · મહત્તમ 5MB"
+  },
+  "hdfc": {
+    "title": "HDFC Bank Credit Cards",
+    "description": "તમારી જીવનશૈલી અને જરૂરિયાતોને અનુરૂપ ક્રેડિટ કાર્ડ્સની શ્રેણી શોધો.",
+    "exclusiveRewards": "Exclusive Rewards",
+    "exclusiveRewardsDesc": "દરેક ખર્ચ પર વધુ બચત કરો",
+    "secureTrusted": "Secure & Trusted",
+    "secureTrustedDesc": "100% સુરક્ષિત બેંકિંગ",
+    "instantApproval": "Instant Approval",
+    "instantApprovalDesc": "ઝંઝટ મુક્ત પ્રક્રિયા",
+    "searchPlaceholder": "ક્રેડિટ કાર્ડ્સ શોધો...",
+    "noCardsFound": "કોઈ કાર્ડ્સ તમારી શોધ સાથે મેળ ખાતા નથી.",
+    "whyChoose": "શા માટે HDFC બેંક ક્રેડિટ કાર્ડ પસંદ કરવું?",
+    "whyChoose1": "ક્રેડિટ કાર્ડ્સની વિશાળ શ્રેણી",
+    "whyChoose1Desc": "દરેક જીવનશૈલી અને જરૂરિયાત માટે",
+    "whyChoose2": "આકર્ષક લાભો",
+    "whyChoose2Desc": "પોઇન્ટ્સ, કેશબેક અને ઘણું બધું મેળવો",
+    "whyChoose3": "સુરક્ષિત વ્યવહારો",
+    "whyChoose3Desc": "અદ્યતન સુરક્ષા સુવિધાઓ",
+    "whyChoose4": "સરળ એપ્લિકેશન પ્રક્રિયા",
+    "whyChoose4Desc": "ઝડપી મંજૂરી પ્રક્રિયા",
+    "findPerfectCard": "તમારા માટે યોગ્ય કાર્ડ શોધો",
+    "compareDesc": "કાર્ડ્સની તુલના કરો અને શ્રેષ્ઠ પસંદ કરો.",
+    "compareBtn": "કાર્ડ્સની તુલના કરો",
+    "faqTitle": "વારંવાર પૂછાતા પ્રશ્નો",
+    "compareTitle": "HDFC ક્રેડિટ કાર્ડ્સની તુલના કરો",
+    "compareLabelCard1": "કાર્ડ ૧",
+    "compareLabelCard2": "કાર્ડ ૨",
+    "closeBtn": "તુલના બંધ કરો",
+    "tableCategory": "કેટેગરી",
+    "tableFee": "જોઇનિંગ/વાર્ષિક ફી",
+    "tableBenefit": "મુખ્ય ખર્ચ લાભ",
+    "tableAdvantage": "મુખ્ય ફાયદો",
+    "tableNetwork": "પેમેન્ટ નેટવર્ક",
+    "filter": {
+      "all": "બધા",
+      "cashback": "કેશબેક",
+      "travel": "પ્રવાસ",
+      "business": "વ્યવસાય",
+      "rewards": "ઇનામો"
+    },
+    "faqs": {
+      "0": {
+        "q": "હું મારી વાર્ષિક ફી કેવી રીતે માફ કરાવી શકું?",
+        "a": "મોટાભાગના HDFC ક્રેડિટ કાર્ડ્સમાં ખર્ચ આધારિત ફી માફીની સુવિધા હોય છે. જો તમે તમારા આરંભિક વર્ષમાં લઘુત્તમ વાર્ષિક ખર્ચ મર્યાદા (દા.ત. Freedom/MoneyBack+ માટે ₹50,000 અથવા Millennia માટે ₹1 લાખ) પૂર્ણ કરો છો, તો તમારી વાર્ષિક સભ્યપદ ફી સંપૂર્ણપણે માફ/પરત કરવામાં આવે છે."
+      },
+      "1": {
+        "q": "HDFC ક્રેડિટ કાર્ડ માટે લાયકાતના માપદંડો શું છે?",
+        "a": "નોકરી કરતા વ્યવસાયિકો માટે અરજદારોની ઉંમર સામાન્ય રીતે 21 થી 60 વર્ષ (અથવા સ્વ-રોજગાર ધરાવતા લોકો માટે 65 વર્ષ સુધી) હોવી જોઈએ. સારો ક્રેડિટ સ્કોર (750+ CIBIL સ્કોર) અને સ્થિર માસિક આવક (એન્ટ્રી-લેવલ કાર્ડ્સ માટે ₹20,000 થી શરૂ) મંજૂરીના દરને નોંધપાત્ર રીતે વધારે છે."
+      },
+      "2": {
+        "q": "જો મારો CIBIL સ્કોર ઓછો હોય તો શું હું સુરક્ષિત કાર્ડ માટે અરજી કરી શકું?",
+        "a": "હા! HDFC એફડી-સમર્થિત સુરક્ષિત ક્રેડિટ કાર્ડ ઓફર કરે છે જેમાં કોઈ આવક પુરાવા, દસ્તાવેજ ઓડิต અથવા CIBIL સ્કોર તપાસની જરૂર નથી. ક્રેડિટ લિમิต સીધી તમારી ફિક્સ્ડ ડિપોઝિટ (90% સુધી) સાથે જોડાયેલી હોય છે, જે ક્રેડિટ હિસ્ટ્રી બનાવવાની સૌથી ઝડપી રીત છે."
+      }
+    },
+    "cards": {
+      "freedom": {
+        "name": "ફ્રીડમ ક્રેડિટ કાર્ડ",
+        "desc": "દૈનિક ખર્ચ માટે યોગ્ય એન્ટ્રી-લેવલ ક્રેડિટ કાર્ડ",
+        "fee": "વાર્ષિક ફી: ₹૫૦૦ (₹૫૦ હજારના વાર્ષિક ખર્ચ પર માફ)"
+      },
+      "moneyback": {
+        "name": "મનીબેક+ ક્રેડિટ કાર્ડ",
+        "desc": "લોકપ્રિય ઓનલાઇન મર્ચન્ટ્સ પર 10X કેશપોઇન્ટ્સ",
+        "fee": "વાર્ષિક ફી: ₹૫૦૦ (₹૫૦ હજારના વાર્ષિક ખર્ચ પર માફ)"
+      },
+      "millennia": {
+        "name": "મિલેનિયા ક્રેડિટ કાર્ડ",
+        "desc": "ટોચની ઓનલાઇન શોપિંગ બ્રાન્ડ્સ પર 5% કેશબેક",
+        "fee": "વાર્ષિક ફી: ₹૧,૦૦૦ (₹૧ લાખના વાર્ષિક ખર્ચ પર માફ)"
+      },
+      "regalia": {
+        "name": "રેગાલિયા ગોલ્ડ ક્રેડિટ કાર્ડ",
+        "desc": "પ્રીમિયમ ટ્રાવελ અને લક્ઝરી લાઇફસ્ટાઇલ કાર્ડ",
+        "fee": "વાર્ષિક ફી: ₹૨,૫૦૦ (₹૩ લાખના વાર્ષિક ખર્ચ પર માફ)"
+      },
+      "bizgrow": {
+        "name": "બિઝગ્રો ક્રેડિટ કાર્ડ",
+        "desc": "વધતા વ્યવસાયિક ખર્ચ માટે કસ્ટમાઇઝ કરેલ",
+        "fee": "વાર્ષિક ફી: ₹૫૦૦ પર માફ"
+      },
+      "bizpower": {
+        "name": "બિઝપાવર ક્રેડિટ કાર્ડ",
+        "desc": "પ્રીમિયમ પુરસ્કારો સાથે વ્યવસાયિક ખર્ચ વધારો",
+        "fee": "વાર્ષિક ફી: ₹૨,૫૦૦ (₹૩ લાખના વાર્ષિક ખર્ચ પર માફ)"
+      },
+      "bizfirst": {
+        "name": "બિઝફર્સ્ટ ક્રેડિટ કાર્ડ",
+        "desc": "વ્યવસાયિક ઉપયોગિતાઓ પર સ્માર્ટ કેશબેક",
+        "fee": "વાર્ષિક ફી: ₹૫૦૦ (₹૫૦ હજારના વાર્ષિક ખર્ચ પર માફ)"
+      }
+    }
   }
 }

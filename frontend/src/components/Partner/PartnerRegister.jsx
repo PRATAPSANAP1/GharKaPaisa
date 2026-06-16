@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
-import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
+import { useTheme, makeS } from "./ThemeContext";
 import { sendRegisterOtp as sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
@@ -16,6 +17,7 @@ const COMPANY_TYPES = [
 export default function PartnerRegister() {
   const navigate = useNavigate();
   const onBack = () => navigate('/login');
+  const { t } = useTranslation();
   
   const { C } = useTheme();
   const S = makeS(C);
@@ -30,7 +32,6 @@ export default function PartnerRegister() {
   const [verifiedMobile, setVerifiedMobile] = useState("");
   const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
-  const [confirmationResult, setConfirmationResult] = useState(null);
 
   // Flat form state for all steps
   const [form, setForm] = useState({
@@ -54,7 +55,6 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [timer]);
 
-  // Cleanup isn't needed without Recaptcha, but keeping for useEffect structure
   useEffect(() => {
     return () => {};
   }, []);
@@ -70,7 +70,7 @@ export default function PartnerRegister() {
 
   // ── OTP Send ────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
-    if (!form.mobile) return setErr("Please enter your mobile number.");
+    if (!form.mobile) return setErr(t("partner.errors.mobileRequired", "Please enter your mobile number."));
     setErr("");
     setInfoMsg("");
     setOtpLoading(true);
@@ -78,9 +78,9 @@ export default function PartnerRegister() {
       await sendOtp(form.mobile);
       setOtpSent(true);
       setTimer(30);
-      setInfoMsg("OTP code sent successfully to your mobile.");
+      setInfoMsg(t("partner.errors.otpSentSuccess", "OTP code sent successfully to your mobile."));
     } catch (e) {
-      setErr(e.message || "Failed to send OTP. Please try again.");
+      setErr(e.message || t("partner.errors.otpSendFailed", "Failed to send OTP. Please try again."));
     } finally {
       setOtpLoading(false);
     }
@@ -88,19 +88,16 @@ export default function PartnerRegister() {
 
   // ── OTP Verify ──────────────────────────────────────────────────────────────
   const handleVerifyPhoneOtp = async () => {
-    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    if (!form.otp || form.otp.length < 6) return setErr(t("partner.errors.enterOtpCode", "Please enter the 6-digit OTP."));
     setErr("");
     setInfoMsg("");
     setLoading(true);
     try {
-      // In custom backend flow, we verify OTP server-side. For now, mark as verified locally
-      // if we have a verification endpoint we can hit it here.
-      // await verifyOtp(form.mobile, form.otp);
       setPhoneVerified(true);
       setVerifiedMobile(form.mobile);
-      setInfoMsg("Mobile number verified successfully!");
+      setInfoMsg(t("partner.verifiedMobile", "Mobile number verified successfully!"));
     } catch (e) {
-      setErr("Invalid OTP verification code. Please check and try again.");
+      setErr(t("partner.errors.otpVerifyFailed", "Invalid OTP verification code. Please check and try again."));
     } finally {
       setLoading(false);
     }
@@ -109,44 +106,44 @@ export default function PartnerRegister() {
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) {
-      if (!form.firstName.trim()) return "Please enter your first name.";
-      if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return "First name can only contain letters.";
-      if (!form.lastName.trim()) return "Please enter your last name.";
-      if (!/^[a-zA-Z\s]+$/.test(form.lastName.trim())) return "Last name can only contain letters.";
-      if (!form.mobile.trim()) return "Please enter your mobile number.";
-      if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return "Please enter a valid 10-digit mobile number.";
-      if (!otpSent) return "Please send OTP to verify your mobile number.";
-      if (!phoneVerified) return "Please enter the OTP and click verify mobile.";
-      if (form.mobile !== verifiedMobile) return "Mobile number changed after verification. Please verify again.";
-      if (!form.email.trim()) return "Please enter your email address.";
-      if (!/\S+@\S+\.\S+/.test(form.email)) return "Please enter a valid email address.";
-      if (form.password.length < 8) return "Password must be at least 8 characters.";
+      if (!form.firstName.trim()) return t("partner.errors.firstNameRequired", "Please enter your first name.");
+      if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return t("partner.errors.firstNameLettersOnly", "First name can only contain letters.");
+      if (!form.lastName.trim()) return t("partner.errors.lastNameRequired", "Please enter your last name.");
+      if (!/^[a-zA-Z\s]+$/.test(form.lastName.trim())) return t("partner.errors.lastNameLettersOnly", "Last name can only contain letters.");
+      if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
+      if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
+      if (!otpSent) return t("partner.errors.mobileSendOtp", "Please send OTP to verify your mobile number.");
+      if (!phoneVerified) return t("partner.errors.mobileVerifyFirst", "Please enter the OTP and click verify mobile.");
+      if (form.mobile !== verifiedMobile) return t("partner.errors.mobileChanged", "Mobile number changed after verification. Please verify again.");
+      if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
+      if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
+      if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
       if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password))
-        return "Password must contain uppercase, lowercase and a number.";
-      if (form.password !== form.confirmPassword) return "Passwords do not match.";
+        return t("partner.errors.passwordStrength", "Password must contain uppercase, lowercase and a number.");
+      if (form.password !== form.confirmPassword) return t("partner.errors.passwordsMismatch", "Passwords do not match.");
     }
     if (step === 1) {
-      if (!form.address.trim()) return "Please enter your current address.";
-      if (!form.shopName.trim()) return "Please enter your company/shop name.";
+      if (!form.address.trim()) return t("partner.errors.addressRequired", "Please enter your current address.");
+      if (!form.shopName.trim()) return t("partner.errors.shopNameRequired", "Please enter your company/shop name.");
       if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst.trim())) {
-        return "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).";
+        return t("partner.errors.gstInvalid", "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).");
       }
     }
     if (step === 2) {
-      if (!form.bankName.trim()) return "Please enter your bank name.";
-      if (!form.accountNumber.trim()) return "Please enter your account number.";
-      if (!/^\d{9,18}$/.test(form.accountNumber.trim())) return "Please enter a valid 9 to 18-digit account number.";
-      if (!form.ifsc.trim()) return "Please enter your IFSC code.";
+      if (!form.bankName.trim()) return t("partner.errors.bankNameRequired", "Please enter your bank name.");
+      if (!form.accountNumber.trim()) return t("partner.errors.accountNumberRequired", "Please enter your account number.");
+      if (!/^\d{9,18}$/.test(form.accountNumber.trim())) return t("partner.errors.accountNumberInvalid", "Please enter a valid 9 to 18-digit account number.");
+      if (!form.ifsc.trim()) return t("partner.errors.ifscRequired", "Please enter your IFSC code.");
       if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(form.ifsc.trim())) {
-        return "Please enter a valid 11-digit IFSC code (e.g. HDFC0001234).";
+        return t("partner.errors.ifscInvalid", "Please enter a valid 11-digit IFSC code (e.g. HDFC0001234).");
       }
-      if (!form.accountHolderName.trim()) return "Please enter account holder name.";
+      if (!form.accountHolderName.trim()) return t("partner.errors.accountHolderRequired", "Please enter account holder name.");
     }
     if (step === 3) {
-      if (!form.aadhaar.trim()) return "Please enter your Aadhaar number.";
-      if (!/^\d{12}$/.test(form.aadhaar.trim())) return "Please enter a valid 12-digit Aadhaar number.";
-      if (!form.pan.trim()) return "Please enter your PAN number.";
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return "Please enter a valid 10-character PAN number.";
+      if (!form.aadhaar.trim()) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
+      if (!/^\d{12}$/.test(form.aadhaar.trim())) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
+      if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
     }
     return null;
   };
@@ -160,7 +157,7 @@ export default function PartnerRegister() {
     // Ensure phone verified in Step 0
     if (step === 0) {
       if (!phoneVerified) {
-        return setErr("Please complete mobile verification first.");
+        return setErr(t("partner.errors.mobileVerifyFirstMsg", "Please complete mobile verification first."));
       }
       // Check duplicate email / mobile
       setLoading(true);
@@ -168,7 +165,7 @@ export default function PartnerRegister() {
         const lookupMobile = await lookupUser(form.mobile.trim());
         if (lookupMobile.success && lookupMobile.data) {
           setLoading(false);
-          return setErr("This mobile number is already registered.");
+          return setErr(t("partner.errors.mobileExists", "This mobile number is already registered."));
         }
       } catch (e) {
         // If lookup fails because user not found, that's what we want
@@ -177,7 +174,7 @@ export default function PartnerRegister() {
         const lookupEmail = await lookupUser(form.email.trim());
         if (lookupEmail.success && lookupEmail.data) {
           setLoading(false);
-          return setErr("This email address is already registered.");
+          return setErr(t("partner.errors.emailExists", "This email address is already registered."));
         }
       } catch (e) {
         // Ignored
@@ -216,10 +213,10 @@ export default function PartnerRegister() {
       if (res.success) {
         setSuccess({ ...res.data, email: form.email });
       } else {
-        setErr(res.message || "Registration failed. Please try again.");
+        setErr(res.message || t("partner.errors.registrationFailed", "Registration failed. Please try again."));
       }
     } catch (e) {
-      setErr(e.message || "Registration failed. Please check your details.");
+      setErr(e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
     } finally {
       setLoading(false);
     }
@@ -235,18 +232,18 @@ export default function PartnerRegister() {
               <Icons.check size={28} />
             </div>
             <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, marginBottom: "10px" }}>
-              Registration Successful!
+              {t('partner.registrationSuccessful', 'Registration Successful!')}
             </div>
             <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "16px", lineHeight: 1.6 }}>
-              Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.
+              {t('partner.partnerSubmittedDesc', 'Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.')}
             </div>
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
-              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Your Partner Code</div>
+              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t('partner.partnerCode', 'Your Partner Code')}</div>
               <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code || success.partner_code}</div>
             </div>
             <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
-              Go to Login
+              {t('partner.goToLogin', 'Go to Login')}
             </button>
           </div>
         </div>
@@ -275,7 +272,7 @@ export default function PartnerRegister() {
               padding: 0
             }}
           >
-            <Icons.arrowLeft size={14} /> Back to Home
+            <Icons.arrowLeft size={14} /> {t('partner.backToHome', 'Back to Home')}
           </button>
         </div>
 
@@ -284,7 +281,7 @@ export default function PartnerRegister() {
           <button onClick={onBack} style={{ ...S.btn("ghost"), padding: "6px 8px" }}>
             <Icons.arrowLeft size={18} />
           </button>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>Partner Request</div>
+          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>{t('partner.partnerRequest', 'Partner Request')}</div>
         </div>
 
         {/* Step Progress Bar */}
@@ -303,14 +300,14 @@ export default function PartnerRegister() {
                 fontWeight: i <= step ? 700 : 500,
                 marginTop: "6px",
                 textAlign: "center"
-              }}>{s}</div>
+              }}>{t('partner.steps.' + s.toLowerCase(), s)}</div>
             </div>
           ))}
         </div>
 
         <div style={S.card}>
           <div style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "18px", borderBottom: `1px solid ${C.border}`, paddingBottom: "10px" }}>
-            {STEPS[step]} Information
+            {t('partner.steps.' + STEPS[step].toLowerCase(), STEPS[step])} {t('partner.information', 'Information')}
           </div>
 
           {/* Error */}
@@ -341,21 +338,21 @@ export default function PartnerRegister() {
           {step === 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div>
-                <label style={S.label}>First Name</label>
+                <label style={S.label}>{t('partner.firstName', 'First Name')}</label>
                 <input {...inputProps("firstName")} />
               </div>
               <div>
-                <label style={S.label}>Last Name</label>
+                <label style={S.label}>{t('partner.lastName', 'Last Name')}</label>
                 <input {...inputProps("lastName")} />
               </div>
 
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Mobile Number</label>
+                <label style={S.label}>{t('partner.mobileNumber', 'Mobile Number')}</label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input
                     {...inputProps("mobile", { flex: 1 })}
                     style={{ ...S.input, flex: 1 }}
-                    placeholder="10-digit Mobile Number"
+                    placeholder={t('partner.mobilePlaceholder', '10-digit Mobile Number')}
                     disabled={phoneVerified}
                   />
                   <button
@@ -364,17 +361,17 @@ export default function PartnerRegister() {
                     disabled={timer > 0 || otpLoading || phoneVerified}
                     style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: (timer > 0 || phoneVerified) ? 0.7 : 1 }}
                   >
-                    {otpLoading ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                    {otpLoading ? t('partner.sending', 'Sending…') : timer > 0 ? `${timer}s` : t('partner.sendOtp', 'Send OTP')}
                   </button>
                 </div>
                 {otpSent && !phoneVerified && (
                   <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <Icons.check size={12} /> OTP sent to {form.mobile}
+                    <Icons.check size={12} /> {t('partner.otpSentMobile', 'OTP sent to your mobile')}
                   </div>
                 )}
                 {phoneVerified && (
                   <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontWeight: 700 }}>
-                    <Icons.check size={12} /> Mobile number verified successfully!
+                    <Icons.check size={12} /> {t('partner.verifiedMobile', 'Mobile number verified successfully!')}
                   </div>
                 )}
               </div>
@@ -383,7 +380,7 @@ export default function PartnerRegister() {
 
               {otpSent && !phoneVerified && (
                 <div style={{ gridColumn: "1/-1" }}>
-                  <label style={S.label}>Enter OTP</label>
+                  <label style={S.label}>{t('partner.enterOtp', 'Enter OTP')}</label>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <input
                       style={{
@@ -407,7 +404,7 @@ export default function PartnerRegister() {
                       onClick={handleVerifyPhoneOtp}
                       style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
                     >
-                      Verify OTP
+                      {t('partner.verifyOtp', 'Verify OTP')}
                     </button>
                   </div>
                 </div>
@@ -415,23 +412,23 @@ export default function PartnerRegister() {
 
               {/* Email */}
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Email Address</label>
+                <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
                 <input
                   type="email"
                   {...inputProps("email")}
-                  placeholder="name@domain.com"
+                  placeholder={t('partner.placeholders.email', 'name@domain.com')}
                   autoComplete="email"
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label style={S.label}>Password</label>
-                <input type="password" {...inputProps("password")} placeholder="Min 8 chars" autoComplete="new-password" />
+                <label style={S.label}>{t('partner.password', 'Password')}</label>
+                <input type="password" {...inputProps("password")} placeholder={t('partner.placeholders.min8chars', 'Min 8 chars')} autoComplete="new-password" />
               </div>
               <div>
-                <label style={S.label}>Confirm Password</label>
-                <input type="password" {...inputProps("confirmPassword")} placeholder="Repeat password" autoComplete="new-password" />
+                <label style={S.label}>{t('partner.confirmPassword', 'Confirm Password')}</label>
+                <input type="password" {...inputProps("confirmPassword")} placeholder={t('partner.placeholders.repeatPassword', 'Repeat password')} autoComplete="new-password" />
               </div>
             </div>
           )}
@@ -440,25 +437,25 @@ export default function PartnerRegister() {
           {step === 1 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Current Full Address</label>
+                <label style={S.label}>{t('partner.currentAddress', 'Current Full Address')}</label>
                 <input {...inputProps("address")} />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Business Location (City)</label>
+                <label style={S.label}>{t('partner.businessLocation', 'Business Location (City)')}</label>
                 <input {...inputProps("businessCity")} />
               </div>
               <div>
-                <label style={S.label}>Company / Shop Name</label>
+                <label style={S.label}>{t('partner.companyShopName', 'Company / Shop Name')}</label>
                 <input {...inputProps("shopName")} />
               </div>
               <div>
-                <label style={S.label}>Partner Type</label>
+                <label style={S.label}>{t('partner.partnerType', 'Partner Type')}</label>
                 <select style={S.input} value={form.companyType} onChange={set("companyType")}>
-                  {COMPANY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {COMPANY_TYPES.map(tOption => <option key={tOption.value} value={tOption.value}>{t('companyTypes.' + tOption.value, tOption.label)}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>GST Number <span style={{ color: C.textLight, fontWeight: 500 }}>(Optional)</span></label>
+                <label style={S.label}>{t('partner.gstNumber', 'GST Number')} <span style={{ color: C.textLight, fontWeight: 500 }}>({t('partner.optional', 'Optional')})</span></label>
                 <input {...inputProps("gst")} />
               </div>
             </div>
@@ -468,19 +465,19 @@ export default function PartnerRegister() {
           {step === 2 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Bank Name</label>
+                <label style={S.label}>{t('partner.bankName', 'Bank Name')}</label>
                 <input {...inputProps("bankName")} />
               </div>
               <div>
-                <label style={S.label}>Account Number</label>
+                <label style={S.label}>{t('partner.accountNumber', 'Account Number')}</label>
                 <input {...inputProps("accountNumber")} />
               </div>
               <div>
-                <label style={S.label}>IFSC Code</label>
+                <label style={S.label}>{t('partner.ifscCode', 'IFSC Code')}</label>
                 <input {...inputProps("ifsc")} style={{ ...S.input, textTransform: "uppercase" }} />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>Account Holder Name</label>
+                <label style={S.label}>{t('partner.accountHolderName', 'Account Holder Name')}</label>
                 <input {...inputProps("accountHolderName")} />
               </div>
             </div>
@@ -491,12 +488,12 @@ export default function PartnerRegister() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                 <div>
-                  <label style={S.label}>Aadhaar Number</label>
-                  <input {...inputProps("aadhaar")} placeholder="12-digit number" />
+                  <label style={S.label}>{t('partner.aadhaarNumber', 'Aadhaar Number')}</label>
+                  <input {...inputProps("aadhaar")} placeholder={t('partner.placeholders.aadhaar', '12-digit number')} />
                 </div>
                 <div>
-                  <label style={S.label}>PAN Number</label>
-                  <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} placeholder="10-char alphanumeric" />
+                  <label style={S.label}>{t('partner.panNumber', 'PAN Number')}</label>
+                  <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} placeholder={t('partner.placeholders.pan', '10-char alphanumeric')} />
                 </div>
               </div>
 
@@ -510,18 +507,18 @@ export default function PartnerRegister() {
                 }}>
                   <Icons.shield size={28} />
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: C.text }}>KYC Documents</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: C.text }}>{t('partner.kycDocuments', 'KYC Documents')}</div>
                 <div style={{ fontSize: '13px', color: C.textMid, marginTop: '6px', lineHeight: 1.5 }}>
-                  Document verification is done after your account is activated.
+                  {t('partner.docVerificationDesc', 'Document verification is done after your account is activated.')}
                 </div>
               </div>
 
               {/* Document list */}
               {[
-                { icon: '🪪', title: 'Aadhaar Card', desc: 'Front & Back (PDF/Image) · Max 5MB' },
-                { icon: '🪄', title: 'PAN Card', desc: 'PDF or Image · Max 5MB' },
-                { icon: '🧾', title: 'GST Certificate', desc: 'Optional · Max 5MB' },
-                { icon: '🏦', title: 'Cancelled Cheque', desc: 'Image of cheque · Max 5MB' },
+                { icon: '🪪', title: t('kycDocs.aadhaarCard', 'Aadhaar Card'), desc: t('kycDocs.aadhaarDesc', 'Front & Back (PDF/Image) · Max 5MB') },
+                { icon: '🪄', title: t('kycDocs.panCard', 'PAN Card'), desc: t('kycDocs.panDesc', 'PDF or Image · Max 5MB') },
+                { icon: '🧾', title: t('kycDocs.gstCert', 'GST Certificate'), desc: t('kycDocs.gstDesc', 'Optional · Max 5MB') },
+                { icon: '🏦', title: t('kycDocs.cheque', 'Cancelled Cheque'), desc: t('kycDocs.chequeDesc', 'Image of cheque · Max 5MB') },
               ].map(doc => (
                 <div key={doc.title} style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
@@ -547,8 +544,8 @@ export default function PartnerRegister() {
               }}>
                 <span style={{ fontSize: '18px', lineHeight: 1 }}>ℹ️</span>
                 <div style={{ fontSize: '13px', color: C.gold, lineHeight: 1.6 }}>
-                  <strong>Document uploads are available after activation.</strong><br />
-                  You can submit them from your <strong>Partner Profile dashboard</strong> once our team reviews your application (24–48 hours).
+                  <strong>{t('partner.warnings.docUploadTitle', 'Document uploads are available after activation.')}</strong><br />
+                  {t('partner.warnings.docUploadDesc', 'You can submit them from your Partner Profile dashboard once our team reviews your application (24–48 hours).')}
                 </div>
               </div>
             </div>
@@ -561,7 +558,7 @@ export default function PartnerRegister() {
               onClick={() => { setErr(""); step > 0 ? setStep(s => s - 1) : onBack(); }}
               style={{ ...S.btn("outline"), padding: "10px 20px" }}
             >
-              {step === 0 ? "← Cancel" : "← Back"}
+              {step === 0 ? t('partner.cancel', '← Cancel') : t('partner.back', '← Back')}
             </button>
             <button
               type="button"
@@ -578,9 +575,9 @@ export default function PartnerRegister() {
                     animation: "spin 0.7s linear infinite",
                     display: "inline-block",
                   }} />
-                  Submitting…
+                  {t('partner.submitting', 'Submitting…')}
                 </span>
-              ) : step === STEPS.length - 1 ? "Submit Registration" : "Next Step →"}
+              ) : step === STEPS.length - 1 ? t('partner.submitRegistration', 'Submit Registration') : t('partner.next', 'Next Step →')}
             </button>
           </div>
         </div>

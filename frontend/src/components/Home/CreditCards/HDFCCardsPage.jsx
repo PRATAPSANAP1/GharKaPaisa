@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../../Partner/ThemeContext";
 import { 
   FaArrowLeft, FaGift, FaShieldAlt, FaClock, FaSearch, 
@@ -11,6 +12,7 @@ import {
 // User's provided card data with enriched category definitions for filtering
 const cards = [
   {
+    id: "freedom",
     name: "Freedom Credit Card",
     description: "Perfect entry-level card for daily spends",
     icon: "/icons/freedom.png",
@@ -22,6 +24,7 @@ const cards = [
     fallbackIcon: <FaGift />
   },
   {
+    id: "moneyback",
     name: "MoneyBack+ Credit Card",
     description: "10X CashPoints on popular online merchants",
     icon: "/icons/moneyback.png",
@@ -33,6 +36,7 @@ const cards = [
     fallbackIcon: <FaRegCreditCard />
   },
   {
+    id: "millennia",
     name: "Millennia Credit Card",
     description: "5% cashback on top online shopping brands",
     icon: "/icons/millennia.png",
@@ -44,6 +48,7 @@ const cards = [
     fallbackIcon: <FaShoppingBag />
   },
   {
+    id: "regalia",
     name: "Regalia Gold Credit Card",
     description: "Premium travel and luxury lifestyle card",
     icon: "/icons/regalia.png",
@@ -55,6 +60,7 @@ const cards = [
     fallbackIcon: <FaPlane />
   },
   {
+    id: "bizgrow",
     name: "BizGrow Credit Card",
     description: "Tailored for growing business expenses",
     icon: "/icons/bizgrow.png",
@@ -66,6 +72,7 @@ const cards = [
     fallbackIcon: <FaBriefcase />
   },
   {
+    id: "bizpower",
     name: "BizPower Credit Card",
     description: "Powering business spends with premium rewards",
     icon: "/icons/bizpower.png",
@@ -77,6 +84,7 @@ const cards = [
     fallbackIcon: <FaBriefcase />
   },
   {
+    id: "bizfirst",
     name: "BizFirst Credit Card",
     description: "Smart cashback on business utilities",
     icon: "/icons/bizfirst.png",
@@ -92,6 +100,7 @@ const cards = [
 export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { t } = useTranslation();
 
   // Interaction State elements
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,8 +177,13 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   );
 
   // Card component with custom styling & failback icon loader
-  function CardItem({ name, description, icon, fallbackIcon, fee, highlights, gradient }) {
+  function CardItem({ id, name, description, icon, fallbackIcon, fee, highlights, gradient }) {
     const [imgFailed, setImgFailed] = useState(false);
+
+    const translatedName = t(`hdfc.cards.${id}.name`, name);
+    const translatedDesc = t(`hdfc.cards.${id}.desc`, description);
+    const translatedFee = t(`hdfc.cards.${id}.fee`, fee);
+    const translatedHighlights = highlights ? highlights.map((h, idx) => t(`hdfc.cards.${id}.highlights.${idx}`, h)) : [];
 
     return (
       <div className="bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all" style={{ position: "relative" }}>
@@ -194,17 +208,17 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
           <div className="flex-1">
             <h3 className="font-bold text-slate-800">
-              {name}
+              {translatedName}
             </h3>
 
             <p className="text-sm text-slate-500 mt-2">
-              {description}
+              {translatedDesc}
             </p>
 
             {/* Added highlights in expansion for user premium look */}
-            {highlights && (
+            {translatedHighlights && (
               <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "12px", borderTop: "1px dashed var(--border-color)", paddingTop: "10px" }}>
-                {highlights.map((h, idx) => (
+                {translatedHighlights.map((h, idx) => (
                   <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "6px", fontSize: "11px", color: "var(--text-slate-500)" }}>
                     <span style={{ color: "#10b981", marginTop: "2px" }}><FaCheckCircle size={10} /></span>
                     <span>{h}</span>
@@ -213,14 +227,14 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               </div>
             )}
 
-            {fee && (
+            {translatedFee && (
               <div style={{ fontSize: "10px", fontWeight: 700, color: "#eab308", background: isDark ? "rgba(234,179,8,0.06)" : "#fef9c3", padding: "4px 8px", borderRadius: "6px", display: "inline-block", marginTop: "10px" }}>
-                {fee}
+                {translatedFee}
               </div>
             )}
 
             <button className="mt-4 w-full bg-[#003B8F] text-white py-2 rounded-lg hover:bg-[#00296B]" style={{ border: "none", cursor: "pointer", display: "block" }}>
-              Apply Now →
+              {t('popularCardsList.applyNow', 'Apply Now')} →
             </button>
           </div>
         </div>
@@ -328,6 +342,9 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
         .text-2xl { font-size: 1.5rem; }
         .text-lg { font-size: 1.125rem; }
         .text-slate-800 { color: var(--text-slate-800); }
+        .text-center { text-align: center; }
+        .pb-12 { padding-bottom: 3rem; }
+        .mt-12 { margin-top: 3rem; }
         .mb-3 { margin-bottom: 0.75rem; }
         .mb-5 { margin-bottom: 1.25rem; }
         .mb-6 { margin-bottom: 1.5rem; }
@@ -387,12 +404,12 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
       {/* Breadcrumb - user's layout structure with live action triggers */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span onClick={onBack} style={{ cursor: "pointer" }} onMouseEnter={e => e.target.style.textDecoration = 'underline'} onMouseLeave={e => e.target.style.textDecoration = 'none'}>Home</span>
+          <span onClick={onBack} style={{ cursor: "pointer" }} onMouseEnter={e => e.target.style.textDecoration = 'underline'} onMouseLeave={e => e.target.style.textDecoration = 'none'}>{t('home.breadcrumbs.home', 'Home')}</span>
           <span>/</span>
-          <span onClick={onBack} style={{ cursor: "pointer" }} onMouseEnter={e => e.target.style.textDecoration = 'underline'} onMouseLeave={e => e.target.style.textDecoration = 'none'}>Credit Cards</span>
+          <span onClick={onBack} style={{ cursor: "pointer" }} onMouseEnter={e => e.target.style.textDecoration = 'underline'} onMouseLeave={e => e.target.style.textDecoration = 'none'}>{t('home.breadcrumbs.creditCards', 'Credit Cards')}</span>
           <span>/</span>
           <span className="text-blue-600 font-medium">
-            HDFC Bank Credit Cards
+            {t('hdfc.title', 'HDFC Bank Credit Cards')}
           </span>
         </div>
       </div>
@@ -404,39 +421,39 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             
             <div>
               <h1 className="text-4xl font-bold text-slate-800 mb-3">
-                HDFC Bank Credit Cards
+                {t('hdfc.title', 'HDFC Bank Credit Cards')}
               </h1>
 
               <p className="text-slate-500 mb-8">
-                Explore a range of credit cards that suit your lifestyle and needs.
+                {t('hdfc.description', 'Explore a range of credit cards that suit your lifestyle and needs.')}
               </p>
 
               <div className="grid grid-cols-3 gap-4">
                 
                 <div className="bg-blue-50 rounded-xl p-4">
                   <div className="text-blue-600 font-semibold">
-                    Exclusive Rewards
+                    {t('hdfc.exclusiveRewards', 'Exclusive Rewards')}
                   </div>
                   <p className="text-xs text-slate-500">
-                    Earn more on every spend
+                    {t('hdfc.exclusiveRewardsDesc', 'Earn more on every spend')}
                   </p>
                 </div>
 
                 <div className="bg-green-50 rounded-xl p-4">
                   <div className="text-green-600 font-semibold">
-                    Secure & Trusted
+                    {t('hdfc.secureTrusted', 'Secure & Trusted')}
                   </div>
                   <p className="text-xs text-slate-500">
-                    100% safe banking
+                    {t('hdfc.secureTrustedDesc', '100% safe banking')}
                   </p>
                 </div>
 
                 <div className="bg-cyan-50 rounded-xl p-4">
                   <div className="text-cyan-600 font-semibold">
-                    Instant Approval
+                    {t('hdfc.instantApproval', 'Instant Approval')}
                   </div>
                   <p className="text-xs text-slate-500">
-                    Hassle-free process
+                    {t('hdfc.instantApprovalDesc', 'Hassle-free process')}
                   </p>
                 </div>
 
@@ -482,7 +499,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-slate-500)" }}><FaSearch size={14} /></span>
             <input 
               type="text" 
-              placeholder="Search credit cards..." 
+              placeholder={t('hdfc.searchPlaceholder', 'Search credit cards...')} 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -521,7 +538,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                     transition: "all 0.15s ease"
                   }}
                 >
-                  {cat}
+                  {t('hdfc.filter.' + cat.toLowerCase(), cat)}
                 </button>
               );
             })}
@@ -537,7 +554,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           <div className="lg:col-span-3">
 
             <h2 className="text-2xl font-bold mb-6">
-              {activeFilter !== "All" ? `${activeFilter} Cards` : "Core Cards"}
+              {activeFilter !== "All" ? `${t('hdfc.filter.' + activeFilter.toLowerCase(), activeFilter)} Cards` : "Core Cards"}
             </h2>
 
             {filteredCards.length > 0 ? (
@@ -548,7 +565,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               </div>
             ) : (
               <div style={{ background: "var(--bg-white)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "40px 20px", textAlign: "center" }}>
-                <p style={{ color: "var(--text-slate-500)", margin: 0 }}>No cards match your current search/filters.</p>
+                <p style={{ color: "var(--text-slate-500)", margin: 0 }}>{t('hdfc.noCardsFound', 'No cards match your current search/filters.')}</p>
               </div>
             )}
 
@@ -559,29 +576,29 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border">
               <h3 className="font-bold text-lg mb-5">
-                Why Choose HDFC Bank Credit Cards?
+                {t('hdfc.whyChoose', 'Why Choose HDFC Bank Credit Cards?')}
               </h3>
 
               <div className="space-y-4">
 
                 <SidebarItem
-                  title="Wide Range of Cards"
-                  desc="For every lifestyle and need"
+                  title={t('hdfc.whyChoose1', 'Wide Range of Cards')}
+                  desc={t('hdfc.whyChoose1Desc', 'For every lifestyle and need')}
                 />
 
                 <SidebarItem
-                  title="Rewarding Benefits"
-                  desc="Earn points, cashback and more"
+                  title={t('hdfc.whyChoose2', 'Rewarding Benefits')}
+                  desc={t('hdfc.whyChoose2Desc', 'Earn points, cashback and more')}
                 />
 
                 <SidebarItem
-                  title="Secure Transactions"
-                  desc="Advanced security features"
+                  title={t('hdfc.whyChoose3', 'Secure Transactions')}
+                  desc={t('hdfc.whyChoose3Desc', 'Advanced security features')}
                 />
 
                 <SidebarItem
-                  title="Easy Applications"
-                  desc="Quick approval process"
+                  title={t('hdfc.whyChoose4', 'Easy Applications')}
+                  desc={t('hdfc.whyChoose4Desc', 'Quick approval process')}
                 />
 
               </div>
@@ -590,11 +607,11 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             {/* Compare Cards box (hooked up to interactive modal) */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 mt-5 border">
               <h3 className="font-semibold text-slate-800">
-                Find the perfect card
+                {t('hdfc.findPerfectCard', 'Find the perfect card')}
               </h3>
 
               <p className="text-sm text-slate-500 mt-2">
-                Compare cards and choose the best one.
+                {t('hdfc.compareDesc', 'Compare cards and choose the best one.')}
               </p>
 
               <button 
@@ -602,7 +619,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 className="mt-4 bg-blue-700 text-white px-5 py-2 rounded-lg"
                 style={{ border: "none", cursor: "pointer", fontWeight: 700 }}
               >
-                Compare Cards
+                {t('hdfc.compareBtn', 'Compare Cards')}
               </button>
             </div>
 
@@ -615,22 +632,22 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
       <div className="max-w-7xl mx-auto px-6 mt-12 pb-12">
         <div className="bg-white rounded-3xl p-8 border shadow-sm">
           <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">
-            Frequently Asked Questions
+            {t('hdfc.faqTitle', 'Frequently Asked Questions')}
           </h2>
           
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {[
-              { q: "How do I get my annual fee waived?", a: "Most HDFC Credit Cards feature spend-based fee waivers. If you meet the minimum required annual spend limit (e.g. ₹50,000 for Freedom/MoneyBack+ or ₹1 Lakh for Millennia) within your card anniversary year, your annual membership fee is fully waived/reversed." },
-              { q: "What are the eligibility criteria for HDFC Credit Cards?", a: "Applicants generally need to be between 21 and 60 years old for salaried professionals (or up to 65 for self-employed). A healthy credit score (750+ CIBIL score) and stable monthly income (starting from ₹20,000 for entry-level cards) increase the approval rate significantly." },
-              { q: "Can I apply for a secured card if I have a low CIBIL score?", a: "Yes! HDFC offers FD-backed secured credit cards that require no income proofs, documentation audits, or CIBIL score checks. The credit limit is directly mapped to your Fixed Deposit (up to 90%), making it the fastest way to build credit history." }
+              { q: t('hdfc.faqs.0.q', "How do I get my annual fee waived?"), a: t('hdfc.faqs.0.a', "Most HDFC Credit Cards feature spend-based fee waivers. If you meet the minimum required annual spend limit (e.g. ₹50,000 for Freedom/MoneyBack+ or ₹1 Lakh for Millennia) within your card anniversary year, your annual membership fee is fully waived/reversed.") },
+              { q: t('hdfc.faqs.1.q', "What are the eligibility criteria for HDFC Credit Cards?"), a: t('hdfc.faqs.1.a', "Applicants generally need to be between 21 and 60 years old for salaried professionals (or up to 65 for self-employed). A healthy credit score (750+ CIBIL score) and stable monthly income (starting from ₹20,000 for entry-level cards) increase the approval rate significantly.") },
+              { q: t('hdfc.faqs.2.q', "Can I apply for a secured card if I have a low CIBIL score?"), a: t('hdfc.faqs.2.a', "Yes! HDFC offers FD-backed secured credit cards that require no income proofs, documentation audits, or CIBIL score checks. The credit limit is directly mapped to your Fixed Deposit (up to 90%), making it the fastest way to build credit history.") }
             ].map((faq, idx) => {
               const isOpen = expandedFaq === idx;
               return (
                 <div key={idx} style={{ 
-                  background: "var(--bg-slate-100)", 
-                  border: "1px solid var(--border-color)", 
-                  borderRadius: "12px", 
-                  overflow: "hidden" 
+                   background: "var(--bg-slate-100)", 
+                   border: "1px solid var(--border-color)", 
+                   borderRadius: "12px", 
+                   overflow: "hidden" 
                 }}>
                   <div 
                     onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
@@ -702,12 +719,12 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               <FaTimes size={18} />
             </span>
 
-            <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 900 }}>Compare HDFC Credit Cards</h3>
+            <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 900 }}>{t('hdfc.compareTitle', 'Compare HDFC Credit Cards')}</h3>
             
             {/* Selector Dropdowns */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
               <div>
-                <label style={{ fontSize: "11px", color: "var(--text-slate-500)", display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 1</label>
+                <label style={{ fontSize: "11px", color: "var(--text-slate-500)", display: "block", marginBottom: "4px", fontWeight: 700 }}>{t('hdfc.compareLabelCard1', 'Card 1')}</label>
                 <select 
                   value={compareCard1.name} 
                   onChange={(e) => setCompareCard1(cards.find(c => c.name === e.target.value))}
@@ -724,13 +741,13 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   }}
                 >
                   {cards.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name}</option>
+                    <option key={idx} value={c.name}>{t(`hdfc.cards.${c.id}.name`, c.name)}</option>
                   ))}
                 </select>
               </div>
               
               <div>
-                <label style={{ fontSize: "11px", color: "var(--text-slate-500)", display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 2</label>
+                <label style={{ fontSize: "11px", color: "var(--text-slate-500)", display: "block", marginBottom: "4px", fontWeight: 700 }}>{t('hdfc.compareLabelCard2', 'Card 2')}</label>
                 <select 
                   value={compareCard2.name} 
                   onChange={(e) => setCompareCard2(cards.find(c => c.name === e.target.value))}
@@ -747,7 +764,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   }}
                 >
                   {cards.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name}</option>
+                    <option key={idx} value={c.name}>{t(`hdfc.cards.${c.id}.name`, c.name)}</option>
                   ))}
                 </select>
               </div>
@@ -756,11 +773,11 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             {/* Comparison Grid Table */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", border: "1px solid var(--border-color)", borderRadius: "12px", overflow: "hidden", background: "var(--bg-slate-100)" }}>
               {[
-                { label: "Category", val1: compareCard1.category, val2: compareCard2.category },
-                { label: "Joining/Annual Fee", val1: compareCard1.fee, val2: compareCard2.fee },
-                { label: "Key Spend Benefit", val1: compareCard1.highlights[0], val2: compareCard2.highlights[0] },
-                { label: "Primary Advantage", val1: compareCard1.description, val2: compareCard2.description },
-                { label: "Payment network", val1: compareCard1.network, val2: compareCard2.network }
+                { label: t("hdfc.tableCategory", "Category"), val1: t('hdfc.filter.' + compareCard1.category.toLowerCase(), compareCard1.category), val2: t('hdfc.filter.' + compareCard2.category.toLowerCase(), compareCard2.category) },
+                { label: t("hdfc.tableFee", "Joining/Annual Fee"), val1: t(`hdfc.cards.${compareCard1.id}.fee`, compareCard1.fee), val2: t(`hdfc.cards.${compareCard2.id}.fee`, compareCard2.fee) },
+                { label: t("hdfc.tableBenefit", "Key Spend Benefit"), val1: t(`hdfc.cards.${compareCard1.id}.highlights.0`, compareCard1.highlights[0]), val2: t(`hdfc.cards.${compareCard2.id}.highlights.0`, compareCard2.highlights[0]) },
+                { label: t("hdfc.tableAdvantage", "Primary Advantage"), val1: t(`hdfc.cards.${compareCard1.id}.desc`, compareCard1.description), val2: t(`hdfc.cards.${compareCard2.id}.desc`, compareCard2.description) },
+                { label: t("hdfc.tableNetwork", "Payment network"), val1: compareCard1.network, val2: compareCard2.network }
               ].map((row, idx) => (
                 <div key={idx} style={{ 
                   display: "grid", 
@@ -791,7 +808,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 cursor: "pointer"
               }}
             >
-              Close Comparison
+              {t('hdfc.closeBtn', 'Close Comparison')}
             </button>
           </div>
         </div>

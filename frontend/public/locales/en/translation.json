@@ -5,7 +5,10 @@
   "nav": {
     "home": "Home",
     "about": "About Us",
-    "contact": "Contact Us"
+    "contact": "Contact Us",
+    "admin": "Admin",
+    "employee": "Employee",
+    "partner": "Partner"
   },
   "sections": {
     "moneyTransfer": "Money Transfer & Payments",
@@ -16,5 +19,356 @@
     "insurance": "Insurance",
     "businessServices": "Business Services",
     "partnerBanks": "Partner Banks"
+  },
+  "moneyTransfer": {
+    "tomobile": "To Mobile",
+    "recharge": "Recharge",
+    "electricity": "Electricity",
+    "loanrepay": "Loan Repay"
+  },
+  "attractiveCards": {
+    "ltf-cards": "Lifetime Free Cards",
+    "cibil-loans": "CIBIL Loan",
+    "hdfc-cc-loan": "Loan on Credit Card",
+    "smart-emi": "Smart EMI Card",
+    "secured-cards": "FD Backed Card",
+    "upi-cards": "UPI Credit Card",
+    "explore": "Explore"
+  },
+  "popularCardsList": {
+    "hdfcmillennia": "5% Cashback on online shopping",
+    "sbisimplyclick": "10X Rewards on online partners",
+    "axisneo": "10% off on Zomato & BookMyShow",
+    "icicicoral": "BookMyShow discounts & dining rewards",
+    "yesbankbyoc": "Choose your own rewards category",
+    "kotakleague": "Premium rewards with zero annual fee",
+    "applyNow": "Apply Now",
+    "viewAll": "View All Cards"
+  },
+  "loansList": {
+    "personalloan": "Personal Loan",
+    "homeloan": "Home Loan",
+    "businessloan": "Business Loan",
+    "educationloan": "Education Loan",
+    "carloan": "Car Loan",
+    "usedcarloan": "Used Car Loan",
+    "instantloan": "Instant Loan",
+    "loanagainstpropertylap": "Loan Against Property (LAP)"
+  },
+  "insuranceList": {
+    "healthinsurance": "Health Insurance",
+    "lifeinsurance": "Life Insurance",
+    "generalinsurance": "General Insurance",
+    "loanprotectioninsurance": "Loan Protection Insurance"
+  },
+  "servicesList": {
+    "gstreturns": "GST Returns",
+    "companyregistration": "Company Registration",
+    "itrfiling": "ITR Filing",
+    "pfesic": "PF & ESIC",
+    "tdsfiling": "TDS Filing",
+    "tradelicense": "Trade License",
+    "msmeregistration": "MSME Registration",
+    "dscservices": "DSC Services"
+  },
+  "footer": {
+    "desc": "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.",
+    "products": "Products",
+    "creditCards": "Credit Cards",
+    "loans": "Loans",
+    "insurance": "Insurance",
+    "company": "Company",
+    "aboutUs": "About Us",
+    "careers": "Careers",
+    "contactUs": "Contact Us",
+    "support": "Support",
+    "privacy": "Privacy Policy",
+    "terms": "Terms & Conditions",
+    "refund": "Refund Policy",
+    "rights": "© 2026 GharKaPaisa. All rights reserved.",
+    "made": "Made with ♥ in India"
+  },
+  "partner": {
+    "backToHome": "Back to Home",
+    "partnerLogin": "Partner Login",
+    "emailOrMobile": "Email or Mobile Number",
+    "enterEmailOrMobile": "Enter email or mobile number",
+    "password": "Password",
+    "enterPassword": "Enter password",
+    "forgotPassword": "Forgot Password?",
+    "sendingResetLink": "Sending reset link...",
+    "enterOtp": "Enter 6-Digit OTP",
+    "sendOtp": "Send OTP",
+    "sending": "Sending...",
+    "secureLogIn": "Secure Log In",
+    "verifying": "Verifying...",
+    "newPartner": "New GharKaPaisa Partner?",
+    "register": "Register",
+    "partnerRequest": "Partner Request",
+    "information": "Information",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "mobileNumber": "Mobile Number",
+    "mobilePlaceholder": "10-digit Mobile Number",
+    "otpSentMobile": "OTP sent to your mobile",
+    "verifiedMobile": "Mobile number verified successfully!",
+    "emailAddress": "Email Address",
+    "confirmPassword": "Confirm Password",
+    "currentAddress": "Current Full Address",
+    "businessLocation": "Business Location (City)",
+    "companyShopName": "Company / Shop Name",
+    "partnerType": "Partner Type",
+    "gstNumber": "GST Number",
+    "optional": "Optional",
+    "bankName": "Bank Name",
+    "accountNumber": "Account Number",
+    "ifscCode": "IFSC Code",
+    "accountHolderName": "Account Holder Name",
+    "aadhaarNumber": "Aadhaar Number",
+    "panNumber": "PAN Number",
+    "kycDocuments": "KYC Documents",
+    "docVerificationDesc": "Document verification is done after your account is activated.",
+    "cancel": "← Cancel",
+    "back": "← Back",
+    "next": "Next Step →",
+    "submitRegistration": "Submit Registration",
+    "submitting": "Submitting…",
+    "registrationSuccessful": "Registration Successful!",
+    "partnerSubmittedDesc": "Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.",
+    "partnerCode": "Your Partner Code",
+    "goToLogin": "Go to Login",
+    "verifyOtp": "Verify OTP",
+    "steps": {
+      "personal": "Personal",
+      "business": "Business",
+      "bank": "Bank",
+      "kyc": "KYC"
+    },
+    "errors": {
+      "enterEmailOrMobile": "Please enter your email or mobile number.",
+      "enterPassword": "Please enter your password.",
+      "validEmailMobile": "Please enter a valid email or 10-digit mobile number.",
+      "maxOtpAttempts": "Maximum OTP attempts reached for this session. Please try again later.",
+      "clickSendOtp": "Please click 'Send OTP' first.",
+      "enterOtpCode": "Please enter the 6-digit OTP.",
+      "otpExpired": "OTP expired. Please send a new one.",
+      "firstNameRequired": "Please enter your first name.",
+      "firstNameLettersOnly": "First name can only contain letters.",
+      "lastNameRequired": "Please enter your last name.",
+      "lastNameLettersOnly": "Last name can only contain letters.",
+      "mobileRequired": "Please enter your mobile number.",
+      "mobileInvalid": "Please enter a valid 10-digit mobile number.",
+      "mobileSendOtp": "Please send OTP to verify your mobile number.",
+      "mobileVerifyFirst": "Please enter the OTP and click verify mobile.",
+      "mobileChanged": "Mobile number changed after verification. Please verify again.",
+      "emailRequired": "Please enter your email address.",
+      "emailInvalid": "Please enter a valid email address.",
+      "passwordMinLength": "Password must be at least 8 characters.",
+      "passwordStrength": "Password must contain uppercase, lowercase and a number.",
+      "passwordsMismatch": "Passwords do not match.",
+      "addressRequired": "Please enter your current address.",
+      "shopNameRequired": "Please enter your company/shop name.",
+      "gstInvalid": "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).",
+      "bankNameRequired": "Please enter your bank name.",
+      "accountNumberRequired": "Please enter your account number.",
+      "accountNumberInvalid": "Please enter a valid 9 to 18-digit account number.",
+      "ifscRequired": "Please enter your IFSC code.",
+      "ifscInvalid": "Please enter a valid 11-digit IFSC code (e.g. HDFC0001234).",
+      "accountHolderRequired": "Please enter account holder name.",
+      "aadhaarRequired": "Please enter your Aadhaar number.",
+      "aadhaarInvalid": "Please enter a valid 12-digit Aadhaar number.",
+      "panRequired": "Please enter your PAN number.",
+      "panInvalid": "Please enter a valid 10-character PAN number.",
+      "mobileExists": "This mobile number is already registered.",
+      "emailExists": "This email address is already registered.",
+      "mobileVerifyFirstMsg": "Please complete mobile verification first.",
+      "otpSentSuccess": "OTP code sent successfully to your mobile."
+    },
+    "warnings": {
+      "docUploadTitle": "Document uploads are available after activation.",
+      "docUploadDesc": "You can submit them from your Partner Profile dashboard once our team reviews your application (24–48 hours)."
+    },
+    "placeholders": {
+      "email": "name@domain.com",
+      "min8chars": "Min 8 chars",
+      "repeatPassword": "Repeat password",
+      "aadhaar": "12-digit number",
+      "pan": "10-char alphanumeric"
+    }
+  },
+  "banks": {
+    "hdfc": "HDFC Bank",
+    "sbi": "SBI Card",
+    "axis": "Axis Bank",
+    "icici": "ICICI Bank",
+    "kotak": "Kotak Bank",
+    "yes": "Yes Bank",
+    "bob": "Bank of Baroda (BOB)",
+    "dcb": "DCB Bank",
+    "federal": "Federal Bank",
+    "sbm": "SBM Bank",
+    "idfc": "IDFC FIRST Bank",
+    "rbl": "RBL Bank",
+    "equitas": "Equitas Bank"
+  },
+  "home": {
+    "selectPartnerBank": "Select Partner Bank",
+    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
+    "noItems": "No items available in this category.",
+    "seeMore": "See More",
+    "dashboard": "Dashboard",
+    "creditCard": "Credit Card",
+    "loan": "Loan",
+    "insurance": "Insurance",
+    "investment": "Investment",
+    "services": "Services",
+    "applyNow": "Apply Now",
+    "banners": {
+      "slide0": {
+        "title": "Lifetime Free Credit Cards",
+        "subtitle": "Zero Joining Fee • Zero Annual Fee",
+        "btn": "Explore Now"
+      },
+      "slide1": {
+        "title": "Personal Loans",
+        "subtitle": "Low Interest Rates • Quick Disbursal",
+        "btn": "Apply Now"
+      },
+      "slide2": {
+        "title": "Business Loans",
+        "subtitle": "Flexible repayment options for growing businesses",
+        "btn": "Check Eligibility"
+      },
+      "slide3": {
+        "title": "Insurance Plans",
+        "subtitle": "Comprehensive health, life and general insurance cover",
+        "btn": "Get Quotes"
+      },
+      "slide4": {
+        "title": "EMI Cards",
+        "subtitle": "Convert purchases to no-cost EMIs instantly",
+        "btn": "Get EMI Card"
+      },
+      "slide5": {
+        "title": "HDFC Pixel Credit Cards",
+        "subtitle": "Customizable rewards on dining, shopping & entertainment",
+        "btn": "Explore Pixel Cards"
+      }
+    },
+    "breadcrumbs": {
+      "home": "Home",
+      "creditCards": "Credit Cards",
+      "attractiveSections": "Attractive Sections",
+      "fdBasedCards": "FD Based Cards",
+      "cobrand": "Co-Brand"
+    }
+  },
+  "companyTypes": {
+    "individual": "Individual",
+    "proprietorship": "Proprietorship",
+    "partnership": "Partnership",
+    "pvt_ltd": "Private Limited Company"
+  },
+  "kycDocs": {
+    "aadhaarCard": "Aadhaar Card",
+    "aadhaarDesc": "Front & Back (PDF/Image) · Max 5MB",
+    "panCard": "PAN Card",
+    "panDesc": "PDF or Image · Max 5MB",
+    "gstCert": "GST Certificate",
+    "gstDesc": "Optional · Max 5MB",
+    "cheque": "Cancelled Cheque",
+    "chequeDesc": "Image of cheque · Max 5MB"
+  },
+  "hdfc": {
+    "title": "HDFC Bank Credit Cards",
+    "description": "Explore a range of credit cards that suit your lifestyle and needs.",
+    "exclusiveRewards": "Exclusive Rewards",
+    "exclusiveRewardsDesc": "Earn more on every spend",
+    "secureTrusted": "Secure & Trusted",
+    "secureTrustedDesc": "100% safe banking",
+    "instantApproval": "Instant Approval",
+    "instantApprovalDesc": "Hassle-free process",
+    "searchPlaceholder": "Search credit cards...",
+    "noCardsFound": "No cards match your current search/filters.",
+    "whyChoose": "Why Choose HDFC Bank Credit Cards?",
+    "whyChoose1": "Wide Range of Cards",
+    "whyChoose1Desc": "For every lifestyle and need",
+    "whyChoose2": "Rewarding Benefits",
+    "whyChoose2Desc": "Earn points, cashback and more",
+    "whyChoose3": "Secure Transactions",
+    "whyChoose3Desc": "Advanced security features",
+    "whyChoose4": "Easy Applications",
+    "whyChoose4Desc": "Quick approval process",
+    "findPerfectCard": "Find the perfect card",
+    "compareDesc": "Compare cards and choose the best one.",
+    "compareBtn": "Compare Cards",
+    "faqTitle": "Frequently Asked Questions",
+    "compareTitle": "Compare HDFC Credit Cards",
+    "compareLabelCard1": "Card 1",
+    "compareLabelCard2": "Card 2",
+    "closeBtn": "Close Comparison",
+    "tableCategory": "Category",
+    "tableFee": "Joining/Annual Fee",
+    "tableBenefit": "Key Spend Benefit",
+    "tableAdvantage": "Primary Advantage",
+    "tableNetwork": "Payment network",
+    "filter": {
+      "all": "All",
+      "cashback": "Cashback",
+      "travel": "Travel",
+      "business": "Business",
+      "rewards": "Rewards"
+    },
+    "faqs": {
+      "0": {
+        "q": "How do I get my annual fee waived?",
+        "a": "Most HDFC Credit Cards feature spend-based fee waivers. If you meet the minimum required annual spend limit (e.g. ₹50,000 for Freedom/MoneyBack+ or ₹1 Lakh for Millennia) within your card anniversary year, your annual membership fee is fully waived/reversed."
+      },
+      "1": {
+        "q": "What are the eligibility criteria for HDFC Credit Cards?",
+        "a": "Applicants generally need to be between 21 and 60 years old for salaried professionals (or up to 65 for self-employed). A healthy credit score (750+ CIBIL score) and stable monthly income (starting from ₹20,000 for entry-level cards) increase the approval rate significantly."
+      },
+      "2": {
+        "q": "Can I apply for a secured card if I have a low CIBIL score?",
+        "a": "Yes! HDFC offers FD-backed secured credit cards that require no income proofs, documentation audits, or CIBIL score checks. The credit limit is directly mapped to your Fixed Deposit (up to 90%), making it the fastest way to build credit history."
+      }
+    },
+    "cards": {
+      "freedom": {
+        "name": "Freedom Credit Card",
+        "desc": "Perfect entry-level card for daily spends",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "moneyback": {
+        "name": "MoneyBack+ Credit Card",
+        "desc": "10X CashPoints on popular online merchants",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "millennia": {
+        "name": "Millennia Credit Card",
+        "desc": "5% cashback on top online shopping brands",
+        "fee": "Annual Fee: ₹1,000 (Waived on ₹1 Lakh annual spend)"
+      },
+      "regalia": {
+        "name": "Regalia Gold Credit Card",
+        "desc": "Premium travel and luxury lifestyle card",
+        "fee": "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)"
+      },
+      "bizgrow": {
+        "name": "BizGrow Credit Card",
+        "desc": "Tailored for growing business expenses",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "bizpower": {
+        "name": "BizPower Credit Card",
+        "desc": "Powering business spends with premium rewards",
+        "fee": "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)"
+      },
+      "bizfirst": {
+        "name": "BizFirst Credit Card",
+        "desc": "Smart cashback on business utilities",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      }
+    }
   }
 }

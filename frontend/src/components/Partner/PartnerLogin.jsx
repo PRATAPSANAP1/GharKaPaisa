@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS, ThemeToggle } from "./ThemeContext";
@@ -10,6 +11,7 @@ export default function PartnerLogin() {
   const { C } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const login = useAuthStore((state) => state.login);
   
   const [form, setForm] = useState({ identity: "", password: "", otp: "" });
@@ -39,7 +41,7 @@ export default function PartnerLogin() {
   // ── Forgot Password ──────────────────────────────────────────────────────────
   const handleForgotPassword = async () => {
     if (!form.identity.trim()) {
-      return setErr("Please enter your email or mobile to reset password.");
+      return setErr(t('partner.errors.emailOrMobileResetErr', 'Please enter your email or mobile to reset password.'));
     }
     setErr("");
     setInfoMsg("");
@@ -48,25 +50,25 @@ export default function PartnerLogin() {
       // Mocked for now - we will build this endpoint later if requested
       // await sendPasswordReset(form.identity);
       setTimeout(() => {
-        setInfoMsg(`Password reset instructions sent to ${form.identity}`);
+        setInfoMsg(t('partner.errors.resetSentSuccess', { identity: form.identity, defaultValue: `Password reset instructions sent to ${form.identity}` }));
         setLoading(l => ({ ...l, reset: false }));
       }, 1000);
     } catch (e) {
-      setErr("Failed to send reset link.");
+      setErr(t('partner.errors.failedSendReset', 'Failed to send reset link.'));
       setLoading(l => ({ ...l, reset: false }));
     }
   };
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
-    if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
-    if (!form.password) return setErr("Please enter your password.");
+    if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
+    if (!form.password) return setErr(t('partner.errors.enterPassword', 'Please enter your password.'));
     
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identity.trim());
     const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
-    if (!isEmail && !isMobile) return setErr("Please enter a valid email or 10-digit mobile number.");
+    if (!isEmail && !isMobile) return setErr(t('partner.errors.validEmailMobile', 'Please enter a valid email or 10-digit mobile number.'));
 
-    if (otpAttempts >= 3) return setErr("Maximum OTP attempts reached for this session. Please try again later.");
+    if (otpAttempts >= 3) return setErr(t('partner.errors.maxOtpAttempts', 'Maximum OTP attempts reached for this session. Please try again later.'));
 
     setErr("");
     setInfoMsg("");
@@ -75,11 +77,11 @@ export default function PartnerLogin() {
       // Look up user to get mobile
       const lookupRes = await lookupUser(form.identity.trim());
       if (!lookupRes.success || !lookupRes.data) {
-        throw new Error("Invalid credentials. Please check your details and try again.");
+        throw new Error(t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
       }
       const { email, mobile } = lookupRes.data;
       if (!email || !mobile) {
-        throw new Error("Invalid credentials. Please check your details and try again.");
+        throw new Error(t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
       }
 
       await sendOtp(mobile);
@@ -90,7 +92,7 @@ export default function PartnerLogin() {
       setOtpAttempts(a => a + 1);
       setTimer(30);
     } catch (e) {
-      setErr(e.message || "Invalid credentials. Please check your details and try again.");
+      setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
     } finally {
       setLoading(l => ({ ...l, otp: false }));
     }
@@ -102,11 +104,11 @@ export default function PartnerLogin() {
     setErr("");
     setInfoMsg("");
 
-    if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
-    if (!form.password) return setErr("Please enter your password.");
-    if (!otpSent) return setErr("Please click 'Send OTP' first.");
-    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
-    if (!otpSentTime || Date.now() - otpSentTime > 120000) return setErr("OTP expired. Please send a new one.");
+    if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
+    if (!form.password) return setErr(t('partner.errors.enterPassword', 'Please enter your password.'));
+    if (!otpSent) return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
+    if (!form.otp || form.otp.length < 6) return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
+    if (!otpSentTime || Date.now() - otpSentTime > 120000) return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
 
     setLoading(l => ({ ...l, login: true }));
     try {
@@ -126,7 +128,7 @@ export default function PartnerLogin() {
       else navigate('/partner/dashboard');
       
     } catch (e) {
-      setErr(e.message || "Invalid credentials. Please try again.");
+      setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
     } finally {
       setLoading(l => ({ ...l, login: false }));
     }
@@ -164,13 +166,13 @@ export default function PartnerLogin() {
               padding: 0
             }}
           >
-            <Icons.arrowLeft size={14} /> Back to Home
+            <Icons.arrowLeft size={14} /> {t('partner.backToHome', 'Back to Home')}
           </button>
         </div>
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Partner Login</div>
+          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>{t('partner.partnerLogin', 'Partner Login')}</div>
         </div>
 
         {/* Card */}
@@ -198,14 +200,14 @@ export default function PartnerLogin() {
           <form onSubmit={handleSubmit}>
             {/* Email or Mobile */}
             <div style={{ marginBottom: "14px" }}>
-              <label style={S.label}>Email or Mobile Number</label>
+              <label style={S.label}>{t('partner.emailOrMobile', 'Email or Mobile Number')}</label>
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
                   <Icons.User size={18} />
                 </div>
                 <input
                   style={{ ...inputStyle, paddingLeft: "42px" }}
-                  placeholder="Enter email or mobile number"
+                  placeholder={t('partner.enterEmailOrMobile', 'Enter email or mobile number')}
                   value={form.identity}
                   onChange={e => setForm({ ...form, identity: e.target.value })}
                   onFocus={e => e.target.style.border = focusBorder}
@@ -216,7 +218,7 @@ export default function PartnerLogin() {
 
             {/* Password */}
             <div style={{ marginBottom: "10px" }}>
-              <label style={S.label}>Password</label>
+              <label style={S.label}>{t('partner.password', 'Password')}</label>
               <div style={{ position: "relative" }}>
                 <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
                   <Icons.Lock size={18} />
@@ -224,7 +226,7 @@ export default function PartnerLogin() {
                 <input
                   style={{ ...inputStyle, paddingLeft: "42px", paddingRight: "42px" }}
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
+                  placeholder={t('partner.enterPassword', 'Enter password')}
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   onFocus={e => e.target.style.border = focusBorder}
@@ -248,13 +250,13 @@ export default function PartnerLogin() {
                 disabled={loading.reset}
                 style={{ background: "none", border: "none", color: C.teal, fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: 0, opacity: loading.reset ? 0.7 : 1 }}
               >
-                {loading.reset ? "Sending reset link..." : "Forgot Password?"}
+                {loading.reset ? t('partner.sendingResetLink', 'Sending reset link...') : t('partner.forgotPassword', 'Forgot Password?')}
               </button>
             </div>
 
             {/* OTP Verification */}
             <div style={{ marginBottom: "20px" }}>
-              <label style={S.label}>Enter 6-Digit OTP</label>
+              <label style={S.label}>{t('partner.enterOtp', 'Enter 6-Digit OTP')}</label>
               <div style={{ display: "flex", gap: "8px" }}>
                 <input
                   style={{
@@ -289,12 +291,12 @@ export default function PartnerLogin() {
                     opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
                   }}
                 >
-                  {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                  {loading.otp ? t('partner.sending', 'Sending…') : timer > 0 ? `${timer}s` : t('partner.sendOtp', 'Send OTP')}
                 </button>
               </div>
               {otpSent && resolvedCredentials && (
                 <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Icons.check size={12} /> OTP sent to {resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")}
+                  <Icons.check size={12} /> {t('partner.errors.otpSentSuccess', 'OTP code sent successfully to your mobile.')} ({resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")})
                 </div>
               )}
             </div>
@@ -322,19 +324,19 @@ export default function PartnerLogin() {
                     animation: "spin 0.7s linear infinite",
                     display: "inline-block",
                   }} />
-                  Verifying…
+                  {t('partner.verifying', 'Verifying…')}
                 </span>
-              ) : "Secure Log In"}
+              ) : t('partner.secureLogIn', 'Secure Log In')}
             </button>
           </form>
 
           <div style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.textLight }}>
-            New GharKaPaisa Partner?{" "}
+            {t('partner.newPartner', 'New GharKaPaisa Partner?')}{" "}
             <span
               onClick={() => navigate('/register')}
               style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}
             >
-              Register
+              {t('partner.register', 'Register')}
             </span>
           </div>
 
