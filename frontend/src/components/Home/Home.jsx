@@ -79,10 +79,10 @@ function ResponsiveGrid({ items, C, onSeeMore, onItemClick }) {
       {visibleItems.map((item, idx) => (
         <div key={idx} style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          background: C.bgSecondary, padding: isMobile ? "8px 4px" : "12px 8px", borderRadius: isMobile ? "10px" : "14px",
+          background: C.bgSecondary, padding: isMobile ? "6px 4px" : "10px 8px", borderRadius: isMobile ? "10px" : "14px",
           border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "6px" : "10px",
           cursor: "pointer", transition: "all 0.2s",
-          height: item.image ? (isMobile ? "55px" : "75px") : "auto"
+          height: item.image ? (isMobile ? "45px" : "60px") : "auto"
         }}
           onClick={() => onItemClick && onItemClick(item)}
           onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
@@ -214,10 +214,10 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 onClick={() => onItemClick && onItemClick(item)}
                 style={{
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: "16px 10px", borderRadius: "14px",
+                  background: C.bgSecondary, padding: isMobile ? "8px 10px" : "12px 10px", borderRadius: "14px",
                   border: `1px solid ${C.border}`, textAlign: "center", gap: "10px", cursor: "pointer",
                   transition: "all 0.2s",
-                  height: item.image ? (isMobile ? "55px" : "75px") : "auto"
+                  height: item.image ? (isMobile ? "45px" : "60px") : "auto"
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
