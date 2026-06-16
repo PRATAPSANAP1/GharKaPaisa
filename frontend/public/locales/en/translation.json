@@ -12,7 +12,7 @@
   },
   "sections": {
     "moneyTransfer": "Money Transfer & Payments",
-    "attractiveCards": "Attractive Cards/Loans",
+    "attractiveCards": "Attractive Cards & Loans",
     "popularCards": "Popular Credit Cards",
     "popularBanks": "Popular Credit Card Banks",
     "loans": "Loans",
@@ -44,6 +44,59 @@
     "kotakleague": "Premium rewards with zero annual fee",
     "applyNow": "Apply Now",
     "viewAll": "View All Cards"
+  },
+  "home": {
+    "seeAll": "See All",
+    "selectPartnerBank": "Select Partner Bank",
+    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
+    "noItems": "No items available in this category.",
+    "seeMore": "See More",
+    "dashboard": "Dashboard",
+    "creditCard": "Credit Card",
+    "loan": "Loan",
+    "insurance": "Insurance",
+    "investment": "Investment",
+    "services": "Services",
+    "applyNow": "Apply Now",
+    "banners": {
+      "slide0": {
+        "title": "Lifetime Free Credit Cards",
+        "subtitle": "Zero Joining Fee • Zero Annual Fee",
+        "btn": "Explore Now"
+      },
+      "slide1": {
+        "title": "Personal Loans",
+        "subtitle": "Low Interest Rates • Quick Disbursal",
+        "btn": "Apply Now"
+      },
+      "slide2": {
+        "title": "Business Loans",
+        "subtitle": "Flexible repayment options for growing businesses",
+        "btn": "Check Eligibility"
+      },
+      "slide3": {
+        "title": "Insurance Plans",
+        "subtitle": "Comprehensive health, life and general insurance cover",
+        "btn": "Get Quotes"
+      },
+      "slide4": {
+        "title": "EMI Cards",
+        "subtitle": "Convert purchases to no-cost EMIs instantly",
+        "btn": "Get EMI Card"
+      },
+      "slide5": {
+        "title": "HDFC Pixel Credit Cards",
+        "subtitle": "Customizable rewards on dining, shopping & entertainment",
+        "btn": "Explore Pixel Cards"
+      }
+    },
+    "breadcrumbs": {
+      "home": "Home",
+      "creditCards": "Credit Cards",
+      "attractiveSections": "Attractive Sections",
+      "fdBasedCards": "FD Based Cards",
+      "cobrand": "Co-Brand"
+    }
   },
   "loansList": {
     "personalloan": "Personal Loan",
@@ -210,58 +263,6 @@
     "idfc": "IDFC FIRST Bank",
     "rbl": "RBL Bank",
     "equitas": "Equitas Bank"
-  },
-  "home": {
-    "selectPartnerBank": "Select Partner Bank",
-    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
-    "noItems": "No items available in this category.",
-    "seeMore": "See More",
-    "dashboard": "Dashboard",
-    "creditCard": "Credit Card",
-    "loan": "Loan",
-    "insurance": "Insurance",
-    "investment": "Investment",
-    "services": "Services",
-    "applyNow": "Apply Now",
-    "banners": {
-      "slide0": {
-        "title": "Lifetime Free Credit Cards",
-        "subtitle": "Zero Joining Fee • Zero Annual Fee",
-        "btn": "Explore Now"
-      },
-      "slide1": {
-        "title": "Personal Loans",
-        "subtitle": "Low Interest Rates • Quick Disbursal",
-        "btn": "Apply Now"
-      },
-      "slide2": {
-        "title": "Business Loans",
-        "subtitle": "Flexible repayment options for growing businesses",
-        "btn": "Check Eligibility"
-      },
-      "slide3": {
-        "title": "Insurance Plans",
-        "subtitle": "Comprehensive health, life and general insurance cover",
-        "btn": "Get Quotes"
-      },
-      "slide4": {
-        "title": "EMI Cards",
-        "subtitle": "Convert purchases to no-cost EMIs instantly",
-        "btn": "Get EMI Card"
-      },
-      "slide5": {
-        "title": "HDFC Pixel Credit Cards",
-        "subtitle": "Customizable rewards on dining, shopping & entertainment",
-        "btn": "Explore Pixel Cards"
-      }
-    },
-    "breadcrumbs": {
-      "home": "Home",
-      "creditCards": "Credit Cards",
-      "attractiveSections": "Attractive Sections",
-      "fdBasedCards": "FD Based Cards",
-      "cobrand": "Co-Brand"
-    }
   },
   "companyTypes": {
     "individual": "Individual",

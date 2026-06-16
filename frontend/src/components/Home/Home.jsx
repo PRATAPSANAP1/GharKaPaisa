@@ -771,143 +771,144 @@ export default function Home({ onNavigate }) {
         </Section>
 
 
-        {/* ── SECTION 2: Attractive Cards/Loans (ticker) ── */}
-        <Section title={t('sections.attractiveCards')} C={C}>
-          <style>{`
-            @keyframes ticker-scroll {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .ticker-wrap {
-              display: flex; gap: 16px; width: max-content;
-              animation: ticker-scroll 35s linear infinite;
-            }
-            .ticker-wrap.paused { animation-play-state: paused !important; }
-          `}</style>
-          <div 
-            onMouseEnter={() => setIsTickerPaused(true)}
-            onMouseLeave={() => setIsTickerPaused(false)}
-            onTouchStart={() => setIsTickerPaused(true)}
-            onTouchEnd={() => setIsTickerPaused(false)}
-            style={{
-              overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
-              maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-              WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
-            }}
-          >
-            <div className={`ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
-              {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
-                <div key={`${cat.id}-${idx}`} style={{
-                  background: C.bgSecondary,
-                  borderRadius: "20px",
-                  border: `1px solid ${C.border}`,
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  width: isMobile ? "200px" : "280px",
-                  flexShrink: 0,
-                  overflow: "hidden",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
-                }}
+        {/* ── SECTION 2: Attractive Cards & Loans ── */}
+        <Section 
+          title={t('sections.attractiveCards')} 
+          viewAllLabel={t('home.seeAll', 'See All')}
+          onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+          C={C}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {attractiveCategories.map((cat) => (
+              <div key={cat.id} 
                 onClick={() => handleAttractiveCategoryClick(cat)}
+                style={{ 
+                  display: "flex", 
+                  flexDirection: "row", 
+                  alignItems: "center", 
+                  gap: "12px", 
+                  background: C.bgSecondary, 
+                  padding: isMobile ? "10px 12px" : "14px 16px", 
+                  borderRadius: "14px", 
+                  cursor: "pointer", 
+                  border: `1px solid ${C.border}`, 
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+                }} 
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = C.teal;
-                  e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
-                }}
+                  e.currentTarget.style.boxShadow = `0 6px 16px ${C.teal}15`;
+                }} 
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = C.border;
                   e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
                 }}
-                >
-                  {/* Image Header */}
-                  <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
-                    <img 
-                      src={attractiveImages[cat.id]} 
-                      alt={cat.label} 
-                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
-                    />
-                  </div>
-                  
-                  {/* Card Body */}
-                  <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
-                      {t('attractiveCards.' + cat.id, cat.label)}
-                    </h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                      {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-            </div>
-          </div>
-        </Section>
-
-        {/* ── SECTION 3: Popular Credit Cards ── */}
-        <Section 
-          title={t('sections.popularCards')} 
-          viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
-          onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
-          C={C}
-        >
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(6, 1fr)", gap: "16px" }}>
-            {popularCards.map((card, idx) => (
-              <div key={idx} style={{
-                background: C.bgSecondary, borderRadius: "18px", border: `1px solid ${C.border}`,
-                padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
-                transition: "all 0.2s ease", cursor: "pointer"
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
               >
-                {/* Visual Card Card */}
-                <div style={{
-                  height: "100px",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-                  background: C.bgSecondary,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                {/* Left side Image Box */}
+                <div style={{ 
+                  width: isMobile ? "36px" : "44px", 
+                  height: isMobile ? "36px" : "44px", 
+                  borderRadius: "10px", 
+                  background: C.bg, 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  flexShrink: 0,
+                  padding: "6px",
+                  boxSizing: "border-box",
+                  border: `1px solid ${C.border}`
                 }}>
                   <img 
-                    src={card.image} 
-                    alt={card.name} 
+                    src={attractiveImages[cat.id]} 
+                    alt={cat.label} 
                     style={{ 
                       width: "100%", 
                       height: "100%", 
                       objectFit: "contain",
-                      transition: "transform 0.3s"
+                      filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
                     }} 
-                    onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
-                    onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
                   />
                 </div>
-
-                {/* Details */}
-                <div>
-                  <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
-                  <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
-                  <button 
-                    onClick={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
-                    style={{
-                      width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
-                      padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => { e.target.style.background = C.teal; e.target.style.color = "#fff"; }}
-                    onMouseLeave={(e) => { e.target.style.background = `${C.teal}15`; e.target.style.color = C.teal; }}
-                  >
-                    {t('popularCardsList.applyNow', 'Apply Now')}
-                  </button>
+                
+                {/* Right side Text & Arrow */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {t('attractiveCards.' + cat.id, cat.label)}
+                  </div>
+                  <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                    <FaChevronRight size={isMobile ? 10 : 12} />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </Section>
+
+        {/* ── SECTION 3: Popular Credit Cards ── */}
+        {!isMobile && (
+          <Section 
+            title={t('sections.popularCards')} 
+            viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
+            onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+            C={C}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
+              {popularCards.map((card, idx) => (
+                <div key={idx} style={{
+                  background: C.bgSecondary, borderRadius: "18px", border: `1px solid ${C.border}`,
+                  padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
+                  transition: "all 0.2s ease", cursor: "pointer"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
+                >
+                  {/* Visual Card Card */}
+                  <div style={{
+                    height: "100px",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                    background: C.bgSecondary,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <img 
+                      src={card.image} 
+                      alt={card.name} 
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "contain",
+                        transition: "transform 0.3s"
+                      }} 
+                      onMouseEnter={(e) => e.target.style.transform = "scale(1.05)"}
+                      onMouseLeave={(e) => e.target.style.transform = "scale(1)"}
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div>
+                    <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
+                    <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
+                    <button 
+                      onClick={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+                      style={{
+                        width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
+                        padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => { e.target.style.background = C.teal; e.target.style.color = "#fff"; }}
+                      onMouseLeave={(e) => { e.target.style.background = `${C.teal}15`; e.target.style.color = C.teal; }}
+                    >
+                      {t('popularCardsList.applyNow', 'Apply Now')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
         <Section title={t('sections.popularBanks')} C={C}>

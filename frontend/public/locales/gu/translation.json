@@ -12,7 +12,7 @@
   },
   "sections": {
     "moneyTransfer": "મની ટ્રાન્સફર અને ચૂકવણીઓ",
-    "attractiveCards": "આકર્ષક કાર્ડ્સ / લોન",
+    "attractiveCards": "આકર્ષક કાર્ડ્સ & લોન",
     "popularCards": "લોકપ્રિય ક્રેડિટ કાર્ડ્સ",
     "popularBanks": "લોકપ્રિય ક્રેડિટ કાર્ડ બેંકો",
     "loans": "લોન",
@@ -44,6 +44,59 @@
     "kotakleague": "Premium rewards with zero annual fee",
     "applyNow": "Apply Now",
     "viewAll": "બધા કાર્ડ જુઓ"
+  },
+  "home": {
+    "seeAll": "બધા જુઓ",
+    "selectPartnerBank": "ભાગીદાર બેંક પસંદ કરો",
+    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
+    "noItems": "આ કેટેગરીમાં કોઈ વસ્તુ ઉપલબ્ધ નથી.",
+    "seeMore": "વધુ જુઓ",
+    "dashboard": "ડૅશબોર્ડ",
+    "creditCard": "ક્રેડિટ કાર્ડ",
+    "loan": "લોન",
+    "insurance": "વીમો",
+    "investment": "રોકાણ",
+    "services": "સેવાઓ",
+    "applyNow": "Apply Now",
+    "banners": {
+      "slide0": {
+        "title": "Lifetime Free Credit Cards",
+        "subtitle": "Lifetime Free Cards",
+        "btn": "Explore"
+      },
+      "slide1": {
+        "title": "Personal Loan",
+        "subtitle": "Personal Loan",
+        "btn": "Apply Now"
+      },
+      "slide2": {
+        "title": "Business Loan",
+        "subtitle": "Business Loan",
+        "btn": "Check Eligibility"
+      },
+      "slide3": {
+        "title": "Insurance Plans",
+        "subtitle": "Insurance Plans",
+        "btn": "Get Quotes"
+      },
+      "slide4": {
+        "title": "EMI Cards",
+        "subtitle": "EMI Cards",
+        "btn": "Get EMI Card"
+      },
+      "slide5": {
+        "title": "HDFC Pixel Credit Cards",
+        "subtitle": "HDFC Pixel Credit Cards",
+        "btn": "Explore Pixel Cards"
+      }
+    },
+    "breadcrumbs": {
+      "home": "હોમ",
+      "creditCards": "ક્રેડિટ કાર્ડ્સ",
+      "attractiveSections": "આકર્ષક વિભાગો",
+      "fdBasedCards": "FD Backed Card",
+      "cobrand": "Co-Brand"
+    }
   },
   "loansList": {
     "personalloan": "Personal Loan",
@@ -210,58 +263,6 @@
     "idfc": "IDFC FIRST બેંક",
     "rbl": "RBL બેંક",
     "equitas": "ઇક્વિટાસ બેંક"
-  },
-  "home": {
-    "selectPartnerBank": "ભાગીદાર બેંક પસંદ કરો",
-    "ltfCardsTitle": "Lifetime Free Credit Cards (LTF)",
-    "noItems": "આ કેટેગરીમાં કોઈ વસ્તુ ઉપલબ્ધ નથી.",
-    "seeMore": "વધુ જુઓ",
-    "dashboard": "ડૅશબોર્ડ",
-    "creditCard": "ક્રેડિટ કાર્ડ",
-    "loan": "લોન",
-    "insurance": "વીમો",
-    "investment": "રોકાણ",
-    "services": "સેવાઓ",
-    "applyNow": "Apply Now",
-    "banners": {
-      "slide0": {
-        "title": "Lifetime Free Credit Cards",
-        "subtitle": "Lifetime Free Cards",
-        "btn": "Explore"
-      },
-      "slide1": {
-        "title": "Personal Loan",
-        "subtitle": "Personal Loan",
-        "btn": "Apply Now"
-      },
-      "slide2": {
-        "title": "Business Loan",
-        "subtitle": "Business Loan",
-        "btn": "Check Eligibility"
-      },
-      "slide3": {
-        "title": "Insurance Plans",
-        "subtitle": "Insurance Plans",
-        "btn": "Get Quotes"
-      },
-      "slide4": {
-        "title": "EMI Cards",
-        "subtitle": "EMI Cards",
-        "btn": "Get EMI Card"
-      },
-      "slide5": {
-        "title": "HDFC Pixel Credit Cards",
-        "subtitle": "HDFC Pixel Credit Cards",
-        "btn": "Explore Pixel Cards"
-      }
-    },
-    "breadcrumbs": {
-      "home": "હોમ",
-      "creditCards": "ક્રેડિટ કાર્ડ્સ",
-      "attractiveSections": "આકર્ષક વિભાગો",
-      "fdBasedCards": "FD Backed Card",
-      "cobrand": "Co-Brand"
-    }
   },
   "companyTypes": {
     "individual": "વ્યક્તિગત",
