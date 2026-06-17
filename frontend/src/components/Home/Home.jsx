@@ -1333,7 +1333,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         <Section title={t('sections.moneyTransfer')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(1, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(5, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
             {moneyTransfer.map((item, idx) => (
               <div key={idx}
                 onClick={() => {
@@ -1343,12 +1343,13 @@ export default function Home({ onNavigate }) {
                 }}
                 style={{
                   display: "flex",
-                  flexDirection: "row",
+                  flexDirection: isMobile ? "column" : "row",
                   alignItems: "center",
-                  gap: "12px",
+                  justifyContent: isMobile ? "center" : "flex-start",
+                  gap: isMobile ? "6px" : "12px",
                   background: C.bgSecondary,
-                  padding: isMobile ? "10px 12px" : "14px 16px",
-                  borderRadius: "14px",
+                  padding: isMobile ? "8px 4px" : "14px 16px",
+                  borderRadius: isMobile ? "10px" : "14px",
                   cursor: "pointer",
                   border: `1px solid ${C.border}`,
                   transition: "all 0.2s ease"
@@ -1357,9 +1358,9 @@ export default function Home({ onNavigate }) {
                 onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
               >
                 <div style={{
-                  width: isMobile ? "48px" : "58px",
-                  height: isMobile ? "48px" : "58px",
-                  borderRadius: "12px",
+                  width: isMobile ? "38px" : "58px",
+                  height: isMobile ? "38px" : "58px",
+                  borderRadius: isMobile ? "8px" : "12px",
                   background: C.bg,
                   display: "flex",
                   alignItems: "center",
@@ -1367,17 +1368,21 @@ export default function Home({ onNavigate }) {
                   flexShrink: 0,
                   padding: "4px",
                   boxSizing: "border-box",
-                  border: `1px solid ${C.border}`
+                  border: `1px solid ${C.border}`,
+                  fontSize: isMobile ? "16px" : "20px",
+                  color: item.color || C.teal
                 }}>
                   {item.icon}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, width: "100%" }}>
+                  <div style={{ fontSize: isMobile ? "9px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
                     {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
                   </div>
-                  <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                    <FaChevronRight size={isMobile ? 10 : 12} />
-                  </div>
+                  {!isMobile && (
+                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                      <FaChevronRight size={12} />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1386,19 +1391,20 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 8: Travel & Transit ── */}
         <Section title={t('sections.travelTransit')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(1, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
             {travelTransitData.map((item, idx) => {
               return (
                 <div key={idx} 
                   onClick={() => navigate("/travel-transit/flight-booking")}
                   style={{ 
                     display: "flex", 
-                    flexDirection: "row", 
+                    flexDirection: isMobile ? "column" : "row", 
                     alignItems: "center", 
-                    gap: "12px", 
+                    justifyContent: isMobile ? "center" : "flex-start",
+                    gap: isMobile ? "6px" : "12px", 
                     background: C.bgSecondary, 
-                    padding: isMobile ? "10px 12px" : "14px 16px", 
-                    borderRadius: "14px", 
+                    padding: isMobile ? "8px 4px" : "14px 16px", 
+                    borderRadius: isMobile ? "10px" : "14px", 
                     cursor: "pointer", 
                     border: `1px solid ${C.border}`, 
                     transition: "all 0.2s ease" 
@@ -1408,9 +1414,9 @@ export default function Home({ onNavigate }) {
                 >
                   {/* Left side Icon Box */}
                   <div style={{ 
-                    width: isMobile ? "48px" : "58px", 
-                    height: isMobile ? "48px" : "58px", 
-                    borderRadius: "12px", 
+                    width: isMobile ? "38px" : "58px", 
+                    height: isMobile ? "38px" : "58px", 
+                    borderRadius: isMobile ? "8px" : "12px", 
                     background: C.bg, 
                     display: "flex", 
                     alignItems: "center", 
@@ -1418,19 +1424,23 @@ export default function Home({ onNavigate }) {
                     flexShrink: 0,
                     padding: "4px",
                     boxSizing: "border-box",
-                    border: `1px solid ${C.border}`
+                    border: `1px solid ${C.border}`,
+                    fontSize: isMobile ? "16px" : "20px",
+                    color: C.teal
                   }}>
                     {item.icon}
                   </div>
                   
                   {/* Right side Text & Arrow */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, width: "100%" }}>
+                    <div style={{ fontSize: isMobile ? "9px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
                       {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
                     </div>
-                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                      <FaChevronRight size={isMobile ? 10 : 12} />
-                    </div>
+                    {!isMobile && (
+                      <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                        <FaChevronRight size={12} />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
