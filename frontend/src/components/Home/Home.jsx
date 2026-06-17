@@ -1779,8 +1779,8 @@ export default function Home({ onNavigate }) {
             <div>
               <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.support', 'Support')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.privacy', 'Privacy Policy')}</span>
-                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.terms', 'Terms & Conditions')}</span>
+                <span onClick={() => navigate("/privacy-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.privacy', 'Privacy Policy')}</span>
+                <span onClick={() => navigate("/terms-and-conditions")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.terms', 'Terms & Conditions')}</span>
                 <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.refund', 'Refund Policy')}</span>
               </div>
             </div>
