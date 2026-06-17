@@ -18,12 +18,14 @@
     "loans": "लोन",
     "insurance": "बीमा",
     "businessServices": "व्यावसायिक सेवाएं",
+    "travelTransit": "यात्रा और पारगमन",
     "partnerBanks": "भागीदार बैंक"
   },
   "moneyTransfer": {
     "tomobile": "मोबाइल पर",
     "recharge": "रिचार्ज",
     "electricity": "बिजली",
+    "fastag": "फास्टैग",
     "loanrepay": "ऋण भुगतान"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "कार लोन",
     "usedcarloan": "पुरानी कार के लिए लोन",
     "instantloan": "तुरंत लोन",
+    "goldloan": "गोल्ड लोन",
+    "loanagainstcar": "कार पर लोन",
+    "2wheelerloan": "टू व्हीलर लोन",
+    "loanagainstmutualfunds": "म्यूचुअल फंड पर लोन",
     "loanagainstpropertylap": "संपत्ति पर लोन (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "व्यापार लाइसेंस",
     "msmeregistration": "एमएसएमई पंजीकरण",
     "dscservices": "डीएससी सेवाएं"
+  },
+  "travel-transitList": {
+    "flight": "उड़ान",
+    "train": "ट्रेन",
+    "bus": "बस",
+    "hotels": "होटल"
   },
   "footer": {
     "desc": "क्रेडिट कार्ड, लोन, बीमा और वित्तीय सेवाओं के लिए भारत का विश्वसनीय मंच।",

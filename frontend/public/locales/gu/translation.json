@@ -18,12 +18,14 @@
     "loans": "લોન",
     "insurance": "વીમો",
     "businessServices": "વ્યવસાય સેવાઓ",
+    "travelTransit": "મુસાફરી અને પરિવહન",
     "partnerBanks": "ભાગીદાર બેંકો"
   },
   "moneyTransfer": {
     "tomobile": "To Mobile",
     "recharge": "Recharge",
     "electricity": "Electricity",
+    "fastag": "ફાસ્ટટેગ",
     "loanrepay": "Loan Repay"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "Car Loan",
     "usedcarloan": "Used Car Loan",
     "instantloan": "ઇન્સ્ટન્ટ લોન",
+    "goldloan": "ગોલ્ડ લોન",
+    "loanagainstcar": "કાર પર લોન",
+    "2wheelerloan": "ટુ વ્હીલર લોન",
+    "loanagainstmutualfunds": "મ્યુચ્યુઅલ ફંડ પર લોન",
     "loanagainstpropertylap": "પ્રોપર્ટી સામે લોન (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "Trade License",
     "msmeregistration": "MSME Registration",
     "dscservices": "DSC Services"
+  },
+  "travel-transitList": {
+    "flight": "ફ્લાઇટ",
+    "train": "ટ્રેન",
+    "bus": "બસ્",
+    "hotels": "હોટેલ્સ"
   },
   "footer": {
     "desc": "ક્રેડિટ કાર્ડ, લોન, વીમો અને નાણાકીય સેવાઓ માટે ભારતનું વિશ્વસનીય પ્લેટફોર્મ.",

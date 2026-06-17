@@ -65,6 +65,9 @@ const baseTranslation = {
   "sections.businessServices": {
     en: "Business Services", hi: "व्यावसायिक सेवाएं", mr: "व्यावसायिक सेवा", te: "వ్యాపార సేవలు", kn: "ವ್ಯವಹಾರ ಸೇವೆಗಳು", ta: "வணிக சேவைகள்", bn: "ব্যবসায়িক পরিষেবা", gu: "વ્યવસાય સેવાઓ", or: "ବ୍ୟବସାୟିକ ସେବା"
   },
+  "sections.travelTransit": {
+    en: "Travel & Transit", hi: "यात्रा और पारगमन", mr: "प्रवास आणि संक्रमण", te: "ప్రయాణం & రవాణా", kn: "ಪ್ರಯಾಣ ಮತ್ತು ಸಾರಿಗೆ", ta: "பயணம் & போக்குவரத்து", bn: "ভ্রমণ ও ট্রানজিট", gu: "મુસાફરી અને પરિવહન", or: "ଯାତ୍ରା ଏବଂ ପରିବହନ"
+  },
   "sections.partnerBanks": {
     en: "Partner Banks", hi: "भागीदार बैंक", mr: "भागीदार बँका", te: "భాగస్వామ్య బ్యాంకులు", kn: "ಪಾಲುದಾರ ಬ್ಯಾಂಕುಗಳು", ta: "கூட்டாளர் வங்கிகள்", bn: "পার্টনার ব্যাঙ্কসমূহ", gu: "ભાગીદાર બેંકો", or: "ଭାଗୀଦାର ବ୍ୟାଙ୍କ"
   },
@@ -76,6 +79,9 @@ const baseTranslation = {
   },
   "moneyTransfer.electricity": {
     en: "Electricity", hi: "बिजली", mr: "वीज", te: "విద్యుత్", kn: "ವಿದ್ಯುತ್", ta: "மின்சாரம்", bn: "বিদ্যুৎ", gu: "Electricity", or: "ବିଦ୍ୟୁତ"
+  },
+  "moneyTransfer.fastag": {
+    en: "FASTag", hi: "फास्टैग", mr: "फास्टॅग", te: "ఫాస్ట్ట్యాగ్", kn: "ಫಾಸ್ಟ್‌ట್ಯಾಗ್", ta: "பாஸ்டேக்", bn: "ফাস্ট্যাগ", gu: "ફાસ્ટટેગ", or: "ଫାଷ୍ଟାਗ୍"
   },
   "moneyTransfer.loanrepay": {
     en: "Loan Repay", hi: "ऋण भुगतान", mr: "कर्ज फेडी", te: "రుణ পরিশোধ", kn: "ಸಾಲ ಮರುಪಾವತಿ", ta: "கடன் திருப்பிச் செலுத்துதல்", bn: "লোন পরিশোধ", gu: "Loan Repay", or: "ଋଣ ପରିଶୋଧ"
@@ -149,6 +155,18 @@ const baseTranslation = {
   "loansList.instantloan": {
     en: "Instant Loan", hi: "तुरंत लोन", mr: "त्वरित कर्ज", te: "తక్షణ రుణం", kn: "ತ್ವರಿತ ಸಾಲ", ta: "உடனடி கடன்", bn: "ইনস্ট্যান্ট লোন", gu: "ઇન્સ્ટન્ટ લોન", or: "ତତ୍କାଳ ଋଣ"
   },
+  "loansList.goldloan": {
+    en: "Gold Loan", hi: "गोल्ड लोन", mr: "गोल्ड लोन", te: "బంగారు రుణం", kn: "ಚಿನ್ನದ ಸಾಲ", ta: "தங்கக் கடன்", bn: "স্বর্ণ ঋণ", gu: "ગોલ્ડ લોન", or: "ସୁନା ଋଣ"
+  },
+  "loansList.loanagainstcar": {
+    en: "Loan against Car", hi: "कार पर लोन", mr: "कारवर कर्ज", te: "కారుపై రుణం", kn: "ಕಾರಿನ ಮೇಲೆ ಸಾಲ", ta: "கார் மீதான கடன்", bn: "গাড়ির বিপরীতে লোন", gu: "કાર પર લોન", or: "କାର୍ ଉପରେ ଋଣ"
+  },
+  "loansList.2wheelerloan": {
+    en: "2 Wheeler Loan", hi: "टू व्हीलर लोन", mr: "दुचाकी कर्ज", te: "ద్విచక్ర వాహన రుణం", kn: "ದ್ವಿಚಕ್ರ ವಾಹನ ಸಾಲ", ta: "இருசக்கர வாகனக் கடன்", bn: "দ্বিచक्र যান লোন", gu: "ટુ વ્હીલર લોન", or: "ଦୁଇ ଚକିଆ ଯାନ ଋଣ"
+  },
+  "loansList.loanagainstmutualfunds": {
+    en: "Loan against Mutual Funds", hi: "म्यूचुअल फंड पर लोन", mr: "म्युच्युअल फंडांवर कर्ज", te: "మ్యూచువల్ ఫండ్లపై రుణం", kn: "ಮ್ಯೂಚುವಲ್ ಫಂಡ್‌ಗಳ ಮೇಲೆ ಸಾಲ", ta: "பரஸ்பర நிதிகள் மீதான கடன்", bn: "মিউচুয়াল ফান্ডের বিপরীতে লোন", gu: "મ્યુચ્યુઅલ ફંડ પર લોન", or: "ମ୍ୟୁଚୁଆଲ୍ ଫଣ୍ଡ୍ ଉପରେ ଋଣ"
+  },
   "loansList.loanagainstpropertylap": {
     en: "Loan Against Property (LAP)", hi: "संपत्ति पर लोन (LAP)", mr: "मालमत्तेवर कर्ज (LAP)", te: "ఆస్తిపై రుణం (LAP)", kn: "ಆಸ್ತಿ ಅಡಮಾನ ಸಾಲ (LAP)", ta: "சொத்து மீதான கடன் (LAP)", bn: "সম্পত্তির বিপরীতে লোন (LAP)", gu: "પ્રોપર્ટી સામે લોન (LAP)", or: "ସମ୍ପତ୍ତି ବିରୁଦ୍ଧରେ ଋଣ (LAP)"
   },
@@ -187,6 +205,18 @@ const baseTranslation = {
   },
   "servicesList.dscservices": {
     en: "DSC Services", hi: "डीएससी सेवाएं", mr: "डीएससी सेवा", te: "డీఎస్‌సీ సేవలు", kn: "ಡಿಎಸ್‌ಸಿ ಸೇವೆಗಳು", ta: "டிஎஸ்சி சேவைகள்", bn: "ডিএসসি পরিষেবা", gu: "DSC Services", or: "ଡିଏସସି ସେବା"
+  },
+  "travel-transitList.flight": {
+    en: "Flight", hi: "उड़ान", mr: "उड्डाण", te: "విమానం", kn: "ವಿಮಾನ", ta: "விமானம்", bn: "বিমান", gu: "ફ્લાઇટ", or: "ଉଡ଼ାଣ"
+  },
+  "travel-transitList.train": {
+    en: "Train", hi: "ट्रेन", mr: "ट्रेन", te: "రైలు", kn: "ರೈಲು", ta: "இரயில்", bn: "ট্রেন", gu: "ટ્રેન", or: "ଟ୍ରେନ୍"
+  },
+  "travel-transitList.bus": {
+    en: "Bus", hi: "बस", mr: "बस", te: "బస్సు", kn: "ಬಸ್", ta: "பேருந்து", bn: "বাস", gu: "બસ્", or: "ବସ୍"
+  },
+  "travel-transitList.hotels": {
+    en: "Hotels", hi: "होटल", mr: "हॉटेल्स", te: "హోటళ్ళు", kn: "ಹೋಟೆಲ್‌ಗಳು", ta: "ஹோட்டல்கள்", bn: "হোটেল", gu: "હોટેલ્સ", or: "ହୋଟେଲ"
   },
   "footer.desc": {
     en: "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.",

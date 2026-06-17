@@ -18,12 +18,14 @@
     "loans": "ଋଣ",
     "insurance": "ବୀମା",
     "businessServices": "ବ୍ୟବସାୟିକ ସେବା",
+    "travelTransit": "ଯାତ୍ରା ଏବଂ ପରିବହନ",
     "partnerBanks": "ଭାଗୀଦାର ବ୍ୟାଙ୍କ"
   },
   "moneyTransfer": {
     "tomobile": "ମୋବାଇଲ୍ କୁ",
     "recharge": "ରିଚାର୍ଜ",
     "electricity": "ବିଦ୍ୟୁତ",
+    "fastag": "ଫାଷ୍ଟାਗ୍",
     "loanrepay": "ଋଣ ପରିଶୋଧ"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "କାର୍ ଋଣ",
     "usedcarloan": "ପୁରୁଣା କାର୍ ଋଣ",
     "instantloan": "ତତ୍କାଳ ଋଣ",
+    "goldloan": "ସୁନା ଋଣ",
+    "loanagainstcar": "କାର୍ ଉପରେ ଋଣ",
+    "2wheelerloan": "ଦୁଇ ଚକିଆ ଯାନ ଋଣ",
+    "loanagainstmutualfunds": "ମ୍ୟୁଚୁଆଲ୍ ଫଣ୍ଡ୍ ଉପରେ ଋଣ",
     "loanagainstpropertylap": "ସମ୍ପତ୍ତି ବିରୁଦ୍ଧରେ ଋଣ (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "ବାଣିଜ୍ୟ ଲାଇସେନ୍ସ",
     "msmeregistration": "ଏମଏସଏମଇ ପଞ୍ଜୀକରଣ",
     "dscservices": "ଡିଏସସି ସେବା"
+  },
+  "travel-transitList": {
+    "flight": "ଉଡ଼ାଣ",
+    "train": "ଟ୍ରେନ୍",
+    "bus": "ବସ୍",
+    "hotels": "ହୋଟେଲ"
   },
   "footer": {
     "desc": "କ୍ରେଡିଟ୍ କାର୍ଡ, ଋଣ, ବୀମା ଏବં ଆର୍ଥିକ ସେବା ପାଇଁ ଭାରତର ବିଶ୍ୱସ୍ତ ପ୍ଲାଟଫର୍ମ।",

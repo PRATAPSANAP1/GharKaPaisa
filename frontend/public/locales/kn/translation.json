@@ -18,12 +18,14 @@
     "loans": "ಸಾಲಗಳು",
     "insurance": "ವಿಮೆ",
     "businessServices": "ವ್ಯವಹಾರ ಸೇವೆಗಳು",
+    "travelTransit": "ಪ್ರಯಾಣ ಮತ್ತು ಸಾರಿಗೆ",
     "partnerBanks": "ಪಾಲುದಾರ ಬ್ಯಾಂಕುಗಳು"
   },
   "moneyTransfer": {
     "tomobile": "ಮೊಬೈಲ್‌ಗೆ",
     "recharge": "ರೀಚಾರ್ಜ್",
     "electricity": "ವಿದ್ಯುತ್",
+    "fastag": "ಫಾಸ್ಟ್‌ట್ಯಾಗ್",
     "loanrepay": "ಸಾಲ ಮರುಪಾವತಿ"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "ಕಾರು ಸಾಲ",
     "usedcarloan": "ಬಳಸಿದ ಕಾರು ಸಾಲ",
     "instantloan": "ತ್ವರಿತ ಸಾಲ",
+    "goldloan": "ಚಿನ್ನದ ಸಾಲ",
+    "loanagainstcar": "ಕಾರಿನ ಮೇಲೆ ಸಾಲ",
+    "2wheelerloan": "ದ್ವಿಚಕ್ರ ವಾಹನ ಸಾಲ",
+    "loanagainstmutualfunds": "ಮ್ಯೂಚುವಲ್ ಫಂಡ್‌ಗಳ ಮೇಲೆ ಸಾಲ",
     "loanagainstpropertylap": "ಆಸ್ತಿ ಅಡಮಾನ ಸಾಲ (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "ವ್ಯಾಪಾರ ಪರವಾನಗಿ",
     "msmeregistration": "ಎಂಎಸ್ಎಂಇ ನೋಂದಣಿ",
     "dscservices": "ಡಿಎಸ್‌ಸಿ ಸೇವೆಗಳು"
+  },
+  "travel-transitList": {
+    "flight": "ವಿಮಾನ",
+    "train": "ರೈಲು",
+    "bus": "ಬಸ್",
+    "hotels": "ಹೋಟೆಲ್‌ಗಳು"
   },
   "footer": {
     "desc": "ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್‌ಗಳು, ಸಾಲಗಳು, ವಿಮೆ ಮತ್ತು ಹಣಕಾಸು ಸೇವೆಗಳಿಗಾಗಿ ಭಾರತದ ವಿಶ್ವಾಸಾರ್ಹ ವೇದಿಕೆ.",

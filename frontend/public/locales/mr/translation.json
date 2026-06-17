@@ -18,12 +18,14 @@
     "loans": "कर्ज",
     "insurance": "विमा",
     "businessServices": "व्यावसायिक सेवा",
+    "travelTransit": "प्रवास आणि संक्रमण",
     "partnerBanks": "भागीदार बँका"
   },
   "moneyTransfer": {
     "tomobile": "मोबाईलवर",
     "recharge": "रिचार्ज",
     "electricity": "वीज",
+    "fastag": "फास्टॅग",
     "loanrepay": "कर्ज फेडी"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "कार कर्ज",
     "usedcarloan": "जुन्या कारसाठी कर्ज",
     "instantloan": "त्वरित कर्ज",
+    "goldloan": "गोल्ड लोन",
+    "loanagainstcar": "कारवर कर्ज",
+    "2wheelerloan": "दुचाकी कर्ज",
+    "loanagainstmutualfunds": "म्युच्युअल फंडांवर कर्ज",
     "loanagainstpropertylap": "मालमत्तेवर कर्ज (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "व्यापार परवाना",
     "msmeregistration": "एमएसएमई नोंदणी",
     "dscservices": "डीएससी सेवा"
+  },
+  "travel-transitList": {
+    "flight": "उड्डाण",
+    "train": "ट्रेन",
+    "bus": "बस",
+    "hotels": "हॉटेल्स"
   },
   "footer": {
     "desc": "क्रेडिट कार्ड, कर्ज, विमा आणि वित्तीय सेवांसाठी भारताचे विश्वसनीय व्यासपीठ.",

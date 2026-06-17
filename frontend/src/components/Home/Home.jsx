@@ -23,6 +23,7 @@ import { banksList, trustBanks } from "./banks/banksData";
 import { moneyTransfer } from "./MoneyTransfer";
 import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
+import { travelTransitData } from "./TravelTransit";
 
 // Import banner images
 import ltfBanner from "./banner/lifetimefree card.png";
@@ -45,6 +46,13 @@ import toMobileImg from "./MoneyTransfer/tomobile.png";
 import rechargeImg from "./MoneyTransfer/recharge.png";
 import electricityImg from "./MoneyTransfer/electricitybill.png";
 import loanRepayImg from "./MoneyTransfer/loan.png";
+import fastagImg from "./MoneyTransfer/fastag.png";
+
+// Import travel transit images
+import flightImg from "./TravelTransit/flight.png";
+import trainImg from "./TravelTransit/train.png";
+import busImg from "./TravelTransit/bus.png";
+import hotelImg from "./TravelTransit/hotel.png";
 
 
 // ── Responsive Hook ──────────────────────────────────────────────
@@ -404,8 +412,17 @@ export default function Home({ onNavigate }) {
     "to mobile": toMobileImg,
     "recharge": rechargeImg,
     "electricity": electricityImg,
-    "loan repay": loanRepayImg
+    "loan repay": loanRepayImg,
+    "fastag": fastagImg
   };
+
+  const travelTransitImages = {
+    "flight": flightImg,
+    "train": trainImg,
+    "bus": busImg,
+    "hotels": hotelImg
+  };
+
 
   // Auto rotate banner slides (height 320px)
   const bannerSlides = [
@@ -543,6 +560,8 @@ export default function Home({ onNavigate }) {
       crumbs.push({ label: t('sections.insurance', 'Insurance'), action: null });
     } else if (cat.id === "services") {
       crumbs.push({ label: t('sections.businessServices', 'Services'), action: null });
+    } else if (cat.id === "travel-transit") {
+      crumbs.push({ label: t('sections.travelTransit', 'Travel & Transit'), action: null });
     } else {
       crumbs.push({ label: t('home.breadcrumbs.attractiveSections', 'Attractive Sections'), action: () => setActiveCategory(null) });
       crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
@@ -558,6 +577,7 @@ export default function Home({ onNavigate }) {
     else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", titleKey: "home.investment", items: [] });
     else if (id === "services") setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
+    else if (id === "travel-transit") setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: travelTransitData });
   };
 
   const handleItemClick = (item) => {
@@ -703,7 +723,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         <Section title={t('sections.moneyTransfer')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
             {moneyTransfer.map((item, idx) => {
               const imgKey = item.label.toLowerCase();
               const img = moneyTransferImages[imgKey] || toMobileImg;
@@ -921,7 +941,7 @@ export default function Home({ onNavigate }) {
         {/* ── SECTION 5: Loans ── */}
         <Section title={t('sections.loans')} C={C}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
-            {loansData.slice(0, 6).map((item, idx) => (
+            {loansData.map((item, idx) => (
               <div key={idx}
                 onClick={() => handleBottomNavClick("loans")}
                 style={{
@@ -984,7 +1004,72 @@ export default function Home({ onNavigate }) {
           </div>
         </Section>
 
-        {/* ── SECTION 8: Partner Banks (Logo strip) ── */}
+        {/* ── SECTION 8: Travel & Transit ── */}
+        <Section title={t('sections.travelTransit')} C={C}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {travelTransitData.map((item, idx) => {
+              const imgKey = item.label.toLowerCase();
+              const img = travelTransitImages[imgKey] || flightImg;
+              return (
+                <div key={idx} 
+                  onClick={() => handleBottomNavClick("travel-transit")}
+                  style={{ 
+                    display: "flex", 
+                    flexDirection: "row", 
+                    alignItems: "center", 
+                    gap: "12px", 
+                    background: C.bgSecondary, 
+                    padding: isMobile ? "10px 12px" : "14px 16px", 
+                    borderRadius: "14px", 
+                    cursor: "pointer", 
+                    border: `1px solid ${C.border}`, 
+                    transition: "all 0.2s ease" 
+                  }} 
+                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
+                  onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
+                >
+                  {/* Left side Image Box */}
+                  <div style={{ 
+                    width: isMobile ? "36px" : "44px", 
+                    height: isMobile ? "36px" : "44px", 
+                    borderRadius: "10px", 
+                    background: C.bg, 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    flexShrink: 0,
+                    padding: "6px",
+                    boxSizing: "border-box",
+                    border: `1px solid ${C.border}`
+                  }}>
+                    <img 
+                      src={img} 
+                      alt={item.label} 
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "contain",
+                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                      }} 
+                    />
+                  </div>
+                  
+                  {/* Right side Text & Arrow */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                    </div>
+                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                      <FaChevronRight size={isMobile ? 10 : 12} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ── SECTION 9: Partner Banks (Logo strip) ── */}
         <Section title={t('sections.partnerBanks')} C={C}>
           <style>{`
             @keyframes bank-ticker-scroll {
@@ -1065,10 +1150,8 @@ export default function Home({ onNavigate }) {
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.company', 'Company')}</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.contactUs', 'Contact Us')}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.aboutUs', 'About Us')}</span>
-                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.careers', 'Careers')}</span>
                 <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.contactUs', 'Contact Us')}</span>
               </div>
             </div>
@@ -1084,7 +1167,7 @@ export default function Home({ onNavigate }) {
           </div>
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-            <span>{t('footer.rights', '© 2026 OIT_stack. All rights reserved.')}</span>
+            <span>@2026 OIT_stack</span>
           </div>
         </div>
 

@@ -18,12 +18,14 @@
     "loans": "লোন",
     "insurance": "বিমা",
     "businessServices": "ব্যবসায়িক পরিষেবা",
+    "travelTransit": "ভ্রমণ ও ট্রানজিট",
     "partnerBanks": "পার্টনার ব্যাঙ্কসমূহ"
   },
   "moneyTransfer": {
     "tomobile": "মোবাইলে",
     "recharge": "রিচার্জ",
     "electricity": "বিদ্যুৎ",
+    "fastag": "ফাস্ট্যাগ",
     "loanrepay": "লোন পরিশোধ"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "গাড়ির লোন",
     "usedcarloan": "সেকেন্ড হ্যান্ড গাড়ির লোন",
     "instantloan": "ইনস্ট্যান্ট লোন",
+    "goldloan": "স্বর্ণ ঋণ",
+    "loanagainstcar": "গাড়ির বিপরীতে লোন",
+    "2wheelerloan": "দ্বিచक्र যান লোন",
+    "loanagainstmutualfunds": "মিউচুয়াল ফান্ডের বিপরীতে লোন",
     "loanagainstpropertylap": "সম্পত্তির বিপরীতে লোন (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "ট্রেড লাইসেন্স",
     "msmeregistration": "এমএসএমই রেজিস্ট্রেশন",
     "dscservices": "ডিএসসি পরিষেবা"
+  },
+  "travel-transitList": {
+    "flight": "বিমান",
+    "train": "ট্রেন",
+    "bus": "বাস",
+    "hotels": "হোটেল"
   },
   "footer": {
     "desc": "ক্রেডিট কার্ড, লোন, বিমা এবং আর্থিক পরিষেবার জন্য ভারতের বিশ্বস্ত প্ল্যাটফর্ম।",

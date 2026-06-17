@@ -18,12 +18,14 @@
     "loans": "రుణాలు",
     "insurance": "భీమా",
     "businessServices": "వ్యాపార సేవలు",
+    "travelTransit": "ప్రయాణం & రవాణా",
     "partnerBanks": "భాగస్వామ్య బ్యాంకులు"
   },
   "moneyTransfer": {
     "tomobile": "మొబైల్‌కు",
     "recharge": "రీఛార్జ్",
     "electricity": "విద్యుత్",
+    "fastag": "ఫాస్ట్ట్యాగ్",
     "loanrepay": "రుణ পরিশোধ"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "కార్ రుణం",
     "usedcarloan": "సెకండ్ హ్యాండ్ కార్ రుణం",
     "instantloan": "తక్షణ రుణం",
+    "goldloan": "బంగారు రుణం",
+    "loanagainstcar": "కారుపై రుణం",
+    "2wheelerloan": "ద్విచక్ర వాహన రుణం",
+    "loanagainstmutualfunds": "మ్యూచువల్ ఫండ్లపై రుణం",
     "loanagainstpropertylap": "ఆస్తిపై రుణం (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "ట్రేడ్ లైసెన్స్",
     "msmeregistration": "MSME రిజిస్ట్రేషన్",
     "dscservices": "డీఎస్‌సీ సేవలు"
+  },
+  "travel-transitList": {
+    "flight": "విమానం",
+    "train": "రైలు",
+    "bus": "బస్సు",
+    "hotels": "హోటళ్ళు"
   },
   "footer": {
     "desc": "క్రెడిట్ కార్డులు, రుణాలు, భీమా & ఆర్థిక సేవల కోసం భారతదేశపు విశ్వసనీయ వేదిక.",

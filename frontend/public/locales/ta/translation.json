@@ -18,12 +18,14 @@
     "loans": "கடன்கள்",
     "insurance": "காப்பீடு",
     "businessServices": "வணிக சேவைகள்",
+    "travelTransit": "பயணம் & போக்குவரத்து",
     "partnerBanks": "கூட்டாளர் வங்கிகள்"
   },
   "moneyTransfer": {
     "tomobile": "கைபேசிக்கு",
     "recharge": "ரீசார்ஜ்",
     "electricity": "மின்சாரம்",
+    "fastag": "பாஸ்டேக்",
     "loanrepay": "கடன் திருப்பிச் செலுத்துதல்"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "கார் கடன்",
     "usedcarloan": "பயன்படுத்திய கார் கடன்",
     "instantloan": "உடனடி கடன்",
+    "goldloan": "தங்கக் கடன்",
+    "loanagainstcar": "கார் மீதான கடன்",
+    "2wheelerloan": "இருசக்கர வாகனக் கடன்",
+    "loanagainstmutualfunds": "பரஸ்பర நிதிகள் மீதான கடன்",
     "loanagainstpropertylap": "சொத்து மீதான கடன் (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "வணிக உரிமம்",
     "msmeregistration": "எம்எஸ்எம்இ பதிவு",
     "dscservices": "டிஎஸ்சி சேவைகள்"
+  },
+  "travel-transitList": {
+    "flight": "விமானம்",
+    "train": "இரயில்",
+    "bus": "பேருந்து",
+    "hotels": "ஹோட்டல்கள்"
   },
   "footer": {
     "desc": "கிரெடிட் கார்டுகள், கடன்கள், காப்பீடு & நிதிச் சேவைகளுக்கான இந்தியாவின் நம்பகமான தளம்.",

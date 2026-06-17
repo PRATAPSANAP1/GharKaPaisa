@@ -18,12 +18,14 @@
     "loans": "Loans",
     "insurance": "Insurance",
     "businessServices": "Business Services",
+    "travelTransit": "Travel & Transit",
     "partnerBanks": "Partner Banks"
   },
   "moneyTransfer": {
     "tomobile": "To Mobile",
     "recharge": "Recharge",
     "electricity": "Electricity",
+    "fastag": "FASTag",
     "loanrepay": "Loan Repay"
   },
   "attractiveCards": {
@@ -106,6 +108,10 @@
     "carloan": "Car Loan",
     "usedcarloan": "Used Car Loan",
     "instantloan": "Instant Loan",
+    "goldloan": "Gold Loan",
+    "loanagainstcar": "Loan against Car",
+    "2wheelerloan": "2 Wheeler Loan",
+    "loanagainstmutualfunds": "Loan against Mutual Funds",
     "loanagainstpropertylap": "Loan Against Property (LAP)"
   },
   "insuranceList": {
@@ -123,6 +129,12 @@
     "tradelicense": "Trade License",
     "msmeregistration": "MSME Registration",
     "dscservices": "DSC Services"
+  },
+  "travel-transitList": {
+    "flight": "Flight",
+    "train": "Train",
+    "bus": "Bus",
+    "hotels": "Hotels"
   },
   "footer": {
     "desc": "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.",

@@ -177,19 +177,16 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   );
 
   // Card component with custom styling & failback icon loader
-  function CardItem({ id, name, description, icon, fallbackIcon, fee, highlights, gradient }) {
+  function CardItem({ id, name, icon, fallbackIcon }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     const translatedName = t(`hdfc.cards.${id}.name`, name);
-    const translatedDesc = t(`hdfc.cards.${id}.desc`, description);
-    const translatedFee = t(`hdfc.cards.${id}.fee`, fee);
-    const translatedHighlights = highlights ? highlights.map((h, idx) => t(`hdfc.cards.${id}.highlights.${idx}`, h)) : [];
 
     return (
       <div className="bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all" style={{ position: "relative" }}>
         
         {/* Render a tiny mockup graphic instead of simple icons to look premium */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
           <div className="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center" style={{ flexShrink: 0, overflow: "hidden" }}>
             {!imgFailed ? (
               <img
@@ -207,34 +204,12 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           </div>
 
           <div className="flex-1">
-            <h3 className="font-bold text-slate-800">
+            <h3 className="font-bold text-slate-800" style={{ margin: 0, fontSize: "15px", lineHeight: 1.3 }}>
               {translatedName}
             </h3>
 
-            <p className="text-sm text-slate-500 mt-2">
-              {translatedDesc}
-            </p>
-
-            {/* Added highlights in expansion for user premium look */}
-            {translatedHighlights && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "12px", borderTop: "1px dashed var(--border-color)", paddingTop: "10px" }}>
-                {translatedHighlights.map((h, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "6px", fontSize: "11px", color: "var(--text-slate-500)" }}>
-                    <span style={{ color: "#10b981", marginTop: "2px" }}><FaCheckCircle size={10} /></span>
-                    <span>{h}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {translatedFee && (
-              <div style={{ fontSize: "10px", fontWeight: 700, color: "#eab308", background: isDark ? "rgba(234,179,8,0.06)" : "#fef9c3", padding: "4px 8px", borderRadius: "6px", display: "inline-block", marginTop: "10px" }}>
-                {translatedFee}
-              </div>
-            )}
-
-            <button className="mt-4 w-full bg-[#003B8F] text-white py-2 rounded-lg hover:bg-[#00296B]" style={{ border: "none", cursor: "pointer", display: "block" }}>
-              {t('popularCardsList.applyNow', 'Apply Now')} →
+            <button className="mt-3 bg-[#003B8F] text-white py-1.5 px-4 rounded-lg hover:bg-[#00296B]" style={{ border: "none", cursor: "pointer", display: "inline-block", fontSize: "12px", fontWeight: 700 }}>
+              {t('popularCardsList.applyNow', 'Apply Now')}
             </button>
           </div>
         </div>
@@ -242,26 +217,6 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
     );
   }
 
-  // Sidebar item component
-  function SidebarItem({ title, desc }) {
-    return (
-      <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center" style={{ flexShrink: 0, color: "#2563eb", fontSize: "16px" }}>
-          <FaCheckCircle />
-        </div>
-
-        <div>
-          <h4 className="font-semibold text-sm">
-            {title}
-          </h4>
-
-          <p className="text-xs text-slate-500">
-            {desc}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -331,6 +286,12 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
         .rounded-xl { border-radius: 0.75rem; }
         .rounded-lg { border-radius: 0.5rem; }
         .rounded-full { border-radius: 9999px; }
+        .p-responsive { padding: 1rem; }
+        .text-responsive-title { font-size: 1.5rem; line-height: 1.2; }
+        @media (min-width: 768px) {
+          .p-responsive { padding: 2rem; }
+          .text-responsive-title { font-size: 2.25rem; }
+        }
         .p-8 { padding: 2rem; }
         .p-6 { padding: 1.5rem; }
         .p-5 { padding: 1.25rem; }
@@ -416,48 +377,13 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
       {/* Hero Banner - user's requested layout with fallback handling */}
       <div className="max-w-7xl mx-auto px-6">
-        <div className="bg-white rounded-3xl p-8 shadow-sm border">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+        <div className="bg-white rounded-3xl p-responsive shadow-sm border">
+          <div className="grid md:grid-cols-2 gap-6 items-center">
             
-            <div>
-              <h1 className="text-4xl font-bold text-slate-800 mb-3">
+            <div style={{ padding: isMobile ? "10px 0" : "0" }}>
+              <h1 className="text-responsive-title font-bold text-slate-800" style={{ margin: 0, textAlign: isMobile ? "center" : "left" }}>
                 {t('hdfc.title', 'HDFC Bank Credit Cards')}
               </h1>
-
-              <p className="text-slate-500 mb-8">
-                {t('hdfc.description', 'Explore a range of credit cards that suit your lifestyle and needs.')}
-              </p>
-
-              <div className="grid grid-cols-3 gap-4">
-                
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <div className="text-blue-600 font-semibold">
-                    {t('hdfc.exclusiveRewards', 'Exclusive Rewards')}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {t('hdfc.exclusiveRewardsDesc', 'Earn more on every spend')}
-                  </p>
-                </div>
-
-                <div className="bg-green-50 rounded-xl p-4">
-                  <div className="text-green-600 font-semibold">
-                    {t('hdfc.secureTrusted', 'Secure & Trusted')}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {t('hdfc.secureTrustedDesc', '100% safe banking')}
-                  </p>
-                </div>
-
-                <div className="bg-cyan-50 rounded-xl p-4">
-                  <div className="text-cyan-600 font-semibold">
-                    {t('hdfc.instantApproval', 'Instant Approval')}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {t('hdfc.instantApprovalDesc', 'Hassle-free process')}
-                  </p>
-                </div>
-
-              </div>
             </div>
 
             {/* Banner image slot (with robust visual mockup fallback) */}
@@ -574,38 +500,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           {/* Sidebar (Right span) */}
           <div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-sm border">
-              <h3 className="font-bold text-lg mb-5">
-                {t('hdfc.whyChoose', 'Why Choose HDFC Bank Credit Cards?')}
-              </h3>
-
-              <div className="space-y-4">
-
-                <SidebarItem
-                  title={t('hdfc.whyChoose1', 'Wide Range of Cards')}
-                  desc={t('hdfc.whyChoose1Desc', 'For every lifestyle and need')}
-                />
-
-                <SidebarItem
-                  title={t('hdfc.whyChoose2', 'Rewarding Benefits')}
-                  desc={t('hdfc.whyChoose2Desc', 'Earn points, cashback and more')}
-                />
-
-                <SidebarItem
-                  title={t('hdfc.whyChoose3', 'Secure Transactions')}
-                  desc={t('hdfc.whyChoose3Desc', 'Advanced security features')}
-                />
-
-                <SidebarItem
-                  title={t('hdfc.whyChoose4', 'Easy Applications')}
-                  desc={t('hdfc.whyChoose4Desc', 'Quick approval process')}
-                />
-
-              </div>
-            </div>
-
             {/* Compare Cards box (hooked up to interactive modal) */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 mt-5 border">
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border">
               <h3 className="font-semibold text-slate-800">
                 {t('hdfc.findPerfectCard', 'Find the perfect card')}
               </h3>
@@ -625,62 +521,6 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
           </div>
 
-        </div>
-      </div>
-
-      {/* Accordion FAQ Widget (inserted at the bottom of the page for maximum utility) */}
-      <div className="max-w-7xl mx-auto px-6 mt-12 pb-12">
-        <div className="bg-white rounded-3xl p-8 border shadow-sm">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">
-            {t('hdfc.faqTitle', 'Frequently Asked Questions')}
-          </h2>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {[
-              { q: t('hdfc.faqs.0.q', "How do I get my annual fee waived?"), a: t('hdfc.faqs.0.a', "Most HDFC Credit Cards feature spend-based fee waivers. If you meet the minimum required annual spend limit (e.g. ₹50,000 for Freedom/MoneyBack+ or ₹1 Lakh for Millennia) within your card anniversary year, your annual membership fee is fully waived/reversed.") },
-              { q: t('hdfc.faqs.1.q', "What are the eligibility criteria for HDFC Credit Cards?"), a: t('hdfc.faqs.1.a', "Applicants generally need to be between 21 and 60 years old for salaried professionals (or up to 65 for self-employed). A healthy credit score (750+ CIBIL score) and stable monthly income (starting from ₹20,000 for entry-level cards) increase the approval rate significantly.") },
-              { q: t('hdfc.faqs.2.q', "Can I apply for a secured card if I have a low CIBIL score?"), a: t('hdfc.faqs.2.a', "Yes! HDFC offers FD-backed secured credit cards that require no income proofs, documentation audits, or CIBIL score checks. The credit limit is directly mapped to your Fixed Deposit (up to 90%), making it the fastest way to build credit history.") }
-            ].map((faq, idx) => {
-              const isOpen = expandedFaq === idx;
-              return (
-                <div key={idx} style={{ 
-                   background: "var(--bg-slate-100)", 
-                   border: "1px solid var(--border-color)", 
-                   borderRadius: "12px", 
-                   overflow: "hidden" 
-                }}>
-                  <div 
-                    onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
-                    style={{ 
-                      padding: "16px 20px", 
-                      cursor: "pointer", 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      alignItems: "center",
-                      fontWeight: 700,
-                      fontSize: "14px",
-                      color: "var(--text-slate-800)"
-                    }}
-                  >
-                    <span>{faq.q}</span>
-                    <span style={{ color: "var(--text-slate-500)" }}>{isOpen ? <FaChevronUp /> : <FaChevronDown />}</span>
-                  </div>
-                  {isOpen && (
-                    <div style={{ 
-                      padding: "0 20px 16px 20px", 
-                      fontSize: "12px", 
-                      color: "var(--text-slate-500)", 
-                      lineHeight: 1.5,
-                      borderTop: "1px solid var(--border-color)",
-                      paddingTop: "12px"
-                    }}>
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
 
