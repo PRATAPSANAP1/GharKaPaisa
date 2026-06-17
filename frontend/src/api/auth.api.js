@@ -75,6 +75,16 @@ export async function loginWithPassword(email, password) {
   }
 }
 
+// ── OTP-ONLY LOGIN ───────────────────────────────────────────────────────
+export async function loginWithOtp(identity, otp) {
+  try {
+    const res = await api.post('/auth/login', { identity, otp });
+    return { success: true, idToken: res.data.token };
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Invalid OTP or credentials.');
+  }
+}
+
 // ── REGISTER PARTNER ────────────────────────────────────────────────────────
 export async function registerPartner(formData) {
   try {

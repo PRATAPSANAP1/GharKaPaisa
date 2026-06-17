@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
-import { useTheme, makeS, ThemeToggle } from "../../components/Partner/ThemeContext";
-import { sendOtp, verifyOtpLogin, loginWithPassword, getMe, lookupUser } from "../../api/auth.api";
-import logo from "../../logo.png";
+import { useTheme, makeS } from "../../components/Partner/ThemeContext";
+import { sendOtp, loginWithOtp, getMe, lookupUser } from "../../api/auth.api";
 
 export default function AdminLogin() {
   const { C } = useTheme();
@@ -12,23 +11,22 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
   
-  const [form, setForm] = useState({ identity: "", password: "", otp: "" });
-  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ identity: "", otp: "" });
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
-  const [loading, setLoading] = useState({ otp: false, login: false, reset: false });
+  const [loading, setLoading] = useState({ otp: false, login: false });
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
   const [resolvedCredentials, setResolvedCredentials] = useState(null);
   const [otpSentTime, setOtpSentTime] = useState(null);
   const [otpAttempts, setOtpAttempts] = useState(0);
 
-  // Clear OTP state on input change
+  // Reset OTP state on identifier change
   useEffect(() => {
     setOtpSent(false);
     setTimer(0);
     setOtpSentTime(null);
-  }, [form.identity, form.password]);
+  }, [form.identity]);
 
   useEffect(() => {
     let t;
@@ -36,31 +34,9 @@ export default function AdminLogin() {
     return () => clearTimeout(t);
   }, [timer]);
 
-  // ── Forgot Password ──────────────────────────────────────────────────────────
-  const handleForgotPassword = async () => {
-    if (!form.identity.trim()) {
-      return setErr("Please enter your email or mobile to reset password.");
-    }
-    setErr("");
-    setInfoMsg("");
-    setLoading(l => ({ ...l, reset: true }));
-    try {
-      // Mocked for now - we will build this endpoint later if requested
-      // await sendPasswordReset(form.identity);
-      setTimeout(() => {
-        setInfoMsg(`Password reset instructions sent to ${form.identity}`);
-        setLoading(l => ({ ...l, reset: false }));
-      }, 1000);
-    } catch (e) {
-      setErr("Failed to send reset link.");
-      setLoading(l => ({ ...l, reset: false }));
-    }
-  };
-
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
-    if (!form.password) return setErr("Please enter your password.");
     
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identity.trim());
     const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
@@ -103,20 +79,16 @@ export default function AdminLogin() {
     setInfoMsg("");
 
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
-    if (!form.password) return setErr("Please enter your password.");
     if (!otpSent) return setErr("Please click 'Send OTP' first.");
     if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
     if (!otpSentTime || Date.now() - otpSentTime > 120000) return setErr("OTP expired. Please send a new one.");
 
     setLoading(l => ({ ...l, login: true }));
     try {
-      // 1. Verify OTP
-      const otpRes = await verifyOtpLogin(resolvedCredentials.mobile, form.otp);
+      // Verify OTP and sign in
+      const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
       
-      // 2. Verify Password + Get JWT Token
-      const loginRes = await loginWithPassword(resolvedCredentials.email, form.password);
-      
-      // 3. Fetch profile and dispatch to Store
+      // Fetch user profile info
       const profile = await getMe(true);
       login(profile, loginRes.idToken);
       
@@ -173,7 +145,7 @@ export default function AdminLogin() {
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>Admin Login</div>
         </div>
 
-        {/* Card */}
+        {/* Form Card */}
         <div style={{ ...S.card, padding: "28px" }}>
           {err && (
             <div style={{
@@ -214,45 +186,7 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {/* Password */}
-            <div style={{ marginBottom: "10px" }}>
-              <label style={S.label}>Password</label>
-              <div style={{ position: "relative" }}>
-                <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
-                  <Icons.Lock size={18} />
-                </div>
-                <input
-                  style={{ ...inputStyle, paddingLeft: "42px", paddingRight: "42px" }}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  onFocus={e => e.target.style.border = focusBorder}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Forgot Password Link */}
-            <div style={{ textAlign: "right", marginBottom: "16px" }}>
-              <button 
-                type="button" 
-                onClick={handleForgotPassword}
-                disabled={loading.reset}
-                style={{ background: "none", border: "none", color: C.teal, fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: 0, opacity: loading.reset ? 0.7 : 1 }}
-              >
-                {loading.reset ? "Sending reset link..." : "Forgot Password?"}
-              </button>
-            </div>
-
-            {/* OTP Verification */}
+            {/* OTP Verification Input */}
             <div style={{ marginBottom: "20px" }}>
               <label style={S.label}>Enter 6-Digit OTP</label>
               <div style={{ display: "flex", gap: "8px" }}>
@@ -327,8 +261,6 @@ export default function AdminLogin() {
               ) : "Secure Log In"}
             </button>
           </form>
-
-
 
         </div>
       </div>
