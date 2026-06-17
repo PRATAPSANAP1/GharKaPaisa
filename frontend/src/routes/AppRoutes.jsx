@@ -28,10 +28,14 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/loans" element={<Home />} />
         <Route path="/insurance" element={<Home />} />
-        <Route path="/cards" element={<Home />} />
-        <Route path="/fastag" element={<Home />} />
-        <Route path="/flight-booking" element={<Home />} />
-        <Route path="/attractive-sections" element={<Home />} />
+        <Route path="/credit-cards" element={<Home />} />
+        <Route path="/credit-cards/lifetime-free-credit-cards-ltf" element={<Home />} />
+        <Route path="/credit-cards/:bankIdParam" element={<Home />} />
+        <Route path="/credit-cards/:bankIdParam/:typeParam" element={<Home />} />
+        <Route path="/money-transfer/fastag" element={<Home />} />
+        <Route path="/travel-transit/flight-booking" element={<Home />} />
+        <Route path="/attractive-cards-loans" element={<Home />} />
+        <Route path="/attractive-cards-loans/:catParam" element={<Home />} />
         <Route path="/travel-transit" element={<Home />} />
         <Route path="/services" element={<Home />} />
         <Route path="/contact" element={<Contact />} />

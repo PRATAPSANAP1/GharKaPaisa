@@ -685,23 +685,118 @@ export default function Home({ onNavigate }) {
 
   useEffect(() => {
     const path = location.pathname;
+    
     if (path === "/") {
       setActiveCategory(null);
-    } else if (path === "/loans") {
+      return;
+    }
+    
+    // Parse /credit-cards/lifetime-free-credit-cards-ltf
+    if (path === "/credit-cards/lifetime-free-credit-cards-ltf") {
+      setActiveCategory({
+        id: "ltf-detail-page",
+        title: "Lifetime Free Credit Cards (LTF)",
+        titleKey: "home.ltfCardsTitle",
+        parentId: "credit-cards",
+        items: ltfCards.map(card => ({
+          id: card.name.toLowerCase().replace(/\s+/g, "-"),
+          label: card.name,
+          icon: <FaRegCreditCard />
+        }))
+      });
+      return;
+    }
+    
+    // Parse /credit-cards/:bankId-bank/:type
+    const cardsSubMatch = path.match(/^\/credit-cards\/([^/]+)-bank\/([^/]+)$/);
+    if (cardsSubMatch) {
+      const bankId = cardsSubMatch[1];
+      const typeParam = cardsSubMatch[2]; // co-brand or fd-based-cards
+      const type = typeParam === "co-brand" ? "cobrand" : "fd";
+      setActiveCategory({
+        id: `${type}-${bankId}`,
+        title: type === "cobrand" ? "Co-Brand" : "FD Based Cards",
+        titleKey: type === "cobrand" ? "home.breadcrumbs.cobrand" : "home.breadcrumbs.fdBasedCards",
+        parentId: `bank-${bankId}`,
+        items: []
+      });
+      return;
+    }
+
+    // Parse /credit-cards/:bankId-bank
+    const cardsMatch = path.match(/^\/credit-cards\/([^/]+)-bank$/);
+    if (cardsMatch) {
+      const bankId = cardsMatch[1];
+      const bankItem = banksList.find(b => b.id === bankId);
+      if (bankItem) {
+        if (bankCardsDetails[bankId]) {
+          setActiveCategory({
+            id: `bank-${bankId}`,
+            title: bankCardsDetails[bankId].title,
+            titleKey: `${bankId}.title`,
+            parentId: "credit-cards",
+            type: "bank-detail",
+            sections: bankCardsDetails[bankId].sections
+          });
+        } else {
+          setActiveCategory({
+            id: `bank-${bankId}`,
+            title: bankItem.label,
+            titleKey: `banks.${bankId}`,
+            parentId: "credit-cards",
+            items: [
+              { id: `cobrand-${bankId}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
+              { id: `fd-${bankId}`, label: "FD Based Cards", icon: <FaUniversity /> }
+            ]
+          });
+        }
+      }
+      return;
+    }
+
+    // Parse /attractive-cards-loans/:catParam
+    const attractiveMatch = path.match(/^\/attractive-cards-loans\/([^/]+)$/);
+    if (attractiveMatch) {
+      const catParam = attractiveMatch[1];
+      const attractiveIds = {
+        "lifetime-free-cards": "ltf-cards",
+        "cibil-loan": "cibil-loans",
+        "loan-on-credit-card": "hdfc-cc-loan",
+        "smart-emi-card": "smart-emi",
+        "fd-backed-card": "secured-cards",
+        "upi-credit-card": "upi-cards"
+      };
+      const catId = attractiveIds[catParam];
+      const cat = attractiveCategories.find(c => c.id === catId);
+      if (cat) {
+        setActiveCategory({
+          id: cat.id,
+          title: cat.title,
+          titleKey: `attractiveCards.${cat.id}`,
+          parentId: "attractive-sections",
+          type: "hierarchy",
+          items: cat.items
+        });
+      }
+      return;
+    }
+
+    // Direct path matchers
+    if (path === "/loans") {
       setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
     } else if (path === "/insurance") {
       setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
-    } else if (path === "/cards") {
+    } else if (path === "/credit-cards") {
       setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
     } else if (path === "/services") {
       setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
     } else if (path === "/travel-transit") {
       setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: travelTransitData });
-    } else if (path === "/attractive-sections") {
+    } else if (path === "/attractive-cards-loans") {
       setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
-    } else if (path === "/fastag") {
+    } else if (path === "/money-transfer/fastag") {
       setActiveCategory({ id: "fastag", title: "FASTag Recharge", titleKey: "moneyTransfer.fastag", items: [] });
-    } else if (path === "/flight-booking") {
+    } else if (path === "/travel-transit/flight-booking") {
       setActiveCategory({ id: "flight-booking", title: "Travel & Transit Booking", titleKey: "sections.travelTransit", items: [] });
     }
   }, [location.pathname]);
@@ -738,20 +833,14 @@ export default function Home({ onNavigate }) {
       subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
       btnText: t('home.banners.slideOffer.btn', 'View Offers'),
       bgImage: offerBanner,
-      action: () => navigate("/cards")
+      action: () => navigate("/credit-cards")
     },
     { 
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
-      action: () => {
-        navigate("/attractive-sections");
-        setTimeout(() => {
-          const ltfCat = attractiveCategories.find(c => c.id === "ltf-cards");
-          if (ltfCat) handleAttractiveCategoryClick(ltfCat);
-        }, 50);
-      }
+      action: () => navigate("/credit-cards/lifetime-free-credit-cards-ltf")
     },
     { 
       title: t('home.banners.slide1.title', 'Personal Loans'), 
@@ -779,25 +868,14 @@ export default function Home({ onNavigate }) {
       subtitle: t('home.banners.slide4.subtitle', 'Convert purchases to no-cost EMIs instantly'), 
       btnText: t('home.banners.slide4.btn', 'Get EMI Card'),
       bgImage: emiBanner,
-      action: () => {
-        navigate("/attractive-sections");
-        setTimeout(() => {
-          const emiCat = attractiveCategories.find(c => c.id === "smart-emi");
-          if (emiCat) handleAttractiveCategoryClick(emiCat);
-        }, 50);
-      }
+      action: () => navigate("/attractive-cards-loans/smart-emi-card")
     },
     { 
       title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
       subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
       btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
       bgImage: hdfcBanner,
-      action: () => {
-        navigate("/cards");
-        setTimeout(() => {
-          handleItemClick({ id: "hdfc", label: "HDFC Bank" });
-        }, 50);
-      }
+      action: () => navigate("/credit-cards/hdfc-bank")
     }
   ];
 
@@ -819,7 +897,7 @@ export default function Home({ onNavigate }) {
     if (searchItem) {
       if (searchItem.type === "category") {
         if (searchItem.target.id === "credit-cards") {
-          navigate("/cards");
+          navigate("/credit-cards");
         } else if (searchItem.target.id === "loans") {
           navigate("/loans");
         } else if (searchItem.target.id === "insurance") {
@@ -827,22 +905,16 @@ export default function Home({ onNavigate }) {
         } else if (searchItem.target.id === "services") {
           navigate("/services");
         } else if (searchItem.target.id === "ltf-detail-page") {
-          navigate("/cards");
-          setTimeout(() => {
-            setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) });
-          }, 50);
+          navigate("/credit-cards/lifetime-free-credit-cards-ltf");
         } else if (searchItem.target.id.startsWith("bank-")) {
           const bankId = searchItem.target.id.split("-")[1];
-          const bankItem = banksList.find(b => b.id === bankId);
-          if (bankItem) {
-            navigate("/cards");
-            setTimeout(() => handleItemClick(bankItem), 50);
-          }
+          navigate(`/credit-cards/${bankId}-bank`);
         } else {
           const attractiveCat = attractiveCategories.find(c => c.id === searchItem.target.id);
           if (attractiveCat) {
-            navigate("/attractive-sections");
-            setTimeout(() => handleAttractiveCategoryClick(attractiveCat), 50);
+            handleAttractiveCategoryClick(attractiveCat);
+          } else if (searchItem.target.id === "attractive-sections") {
+            navigate("/attractive-cards-loans");
           }
         }
       } else if (searchItem.type === "loan") {
@@ -872,10 +944,10 @@ export default function Home({ onNavigate }) {
       crumbs.push({ 
         label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
         action: () => {
-          if (location.pathname === "/cards") {
+          if (location.pathname === "/credit-cards") {
             setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
           } else {
-            navigate("/cards");
+            navigate("/credit-cards");
           }
         } 
       });
@@ -888,10 +960,10 @@ export default function Home({ onNavigate }) {
       crumbs.push({ 
         label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
         action: () => {
-          if (location.pathname === "/cards") {
+          if (location.pathname === "/credit-cards") {
             setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
           } else {
-            navigate("/cards");
+            navigate("/credit-cards");
           }
         } 
       });
@@ -912,10 +984,10 @@ export default function Home({ onNavigate }) {
       crumbs.push({ 
         label: t('sections.attractiveCards', 'Attractive Cards & Loans'), 
         action: () => {
-          if (location.pathname === "/attractive-sections") {
+          if (location.pathname === "/attractive-cards-loans") {
             setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
           } else {
-            navigate("/attractive-sections");
+            navigate("/attractive-cards-loans");
           }
         } 
       });
@@ -930,7 +1002,7 @@ export default function Home({ onNavigate }) {
 
   const handleBottomNavClick = (id) => {
     if (id === "home") navigate("/");
-    else if (id === "credit-cards") navigate("/cards");
+    else if (id === "credit-cards") navigate("/credit-cards");
     else if (id === "loans") navigate("/loans");
     else if (id === "insurance") navigate("/insurance");
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", titleKey: "home.investment", items: [] });
@@ -940,17 +1012,7 @@ export default function Home({ onNavigate }) {
 
   const handleItemClick = (item) => {
     if (item.id === "ltf-detail-page-trigger") {
-      setActiveCategory({
-        id: "ltf-detail-page",
-        title: "Lifetime Free Credit Cards (LTF)",
-        titleKey: "home.ltfCardsTitle",
-        parentId: "credit-cards",
-        items: ltfCards.map(card => ({
-          id: card.name.toLowerCase().replace(/\s+/g, "-"),
-          label: card.name,
-          icon: <FaRegCreditCard />
-        }))
-      });
+      navigate("/credit-cards/lifetime-free-credit-cards-ltf");
       return;
     }
     const attractiveCat = attractiveCategories.find(c => c.id === item.id);
@@ -958,40 +1020,31 @@ export default function Home({ onNavigate }) {
       handleAttractiveCategoryClick(attractiveCat);
       return;
     }
-    if (activeCategory?.id === "credit-cards" || banksList.find(b => b.id === item.id)) {
-      if (bankCardsDetails[item.id]) {
-        setActiveCategory({
-          id: `bank-${item.id}`,
-          title: bankCardsDetails[item.id].title,
-          titleKey: `${item.id}.title`,
-          parentId: "credit-cards",
-          type: "bank-detail",
-          sections: bankCardsDetails[item.id].sections
-        });
-      } else {
-        setActiveCategory({
-          id: `bank-${item.id}`,
-          title: item.label,
-          titleKey: `banks.${item.id}`,
-          parentId: "credit-cards",
-          items: [
-            { id: `cobrand-${item.id}`, label: "Co-Brand", icon: <FaLaptopHouse /> },
-            { id: `fd-${item.id}`, label: "FD Based Cards", icon: <FaUniversity /> }
-          ]
-        });
-      }
+    if (item.id.startsWith("cobrand-") || item.id.startsWith("fd-")) {
+      const parts = item.id.split("-");
+      const type = parts[0] === "cobrand" ? "co-brand" : "fd-based-cards";
+      const bankId = parts[1];
+      navigate(`/credit-cards/${bankId}-bank/${type}`);
+      return;
+    }
+    const bankItem = banksList.find(b => b.id === item.id);
+    if (bankItem) {
+      navigate(`/credit-cards/${bankItem.id}-bank`);
+      return;
     }
   };
 
   const handleAttractiveCategoryClick = (cat) => {
-    setActiveCategory({
-      id: cat.id,
-      title: cat.title,
-      titleKey: `attractiveCards.${cat.id}`,
-      parentId: "attractive-sections",
-      type: "hierarchy",
-      items: cat.items
-    });
+    const attractiveSlugs = {
+      "ltf-cards": "lifetime-free-cards",
+      "cibil-loans": "cibil-loan",
+      "hdfc-cc-loan": "loan-on-credit-card",
+      "smart-emi": "smart-emi-card",
+      "secured-cards": "fd-backed-card",
+      "upi-cards": "upi-credit-card"
+    };
+    const slug = attractiveSlugs[cat.id] || cat.id;
+    navigate(`/attractive-cards-loans/${slug}`);
   };
 
   const handleTrustBankClick = (bankId) => {
@@ -1003,17 +1056,20 @@ export default function Home({ onNavigate }) {
 
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
-      if (location.pathname === "/cards") {
+      if (location.pathname === "/credit-cards") {
         setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
       } else {
-        navigate("/cards");
+        navigate("/credit-cards");
       }
     } else if (activeCategory?.parentId === "attractive-sections") {
-      if (location.pathname === "/attractive-sections") {
+      if (location.pathname === "/attractive-cards-loans") {
         setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
       } else {
-        navigate("/attractive-sections");
+        navigate("/attractive-cards-loans");
       }
+    } else if (activeCategory?.parentId && activeCategory.parentId.startsWith("bank-")) {
+      const bankId = activeCategory.parentId.replace("bank-", "");
+      navigate(`/credit-cards/${bankId}-bank`);
     } else {
       navigate("/");
     }
@@ -1122,7 +1178,7 @@ export default function Home({ onNavigate }) {
                 <div key={idx} 
                   onClick={() => {
                     if (item.label === "FASTag") {
-                      navigate("/fastag");
+                      navigate("/money-transfer/fastag");
                     }
                   }}
                   style={{ 
@@ -1186,7 +1242,7 @@ export default function Home({ onNavigate }) {
         <Section 
           title={t('sections.attractiveCards')} 
           viewAllLabel={t('home.seeAll', 'See All')}
-          onViewAll={() => navigate("/attractive-sections")}
+          onViewAll={() => navigate("/attractive-cards-loans")}
           C={C}
         >
           <style>{`
@@ -1268,7 +1324,7 @@ export default function Home({ onNavigate }) {
           <Section 
             title={t('sections.popularCards')} 
             viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
-            onViewAll={() => navigate("/cards")}
+            onViewAll={() => navigate("/credit-cards")}
             C={C}
           >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
@@ -1311,7 +1367,7 @@ export default function Home({ onNavigate }) {
                     <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
                     <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
                     <button 
-                      onClick={() => navigate("/cards")}
+                      onClick={() => navigate("/credit-cards")}
                       style={{
                         width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
                         padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
@@ -1331,7 +1387,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
         <Section title={t('sections.popularBanks')} C={C}>
-          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => navigate("/cards")} onItemClick={handleItemClick} />
+          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => navigate("/credit-cards")} onItemClick={handleItemClick} />
         </Section>
 
         {/* ── SECTION 5: Loans ── */}
@@ -1408,7 +1464,7 @@ export default function Home({ onNavigate }) {
               const img = travelTransitImages[imgKey] || flightImg;
               return (
                 <div key={idx} 
-                  onClick={() => navigate("/flight-booking")}
+                  onClick={() => navigate("/travel-transit/flight-booking")}
                   style={{ 
                     display: "flex", 
                     flexDirection: "row", 
