@@ -1603,23 +1603,43 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 5: Loans ── */}
         <Section title={t('sections.loans')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
-            {loansData.map((item, idx) => (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
+            {((isMobile && loansData.length > 8) ? loansData.slice(0, 7) : loansData).map((item, idx) => (
               <div key={idx}
                 onClick={() => handleBottomNavClick("loans")}
                 style={{
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: "16px 8px", borderRadius: "12px",
-                  border: `1px solid ${C.border}`, textAlign: "center", gap: "8px", cursor: "pointer",
+                  background: C.bgSecondary, padding: isMobile ? "10px 4px" : "16px 8px", borderRadius: "12px",
+                  border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "4px" : "8px", cursor: "pointer",
                   transition: "all 0.2s"
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
               >
-                <div style={{ color: C.teal, fontSize: "22px" }}>{item.icon}</div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('loansList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
+                <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>
+                <div style={{ fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+                  {t('loansList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                </div>
               </div>
             ))}
+            {isMobile && loansData.length > 8 && (
+              <div
+                onClick={() => handleBottomNavClick("loans")}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: C.bgSecondary, padding: "10px 4px", borderRadius: "12px",
+                  border: `1px solid ${C.border}`, textAlign: "center", gap: "4px", cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+              >
+                <div style={{ color: C.teal, fontSize: "18px" }}><FaChevronRight /></div>
+                <div style={{ fontSize: "10px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+                  {t('home.seeMore', 'See More')}
+                </div>
+              </div>
+            )}
           </div>
         </Section>
 
