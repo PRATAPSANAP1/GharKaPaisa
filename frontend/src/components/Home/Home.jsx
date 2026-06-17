@@ -1107,6 +1107,16 @@ export default function Home({ onNavigate }) {
         } else if (searchItem.target.id === "admin-login") {
           navigate("/admin-login");
         }
+      } else if (searchItem.type === "partner") {
+        if (searchItem.target.id === "partner-dashboard") {
+          navigate("/partner/dashboard");
+        } else if (searchItem.target.id === "partner-wallet") {
+          navigate("/partner/wallet");
+        } else if (searchItem.target.id === "partner-applications") {
+          navigate("/partner/applications");
+        } else if (searchItem.target.id === "partner-profile") {
+          navigate("/partner/profile");
+        }
       }
       setSearchItem(null); // Reset store
     }

@@ -131,6 +131,12 @@ const searchCatalog = [
   { type: "info", label: "Partner Login", target: { id: "login" } },
   { type: "info", label: "Partner Registration", target: { id: "register" } },
   { type: "info", label: "Admin Login", target: { id: "admin-login" } },
+
+  // Partner Panel Pages
+  { type: "partner", label: "Partner Dashboard", target: { id: "partner-dashboard" } },
+  { type: "partner", label: "Partner Wallet & Balance", target: { id: "partner-wallet" } },
+  { type: "partner", label: "Partner Applications & Status", target: { id: "partner-applications" } },
+  { type: "partner", label: "Partner Profile & Bank Info", target: { id: "partner-profile" } },
 ];
 
 const Navbar = () => {
