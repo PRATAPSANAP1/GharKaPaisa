@@ -8,6 +8,7 @@ import {
   FaPlane, FaShoppingBag, FaBriefcase, FaRegCreditCard,
   FaMobileAlt, FaInfoCircle, FaStar
 } from "react-icons/fa";
+import hdfcBanner from "./image/hdfcbanner.png";
 
 // User's provided card data with enriched category definitions for filtering
 const cards = [
@@ -280,6 +281,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   const [activeFilter, setActiveFilter] = useState("All");
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [selectedCard, setSelectedCard] = useState(null);
   
   // Selection states for comparator
   const [compareCard1, setCompareCard1] = useState(cards[2]); // Millennia
@@ -559,20 +561,18 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               </h1>
             </div>
 
-            {/* Banner image slot (with robust visual mockup fallback) */}
+            {/* Banner image slot */}
             <div>
               <img
-                src="/images/hdfc-banner.png"
-                alt=""
-                className="w-full"
-                onError={(e) => {
-                  e.target.style.display = "none";
+                src={hdfcBanner}
+                alt="HDFC Bank Credit Cards Banner"
+                style={{
+                  width: "100%",
+                  borderRadius: "20px",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                  display: "block"
                 }}
               />
-              {/* If image doesn't exist, display visual credit cards */}
-              <div id="banner-fallback-container" style={{ display: "block" }}>
-                <BannerImageFallback />
-              </div>
             </div>
 
           </div>
@@ -657,13 +657,46 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             </h2>
 
             {filteredCards.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-5">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 {filteredCards.map((card) => (
-                  <CardItem key={card.name} {...card} />
+                  <button
+                    key={card.id}
+                    onClick={() => setSelectedCard(card)}
+                    style={{
+                      background: "var(--bg-white)",
+                      color: "var(--text-slate-800)",
+                      border: "1px solid var(--border-color)",
+                      padding: "10px 18px",
+                      borderRadius: "30px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#003B8F";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.06)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-color)";
+                      e.currentTarget.style.transform = "none";
+                      e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", color: "#003B8F", fontSize: "14px" }}>
+                      {card.fallbackIcon}
+                    </span>
+                    {t(`hdfc.cards.${card.id}.name`, card.name)}
+                  </button>
                 ))}
               </div>
             ) : (
-              <div style={{ background: "var(--bg-white)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "40px 20px", textAlign: "center" }}>
+              <div style={{ background: "var(--bg-white)", border: "1px solid var(--border-color)", borderRadius: "16px", padding: "40px 20px", textAlign: "center", width: "100%" }}>
                 <p style={{ color: "var(--text-slate-500)", margin: 0 }}>{t('hdfc.noCardsFound', 'No cards match your current search/filters.')}</p>
               </div>
             )}
@@ -823,6 +856,132 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             >
               {t('hdfc.closeBtn', 'Close Comparison')}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Card Details Modal Overlay */}
+      {selectedCard && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "16px",
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "var(--bg-white)",
+            width: "100%",
+            maxWidth: "500px",
+            borderRadius: "24px",
+            border: "1px solid var(--border-color)",
+            padding: "24px",
+            position: "relative",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+            color: "var(--text-slate-800)"
+          }}>
+            {/* Close button */}
+            <span 
+              onClick={() => setSelectedCard(null)}
+              style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: "var(--text-slate-500)" }}
+            >
+              <FaTimes size={18} />
+            </span>
+
+            {/* Card Visual Header */}
+            <div style={{
+              background: selectedCard.gradient,
+              padding: "24px",
+              borderRadius: "16px",
+              color: "#fff",
+              marginBottom: "20px",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+              position: "relative",
+              overflow: "hidden"
+            }}>
+              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", opacity: 0.9 }}>HDFC BANK</div>
+              <div style={{ fontSize: "20px", fontWeight: 800, margin: "20px 0 10px 0" }}>{t(`hdfc.cards.${selectedCard.id}.name`, selectedCard.name)}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", opacity: 0.8 }}>
+                <span>{selectedCard.network}</span>
+                <span>•••• •••• •••• 8888</span>
+              </div>
+            </div>
+
+            {/* Card Info Details */}
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: 800 }}>{t(`hdfc.cards.${selectedCard.id}.name`, selectedCard.name)}</h3>
+            <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "var(--text-slate-500)", lineHeight: 1.4 }}>
+              {t(`hdfc.cards.${selectedCard.id}.desc`, selectedCard.description)}
+            </p>
+
+            {/* Highlights */}
+            <div style={{ marginBottom: "16px" }}>
+              <h4 style={{ margin: "0 0 8px 0", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", color: "var(--text-slate-500)", letterSpacing: "0.5px" }}>Key Features</h4>
+              <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "12px", color: "var(--text-slate-800)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                {selectedCard.highlights.map((hl, i) => (
+                  <li key={i}>{t(`hdfc.cards.${selectedCard.id}.highlights.${i}`, hl)}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Annual Fee */}
+            <div style={{
+              background: "var(--bg-slate-100)",
+              padding: "12px",
+              borderRadius: "10px",
+              fontSize: "12px",
+              fontWeight: 700,
+              marginBottom: "20px",
+              color: "var(--text-slate-800)"
+            }}>
+              {t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee)}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button 
+                onClick={() => {
+                  setCompareCard1(selectedCard);
+                  setIsCompareOpen(true);
+                  setSelectedCard(null);
+                }}
+                style={{
+                  flex: 1,
+                  background: "none",
+                  border: "1px solid #003B8F",
+                  color: "#003B8F",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                Compare
+              </button>
+              <button 
+                onClick={() => setSelectedCard(null)}
+                style={{
+                  flex: 2,
+                  background: "#003B8F",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                {t('popularCardsList.applyNow', 'Apply Now')}
+              </button>
+            </div>
           </div>
         </div>
       )}

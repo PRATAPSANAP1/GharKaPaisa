@@ -11,7 +11,7 @@ import {
   FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
   FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
-  FaPlane, FaTrain, FaBus, FaHotel
+  FaPlane, FaTrain, FaBus, FaHotel, FaTimes
 } from "react-icons/fa";
 
 // Import modular data lists
@@ -159,6 +159,7 @@ function Section({ title, viewAllLabel, onViewAll, C, children }) {
 function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+  const [selectedDetailCard, setSelectedDetailCard] = useState(null);
 
   const renderBreadcrumbs = () => {
     if (!breadcrumbs) return null;
@@ -299,15 +300,123 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
             {category.sections.map((sec, sIdx) => (
               <div key={sIdx} style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
                 <h3 style={{ margin: "0 0 14px 0", fontSize: "16px", fontWeight: 800, color: C.teal }}>{sec.title}</h3>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" }}>
                   {sec.cards.map((card, cIdx) => (
-                    <CategoryCardItem key={cIdx} card={card} C={C} t={t} isMobile={isMobile} />
+                    <button
+                      key={cIdx}
+                      onClick={() => setSelectedDetailCard(card)}
+                      style={{
+                        background: C.bgSecondary,
+                        color: C.text,
+                        border: `1px solid ${C.border}`,
+                        padding: "8px 16px",
+                        borderRadius: "20px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        transition: "all 0.2s ease"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = C.teal;
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = C.border;
+                        e.currentTarget.style.transform = "none";
+                      }}
+                    >
+                      {card.name}
+                    </button>
                   ))}
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Generic Card Details Modal Overlay */}
+        {selectedDetailCard && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+            backdropFilter: "blur(4px)"
+          }}>
+            <div style={{
+              background: C.card,
+              width: "100%",
+              maxWidth: "450px",
+              borderRadius: "24px",
+              border: `1px solid ${C.border}`,
+              padding: "24px",
+              position: "relative",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+              color: C.text
+            }}>
+              {/* Close button */}
+              <span 
+                onClick={() => setSelectedDetailCard(null)}
+                style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight }}
+              >
+                <FaTimes size={18} />
+              </span>
+
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "18px", fontWeight: 800, color: C.text }}>
+                {selectedDetailCard.name}
+              </h3>
+              <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: C.textLight, lineHeight: 1.5 }}>
+                {selectedDetailCard.desc}
+              </p>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button 
+                  onClick={() => setSelectedDetailCard(null)}
+                  style={{
+                    flex: 1,
+                    background: "none",
+                    border: `1px solid ${C.border}`,
+                    color: C.text,
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  {t('common.cancel', 'Close')}
+                </button>
+                <button 
+                  onClick={() => setSelectedDetailCard(null)}
+                  style={{
+                    flex: 2,
+                    background: C.teal,
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer"
+                  }}
+                >
+                  {t('popularCardsList.applyNow', 'Apply Now')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
