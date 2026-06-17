@@ -1086,6 +1086,13 @@ export default function Home({ onNavigate }) {
         navigate("/insurance");
       } else if (searchItem.type === "service") {
         navigate("/services");
+      } else if (searchItem.type === "card") {
+        if (searchItem.target.id === "ltf-detail-page") {
+          navigate("/credit-cards/lifetime-free-credit-cards-ltf");
+        } else if (searchItem.target.id.startsWith("bank-")) {
+          const bankId = searchItem.target.id.split("-")[1];
+          navigate(`/credit-cards/${bankId}-bank`);
+        }
       }
       setSearchItem(null); // Reset store
     }
