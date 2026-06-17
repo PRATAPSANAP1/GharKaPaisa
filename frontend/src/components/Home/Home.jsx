@@ -1093,6 +1093,12 @@ export default function Home({ onNavigate }) {
           const bankId = searchItem.target.id.split("-")[1];
           navigate(`/credit-cards/${bankId}-bank`);
         }
+      } else if (searchItem.type === "info") {
+        if (searchItem.target.id === "terms-and-conditions") {
+          navigate("/terms-and-conditions");
+        } else if (searchItem.target.id === "privacy-policy") {
+          navigate("/privacy-policy");
+        }
       }
       setSearchItem(null); // Reset store
     }

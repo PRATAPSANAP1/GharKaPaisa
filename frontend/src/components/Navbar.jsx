@@ -123,6 +123,10 @@ const searchCatalog = [
   { type: "card", label: "SBM Uni Card", target: { id: "ltf-detail-page" } },
   { type: "card", label: "Federal Bank OneCard", target: { id: "ltf-detail-page" } },
   { type: "card", label: "Yes Bank Paisabazaar Step Up Credit Card", target: { id: "ltf-detail-page" } },
+
+  // General Info/Policies
+  { type: "info", label: "Terms and Conditions", target: { id: "terms-and-conditions" } },
+  { type: "info", label: "Privacy Policy", target: { id: "privacy-policy" } },
 ];
 
 const Navbar = () => {
