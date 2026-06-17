@@ -1,0 +1,25 @@
+const express = require('express');
+const router = express.Router();
+const walletCtrl = require('../controllers/wallet.controller');
+const { authenticate, syncUser, authorize, requireApprovedPartner, selfOrAdmin } = require('../middleware/auth.middleware');
+const { withdrawalRules, validate } = require('../middleware/validation.middleware');
+
+router.use(authenticate, syncUser);
+
+// Admin: list/process withdrawals
+router.get('/withdrawals', authorize('super_admin', 'admin'), walletCtrl.listWithdrawals);
+router.patch('/withdrawals/:id/process', authorize('super_admin'), walletCtrl.processWithdrawalRequest);
+
+// Partner self-endpoints (no ID needed in URL)
+router.get('/', walletCtrl.getWallet);
+router.get('/balance', walletCtrl.getWallet);
+router.get('/transactions', walletCtrl.getTransactions);
+router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+
+// Partner self or admin (with ID)
+router.get('/:PartnerId', selfOrAdmin('PartnerId'), walletCtrl.getWallet);
+router.get('/:PartnerId/transactions', selfOrAdmin('PartnerId'), walletCtrl.getTransactions);
+router.get('/:PartnerId/case-summary', selfOrAdmin('PartnerId'), walletCtrl.getCaseSummary);
+router.post('/:PartnerId/withdraw', selfOrAdmin('PartnerId'), requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+
+module.exports = router;

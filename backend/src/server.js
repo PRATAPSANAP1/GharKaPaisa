@@ -157,29 +157,8 @@ app.get('/health', async (req, res) => {
 });
 
 // ── API Routes ─────────────────────────────────────────────────
-const routes = require('./routes/routes');
-const authRoutes = require('./routes/auth.routes');
-const PartnerRoutes = require('./routes/partner.routes');
-const superadminRoutes = require('./routes/superadmin.routes');
-const adminRouter = require('./routes/admin.routes');
-const partnerSelfRouter = require('./routes/partner.self.routes');
-const bannerRouter = require('./routes/banner.routes');
-const settingsRouter = require('./routes/settings.routes');
-
-const API = '/api/v1';
-app.use(`${API}/auth`, authRoutes);
-app.use(`${API}/Partners`, PartnerRoutes);
-app.use(`${API}/partner`, partnerSelfRouter);
-app.use(`${API}/admin`, adminRouter);
-app.use(`${API}/superadmin`, superadminRoutes);
-app.use(`${API}/banners`, bannerRouter);
-app.use(`${API}/settings`, settingsRouter);
-app.use(`${API}/applications`, routes.appRouter);
-app.use(`${API}/wallet`, routes.walletRouter);
-app.use(`${API}/products`, routes.productRouter);
-app.use(`${API}/notifications`, routes.notifRouter);
-app.use(`${API}/reports`, routes.reportRouter);
-app.use(`${API}/kyc`, require('./routes/kyc.routes'));
+const apiRouter = require('./routes/index');
+app.use('/api/v1', apiRouter);
 
 // ── Test Routes ────────────────────────────────────────────────
 const testEmailRoutes = require("./routes/testEmail.routes");
