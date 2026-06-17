@@ -127,6 +127,10 @@ const searchCatalog = [
   // General Info/Policies
   { type: "info", label: "Terms and Conditions", target: { id: "terms-and-conditions" } },
   { type: "info", label: "Privacy Policy", target: { id: "privacy-policy" } },
+  { type: "info", label: "Contact Us", target: { id: "contact" } },
+  { type: "info", label: "Partner Login", target: { id: "login" } },
+  { type: "info", label: "Partner Registration", target: { id: "register" } },
+  { type: "info", label: "Admin Login", target: { id: "admin-login" } },
 ];
 
 const Navbar = () => {

@@ -1098,6 +1098,14 @@ export default function Home({ onNavigate }) {
           navigate("/terms-and-conditions");
         } else if (searchItem.target.id === "privacy-policy") {
           navigate("/privacy-policy");
+        } else if (searchItem.target.id === "contact") {
+          navigate("/contact");
+        } else if (searchItem.target.id === "login") {
+          navigate("/login");
+        } else if (searchItem.target.id === "register") {
+          navigate("/register");
+        } else if (searchItem.target.id === "admin-login") {
+          navigate("/admin-login");
         }
       }
       setSearchItem(null); // Reset store
