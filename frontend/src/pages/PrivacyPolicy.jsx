@@ -2,7 +2,7 @@ import React from "react";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="max-w-4xl mx-auto p-6 text-gray-800">
+    <div className="max-w-4xl mx-auto p-4 md:p-6 text-gray-800">
       <h1 className="text-3xl font-bold mb-4">Privacy Policy – GharKaPaisa</h1>
       <p className="text-sm text-gray-600 mb-6">Last Updated: June 2026</p>
 
@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
       <h2 className="text-2xl font-semibold mt-8 mb-2">1. Company Information</h2>
       <p className="font-medium">YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED</p>
       <p>Registered Address:</p>
-      <pre className="bg-gray-100 p-2 rounded mb-4">
+      <pre className="bg-gray-100 p-3 rounded mb-4 whitespace-pre-wrap break-words text-sm font-mono overflow-x-auto">
         GAT NO. 4/1/1B, DIGHIGAON THAN,
         Dighi Camp,
         Pune, Maharashtra – 411015,
