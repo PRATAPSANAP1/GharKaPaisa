@@ -25,12 +25,14 @@ import { moneyTransfer } from "./MoneyTransfer";
 import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 import { travelTransitData } from "./TravelTransit";
+import CategoryCardItem from "./CategoryCardItem";
 
 // Import banner images
 import ltfBanner from "./banner/lifetimefree card.png";
 import loanBanner from "./banner/loan.png";
 import insuranceBanner from "./banner/insurance.png";
 import emiBanner from "./banner/smart emi.png";
+import emiNewBanner from "./banner/emi.jpeg";
 import hdfcBanner from "./banner/hdfc pixel card.png";
 import offerBanner from "./banner/offerbanner.png";
 
@@ -272,13 +274,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 {sec.cards && (
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px", marginTop: sec.subcategories ? "14px" : "0" }}>
                     {sec.cards.map((card, cIdx) => (
-                      <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
-                        <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
-                        <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
-                        <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
-                          {t('popularCardsList.applyNow', 'Apply Now')}
-                        </button>
-                      </div>
+                      <CategoryCardItem key={cIdx} card={card} C={C} t={t} isMobile={isMobile} />
                     ))}
                   </div>
                 )}
@@ -305,13 +301,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 <h3 style={{ margin: "0 0 14px 0", fontSize: "16px", fontWeight: 800, color: C.teal }}>{sec.title}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "10px" }}>
                   {sec.cards.map((card, cIdx) => (
-                    <div key={cIdx} style={{ display: "flex", flexDirection: "column", gap: "4px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{card.name}</span>
-                      <span style={{ fontSize: "12px", color: C.textLight, lineHeight: 1.4 }}>{card.desc}</span>
-                      <button style={{ alignSelf: "flex-start", marginTop: "8px", background: C.teal, color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer", transition: "opacity 0.2s" }} onMouseEnter={(e) => e.target.style.opacity = 0.9} onMouseLeave={(e) => e.target.style.opacity = 1}>
-                        {t('popularCardsList.applyNow', 'Apply Now')}
-                      </button>
-                    </div>
+                    <CategoryCardItem key={cIdx} card={card} C={C} t={t} isMobile={isMobile} />
                   ))}
                 </div>
               </div>
@@ -871,6 +861,13 @@ export default function Home({ onNavigate }) {
       action: () => navigate("/attractive-cards-loans/smart-emi-card")
     },
     { 
+      title: t('home.banners.slideEmiNew.title', 'New EMI Schemes'), 
+      subtitle: t('home.banners.slideEmiNew.subtitle', 'Convert your spends into easy EMIs'), 
+      btnText: t('home.banners.slideEmiNew.btn', 'Explore EMI'),
+      bgImage: emiNewBanner,
+      action: () => navigate("/attractive-cards-loans/smart-emi-card")
+    },
+    { 
       title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
       subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
       btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
@@ -1198,15 +1195,15 @@ export default function Home({ onNavigate }) {
                 >
                   {/* Left side Image Box */}
                   <div style={{ 
-                    width: isMobile ? "36px" : "44px", 
-                    height: isMobile ? "36px" : "44px", 
-                    borderRadius: "10px", 
+                    width: isMobile ? "48px" : "58px", 
+                    height: isMobile ? "48px" : "58px", 
+                    borderRadius: "12px", 
                     background: C.bg, 
                     display: "flex", 
                     alignItems: "center", 
                     justifyContent: "center", 
                     flexShrink: 0,
-                    padding: "6px",
+                    padding: "4px",
                     boxSizing: "border-box",
                     border: `1px solid ${C.border}`
                   }}>
@@ -1226,6 +1223,71 @@ export default function Home({ onNavigate }) {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                    </div>
+                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                      <FaChevronRight size={isMobile ? 10 : 12} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* ── SECTION 8: Travel & Transit ── */}
+        <Section title={t('sections.travelTransit')} C={C}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {travelTransitData.map((item, idx) => {
+              const imgKey = item.label.toLowerCase();
+              const img = travelTransitImages[imgKey] || flightImg;
+              return (
+                <div key={idx} 
+                  onClick={() => navigate("/travel-transit/flight-booking")}
+                  style={{ 
+                    display: "flex", 
+                    flexDirection: "row", 
+                    alignItems: "center", 
+                    gap: "12px", 
+                    background: C.bgSecondary, 
+                    padding: isMobile ? "10px 12px" : "14px 16px", 
+                    borderRadius: "14px", 
+                    cursor: "pointer", 
+                    border: `1px solid ${C.border}`, 
+                    transition: "all 0.2s ease" 
+                  }} 
+                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
+                  onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
+                >
+                  {/* Left side Image Box */}
+                  <div style={{ 
+                    width: isMobile ? "48px" : "58px", 
+                    height: isMobile ? "48px" : "58px", 
+                    borderRadius: "12px", 
+                    background: C.bg, 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    flexShrink: 0,
+                    padding: "4px",
+                    boxSizing: "border-box",
+                    border: `1px solid ${C.border}`
+                  }}>
+                    <img 
+                      src={img} 
+                      alt={item.label} 
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "contain",
+                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
+                      }} 
+                    />
+                  </div>
+                  
+                  {/* Right side Text & Arrow */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
                     </div>
                     <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
                       <FaChevronRight size={isMobile ? 10 : 12} />
@@ -1456,70 +1518,7 @@ export default function Home({ onNavigate }) {
           </div>
         </Section>
 
-        {/* ── SECTION 8: Travel & Transit ── */}
-        <Section title={t('sections.travelTransit')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
-            {travelTransitData.map((item, idx) => {
-              const imgKey = item.label.toLowerCase();
-              const img = travelTransitImages[imgKey] || flightImg;
-              return (
-                <div key={idx} 
-                  onClick={() => navigate("/travel-transit/flight-booking")}
-                  style={{ 
-                    display: "flex", 
-                    flexDirection: "row", 
-                    alignItems: "center", 
-                    gap: "12px", 
-                    background: C.bgSecondary, 
-                    padding: isMobile ? "10px 12px" : "14px 16px", 
-                    borderRadius: "14px", 
-                    cursor: "pointer", 
-                    border: `1px solid ${C.border}`, 
-                    transition: "all 0.2s ease" 
-                  }} 
-                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
-                  onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
-                >
-                  {/* Left side Image Box */}
-                  <div style={{ 
-                    width: isMobile ? "36px" : "44px", 
-                    height: isMobile ? "36px" : "44px", 
-                    borderRadius: "10px", 
-                    background: C.bg, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    flexShrink: 0,
-                    padding: "6px",
-                    boxSizing: "border-box",
-                    border: `1px solid ${C.border}`
-                  }}>
-                    <img 
-                      src={img} 
-                      alt={item.label} 
-                      style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        objectFit: "contain",
-                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
-                      }} 
-                    />
-                  </div>
-                  
-                  {/* Right side Text & Arrow */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
-                    </div>
-                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                      <FaChevronRight size={isMobile ? 10 : 12} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
+
 
         {/* ── SECTION 9: Partner Banks (Logo strip) ── */}
         <Section title={t('sections.partnerBanks')} C={C}>

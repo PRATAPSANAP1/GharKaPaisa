@@ -90,8 +90,14 @@
         "title": "HDFC Pixel Credit Cards",
         "subtitle": "Customizable rewards on dining, shopping & entertainment",
         "btn": "Explore Pixel Cards"
+      },
+      "slideEmiNew": {
+        "title": "New EMI Schemes",
+        "subtitle": "Convert your spends into easy EMIs",
+        "btn": "Explore EMI"
       }
     },
+    "seeLess": "See Less",
     "breadcrumbs": {
       "home": "Home",
       "creditCards": "Credit Cards",
