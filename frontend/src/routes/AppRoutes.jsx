@@ -25,6 +25,10 @@ import ManagePartners from '../pages/Admin/ManagePartners';
 import ManageApplications from '../pages/Admin/ManageApplications';
 import ManageWithdrawals from '../pages/Admin/ManageWithdrawals';
 
+// SuperAdmin Pages
+import SuperAdminReports from '../pages/SuperAdmin/SuperAdminReports';
+import AuditLogs from '../pages/SuperAdmin/AuditLogs';
+
 // Protected Pages (Placeholders for now)
 import PartnerDashboard from '../pages/Partner/PartnerDashboard';
 
@@ -103,7 +107,8 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<SuperAdminDashboard />} />
-        <Route path="reports" element={<div className="p-4">System Reports</div>} />
+        <Route path="reports" element={<SuperAdminReports />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
       </Route>
 
       {/* Fallback */}
