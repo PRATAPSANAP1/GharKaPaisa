@@ -1276,79 +1276,61 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         <Section title={t('sections.moneyTransfer')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
-            {moneyTransfer.map((item, idx) => {
-              const imgKey = item.label.toLowerCase();
-              const img = moneyTransferImages[imgKey] || toMobileImg;
-              return (
-                <div key={idx} 
-                  onClick={() => {
-                    if (item.label === "FASTag") {
-                      navigate("/money-transfer/fastag");
-                    }
-                  }}
-                  style={{ 
-                    display: "flex", 
-                    flexDirection: "row", 
-                    alignItems: "center", 
-                    gap: "12px", 
-                    background: C.bgSecondary, 
-                    padding: isMobile ? "10px 12px" : "14px 16px", 
-                    borderRadius: "14px", 
-                    cursor: "pointer", 
-                    border: `1px solid ${C.border}`, 
-                    transition: "all 0.2s ease" 
-                  }} 
-                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
-                  onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
-                >
-                  {/* Left side Image Box */}
-                  <div style={{ 
-                    width: isMobile ? "48px" : "58px", 
-                    height: isMobile ? "48px" : "58px", 
-                    borderRadius: "12px", 
-                    background: C.bg, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
-                    flexShrink: 0,
-                    padding: "4px",
-                    boxSizing: "border-box",
-                    border: `1px solid ${C.border}`
-                  }}>
-                    <img 
-                      src={img} 
-                      alt={item.label} 
-                      style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        objectFit: "contain",
-                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
-                      }} 
-                    />
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(1, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+            {moneyTransfer.map((item, idx) => (
+              <div key={idx}
+                onClick={() => {
+                  if (item.label === "FASTag") {
+                    navigate("/money-transfer/fastag");
+                  }
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: "12px",
+                  background: C.bgSecondary,
+                  padding: isMobile ? "10px 12px" : "14px 16px",
+                  borderRadius: "14px",
+                  cursor: "pointer",
+                  border: `1px solid ${C.border}`,
+                  transition: "all 0.2s ease"
+                }}
+                onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)}
+                onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
+              >
+                <div style={{
+                  width: isMobile ? "48px" : "58px",
+                  height: isMobile ? "48px" : "58px",
+                  borderRadius: "12px",
+                  background: C.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  padding: "4px",
+                  boxSizing: "border-box",
+                  border: `1px solid ${C.border}`
+                }}>
+                  {item.icon}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
                   </div>
-                  
-                  {/* Right side Text & Arrow */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
-                    </div>
-                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                      <FaChevronRight size={isMobile ? 10 : 12} />
-                    </div>
+                  <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                    <FaChevronRight size={isMobile ? 10 : 12} />
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </Section>
 
         {/* ── SECTION 8: Travel & Transit ── */}
         <Section title={t('sections.travelTransit')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(1, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "8px" : "16px", marginTop: "12px" }}>
             {travelTransitData.map((item, idx) => {
-              const imgKey = item.label.toLowerCase();
-              const img = travelTransitImages[imgKey] || flightImg;
               return (
                 <div key={idx} 
                   onClick={() => navigate("/travel-transit/flight-booking")}
@@ -1367,7 +1349,7 @@ export default function Home({ onNavigate }) {
                   onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
                   onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
                 >
-                  {/* Left side Image Box */}
+                  {/* Left side Icon Box */}
                   <div style={{ 
                     width: isMobile ? "48px" : "58px", 
                     height: isMobile ? "48px" : "58px", 
@@ -1381,9 +1363,6 @@ export default function Home({ onNavigate }) {
                     boxSizing: "border-box",
                     border: `1px solid ${C.border}`
                   }}>
-                    <img 
-                      src={img} 
-                      alt={item.label} 
                       style={{ 
                         width: "100%", 
                         height: "100%", 
