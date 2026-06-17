@@ -19,6 +19,7 @@ const cards = [
     description: "Perfect entry-level card for daily spends",
     icon: "/icons/freedom.png",
     category: "Rewards",
+    section: "Core Cards",
     highlights: ["Earn 10X CashPoints on select merchants", "1% fuel surcharge waiver", "500 CashPoints welcome benefit"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
@@ -31,6 +32,7 @@ const cards = [
     description: "10X CashPoints on popular online merchants",
     icon: "/icons/moneyback.png",
     category: "Rewards",
+    section: "Core Cards",
     highlights: ["10X CashPoints on Amazon, Flipkart, Swiggy", "15% discount at partner restaurants", "Gift vouchers on milestone spends"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Mastercard",
@@ -43,6 +45,7 @@ const cards = [
     description: "5% cashback on top online shopping brands",
     icon: "/icons/millennia.png",
     category: "Cashback",
+    section: "Core Cards",
     highlights: ["5% cashback on Amazon, Flipkart, Swiggy & more", "1% cashback on all other spends", "Complimentary lounge access quarterly"],
     fee: "Annual Fee: ₹1,000 (Waived on ₹1 Lakh annual spend)",
     network: "Visa",
@@ -55,6 +58,7 @@ const cards = [
     description: "Premium travel and luxury lifestyle card",
     icon: "/icons/regalia.png",
     category: "Travel",
+    section: "Core Cards",
     highlights: ["Complimentary Club Marriott membership", "12 complimentary domestic & 6 international lounge visits", "5X Reward Points on travel spends"],
     fee: "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)",
     network: "Visa",
@@ -67,6 +71,7 @@ const cards = [
     description: "Tailored for growing business expenses",
     icon: "/icons/bizgrow.png",
     category: "Business",
+    section: "Core Cards",
     highlights: ["10X Reward Points on business utilities & tax payments", "1% fuel surcharge waiver", "Up to 50 days interest-free period"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Mastercard",
@@ -79,6 +84,7 @@ const cards = [
     description: "Powering business spends with premium rewards",
     icon: "/icons/bizpower.png",
     category: "Business",
+    section: "Core Cards",
     highlights: ["4 complimentary lounge visits per year", "Accelerated rewards on business software & travel", "Milestone voucher benefits up to ₹5,000"],
     fee: "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)",
     network: "Visa",
@@ -91,6 +97,7 @@ const cards = [
     description: "Smart cashback on business utilities",
     icon: "/icons/bizfirst.png",
     category: "Business",
+    section: "Core Cards",
     highlights: ["3% cashback on business utilities, electronics & supplies", "1% cashback on other retail business spends", "Annual fee waiver on milestone spends"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Mastercard",
@@ -105,6 +112,7 @@ const cards = [
     description: "Customizable rewards in a digital-first avatar",
     icon: "/icons/pixelplay.png",
     category: "Rewards",
+    section: "Co-Branded Cards",
     highlights: ["Choose your own reward merchant merchants", "Instant digital activation in minutes", "1% fuel surcharge waiver"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
@@ -117,6 +125,7 @@ const cards = [
     description: "Smart digital-first card for daily online spends",
     icon: "/icons/pixelgo.png",
     category: "Rewards",
+    section: "Co-Branded Cards",
     highlights: ["Custom merchant cashback options", "Digital wallet controls inside PayZapp", "Complimentary insurance covers"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
@@ -129,6 +138,7 @@ const cards = [
     description: "2% NeuCoins back on Neu spends and partners",
     icon: "/icons/tataneuplus.png",
     category: "Cashback",
+    section: "Co-Branded Cards",
     highlights: ["2% NeuCoins on Tata Neu and partner brands", "1% NeuCoins on other domestic & merchant spends", "4 complimentary domestic lounge visits annually"],
     fee: "Annual Fee: ₹499 (Waived on ₹1 Lakh annual spend)",
     network: "RuPay",
@@ -141,6 +151,7 @@ const cards = [
     description: "5% NeuCoins back on Neu spends and partners",
     icon: "/icons/tataneuinfinity.png",
     category: "Cashback",
+    section: "Co-Branded Cards",
     highlights: ["5% NeuCoins on Tata Neu and partner brands", "1.5% NeuCoins on non-Tata spends", "8 domestic & 4 international lounge visits annually"],
     fee: "Annual Fee: ₹1,499 (Waived on ₹3 Lakhs annual spend)",
     network: "RuPay",
@@ -153,6 +164,7 @@ const cards = [
     description: "10% cashback on Swiggy app dining and delivery",
     icon: "/icons/swiggy.png",
     category: "Cashback",
+    section: "Co-Branded Cards",
     highlights: ["10% cashback on Swiggy food, Instamart & Dineout", "5% cashback on top online shopping platforms", "1% cashback on other everyday spends"],
     fee: "Annual Fee: ₹500 (Waived on ₹2 Lakhs annual spend)",
     network: "Mastercard",
@@ -165,6 +177,7 @@ const cards = [
     description: "Earn up to 50 Liters of free fuel annually",
     icon: "/icons/indianoil.png",
     category: "Rewards",
+    section: "Co-Branded Cards",
     highlights: ["Earn fuel points on IndianOil fuel purchases", "1% fuel surcharge waiver across outlets", "Reward points on grocery and bill payments"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
@@ -177,6 +190,7 @@ const cards = [
     description: "Save on railway ticket bookings via IRCTC",
     icon: "/icons/irctc.png",
     category: "Travel",
+    section: "Co-Branded Cards",
     highlights: ["Up to 5X reward points on IRCTC app spends", "1% transaction charges waiver on IRCTC website", "Complimentary railway lounge access visits"],
     fee: "Annual Fee: ₹500 (Waived on ₹1.5 Lakhs annual spend)",
     network: "RuPay",
@@ -189,6 +203,7 @@ const cards = [
     description: "Exclusive global lounge access and dining benefits",
     icon: "/icons/dinersprivilege.png",
     category: "Travel",
+    section: "Co-Branded Cards",
     highlights: ["Complimentary annual memberships for Amazon Prime & Swiggy", "12 complimentary global airport lounge visits annually", "2X rewards on dining and weekend spends"],
     fee: "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)",
     network: "Diners Club",
@@ -201,6 +216,7 @@ const cards = [
     description: "Super premium card for global luxury travelers",
     icon: "/icons/dinersblack.png",
     category: "Travel",
+    section: "Co-Branded Cards",
     highlights: ["Unlimited airport lounge access globally", "5X reward points on travel and hotel bookings", "Complimentary golf games at premium clubs"],
     fee: "Annual Fee: ₹10,000 (Waived on ₹8 Lakhs annual spend)",
     network: "Diners Club",
@@ -213,6 +229,7 @@ const cards = [
     description: "Complimentary hotel nights and loyalty points",
     icon: "/icons/marriott.png",
     category: "Travel",
+    section: "Co-Branded Cards",
     highlights: ["1 free night award welcome benefit at Marriott properties", "Silver Elite status benefits with late checkout", "10 Elite night credits credited annually"],
     fee: "Annual Fee: ₹3,000 (Non-waivable)",
     network: "Visa",
@@ -225,6 +242,7 @@ const cards = [
     description: "Elite membership and premium rewards at Shoppers Stop",
     icon: "/icons/shoppersstopblack.png",
     category: "Rewards",
+    section: "Co-Branded Cards",
     highlights: ["Complimentary Shoppers Stop Golden Glow Club membership", "Up to 7% back on Shoppers Stop spends", "First citizen loyalty benefits on milestones"],
     fee: "Annual Fee: ₹4,500 (Waived on ₹4 Lakhs annual spend)",
     network: "Visa",
@@ -237,6 +255,7 @@ const cards = [
     description: "Accelerated reward points on fashion shopping",
     icon: "/icons/shoppersstop.png",
     category: "Rewards",
+    section: "Co-Branded Cards",
     highlights: ["Up to 3% back on Shoppers Stop apparel spends", "Accelerated first citizen reward points", "Annual fee waiver on milestone spends"],
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
@@ -251,6 +270,7 @@ const cards = [
     description: "Get credit limit mapped directly against your existing FD",
     icon: "/icons/securedexistingfd.png",
     category: "Business",
+    section: "Secured Cards",
     highlights: ["No income proof or income tax documents needed", "Earn high interest on FD while spending on credit", "90% credit limit mapped directly against deposit value"],
     fee: "Annual Fee: Nil (Zero annual fee)",
     network: "Visa",
@@ -263,6 +283,7 @@ const cards = [
     description: "Open a new FD instantly to unlock HDFC credit power",
     icon: "/icons/securednewfd.png",
     category: "Business",
+    section: "Secured Cards",
     highlights: ["Instant issuance in under 5 minutes online", "Zero document check or CIBIL score checks", "100% safe path to build credit history"],
     fee: "Annual Fee: Nil (Zero annual fee)",
     network: "Visa",
@@ -296,6 +317,15 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   });
 
   const filterCategories = ["All", "Cashback", "Travel", "Business", "Rewards"];
+
+  // Group filtered cards by section, preserving order
+  const sectionOrder = ["Core Cards", "Co-Branded Cards", "Secured Cards"];
+  const groupedSections = sectionOrder
+    .map(secName => ({
+      title: secName,
+      cards: filteredCards.filter(c => c.section === secName)
+    }))
+    .filter(sec => sec.cards.length > 0);
 
   // Custom UI Fallback Component for HDFC card layout in the banner
   const BannerImageFallback = () => (
@@ -652,47 +682,68 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           {/* Cards Section (Left span) */}
           <div className="lg:col-span-3">
 
-            <h2 className="text-2xl font-bold mb-6">
-              {activeFilter !== "All" ? `${t('hdfc.filter.' + activeFilter.toLowerCase(), activeFilter)} Cards` : "Core Cards"}
-            </h2>
-
-            {filteredCards.length > 0 ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                {filteredCards.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() => setSelectedCard(card)}
-                    style={{
-                      background: "var(--bg-white)",
+            {groupedSections.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+                {groupedSections.map((sec) => (
+                  <div key={sec.title}>
+                    <h2 style={{
+                      fontSize: "18px",
+                      fontWeight: 800,
                       color: "var(--text-slate-800)",
-                      border: "1px solid var(--border-color)",
-                      padding: "10px 18px",
-                      borderRadius: "30px",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-                      transition: "all 0.2s ease"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = "#003B8F";
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.06)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = "var(--border-color)";
-                      e.currentTarget.style.transform = "none";
-                      e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
-                    }}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", color: "#003B8F", fontSize: "14px" }}>
-                      {card.fallbackIcon}
-                    </span>
-                    {t(`hdfc.cards.${card.id}.name`, card.name)}
-                  </button>
+                      margin: "0 0 14px 0",
+                      paddingBottom: "8px",
+                      borderBottom: "2px solid #003B8F",
+                      display: "inline-block"
+                    }}>
+                      {sec.title}
+                    </h2>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr",
+                      gap: "10px"
+                    }}>
+                      {sec.cards.map((card) => (
+                        <button
+                          key={card.id}
+                          onClick={() => setSelectedCard(card)}
+                          style={{
+                            background: "var(--bg-white)",
+                            color: "var(--text-slate-800)",
+                            border: "1px solid var(--border-color)",
+                            padding: "12px 14px",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-start",
+                            gap: "8px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                            transition: "all 0.2s ease",
+                            textAlign: "left",
+                            lineHeight: 1.3,
+                            minHeight: "48px"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "#003B8F";
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,59,143,0.1)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "var(--border-color)";
+                            e.currentTarget.style.transform = "none";
+                            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+                          }}
+                        >
+                          <span style={{ display: "flex", alignItems: "center", color: "#003B8F", fontSize: "15px", flexShrink: 0 }}>
+                            {card.fallbackIcon}
+                          </span>
+                          <span>{t(`hdfc.cards.${card.id}.name`, card.name)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
