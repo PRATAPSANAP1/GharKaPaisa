@@ -387,6 +387,76 @@
         "name": "BizFirst Credit Card",
         "desc": "Smart cashback on business utilities",
         "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "pixelplay": {
+        "name": "Pixel Play Credit Card",
+        "desc": "Customizable rewards in a digital-first avatar",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "pixelgo": {
+        "name": "Pixel Go Credit Card",
+        "desc": "Smart digital-first card for daily online spends",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "tataneuplus": {
+        "name": "Tata Neu Plus Credit Card",
+        "desc": "2% NeuCoins back on Neu spends and partners",
+        "fee": "Annual Fee: ₹499 (Waived on ₹1 Lakh annual spend)"
+      },
+      "tataneuinfinity": {
+        "name": "Tata Neu Infinity Credit Card",
+        "desc": "5% NeuCoins back on Neu spends and partners",
+        "fee": "Annual Fee: ₹1,499 (Waived on ₹3 Lakhs annual spend)"
+      },
+      "swiggy": {
+        "name": "Swiggy HDFC Bank Credit Card",
+        "desc": "10% cashback on Swiggy app dining and delivery",
+        "fee": "Annual Fee: ₹500 (Waived on ₹2 Lakhs annual spend)"
+      },
+      "indianoil": {
+        "name": "IndianOil HDFC Bank Credit Card",
+        "desc": "Earn up to 50 Liters of free fuel annually",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "irctc": {
+        "name": "IRCTC HDFC Bank Credit Card",
+        "desc": "Save on railway ticket bookings via IRCTC",
+        "fee": "Annual Fee: ₹500 (Waived on ₹1.5 Lakhs annual spend)"
+      },
+      "dinersprivilege": {
+        "name": "Diners Club Privilege Credit Card",
+        "desc": "Exclusive global lounge access and dining benefits",
+        "fee": "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)"
+      },
+      "dinersblack": {
+        "name": "Diners Club Black Credit Card",
+        "desc": "Super premium card for global luxury travelers",
+        "fee": "Annual Fee: ₹10,000 (Waived on ₹8 Lakhs annual spend)"
+      },
+      "marriott": {
+        "name": "Marriott Bonvoy HDFC Bank Credit Card",
+        "desc": "Complimentary hotel nights and loyalty points",
+        "fee": "Annual Fee: ₹3,000 (Non-waivable)"
+      },
+      "shoppersstopblack": {
+        "name": "Shoppers Stop Black HDFC Bank Credit Card",
+        "desc": "Elite membership and premium rewards at Shoppers Stop",
+        "fee": "Annual Fee: ₹4,500 (Waived on ₹4 Lakhs annual spend)"
+      },
+      "shoppersstop": {
+        "name": "Shoppers Stop Credit Card",
+        "desc": "Accelerated reward points on fashion shopping",
+        "fee": "Annual Fee: ₹500 (Waived on ₹50k annual spend)"
+      },
+      "securedexistingfd": {
+        "name": "Against Existing FD",
+        "desc": "Get credit limit mapped directly against your existing FD",
+        "fee": "Annual Fee: Nil (Zero annual fee)"
+      },
+      "securednewfd": {
+        "name": "New FD Based Credit Card",
+        "desc": "Open a new FD instantly to unlock HDFC credit power",
+        "fee": "Annual Fee: Nil (Zero annual fee)"
       }
     }
   }

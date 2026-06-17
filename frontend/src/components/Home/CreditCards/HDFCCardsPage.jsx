@@ -11,6 +11,7 @@ import {
 
 // User's provided card data with enriched category definitions for filtering
 const cards = [
+  // Core Cards
   {
     id: "freedom",
     name: "Freedom Credit Card",
@@ -94,6 +95,178 @@ const cards = [
     network: "Mastercard",
     gradient: "linear-gradient(135deg, #5C258D 0%, #4389A2 100%)",
     fallbackIcon: <FaBriefcase />
+  },
+  
+  // Co-Branded Cards
+  {
+    id: "pixelplay",
+    name: "Pixel Play Credit Card",
+    description: "Customizable rewards in a digital-first avatar",
+    icon: "/icons/pixelplay.png",
+    category: "Rewards",
+    highlights: ["Choose your own reward merchant merchants", "Instant digital activation in minutes", "1% fuel surcharge waiver"],
+    fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #FF512F 0%, #DD2476 100%)",
+    fallbackIcon: <FaRegCreditCard />
+  },
+  {
+    id: "pixelgo",
+    name: "Pixel Go Credit Card",
+    description: "Smart digital-first card for daily online spends",
+    icon: "/icons/pixelgo.png",
+    category: "Rewards",
+    highlights: ["Custom merchant cashback options", "Digital wallet controls inside PayZapp", "Complimentary insurance covers"],
+    fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    fallbackIcon: <FaMobileAlt />
+  },
+  {
+    id: "tataneuplus",
+    name: "Tata Neu Plus Credit Card",
+    description: "2% NeuCoins back on Neu spends and partners",
+    icon: "/icons/tataneuplus.png",
+    category: "Cashback",
+    highlights: ["2% NeuCoins on Tata Neu and partner brands", "1% NeuCoins on other domestic & merchant spends", "4 complimentary domestic lounge visits annually"],
+    fee: "Annual Fee: ₹499 (Waived on ₹1 Lakh annual spend)",
+    network: "RuPay",
+    gradient: "linear-gradient(135deg, #4568DC 0%, #B06AB8 100%)",
+    fallbackIcon: <FaGift />
+  },
+  {
+    id: "tataneuinfinity",
+    name: "Tata Neu Infinity Credit Card",
+    description: "5% NeuCoins back on Neu spends and partners",
+    icon: "/icons/tataneuinfinity.png",
+    category: "Cashback",
+    highlights: ["5% NeuCoins on Tata Neu and partner brands", "1.5% NeuCoins on non-Tata spends", "8 domestic & 4 international lounge visits annually"],
+    fee: "Annual Fee: ₹1,499 (Waived on ₹3 Lakhs annual spend)",
+    network: "RuPay",
+    gradient: "linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)",
+    fallbackIcon: <FaGift />
+  },
+  {
+    id: "swiggy",
+    name: "Swiggy HDFC Bank Credit Card",
+    description: "10% cashback on Swiggy app dining and delivery",
+    icon: "/icons/swiggy.png",
+    category: "Cashback",
+    highlights: ["10% cashback on Swiggy food, Instamart & Dineout", "5% cashback on top online shopping platforms", "1% cashback on other everyday spends"],
+    fee: "Annual Fee: ₹500 (Waived on ₹2 Lakhs annual spend)",
+    network: "Mastercard",
+    gradient: "linear-gradient(135deg, #f12711 0%, #f5af19 100%)",
+    fallbackIcon: <FaShoppingBag />
+  },
+  {
+    id: "indianoil",
+    name: "IndianOil HDFC Bank Credit Card",
+    description: "Earn up to 50 Liters of free fuel annually",
+    icon: "/icons/indianoil.png",
+    category: "Rewards",
+    highlights: ["Earn fuel points on IndianOil fuel purchases", "1% fuel surcharge waiver across outlets", "Reward points on grocery and bill payments"],
+    fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
+    fallbackIcon: <FaGift />
+  },
+  {
+    id: "irctc",
+    name: "IRCTC HDFC Bank Credit Card",
+    description: "Save on railway ticket bookings via IRCTC",
+    icon: "/icons/irctc.png",
+    category: "Travel",
+    highlights: ["Up to 5X reward points on IRCTC app spends", "1% transaction charges waiver on IRCTC website", "Complimentary railway lounge access visits"],
+    fee: "Annual Fee: ₹500 (Waived on ₹1.5 Lakhs annual spend)",
+    network: "RuPay",
+    gradient: "linear-gradient(135deg, #3a7bd5 0%, #3a6073 100%)",
+    fallbackIcon: <FaPlane />
+  },
+  {
+    id: "dinersprivilege",
+    name: "Diners Club Privilege Credit Card",
+    description: "Exclusive global lounge access and dining benefits",
+    icon: "/icons/dinersprivilege.png",
+    category: "Travel",
+    highlights: ["Complimentary annual memberships for Amazon Prime & Swiggy", "12 complimentary global airport lounge visits annually", "2X rewards on dining and weekend spends"],
+    fee: "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)",
+    network: "Diners Club",
+    gradient: "linear-gradient(135deg, #141e30 0%, #243b55 100%)",
+    fallbackIcon: <FaStar />
+  },
+  {
+    id: "dinersblack",
+    name: "Diners Club Black Credit Card",
+    description: "Super premium card for global luxury travelers",
+    icon: "/icons/dinersblack.png",
+    category: "Travel",
+    highlights: ["Unlimited airport lounge access globally", "5X reward points on travel and hotel bookings", "Complimentary golf games at premium clubs"],
+    fee: "Annual Fee: ₹10,000 (Waived on ₹8 Lakhs annual spend)",
+    network: "Diners Club",
+    gradient: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
+    fallbackIcon: <FaStar />
+  },
+  {
+    id: "marriott",
+    name: "Marriott Bonvoy HDFC Bank Credit Card",
+    description: "Complimentary hotel nights and loyalty points",
+    icon: "/icons/marriott.png",
+    category: "Travel",
+    highlights: ["1 free night award welcome benefit at Marriott properties", "Silver Elite status benefits with late checkout", "10 Elite night credits credited annually"],
+    fee: "Annual Fee: ₹3,000 (Non-waivable)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #6441A5 0%, #2a0845 100%)",
+    fallbackIcon: <FaPlane />
+  },
+  {
+    id: "shoppersstopblack",
+    name: "Shoppers Stop Black HDFC Bank Credit Card",
+    description: "Elite membership and premium rewards at Shoppers Stop",
+    icon: "/icons/shoppersstopblack.png",
+    category: "Rewards",
+    highlights: ["Complimentary Shoppers Stop Golden Glow Club membership", "Up to 7% back on Shoppers Stop spends", "First citizen loyalty benefits on milestones"],
+    fee: "Annual Fee: ₹4,500 (Waived on ₹4 Lakhs annual spend)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #3E5151 0%, #DECBA4 100%)",
+    fallbackIcon: <FaShoppingBag />
+  },
+  {
+    id: "shoppersstop",
+    name: "Shoppers Stop Credit Card",
+    description: "Accelerated reward points on fashion shopping",
+    icon: "/icons/shoppersstop.png",
+    category: "Rewards",
+    highlights: ["Up to 3% back on Shoppers Stop apparel spends", "Accelerated first citizen reward points", "Annual fee waiver on milestone spends"],
+    fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #8A2387 0%, #E94057 50%, #F27121 100%)",
+    fallbackIcon: <FaShoppingBag />
+  },
+  
+  // Secured Cards
+  {
+    id: "securedexistingfd",
+    name: "Against Existing FD",
+    description: "Get credit limit mapped directly against your existing FD",
+    icon: "/icons/securedexistingfd.png",
+    category: "Business",
+    highlights: ["No income proof or income tax documents needed", "Earn high interest on FD while spending on credit", "90% credit limit mapped directly against deposit value"],
+    fee: "Annual Fee: Nil (Zero annual fee)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #000000 0%, #434343 100%)",
+    fallbackIcon: <FaLock />
+  },
+  {
+    id: "securednewfd",
+    name: "New FD Based Credit Card",
+    description: "Open a new FD instantly to unlock HDFC credit power",
+    icon: "/icons/securednewfd.png",
+    category: "Business",
+    highlights: ["Instant issuance in under 5 minutes online", "Zero document check or CIBIL score checks", "100% safe path to build credit history"],
+    fee: "Annual Fee: Nil (Zero annual fee)",
+    network: "Visa",
+    gradient: "linear-gradient(135deg, #00b09b 0%, #96c93d 100%)",
+    fallbackIcon: <FaLock />
   }
 ];
 
