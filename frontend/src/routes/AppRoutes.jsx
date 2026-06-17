@@ -14,25 +14,32 @@ import Home from '../components/Home';
 import Contact from '../components/Contact';
 import PartnerLogin from '../components/Partner/PartnerLogin';
 import PartnerRegister from '../components/Partner/PartnerRegister';
-import AdminLogin from '../pages/Admin/AdminLogin';
-import SuperAdminDashboard from '../pages/SuperAdmin/SuperAdminDashboard';
 import TermsAndConditions from '../pages/TermsAndConditions';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 
-// Admin Pages
-import AdminDashboard from '../pages/Admin/AdminDashboard';
-import ManagePartners from '../pages/Admin/ManagePartners';
-import ManageApplications from '../pages/Admin/ManageApplications';
-import ManageWithdrawals from '../pages/Admin/ManageWithdrawals';
+// Structured Folder Imports
+import { 
+  AdminDashboard, 
+  AdminLogin, 
+  ManageApplications, 
+  ManagePartners, 
+  ManageWithdrawals 
+} from '../pages/Admin';
 
-// SuperAdmin Pages
-import SuperAdminReports from '../pages/SuperAdmin/SuperAdminReports';
-import AuditLogs from '../pages/SuperAdmin/AuditLogs';
-import ManageBanners from '../pages/SuperAdmin/ManageBanners';
-import ManageProducts from '../pages/SuperAdmin/ManageProducts';
+import { 
+  SuperAdminDashboard, 
+  SuperAdminReports, 
+  AuditLogs, 
+  ManageBanners, 
+  ManageProducts 
+} from '../pages/SuperAdmin';
 
-// Protected Pages (Placeholders for now)
-import PartnerDashboard from '../pages/Partner/PartnerDashboard';
+import { 
+  PartnerDashboard, 
+  PartnerApplications, 
+  PartnerWallet, 
+  PartnerProfile 
+} from '../pages/Partner';
 
 const AppRoutes = () => {
   return (
@@ -73,9 +80,9 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PartnerDashboard />} />
-        <Route path="applications" element={<div className="p-4">Applications List</div>} />
-        <Route path="wallet" element={<div className="p-4">Wallet View</div>} />
-        <Route path="profile" element={<div className="p-4">Profile Settings</div>} />
+        <Route path="applications" element={<PartnerApplications />} />
+        <Route path="wallet" element={<PartnerWallet />} />
+        <Route path="profile" element={<PartnerProfile />} />
       </Route>
 
       {/* Admin Routes */}
