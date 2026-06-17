@@ -342,6 +342,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               <div style={{ fontSize: isMobile ? "12px" : "14px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
                 {item.label === "Co-Brand" ? t('home.breadcrumbs.cobrand', 'Co-Brand') : 
                  item.label === "FD Based Cards" ? t('home.breadcrumbs.fdBasedCards', 'FD Based Cards') : 
+                 category.id === "attractive-sections" ? t('attractiveCards.' + item.id, item.label) :
                  t(category.id + 'List.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
               </div>
             </div>
@@ -562,6 +563,14 @@ export default function Home({ onNavigate }) {
       crumbs.push({ label: t('sections.businessServices', 'Services'), action: null });
     } else if (cat.id === "travel-transit") {
       crumbs.push({ label: t('sections.travelTransit', 'Travel & Transit'), action: null });
+    } else if (cat.id === "attractive-sections") {
+      crumbs.push({ label: t('sections.attractiveCards', 'Attractive Cards & Loans'), action: null });
+    } else if (cat.parentId === "attractive-sections") {
+      crumbs.push({ 
+        label: t('sections.attractiveCards', 'Attractive Cards & Loans'), 
+        action: () => setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories }) 
+      });
+      crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     } else {
       crumbs.push({ label: t('home.breadcrumbs.attractiveSections', 'Attractive Sections'), action: () => setActiveCategory(null) });
       crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
@@ -595,6 +604,11 @@ export default function Home({ onNavigate }) {
       });
       return;
     }
+    const attractiveCat = attractiveCategories.find(c => c.id === item.id);
+    if (attractiveCat) {
+      handleAttractiveCategoryClick(attractiveCat);
+      return;
+    }
     if (activeCategory?.id === "credit-cards" || banksList.find(b => b.id === item.id)) {
       if (bankCardsDetails[item.id]) {
         setActiveCategory({
@@ -625,6 +639,7 @@ export default function Home({ onNavigate }) {
       id: cat.id,
       title: cat.title,
       titleKey: `attractiveCards.${cat.id}`,
+      parentId: "attractive-sections",
       type: "hierarchy",
       items: cat.items
     });
@@ -640,6 +655,8 @@ export default function Home({ onNavigate }) {
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
       setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+    } else if (activeCategory?.parentId === "attractive-sections") {
+      setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
     } else {
       setActiveCategory(null);
     }
@@ -790,7 +807,7 @@ export default function Home({ onNavigate }) {
         <Section 
           title={t('sections.attractiveCards')} 
           viewAllLabel={t('home.seeAll', 'See All')}
-          onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+          onViewAll={() => setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories })}
           C={C}
         >
           <style>{`
