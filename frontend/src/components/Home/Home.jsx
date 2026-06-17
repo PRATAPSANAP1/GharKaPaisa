@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../Partner/ThemeContext";
 import { useSearchStore } from "../../store/searchStore";
 import {
@@ -10,7 +10,8 @@ import {
   FaTwitter, FaInstagram, FaEnvelope, FaPhoneAlt, FaArrowLeft, FaHome,
   FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
   FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
-  FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard
+  FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
+  FaPlane, FaTrain, FaBus, FaHotel
 } from "react-icons/fa";
 
 // Import modular data lists
@@ -387,10 +388,292 @@ function MobileBottomNav({ C, onNavigate, activeTab }) {
 
 
 
+function FastagPage({ onBack, C, isMobile, breadcrumbs }) {
+  const { t } = useTranslation();
+  const [vehicleNo, setVehicleNo] = useState("");
+  const [amount, setAmount] = useState("");
+  const [bank, setBank] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleRecharge = (e) => {
+    e.preventDefault();
+    if (!vehicleNo || !amount || !bank) return;
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setSuccess(true);
+    }, 1500);
+  };
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.textLight, marginBottom: "20px" }}>
+          {breadcrumbs.map((crumb, idx) => (
+            <React.Fragment key={idx}>
+              <span 
+                onClick={crumb.action} 
+                style={{ cursor: crumb.action ? "pointer" : "default", color: crumb.action ? C.teal : C.textLight }}
+                onMouseEnter={e => crumb.action && (e.target.style.textDecoration = "underline")}
+                onMouseLeave={e => crumb.action && (e.target.style.textDecoration = "none")}
+              >
+                {crumb.label}
+              </span>
+              {idx < breadcrumbs.length - 1 && <span>/</span>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: C.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s" }} onMouseEnter={e => e.target.style.background = C.bgSecondary} onMouseLeave={e => e.target.style.background = "none"}>
+            <FaArrowLeft size={18} />
+          </button>
+          <h2 style={{ margin: 0, fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: C.text }}>
+            {t('moneyTransfer.fastag', 'FASTag Recharge')}
+          </h2>
+        </div>
+
+        {success ? (
+          <div style={{ background: C.card, padding: "30px", borderRadius: "20px", border: `1px solid ${C.border}`, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.05)" }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#27ae60", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px auto", fontSize: "28px" }}>✓</div>
+            <h3 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "20px", fontWeight: 800 }}>Recharge Initiated!</h3>
+            <p style={{ margin: "0 0 20px 0", color: C.textLight, fontSize: "14px" }}>Recharge of ₹{amount} for {vehicleNo.toUpperCase()} is successful.</p>
+            <button onClick={() => { setSuccess(false); setVehicleNo(""); setAmount(""); setBank(""); }} style={{ background: C.teal, color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}>
+              Recharge Another Card
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 2fr", gap: "24px" }}>
+            <form onSubmit={handleRecharge} style={{ background: C.card, padding: "24px", borderRadius: "20px", border: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 8px 24px rgba(0,0,0,0.02)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Vehicle Registration Number</label>
+                <input 
+                  type="text" 
+                  value={vehicleNo}
+                  onChange={e => setVehicleNo(e.target.value)}
+                  placeholder="e.g. MH12AB1234" 
+                  required
+                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Select FASTag Bank</label>
+                <select 
+                  value={bank}
+                  onChange={e => setBank(e.target.value)}
+                  required
+                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
+                >
+                  <option value="">-- Select Bank --</option>
+                  <option value="hdfc">HDFC Bank FASTag</option>
+                  <option value="sbi">SBI FASTag</option>
+                  <option value="icici">ICICI Bank FASTag</option>
+                  <option value="idfc">IDFC First Bank FASTag</option>
+                  <option value="axis">Axis Bank FASTag</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Recharge Amount (₹)</label>
+                <input 
+                  type="number" 
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="Enter amount" 
+                  min="100"
+                  required
+                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                style={{ width: "100%", background: C.teal, color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 800, cursor: "pointer", marginTop: "10px", transition: "opacity 0.2s" }}
+              >
+                {loading ? "Processing Payment..." : "Proceed to Pay"}
+              </button>
+            </form>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}` }}>
+                <h4 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "14px", fontWeight: 800 }}>Instant and Secure</h4>
+                <p style={{ margin: 0, color: C.textLight, fontSize: "12px", lineHeight: 1.5 }}>Enjoy a completely automated and secure FASTag recharge experience. Receipts are generated instantly upon bank clearance.</p>
+              </div>
+              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}` }}>
+                <h4 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "14px", fontWeight: 800 }}>Need Assistance?</h4>
+                <p style={{ margin: 0, color: C.textLight, fontSize: "12px", lineHeight: 1.5 }}>If your recharge fails or is delayed, contact our round-the-clock helpdesk for fast resolution.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TravelBookingPage({ onBack, C, isMobile, breadcrumbs }) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState("flight");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [date, setDate] = useState("");
+  const [hotelDest, setHotelDest] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setSearching(true);
+    setTimeout(() => {
+      setSearching(false);
+      setSearchResults(true);
+    }, 1200);
+  };
+
+  const tabs = [
+    { id: "flight", label: "Flights", icon: <FaPlane /> },
+    { id: "train", label: "Trains", icon: <FaTrain /> },
+    { id: "bus", label: "Buses", icon: <FaBus /> },
+    { id: "hotel", label: "Hotels", icon: <FaHotel /> }
+  ];
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.textLight, marginBottom: "20px" }}>
+          {breadcrumbs.map((crumb, idx) => (
+            <React.Fragment key={idx}>
+              <span 
+                onClick={crumb.action} 
+                style={{ cursor: crumb.action ? "pointer" : "default", color: crumb.action ? C.teal : C.textLight }}
+                onMouseEnter={e => crumb.action && (e.target.style.textDecoration = "underline")}
+                onMouseLeave={e => crumb.action && (e.target.style.textDecoration = "none")}
+              >
+                {crumb.label}
+              </span>
+              {idx < breadcrumbs.length - 1 && <span>/</span>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: C.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", borderRadius: "50%", transition: "background 0.2s" }} onMouseEnter={e => e.target.style.background = C.bgSecondary} onMouseLeave={e => e.target.style.background = "none"}>
+            <FaArrowLeft size={18} />
+          </button>
+          <h2 style={{ margin: 0, fontSize: isMobile ? "20px" : "26px", fontWeight: 800, color: C.text }}>
+            {t('sections.travelTransit', 'Travel & Transit Booking')}
+          </h2>
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", marginBottom: "20px", borderBottom: `1px solid ${C.border}`, paddingBottom: "10px", overflowX: "auto" }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchResults(null); }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: activeTab === tab.id ? C.teal : "none",
+                color: activeTab === tab.id ? "#fff" : C.text,
+                border: activeTab === tab.id ? `1px solid ${C.teal}` : `1px solid ${C.border}`,
+                padding: "8px 16px",
+                borderRadius: "10px",
+                fontWeight: 700,
+                fontSize: "13px",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {searchResults ? (
+          <div style={{ background: C.card, padding: "30px", borderRadius: "20px", border: `1px solid ${C.border}`, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.05)" }}>
+            <h3 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "18px", fontWeight: 800 }}>Search Results Found!</h3>
+            <p style={{ margin: "0 0 20px 0", color: C.textLight, fontSize: "14px" }}>We found several premium options for your request. Proceeding to checkout partner gateway...</p>
+            <button onClick={() => setSearchResults(null)} style={{ background: C.teal, color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}>
+              Modify Search
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSearch} style={{ background: C.card, padding: "24px", borderRadius: "20px", border: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 8px 24px rgba(0,0,0,0.02)" }}>
+            {activeTab !== "hotel" ? (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "16px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>From</label>
+                  <input 
+                    type="text" 
+                    value={from}
+                    onChange={e => setFrom(e.target.value)}
+                    placeholder="Origin City / Station" 
+                    required
+                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>To</label>
+                  <input 
+                    type="text" 
+                    value={to}
+                    onChange={e => setTo(e.target.value)}
+                    placeholder="Destination City / Station" 
+                    required
+                    style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", boxSizing: "border-box" }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Destination or Hotel Name</label>
+                <input 
+                  type="text" 
+                  value={hotelDest}
+                  onChange={e => setHotelDest(e.target.value)}
+                  placeholder="e.g. Mumbai, Goa" 
+                  required
+                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", boxSizing: "border-box" }}
+                />
+              </div>
+            )}
+
+            <div>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Travel Date</label>
+              <input 
+                type="date" 
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+                style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", boxSizing: "border-box" }}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={searching}
+              style={{ width: "100%", background: C.teal, color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 800, cursor: "pointer", marginTop: "10px" }}
+            >
+              {searching ? "Searching..." : `Search ${tabs.find(t => t.id === activeTab).label}`}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home({ onNavigate }) {
   const { C } = useTheme();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -399,6 +682,29 @@ export default function Home({ onNavigate }) {
 
   const searchItem = useSearchStore(state => state.searchItem);
   const setSearchItem = useSearchStore(state => state.setSearchItem);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === "/") {
+      setActiveCategory(null);
+    } else if (path === "/loans") {
+      setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
+    } else if (path === "/insurance") {
+      setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+    } else if (path === "/cards") {
+      setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+    } else if (path === "/services") {
+      setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
+    } else if (path === "/travel-transit") {
+      setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: travelTransitData });
+    } else if (path === "/attractive-sections") {
+      setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
+    } else if (path === "/fastag") {
+      setActiveCategory({ id: "fastag", title: "FASTag Recharge", titleKey: "moneyTransfer.fastag", items: [] });
+    } else if (path === "/flight-booking") {
+      setActiveCategory({ id: "flight-booking", title: "Travel & Transit Booking", titleKey: "sections.travelTransit", items: [] });
+    }
+  }, [location.pathname]);
 
   const attractiveImages = {
     "ltf-cards": ltfImg,
@@ -432,56 +738,66 @@ export default function Home({ onNavigate }) {
       subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
       btnText: t('home.banners.slideOffer.btn', 'View Offers'),
       bgImage: offerBanner,
-      action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList })
+      action: () => navigate("/cards")
     },
     { 
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
-      action: () => setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) })
+      action: () => {
+        navigate("/attractive-sections");
+        setTimeout(() => {
+          const ltfCat = attractiveCategories.find(c => c.id === "ltf-cards");
+          if (ltfCat) handleAttractiveCategoryClick(ltfCat);
+        }, 50);
+      }
     },
     { 
       title: t('home.banners.slide1.title', 'Personal Loans'), 
       subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
       btnText: t('home.banners.slide1.btn', 'Apply Now'),
       bgImage: loanBanner,
-      action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
+      action: () => navigate("/loans")
     },
     { 
       title: t('home.banners.slide2.title', 'Business Loans'), 
       subtitle: t('home.banners.slide2.subtitle', 'Flexible repayment options for growing businesses'), 
       btnText: t('home.banners.slide2.btn', 'Check Eligibility'),
       bgImage: loanBanner,
-      action: () => setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData })
+      action: () => navigate("/loans")
     },
     { 
       title: t('home.banners.slide3.title', 'Insurance Plans'), 
       subtitle: t('home.banners.slide3.subtitle', 'Comprehensive health, life and general insurance cover'), 
       btnText: t('home.banners.slide3.btn', 'Get Quotes'),
       bgImage: insuranceBanner,
-      action: () => setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData })
+      action: () => navigate("/insurance")
     },
     { 
       title: t('home.banners.slide4.title', 'EMI Cards'), 
       subtitle: t('home.banners.slide4.subtitle', 'Convert purchases to no-cost EMIs instantly'), 
       btnText: t('home.banners.slide4.btn', 'Get EMI Card'),
       bgImage: emiBanner,
-      action: () => handleAttractiveCategoryClick(attractiveCategories.find(c => c.id === "smart-emi"))
+      action: () => {
+        navigate("/attractive-sections");
+        setTimeout(() => {
+          const emiCat = attractiveCategories.find(c => c.id === "smart-emi");
+          if (emiCat) handleAttractiveCategoryClick(emiCat);
+        }, 50);
+      }
     },
     { 
       title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
       subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
       btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
       bgImage: hdfcBanner,
-      action: () => setActiveCategory({
-        id: "bank-hdfc",
-        title: bankCardsDetails.hdfc.title,
-        titleKey: "hdfc.title",
-        parentId: "credit-cards",
-        type: "bank-detail",
-        sections: bankCardsDetails.hdfc.sections
-      })
+      action: () => {
+        navigate("/cards");
+        setTimeout(() => {
+          handleItemClick({ id: "hdfc", label: "HDFC Bank" });
+        }, 50);
+      }
     }
   ];
 
@@ -503,29 +819,38 @@ export default function Home({ onNavigate }) {
     if (searchItem) {
       if (searchItem.type === "category") {
         if (searchItem.target.id === "credit-cards") {
-          setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+          navigate("/cards");
         } else if (searchItem.target.id === "loans") {
-          setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
+          navigate("/loans");
         } else if (searchItem.target.id === "insurance") {
-          setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+          navigate("/insurance");
         } else if (searchItem.target.id === "services") {
-          setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
+          navigate("/services");
         } else if (searchItem.target.id === "ltf-detail-page") {
-          setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) });
+          navigate("/cards");
+          setTimeout(() => {
+            setActiveCategory({ id: "ltf-detail-page", title: "Lifetime Free Credit Cards (LTF)", titleKey: "home.ltfCardsTitle", parentId: "credit-cards", items: ltfCards.map(c => ({ id: c.name.toLowerCase().replace(/\s+/g, "-"), label: c.name, icon: <FaRegCreditCard /> })) });
+          }, 50);
         } else if (searchItem.target.id.startsWith("bank-")) {
           const bankId = searchItem.target.id.split("-")[1];
           const bankItem = banksList.find(b => b.id === bankId);
-          if (bankItem) handleItemClick(bankItem);
+          if (bankItem) {
+            navigate("/cards");
+            setTimeout(() => handleItemClick(bankItem), 50);
+          }
         } else {
           const attractiveCat = attractiveCategories.find(c => c.id === searchItem.target.id);
-          if (attractiveCat) handleAttractiveCategoryClick(attractiveCat);
+          if (attractiveCat) {
+            navigate("/attractive-sections");
+            setTimeout(() => handleAttractiveCategoryClick(attractiveCat), 50);
+          }
         }
       } else if (searchItem.type === "loan") {
-        setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
+        navigate("/loans");
       } else if (searchItem.type === "insurance") {
-        setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+        navigate("/insurance");
       } else if (searchItem.type === "service") {
-        setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
+        navigate("/services");
       }
       setSearchItem(null); // Reset store
     }
@@ -537,21 +862,39 @@ export default function Home({ onNavigate }) {
   };
 
   const getBreadcrumbs = (cat) => {
-    const crumbs = [{ label: t('home.breadcrumbs.home', 'Home'), action: () => setActiveCategory(null) }];
+    const crumbs = [{ label: t('home.breadcrumbs.home', 'Home'), action: () => navigate("/") }];
     
     if (!cat) return crumbs;
 
     if (cat.id.startsWith("cobrand-") || cat.id.startsWith("fd-")) {
       const bankId = cat.id.split("-")[1];
       const bankName = banksList.find(b => b.id === bankId)?.label || "Bank";
-      crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList }) });
+      crumbs.push({ 
+        label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
+        action: () => {
+          if (location.pathname === "/cards") {
+            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+          } else {
+            navigate("/cards");
+          }
+        } 
+      });
       crumbs.push({ 
         label: t('banks.' + bankId, bankName), 
         action: () => handleItemClick({ id: bankId, label: bankName }) 
       });
       crumbs.push({ label: cat.id.startsWith("cobrand-") ? t('home.breadcrumbs.cobrand', 'Co-Brand') : t('home.breadcrumbs.fdBasedCards', 'FD Based Cards'), action: null });
     } else if (cat.parentId === "credit-cards" || cat.id.startsWith("bank-")) {
-      crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: () => setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList }) });
+      crumbs.push({ 
+        label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
+        action: () => {
+          if (location.pathname === "/cards") {
+            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+          } else {
+            navigate("/cards");
+          }
+        } 
+      });
       crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     } else if (cat.id === "credit-cards") {
       crumbs.push({ label: t('home.breadcrumbs.creditCards', 'Credit Cards'), action: null });
@@ -568,11 +911,17 @@ export default function Home({ onNavigate }) {
     } else if (cat.parentId === "attractive-sections") {
       crumbs.push({ 
         label: t('sections.attractiveCards', 'Attractive Cards & Loans'), 
-        action: () => setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories }) 
+        action: () => {
+          if (location.pathname === "/attractive-sections") {
+            setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
+          } else {
+            navigate("/attractive-sections");
+          }
+        } 
       });
       crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     } else {
-      crumbs.push({ label: t('home.breadcrumbs.attractiveSections', 'Attractive Sections'), action: () => setActiveCategory(null) });
+      crumbs.push({ label: t('home.breadcrumbs.attractiveSections', 'Attractive Sections'), action: () => navigate("/") });
       crumbs.push({ label: t(cat.titleKey || cat.title, cat.title), action: null });
     }
     
@@ -580,13 +929,13 @@ export default function Home({ onNavigate }) {
   };
 
   const handleBottomNavClick = (id) => {
-    if (id === "home") setActiveCategory(null);
-    else if (id === "credit-cards") setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
-    else if (id === "loans") setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
-    else if (id === "insurance") setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+    if (id === "home") navigate("/");
+    else if (id === "credit-cards") navigate("/cards");
+    else if (id === "loans") navigate("/loans");
+    else if (id === "insurance") navigate("/insurance");
     else if (id === "investment") setActiveCategory({ id: "investment", title: "Investment", titleKey: "home.investment", items: [] });
-    else if (id === "services") setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
-    else if (id === "travel-transit") setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: travelTransitData });
+    else if (id === "services") navigate("/services");
+    else if (id === "travel-transit") navigate("/travel-transit");
   };
 
   const handleItemClick = (item) => {
@@ -654,15 +1003,40 @@ export default function Home({ onNavigate }) {
 
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
-      setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+      if (location.pathname === "/cards") {
+        setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+      } else {
+        navigate("/cards");
+      }
     } else if (activeCategory?.parentId === "attractive-sections") {
-      setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
+      if (location.pathname === "/attractive-sections") {
+        setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
+      } else {
+        navigate("/attractive-sections");
+      }
     } else {
-      setActiveCategory(null);
+      navigate("/");
     }
   };
 
-  // If a category page is active, render it
+  if (activeCategory?.id === "fastag") {
+    return (
+      <>
+        <FastagPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
+        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
+      </>
+    );
+  }
+
+  if (activeCategory?.id === "flight-booking") {
+    return (
+      <>
+        <TravelBookingPage onBack={handleBack} C={C} isMobile={isMobile} breadcrumbs={getBreadcrumbs(activeCategory)} />
+        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="travel-transit" />}
+      </>
+    );
+  }
+
   if (activeCategory) {
     return (
       <>
@@ -746,6 +1120,11 @@ export default function Home({ onNavigate }) {
               const img = moneyTransferImages[imgKey] || toMobileImg;
               return (
                 <div key={idx} 
+                  onClick={() => {
+                    if (item.label === "FASTag") {
+                      navigate("/fastag");
+                    }
+                  }}
                   style={{ 
                     display: "flex", 
                     flexDirection: "row", 
@@ -807,7 +1186,7 @@ export default function Home({ onNavigate }) {
         <Section 
           title={t('sections.attractiveCards')} 
           viewAllLabel={t('home.seeAll', 'See All')}
-          onViewAll={() => setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories })}
+          onViewAll={() => navigate("/attractive-sections")}
           C={C}
         >
           <style>{`
@@ -889,7 +1268,7 @@ export default function Home({ onNavigate }) {
           <Section 
             title={t('sections.popularCards')} 
             viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
-            onViewAll={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+            onViewAll={() => navigate("/cards")}
             C={C}
           >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
@@ -932,7 +1311,7 @@ export default function Home({ onNavigate }) {
                     <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
                     <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
                     <button 
-                      onClick={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })}
+                      onClick={() => navigate("/cards")}
                       style={{
                         width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
                         padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
@@ -952,7 +1331,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
         <Section title={t('sections.popularBanks')} C={C}>
-          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => setActiveCategory({ id: "credit-cards", title: "Credit Cards", items: banksList })} onItemClick={handleItemClick} />
+          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => navigate("/cards")} onItemClick={handleItemClick} />
         </Section>
 
         {/* ── SECTION 5: Loans ── */}
@@ -1029,7 +1408,7 @@ export default function Home({ onNavigate }) {
               const img = travelTransitImages[imgKey] || flightImg;
               return (
                 <div key={idx} 
-                  onClick={() => handleBottomNavClick("travel-transit")}
+                  onClick={() => navigate("/flight-booking")}
                   style={{ 
                     display: "flex", 
                     flexDirection: "row", 

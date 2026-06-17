@@ -26,6 +26,14 @@ const AppRoutes = () => {
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/loans" element={<Home />} />
+        <Route path="/insurance" element={<Home />} />
+        <Route path="/cards" element={<Home />} />
+        <Route path="/fastag" element={<Home />} />
+        <Route path="/flight-booking" element={<Home />} />
+        <Route path="/attractive-sections" element={<Home />} />
+        <Route path="/travel-transit" element={<Home />} />
+        <Route path="/services" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<PartnerLogin />} />
         <Route path="/register" element={<PartnerRegister />} />
