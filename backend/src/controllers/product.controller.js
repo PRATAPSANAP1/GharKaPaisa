@@ -9,9 +9,16 @@ const listProducts = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { category, bank_id, is_active = 'true', search } = req.query;
 
-    let where = `WHERE p.is_active = $1`;
-    const values = [is_active === 'true'];
-    let idx = 2;
+    let where = '';
+    const values = [];
+    let idx = 1;
+
+    if (is_active === 'all') {
+      where = `WHERE 1=1`;
+    } else {
+      where = `WHERE p.is_active = $${idx++}`;
+      values.push(is_active === 'true');
+    }
 
     if (category) { where += ` AND p.category = $${idx++}`; values.push(category); }
     if (bank_id) { where += ` AND p.bank_id = $${idx++}`; values.push(bank_id); }

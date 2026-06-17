@@ -586,6 +586,65 @@ const migrate = async () => {
     logger.info('Super admin Pratap Sanap configuration verified');
   }
 
+  // ── Banners Table ─────────────────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS banners (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      title VARCHAR(255) NOT NULL,
+      subtitle VARCHAR(500),
+      btn_text VARCHAR(100),
+      image_url VARCHAR(500) NOT NULL,
+      display_order INT DEFAULT 0,
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  // Drop update trigger on banners if exists and recreate
+  await query(`DROP TRIGGER IF EXISTS set_updated_at ON banners`);
+  await query(`
+    CREATE TRIGGER set_updated_at BEFORE UPDATE ON banners
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at()
+  `);
+
+  // Seed initial banners if table is empty
+  const { rows: [{ count: bannerCount }] } = await query(`SELECT COUNT(*) FROM banners`);
+  if (parseInt(bannerCount) === 0) {
+    const initialBanners = [
+      ['Special Offer', 'Exclusive credit card and loan deals', 'View Offers', 'offerbanner.png', 1],
+      ['Lifetime Free Credit Cards', 'Zero Joining Fee • Zero Annual Fee', 'Explore Now', 'lifetimefree card.png', 2],
+      ['Personal Loans', 'Low Interest Rates • Quick Disbursal', 'Apply Now', 'loan.png', 3],
+      ['Business Loans', 'Flexible repayment options for growing businesses', 'Check Eligibility', 'loan.png', 4],
+      ['Insurance Plans', 'Comprehensive health, life and general insurance cover', 'Get Quotes', 'insurance.png', 5],
+      ['EMI Cards', 'Convert purchases to no-cost EMIs instantly', 'Get EMI Card', 'smart emi.png', 6],
+      ['New EMI Schemes', 'Convert your spends into easy EMIs', 'Explore EMI', 'emi.jpeg', 7],
+      ['HDFC Pixel Credit Cards', 'Customizable rewards on dining, shopping & entertainment', 'Explore Pixel Cards', 'hdfc pixel card.png', 8]
+    ];
+    for (const b of initialBanners) {
+      await query(`
+        INSERT INTO banners (title, subtitle, btn_text, image_url, display_order)
+        VALUES ($1, $2, $3, $4, $5)
+      `, b);
+    }
+    logger.info('Initial banners seeded successfully');
+  }
+
+  // ── System Settings Table ──────────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key VARCHAR(100) PRIMARY KEY,
+      value VARCHAR(255) NOT NULL
+    )
+  `);
+
+  // Seed default system setting if not exists
+  await query(`
+    INSERT INTO system_settings (key, value)
+    VALUES ('admin_privacy_mode', 'off')
+    ON CONFLICT (key) DO NOTHING
+  `);
+
   logger.info('✅ All migrations completed successfully');
   process.exit(0);
 };

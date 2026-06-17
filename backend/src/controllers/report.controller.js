@@ -112,4 +112,56 @@ const monthlyTrend = async (req, res, next) => {
   }
 };
 
-module.exports = { getOverview, applicationsByProduct, topPartners, monthlyTrend };
+const exportPayoutsReport = async (req, res, next) => {
+  try {
+    const { from_date, to_date, status = 'approved' } = req.query;
+
+    let sql = `
+      SELECT 
+        a.app_number,
+        a.status,
+        a.created_at as application_date,
+        a.loan_amount as applied_amount,
+        a.approved_amount,
+        a.commission_amount,
+        c.full_name as customer_name,
+        p.name as product_name,
+        b.name as bank_name,
+        ap.Partner_code,
+        ap.first_name || ' ' || ap.last_name as partner_name
+      FROM applications a
+      JOIN customers c ON c.id = a.customer_id
+      JOIN products p ON p.id = a.product_id
+      JOIN banks b ON b.id = p.bank_id
+      JOIN Partner_profiles ap ON ap.id = a.Partner_id
+      WHERE 1=1
+    `;
+    const values = [];
+    let idx = 1;
+
+    if (status === 'approved') {
+      sql += ` AND a.status IN ('approved', 'disbursed')`;
+    } else if (status !== 'all') {
+      sql += ` AND a.status = $${idx++}`;
+      values.push(status);
+    }
+
+    if (from_date) {
+      sql += ` AND a.created_at >= $${idx++}`;
+      values.push(from_date);
+    }
+    if (to_date) {
+      sql += ` AND a.created_at <= $${idx++}`;
+      values.push(to_date + ' 23:59:59');
+    }
+
+    sql += ` ORDER BY a.created_at DESC`;
+
+    const { rows } = await query(sql, values);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getOverview, applicationsByProduct, topPartners, monthlyTrend, exportPayoutsReport };

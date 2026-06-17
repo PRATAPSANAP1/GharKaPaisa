@@ -161,7 +161,25 @@ const listWithdrawals = async (req, res, next) => {
       `, [status, limit, offset]),
     ]);
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+
+    const processedRows = data.rows.map(row => {
+      if (shouldMask) {
+        return {
+          ...row,
+          first_name: 'Partner',
+          last_name: row.Partner_code,
+          mobile: '**********',
+          account_number: 'HIDDEN',
+          ifsc_code: 'HIDDEN'
+        };
+      }
+      return row;
+    });
+
+    return paginate(res, processedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }

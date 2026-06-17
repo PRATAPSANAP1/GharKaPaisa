@@ -10,6 +10,113 @@ export default function SuperAdminReports() {
   // Tabs: 'analytics' or 'commissions'
   const [activeTab, setActiveTab] = useState("analytics");
 
+  // Privacy Toggle & Export States
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
+  const [exportDates, setExportDates] = useState({
+    from_date: "",
+    to_date: ""
+  });
+  const [loadingExport, setLoadingExport] = useState(false);
+
+  const fetchPrivacySetting = async () => {
+    try {
+      const res = await api.get("/settings");
+      if (res.data?.success) {
+        setPrivacyMode(res.data.data.admin_privacy_mode === "on");
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings:", e);
+    }
+  };
+
+  const togglePrivacyMode = async () => {
+    setLoadingPrivacy(true);
+    const newValue = !privacyMode ? "on" : "off";
+    try {
+      const res = await api.post("/settings", { key: "admin_privacy_mode", value: newValue });
+      if (res.data?.success) {
+        setPrivacyMode(!privacyMode);
+        alert(`Admin Privacy Mode has been turned ${newValue === 'on' ? 'ON' : 'OFF'}.`);
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to update privacy setting.");
+    } finally {
+      setLoadingPrivacy(false);
+    }
+  };
+
+  const handleExportReport = async () => {
+    setLoadingExport(true);
+    try {
+      const res = await api.get("/reports/payouts-export", {
+        params: {
+          from_date: exportDates.from_date || undefined,
+          to_date: exportDates.to_date || undefined
+        }
+      });
+      if (res.data?.success) {
+        downloadCSV(res.data.data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to export payouts report.");
+    } finally {
+      setLoadingExport(false);
+    }
+  };
+
+  const downloadCSV = (data) => {
+    if (!data || data.length === 0) {
+      alert("No data available for the selected criteria.");
+      return;
+    }
+    const headers = [
+      "Application Number",
+      "Status",
+      "Application Date",
+      "Applied Amount",
+      "Approved Amount",
+      "Commission Amount",
+      "Customer Name",
+      "Product Name",
+      "Bank Name",
+      "Partner Code",
+      "Partner Name"
+    ];
+    
+    const csvRows = [
+      headers.join(","),
+      ...data.map(row => [
+        `"${row.app_number || ''}"`,
+        `"${row.status || ''}"`,
+        `"${row.application_date ? new Date(row.application_date).toISOString().split('T')[0] : ''}"`,
+        row.applied_amount || 0,
+        row.approved_amount || 0,
+        row.commission_amount || 0,
+        `"${(row.customer_name || '').replace(/"/g, '""')}"`,
+        `"${(row.product_name || '').replace(/"/g, '""')}"`,
+        `"${(row.bank_name || '').replace(/"/g, '""')}"`,
+        `"${row.Partner_code || ''}"`,
+        `"${(row.partner_name || '').replace(/"/g, '""')}"`
+      ].join(","))
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `payouts_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => {
+    fetchPrivacySetting();
+  }, []);
+
+
   // Analytics State
   const [stats, setStats] = useState(null);
   const [trends, setTrends] = useState([]);
@@ -168,6 +275,99 @@ export default function SuperAdminReports() {
             <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red }}>{analyticsErr}</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              {/* Controls Grid: Privacy Mode & Exporter */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
+                {/* Privacy Mode Control Card */}
+                <div style={{ ...S.card, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div>
+                    <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: "0 0 6px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Icons.profile size={18} color={privacyMode ? C.red : C.textLight} />
+                      Admin Privacy Mode
+                    </h3>
+                    <p style={{ fontSize: "12px", color: C.textLight, margin: 0, lineHeight: 1.4 }}>
+                      When ON, standard Admins only see the Partner Code. KYC files, bank accounts, name, email, and mobile are completely masked to protect partner details.
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px" }}>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: privacyMode ? C.red : C.green }}>
+                      Status: {privacyMode ? "Privacy Mode Active (ON)" : "Details Visible (OFF)"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={togglePrivacyMode}
+                      disabled={loadingPrivacy}
+                      style={{
+                        background: privacyMode ? C.red : C.teal,
+                        color: "#fff",
+                        border: "none",
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {loadingPrivacy ? "Updating..." : privacyMode ? "Turn OFF" : "Turn ON"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Report Exporter Control Card */}
+                <div style={{ ...S.card }}>
+                  <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: "0 0 12px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Icons.withdraw size={18} color={C.teal} />
+                    Export Approved Cards Report
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>From Date</label>
+                        <input
+                          type="date"
+                          style={{ ...S.input, padding: "6px 10px", fontSize: "12.5px" }}
+                          value={exportDates.from_date}
+                          onChange={(e) => setExportDates({ ...exportDates, from_date: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>To Date</label>
+                        <input
+                          type="date"
+                          style={{ ...S.input, padding: "6px 10px", fontSize: "12.5px" }}
+                          value={exportDates.to_date}
+                          onChange={(e) => setExportDates({ ...exportDates, to_date: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleExportReport}
+                      disabled={loadingExport}
+                      style={{
+                        background: C.teal,
+                        color: "#fff",
+                        border: "none",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        fontWeight: 800,
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        width: "100%",
+                        marginTop: "4px"
+                      }}
+                    >
+                      {loadingExport ? "Generating CSV..." : "Export CSV Report"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Counter Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
                 <div style={{ ...S.card }}>

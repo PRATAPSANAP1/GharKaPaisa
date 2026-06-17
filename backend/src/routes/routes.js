@@ -81,6 +81,7 @@ reportRouter.get('/overview', reportCtrl.getOverview);
 reportRouter.get('/applications-by-product', reportCtrl.applicationsByProduct);
 reportRouter.get('/top-Partners', reportCtrl.topPartners);
 reportRouter.get('/monthly-trend', reportCtrl.monthlyTrend);
+reportRouter.get('/payouts-export', reportCtrl.exportPayoutsReport);
 
 module.exports = {
   appRouter,

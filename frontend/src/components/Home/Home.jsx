@@ -778,9 +778,26 @@ export default function Home({ onNavigate }) {
   const [isPaused, setIsPaused] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
+  const [dynamicBanners, setDynamicBanners] = useState([]);
 
   const searchItem = useSearchStore(state => state.searchItem);
   const setSearchItem = useSearchStore(state => state.setSearchItem);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const url = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/v1/banners`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          setDynamicBanners(data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load banners from backend:", err);
+      }
+    };
+    fetchBanners();
+  }, []);
 
   useEffect(() => {
     const path = location.pathname;
@@ -925,8 +942,48 @@ export default function Home({ onNavigate }) {
   };
 
 
+  const localBannerMap = {
+    'lifetimefree card.png': ltfBanner,
+    'loan.png': loanBanner,
+    'insurance.png': insuranceBanner,
+    'smart emi.png': emiBanner,
+    'emi.jpeg': emiNewBanner,
+    'hdfc pixel card.png': hdfcBanner,
+    'offerbanner.png': offerBanner
+  };
+
+  const getBannerAction = (title, image_url) => {
+    const tLower = (title || "").toLowerCase();
+    const imgLower = (image_url || "").toLowerCase();
+    if (tLower.includes("pixel") || imgLower.includes("pixel")) {
+      return () => navigate("/credit-cards/hdfc-bank");
+    }
+    if (tLower.includes("lifetime") || tLower.includes("ltf") || imgLower.includes("lifetimefree")) {
+      return () => navigate("/credit-cards/lifetime-free-credit-cards-ltf");
+    }
+    if (tLower.includes("personal loan") || tLower.includes("business loan") || tLower.includes("loans") || imgLower.includes("loan")) {
+      return () => navigate("/loans");
+    }
+    if (tLower.includes("insurance") || imgLower.includes("insurance")) {
+      return () => navigate("/insurance");
+    }
+    if (tLower.includes("emi") || imgLower.includes("emi")) {
+      return () => navigate("/attractive-cards-loans/smart-emi-card");
+    }
+    if (tLower.includes("offer") || imgLower.includes("offer")) {
+      return () => navigate("/credit-cards");
+    }
+    return () => navigate("/credit-cards");
+  };
+
   // Auto rotate banner slides (height 320px)
-  const bannerSlides = [
+  const bannerSlides = dynamicBanners.length > 0 ? dynamicBanners.map(b => ({
+    title: b.title,
+    subtitle: b.subtitle,
+    btnText: b.btn_text || 'Apply Now',
+    bgImage: localBannerMap[b.image_url] || b.image_url,
+    action: getBannerAction(b.title, b.image_url)
+  })) : [
     { 
       title: t('home.banners.slideOffer.title', 'Special Offer'), 
       subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 

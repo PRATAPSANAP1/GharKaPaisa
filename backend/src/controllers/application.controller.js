@@ -189,7 +189,22 @@ const listApplications = async (req, res, next) => {
       `, [...values, limit, offset]),
     ]);
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+
+    const processedRows = data.rows.map(row => {
+      if (shouldMask) {
+        return {
+          ...row,
+          Partner_first_name: 'Partner',
+          Partner_last_name: row.Partner_code
+        };
+      }
+      return row;
+    });
+
+    return paginate(res, processedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }
@@ -221,6 +236,15 @@ const getApplication = async (req, res, next) => {
       if (!Partner || app.Partner_id !== Partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
       }
+    }
+
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+
+    if (shouldMask) {
+      app.Partner_first_name = 'Partner';
+      app.Partner_last_name = app.Partner_code;
     }
 
     return success(res, app);

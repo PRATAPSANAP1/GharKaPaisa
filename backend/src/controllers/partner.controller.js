@@ -31,11 +31,32 @@ const getProfile = async (req, res, next) => {
       }
     }
 
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+
+    if (shouldMask) {
+      Partner.first_name = 'Partner';
+      Partner.last_name = Partner.Partner_code;
+      Partner.email = 'masked@gharkapaisa.in';
+      Partner.mobile = '**********';
+      Partner.current_address = 'HIDDEN';
+      Partner.business_location = 'HIDDEN';
+      Partner.company_name = 'HIDDEN';
+      Partner.gst_number = 'HIDDEN';
+      Partner.bank_name = 'HIDDEN';
+      Partner.account_number = 'HIDDEN';
+      Partner.ifsc_code = 'HIDDEN';
+      Partner.account_holder_name = 'HIDDEN';
+    }
+
     const { rows: kyc } = await query(
       `SELECT doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
     );
 
-    return success(res, { ...Partner, kyc_documents: kyc });
+    const processedKyc = shouldMask ? [] : kyc;
+
+    return success(res, { ...Partner, kyc_documents: processedKyc });
   } catch (err) {
     next(err);
   }
@@ -178,6 +199,10 @@ const listPartners = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { status, kyc_status, search } = req.query;
 
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+
     let where = 'WHERE 1=1';
     const values = [];
     let idx = 1;
@@ -185,7 +210,11 @@ const listPartners = async (req, res, next) => {
     if (status) { where += ` AND u.status = $${idx++}`; values.push(status); }
     if (kyc_status) { where += ` AND ap.kyc_status = $${idx++}`; values.push(kyc_status); }
     if (search) {
-      where += ` AND (ap.first_name ILIKE $${idx} OR ap.last_name ILIKE $${idx} OR u.mobile ILIKE $${idx} OR ap.Partner_code ILIKE $${idx})`;
+      if (shouldMask) {
+        where += ` AND ap.Partner_code ILIKE $${idx}`;
+      } else {
+        where += ` AND (ap.first_name ILIKE $${idx} OR ap.last_name ILIKE $${idx} OR u.mobile ILIKE $${idx} OR ap.Partner_code ILIKE $${idx})`;
+      }
       values.push(`%${search}%`); idx++;
     }
 
@@ -202,7 +231,21 @@ const listPartners = async (req, res, next) => {
       query(dataQuery, [...values, limit, offset]),
     ]);
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const processedRows = data.rows.map(row => {
+      if (shouldMask) {
+        return {
+          ...row,
+          first_name: 'Partner',
+          last_name: row.Partner_code,
+          company_name: 'HIDDEN',
+          email: 'masked@gharkapaisa.in',
+          mobile: '**********'
+        };
+      }
+      return row;
+    });
+
+    return paginate(res, processedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }
