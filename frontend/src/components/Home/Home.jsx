@@ -1117,6 +1117,18 @@ export default function Home({ onNavigate }) {
         } else if (searchItem.target.id === "partner-profile") {
           navigate("/partner/profile");
         }
+      } else if (searchItem.type === "payment") {
+        if (searchItem.target.id === "fastag") {
+          navigate("/money-transfer/fastag");
+        } else {
+          navigate("/");
+        }
+      } else if (searchItem.type === "travel") {
+        if (searchItem.target.id === "flight-booking") {
+          navigate("/travel-transit/flight-booking");
+        } else {
+          navigate("/travel-transit");
+        }
       }
       setSearchItem(null); // Reset store
     }
