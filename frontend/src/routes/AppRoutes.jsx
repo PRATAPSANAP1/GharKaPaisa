@@ -16,6 +16,14 @@ import PartnerLogin from '../components/Partner/PartnerLogin';
 import PartnerRegister from '../components/Partner/PartnerRegister';
 import AdminLogin from '../pages/Admin/AdminLogin';
 import SuperAdminDashboard from '../pages/SuperAdmin/SuperAdminDashboard';
+import TermsAndConditions from '../pages/TermsAndConditions';
+import PrivacyPolicy from '../pages/PrivacyPolicy';
+
+// Admin Pages
+import AdminDashboard from '../pages/Admin/AdminDashboard';
+import ManagePartners from '../pages/Admin/ManagePartners';
+import ManageApplications from '../pages/Admin/ManageApplications';
+import ManageWithdrawals from '../pages/Admin/ManageWithdrawals';
 
 // Protected Pages (Placeholders for now)
 import PartnerDashboard from '../pages/Partner/PartnerDashboard';
@@ -42,6 +50,8 @@ const AppRoutes = () => {
         <Route path="/login" element={<PartnerLogin />} />
         <Route path="/register" element={<PartnerRegister />} />
         <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       </Route>
 
       {/* Partner Routes */}
@@ -74,8 +84,10 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<div className="p-4">Admin Dashboard</div>} />
-        <Route path="partners" element={<div className="p-4">Manage Partners</div>} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="partners" element={<ManagePartners />} />
+        <Route path="applications" element={<ManageApplications />} />
+        <Route path="withdrawals" element={<ManageWithdrawals />} />
       </Route>
 
       {/* SuperAdmin Routes */}

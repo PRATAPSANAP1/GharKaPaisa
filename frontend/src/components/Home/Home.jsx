@@ -1363,13 +1363,7 @@ export default function Home({ onNavigate }) {
                     boxSizing: "border-box",
                     border: `1px solid ${C.border}`
                   }}>
-                      style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        objectFit: "contain",
-                        filter: C.text === '#fff' ? 'brightness(1.2)' : 'none'
-                      }} 
-                    />
+                    {item.icon}
                   </div>
                   
                   {/* Right side Text & Arrow */}
