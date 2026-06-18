@@ -20,6 +20,7 @@ const PartnerLayout = () => {
         </div>
         <nav className="p-4 space-y-2">
           <a href="/partner/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Dashboard</a>
+          <a href="/partner/products" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Products & Leads</a>
           <a href="/partner/applications" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Applications</a>
           <a href="/partner/wallet" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Wallet</a>
           <a href="/partner/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Profile</a>

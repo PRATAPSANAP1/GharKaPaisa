@@ -486,7 +486,23 @@ const migrate = async () => {
     )
   `);
 
-  // ── Extra Indexes for Performance and Unique Constraints ──────────────────
+  // ── Leads ─────────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      partner_id    UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+      product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      customer_name VARCHAR(255) NOT NULL,
+      mobile        VARCHAR(15) NOT NULL,
+      status        VARCHAR(50) DEFAULT 'pending',
+      created_at    TIMESTAMPTZ DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_leads_product ON leads(product_id)`);
+
+
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_mobile ON customers(mobile)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_customers_pan ON customers(pan_number)`);
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_bank_name ON products(bank_id, name)`);
@@ -574,7 +590,7 @@ const migrate = async () => {
     BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
     $$ LANGUAGE plpgsql
   `);
-  const triggerTables = ['users', 'Partner_profiles', 'Partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests'];
+  const triggerTables = ['users', 'Partner_profiles', 'Partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests', 'leads'];
   for (const t of triggerTables) {
     await query(`DROP TRIGGER IF EXISTS set_updated_at ON ${t}`);
     await query(`
@@ -771,6 +787,60 @@ const migrate = async () => {
     }
     logger.info('Initial homepage CMS sections seeded successfully');
   }
+
+  // ── Services Catalog ────────────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS services_catalog (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      icon VARCHAR(255),
+      route VARCHAR(255) NOT NULL,
+      status VARCHAR(20) DEFAULT 'active',
+      display_order INTEGER DEFAULT 1,
+      clicks INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  const { rows: catalogCheck } = await query(`SELECT COUNT(*) FROM services_catalog`);
+  if (parseInt(catalogCheck[0].count) === 0) {
+    const initialServices = [
+      ['Recharge', '📱', '/recharge', 'active', 1],
+      ['Electricity', '⚡', '/electricity', 'active', 2],
+      ['Loan Repay', '💰', '/loan-repay', 'active', 3],
+      ['FASTag', '🚗', '/fastag', 'active', 4],
+      ['Bus', '🚍', '/travel-transit/bus-booking', 'active', 5],
+      ['Flight', '✈️', '/travel-transit/flight-booking', 'active', 6],
+      ['Train', '🎛️', '/travel-transit/train-booking', 'active', 7],
+      ['Hotel', '🏨', '/travel-transit/hotel-booking', 'active', 8]
+    ];
+    for (const s of initialServices) {
+      await query(`
+        INSERT INTO services_catalog (name, icon, route, status, display_order)
+        VALUES ($1, $2, $3, $4, $5)
+      `, s);
+    }
+    logger.info('Initial services catalog seeded successfully');
+  }
+
+  // ── Service Requests (Money Transfer & Payments) ─────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS service_requests (
+      id SERIAL PRIMARY KEY,
+      service_type VARCHAR(50) NOT NULL,
+      mobile VARCHAR(20),
+      operator VARCHAR(50),
+      consumer_number VARCHAR(100),
+      provider VARCHAR(100),
+      loan_number VARCHAR(100),
+      vehicle_number VARCHAR(100),
+      amount NUMERIC(10,2) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
 
   logger.info('✅ All migrations completed successfully');
   process.exit(0);

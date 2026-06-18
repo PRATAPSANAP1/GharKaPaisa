@@ -156,6 +156,139 @@ function Section({ title, viewAllLabel, onViewAll, C, children }) {
   );
 }
 
+// Helper to map UI labels/IDs to backend product categories
+const mapToCategoryKey = (item) => {
+  const label = item.label || "";
+  const id = item.id || "";
+  const clean = (label || id).toLowerCase();
+  
+  if (clean.includes("personal loan") || clean === "personal-loan") return "personal_loan";
+  if (clean.includes("home loan") || clean === "home-loan") return "home_loan";
+  if (clean.includes("business loan") || clean === "business-loan") return "business_loan";
+  if (clean.includes("instant loan") || clean === "instant-loan") return "instant_loan";
+  if (clean.includes("used car loan") || clean === "used-car-loan") return "used_car_loan";
+  if (clean.includes("education loan") || clean === "education-loan") return "education_loan";
+  
+  if (clean.includes("health insurance") || clean === "health-insurance") return "health_insurance";
+  if (clean.includes("life insurance") || clean === "life-insurance") return "life_insurance";
+  if (clean.includes("general insurance") || clean === "general-insurance") return "general_insurance";
+  
+  if (clean.includes("lifetime free cards") || clean === "ltf-cards") return "credit_card";
+  if (clean.includes("fd based") || clean.includes("fd backed") || clean === "secured-cards") return "fd_card";
+  if (clean.includes("co-brand") || clean === "upi-cards" || clean === "smart-emi") return "co_branded_card";
+  
+  return null;
+};
+
+// Dynamic Products List Component for dynamic category views
+function DynamicProductsList({ categoryKey, C, isMobile }) {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${baseUrl}/api/v1/products?category=${categoryKey}`);
+        const data = await res.json();
+        if (data && data.success) {
+          setProducts(data.data);
+        } else {
+          setError(data.message || "Failed to load products");
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Network error loading products.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [categoryKey]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
+        <div style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px", animation: "spin 1s linear infinite" }}></div>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        Loading matching products...
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div style={{ color: C.red, padding: "20px", textAlign: "center" }}>{error}</div>;
+  }
+
+  if (products.length === 0) {
+    return <div style={{ color: C.textLight, padding: "48px", textAlign: "center" }}>No products available under this category currently.</div>;
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px", marginTop: "16px" }}>
+      {products.map((prod) => (
+        <div key={prod.id} style={{
+          background: C.card,
+          borderRadius: "16px",
+          border: `1px solid ${C.border}`,
+          padding: "20px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+          transition: "all 0.25s ease",
+          color: C.text
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = C.teal; e.currentTarget.style.transform = "translateY(-2px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}
+        >
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, background: `${C.teal}15`, color: C.teal, padding: "3px 8px", borderRadius: "20px", textTransform: "uppercase" }}>
+                {prod.category.replace(/_/g, ' ')}
+              </span>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>
+                {prod.bank_code || "Partner Bank"}
+              </span>
+            </div>
+            <h4 style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: 800 }}>{prod.name}</h4>
+            <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: C.textLight, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {prod.description || "Get instant approval and flexible tenure."}
+            </p>
+          </div>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${C.border}60`, paddingTop: "12px", marginTop: "8px" }}>
+            <div>
+              <span style={{ fontSize: "10px", color: C.textLight, display: "block", textTransform: "uppercase", fontWeight: 700 }}>Commission</span>
+              <span style={{ fontSize: "18px", fontWeight: 800, color: C.green }}>₹{parseFloat(prod.commission_value).toLocaleString("en-IN")}</span>
+            </div>
+            <button
+              onClick={() => navigate(`/product/${prod.id}`)}
+              style={{
+                background: C.teal,
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 800,
+                cursor: "pointer",
+                boxShadow: `0 4px 10px ${C.teal}25`
+              }}
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── CategoryPage Component ──────────────────────────────────────────
 function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const isMobile = useIsMobile();
@@ -426,7 +559,10 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
         <BackRow />
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px" }}>
+        {category.type === "dynamic-products" ? (
+          <DynamicProductsList categoryKey={category.categoryKey} C={C} isMobile={isMobile} />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(140px, 1fr))", gap: "12px" }}>
           {category.items && category.items.length > 0 ? category.items.map((item, idx) => (
             <div key={idx}
               onClick={() => onItemClick && onItemClick(item)}
@@ -450,7 +586,8 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
           )) : (
             <div style={{ color: C.textLight, gridColumn: "1 / -1", textAlign: "center", padding: "40px" }}>{t('home.noItems', 'No items available in this category.')}</div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -780,8 +917,10 @@ export default function Home({ onNavigate }) {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
   const [dynamicBanners, setDynamicBanners] = useState([]);
+  const [services, setServices] = useState([]);
   const [settings, setSettings] = useState({});
   const [cmsSections, setCmsSections] = useState([]);
+  const [dynamicProducts, setDynamicProducts] = useState([]);
 
   const getSectionItems = (sectionKey, fallbackData) => {
     const cmsSection = cmsSections.find(s => s.key === sectionKey);
@@ -835,6 +974,29 @@ export default function Home({ onNavigate }) {
         }
       } catch (err) {
         console.warn("Failed to load CMS layout sections:", err);
+      }
+
+      // Fetch dynamic products for homepage lead generation
+      try {
+        const res = await fetch(`${baseUrl}/api/v1/products`);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          // Use up to 10 active products for the attractive ticker
+          setDynamicProducts(data.data.filter(p => p.is_active).slice(0, 10));
+        }
+      } catch (err) {
+        console.warn("Failed to load dynamic products:", err);
+      }
+      
+      // 5) Fetch active services
+      try {
+        const resServices = await fetch(`${baseUrl}/api/v1/service-catalog`);
+        const dataServices = await resServices.json();
+        if (dataServices?.success) {
+          setServices(dataServices.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load services:", err);
       }
     };
     fetchBannersSettingsAndCms();
@@ -935,6 +1097,21 @@ export default function Home({ onNavigate }) {
           items: cat.items
         });
       }
+      return;
+    }
+
+    // Parse /category/:categoryKey
+    const categoryMatch = path.match(/^\/category\/([^/]+)$/);
+    if (categoryMatch) {
+      const categoryKey = categoryMatch[1];
+      const categoryName = categoryKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      setActiveCategory({
+        id: `category-${categoryKey}`,
+        title: categoryName,
+        parentId: categoryKey.includes("loan") ? "loans" : (categoryKey.includes("insurance") ? "insurance" : "credit-cards"),
+        type: "dynamic-products",
+        categoryKey: categoryKey
+      });
       return;
     }
 
@@ -1267,7 +1444,7 @@ export default function Home({ onNavigate }) {
       handleAttractiveCategoryClick(attractiveCat);
       return;
     }
-    if (item.id.startsWith("cobrand-") || item.id.startsWith("fd-")) {
+    if (item.id && (item.id.startsWith("cobrand-") || item.id.startsWith("fd-"))) {
       const parts = item.id.split("-");
       const type = parts[0] === "cobrand" ? "co-brand" : "fd-based-cards";
       const bankId = parts[1];
@@ -1277,6 +1454,11 @@ export default function Home({ onNavigate }) {
     const bankItem = banksList.find(b => b.id === item.id);
     if (bankItem) {
       navigate(`/credit-cards/${bankItem.id}-bank`);
+      return;
+    }
+    const categoryKey = mapToCategoryKey(item);
+    if (categoryKey) {
+      navigate(`/category/${categoryKey}`);
       return;
     }
   };
@@ -1422,9 +1604,12 @@ export default function Home({ onNavigate }) {
               {getSectionItems("money_transfer", moneyTransfer).map((item, idx) => (
                 <div key={idx}
                   onClick={() => {
-                    if (item.label === "FASTag") {
-                      navigate("/money-transfer/fastag");
-                    }
+                    const id = item.id;
+                    if (id === "recharge" || id === "tomobile") navigate("/recharge");
+                    else if (id === "electricity") navigate("/electricity");
+                    else if (id === "loanrepay") navigate("/loan-repay");
+                    else if (id === "fastag") navigate("/fastag");
+                    else navigate("/money-transfer");
                   }}
                   style={{
                     display: "flex",
@@ -1569,9 +1754,9 @@ export default function Home({ onNavigate }) {
               }}
             >
               <div className={`attractive-ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
-                {[...getSectionItems("attractive_cards", attractiveCategories), ...getSectionItems("attractive_cards", attractiveCategories)].map((cat, idx) => (
-                  <div key={`${cat.id}-${idx}`} 
-                    onClick={() => handleAttractiveCategoryClick(cat)}
+                {dynamicProducts.length > 0 ? [...dynamicProducts, ...dynamicProducts].map((prod, idx) => (
+                  <div key={`prod-${prod.id}-${idx}`} 
+                    onClick={() => navigate(`/product/${prod.id}`)}
                     style={{
                       background: C.bgSecondary,
                       borderRadius: "20px",
@@ -1597,8 +1782,8 @@ export default function Home({ onNavigate }) {
                     {/* Image Header */}
                     <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
                       <img 
-                        src={attractiveImages[cat.id]} 
-                        alt={cat.label} 
+                        src={prod.image_url || attractiveImages['ltf-cards']} 
+                        alt={prod.name} 
                         style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
                       />
                     </div>
@@ -1606,14 +1791,14 @@ export default function Home({ onNavigate }) {
                     {/* Card Body */}
                     <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
                       <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
-                        {t('attractiveCards.' + cat.id, cat.label)}
+                        {prod.name}
                       </h3>
                       <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
                         {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
                       </div>
                     </div>
                   </div>
-                ))}
+                )) : null}
               </div>
             </div>
           </Section>
@@ -1696,7 +1881,11 @@ export default function Home({ onNavigate }) {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
               {((isMobile && getSectionItems("loans", loansData).length > 8) ? getSectionItems("loans", loansData).slice(0, 7) : getSectionItems("loans", loansData)).map((item, idx) => (
                 <div key={idx}
-                  onClick={() => handleBottomNavClick("loans")}
+                  onClick={() => {
+                    const key = mapToCategoryKey(item);
+                    if (key) navigate(`/category/${key}`);
+                    else handleBottomNavClick("loans");
+                  }}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     background: C.bgSecondary, padding: isMobile ? "10px 4px" : "16px 8px", borderRadius: "12px",
@@ -1740,7 +1929,11 @@ export default function Home({ onNavigate }) {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
               {getSectionItems("insurance", insuranceData).map((item, idx) => (
                 <div key={idx}
-                  onClick={() => handleBottomNavClick("insurance")}
+                  onClick={() => {
+                    const key = mapToCategoryKey(item);
+                    if (key) navigate(`/category/${key}`);
+                    else handleBottomNavClick("insurance");
+                  }}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     background: C.bgSecondary, padding: "16px 8px", borderRadius: "12px",
@@ -1764,7 +1957,11 @@ export default function Home({ onNavigate }) {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(8, 1fr)", gap: "10px" }}>
               {getSectionItems("recharge", servicesData).map((item, idx) => (
                 <div key={idx}
-                  onClick={() => handleBottomNavClick("services")}
+                  onClick={() => {
+                    const key = mapToCategoryKey(item);
+                    if (key) navigate(`/category/${key}`);
+                    else handleBottomNavClick("services");
+                  }}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     background: C.bgSecondary, padding: "14px 6px", borderRadius: "12px",

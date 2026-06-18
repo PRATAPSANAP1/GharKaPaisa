@@ -76,6 +76,85 @@ const submitApplication = async (req, res, next) => {
   }
 };
 
+// POST /applications/public — Customer submits application from homepage
+const submitPublicApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const { product_id, customer, loan_amount, notes, partner_code } = req.body;
+
+    // Validate product
+    const { rows: [product] } = await client.query(
+      `SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1 AND p.is_active = true`,
+      [product_id]
+    );
+    if (!product) return error(res, 'Product not found or inactive', 404);
+
+    // Get Partner ID (either from partner_code or default first partner for direct leads)
+    let partnerId;
+    if (partner_code) {
+      const { rows: [partner] } = await client.query(`SELECT id FROM Partner_profiles WHERE Partner_code = $1`, [partner_code]);
+      if (partner) partnerId = partner.id;
+    }
+    if (!partnerId) {
+      const { rows: [defaultPartner] } = await client.query(`SELECT id FROM Partner_profiles LIMIT 1`);
+      if (!defaultPartner) {
+        return error(res, 'System cannot accept public leads yet as no Partner profiles exist to route to.', 500);
+      }
+      partnerId = defaultPartner.id;
+    }
+
+    // System Admin User ID for created_by
+    const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='super_admin' LIMIT 1`);
+    const sysUserId = sysUser.id;
+
+    // Upsert customer
+    let customerId;
+    const { rows: [existingCust] } = await client.query(
+      `SELECT id FROM customers WHERE mobile = $1`, [customer.mobile]
+    );
+    
+    if (existingCust) {
+      customerId = existingCust.id;
+      // Update customer info
+      await client.query(`
+        UPDATE customers SET full_name=$1, email=$2, city=$3, updated_at=NOW() WHERE id=$4
+      `, [customer.full_name, customer.email, customer.city, customerId]);
+    } else {
+      const { rows: [newCust] } = await client.query(`
+        INSERT INTO customers (full_name, mobile, email, city, created_by)
+        VALUES ($1,$2,$3,$4,$5) RETURNING id
+      `, [customer.full_name, customer.mobile, customer.email, customer.city, sysUserId]);
+      customerId = newCust.id;
+    }
+
+    // Calculate commission
+    const commission = await calculatePartnerCommission(product_id, partnerId, loan_amount);
+    const appNumber = generateAppNumber();
+
+    // Create application
+    const { rows: [app] } = await client.query(`
+      INSERT INTO applications
+        (app_number, customer_id, product_id, Partner_id, submitted_by, loan_amount, commission_amount, notes,
+         status_history)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$9::text)))
+      RETURNING id, app_number
+    `, [appNumber, customerId, product_id, partnerId, sysUserId, loan_amount, commission, notes, sysUserId.toString()]);
+
+    await client.query('COMMIT');
+    
+    logger.info(`Public application ${appNumber} submitted routing to Partner ${partnerId}`);
+    return created(res, { application_id: app.id, app_number: app.app_number, commission }, 'Application submitted successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 // PATCH /applications/:id/status (Admin/Employee updates status)
 const updateStatus = async (req, res, next) => {
   const client = await getClient();
@@ -314,4 +393,4 @@ const uploadApplicationDoc = async (req, res, next) => {
   }
 };
 
-module.exports = { submitApplication, updateStatus, listApplications, getApplication, uploadApplicationDoc };
+module.exports = { submitApplication, submitPublicApplication, updateStatus, listApplications, getApplication, uploadApplicationDoc };

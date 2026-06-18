@@ -14,9 +14,9 @@ router.use(jwtAuth);
 // Get all banners (Admin / SuperAdmin)
 router.get('/all', roleCheck('admin', 'super_admin'), ctrl.listAllBanners);
 
-// CRUD operations (SuperAdmin only)
-router.post('/', roleCheck('super_admin'), upload.single('image'), ctrl.createBanner);
-router.put('/:id', roleCheck('super_admin'), upload.single('image'), ctrl.updateBanner);
-router.delete('/:id', roleCheck('super_admin'), ctrl.deleteBanner);
+// CRUD operations (Admin / SuperAdmin)
+router.post('/', roleCheck('admin', 'super_admin'), upload.single('image'), ctrl.createBanner);
+router.put('/:id', roleCheck('admin', 'super_admin'), upload.single('image'), ctrl.updateBanner);
+router.delete('/:id', roleCheck('admin', 'super_admin'), ctrl.deleteBanner);
 
 module.exports = router;

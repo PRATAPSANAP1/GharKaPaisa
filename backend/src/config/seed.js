@@ -44,6 +44,7 @@ const seed = async () => {
   // Products
   const PRODUCTS = [
     // Credit Cards
+    { bank: 'HDFC', name: 'HDFC Pixel Card', category: 'credit_card', commission: 1200, features: ['Customizable rewards','Digital first card'] },
     { bank: 'HDFC', name: 'HDFC Millennia Credit Card', category: 'credit_card', commission: 1200, features: ['5% cashback','Lounge access','Zero forex markup'] },
     { bank: 'HDFC', name: 'HDFC Regalia Gold', category: 'credit_card', commission: 1800, features: ['Premium rewards','Golf access','Travel insurance'] },
     { bank: 'SBI', name: 'SBI SimplyCLICK', category: 'credit_card', commission: 950, features: ['10x rewards online','Amazon voucher','Fuel surcharge waiver'] },

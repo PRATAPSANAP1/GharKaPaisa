@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../Partner/ThemeContext";
 import { 
   FaArrowLeft, FaGift, FaShieldAlt, FaClock, FaSearch, 
@@ -296,6 +297,39 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  // Local products mapping state
+  const [dbProducts, setDbProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchDbProducts = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${baseUrl}/api/v1/products?limit=100`);
+        const data = await res.json();
+        if (data && data.success) {
+          setDbProducts(data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load products for mapping in HDFCCardsPage:", err);
+      }
+    };
+    fetchDbProducts();
+  }, []);
+
+  const handleApplyClick = (card) => {
+    // Attempt to match card.name to db product name
+    const match = dbProducts.find(p => 
+      p.name.toLowerCase().includes(card.name.toLowerCase()) || 
+      card.name.toLowerCase().includes(p.name.toLowerCase())
+    );
+    if (match) {
+      navigate(`/product/${match.id}`);
+    } else {
+      navigate(`/category/credit_card`);
+    }
+  };
 
   // Interaction State elements
   const [searchQuery, setSearchQuery] = useState("");
@@ -413,7 +447,11 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               {translatedName}
             </h3>
 
-            <button className="mt-3 bg-[#003B8F] text-white py-1.5 px-4 rounded-lg hover:bg-[#00296B]" style={{ border: "none", cursor: "pointer", display: "inline-block", fontSize: "12px", fontWeight: 700 }}>
+            <button 
+              onClick={() => handleApplyClick({ id, name })}
+              className="mt-3 bg-[#003B8F] text-white py-1.5 px-4 rounded-lg hover:bg-[#00296B]" 
+              style={{ border: "none", cursor: "pointer", display: "inline-block", fontSize: "12px", fontWeight: 700 }}
+            >
               {t('popularCardsList.applyNow', 'Apply Now')}
             </button>
           </div>
@@ -1017,7 +1055,11 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 Compare
               </button>
               <button 
-                onClick={() => setSelectedCard(null)}
+                onClick={() => {
+                  const cardToApply = selectedCard;
+                  setSelectedCard(null);
+                  handleApplyClick(cardToApply);
+                }}
                 style={{
                   flex: 2,
                   background: "#003B8F",

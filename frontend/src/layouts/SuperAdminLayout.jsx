@@ -1,13 +1,18 @@
-import React from 'react';
-import { Outlet, useNavigate, NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useTheme } from '../components/Partner/ThemeContext';
+import { ThemeToggle } from '../components/Partner/ThemeContext';
 import { Icons } from '../components/Partner/PartnerIcons';
+import logo from '../logo.png';
+import '../components/Navbar.css';
 
 const SuperAdminLayout = () => {
   const { C } = useTheme();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -15,49 +20,56 @@ const SuperAdminLayout = () => {
   };
 
   const navItems = [
-    { path: '/superadmin/dashboard', label: 'Admins Directory', icon: <Icons.profile size={18} /> },
-    { path: '/superadmin/banks', label: 'Lending Partners', icon: <Icons.wallet size={18} /> },
-    { path: '/superadmin/banners', label: 'Manage Banners', icon: <Icons.gift size={18} /> },
-    { path: '/superadmin/products', label: 'Manage Products', icon: <Icons.investment size={18} /> },
-    { path: '/superadmin/sections', label: 'Homepage CMS', icon: <Icons.profile size={18} /> },
-    { path: '/superadmin/services', label: 'Services API Settings', icon: <Icons.clock size={18} /> },
-    { path: '/superadmin/reports', label: 'System Reports', icon: <Icons.trending size={18} /> },
-    { path: '/superadmin/audit-logs', label: 'Audit Logs', icon: <Icons.clock size={18} /> },
+    { path: '/superadmin/dashboard', label: 'Admins', icon: <Icons.profile size={16} /> },
+    { path: '/superadmin/leads', label: 'Leads', icon: <Icons.trending size={16} /> },
+    { path: '/superadmin/banks', label: 'Lending Partners', icon: <Icons.wallet size={16} /> },
+    { path: '/superadmin/products', label: 'Products', icon: <Icons.investment size={16} /> },
+    { path: '/superadmin/sections', label: 'CMS', icon: <Icons.profile size={16} /> },
+    { path: '/superadmin/services', label: 'Services API', icon: <Icons.clock size={16} /> },
+    { path: '/superadmin/reports', label: 'Reports', icon: <Icons.trending size={16} /> }
   ];
 
+  const toggleLink = () => {
+    const next = !menuOpen;
+    setMenuOpen(next);
+    document.body.classList.toggle('no-scroll', next);
+  };
+
+  useEffect(() => {
+    // Close menu when route changes
+    setMenuOpen(false);
+    document.body.classList.remove('no-scroll');
+  }, [location.pathname]);
+
   return (
-    <div style={{ display: 'flex', height: '100vh', background: C.bg, overflow: 'hidden' }}>
-      {/* Sidebar - Desktop */}
-      <aside style={{
-        width: '260px',
-        background: C.sidebar,
-        color: C.sidebarText,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: `1px solid ${C.border}30`,
-        flexShrink: 0,
-      }} className="hidden md:flex">
-        <div style={{ padding: '24px 20px', borderBottom: `1px solid ${C.border}20` }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.5px', margin: 0 }}>GKP SuperAdmin</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: C.bg, overflow: 'hidden' }}>
+      
+      {/* Overlay for mobile drawer */}
+      <div className={`overlay ${menuOpen ? 'active' : ''}`} onClick={toggleLink} />
+
+      {/* Mobile Side Drawer (Matches Home Navbar Drawer) */}
+      <div className={`side-drawer ${menuOpen ? 'show1' : ''}`} style={{ background: C.bg }}>
+        <button className="close-btn" onClick={toggleLink} style={{ filter: C.text === '#fff' ? 'invert(1)' : 'none' }}>
+          <span></span><span></span><span></span>
+        </button>
+        
+        <div style={{ padding: "20px 0", borderBottom: `1px solid ${C.border}`, marginBottom: "10px", display: "flex", alignItems: "center", gap: "12px", justifyContent: "center" }}>
+          <img src={logo} alt="logo" style={{ height: "30px", width: "auto" }} />
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Super Admin</h2>
         </div>
-        <nav style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={toggleLink}
               style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.65)',
-                background: isActive ? `${C.teal}35` : 'transparent',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                border: isActive ? `1px solid ${C.teal}40` : '1px solid transparent',
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+                color: isActive ? C.text : C.textLight,
+                background: isActive ? `${C.teal}15` : 'transparent',
+                textDecoration: 'none', transition: 'all 0.2s',
               })}
             >
               {item.icon}
@@ -65,85 +77,80 @@ const SuperAdminLayout = () => {
             </NavLink>
           ))}
         </nav>
-      </aside>
+
+        <div className="mobile-widgets" style={{ marginTop: "24px", borderTop: `1px solid ${C.border}`, paddingTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: C.text, fontSize: "14px", fontWeight: 600 }}>Theme</span>
+            <ThemeToggle />
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: `${C.red}10`, color: C.red, border: 'none', borderRadius: '8px',
+              padding: '12px 16px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+              marginTop: "20px"
+            }}
+          >
+            <Icons.logout size={16} /> Log Out
+          </button>
+        </div>
+      </div>
+
+      {/* Top Navbar (Matches Home Navbar) */}
+      <nav className="navbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px", flex: "0 0 auto" }}>
+          <button className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink} style={{ margin: 0, filter: C.text === '#fff' ? 'invert(1)' : 'none' }}>
+            <span></span><span></span><span></span>
+          </button>
+          <div onClick={() => navigate('/superadmin')} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }}>
+            <img src={logo} alt="logo" className="logo" />
+            <h1 style={{ color: C.text, margin: 0, fontSize: "20px", fontWeight: "bold" }}>GKP Admin</h1>
+          </div>
+        </div>
+
+        {/* Desktop Links Container */}
+        <div className="hidden lg:flex" style={{ flex: "1 1 auto", margin: "0 20px", justifyContent: "center", gap: "12px" }}>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+                borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                color: isActive ? C.teal : C.text,
+                background: isActive ? `${C.teal}15` : 'transparent',
+                textDecoration: 'none', transition: 'all 0.2s',
+              })}
+            >
+              {item.icon}
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "16px", flex: "0 0 auto", justifyContent: "flex-end" }}>
+          <div className="hidden md:flex">
+            <ThemeToggle />
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', background: `${C.red}10`, color: C.red,
+              border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', transition: 'background 0.2s',
+            }}
+          >
+            <Icons.logout size={14} /> <span className="hidden sm:inline">Log Out</span>
+          </button>
+        </div>
+      </nav>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <header style={{
-          background: C.card,
-          borderBottom: `1px solid ${C.border}`,
-          padding: '16px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
-        }}>
-          {/* Logo / Header Title for Mobile */}
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.text }} className="md:hidden">
-            GKP SuperAdmin
-          </h2>
-          <div className="hidden md:block"></div> {/* Spacer */}
+      <main style={{ flex: 1, overflowY: 'auto', padding: '24px', boxSizing: 'border-box', background: C.bg }}>
+        <Outlet />
+      </main>
 
-          {/* User Status / Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              onClick={handleLogout}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: `${C.red}10`,
-                color: C.red,
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}
-            >
-              <Icons.logout size={14} /> Log Out
-            </button>
-          </div>
-        </header>
-
-        {/* Dynamic Inner Page Content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px', boxSizing: 'border-box' }}>
-          <Outlet />
-        </main>
-
-        {/* Mobile Bottom Navigation Bar */}
-        <nav style={{
-          display: 'flex',
-          justifyContent: 'space-around',
-          background: C.card,
-          borderTop: `1px solid ${C.border}`,
-          padding: '8px 0',
-          boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
-        }} className="md:hidden">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={({ isActive }) => ({
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                fontWeight: 700,
-                color: isActive ? C.teal : C.textLight,
-                textDecoration: 'none',
-              })}
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
     </div>
   );
 };

@@ -17,13 +17,26 @@ import PartnerRegister from '../components/Partner/PartnerRegister';
 import TermsAndConditions from '../pages/TermsAndConditions';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 
+// Services Pages
+import MoneyTransfer from '../pages/Services/MoneyTransfer';
+import Recharge from '../pages/Services/Recharge';
+import Electricity from '../pages/Services/Electricity';
+import LoanRepay from '../pages/Services/LoanRepay';
+import Fastag from '../pages/Services/Fastag';
+import ComingSoon from '../pages/Services/ComingSoon';
+
+// Product Lead Gen
+import ProductDetails from '../pages/Product/ProductDetails';
+import ApplyForm from '../pages/Product/ApplyForm';
+
 // Structured Folder Imports
 import { 
   AdminDashboard, 
   AdminLogin, 
   ManageApplications, 
   ManagePartners, 
-  ManageWithdrawals 
+  ManageWithdrawals,
+  ManageLeads
 } from '../pages/Admin';
 
 import { 
@@ -41,7 +54,8 @@ import {
   PartnerDashboard, 
   PartnerApplications, 
   PartnerWallet, 
-  PartnerProfile 
+  PartnerProfile,
+  PartnerProducts
 } from '../pages/Partner';
 
 const AppRoutes = () => {
@@ -62,12 +76,29 @@ const AppRoutes = () => {
         <Route path="/attractive-cards-loans/:catParam" element={<Home />} />
         <Route path="/travel-transit" element={<Home />} />
         <Route path="/services" element={<Home />} />
+        <Route path="/category/:categoryKey" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<PartnerLogin />} />
         <Route path="/register" element={<PartnerRegister />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+
+        {/* Services Routes */}
+        <Route path="/money-transfer" element={<MoneyTransfer />} />
+        <Route path="/recharge" element={<Recharge />} />
+        <Route path="/electricity" element={<Electricity />} />
+        <Route path="/loan-repay" element={<LoanRepay />} />
+        <Route path="/fastag" element={<Fastag />} />
+        
+        {/* Travel Bookings - mapped to Coming Soon for now */}
+        <Route path="/travel-transit/bus-booking" element={<ComingSoon />} />
+        <Route path="/travel-transit/train-booking" element={<ComingSoon />} />
+        <Route path="/travel-transit/hotel-booking" element={<ComingSoon />} />
+
+        {/* Product Lead Generation */}
+        <Route path="/product/:id" element={<ProductDetails />} />
+        <Route path="/product/:id/apply" element={<ApplyForm />} />
       </Route>
 
       {/* Partner Routes */}
@@ -86,6 +117,7 @@ const AppRoutes = () => {
         <Route path="applications" element={<PartnerApplications />} />
         <Route path="wallet" element={<PartnerWallet />} />
         <Route path="profile" element={<PartnerProfile />} />
+        <Route path="products" element={<PartnerProducts />} />
       </Route>
 
       {/* Admin Routes */}
@@ -103,7 +135,13 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="partners" element={<ManagePartners />} />
         <Route path="applications" element={<ManageApplications />} />
+        <Route path="leads" element={<ManageLeads />} />
         <Route path="withdrawals" element={<ManageWithdrawals />} />
+        <Route path="banners" element={<ManageBanners />} />
+        <Route path="products" element={<ManageProducts />} />
+        <Route path="banks" element={<ManageBanks />} />
+        <Route path="sections" element={<ManageSections />} />
+        <Route path="services" element={<ManageServices />} />
       </Route>
 
       {/* SuperAdmin Routes */}
@@ -121,6 +159,7 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="reports" element={<SuperAdminReports />} />
         <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="leads" element={<ManageLeads />} />
         <Route path="banners" element={<ManageBanners />} />
         <Route path="products" element={<ManageProducts />} />
         <Route path="banks" element={<ManageBanks />} />

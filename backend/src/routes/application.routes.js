@@ -5,6 +5,9 @@ const { authenticate, syncUser, authorize, requireApprovedPartner } = require('.
 const { upload } = require('../services/s3.service');
 const { applicationRules, validate } = require('../middleware/validation.middleware');
 
+// Public route for homepage lead generation
+router.post('/public', applicationRules, validate, appCtrl.submitPublicApplication);
+
 router.use(authenticate, syncUser);
 
 router.get('/', appCtrl.listApplications);

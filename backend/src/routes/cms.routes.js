@@ -9,8 +9,8 @@ router.get('/', ctrl.listActiveSections);
 
 // Protected routes (Admin / Super Admin only)
 router.get('/all', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.listAllSections);
-router.post('/', jwtAuth, roleCheck('super_admin'), ctrl.createSection);
+router.post('/', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.createSection);
 router.put('/:key', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.updateSection);
-router.delete('/:key', jwtAuth, roleCheck('super_admin'), ctrl.deleteSection);
+router.delete('/:key', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.deleteSection);
 
 module.exports = router;
