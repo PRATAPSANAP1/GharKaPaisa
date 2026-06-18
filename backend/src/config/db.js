@@ -3,11 +3,9 @@ const logger = require('../utils/logger');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const sslConfig = isProduction
-  ? { rejectUnauthorized: true }
-  : process.env.DB_SSL === 'true'
-    ? { rejectUnauthorized: false }
-    : false;
+const sslConfig = (isProduction || process.env.DB_SSL === 'true')
+  ? { rejectUnauthorized: false }
+  : false;
 
 const poolOptions = process.env.DATABASE_URL
   ? {
