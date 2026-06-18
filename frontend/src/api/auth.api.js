@@ -4,7 +4,7 @@
  * ✔ Backend handles: Profile storage (PostgreSQL), session management
  * ✔ Replaced Firebase with custom JWT authentication.
  */
-import api, { saveSession, clearSession } from './api';
+import api, { saveSession, clearSession, setAccessToken } from './api';
 
 // ── Profile cache ──────────────────────────────────────────────────────────
 let cachedUser    = null;
@@ -69,6 +69,9 @@ export async function verifyOtpLogin(mobile, otp) {
 export async function loginWithPassword(email, password) {
   try {
     const res = await api.post('/auth/login', { identity: email, password });
+    if (res.data && res.data.token) {
+      setAccessToken(res.data.token);
+    }
     return { success: true, idToken: res.data.token };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid credentials.');
@@ -79,6 +82,9 @@ export async function loginWithPassword(email, password) {
 export async function loginWithOtp(identity, otp) {
   try {
     const res = await api.post('/auth/login', { identity, otp });
+    if (res.data && res.data.token) {
+      setAccessToken(res.data.token);
+    }
     return { success: true, idToken: res.data.token };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP or credentials.');
