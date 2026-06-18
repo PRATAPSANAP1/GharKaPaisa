@@ -31,7 +31,10 @@ import {
   SuperAdminReports, 
   AuditLogs, 
   ManageBanners, 
-  ManageProducts 
+  ManageProducts,
+  ManageBanks,
+  ManageSections,
+  ManageServices
 } from '../pages/SuperAdmin';
 
 import { 
@@ -120,6 +123,9 @@ const AppRoutes = () => {
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="banners" element={<ManageBanners />} />
         <Route path="products" element={<ManageProducts />} />
+        <Route path="banks" element={<ManageBanks />} />
+        <Route path="sections" element={<ManageSections />} />
+        <Route path="services" element={<ManageServices />} />
       </Route>
 
       {/* Fallback */}

@@ -247,6 +247,10 @@ const migrate = async () => {
     )
   `);
 
+  await query(`
+    ALTER TABLE banks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'
+  `);
+
   // ── Products ──────────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS products (

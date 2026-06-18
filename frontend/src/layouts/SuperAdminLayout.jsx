@@ -16,8 +16,11 @@ const SuperAdminLayout = () => {
 
   const navItems = [
     { path: '/superadmin/dashboard', label: 'Admins Directory', icon: <Icons.profile size={18} /> },
+    { path: '/superadmin/banks', label: 'Lending Partners', icon: <Icons.wallet size={18} /> },
     { path: '/superadmin/banners', label: 'Manage Banners', icon: <Icons.gift size={18} /> },
     { path: '/superadmin/products', label: 'Manage Products', icon: <Icons.investment size={18} /> },
+    { path: '/superadmin/sections', label: 'Homepage CMS', icon: <Icons.profile size={18} /> },
+    { path: '/superadmin/services', label: 'Services API Settings', icon: <Icons.clock size={18} /> },
     { path: '/superadmin/reports', label: 'System Reports', icon: <Icons.trending size={18} /> },
     { path: '/superadmin/audit-logs', label: 'Audit Logs', icon: <Icons.clock size={18} /> },
   ];
