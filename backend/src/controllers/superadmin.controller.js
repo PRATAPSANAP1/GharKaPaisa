@@ -66,7 +66,7 @@ const createAdmin = async (req, res, next) => {
     logger.info(`Super admin ${req.user.email} created new Admin user: ${email}`);
 
     // Record the action in audit logs
-    await logAction(req.user.id, 'CREATE_ADMIN', dbUser.id, { email, role: 'admin' });
+    await logAction(req, 'CREATE_ADMIN', dbUser.id, { email, role: 'admin' });
 
     return created(res, {
       userId: dbUser.id,
@@ -144,7 +144,7 @@ const blockUser = async (req, res, next) => {
     // 3. Removed Firebase token revocation
 
     // 4. Log to audit logs
-    await logAction(req.user.id, actionName, targetUser.id, { email: targetUser.email, role: targetUser.role });
+    await logAction(req, actionName, targetUser.id, { email: targetUser.email, role: targetUser.role });
 
     return success(res, {}, `User status updated to ${newStatus} successfully.`);
   } catch (err) {

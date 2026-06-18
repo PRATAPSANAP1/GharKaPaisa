@@ -40,7 +40,7 @@ const getTransactions = async (req, res, next) => {
     const values = [PartnerId];
     let idx = 2;
 
-    if (type) { where += ` AND wt.txn_type = $${idx++}`; values.push(type); }
+    if (type) { where += ` AND wt.type = $${idx++}`; values.push(type); }
     if (status) { where += ` AND wt.status = $${idx++}`; values.push(status); }
     if (from_date) { where += ` AND wt.created_at >= $${idx++}`; values.push(from_date); }
     if (to_date) { where += ` AND wt.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
@@ -194,7 +194,7 @@ const processWithdrawalRequest = async (req, res, next) => {
 
     // Log the withdrawal processing action
     const actionName = approved ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL';
-    await logAction(req.user.id, actionName, id, { utr_number, rejection_reason, admin_note });
+    await logAction(req, actionName, id, { utr_number, rejection_reason, admin_note });
 
     return success(res, {}, `Withdrawal ${approved ? 'approved' : 'rejected'}`);
   } catch (err) {
@@ -246,7 +246,7 @@ const adminAdjustWalletController = async (req, res, next) => {
     const txn = await adminAdjustWallet(partner_id, parsedAmount, txn_type, description || 'Manual admin adjustment', req.user.id);
     
     // Log manual adjustment to audit logs
-    await logAction(req.user.id, 'MANUAL_WALLET_ADJUSTMENT', partner_id, { amount: parsedAmount, txn_type, description });
+    await logAction(req, 'MANUAL_WALLET_ADJUSTMENT', partner_id, { amount: parsedAmount, txn_type, description });
 
     return success(res, { transaction_id: txn.id }, `Wallet successfully adjusted by ₹${parsedAmount} (${txn_type})`);
   } catch (err) {
@@ -262,7 +262,7 @@ const approveWithdrawalController = async (req, res, next) => {
     if (!utr_number) return error(res, 'UTR number is required to approve withdrawal');
 
     await processWithdrawal(id, true, req.user.id, utr_number, null, admin_note);
-    await logAction(req.user.id, 'APPROVE_WITHDRAWAL', id, { utr_number, admin_note });
+    await logAction(req, 'APPROVE_WITHDRAWAL', id, { utr_number, admin_note });
 
     return success(res, {}, 'Withdrawal request successfully approved and processed');
   } catch (err) {
@@ -278,7 +278,7 @@ const rejectWithdrawalController = async (req, res, next) => {
     if (!rejection_reason) return error(res, 'Rejection reason is required to reject withdrawal');
 
     await processWithdrawal(id, false, req.user.id, null, rejection_reason, admin_note);
-    await logAction(req.user.id, 'REJECT_WITHDRAWAL', id, { rejection_reason, admin_note });
+    await logAction(req, 'REJECT_WITHDRAWAL', id, { rejection_reason, admin_note });
 
     return success(res, {}, 'Withdrawal request successfully rejected');
   } catch (err) {

@@ -16,7 +16,7 @@ const listProducts = async (req, res, next) => {
     if (is_active === 'all') {
       where = `WHERE 1=1`;
     } else {
-      where = `WHERE p.is_active = $${idx++}`;
+      where = `WHERE p.is_active = $${idx++} AND b.is_active = true AND b.status = 'Active'`;
       values.push(is_active === 'true');
     }
 
@@ -70,7 +70,7 @@ const createProduct = async (req, res, next) => {
     `, [bank_id, name, category, description, JSON.stringify(features || []), JSON.stringify(eligibility || {}), commission_type || 'fixed', commission_value, min_age, max_age, min_income, display_order || 0]);
 
     // Log the product creation
-    await logAction(req.user.id, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
+    await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
 
     return created(res, { product_id: p.id }, 'Product created');
   } catch (err) {
@@ -116,7 +116,7 @@ const updateProduct = async (req, res, next) => {
     `, [name, description, features ? JSON.stringify(features) : null, eligibility ? JSON.stringify(eligibility) : null, commission_type, commission_value, is_active, display_order, req.params.id]);
 
     // Log product update
-    await logAction(req.user.id, 'UPDATE_PRODUCT', req.params.id, { name, commission_value, is_active });
+    await logAction(req, 'UPDATE_PRODUCT', req.params.id, { name, commission_value, is_active });
 
     return success(res, {}, 'Product updated');
   } catch (err) {
@@ -129,12 +129,12 @@ const getProductsByCategory = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products WHERE is_active = true`),
+      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'`),
       query(`
         SELECT p.id, p.name, p.category, p.commission_type, p.commission_value, p.features, p.eligibility,
           b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true
+        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'
         ORDER BY p.category, p.display_order, p.commission_value DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
@@ -179,7 +179,7 @@ const setCommission = async (req, res, next) => {
     `, [product_id, Partner_id || null, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
 
     // Log setting of commission rule
-    await logAction(req.user.id, 'SET_COMMISSION_RULE', product_id, { Partner_id, commission_type, commission_value });
+    await logAction(req, 'SET_COMMISSION_RULE', product_id, { Partner_id, commission_type, commission_value });
 
     return created(res, {}, 'Commission structure set');
   } catch (err) {
@@ -202,11 +202,11 @@ const getCards = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('credit_card', 'co_branded_card', 'fd_card')`),
+      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
+        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
         ORDER BY p.display_order ASC, p.commission_value DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
@@ -222,11 +222,11 @@ const getLoans = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
+      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
+        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
         ORDER BY p.display_order ASC, p.commission_value DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
@@ -242,11 +242,11 @@ const getInsurance = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products WHERE is_active = true AND category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
+      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
+        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
         ORDER BY p.display_order ASC, p.commission_value DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])

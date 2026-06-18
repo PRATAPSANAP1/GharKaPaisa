@@ -30,6 +30,13 @@ const migrate = async () => {
       CREATE TYPE application_status AS ENUM ('draft','submitted','under_review','approved','rejected','disbursed');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  try {
+    await query(`ALTER TYPE application_status ADD VALUE 'confirmed'`);
+  } catch (err) {
+    if (!err.message.includes('already exists')) {
+      throw err;
+    }
+  }
   await query(`
     DO $$ BEGIN
       CREATE TYPE product_category AS ENUM ('credit_card','personal_loan','home_loan','business_loan',
@@ -272,6 +279,10 @@ const migrate = async () => {
       updated_at       TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS banner_url VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS priority INT DEFAULT 0`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
@@ -496,6 +507,8 @@ const migrate = async () => {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS role VARCHAR(50)`);
+  await query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
 
   // ── Wallet Audit Logs ─────────────────────────────────────────
@@ -651,6 +664,113 @@ const migrate = async () => {
     VALUES ('admin_privacy_mode', 'off')
     ON CONFLICT (key) DO NOTHING
   `);
+
+  // ── Homepage CMS Sections Table ──────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS homepage_sections (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      key           VARCHAR(100) UNIQUE NOT NULL,
+      title         VARCHAR(255) NOT NULL,
+      subtitle      VARCHAR(500),
+      is_active     BOOLEAN DEFAULT TRUE,
+      display_order INT DEFAULT 0,
+      items         JSONB DEFAULT '[]',
+      created_at    TIMESTAMPTZ DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  // ── OTP Verifications Table ──────────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS otp_verifications (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      identity      VARCHAR(255) UNIQUE NOT NULL,
+      otp_hash      VARCHAR(255) NOT NULL,
+      expires_at    TIMESTAMPTZ NOT NULL,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  // Seed initial homepage sections if empty
+  const { rows: [{ count: sectionCount }] } = await query(`SELECT COUNT(*) FROM homepage_sections`);
+  if (parseInt(sectionCount) === 0) {
+    const initialSections = [
+      [
+        'money_transfer',
+        'Money Transfer & Payments',
+        'Send money instantly or pay utility bills',
+        true,
+        1,
+        JSON.stringify([
+          { "id": "tomobile", "label": "To Mobile", "icon": "FaMobileAlt", "desc": "Send money instantly", "color": "#27ae60" },
+          { "id": "recharge", "label": "Recharge", "icon": "FaMobileAlt", "desc": "Mobile, DTH, FASTag", "color": "#2980b9" },
+          { "id": "electricity", "label": "Electricity", "icon": "FaBolt", "desc": "Pay electricity bills", "color": "#f39c12" },
+          { "id": "loanrepay", "label": "Loan Repay", "icon": "FaMoneyBillWave", "desc": "EMI & Loan Payments", "color": "#8e44ad" },
+          { "id": "fastag", "label": "FASTag", "icon": "FaTags", "desc": "Recharge FASTag tag", "color": "#3498db" }
+        ])
+      ],
+      [
+        'attractive_cards',
+        'Attractive Cards & Loans',
+        'Handpicked financial solutions for your profile',
+        true,
+        2,
+        JSON.stringify([
+          { "id": "ltf-cards", "label": "Lifetime Free Cards", "icon": "FaRegCreditCard", "desc": "No annual fee forever" },
+          { "id": "cibil-loans", "label": "CIBIL Score Based Loans", "icon": "FaUniversity", "desc": "Get loan based on score" },
+          { "id": "hdfc-cc-loan", "label": "Loan on Credit Card", "icon": "FaLaptopHouse", "desc": "Pre-approved credit card loans" },
+          { "id": "smart-emi", "label": "Smart EMI Cards", "icon": "FaMoneyCheckAlt", "desc": "Convert purchase to EMI" },
+          { "id": "secured-cards", "label": "FD Backed Cards", "icon": "FaRegCreditCard", "desc": "Guaranteed approval cards" },
+          { "id": "upi-cards", "label": "UPI Credit Cards", "icon": "FaBolt", "desc": "Link credit card to UPI" }
+        ])
+      ],
+      [
+        'loans',
+        'Loans',
+        'Instant approvals with minimum documentation',
+        true,
+        3,
+        JSON.stringify([
+          { "id": "personal-loan", "label": "Personal Loan", "icon": "FaUser", "desc": "Instant personal loans" },
+          { "id": "home-loan", "label": "Home Loan", "icon": "FaHome", "desc": "Home purchase and renovation" },
+          { "id": "business-loan", "label": "Business Loan", "icon": "FaBriefcase", "desc": "Expand your business" },
+          { "id": "instant-loan", "label": "Instant Loan", "icon": "FaBolt", "desc": "Quick emergency funds" }
+        ])
+      ],
+      [
+        'insurance',
+        'Insurance',
+        'Secure your future with complete health & life plans',
+        true,
+        4,
+        JSON.stringify([
+          { "id": "health-insurance", "label": "Health Insurance", "icon": "FaHeartbeat", "desc": "Medical coverages" },
+          { "id": "life-insurance", "label": "Life Insurance", "icon": "FaShieldAlt", "desc": "Term life coverage" },
+          { "id": "general-insurance", "label": "General Insurance", "icon": "FaUmbrella", "desc": "Vehicle & assets" }
+        ])
+      ],
+      [
+        'travel',
+        'Travel & Transit',
+        'Book flights, trains, hotels, and buses instantly',
+        true,
+        5,
+        JSON.stringify([
+          { "id": "flight", "label": "Flight Booking", "icon": "FaPlane", "desc": "Domestic & international flights" },
+          { "id": "train", "label": "Train Booking", "icon": "FaTrain", "desc": "IRCTC train tickets" },
+          { "id": "bus", "label": "Bus Booking", "icon": "FaBus", "desc": "Intercity bus travels" },
+          { "id": "hotels", "label": "Hotel Booking", "icon": "FaHotel", "desc": "Best hotels & resorts" }
+        ])
+      ]
+    ];
+    for (const s of initialSections) {
+      await query(`
+        INSERT INTO homepage_sections (key, title, subtitle, is_active, display_order, items)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, s);
+    }
+    logger.info('Initial homepage CMS sections seeded successfully');
+  }
 
   logger.info('✅ All migrations completed successfully');
   process.exit(0);

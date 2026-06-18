@@ -21,6 +21,7 @@ const productRouter = require('./product.routes');
 const notificationRouter = require('./notification.routes');
 const reportRouter = require('./report.routes');
 const bankRouter = require('./bank.routes');
+const cmsRouter = require('./cms.routes');
 
 // Map endpoints to sub-routers
 router.use('/auth', authRoutes);
@@ -37,5 +38,6 @@ router.use('/notifications', notificationRouter);
 router.use('/reports', reportRouter);
 router.use('/kyc', kycRouter);
 router.use('/banks', bankRouter);
+router.use('/cms', cmsRouter);
 
 module.exports = router;

@@ -273,14 +273,14 @@ const approvePartner = async (req, res, next) => {
         ON CONFLICT (Partner_id) DO NOTHING
       `, [PartnerId]);
       await client.query('COMMIT');
-      await logAction(req.user.id, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
+      await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
     } else {
       await client.query(`
         UPDATE Partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
       await client.query('COMMIT');
-      await logAction(req.user.id, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
+      await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);
     }
 
@@ -391,7 +391,7 @@ const uploadSelfKYC = async (req, res, next) => {
     await query(`UPDATE Partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
 
     // Log the KYC upload to audit logs
-    await logAction(req.user.id, 'UPLOAD_KYC', PartnerId, { uploaded });
+    await logAction(req, 'UPLOAD_KYC', PartnerId, { uploaded });
 
     return success(res, { uploaded }, `${uploaded.length} document(s) uploaded. KYC under review.`);
   } catch (err) {

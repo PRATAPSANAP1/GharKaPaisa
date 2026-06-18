@@ -71,8 +71,11 @@ export async function loginWithPassword(email, password) {
     const res = await api.post('/auth/login', { identity: email, password });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
+      if (res.data.refreshToken) {
+        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
+      }
     }
-    return { success: true, idToken: res.data.token };
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid credentials.');
   }
@@ -84,8 +87,11 @@ export async function loginWithOtp(identity, otp) {
     const res = await api.post('/auth/login', { identity, otp });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
+      if (res.data.refreshToken) {
+        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
+      }
     }
-    return { success: true, idToken: res.data.token };
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP or credentials.');
   }

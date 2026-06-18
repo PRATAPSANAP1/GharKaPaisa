@@ -7,7 +7,7 @@ const { success, error } = require('../utils/response');
 const { logAction } = require('../services/audit.service');
 
 // Public or global check to fetch settings
-router.get('/', jwtAuth, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const { rows } = await query(`SELECT key, value FROM system_settings`);
     const settings = rows.reduce((acc, curr) => {
@@ -34,7 +34,7 @@ router.post('/', jwtAuth, roleCheck('super_admin'), async (req, res, next) => {
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
     `, [key, value.toString()]);
 
-    await logAction(req.user.id, 'UPDATE_SYSTEM_SETTING', null, { key, value });
+    await logAction(req, 'UPDATE_SYSTEM_SETTING', null, { key, value });
 
     return success(res, {}, `System setting '${key}' updated to '${value}' successfully`);
   } catch (err) {

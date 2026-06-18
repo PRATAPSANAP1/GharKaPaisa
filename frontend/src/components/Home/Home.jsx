@@ -13,6 +13,7 @@ import {
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
   FaPlane, FaTrain, FaBus, FaHotel, FaTimes
 } from "react-icons/fa";
+import * as FaIcons from "react-icons/fa";
 
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./CreditCards";
@@ -779,15 +780,33 @@ export default function Home({ onNavigate }) {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
   const [dynamicBanners, setDynamicBanners] = useState([]);
+  const [settings, setSettings] = useState({});
+  const [cmsSections, setCmsSections] = useState([]);
+
+  const getSectionItems = (sectionKey, fallbackData) => {
+    const cmsSection = cmsSections.find(s => s.key === sectionKey);
+    if (cmsSection && cmsSection.is_active && cmsSection.items?.length > 0) {
+      return cmsSection.items.map(item => {
+        if (typeof item.icon === 'string') {
+          const IconComp = FaIcons[item.icon] || FaIcons.FaRegCreditCard;
+          return { ...item, icon: <IconComp /> };
+        }
+        return item;
+      });
+    }
+    return fallbackData;
+  };
 
   const searchItem = useSearchStore(state => state.searchItem);
   const setSearchItem = useSearchStore(state => state.setSearchItem);
 
   useEffect(() => {
-    const fetchBanners = async () => {
+    const fetchBannersSettingsAndCms = async () => {
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      
+      // Fetch banners
       try {
-        const url = `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/v1/banners`;
-        const res = await fetch(url);
+        const res = await fetch(`${baseUrl}/api/v1/banners`);
         const data = await res.json();
         if (data && data.success && data.data?.length > 0) {
           setDynamicBanners(data.data);
@@ -795,8 +814,30 @@ export default function Home({ onNavigate }) {
       } catch (err) {
         console.warn("Failed to load banners from backend:", err);
       }
+
+      // Fetch layout visibility settings
+      try {
+        const res = await fetch(`${baseUrl}/api/v1/settings`);
+        const data = await res.json();
+        if (data && data.success && data.data) {
+          setSettings(data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load layout settings:", err);
+      }
+
+      // Fetch CMS homepage sections
+      try {
+        const res = await fetch(`${baseUrl}/api/v1/cms/sections`);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          setCmsSections(data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load CMS layout sections:", err);
+      }
     };
-    fetchBanners();
+    fetchBannersSettingsAndCms();
   }, []);
 
   useEffect(() => {
@@ -899,17 +940,17 @@ export default function Home({ onNavigate }) {
 
     // Direct path matchers
     if (path === "/loans") {
-      setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: loansData });
+      setActiveCategory({ id: "loans", title: "Loans", titleKey: "sections.loans", items: getSectionItems("loans", loansData) });
     } else if (path === "/insurance") {
-      setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: insuranceData });
+      setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: getSectionItems("insurance", insuranceData) });
     } else if (path === "/credit-cards") {
       setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
     } else if (path === "/services") {
-      setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: servicesData });
+      setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: getSectionItems("recharge", servicesData) });
     } else if (path === "/travel-transit") {
-      setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: travelTransitData });
+      setActiveCategory({ id: "travel-transit", title: "Travel & Transit", titleKey: "sections.travelTransit", items: getSectionItems("travel", travelTransitData) });
     } else if (path === "/attractive-cards-loans") {
-      setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: attractiveCategories });
+      setActiveCategory({ id: "attractive-sections", title: "Attractive Cards & Loans", titleKey: "sections.attractiveCards", items: getSectionItems("attractive_cards", attractiveCategories) });
     } else if (path === "/money-transfer/fastag") {
       setActiveCategory({ id: "fastag", title: "FASTag Recharge", titleKey: "moneyTransfer.fastag", items: [] });
     } else if (path === "/travel-transit/flight-booking") {
@@ -1375,109 +1416,52 @@ export default function Home({ onNavigate }) {
         </div>
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
-        <Section title={t('sections.moneyTransfer')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(5, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
-            {moneyTransfer.map((item, idx) => (
-              <div key={idx}
-                onClick={() => {
-                  if (item.label === "FASTag") {
-                    navigate("/money-transfer/fastag");
-                  }
-                }}
-                style={{
-                  display: "flex",
-                  flexDirection: isMobile ? "column" : "row",
-                  alignItems: "center",
-                  justifyContent: isMobile ? "center" : "flex-start",
-                  gap: isMobile ? "6px" : "12px",
-                  background: C.bgSecondary,
-                  padding: isMobile ? "8px 4px" : "14px 16px",
-                  borderRadius: isMobile ? "10px" : "14px",
-                  cursor: "pointer",
-                  border: `1px solid ${C.border}`,
-                  transition: "all 0.2s ease"
-                }}
-                onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)}
-                onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
-              >
-                <div style={{
-                  width: isMobile ? "38px" : "58px",
-                  height: isMobile ? "38px" : "58px",
-                  borderRadius: isMobile ? "8px" : "12px",
-                  background: C.bg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  padding: "4px",
-                  boxSizing: "border-box",
-                  border: `1px solid ${C.border}`,
-                  fontSize: isMobile ? "16px" : "20px",
-                  color: item.color || C.teal
-                }}>
-                  {item.icon}
-                </div>
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, width: "100%" }}>
-                  <div style={{ fontSize: isMobile ? "9px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
-                    {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
-                  </div>
-                  {!isMobile && (
-                    <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
-                      <FaChevronRight size={12} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* ── SECTION 8: Travel & Transit ── */}
-        <Section title={t('sections.travelTransit')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
-            {travelTransitData.map((item, idx) => {
-              return (
-                <div key={idx} 
-                  onClick={() => navigate("/travel-transit/flight-booking")}
-                  style={{ 
-                    display: "flex", 
-                    flexDirection: isMobile ? "column" : "row", 
-                    alignItems: "center", 
+        {settings.section_visibility_money_transfer !== "hide" && (
+          <Section title={t('sections.moneyTransfer')} C={C}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(5, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
+              {getSectionItems("money_transfer", moneyTransfer).map((item, idx) => (
+                <div key={idx}
+                  onClick={() => {
+                    if (item.label === "FASTag") {
+                      navigate("/money-transfer/fastag");
+                    }
+                  }}
+                  style={{
+                    display: "flex",
+                    flexDirection: isMobile ? "column" : "row",
+                    alignItems: "center",
                     justifyContent: isMobile ? "center" : "flex-start",
-                    gap: isMobile ? "6px" : "12px", 
-                    background: C.bgSecondary, 
-                    padding: isMobile ? "8px 4px" : "14px 16px", 
-                    borderRadius: isMobile ? "10px" : "14px", 
-                    cursor: "pointer", 
-                    border: `1px solid ${C.border}`, 
-                    transition: "all 0.2s ease" 
-                  }} 
-                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
+                    gap: isMobile ? "6px" : "12px",
+                    background: C.bgSecondary,
+                    padding: isMobile ? "8px 4px" : "14px 16px",
+                    borderRadius: isMobile ? "10px" : "14px",
+                    cursor: "pointer",
+                    border: `1px solid ${C.border}`,
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)}
                   onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
                 >
-                  {/* Left side Icon Box */}
-                  <div style={{ 
-                    width: isMobile ? "38px" : "58px", 
-                    height: isMobile ? "38px" : "58px", 
-                    borderRadius: isMobile ? "8px" : "12px", 
-                    background: C.bg, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center", 
+                  <div style={{
+                    width: isMobile ? "38px" : "58px",
+                    height: isMobile ? "38px" : "58px",
+                    borderRadius: isMobile ? "8px" : "12px",
+                    background: C.bg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     flexShrink: 0,
                     padding: "4px",
                     boxSizing: "border-box",
                     border: `1px solid ${C.border}`,
                     fontSize: isMobile ? "16px" : "20px",
-                    color: C.teal
+                    color: item.color || C.teal
                   }}>
                     {item.icon}
                   </div>
-                  
-                  {/* Right side Text & Arrow */}
                   <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, width: "100%" }}>
                     <div style={{ fontSize: isMobile ? "9px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
-                      {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                      {t('moneyTransfer.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
                     </div>
                     {!isMobile && (
                       <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
@@ -1486,95 +1470,157 @@ export default function Home({ onNavigate }) {
                     )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </Section>
-
-
-        {/* ── SECTION 2: Attractive Cards & Loans ── */}
-        <Section 
-          title={t('sections.attractiveCards')} 
-          viewAllLabel={t('home.seeAll', 'See All')}
-          onViewAll={() => navigate("/attractive-cards-loans")}
-          C={C}
-        >
-          <style>{`
-            @keyframes attractive-ticker-scroll {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .attractive-ticker-wrap {
-              display: flex; gap: 16px; width: max-content;
-              animation: attractive-ticker-scroll 30s linear infinite;
-            }
-            .attractive-ticker-wrap.paused {
-              animation-play-state: paused !important;
-            }
-          `}</style>
-          <div 
-            onMouseEnter={() => setIsTickerPaused(true)}
-            onMouseLeave={() => setIsTickerPaused(false)}
-            onTouchStart={() => setIsTickerPaused(true)}
-            onTouchEnd={() => setIsTickerPaused(false)}
-            style={{
-              overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
-              maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-              WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
-            }}
-          >
-            <div className={`attractive-ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
-              {[...attractiveCategories, ...attractiveCategories].map((cat, idx) => (
-                <div key={`${cat.id}-${idx}`} 
-                  onClick={() => handleAttractiveCategoryClick(cat)}
-                  style={{
-                    background: C.bgSecondary,
-                    borderRadius: "20px",
-                    border: `1px solid ${C.border}`,
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    display: "flex",
-                    flexDirection: "column",
-                    width: isMobile ? "200px" : "280px",
-                    flexShrink: 0,
-                    overflow: "hidden",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = C.teal;
-                    e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
-                  }}
-                >
-                  {/* Image Header */}
-                  <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
-                    <img 
-                      src={attractiveImages[cat.id]} 
-                      alt={cat.label} 
-                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
-                    />
-                  </div>
-                  
-                  {/* Card Body */}
-                  <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
-                      {t('attractiveCards.' + cat.id, cat.label)}
-                    </h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                      {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
-                    </div>
-                  </div>
-                </div>
               ))}
             </div>
-          </div>
-        </Section>
+          </Section>
+        )}
+
+        {/* ── SECTION 8: Travel & Transit ── */}
+        {settings.section_visibility_travel !== "hide" && (
+          <Section title={t('sections.travelTransit')} C={C}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
+              {getSectionItems("travel", travelTransitData).map((item, idx) => {
+                return (
+                  <div key={idx} 
+                    onClick={() => navigate("/travel-transit/flight-booking")}
+                    style={{ 
+                      display: "flex", 
+                      flexDirection: isMobile ? "column" : "row", 
+                      alignItems: "center", 
+                      justifyContent: isMobile ? "center" : "flex-start",
+                      gap: isMobile ? "6px" : "12px", 
+                      background: C.bgSecondary, 
+                      padding: isMobile ? "8px 4px" : "14px 16px", 
+                      borderRadius: isMobile ? "10px" : "14px", 
+                      cursor: "pointer", 
+                      border: `1px solid ${C.border}`, 
+                      transition: "all 0.2s ease" 
+                    }} 
+                    onMouseEnter={(e) => !isMobile && (e.currentTarget.style.borderColor = C.teal)} 
+                    onMouseLeave={(e) => !isMobile && (e.currentTarget.style.borderColor = C.border)}
+                  >
+                    {/* Left side Icon Box */}
+                    <div style={{ 
+                      width: isMobile ? "38px" : "58px", 
+                      height: isMobile ? "38px" : "58px", 
+                      borderRadius: isMobile ? "8px" : "12px", 
+                      background: C.bg, 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      flexShrink: 0,
+                      padding: "4px",
+                      boxSizing: "border-box",
+                      border: `1px solid ${C.border}`,
+                      fontSize: isMobile ? "16px" : "20px",
+                      color: C.teal
+                    }}>
+                      {item.icon}
+                    </div>
+                    
+                    {/* Right side Text & Arrow */}
+                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "center", justifyContent: "center", flex: 1, minWidth: 0, width: "100%" }}>
+                      <div style={{ fontSize: isMobile ? "9px" : "13px", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
+                        {t('travel-transitList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                      </div>
+                      {!isMobile && (
+                        <div style={{ color: C.teal, display: "flex", alignItems: "center", marginLeft: "6px" }}>
+                          <FaChevronRight size={12} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
+        {/* ── SECTION 2: Attractive Cards & Loans ── */}
+        {settings.section_visibility_attractive_cards !== "hide" && (
+          <Section 
+            title={t('sections.attractiveCards')} 
+            viewAllLabel={t('home.seeAll', 'See All')}
+            onViewAll={() => navigate("/attractive-cards-loans")}
+            C={C}
+          >
+            <style>{`
+              @keyframes attractive-ticker-scroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              .attractive-ticker-wrap {
+                display: flex; gap: 16px; width: max-content;
+                animation: attractive-ticker-scroll 30s linear infinite;
+              }
+              .attractive-ticker-wrap.paused {
+                animation-play-state: paused !important;
+              }
+            `}</style>
+            <div 
+              onMouseEnter={() => setIsTickerPaused(true)}
+              onMouseLeave={() => setIsTickerPaused(false)}
+              onTouchStart={() => setIsTickerPaused(true)}
+              onTouchEnd={() => setIsTickerPaused(false)}
+              style={{
+                overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
+                maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
+                WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
+              }}
+            >
+              <div className={`attractive-ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
+                {[...getSectionItems("attractive_cards", attractiveCategories), ...getSectionItems("attractive_cards", attractiveCategories)].map((cat, idx) => (
+                  <div key={`${cat.id}-${idx}`} 
+                    onClick={() => handleAttractiveCategoryClick(cat)}
+                    style={{
+                      background: C.bgSecondary,
+                      borderRadius: "20px",
+                      border: `1px solid ${C.border}`,
+                      cursor: "pointer",
+                      transition: "all 0.3s ease",
+                      display: "flex",
+                      flexDirection: "column",
+                      width: isMobile ? "200px" : "280px",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = C.teal;
+                      e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = C.border;
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
+                    }}
+                  >
+                    {/* Image Header */}
+                    <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
+                      <img 
+                        src={attractiveImages[cat.id]} 
+                        alt={cat.label} 
+                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
+                      />
+                    </div>
+                    
+                    {/* Card Body */}
+                    <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
+                      <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
+                        {t('attractiveCards.' + cat.id, cat.label)}
+                      </h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
+                        {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Section>
+        )}
 
         {/* ── SECTION 3: Popular Credit Cards ── */}
-        {!isMobile && (
+        {settings.section_visibility_attractive_cards !== "hide" && !isMobile && (
           <Section 
             title={t('sections.popularCards')} 
             viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
@@ -1645,90 +1691,96 @@ export default function Home({ onNavigate }) {
         </Section>
 
         {/* ── SECTION 5: Loans ── */}
-        <Section title={t('sections.loans')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
-            {((isMobile && loansData.length > 8) ? loansData.slice(0, 7) : loansData).map((item, idx) => (
-              <div key={idx}
-                onClick={() => handleBottomNavClick("loans")}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: isMobile ? "10px 4px" : "16px 8px", borderRadius: "12px",
-                  border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "4px" : "8px", cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-              >
-                <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>
-                <div style={{ fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
-                  {t('loansList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+        {settings.section_visibility_attractive_cards !== "hide" && (
+          <Section title={t('sections.loans')} C={C}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
+              {((isMobile && getSectionItems("loans", loansData).length > 8) ? getSectionItems("loans", loansData).slice(0, 7) : getSectionItems("loans", loansData)).map((item, idx) => (
+                <div key={idx}
+                  onClick={() => handleBottomNavClick("loans")}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    background: C.bgSecondary, padding: isMobile ? "10px 4px" : "16px 8px", borderRadius: "12px",
+                    border: `1px solid ${C.border}`, textAlign: "center", gap: isMobile ? "4px" : "8px", cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                >
+                  <div style={{ color: C.teal, fontSize: isMobile ? "18px" : "22px" }}>{item.icon}</div>
+                  <div style={{ fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+                    {t('loansList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {isMobile && loansData.length > 8 && (
-              <div
-                onClick={() => handleBottomNavClick("loans")}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: "10px 4px", borderRadius: "12px",
-                  border: `1px solid ${C.border}`, textAlign: "center", gap: "4px", cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-              >
-                <div style={{ color: C.teal, fontSize: "18px" }}><FaChevronRight /></div>
-                <div style={{ fontSize: "10px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
-                  {t('home.seeMore', 'See More')}
+              ))}
+              {isMobile && getSectionItems("loans", loansData).length > 8 && (
+                <div
+                  onClick={() => handleBottomNavClick("loans")}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    background: C.bgSecondary, padding: "10px 4px", borderRadius: "12px",
+                    border: `1px solid ${C.border}`, textAlign: "center", gap: "4px", cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                >
+                  <div style={{ color: C.teal, fontSize: "18px" }}><FaChevronRight /></div>
+                  <div style={{ fontSize: "10px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>
+                    {t('home.seeMore', 'See More')}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </Section>
+              )}
+            </div>
+          </Section>
+        )}
 
         {/* ── SECTION 6: Insurance ── */}
-        <Section title={t('sections.insurance')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
-            {insuranceData.map((item, idx) => (
-              <div key={idx}
-                onClick={() => handleBottomNavClick("insurance")}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: "16px 8px", borderRadius: "12px",
-                  border: `1px solid ${C.border}`, textAlign: "center", gap: "8px", cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-              >
-                <div style={{ color: C.teal, fontSize: "22px" }}>{item.icon}</div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('insuranceList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
-              </div>
-            ))}
-          </div>
-        </Section>
+        {settings.section_visibility_insurance !== "hide" && (
+          <Section title={t('sections.insurance')} C={C}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
+              {getSectionItems("insurance", insuranceData).map((item, idx) => (
+                <div key={idx}
+                  onClick={() => handleBottomNavClick("insurance")}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    background: C.bgSecondary, padding: "16px 8px", borderRadius: "12px",
+                    border: `1px solid ${C.border}`, textAlign: "center", gap: "8px", cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                >
+                  <div style={{ color: C.teal, fontSize: "22px" }}>{item.icon}</div>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('insuranceList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
 
         {/* ── SECTION 7: Business Services ── */}
-        <Section title={t('sections.businessServices')} C={C}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(8, 1fr)", gap: "10px" }}>
-            {servicesData.map((item, idx) => (
-              <div key={idx}
-                onClick={() => handleBottomNavClick("services")}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  background: C.bgSecondary, padding: "14px 6px", borderRadius: "12px",
-                  border: `1px solid ${C.border}`, textAlign: "center", gap: "6px", cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-              >
-                <div style={{ color: C.teal, fontSize: "20px" }}>{item.icon}</div>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('servicesList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
-              </div>
-            ))}
-          </div>
-        </Section>
+        {settings.section_visibility_recharge !== "hide" && (
+          <Section title={t('sections.businessServices')} C={C}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(8, 1fr)", gap: "10px" }}>
+              {getSectionItems("recharge", servicesData).map((item, idx) => (
+                <div key={idx}
+                  onClick={() => handleBottomNavClick("services")}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    background: C.bgSecondary, padding: "14px 6px", borderRadius: "12px",
+                    border: `1px solid ${C.border}`, textAlign: "center", gap: "6px", cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                >
+                  <div style={{ color: C.teal, fontSize: "20px" }}>{item.icon}</div>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{t('servicesList.' + item.label.toLowerCase().replace(/[^a-z0-9]/g, ''), item.label)}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
 
 
 

@@ -8,149 +8,13 @@ import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 import { useSearchStore } from '../store/searchStore';
 import LanguageSwitcher from './LanguageSwitcher';
 
-const searchCatalog = [
-  // Categories/Banks
-  { type: "category", label: "Lifetime Free Credit Cards (LTF)", target: { id: "ltf-detail-page" } },
-  { type: "category", label: "CIBIL Based Loan", target: { id: "cibil-loans" } },
-  { type: "category", label: "Loan on credit card", target: { id: "hdfc-cc-loan" } },
-  { type: "category", label: "Smart Emi on hdfc credit card", target: { id: "smart-emi" } },
-  { type: "category", label: "FD/Secured card(no Cibil required)", target: { id: "secured-cards" } },
-  { type: "category", label: "HDFC Express Loan", target: { id: "hdfc-express" } },
-  { type: "category", label: "All Rupey Upi credit card", target: { id: "upi-cards" } },
-  
-  { type: "category", label: "HDFC Bank Credit Cards", target: { id: "bank-hdfc" } },
-  { type: "category", label: "SBI Card Credit Cards", target: { id: "bank-sbi" } },
-  { type: "category", label: "Axis Bank Credit Cards", target: { id: "bank-axis" } },
-  { type: "category", label: "BOB Credit Cards", target: { id: "bank-bob" } },
-  
-  { type: "category", label: "Credit Cards (All Banks)", target: { id: "credit-cards" } },
-  { type: "category", label: "Loans", target: { id: "loans" } },
-  { type: "category", label: "Insurance", target: { id: "insurance" } },
-  { type: "category", label: "Services", target: { id: "services" } },
-
-  // Loans items
-  { type: "loan", label: "Personal Loan", target: { id: "loans" } },
-  { type: "loan", label: "Home Loan", target: { id: "loans" } },
-  { type: "loan", label: "Business Loan", target: { id: "loans" } },
-  { type: "loan", label: "Education Loan", target: { id: "loans" } },
-  { type: "loan", label: "Car Loan", target: { id: "loans" } },
-  { type: "loan", label: "Used Car Loan", target: { id: "loans" } },
-  { type: "loan", label: "Instant Loan", target: { id: "loans" } },
-  { type: "loan", label: "Gold Loan", target: { id: "loans" } },
-  { type: "loan", label: "2 Wheeler Loan", target: { id: "loans" } },
-  { type: "loan", label: "Loan Against Property (LAP)", target: { id: "loans" } },
-  { type: "loan", label: "Loan Against Car", target: { id: "loans" } },
-  { type: "loan", label: "Loan Against Mutual Funds", target: { id: "loans" } },
-
-  // Insurance items
-  { type: "insurance", label: "Health Insurance", target: { id: "insurance" } },
-  { type: "insurance", label: "Life Insurance", target: { id: "insurance" } },
-  { type: "insurance", label: "General Insurance", target: { id: "insurance" } },
-  { type: "insurance", label: "Loan Protection Insurance", target: { id: "insurance" } },
-
-  // Business Services items
-  { type: "service", label: "GST Returns", target: { id: "services" } },
-  { type: "service", label: "Company Registration", target: { id: "services" } },
-  { type: "service", label: "ITR Filing", target: { id: "services" } },
-  { type: "service", label: "PF & ESIC", target: { id: "services" } },
-  { type: "service", label: "TDS Filing", target: { id: "services" } },
-  { type: "service", label: "Trade License", target: { id: "services" } },
-  { type: "service", label: "MSME Registration", target: { id: "services" } },
-  { type: "service", label: "DSC Services", target: { id: "services" } },
-
-  // Money Transfer & Payments
-  { type: "payment", label: "To Mobile (Send money instantly)", target: { id: "money-transfer" } },
-  { type: "payment", label: "Recharge (Mobile, DTH, FASTag)", target: { id: "money-transfer" } },
-  { type: "payment", label: "Electricity (Pay electricity bills)", target: { id: "money-transfer" } },
-  { type: "payment", label: "Loan Repay (EMI & Loan Payments)", target: { id: "money-transfer" } },
-  { type: "payment", label: "FASTag Recharge", target: { id: "fastag" } },
-
-  // Travel & Transit
-  { type: "travel", label: "Flight Booking", target: { id: "flight-booking" } },
-  { type: "travel", label: "Train Booking", target: { id: "travel-transit" } },
-  { type: "travel", label: "Bus Booking", target: { id: "travel-transit" } },
-  { type: "travel", label: "Hotel Booking", target: { id: "travel-transit" } },
-
-  // Individual Credit Cards (HDFC)
-  { type: "card", label: "HDFC Freedom Credit Card", desc: "Perfect entry-level card for daily spends", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC MoneyBack+ Credit Card", desc: "10X CashPoints on popular online merchants", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Millennia Credit Card", desc: "5% cashback on top online shopping brands", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Regalia Gold Credit Card", desc: "Premium travel and luxury lifestyle card", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC BizGrow Credit Card", desc: "Tailored for growing business expenses", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC BizPower Credit Card", desc: "Powering business spends with premium rewards", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC BizFirst Credit Card", desc: "Smart cashbacks on business utilities and supplies", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Pixel Play Credit Card", desc: "Customizable benefits in a digital-first avatar", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Pixel Go Credit Card", desc: "Smart lifestyle benefits on the go", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Tata Neu Plus Credit Card", desc: "2% NeuCoins back on Neu spend and partners", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Tata Neu Infinity Credit Card", desc: "5% NeuCoins back on Neu spend and partners", target: { id: "bank-hdfc" } },
-  { type: "card", label: "Swiggy HDFC Bank Credit Card", desc: "10% cashback on Swiggy spends", target: { id: "bank-hdfc" } },
-  { type: "card", label: "IndianOil HDFC Bank Credit Card", desc: "Earn up to 50 Liters of free fuel annually", target: { id: "bank-hdfc" } },
-  { type: "card", label: "IRCTC HDFC Bank Credit Card", desc: "Save on railway tickets booking via IRCTC", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Diners Club Privilege Credit Card", desc: "Exclusive global lounge access and dining benefits", target: { id: "bank-hdfc" } },
-  { type: "card", label: "HDFC Diners Club Black Credit Card", desc: "Super premium card for global travelers", target: { id: "bank-hdfc" } },
-  { type: "card", label: "Marriott Bonvoy HDFC Bank Credit Card", desc: "Complimentary hotel nights and loyalty points", target: { id: "bank-hdfc" } },
-  { type: "card", label: "Shoppers Stop Black HDFC Bank Credit Card", desc: "Elite membership and premium rewards at Shoppers Stop", target: { id: "bank-hdfc" } },
-  { type: "card", label: "Shoppers Stop Credit Card", desc: "Accelerated reward points on fashion shopping", target: { id: "bank-hdfc" } },
-
-  // Individual Credit Cards (SBI)
-  { type: "card", label: "SimplySAVE SBI Credit Card", desc: "10X points on dining, movies, grocery and department stores", target: { id: "bank-sbi" } },
-  { type: "card", label: "SimplyCLICK SBI Credit Card", desc: "10X points on Amazon, BookMyShow, Cleartrip, Lenskart", target: { id: "bank-sbi" } },
-  { type: "card", label: "BPCL SBI Card OCTANE", desc: "7.25% value back on BPCL fuel purchases", target: { id: "bank-sbi" } },
-  { type: "card", label: "BPCL SBI Card", desc: "4.25% value back on fuel spends", target: { id: "bank-sbi" } },
-  { type: "card", label: "SBI Card PULSE", desc: "Stay fit with complimentary Noise smartwatch & health benefits", target: { id: "bank-sbi" } },
-  { type: "card", label: "Tata Neu SBI Card", desc: "Co-branded shopping rewards on the Neu app", target: { id: "bank-sbi" } },
-  { type: "card", label: "IRCTC SBI Card Premier", desc: "Up to 10% value back on AC ticket bookings", target: { id: "bank-sbi" } },
-  { type: "card", label: "Apollo SBI Card", desc: "Accelerated points on Apollo pharmacy & healthcare", target: { id: "bank-sbi" } },
-  { type: "card", label: "Air India SBI Signature Card", desc: "Earn Air India flying returns miles on every spend", target: { id: "bank-sbi" } },
-  { type: "card", label: "Air India SBI Platinum Card", desc: "Save on domestic and international air travel", target: { id: "bank-sbi" } },
-  { type: "card", label: "Club Vistara SBI Prime Card", desc: "Complimentary premium economy tickets on Vistara", target: { id: "bank-sbi" } },
-  { type: "card", label: "Club Vistara SBI Card", desc: "Complimentary tickets and Club Vistara membership", target: { id: "bank-sbi" } },
-
-  // Individual Credit Cards (Axis)
-  { type: "card", label: "Axis Bank Neo Credit Card", desc: "Zomato, BookMyShow and utility bill discounts", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank ACE Credit Card", desc: "2% unlimited cashback on Google Pay spends", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank MY Zone Credit Card", desc: "Buy 1 Get 1 Free on movie tickets", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Rewards Credit Card", desc: "10X reward points on department stores and apparel", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Flipkart Credit Card", desc: "5% unlimited cashback on Flipkart purchases", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank IndianOil Credit Card", desc: "Accelerated reward points on fuel purchases", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Atlas Credit Card", desc: "Miles-focused premium card for frequent flyers", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Select Credit Card", desc: "Elite lifestyle rewards with priority pass lounge access", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Privilege Credit Card", desc: "Double activation benefits and milestone rewards", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Vistara Credit Card", desc: "Complimentary economy flight tickets", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Vistara Infinite Credit Card", desc: "Complimentary business class ticket and gold membership", target: { id: "bank-axis" } },
-  { type: "card", label: "Axis Bank Aura Credit Card", desc: "Health and wellness focused credit card", target: { id: "bank-axis" } },
-
-  // Individual Credit Cards (BOB)
-  { type: "card", label: "BOB Eterna Credit Card", desc: "Premium travel and dining rewards with lounge access", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB Premier Credit Card", desc: "5X rewards on travel and dining", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB Easy Credit Card", desc: "5X rewards on grocery and department stores", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB Select Credit Card", desc: "Accelerated points on dining and online shopping", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB HPCL Energy Card", desc: "Save on fuel and LPG cylinder bookings", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB Prime Credit Card", desc: "FD-backed credit card with zero joining fee", target: { id: "bank-bob" } },
-  { type: "card", label: "BOB Snapdeal Credit Card", desc: "Up to 5% cashback on Snapdeal shopping", target: { id: "bank-bob" } },
-
-  // Lifetime Free Credit Cards (LTF Detail Page)
-  { type: "card", label: "Federal Bank Scapia Credit Card", desc: "Premium travel rewards with zero forex markup", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "AU Bank SPONT Credit Card", desc: "Customized benefits with zero annual fee", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "Kiwi RuPay Credit Card", desc: "UPI-first credit card with instant rewards", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "IDFC FIRST Classic Credit Card", desc: "Lifetime free with interest-free cash withdrawals", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "IDFC FIRST Millennia Credit Card", desc: "Lifetime free with high rewards on online spends", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "IDFC FIRST Select Credit Card", desc: "Premium benefits, airport lounge access and zero fee", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "IndusInd Legend Credit Card", desc: "Exclusive travel, dining and golfing privileges", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "OneCard Metal Credit Card", desc: "Metal card backed by FD with premium rewards", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "SBM Uni Card", desc: "Build credit score with secured benefits", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "Federal Bank OneCard", desc: "Zero join fee metal card with custom app controls", target: { id: "ltf-detail-page" } },
-  { type: "card", label: "Yes Bank Paisabazaar Step Up Credit Card", desc: "Secured credit card to build credit rating", target: { id: "ltf-detail-page" } },
-
-  // General Info/Policies
+const staticLinks = [
   { type: "info", label: "Terms and Conditions", target: { id: "terms-and-conditions" } },
   { type: "info", label: "Privacy Policy", target: { id: "privacy-policy" } },
   { type: "info", label: "Contact Us", target: { id: "contact" } },
   { type: "info", label: "Partner Login", target: { id: "login" } },
   { type: "info", label: "Partner Registration", target: { id: "register" } },
   { type: "info", label: "Admin Login", target: { id: "admin-login" } },
-
-  // Partner Panel Pages
   { type: "partner", label: "Partner Dashboard", target: { id: "partner-dashboard" } },
   { type: "partner", label: "Partner Wallet & Balance", target: { id: "partner-wallet" } },
   { type: "partner", label: "Partner Applications & Status", target: { id: "partner-applications" } },
@@ -166,6 +30,7 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [dynamicCatalog, setDynamicCatalog] = useState(staticLinks);
 
   const path = location.pathname.toLowerCase().replace(/\/$/, '');
   const isAuthPage = path === '/login' || path === '/register';
@@ -193,9 +58,30 @@ const Navbar = () => {
     navigate("/");
   };
 
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const { default: api } = await import('../api/api');
+        const res = await api.get('/products', { params: { is_active: 'true', limit: 200 } });
+        if (res.data?.success) {
+          const fetchedItems = res.data.data.map(p => ({
+            type: p.category.replace(/_/g, ' '),
+            label: `${p.bank_name} ${p.name}`,
+            desc: p.description || p.bank_code,
+            target: { id: `product-${p.id}` }
+          }));
+          setDynamicCatalog([...fetchedItems, ...staticLinks]);
+        }
+      } catch (err) {
+        console.error("Failed to load catalog", err);
+      }
+    };
+    fetchCatalog();
+  }, []);
+
   const filteredCatalog = searchQuery.trim() === ""
     ? []
-    : searchCatalog.filter(item =>
+    : dynamicCatalog.filter(item =>
         item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.desc && item.desc.toLowerCase().includes(searchQuery.toLowerCase()))
       );

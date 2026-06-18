@@ -17,6 +17,7 @@ router.post('/verify-otp', authLimiter, ctrl.verifyOtpLogin);
 router.post('/lookup', authLimiter, ctrl.lookupUser);
 router.post('/register', authLimiter, registerRules, validate, ctrl.register);
 router.post('/reset-password', authLimiter, ctrl.resetPassword);
+router.post('/refresh', authLimiter, ctrl.refresh);
 
 // ── Protected Auth Routes ───────────────────────────────────────────────────────
 router.get('/me', jwtAuth, ctrl.getMe);

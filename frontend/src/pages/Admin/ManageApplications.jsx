@@ -147,6 +147,7 @@ export default function ManageApplications() {
             <option value="submitted">Submitted</option>
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>
+            <option value="confirmed">Confirmed</option>
             <option value="disbursed">Disbursed</option>
             <option value="rejected">Rejected</option>
           </select>
@@ -325,12 +326,13 @@ export default function ManageApplications() {
                         <option value="submitted">Submitted</option>
                         <option value="under_review">Under Review</option>
                         <option value="approved">Approved (Triggers Commission)</option>
+                        <option value="confirmed">Confirmed (Matures Commission)</option>
                         <option value="disbursed">Disbursed (Triggers Commission)</option>
                         <option value="rejected">Rejected</option>
                       </select>
                     </div>
 
-                    {(newStatus === "approved" || newStatus === "disbursed") && (
+                    {(newStatus === "approved" || newStatus === "disbursed" || newStatus === "confirmed") && (
                       <div>
                         <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Approved Amount (₹)</label>
                         <input
@@ -344,7 +346,7 @@ export default function ManageApplications() {
                     )}
                   </div>
 
-                  {(newStatus === "approved" || newStatus === "disbursed") && (
+                  {(newStatus === "approved" || newStatus === "disbursed" || newStatus === "confirmed") && (
                     <div>
                       <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Bank Reference / Loan Account #</label>
                       <input

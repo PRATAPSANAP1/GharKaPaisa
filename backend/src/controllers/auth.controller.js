@@ -61,6 +61,21 @@ const lookupUser = async (req, res, next) => {
   }
 };
 
+// Helper to generate and hash refresh token in db
+const generateAndSaveRefreshToken = async (userId) => {
+  const crypto = require('crypto');
+  const refreshToken = crypto.randomBytes(40).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
+
+  await query(`
+    INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+    VALUES ($1, $2, $3)
+  `, [userId, tokenHash, expiresAt]);
+
+  return refreshToken;
+};
+
 // ── POST /auth/reset-password ───────────────────────────────────────────────────
 const resetPassword = async (req, res, next) => {
   try {
@@ -73,10 +88,19 @@ const resetPassword = async (req, res, next) => {
       return error(res, 'Password must be at least 8 characters long', 400);
     }
 
-    // Verify OTP
-    if (otp !== '123456') {
-      return error(res, 'Invalid OTP code', 400);
+    // Verify OTP against otp_verifications table
+    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+    const { rows: [record] } = await query(`
+      SELECT * FROM otp_verifications 
+      WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
+    `, [identity, otpHash]);
+
+    if (!record) {
+      return error(res, 'Invalid or expired OTP code', 400);
     }
+
+    // Delete OTP to prevent reuse
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
 
     const { rows: [user] } = await query(
       `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
@@ -101,10 +125,20 @@ const sendOtp = async (req, res, next) => {
     const { mobile } = req.body;
     if (!mobile) return error(res, 'Mobile number required', 400);
 
-    // Mock sending OTP - in production, integrate Twilio/Fast2SMS here
-    logger.info(`Sending mock OTP 123456 to ${mobile}`);
+    // Generate random 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
-    return res.json({ success: true, message: 'OTP sent successfully' });
+    await query(`
+      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+    `, [mobile, otpHash, expiresAt]);
+
+    logger.info(`[OTP] Generated verification OTP for ${mobile}: ${otp}`);
+
+    return res.json({ success: true, message: 'OTP sent successfully (check server logs)' });
   } catch (err) {
     next(err);
   }
@@ -116,14 +150,18 @@ const verifyOtpLogin = async (req, res, next) => {
     const { mobile, otp } = req.body;
     if (!mobile || !otp) return error(res, 'Mobile and OTP required', 400);
 
-    // Mock OTP verification
-    if (otp !== '123456') {
-      return error(res, 'Invalid OTP code', 400);
+    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+    const { rows: [record] } = await query(`
+      SELECT * FROM otp_verifications 
+      WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
+    `, [mobile, otpHash]);
+
+    if (!record) {
+      return error(res, 'Invalid or expired OTP code', 400);
     }
 
-    // OTP verified - check if user exists to generate a provisional token (if needed by frontend)
-    // Actually, frontend uses OTP just as a 2FA step, then calls /auth/login with password to get token.
-    // So we can just return success here.
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
+
     return res.json({ success: true, message: 'OTP verified' });
   } catch (err) {
     next(err);
@@ -145,9 +183,16 @@ const login = async (req, res, next) => {
 
     // Validate using OTP or Password
     if (otp) {
-      if (otp !== '123456') {
-        return error(res, 'Invalid OTP code', 400);
+      const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+      const { rows: [record] } = await query(`
+        SELECT * FROM otp_verifications 
+        WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
+      `, [identity, otpHash]);
+
+      if (!record) {
+        return error(res, 'Invalid or expired OTP code', 400);
       }
+      await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
     } else if (password) {
       const isMatch = await bcrypt.compare(password, user.password_hash || '');
       if (!isMatch) return error(res, 'Invalid credentials', 401);
@@ -158,14 +203,60 @@ const login = async (req, res, next) => {
     if (user.status === 'suspended') return error(res, 'Account suspended', 403);
     if (user.status === 'rejected') return error(res, 'Account rejected', 403);
 
-    // Generate JWT
+    // Generate JWT (15-minute access token)
     const token = jwt.sign(
       { id: user.id, email: user.email, phone: user.mobile, role: user.role },
       JWT_SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '15m' }
     );
 
-    return res.json({ success: true, token });
+    // Generate Refresh Token
+    const refreshToken = await generateAndSaveRefreshToken(user.id);
+
+    return res.json({ success: true, token, refreshToken });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/refresh ───────────────────────────────────────────────────────
+const refresh = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return error(res, 'Refresh token required', 400);
+
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    // Check if token exists, is not expired, and is not revoked
+    const { rows: [tokenRecord] } = await query(`
+      SELECT rt.*, u.email, u.mobile, u.role 
+      FROM refresh_tokens rt
+      JOIN users u ON u.id = rt.user_id
+      WHERE rt.token_hash = $1 AND rt.revoked = false AND rt.expires_at > NOW()
+    `, [tokenHash]);
+
+    if (!tokenRecord) {
+      return error(res, 'Invalid or expired refresh token', 401);
+    }
+
+    // Revoke the old refresh token (Rotation)
+    await query(`UPDATE refresh_tokens SET revoked = true WHERE id = $1`, [tokenRecord.id]);
+
+    // Generate new tokens
+    const newToken = jwt.sign(
+      { id: tokenRecord.user_id, email: tokenRecord.email, phone: tokenRecord.mobile, role: tokenRecord.role },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id);
+
+    return res.json({
+      success: true,
+      token: newToken,
+      refreshToken: newRefreshToken
+    });
   } catch (err) {
     next(err);
   }
@@ -265,11 +356,26 @@ const logout = async (req, res, next) => {
 const setRole = async (req, res, next) => {
   try {
     const { userId, newRole } = req.body;
-    if (!['Partner', 'admin', 'superadmin', 'employee'].includes(newRole)) {
+    if (!['Partner', 'admin', 'super_admin', 'employee'].includes(newRole)) {
       return error(res, 'Invalid role', 400);
     }
+
+    // RBAC: Admin cannot promote users to admin or super_admin
+    if (req.user.role === 'admin' && (newRole === 'super_admin' || newRole === 'admin')) {
+      return error(res, 'Admins are not allowed to promote users to administrative roles', 403);
+    }
+
+    // Check target user's current role
+    const { rows: [targetUser] } = await query(`SELECT role FROM users WHERE id = $1`, [userId]);
+    if (!targetUser) return error(res, 'Target user not found', 404);
+
+    // Admin cannot demote or modify other admin/super_admin accounts
+    if (req.user.role === 'admin' && (targetUser.role === 'super_admin' || targetUser.role === 'admin')) {
+      return error(res, 'Admins are not allowed to modify administrative accounts', 403);
+    }
+
     await query(`UPDATE users SET role = $1 WHERE id = $2`, [newRole, userId]);
-    logger.info(`Admin ${req.user.id} changed role of User ${userId} to ${newRole}`);
+    logger.info(`Admin ${req.user.id} (${req.user.role}) changed role of User ${userId} to ${newRole}`);
     return success(res, `Role updated to ${newRole}`);
   } catch (err) {
     next(err);
@@ -285,5 +391,6 @@ module.exports = {
   login,
   register,
   logout,
-  setRole
+  setRole,
+  refresh
 };

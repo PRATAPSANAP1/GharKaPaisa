@@ -45,7 +45,7 @@ const creditHold = async (partnerId, amount, meta = {}) => {
         wallet_id, partner_id, application_id, type, amount, balance_before, balance_after, status, description, 
         reference_type, reference_id, bank_name, product_type, processed_by, release_at
       )
-      VALUES ($1, $2, $3, 'credit', $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, NOW() + INTERVAL '${holdHours} hours')
+      VALUES ($1, $2, $3, 'credit', $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, NULL)
       RETURNING id
     `, [
       wallet.id, partnerId, meta.application_id || null, amount, wallet.hold_balance, parseFloat(wallet.hold_balance) + parseFloat(amount),
@@ -340,7 +340,7 @@ const releaseMaturedCommissions = async () => {
       SELECT wt.id, wt.wallet_id, wt.amount, w.Partner_id as partner_id
       FROM wallet_transactions wt
       JOIN wallets w ON w.id = wt.wallet_id
-      WHERE wt.status = 'pending' AND wt.txn_type = 'credit' AND wt.release_at <= NOW()
+      WHERE wt.status = 'pending' AND wt.type = 'credit' AND wt.release_at <= NOW()
     `);
     if (rows.length > 0) {
       logger.info(`Releasing ${rows.length} matured commission transaction(s)...`);
@@ -401,7 +401,7 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
     // Log transaction
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_transactions (
-        wallet_id, partner_id, txn_type, amount, status, description, 
+        wallet_id, partner_id, type, amount, status, description, 
         reference_type, processed_by, processed_at
       )
       VALUES ($1, $2, $3, $4, 'approved', $5, 'manual_adjustment', $6, NOW())

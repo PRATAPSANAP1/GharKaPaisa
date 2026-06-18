@@ -63,7 +63,7 @@ const createBank = async (req, res, next) => {
     `, [name, short_code, logo_url || null, is_active !== undefined ? is_active : true, status || 'Active']);
 
     // Log action to audit logs
-    await logAction(req.user.id, 'CREATE_BANK', bank.id, { name, short_code });
+    await logAction(req, 'CREATE_BANK', bank.id, { name, short_code });
 
     return created(res, bank, 'Bank partner created successfully');
   } catch (err) {
@@ -113,7 +113,7 @@ const updateBank = async (req, res, next) => {
     ]);
 
     // Log action to audit logs
-    await logAction(req.user.id, 'UPDATE_BANK', bank.id, { name: bank.name, status: bank.status, is_active: bank.is_active });
+    await logAction(req, 'UPDATE_BANK', bank.id, { name: bank.name, status: bank.status, is_active: bank.is_active });
 
     return success(res, bank, 'Bank partner updated successfully');
   } catch (err) {
@@ -140,7 +140,7 @@ const deleteBank = async (req, res, next) => {
     await query('DELETE FROM banks WHERE id = $1', [id]);
 
     // Log action to audit logs
-    await logAction(req.user.id, 'DELETE_BANK', id, { name: existing.name });
+    await logAction(req, 'DELETE_BANK', id, { name: existing.name });
 
     return success(res, {}, 'Bank partner deleted successfully');
   } catch (err) {

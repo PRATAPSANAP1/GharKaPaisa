@@ -1,6 +1,7 @@
 const { query, getClient } = require('../config/db');
 const { generateAppNumber, calculateCommission, getPaginationParams } = require('../utils/helpers');
-const { creditCommission } = require('../services/wallet.service');
+const { creditCommission, releaseHold } = require('../services/wallet.service');
+const { calculatePartnerCommission } = require('../services/commission.service');
 const { notify } = require('../services/notification.service');
 const { uploadToS3 } = require('../services/s3.service');
 const { success, created, error, notFound, forbidden, paginate } = require('../utils/response');
@@ -47,7 +48,7 @@ const submitApplication = async (req, res, next) => {
     }
 
     // Calculate commission
-    const commission = calculateCommission(product, loan_amount);
+    const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
     const appNumber = generateAppNumber();
 
     // Create application
@@ -103,12 +104,12 @@ const updateStatus = async (req, res, next) => {
     await client.query('COMMIT');
 
     // Log application status update to audit logs
-    await logAction(req.user.id, 'UPDATE_APPLICATION_STATUS', id, { status, bank_ref_number, approved_amount });
+    await logAction(req, 'UPDATE_APPLICATION_STATUS', id, { status, bank_ref_number, approved_amount });
 
     // Credit commission on approval or disbursal, but only once
     if (status === 'approved' || status === 'disbursed') {
       const { rows: [existingTx] } = await client.query(
-        `SELECT id FROM wallet_transactions WHERE application_id = $1 AND txn_type = 'credit'`, [app.id]
+        `SELECT id FROM wallet_transactions WHERE application_id = $1 AND type = 'credit'`, [app.id]
       );
       if (!existingTx) {
         const commission = app.commission_amount || 0;
@@ -118,6 +119,28 @@ const updateStatus = async (req, res, next) => {
         // Get Partner user_id for notification
         const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
         if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
+      }
+    }
+
+    // Release commission on confirmed status, converting pending earnings to withdrawable balance
+    if (status === 'confirmed') {
+      const { rows: [pendingTx] } = await client.query(
+        `SELECT id, amount FROM wallet_transactions WHERE application_id = $1 AND type = 'credit' AND status = 'pending'`, [app.id]
+      );
+      if (pendingTx) {
+        await releaseHold(app.Partner_id, pendingTx.amount, {
+          txn_id: pendingTx.id,
+          processed_by: req.user.id,
+          reference_type: 'commission',
+          reference_id: app.id,
+          description: `Commission released for App ${app.app_number}`
+        });
+        // Update applications commission_status to approved
+        await client.query(`UPDATE applications SET commission_status = 'approved', updated_at = NOW() WHERE id = $1`, [app.id]);
+        
+        // Notify Partner
+        const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+        if (Partner) await notify.commissionCredited(Partner.user_id, pendingTx.amount);
       }
     }
 

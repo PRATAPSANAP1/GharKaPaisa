@@ -11,6 +11,6 @@ router.use(roleCheck('admin', 'super_admin'));
 router.get('/', ctrl.listAllBanks);
 router.post('/', ctrl.createBank);
 router.put('/:id', ctrl.updateBank);
-router.delete('/:id', ctrl.deleteBank);
+router.delete('/:id', roleCheck('super_admin'), ctrl.deleteBank);
 
 module.exports = router;
