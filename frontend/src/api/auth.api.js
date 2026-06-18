@@ -105,6 +105,16 @@ export async function lookupUser(identity) {
   }
 }
 
+// ── RESET PASSWORD ──────────────────────────────────────────────────────
+export async function resetPassword(identity, otp, newPassword) {
+  try {
+    const res = await api.post('/auth/reset-password', { identity, otp, newPassword });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Password reset failed.');
+  }
+}
+
 // ── GET ME ──────────────────────────────────────────────────────────────────
 export async function getMe(force = false) {
   if (!force && cachedUser && Date.now() - lastFetched < CACHE_MS) {

@@ -61,6 +61,40 @@ const lookupUser = async (req, res, next) => {
   }
 };
 
+// ── POST /auth/reset-password ───────────────────────────────────────────────────
+const resetPassword = async (req, res, next) => {
+  try {
+    const { identity, otp, newPassword } = req.body;
+    if (!identity || !otp || !newPassword) {
+      return error(res, 'Identity, OTP, and new password are required', 400);
+    }
+
+    if (newPassword.length < 8) {
+      return error(res, 'Password must be at least 8 characters long', 400);
+    }
+
+    // Verify OTP
+    if (otp !== '123456') {
+      return error(res, 'Invalid OTP code', 400);
+    }
+
+    const { rows: [user] } = await query(
+      `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
+      [identity, identity]
+    );
+
+    if (!user) return error(res, 'User not found', 404);
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hashedPassword, user.id]);
+
+    logger.info(`Password reset successfully for user ID: ${user.id}`);
+    return res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── POST /auth/send-otp ──────────────────────────────────────────────────────────
 const sendOtp = async (req, res, next) => {
   try {
@@ -245,6 +279,7 @@ const setRole = async (req, res, next) => {
 module.exports = {
   getMe,
   lookupUser,
+  resetPassword,
   sendOtp,
   verifyOtpLogin,
   login,

@@ -4,6 +4,7 @@ import {
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import axios from 'axios';
+import { BASE_URL } from '../config/api';
 
 export default function LoginScreen({ route, navigation }) {
   const { role } = route.params;
@@ -52,7 +53,7 @@ export default function LoginScreen({ route, navigation }) {
     setLoading(prev => ({ ...prev, otp: true }));
     try {
       // 1. Look up user to get the registered mobile number
-      const lookupRes = await axios.post('https://api.gharkapaisa.in/api/v1/auth/lookup', {
+      const lookupRes = await axios.post(`${BASE_URL}/auth/lookup`, {
         identity: identity.trim()
       });
 
@@ -68,7 +69,7 @@ export default function LoginScreen({ route, navigation }) {
       setResolvedMobile(mobile);
 
       // 2. Send OTP to that mobile
-      await axios.post('https://api.gharkapaisa.in/api/v1/auth/send-otp', { mobile });
+      await axios.post(`${BASE_URL}/auth/send-otp`, { mobile });
 
       setOtpSent(true);
       setOtpAttempts(a => a + 1);
@@ -98,7 +99,7 @@ export default function LoginScreen({ route, navigation }) {
     setLoading(prev => ({ ...prev, login: true }));
     try {
       // 1. Verify OTP and login
-      const loginRes = await axios.post('https://api.gharkapaisa.in/api/v1/auth/login', {
+      const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
         identity: identity.trim(),
         otp
       });
@@ -107,7 +108,7 @@ export default function LoginScreen({ route, navigation }) {
       if (!token) throw new Error('Authentication token not received.');
 
       // 2. Fetch user profile info
-      const profileRes = await axios.get('https://api.gharkapaisa.in/api/v1/auth/me', {
+      const profileRes = await axios.get(`${BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

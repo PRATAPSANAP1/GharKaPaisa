@@ -92,13 +92,15 @@ const seed = async () => {
   logger.info(`Seeded ${PRODUCTS.length} products`);
 
   // Super Admin
+  const bcrypt = require('bcrypt');
+  const hashedPassword = await bcrypt.hash('Admin@123', 10);
   const { rows: [superAdmin] } = await query(`
-    INSERT INTO users (email, mobile, firebase_uid, role, status)
-    VALUES ('superadmin@finedge.in', '9999999999', 'seed-superadmin-uid', 'super_admin', 'active')
-    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid'
+    INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash)
+    VALUES ('sharadyohesa@gmail.com', '8087179438', 'seed-superadmin-uid', 'super_admin', 'active', 'Sharad Yohesa', $1)
+    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid', mobile = '8087179438', role = 'super_admin', status = 'active', full_name = 'Sharad Yohesa', password_hash = $1
     RETURNING id
-  `);
-  logger.info('Super admin seeded with mock Firebase UID');
+  `, [hashedPassword]);
+  logger.info('Super admin seeded with credentials');
 
   logger.info('✅ Seeding complete');
   process.exit(0);

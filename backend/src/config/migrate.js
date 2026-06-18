@@ -566,24 +566,24 @@ const migrate = async () => {
     `);
   }
 
-  // Seed Super Admin Pratap Sanap if not exists
-  const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['admin@gharkapaisa.in']);
+  // Seed Super Admin Sharad Yohesa if not exists
+  const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
   if (!existingSuper) {
     const bcrypt = require('bcrypt');
     const hashedPassword = await bcrypt.hash('Admin@123', 10);
     await query(`
-      INSERT INTO users (email, role, status, full_name, password_hash, is_active)
-      VALUES ($1, $2, 'active', $3, $4, true)
-    `, ['admin@gharkapaisa.in', 'super_admin', 'Pratap Sanap', hashedPassword]);
-    logger.info('Super admin Pratap Sanap seeded successfully');
+      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active)
+      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true)
+    `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
+    logger.info('Super admin Sharad Yohesa seeded successfully');
   } else {
     // Make sure role and status are set correctly
     await query(`
       UPDATE users 
-      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Pratap Sanap'
-      WHERE email = 'admin@gharkapaisa.in'
+      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438'
+      WHERE email = 'sharadyohesa@gmail.com'
     `);
-    logger.info('Super admin Pratap Sanap configuration verified');
+    logger.info('Super admin Sharad Yohesa configuration verified');
   }
 
   // ── Banners Table ─────────────────────────────────────────────────────────────

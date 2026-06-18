@@ -4,6 +4,7 @@ import {
   ActivityIndicator, SafeAreaView, StatusBar, ScrollView, Alert
 } from 'react-native';
 import axios from 'axios';
+import { BASE_URL } from '../config/api';
 
 export default function DashboardScreen({ route, navigation }) {
   const { user, token } = route.params;
@@ -17,7 +18,7 @@ export default function DashboardScreen({ route, navigation }) {
   const fetchWalletData = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('https://api.gharkapaisa.in/api/v1/wallet', {
+      const res = await axios.get(`${BASE_URL}/wallet`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.success) {
