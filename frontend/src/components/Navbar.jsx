@@ -216,7 +216,7 @@ const Navbar = () => {
         </button>
         <button
           onClick={() =>
-            window.location.href = 'https://gharkapaisa.in/dashboard'
+            window.location.href = 'https://yohesa-test-three.vercel.app/dashboard'
           }
         >
           {t('nav.employee', 'Employee')}
@@ -324,7 +324,7 @@ const Navbar = () => {
             {t('nav.admin', 'Admin')}
           </button>
           <button
-            onClick={() => window.location.href = 'https://gharkapaisa.in/dashboard'}
+            onClick={() => window.location.href = 'https://yohesa-test-three.vercel.app/dashboard'}
             style={{ color: C.text, '--underline-color': C.teal }}
           >
             {t('nav.employee', 'Employee')}
