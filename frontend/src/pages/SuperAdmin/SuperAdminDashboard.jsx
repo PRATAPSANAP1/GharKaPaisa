@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/api';
-import { useTheme } from '../../components/Partner/ThemeContext';
+import { useTheme, makeS } from '../../components/Partner/ThemeContext';
 import { Icons } from '../../components/Partner/PartnerIcons';
 
 export default function SuperAdminDashboard() {
   const { C } = useTheme();
+  const S = makeS(C);
   
   // Tabs: 'directory' or 'create'
   const [activeTab, setActiveTab] = useState('directory');
@@ -129,28 +130,38 @@ export default function SuperAdminDashboard() {
     total: admins.length,
     active: admins.filter(a => a.status === 'active' || a.isActive).length,
     suspended: admins.filter(a => a.status === 'suspended').length
-  };
-
-  return (
-    <div className="space-y-6">
+  };  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Top Banner / Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "8px" }}>
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">System Administrators</h2>
-          <p className="text-gray-500 text-sm mt-1">Manage and provision administrator credentials and permission settings.</p>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>System Administrators</h2>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage and provision administrator credentials and permission settings.</p>
         </div>
         
         {/* Navigation Tabs */}
-        <div className="flex bg-gray-100 p-1 rounded-xl mt-4 md:mt-0 self-start md:self-center">
+        <div style={{ display: "flex", background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "4px" }}>
           <button
             onClick={() => setActiveTab('directory')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'directory' ? 'bg-white text-indigo-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            style={{
+              background: activeTab === 'directory' ? C.teal : "transparent",
+              color: activeTab === 'directory' ? "#fff" : C.textMid,
+              border: "none", borderRadius: "8px", padding: "8px 16px",
+              fontWeight: 700, fontSize: "13px", cursor: "pointer",
+              transition: "all 0.2s"
+            }}
           >
             Admins Directory
           </button>
           <button
             onClick={() => setActiveTab('create')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'create' ? 'bg-white text-indigo-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            style={{
+              background: activeTab === 'create' ? C.teal : "transparent",
+              color: activeTab === 'create' ? "#fff" : C.textMid,
+              border: "none", borderRadius: "8px", padding: "8px 16px",
+              fontWeight: 700, fontSize: "13px", cursor: "pointer",
+              transition: "all 0.2s"
+            }}
           >
             Create New Admin
           </button>
@@ -158,44 +169,46 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
+          <div style={{ width: "48px", height: "48px", background: `${C.teal}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal }}>
             <Icons.profile size={24} />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
-            <div className="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Administrators</div>
+            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.total}</div>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Administrators</div>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+
+        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
+          <div style={{ width: "48px", height: "48px", background: `${C.green}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.green }}>
             <Icons.check size={24} />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-800">{stats.active}</div>
-            <div className="text-gray-400 text-xs font-medium uppercase tracking-wider">Active Admins</div>
+            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.active}</div>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Active Admins</div>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500">
+
+        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
+          <div style={{ width: "48px", height: "48px", background: `${C.red}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.red }}>
             <Icons.x size={24} />
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-800">{stats.suspended}</div>
-            <div className="text-gray-400 text-xs font-medium uppercase tracking-wider">Suspended Admins</div>
+            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.suspended}</div>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Suspended Admins</div>
           </div>
         </div>
       </div>
 
       {/* Main Container */}
       {activeTab === 'directory' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-            <h3 className="font-bold text-gray-800 text-lg">Directory List</h3>
+        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Directory List</h3>
             <button 
               onClick={fetchAdmins}
-              className="text-gray-400 hover:text-indigo-600 transition"
+              style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }}
               title="Refresh"
             >
               🔄 Refresh
@@ -203,75 +216,85 @@ export default function SuperAdminDashboard() {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center text-gray-400">
-              <div className="animate-spin inline-block w-8 h-8 border-4 border-indigo-600 rounded-full border-t-transparent mb-2"></div>
-              <p>Loading directory list...</p>
+            <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
+              <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
+              Loading directory list...
             </div>
           ) : errorMsg ? (
-            <div className="p-12 text-center text-red-500 bg-red-50/50 m-6 rounded-2xl border border-red-100">
-              <Icons.x size={24} className="mx-auto mb-2" />
-              <p className="font-semibold">{errorMsg}</p>
+            <div style={{ padding: "24px", textAlign: "center", color: C.red, background: `${C.red}10`, margin: "24px", borderRadius: "12px", border: `1px solid ${C.red}20` }}>
+              <Icons.x size={24} style={{ margin: "0 auto 8px" }} />
+              <p style={{ fontWeight: 600, margin: 0 }}>{errorMsg}</p>
             </div>
           ) : admins.length === 0 ? (
-            <div className="p-12 text-center text-gray-400">
-              <p className="text-lg">No administrators provisioned yet.</p>
+            <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
+              <p style={{ fontSize: "16px", margin: 0 }}>No administrators provisioned yet.</p>
               <button 
                 onClick={() => setActiveTab('create')}
-                className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition"
+                style={{ ...S.btn("primary"), marginTop: "16px", padding: "10px 20px" }}
               >
                 Create First Admin
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                 <thead>
-                  <tr className="bg-gray-50 text-gray-400 font-semibold text-xs tracking-wider border-b border-gray-100">
-                    <th className="py-4 px-6">Name</th>
-                    <th className="py-4 px-6">Employee ID</th>
-                    <th className="py-4 px-6">Contact Info</th>
-                    <th className="py-4 px-6">Department</th>
-                    <th className="py-4 px-6">Designation</th>
-                    <th className="py-4 px-6">Status</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
+                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
+                    <th style={{ padding: "14px 16px" }}>Name</th>
+                    <th style={{ padding: "14px 16px" }}>Employee ID</th>
+                    <th style={{ padding: "14px 16px" }}>Contact Info</th>
+                    <th style={{ padding: "14px 16px" }}>Department</th>
+                    <th style={{ padding: "14px 16px" }}>Designation</th>
+                    <th style={{ padding: "14px 16px" }}>Status</th>
+                    <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm text-gray-600">
+                <tbody style={{ fontSize: "13.5px", color: C.text }}>
                   {admins.map((admin) => (
-                    <tr key={admin._id} className="hover:bg-gray-50/50 transition">
-                      <td className="py-4 px-6 font-semibold text-gray-800">
+                    <tr key={admin._id} style={{ borderBottom: `1px solid ${C.border}60` }} className="hover:bg-gray-50/10">
+                      <td style={{ padding: "14px 16px", fontWeight: 700 }}>
                         {admin.fullName || 'No Name Provided'}
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs">
+                      <td style={{ padding: "14px 16px", fontFamily: "monospace", fontSize: "12px", color: C.textMid }}>
                         {admin.employeeId}
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="font-medium text-gray-700">{admin.email}</div>
-                        <div className="text-xs text-gray-400">{admin.mobile}</div>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div style={{ fontWeight: 600 }}>{admin.email}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{admin.mobile}</div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, background: `${C.teal}15`, color: C.teal }}>
                           {admin.department}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td style={{ padding: "14px 16px" }}>
                         {admin.designation}
                       </td>
-                      <td className="py-4 px-6">
+                      <td style={{ padding: "14px 16px" }}>
                         {admin.status === 'active' || admin.isActive ? (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Active
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 8px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, background: `${C.green}15`, color: C.green }}>
+                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.green }}></span> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Suspended
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 8px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, background: `${C.red}15`, color: C.red }}>
+                            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.red }}></span> Suspended
                           </span>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
                         <button
                           onClick={() => handleToggleBlock(admin._id, admin.status)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${admin.status === 'active' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+                          style={{
+                            background: admin.status === 'active' ? `${C.red}15` : `${C.green}15`,
+                            color: admin.status === 'active' ? C.red : C.green,
+                            border: `1px solid ${admin.status === 'active' ? C.red : C.green}30`,
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                          }}
                         >
                           {admin.status === 'active' ? 'Suspend' : 'Activate'}
                         </button>
@@ -285,114 +308,114 @@ export default function SuperAdminDashboard() {
         </div>
       ) : (
         /* Create Admin Form */
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden max-w-2xl">
-          <div className="p-6 border-b border-gray-50">
-            <h3 className="font-bold text-gray-800 text-lg">Provision Administrator</h3>
+        <div style={{ ...S.card, maxWidth: "600px" }}>
+          <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: "14px", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Provision Administrator</h3>
           </div>
           
-          <form onSubmit={handleCreateAdmin} className="p-6 space-y-4">
+          <form onSubmit={handleCreateAdmin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {formErr && (
-              <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm flex items-center gap-2">
+              <div style={{ padding: "12px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "10px", color: C.red, fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <Icons.x size={16} /> {formErr}
               </div>
             )}
             
             {formSuccess && (
-              <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-sm flex items-center gap-2">
+              <div style={{ padding: "12px", background: `${C.green}10`, border: `1px solid ${C.green}30`, borderRadius: "10px", color: C.green, fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <Icons.check size={16} /> {formSuccess}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
               {/* Full Name */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Full Name *</label>
+                <label style={S.label}>Full Name *</label>
                 <input
                   name="fullName"
                   value={form.fullName}
                   onChange={handleChange}
                   placeholder="e.g. Pratap Sanap"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Email Address *</label>
+                <label style={S.label}>Email Address *</label>
                 <input
                   name="email"
                   type="email"
                   value={form.email}
                   onChange={handleChange}
                   placeholder="e.g. manager@gharkapaisa.in"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Mobile */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Mobile Number *</label>
+                <label style={S.label}>Mobile Number *</label>
                 <input
                   name="mobile"
                   value={form.mobile}
                   onChange={handleChange}
                   placeholder="10-digit number"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Employee ID */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Employee ID *</label>
+                <label style={S.label}>Employee ID *</label>
                 <input
                   name="employeeId"
                   value={form.employeeId}
                   onChange={handleChange}
                   placeholder="e.g. GKP-1024"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Password *</label>
+                <label style={S.label}>Password *</label>
                 <input
                   name="password"
                   type="password"
                   value={form.password}
                   onChange={handleChange}
                   placeholder="Min 8 characters"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Confirm Password *</label>
+                <label style={S.label}>Confirm Password *</label>
                 <input
                   name="confirmPassword"
                   type="password"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   placeholder="Repeat password"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
 
               {/* Department */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Department *</label>
+                <label style={S.label}>Department *</label>
                 <select
                   name="department"
                   value={form.department}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 >
                   <option value="Operations">Operations</option>
@@ -407,30 +430,30 @@ export default function SuperAdminDashboard() {
 
               {/* Designation */}
               <div>
-                <label className="block text-gray-600 text-xs font-bold mb-1.5 uppercase tracking-wide">Designation *</label>
+                <label style={S.label}>Designation *</label>
                 <input
                   name="designation"
                   value={form.designation}
                   onChange={handleChange}
                   placeholder="e.g. Credit Officer"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-sm"
+                  style={S.input}
                   required
                 />
               </div>
             </div>
 
-            <div className="pt-4 flex justify-end space-x-2">
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: `1px solid ${C.border}40`, paddingTop: "16px" }}>
               <button
                 type="button"
                 onClick={() => setActiveTab('directory')}
-                className="px-5 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-500 rounded-xl text-sm font-semibold transition"
+                style={S.btn("outline")}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={formLoading}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition disabled:opacity-75"
+                style={S.btn("primary")}
               >
                 {formLoading ? 'Creating User...' : 'Provision Admin'}
               </button>
