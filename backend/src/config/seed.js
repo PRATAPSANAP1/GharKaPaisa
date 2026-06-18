@@ -93,7 +93,7 @@ const seed = async () => {
 
   // Super Admin
   const bcrypt = require('bcrypt');
-  const hashedPassword = await bcrypt.hash('Admin@123', 10);
+  const hashedPassword = await bcrypt.hash('gharkapaisa@123', 10);
   const { rows: [superAdmin] } = await query(`
     INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash)
     VALUES ('sharadyohesa@gmail.com', '8087179438', 'seed-superadmin-uid', 'super_admin', 'active', 'Sharad Yohesa', $1)

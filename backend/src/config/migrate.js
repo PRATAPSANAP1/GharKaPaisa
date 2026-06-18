@@ -567,22 +567,22 @@ const migrate = async () => {
   }
 
   // Seed Super Admin Sharad Yohesa if not exists
+  const bcrypt = require('bcrypt');
+  const hashedPassword = await bcrypt.hash('gharkapaisa@123', 10);
   const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
   if (!existingSuper) {
-    const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash('Admin@123', 10);
     await query(`
       INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active)
       VALUES ($1, $2, 'super_admin', 'active', $3, $4, true)
     `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
     logger.info('Super admin Sharad Yohesa seeded successfully');
   } else {
-    // Make sure role and status are set correctly
+    // Make sure role, status, and password are set correctly
     await query(`
       UPDATE users 
-      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438'
+      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1
       WHERE email = 'sharadyohesa@gmail.com'
-    `);
+    `, [hashedPassword]);
     logger.info('Super admin Sharad Yohesa configuration verified');
   }
 
