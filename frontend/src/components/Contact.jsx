@@ -44,17 +44,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", color: C.textLight, fontWeight: 600, marginBottom: "4px" }}>Email Us</div>
-                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>sharadyohesa@gmail.com</div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "20px" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: `${C.teal}15`, color: C.teal, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <FaPhoneAlt size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "13px", color: C.textLight, fontWeight: 600, marginBottom: "4px" }}>Call Us</div>
-                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>+91 8087179438</div>
+                  <div style={{ fontSize: "15px", color: C.text, fontWeight: 600 }}>support@gharkapaisa.in</div>
                 </div>
               </div>
 

@@ -20,7 +20,6 @@ export default function PrivacyPolicy() {
         India
       </pre>
       <p className="mb-2">Email: <a href="mailto:support@gharkapaisa.in" className="text-blue-600 hover:underline">support@gharkapaisa.in</a></p>
-      <p className="mb-2">Phone: <a href="tel:+918087179438" className="text-blue-600 hover:underline">+91 8087179438</a></p>
       <p className="mb-4">Website: <a href="https://gharkapaisa.in" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://gharkapaisa.in</a></p>
 
       <h2 className="text-2xl font-semibold mt-8 mb-2">2. Information We Collect</h2>

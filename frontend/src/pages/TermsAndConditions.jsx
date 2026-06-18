@@ -135,7 +135,6 @@ export default function TermsAndConditions() {
       <h2 className="text-2xl font-semibold mt-8 mb-2">15. Contact Information</h2>
       <p className="font-medium">YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED</p>
       <p>Email: <a href="mailto:support@gharkapaisa.in" className="text-blue-600 hover:underline">support@gharkapaisa.in</a></p>
-      <p>Phone: <a href="tel:+918087179438" className="text-blue-600 hover:underline">+91 8087179438</a></p>
       <p>Website: <a href="https://gharkapaisa.in" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">https://gharkapaisa.in</a></p>
     </div>
   );
