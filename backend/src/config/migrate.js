@@ -566,9 +566,12 @@ const migrate = async () => {
     `);
   }
 
-  // Seed Super Admin Sharad Yohesa if not exists
+  // Clean up all old super admin records
   const bcrypt = require('bcrypt');
-  const hashedPassword = await bcrypt.hash('gharkapaisa@123', 10);
+  const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
+  await query(`DELETE FROM users WHERE role = 'super_admin' AND email != $1`, ['sharadyohesa@gmail.com']);
+
+  // Seed Super Admin Sharad Yohesa if not exists
   const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
   if (!existingSuper) {
     await query(`
@@ -577,7 +580,7 @@ const migrate = async () => {
     `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
     logger.info('Super admin Sharad Yohesa seeded successfully');
   } else {
-    // Make sure role, status, and password are set correctly
+    // Make sure role, status, mobile, and password are set correctly
     await query(`
       UPDATE users 
       SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1
