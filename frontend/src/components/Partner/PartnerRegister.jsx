@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { registerPartner, lookupUser } from "../../api/auth.api";
+import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -47,7 +47,6 @@ export default function PartnerRegister() {
     firstName: "", lastName: "", mobile: "",
     email: "",
     // Step 1 – Business
-    address: "", businessCity: "", shopName: "",
     companyType: "individual", gst: "",
     // Step 2 – Bank
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
@@ -64,8 +63,11 @@ export default function PartnerRegister() {
   const [emailOtpLoading, setEmailOtpLoading] = useState(false);
 
   useEffect(() => {
-    return () => {};
-  }, []);
+    if (!form.email) return;
+    setEmailOtpSent(false);
+    setEmailOtpTimer(0);
+    setForm(f => ({ ...f, emailPreVerified: false, emailOtp: '' }));
+  }, [form.email]);
 
   useEffect(() => {
     let t;
@@ -96,8 +98,6 @@ export default function PartnerRegister() {
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
     }
     if (step === 1) {
-      if (!form.address.trim()) return t("partner.errors.addressRequired", "Please enter your current address.");
-      if (!form.shopName.trim()) return t("partner.errors.shopNameRequired", "Please enter your company/shop name.");
       if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst.trim())) {
         return t("partner.errors.gstInvalid", "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).");
       }
@@ -121,14 +121,57 @@ export default function PartnerRegister() {
     return null;
   };
 
+  const handleSendRegistrationOtp = async () => {
+    if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr(t('partner.errors.emailInvalid', 'Please enter a valid email address.'));
+
+    setErr('');
+    setInfoMsg('');
+    setEmailOtpLoading(true);
+    try {
+      await sendRegistrationOtp(form.email.trim());
+      setEmailOtpSent(true);
+      setEmailOtpTimer(120);
+      setInfoMsg(t('partner.emailOtpSent', 'OTP sent to your email address.'));
+    } catch (err) {
+      setErr(err.message || t('partner.errors.sendOtpFailed', 'Failed to send OTP. Please try again.'));
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
+  const handleVerifyRegistrationOtp = async () => {
+    if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
+    if (!form.emailOtp.trim() || form.emailOtp.trim().length < 6) return setErr(t('partner.errors.enterEmailOtp', 'Please enter the 6-digit OTP.'));
+
+    setErr('');
+    setInfoMsg('');
+    setEmailOtpLoading(true);
+    try {
+      await verifyRegistrationOtp(form.email.trim(), form.emailOtp.trim());
+      setForm(f => ({ ...f, emailPreVerified: true }));
+      setEmailOtpSent(false);
+      setEmailOtpTimer(0);
+      setInfoMsg(t('partner.emailVerified', 'Email successfully verified.'));
+    } catch (err) {
+      setErr(err.message || t('partner.errors.verifyOtpFailed', 'Failed to verify OTP. Please try again.'));
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
   // ── Step Submit / Final Register ─────────────────────────────────────────────
   const handleStepSubmit = async () => {
     setErr("");
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // Step 0 — check duplicate email / mobile
+    // Step 0 — check duplicate email / mobile and verify email OTP
     if (step === 0) {
+      if (!form.emailPreVerified) {
+        return setErr(t('partner.errors.verifyEmailBeforeContinue', 'Please verify your email with OTP before continuing.'));
+      }
+
       setLoading(true);
       try {
         const mobileExists = await lookupUser(form.mobile.trim());
@@ -160,9 +203,9 @@ export default function PartnerRegister() {
         mobile: form.mobile.trim(),
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
-        current_address: form.address.trim(),
-        business_location: form.businessCity.trim(),
-        company_name: form.shopName.trim(),
+        current_address: "",
+        business_location: "",
+        company_name: "",
         company_type: form.companyType,
         gst_number: form.gst ? form.gst.trim().toUpperCase() : null,
         bank_name: form.bankName.trim(),
@@ -356,42 +399,35 @@ export default function PartnerRegister() {
                   {/* Email OTP input shown after sending OTP */}
                   {emailOtpSent && !form.emailPreVerified && (
                     <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                      <input style={{ ...S.input, flex: 1 }} value={form.emailOtp} onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))} placeholder={t('partner.enterEmailOtp', 'Enter 6-digit OTP')} maxLength={6} />
-                      <button type="button" onClick={async () => {
-                        if (!form.email.trim()) return setErr('Please enter your email first');
-                        if (!form.emailOtp || form.emailOtp.length < 6) return setErr('Please enter the 6-digit OTP');
-                        setEmailOtpLoading(true);
-                        try {
-                          const { verifyRegistrationOtp } = await import('../../api/auth.api');
-                          await verifyRegistrationOtp(form.email.trim(), form.emailOtp);
-                          setForm(f => ({ ...f, emailPreVerified: true }));
-                          setInfoMsg('Email verified for registration');
-                          setEmailOtpSent(false);
-                        } catch (err) {
-                          setErr(err.message || 'Failed to verify OTP');
-                        } finally {
-                          setEmailOtpLoading(false);
-                        }
-                      }} style={{ ...S.btn('sm') }}>{emailOtpLoading ? 'Verifying…' : t('partner.verifyOtpButton', 'Verify')}</button>
+                      <input
+                        style={{ ...S.input, flex: 1 }}
+                        value={form.emailOtp}
+                        onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
+                        placeholder={t('partner.enterEmailOtp', 'Enter 6-digit OTP')}
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyRegistrationOtp}
+                        disabled={emailOtpLoading}
+                        style={{ ...S.btn('sm') }}
+                      >
+                        {emailOtpLoading ? t('partner.verifying', 'Verifying…') : t('partner.verifyOtpButton', 'Verify')}
+                      </button>
                     </div>
                   )}
                 </div>
 
                 <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <label style={{ visibility: 'hidden' }}>.</label>
-                  <button type="button" onClick={async () => {
-                    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr('Please enter a valid email to verify');
-                    setErr(''); setInfoMsg(''); setEmailOtpLoading(true);
-                    try {
-                      const { sendRegistrationOtp } = await import('../../api/auth.api');
-                      await sendRegistrationOtp(form.email.trim());
-                      setEmailOtpSent(true);
-                      setEmailOtpTimer(120);
-                      setInfoMsg('OTP sent to email');
-                    } catch (err) {
-                      setErr(err.message || 'Failed to send OTP');
-                    } finally { setEmailOtpLoading(false); }
-                  }} style={{ ...S.btn('primary'), width: '100%' }} disabled={form.emailPreVerified}>{form.emailPreVerified ? t('partner.verified', 'Verified') : t('partner.sendVerify', 'Verify')}</button>
+                  <button
+                    type="button"
+                    onClick={handleSendRegistrationOtp}
+                    style={{ ...S.btn('primary'), width: '100%' }}
+                    disabled={form.emailPreVerified || emailOtpLoading}
+                  >
+                    {form.emailPreVerified ? t('partner.verified', 'Verified') : emailOtpSent ? t('partner.resendOtp', 'Resend OTP') : t('partner.sendVerify', 'Send OTP')}
+                  </button>
                   {emailOtpTimer > 0 && <div style={{ fontSize: 12, color: C.textLight, textAlign: 'center' }}>{emailOtpTimer}s</div>}
                 </div>
               </div>
@@ -401,27 +437,13 @@ export default function PartnerRegister() {
           {/* ── Step 1: Business ─────────────────────────────────────────────── */}
           {step === 1 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.currentAddress', 'Current Full Address')}</label>
-                <input {...inputProps("address")} />
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.businessLocation', 'Business Location (City)')}</label>
-                <input {...inputProps("businessCity")} />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.companyShopName', 'Company / Shop Name')}</label>
-                <input {...inputProps("shopName")} />
-              </div>
               <div>
                 <label style={S.label}>{t('partner.partnerType', 'Partner Type')}</label>
-                <select style={S.input} value={form.companyType} onChange={set("companyType")}>
+                <select style={S.input} value={form.companyType} onChange={set("companyType")}> 
                   {COMPANY_TYPES.map(tOption => <option key={tOption.value} value={tOption.value}>{t('companyTypes.' + tOption.value, tOption.label)}</option>)}
                 </select>
               </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.gstNumber', 'GST Number')} <span style={{ color: C.textLight, fontWeight: 500 }}>({t('partner.optional', 'Optional')})</span></label>
-                <input {...inputProps("gst")} />
+              <div>
               </div>
             </div>
           )}
