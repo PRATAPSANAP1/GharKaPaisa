@@ -14,6 +14,19 @@ const COMPANY_TYPES = [
   { label: "Private Limited Company", value: "pvt_ltd" },
 ];
 
+const INDIA_BANKS = [
+  'State Bank of India', 'Punjab National Bank', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank',
+  'Bank of Baroda', 'Canara Bank', 'Union Bank of India', 'IDBI Bank', 'Indian Bank', 'Indian Overseas Bank',
+  'Yes Bank', 'IDFC First Bank', 'IndusInd Bank', 'Federal Bank', 'Central Bank of India', 'UCO Bank',
+  'Bank of India', 'Punjab & Sind Bank', 'AU Small Finance Bank', 'Bandhan Bank', 'RBL Bank', 'Karur Vysya Bank',
+  'Karnataka Bank', 'South Indian Bank', 'Tamilnad Mercantile Bank', 'City Union Bank', 'Jammu & Kashmir Bank',
+  'DCB Bank', 'Yes Bank', 'PNB Housing Finance', 'Axis Small Finance Bank', 'Suryoday Small Finance Bank',
+  'Equitas Small Finance Bank', 'Fincare Small Finance Bank', 'Ujjivan Small Finance Bank', 'IDFC First Bank',
+  'IIFL Finance', 'Nainital Bank', 'J&K Bank', 'Lakshmi Vilas Bank', 'Punjab National Bank (PNB)',
+  'Bank of Maharashtra', 'Syndicate Bank', 'Andhra Bank', 'Oriental Bank of Commerce', 'Vijaya Bank',
+  'Yes Bank', 'West Bengal State Co-operative Bank', 'North East Small Finance Bank', 'Small Industries Development Bank of India'
+].sort();
+
 export default function PartnerRegister() {
   const navigate = useNavigate();
   const onBack = () => navigate('/login');
@@ -362,7 +375,12 @@ export default function PartnerRegister() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>{t('partner.bankName', 'Bank Name')}</label>
-                <input {...inputProps("bankName")} />
+                <div style={{ position: 'relative' }}>
+                  <input list="bank-list" {...inputProps("bankName")} placeholder={t('partner.selectBank', 'Search and select your bank')} />
+                  <datalist id="bank-list">
+                    {INDIA_BANKS.map(b => <option key={b} value={b} />)}
+                  </datalist>
+                </div>
               </div>
               <div>
                 <label style={S.label}>{t('partner.accountNumber', 'Account Number')}</label>
