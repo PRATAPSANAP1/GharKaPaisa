@@ -234,14 +234,37 @@ export default function PartnerRegister() {
             <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, marginBottom: "10px" }}>
               {t('partner.registrationSuccessful', 'Registration Successful!')}
             </div>
-            <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "16px", lineHeight: 1.6 }}>
-              {t('partner.partnerSubmittedDesc', 'Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.')}
+
+            {/* Email verification notice */}
+            <div style={{
+              background: `${C.teal}12`,
+              border: `1.5px solid ${C.teal}40`,
+              borderRadius: "12px",
+              padding: "16px 18px",
+              marginBottom: "18px",
+              textAlign: "left",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <span style={{ fontSize: "18px" }}>📧</span>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>
+                  {t('partner.verifyEmailTitle', 'Verify Your Email')}
+                </span>
+              </div>
+              <div style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6 }}>
+                {t('partner.verifyEmailDesc', 'A verification email has been sent to')} <strong style={{ color: C.text }}>{success.email}</strong>.
+                {' '}{t('partner.verifyEmailAction', 'Please check your inbox (and spam folder) and click the verification link to activate your login.')}
+              </div>
             </div>
 
-            <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "24px" }}>
+            <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "16px" }}>
               <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t('partner.partnerCode', 'Your Partner Code')}</div>
               <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code || success.partner_code}</div>
             </div>
+
+            <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>
+              {t('partner.partnerSubmittedDesc', 'Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.')}
+            </div>
+
             <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
               {t('partner.goToLogin', 'Go to Login')}
             </button>

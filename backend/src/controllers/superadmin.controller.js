@@ -56,9 +56,9 @@ const createAdmin = async (req, res, next) => {
     const { rows: [dbUser] } = await query(
       `INSERT INTO users (
         email, mobile, password_hash, role, status, 
-        full_name, employee_id, department, designation, created_by, is_active
+        full_name, employee_id, department, designation, created_by, is_active, email_verified
       )
-      VALUES ($1, $2, $3, 'admin', 'active', $4, $5, $6, $7, $8, true)
+      VALUES ($1, $2, $3, 'admin', 'active', $4, $5, $6, $7, $8, true, true)
       RETURNING id, email, role, status`,
       [email, formattedMobile, hashedPassword, fullName, employeeId, department, designation, req.user.id]
     );

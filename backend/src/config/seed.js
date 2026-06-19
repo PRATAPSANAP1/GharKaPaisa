@@ -97,9 +97,9 @@ const seed = async () => {
   const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
   await query(`DELETE FROM users WHERE role = 'super_admin' AND email != $1`, ['sharadyohesa@gmail.com']);
   const { rows: [superAdmin] } = await query(`
-    INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash)
-    VALUES ('sharadyohesa@gmail.com', '8087179438', 'seed-superadmin-uid', 'super_admin', 'active', 'Sharad Yohesa', $1)
-    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid', mobile = '8087179438', role = 'super_admin', status = 'active', full_name = 'Sharad Yohesa', password_hash = $1
+    INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash, email_verified)
+    VALUES ('sharadyohesa@gmail.com', '8087179438', 'seed-superadmin-uid', 'super_admin', 'active', 'Sharad Yohesa', $1, TRUE)
+    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid', mobile = '8087179438', role = 'super_admin', status = 'active', full_name = 'Sharad Yohesa', password_hash = $1, email_verified = TRUE
     RETURNING id
   `, [hashedPassword]);
   logger.info('Super admin seeded with credentials');

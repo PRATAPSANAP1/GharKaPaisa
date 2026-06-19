@@ -10,7 +10,7 @@ const { query, getClient } = require('../config/db');
 const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
-const { sendOtpEmail } = require('../services/email.service');
+const { sendOtpEmail, sendVerificationEmail } = require('../services/email.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa-secret-key-fallback';
 
@@ -86,12 +86,16 @@ const sendOtp = async (req, res, next) => {
 
     // Look up the user to get their email address
     const { rows: [user] } = await query(
-      `SELECT email, mobile FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT email, mobile, email_verified FROM users WHERE email = $1 OR mobile = $2`,
       [identity, identity]
     );
 
     if (!user || !user.email) {
       return error(res, 'No account found with this email or mobile number', 404);
+    }
+
+    if (!user.email_verified) {
+      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
 
     // Generate random 6-digit OTP
@@ -181,6 +185,10 @@ const login = async (req, res, next) => {
     );
 
     if (!user) return error(res, 'No account found with this email or mobile', 401);
+
+    if (!user.email_verified) {
+      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
+    }
 
     // Validate OTP
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
@@ -298,11 +306,13 @@ const register = async (req, res, next) => {
         passwordHash = await bcrypt.hash(password, salt);
       }
 
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
       // Insert User
       const { rows: [user] } = await client.query(
-        `INSERT INTO users (email, mobile, password_hash, role, status)
-         VALUES ($1, $2, $3, $4, 'pending') RETURNING id`,
-        [email, mobile, passwordHash, role]
+        `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token)
+         VALUES ($1, $2, $3, $4, 'pending', FALSE, $5) RETURNING id`,
+        [email, mobile, passwordHash, role, verificationToken]
       );
 
       let PartnerCode = null;
@@ -336,10 +346,22 @@ const register = async (req, res, next) => {
         `, [Partner.id]);
       }
 
+      // Send verification email via SES
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+        const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+        await sendVerificationEmail(email, verificationLink);
+        logger.info(`[Verification] Sent verification email to ${email}`);
+      } catch (emailErr) {
+        logger.error(`[Verification] Failed to send verification email to ${email}: ${emailErr.message}`);
+        await client.query('ROLLBACK');
+        return error(res, 'Failed to send verification email. Please try again.', 500);
+      }
+
       await client.query('COMMIT');
 
       logger.info(`User registered: ${email} (${PartnerCode || role})`);
-      return created(res, { partner_code: PartnerCode }, 'Registration successful. Awaiting KYC verification.');
+      return created(res, { partner_code: PartnerCode, email }, 'Registration successful. A verification email has been sent. Please check your inbox.');
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -393,6 +415,7 @@ module.exports = {
   verifyOtpLogin,
   login,
   register,
+  verifyEmail,
   logout,
   setRole,
   refresh

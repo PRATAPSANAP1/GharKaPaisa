@@ -14,6 +14,7 @@ import Home from '../components/Home';
 import Contact from '../components/Contact';
 import PartnerLogin from '../components/Partner/PartnerLogin';
 import PartnerRegister from '../components/Partner/PartnerRegister';
+import VerifyEmail from '../pages/VerifyEmail';
 import TermsAndConditions from '../pages/TermsAndConditions';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 
@@ -81,6 +82,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<PartnerLogin />} />
         <Route path="/register" element={<PartnerRegister />} />
         <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 

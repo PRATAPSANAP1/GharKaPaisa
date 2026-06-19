@@ -6,6 +6,53 @@ import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
 import { sendOtp, loginWithOtp, getMe } from "../../api/auth.api";
 
+// ── Toast Notification Component ─────────────────────────────────────────────
+function Toast({ message, type = "success", onClose }) {
+  const isSuccess = type === "success";
+
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 20,
+        right: 20,
+        zIndex: 9999,
+        minWidth: 280,
+        maxWidth: 400,
+        padding: "14px 20px",
+        borderRadius: "12px",
+        background: isSuccess ? "#059669" : "#DC2626",
+        color: "#fff",
+        fontSize: "13px",
+        fontWeight: 600,
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        boxShadow: isSuccess
+          ? "0 8px 24px rgba(5,150,105,0.35)"
+          : "0 8px 24px rgba(220,38,38,0.35)",
+        animation: "toastSlideIn 0.35s ease-out",
+      }}
+    >
+      <span style={{ fontSize: "18px", flexShrink: 0 }}>
+        {isSuccess ? "✅" : "❌"}
+      </span>
+      <span style={{ flex: 1, lineHeight: 1.5 }}>{message}</span>
+      <span
+        onClick={onClose}
+        style={{ cursor: "pointer", opacity: 0.7, fontSize: "16px", flexShrink: 0 }}
+      >
+        ✕
+      </span>
+    </div>
+  );
+}
+
 export default function PartnerLogin() {
   const { C } = useTheme();
   const S = makeS(C);
@@ -19,7 +66,7 @@ export default function PartnerLogin() {
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
   const [err, setErr] = useState("");
-  const [infoMsg, setInfoMsg] = useState("");
+  const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
   const [resolvedCredentials, setResolvedCredentials] = useState(null);
   const [otpSentTime, setOtpSentTime] = useState(null);
   const [otpAttempts, setOtpAttempts] = useState(0);
@@ -48,7 +95,7 @@ export default function PartnerLogin() {
     if (otpAttempts >= 3) return setErr(t('partner.errors.maxOtpAttempts', 'Maximum OTP attempts reached for this session. Please try again later.'));
 
     setErr("");
-    setInfoMsg("");
+    setToast(null);
     setLoading(l => ({ ...l, otp: true }));
     try {
       // Send OTP — backend resolves user email from identity and sends via SES
@@ -59,8 +106,9 @@ export default function PartnerLogin() {
       setOtpSentTime(Date.now());
       setOtpAttempts(a => a + 1);
       setTimer(30);
+      setToast({ message: t('partner.errors.otpSentSuccess', 'OTP sent to your registered email') + ` (${otpRes.email || '****@****.com'})`, type: "success" });
     } catch (e) {
-      setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
+      setToast({ message: e.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
     } finally {
       setLoading(l => ({ ...l, otp: false }));
     }
@@ -70,7 +118,7 @@ export default function PartnerLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr("");
-    setInfoMsg("");
+    setToast(null);
 
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
     if (!otpSent) return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
@@ -112,6 +160,15 @@ export default function PartnerLogin() {
       boxSizing: "border-box",
       transition: "background 0.3s",
     }}>
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div style={{ width: "100%", maxWidth: "400px" }}>
         {/* Back to Home */}
         <div style={{ marginBottom: "16px", textAlign: "left" }}>
@@ -148,16 +205,6 @@ export default function PartnerLogin() {
               color: C.red, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
             }}>
               <Icons.x size={14} /> {err}
-            </div>
-          )}
-
-          {infoMsg && (
-            <div style={{
-              background: `${C.green}15`, border: `1px solid ${C.green}40`,
-              borderRadius: "10px", padding: "10px 14px", fontSize: "13px",
-              color: C.green, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
-            }}>
-              <Icons.check size={14} /> {infoMsg}
             </div>
           )}
 
@@ -220,11 +267,6 @@ export default function PartnerLogin() {
                   {loading.otp ? t('partner.sending', 'Sending…') : timer > 0 ? `${timer}s` : t('partner.sendOtp', 'Send OTP')}
                 </button>
               </div>
-              {otpSent && resolvedCredentials && (
-                <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Icons.check size={12} /> {t('partner.errors.otpSentSuccess', 'OTP sent to your registered email')} ({resolvedCredentials.maskedEmail})
-                </div>
-              )}
             </div>
 
             {/* Submit */}
@@ -268,7 +310,13 @@ export default function PartnerLogin() {
 
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes toastSlideIn {
+          from { opacity: 0; transform: translateX(100px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -103,6 +103,16 @@ export async function lookupUser(identity) {
   }
 }
 
+// ── VERIFY EMAIL ────────────────────────────────────────────────────────
+export async function verifyEmail(token) {
+  try {
+    const res = await api.post('/auth/verify-email', { token });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Email verification failed.');
+  }
+}
+
 // ── GET ME ──────────────────────────────────────────────────────────────────
 export async function getMe(force = false) {
   if (!force && cachedUser && Date.now() - lastFetched < CACHE_MS) {

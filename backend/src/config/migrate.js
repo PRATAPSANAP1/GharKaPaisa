@@ -112,6 +112,8 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100)`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT`);
 
   // Drop password_hash — Firebase handles all credentials (idempotent)
   // await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
@@ -610,15 +612,15 @@ const migrate = async () => {
   const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
   if (!existingSuper) {
     await query(`
-      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active)
-      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true)
+      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
+      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true, true)
     `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
     logger.info('Super admin Sharad Yohesa seeded successfully');
   } else {
     // Make sure role, status, mobile, and password are set correctly
     await query(`
       UPDATE users 
-      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1
+      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1, email_verified = true
       WHERE email = 'sharadyohesa@gmail.com'
     `, [hashedPassword]);
     logger.info('Super admin Sharad Yohesa configuration verified');
