@@ -1751,7 +1751,20 @@ export default function Home({ onNavigate }) {
         )}
 
         {/* ── SECTION 2: Attractive Cards & Loans ── */}
-        {settings.section_visibility_attractive_cards !== "hide" && (
+        {settings.section_visibility_attractive_cards !== "hide" && (() => {
+          const attractiveCards = [
+            { id: "ltf-cards", title: "Lifetime Free Cards", desc: "Zero annual fees forever", img: ltfImg, gradient: "linear-gradient(135deg, #166397, #0F4F7A)" },
+            { id: "cibil-loans", title: "CIBIL Loan", desc: "Personalized loan offers", img: cibilImg, gradient: "linear-gradient(135deg, #27ae60, #0c6b30)" },
+            { id: "hdfc-cc-loan", title: "Loan on Credit Card", desc: "Instant cash on card limit", img: hdfcCcLoanImg, gradient: "linear-gradient(135deg, #8e44ad, #5b2c6f)" },
+            { id: "smart-emi", title: "Smart EMI Card", desc: "No-cost EMI purchases", img: smartEmiImg, gradient: "linear-gradient(135deg, #f39c12, #d35400)" },
+            { id: "secured-cards", title: "FD Backed Card", desc: "Build credit with FD", img: securedImg, gradient: "linear-gradient(135deg, #16a085, #117864)" },
+            { id: "upi-cards", title: "UPI Credit Card", desc: "Pay via UPI with credit", img: upiImg, gradient: "linear-gradient(135deg, #c0392b, #962d22)" },
+          ];
+          const doubled = [...attractiveCards, ...attractiveCards];
+          const cardW = isMobile ? 220 : 300;
+          const gap = 20;
+          const totalW = attractiveCards.length * (cardW + gap);
+          return (
           <Section 
             title={t('sections.attractiveCards')} 
             viewAllLabel={t('home.seeAll', 'See All')}
@@ -1759,16 +1772,60 @@ export default function Home({ onNavigate }) {
             C={C}
           >
             <style>{`
-              @keyframes attractive-ticker-scroll {
+              @keyframes attractive-scroll {
                 0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
+                100% { transform: translateX(-${totalW}px); }
               }
-              .attractive-ticker-wrap {
-                display: flex; gap: 16px; width: max-content;
-                animation: attractive-ticker-scroll 30s linear infinite;
+              .attractive-carousel {
+                display: flex; gap: ${gap}px; width: max-content;
+                animation: attractive-scroll ${attractiveCards.length * 5}s linear infinite;
               }
-              .attractive-ticker-wrap.paused {
-                animation-play-state: paused !important;
+              .attractive-carousel.paused { animation-play-state: paused; }
+              .attractive-card {
+                width: ${cardW}px; flex-shrink: 0; border-radius: 22px; overflow: hidden;
+                cursor: pointer; transition: all 0.35s cubic-bezier(.4,0,.2,1);
+                position: relative;
+              }
+              .attractive-card:hover {
+                transform: translateY(-6px) scale(1.02);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+              }
+              .attractive-card-img {
+                width: 100%; height: ${isMobile ? '130px' : '175px'};
+                object-fit: cover; display: block;
+                transition: transform 0.5s ease;
+              }
+              .attractive-card:hover .attractive-card-img { transform: scale(1.08); }
+              .attractive-card-overlay {
+                position: absolute; bottom: 0; left: 0; right: 0;
+                padding: ${isMobile ? '14px' : '18px'}; display: flex; flex-direction: column; gap: 4px;
+                background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%);
+              }
+              .attractive-card-title {
+                color: #fff; font-weight: 800; font-size: ${isMobile ? '14px' : '17px'};
+                line-height: 1.2; text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                margin: 0;
+              }
+              .attractive-card-desc {
+                color: rgba(255,255,255,0.85); font-size: ${isMobile ? '11px' : '13px'};
+                font-weight: 500; margin: 0;
+              }
+              .attractive-card-badge {
+                position: absolute; top: 12px; right: 12px;
+                padding: 5px 12px; border-radius: 20px; font-size: 10px;
+                font-weight: 800; color: #fff; letter-spacing: 0.5px;
+                backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+                background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+              }
+              .attractive-card-arrow {
+                position: absolute; top: 12px; left: 12px;
+                width: 32px; height: 32px; border-radius: 50%;
+                background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
+                display: flex; align-items: center; justify-content: center;
+                transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.2);
+              }
+              .attractive-card:hover .attractive-card-arrow {
+                background: rgba(255,255,255,0.3); transform: translateX(3px);
               }
             `}</style>
             <div 
@@ -1777,61 +1834,42 @@ export default function Home({ onNavigate }) {
               onTouchStart={() => setIsTickerPaused(true)}
               onTouchEnd={() => setIsTickerPaused(false)}
               style={{
-                overflow: "hidden", width: "100%", padding: "8px 0", position: "relative", display: "flex",
-                maskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)",
-                WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
+                overflow: "hidden", width: "100%", padding: "8px 0", position: "relative",
+                maskImage: "linear-gradient(to right, transparent 0%, white 4%, white 96%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to right, transparent 0%, white 4%, white 96%, transparent 100%)"
               }}
             >
-              <div className={`attractive-ticker-wrap ${isTickerPaused ? "paused" : ""}`}>
-                {dynamicProducts.length > 0 ? [...dynamicProducts, ...dynamicProducts].map((prod, idx) => (
-                  <div key={`prod-${prod.id}-${idx}`} 
-                    onClick={() => navigate(`/product/${prod.id}`)}
-                    style={{
-                      background: C.bgSecondary,
-                      borderRadius: "20px",
-                      border: `1px solid ${C.border}`,
-                      cursor: "pointer",
-                      transition: "all 0.3s ease",
-                      display: "flex",
-                      flexDirection: "column",
-                      width: isMobile ? "200px" : "280px",
-                      flexShrink: 0,
-                      overflow: "hidden",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+              <div className={`attractive-carousel ${isTickerPaused ? "paused" : ""}`}>
+                {doubled.map((card, idx) => (
+                  <div 
+                    key={`${card.id}-${idx}`} 
+                    className="attractive-card"
+                    onClick={() => {
+                      const slugs = { "ltf-cards":"lifetime-free-cards","cibil-loans":"cibil-loan","hdfc-cc-loan":"loan-on-credit-card","smart-emi":"smart-emi-card","secured-cards":"fd-backed-card","upi-cards":"upi-credit-card" };
+                      navigate(`/attractive-cards-loans/${slugs[card.id] || card.id}`);
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = C.teal;
-                      e.currentTarget.style.boxShadow = `0 8px 20px ${C.teal}15`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = C.border;
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
-                    }}
+                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}` }}
                   >
-                    {/* Image Header */}
-                    <div style={{ width: "100%", height: isMobile ? "90px" : "130px", background: "rgba(0,0,0,0.02)", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", boxSizing: "border-box" }}>
-                      <img 
-                        src={prod.image_url || attractiveImages['ltf-cards']} 
-                        alt={prod.name} 
-                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} 
-                      />
-                    </div>
-                    
-                    {/* Card Body */}
-                    <div style={{ padding: isMobile ? "12px" : "16px", display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between", gap: "8px", boxSizing: "border-box" }}>
-                      <h3 style={{ margin: 0, fontSize: isMobile ? "12px" : "14px", fontWeight: 800, color: C.text, lineHeight: 1.3 }}>
-                        {prod.name}
-                      </h3>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: isMobile ? "10px" : "12px", fontWeight: 700, color: C.teal, marginTop: "auto" }}>
-                        {t('attractiveCards.explore', 'Explore')} <FaChevronRight size={isMobile ? 8 : 10} />
+                    <div style={{ overflow: "hidden", position: "relative", background: card.gradient }}>
+                      <img src={card.img} alt={card.title} className="attractive-card-img" />
+                      <div className="attractive-card-badge">POPULAR</div>
+                      <div className="attractive-card-arrow">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
                       </div>
                     </div>
+                    <div className="attractive-card-overlay">
+                      <h3 className="attractive-card-title">{t('attractiveCards.' + card.id, card.title)}</h3>
+                      <p className="attractive-card-desc">{card.desc}</p>
+                    </div>
                   </div>
-                )) : null}
+                ))}
               </div>
             </div>
           </Section>
-        )}
+          );
+        })()}
 
         {/* ── SECTION 3: Popular Credit Cards ── */}
         {settings.section_visibility_attractive_cards !== "hide" && !isMobile && (
