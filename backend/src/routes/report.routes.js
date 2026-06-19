@@ -4,7 +4,7 @@ const reportCtrl = require('../controllers/report.controller');
 const { authenticate, syncUser, authorize } = require('../middleware/auth.middleware');
 
 router.use(authenticate, syncUser);
-router.use(authorize('admin', 'super_admin'));
+router.use(authorize('ADMIN', 'SUPER_ADMIN'));
 
 router.get('/overview', reportCtrl.getOverview);
 router.get('/applications-by-product', reportCtrl.applicationsByProduct);

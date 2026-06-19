@@ -7,8 +7,8 @@ const { withdrawalRules, validate } = require('../middleware/validation.middlewa
 router.use(authenticate, syncUser);
 
 // Admin: list/process withdrawals
-router.get('/withdrawals', authorize('super_admin', 'admin'), walletCtrl.listWithdrawals);
-router.patch('/withdrawals/:id/process', authorize('super_admin'), walletCtrl.processWithdrawalRequest);
+router.get('/withdrawals', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.listWithdrawals);
+router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 
 // Partner self-endpoints (no ID needed in URL)
 router.get('/', walletCtrl.getWallet);

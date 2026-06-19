@@ -57,41 +57,6 @@ export default function PartnerRegister() {
     onBlur: e => (e.target.style.border = `1.5px solid ${C.border}`),
   });
 
-  // ── OTP Send ────────────────────────────────────────────────────────────────
-  const handleSendOtp = async () => {
-    if (!form.mobile) return setErr(t("partner.errors.mobileRequired", "Please enter your mobile number."));
-    setErr("");
-    setInfoMsg("");
-    setOtpLoading(true);
-    try {
-      await sendOtp(form.mobile);
-      setOtpSent(true);
-      setTimer(30);
-      setInfoMsg(t("partner.errors.otpSentSuccess", "OTP code sent successfully to your mobile."));
-    } catch (e) {
-      setErr(e.message || t("partner.errors.otpSendFailed", "Failed to send OTP. Please try again."));
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  // ── OTP Verify ──────────────────────────────────────────────────────────────
-  const handleVerifyPhoneOtp = async () => {
-    if (!form.otp || form.otp.length < 6) return setErr(t("partner.errors.enterOtpCode", "Please enter the 6-digit OTP."));
-    setErr("");
-    setInfoMsg("");
-    setLoading(true);
-    try {
-      await verifyOtpLogin(form.mobile, form.otp);
-      setPhoneVerified(true);
-      setVerifiedMobile(form.mobile);
-      setInfoMsg(t("partner.verifiedMobile", "Mobile number verified successfully!"));
-    } catch (e) {
-      setErr(e.message || t("partner.errors.otpVerifyFailed", "Invalid OTP verification code. Please check and try again."));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {

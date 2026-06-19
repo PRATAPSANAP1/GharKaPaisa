@@ -48,7 +48,8 @@ import {
   ManageProducts,
   ManageBanks,
   ManageSections,
-  ManageServices
+  ManageServices,
+  ManageCommissions
 } from '../pages/SuperAdmin';
 
 import { 
@@ -139,11 +140,6 @@ const AppRoutes = () => {
         <Route path="applications" element={<ManageApplications />} />
         <Route path="leads" element={<ManageLeads />} />
         <Route path="withdrawals" element={<ManageWithdrawals />} />
-        <Route path="banners" element={<ManageBanners />} />
-        <Route path="products" element={<ManageProducts />} />
-        <Route path="banks" element={<ManageBanks />} />
-        <Route path="sections" element={<ManageSections />} />
-        <Route path="services" element={<ManageServices />} />
       </Route>
 
       {/* SuperAdmin Routes */}
@@ -161,12 +157,14 @@ const AppRoutes = () => {
         <Route path="dashboard" element={<SuperAdminDashboard />} />
         <Route path="reports" element={<SuperAdminReports />} />
         <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="partners" element={<ManagePartners />} />
         <Route path="leads" element={<ManageLeads />} />
         <Route path="banners" element={<ManageBanners />} />
         <Route path="products" element={<ManageProducts />} />
         <Route path="banks" element={<ManageBanks />} />
         <Route path="sections" element={<ManageSections />} />
         <Route path="services" element={<ManageServices />} />
+        <Route path="commissions" element={<ManageCommissions />} />
       </Route>
 
       {/* Fallback */}

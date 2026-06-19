@@ -290,6 +290,45 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+const listCommissionRules = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        cs.*, 
+        p.name as product_name,
+        p.category as product_category,
+        ap.first_name, 
+        ap.last_name, 
+        ap.Partner_code
+      FROM commission_structures cs
+      JOIN products p ON p.id = cs.product_id
+      LEFT JOIN Partner_profiles ap ON ap.id = cs.Partner_id
+      ORDER BY cs.created_at DESC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteCommissionRule = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [rule] } = await query(`SELECT * FROM commission_structures WHERE id = $1`, [id]);
+    if (!rule) {
+      return notFound(res, 'Commission rule not found');
+    }
+
+    await query(`DELETE FROM commission_structures WHERE id = $1`, [id]);
+
+    await logAction(req, 'DELETE_COMMISSION_RULE', rule.product_id, { Partner_id: rule.Partner_id });
+
+    return success(res, {}, 'Commission rule deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -301,5 +340,7 @@ module.exports = {
   getCards,
   getLoans,
   getInsurance,
-  deleteProduct
+  deleteProduct,
+  listCommissionRules,
+  deleteCommissionRule
 };

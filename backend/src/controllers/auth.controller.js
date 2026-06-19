@@ -155,41 +155,7 @@ const sendOtp = async (req, res, next) => {
   }
 };
 
-// ── POST /auth/send-register-otp ───────────────────────────────────────────
-const sendRegisterOtp = async (req, res, next) => {
-  try {
-    const { mobile } = req.body;
-    if (!mobile) return error(res, 'Mobile number required', 400);
 
-    // Check if mobile already exists in users
-    const { rows: [existing] } = await query(`SELECT id FROM users WHERE mobile = $1`, [mobile]);
-    if (existing) {
-      return error(res, 'This mobile number is already registered', 409);
-    }
-
-    // Generate random 6-digit OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
-
-    // Store in database
-    await query(`
-      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
-    `, [mobile, otpHash, expiresAt]);
-
-    // Send actual SMS via the service (logs only in non-production)
-    await sendSms(mobile, `Your GharKaPaisa verification OTP is ${otp}. Valid for 5 minutes.`);
-
-    return res.json({
-      success: true,
-      message: 'OTP sent successfully'
-    });
-  } catch (err) {
-    next(err);
-  }
-};
 
 // ── POST /auth/verify-otp ──────────────────────────────────────────────────────────
 const verifyOtpLogin = async (req, res, next) => {
@@ -510,7 +476,6 @@ module.exports = {
   getMe,
   lookupUser,
   sendOtp,
-  sendRegisterOtp,
   verifyOtpLogin,
   login,
   register,

@@ -20,10 +20,6 @@ const AdminLayout = () => {
     { path: '/admin/applications', label: 'Applications', icon: <Icons.creditCard size={18} /> },
     { path: '/admin/leads', label: 'Leads', icon: <Icons.trending size={18} /> },
     { path: '/admin/withdrawals', label: 'Withdrawals', icon: <Icons.wallet size={18} /> },
-    { path: '/admin/banners', label: 'Banners', icon: <Icons.gift size={18} /> },
-    { path: '/admin/products', label: 'Products', icon: <Icons.investment size={18} /> },
-    { path: '/admin/sections', label: 'CMS Layout', icon: <Icons.clock size={18} /> },
-    { path: '/admin/banks', label: 'Lending Partners', icon: <Icons.profile size={18} /> },
   ];
 
   return (

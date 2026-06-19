@@ -14,7 +14,6 @@ const { validate, registerRules } = require('../middleware/validation.middleware
 // ── Public Auth Routes ──────────────────────────────────────────────────────────
 router.post('/login', authLimiter, ctrl.login);
 router.post('/send-otp', authLimiter, ctrl.sendOtp);
-router.post('/send-register-otp', authLimiter, ctrl.sendRegisterOtp);
 router.post('/verify-otp', authLimiter, ctrl.verifyOtpLogin);
 router.post('/lookup', authLimiter, ctrl.lookupUser);
 router.post('/register', authLimiter, registerRules, validate, ctrl.register);

@@ -37,7 +37,7 @@ router.post('/:PartnerId/kyc',
 router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.getDashboardStats);
 
 // Admin only — partner management
-router.get('/', authorize('admin', 'super_admin'), ctrl.listPartners);
-router.patch('/:PartnerId/approve', authorize('admin', 'super_admin'), ctrl.approvePartner);
+router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
+router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.approvePartner);
 
 module.exports = router;

@@ -12,8 +12,8 @@ router.use(authenticate, syncUser);
 
 router.get('/', appCtrl.listApplications);
 router.get('/:id', appCtrl.getApplication);
-router.post('/', authorize('Partner'), requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
-router.patch('/:id/status', authorize('admin', 'super_admin', 'employee'), appCtrl.updateStatus);
-router.post('/:id/documents', authorize('Partner', 'admin', 'super_admin'), upload.single('document'), appCtrl.uploadApplicationDoc);
+router.post('/', authorize('PARTNER'), requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
+router.patch('/:id/status', authorize('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCtrl.updateStatus);
+router.post('/:id/documents', authorize('PARTNER', 'ADMIN', 'SUPER_ADMIN'), upload.single('document'), appCtrl.uploadApplicationDoc);
 
 module.exports = router;

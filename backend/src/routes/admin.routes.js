@@ -29,6 +29,12 @@ router.get('/applications', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCt
 // ── POST /admin/commission-rule ──────────────────────────────────────────────
 router.post('/commission-rule', roleCheck('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
+// ── GET /admin/commission-rules ──────────────────────────────────────────────
+router.get('/commission-rules', roleCheck('SUPER_ADMIN'), productCtrl.listCommissionRules);
+
+// ── DELETE /admin/commission-rules/:id ─────────────────────────────────────────
+router.delete('/commission-rules/:id', roleCheck('SUPER_ADMIN'), productCtrl.deleteCommissionRule);
+
 // ── POST /admin/withdrawal/approve ───────────────────────────────────────────
 router.post('/withdrawal/approve', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.approveWithdrawalController);
 

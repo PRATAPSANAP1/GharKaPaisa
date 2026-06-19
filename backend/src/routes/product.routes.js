@@ -15,10 +15,10 @@ router.get('/:id', productCtrl.getProduct);
 
 // Protected Routes
 router.use(authenticate, syncUser);
-router.post('/create', authorize('admin', 'super_admin'), productCtrl.createProduct);
-router.post('/', authorize('admin', 'super_admin'), productCtrl.createProduct);
-router.put('/:id', authorize('admin', 'super_admin'), productCtrl.updateProduct);
-router.delete('/:id', authorize('admin', 'super_admin'), productCtrl.deleteProduct);
-router.post('/commission', authorize('super_admin'), commissionRules, validate, productCtrl.setCommission);
+router.post('/create', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.createProduct);
+router.post('/', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.createProduct);
+router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.updateProduct);
+router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
+router.post('/commission', authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
 module.exports = router;

@@ -41,18 +41,20 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
 
     // Log txn with release_at timestamp
     const holdHours = parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48);
+    const releaseAt = new Date(Date.now() + holdHours * 60 * 60 * 1000);
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_transactions (
         wallet_id, partner_id, application_id, type, amount, balance_before, balance_after, status, description, 
         reference_type, reference_id, bank_name, product_type, processed_by, release_at
       )
-      VALUES ($1, $2, $3, 'credit', $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, NULL)
+      VALUES ($1, $2, $3, 'credit', $4, $5, $6, 'pending', $7, $8, $9, $10, $11, $12, $13)
       RETURNING id
     `, [
       wallet.id, partnerId, meta.application_id || null, amount, wallet.hold_balance, parseFloat(wallet.hold_balance) + parseFloat(amount),
       meta.description || 'Commission credit on hold',
       meta.reference_type || 'commission', meta.reference_id || meta.application_id || null,
-      meta.bank_name || null, meta.product_type || null, meta.processed_by || null
+      meta.bank_name || null, meta.product_type || null, meta.processed_by || null,
+      releaseAt
     ]);
 
     if (isInternalTxn) await client.query('COMMIT');

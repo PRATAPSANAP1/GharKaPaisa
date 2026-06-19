@@ -6,3 +6,4 @@ export { default as SuperAdminReports } from "./SuperAdminReports";
 export { default as ManageBanks } from "./ManageBanks";
 export { default as ManageSections } from "./ManageSections";
 export { default as ManageServices } from "./ManageServices";
+export { default as ManageCommissions } from "./ManageCommissions";
