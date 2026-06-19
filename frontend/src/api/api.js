@@ -9,7 +9,8 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const BASE_URL = `${import.meta.env.VITE_API_URL}/api/v1`;
+const rawBase = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
+const BASE_URL = rawBase.replace(/\/+$/, '').endsWith('/api/v1') ? rawBase.replace(/\/+$/, '') : rawBase.replace(/\/+$/, '') + '/api/v1';
 
 const api = axios.create({
   baseURL: BASE_URL,
