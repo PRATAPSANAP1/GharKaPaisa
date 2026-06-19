@@ -222,6 +222,7 @@ export default function PartnerLogin() {
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <button type="button" onClick={() => setMethod('otp')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'otp' ? C.inputBg : 'transparent' }}>{t('partner.loginWithOtp', 'Login with OTP')}</button>
               <button type="button" onClick={() => setMethod('password')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'password' ? C.inputBg : 'transparent' }}>{t('partner.loginWithPassword', 'Login with Password')}</button>
+            </div>
             {/* Email or Mobile */}
             <div style={{ marginBottom: "14px" }}>
               <label style={S.label}>{t('partner.emailOrMobile', 'Email or Mobile Number')}</label>
