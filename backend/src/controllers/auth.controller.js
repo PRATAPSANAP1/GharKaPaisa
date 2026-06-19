@@ -1,14 +1,16 @@
 /**
- * auth.controller.js — Custom JWT Auth
+ * auth.controller.js — Email OTP Authentication
  * ─────────────────────────────────────────────────────────────────────────
- * Replaced Firebase with custom JWT authentication.
+ * All login is via email OTP. No password-based login.
+ * OTP is sent to the user's registered email via AWS SES.
  */
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { query, getClient } = require('../config/db');
 const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
+const { sendOtpEmail } = require('../services/email.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa-secret-key-fallback';
 
@@ -63,7 +65,6 @@ const lookupUser = async (req, res, next) => {
 
 // Helper to generate and hash refresh token in db
 const generateAndSaveRefreshToken = async (userId) => {
-  const crypto = require('crypto');
   const refreshToken = crypto.randomBytes(40).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
@@ -76,69 +77,67 @@ const generateAndSaveRefreshToken = async (userId) => {
   return refreshToken;
 };
 
-// ── POST /auth/reset-password ───────────────────────────────────────────────────
-const resetPassword = async (req, res, next) => {
+// ── POST /auth/send-otp ──────────────────────────────────────────────────────────
+// Sends a 6-digit OTP to the user's registered email via AWS SES.
+const sendOtp = async (req, res, next) => {
   try {
-    const { identity, otp, newPassword } = req.body;
-    if (!identity || !otp || !newPassword) {
-      return error(res, 'Identity, OTP, and new password are required', 400);
-    }
+    const { identity } = req.body;
+    if (!identity) return error(res, 'Email or mobile number required', 400);
 
-    if (newPassword.length < 8) {
-      return error(res, 'Password must be at least 8 characters long', 400);
-    }
-
-    // Verify OTP against otp_verifications table
-    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
-    const { rows: [record] } = await query(`
-      SELECT * FROM otp_verifications 
-      WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
-    `, [identity, otpHash]);
-
-    if (!record) {
-      return error(res, 'Invalid or expired OTP code', 400);
-    }
-
-    // Delete OTP to prevent reuse
-    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
-
+    // Look up the user to get their email address
     const { rows: [user] } = await query(
-      `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT email, mobile FROM users WHERE email = $1 OR mobile = $2`,
       [identity, identity]
     );
 
-    if (!user) return error(res, 'User not found', 404);
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hashedPassword, user.id]);
-
-    logger.info(`Password reset successfully for user ID: ${user.id}`);
-    return res.json({ success: true, message: 'Password updated successfully' });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── POST /auth/send-otp ──────────────────────────────────────────────────────────
-const sendOtp = async (req, res, next) => {
-  try {
-    const { mobile } = req.body;
-    if (!mobile) return error(res, 'Mobile number required', 400);
+    if (!user || !user.email) {
+      return error(res, 'No account found with this email or mobile number', 404);
+    }
 
     // Generate random 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
+    // Store OTP hash (keyed by email for email-based verification)
     await query(`
       INSERT INTO otp_verifications (identity, otp_hash, expires_at)
       VALUES ($1, $2, $3)
       ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
-    `, [mobile, otpHash, expiresAt]);
+    `, [user.email, otpHash, expiresAt]);
 
-    logger.info(`[OTP] Generated verification OTP for ${mobile}: ${otp}`);
+    // Also store by mobile if identity was mobile (so login can verify by either)
+    if (user.mobile && user.mobile !== user.email) {
+      await query(`
+        INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+      `, [user.mobile, otpHash, expiresAt]);
+    }
 
-    return res.json({ success: true, message: 'OTP sent successfully (check server logs)' });
+    // Send OTP via AWS SES email
+    try {
+      await sendOtpEmail(user.email, otp);
+      logger.info(`[OTP] Email OTP sent to ${user.email}`);
+    } catch (emailErr) {
+      logger.error(`[OTP] Failed to send OTP email to ${user.email}: ${emailErr.message}`);
+      // In development, log the OTP so developers can still test
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`[OTP-DEV] OTP for ${user.email}: ${otp}`);
+      }
+      return error(res, 'Failed to send OTP email. Please try again later.', 500);
+    }
+
+    // Mask email for display: p****p@gmail.com
+    const maskedEmail = user.email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
+      return first + '*'.repeat(Math.min(middle.length, 6)) + domain;
+    });
+
+    return res.json({
+      success: true,
+      message: `OTP sent to ${maskedEmail}`,
+      email: maskedEmail
+    });
   } catch (err) {
     next(err);
   }
@@ -147,14 +146,14 @@ const sendOtp = async (req, res, next) => {
 // ── POST /auth/verify-otp ──────────────────────────────────────────────────────────
 const verifyOtpLogin = async (req, res, next) => {
   try {
-    const { mobile, otp } = req.body;
-    if (!mobile || !otp) return error(res, 'Mobile and OTP required', 400);
+    const { identity, otp } = req.body;
+    if (!identity || !otp) return error(res, 'Identity and OTP required', 400);
 
-    const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
     const { rows: [record] } = await query(`
       SELECT * FROM otp_verifications 
       WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
-    `, [mobile, otpHash]);
+    `, [identity, otpHash]);
 
     if (!record) {
       return error(res, 'Invalid or expired OTP code', 400);
@@ -169,35 +168,36 @@ const verifyOtpLogin = async (req, res, next) => {
 };
 
 // ── POST /auth/login ──────────────────────────────────────────────────────────
+// Email OTP-only login. No password authentication.
 const login = async (req, res, next) => {
   try {
-    const { identity, password, otp } = req.body;
+    const { identity, otp } = req.body;
     if (!identity) return error(res, 'Identity is required', 400);
+    if (!otp) return error(res, 'OTP is required. Please request an OTP first.', 400);
 
     const { rows: [user] } = await query(
       `SELECT * FROM users WHERE email = $1 OR mobile = $2`,
       [identity, identity]
     );
 
-    if (!user) return error(res, 'Invalid credentials', 401);
+    if (!user) return error(res, 'No account found with this email or mobile', 401);
 
-    // Validate using OTP or Password
-    if (otp) {
-      const otpHash = require('crypto').createHash('sha256').update(otp).digest('hex');
-      const { rows: [record] } = await query(`
-        SELECT * FROM otp_verifications 
-        WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
-      `, [identity, otpHash]);
+    // Validate OTP
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const { rows: [record] } = await query(`
+      SELECT * FROM otp_verifications 
+      WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
+    `, [identity, otpHash]);
 
-      if (!record) {
-        return error(res, 'Invalid or expired OTP code', 400);
-      }
-      await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
-    } else if (password) {
-      const isMatch = await bcrypt.compare(password, user.password_hash || '');
-      if (!isMatch) return error(res, 'Invalid credentials', 401);
-    } else {
-      return error(res, 'OTP or Password is required', 400);
+    if (!record) {
+      return error(res, 'Invalid or expired OTP code', 400);
+    }
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
+
+    // Also clean up matching OTP for the other identity (email/mobile)
+    if (user.email && user.mobile) {
+      const otherIdentity = identity === user.email ? user.mobile : user.email;
+      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [otherIdentity]);
     }
 
     if (user.status === 'suspended') return error(res, 'Account suspended', 403);
@@ -225,7 +225,6 @@ const refresh = async (req, res, next) => {
     const { refreshToken } = req.body;
     if (!refreshToken) return error(res, 'Refresh token required', 400);
 
-    const crypto = require('crypto');
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
     // Check if token exists, is not expired, and is not revoked
@@ -263,6 +262,7 @@ const refresh = async (req, res, next) => {
 };
 
 // ── POST /auth/register ────────────────────────────────────────────────────
+// Registration still creates password_hash for backward compat, but login is OTP-only.
 const register = async (req, res, next) => {
   try {
     const {
@@ -271,8 +271,8 @@ const register = async (req, res, next) => {
       bank_name, account_number, ifsc_code, account_holder_name, role = 'Partner'
     } = req.body;
 
-    if (!email || !mobile || !password) {
-      return error(res, 'Email, mobile, and password are required', 400);
+    if (!email || !mobile) {
+      return error(res, 'Email and mobile are required', 400);
     }
 
     const client = await getClient();
@@ -290,9 +290,13 @@ const register = async (req, res, next) => {
         return error(res, 'User with this email or mobile already exists', 409);
       }
 
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(password, salt);
+      // Hash password if provided (for backward compat); otherwise set null
+      let passwordHash = null;
+      if (password) {
+        const bcrypt = require('bcrypt');
+        const salt = await bcrypt.genSalt(10);
+        passwordHash = await bcrypt.hash(password, salt);
+      }
 
       // Insert User
       const { rows: [user] } = await client.query(
@@ -303,7 +307,7 @@ const register = async (req, res, next) => {
 
       let PartnerCode = null;
 
-      if (role === 'Partner' || role === 'admin' || role === 'superadmin') {
+      if (role === 'Partner' || role === 'admin' || role === 'super_admin') {
         // Generate Partner code using atomic sequence
         const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
         PartnerCode = generatePartnerCode(parseInt(nextval));
@@ -385,7 +389,6 @@ const setRole = async (req, res, next) => {
 module.exports = {
   getMe,
   lookupUser,
-  resetPassword,
   sendOtp,
   verifyOtpLogin,
   login,

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
 import { useTheme, makeS } from "../../components/Partner/ThemeContext";
-import { sendOtp, loginWithOtp, loginWithPassword, getMe, lookupUser } from "../../api/auth.api";
+import { sendOtp, loginWithOtp, getMe } from "../../api/auth.api";
 
 export default function AdminLogin() {
   const { C } = useTheme();
@@ -12,9 +12,7 @@ export default function AdminLogin() {
   const login = useAuthStore((state) => state.login);
   
   // Login Form States
-  const [form, setForm] = useState({ identity: "", password: "", otp: "" });
-  const [loginMode, setLoginMode] = useState("password"); // "password" | "otp"
-  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({ identity: "", otp: "" });
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
@@ -25,7 +23,14 @@ export default function AdminLogin() {
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
 
-  // Reset OTP timer on login countdown
+  // Reset OTP state on identifier change
+  useEffect(() => {
+    setOtpSent(false);
+    setTimer(0);
+    setOtpSentTime(null);
+  }, [form.identity]);
+
+  // Timer countdown
   useEffect(() => {
     let interval;
     if (timer > 0) {
@@ -34,15 +39,7 @@ export default function AdminLogin() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  // Reset states on mode/view changes
-  useEffect(() => {
-    setErr("");
-    setInfoMsg("");
-    setOtpSent(false);
-    setTimer(0);
-  }, [loginMode]);
-
-  // ── Send Login OTP ────────────────────────────────────────────────────────────
+  // ── Send OTP via Email ────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
     
@@ -56,18 +53,10 @@ export default function AdminLogin() {
     setInfoMsg("");
     setLoading(l => ({ ...l, otp: true }));
     try {
-      const lookupRes = await lookupUser(form.identity.trim());
-      if (!lookupRes.success || !lookupRes.data) {
-        throw new Error("Invalid credentials. Please check your details and try again.");
-      }
-      const { email, mobile } = lookupRes.data;
-      if (!email || !mobile) {
-        throw new Error("Invalid credentials. Please check your details and try again.");
-      }
-
-      await sendOtp(mobile);
+      // Send OTP — backend resolves user email and sends via AWS SES
+      const otpRes = await sendOtp(form.identity.trim());
       
-      setResolvedCredentials({ email, mobile });
+      setResolvedCredentials({ maskedEmail: otpRes.email || '****@****.com' });
       setOtpSent(true);
       setOtpSentTime(Date.now());
       setOtpAttempts(a => a + 1);
@@ -86,32 +75,14 @@ export default function AdminLogin() {
     setInfoMsg("");
 
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
+    if (!otpSent) return setErr("Please click 'Send OTP' first.");
+    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+    if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr("OTP expired. Please send a new one.");
 
     setLoading(l => ({ ...l, login: true }));
     try {
-      let loginRes;
-      if (loginMode === "password") {
-        if (!form.password) {
-          setLoading(l => ({ ...l, login: false }));
-          return setErr("Please enter your password.");
-        }
-        loginRes = await loginWithPassword(form.identity.trim(), form.password);
-      } else {
-        // OTP Login
-        if (!otpSent) {
-          setLoading(l => ({ ...l, login: false }));
-          return setErr("Please click 'Send OTP' first.");
-        }
-        if (!form.otp || form.otp.length < 6) {
-          setLoading(l => ({ ...l, login: false }));
-          return setErr("Please enter the 6-digit OTP.");
-        }
-        if (!otpSentTime || Date.now() - otpSentTime > 120000) {
-          setLoading(l => ({ ...l, login: false }));
-          return setErr("OTP expired. Please send a new one.");
-        }
-        loginRes = await loginWithOtp(form.identity.trim(), form.otp);
-      }
+      // OTP Login
+      const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
       
       // Fetch user profile info
       const profile = await getMe(true);
@@ -201,51 +172,21 @@ export default function AdminLogin() {
             </div>
           )}
 
-          {/* Modern Custom Tabs */}
+          {/* Email OTP info badge */}
           <div style={{
-            display: "flex",
-            background: C.bgSecondary,
-            padding: "4px",
+            background: `${C.teal}10`,
+            border: `1px solid ${C.teal}30`,
             borderRadius: "10px",
-            marginBottom: "20px",
-            border: `1px solid ${C.border}`,
+            padding: "10px 14px",
+            fontSize: "12px",
+            color: C.teal,
+            marginBottom: "18px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontWeight: 500,
           }}>
-            <button
-              type="button"
-              onClick={() => setLoginMode("password")}
-              style={{
-                flex: 1,
-                padding: "8px 0",
-                borderRadius: "8px",
-                border: "none",
-                background: loginMode === "password" ? C.teal : "transparent",
-                color: loginMode === "password" ? "#fff" : C.textSecondary,
-                fontWeight: 600,
-                fontSize: "13px",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginMode("otp")}
-              style={{
-                flex: 1,
-                padding: "8px 0",
-                borderRadius: "8px",
-                border: "none",
-                background: loginMode === "otp" ? C.teal : "transparent",
-                color: loginMode === "otp" ? "#fff" : C.textSecondary,
-                fontWeight: 600,
-                fontSize: "13px",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              OTP Sign In
-            </button>
+            <span style={{ fontSize: "16px" }}>📧</span> OTP will be sent to your registered email address
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -267,96 +208,52 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {loginMode === "password" ? (
-              <>
-                {/* Password */}
-                <div style={{ marginBottom: "10px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <label style={{ ...S.label, marginBottom: 0 }}>Password</label>
-                  </div>
-                  <div style={{ position: "relative" }}>
-                    <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
-                      <Icons.Lock size={18} />
-                    </div>
-                    <input
-                      style={{ ...inputStyle, paddingLeft: "42px", paddingRight: "42px" }}
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter password"
-                      value={form.password}
-                      onChange={e => setForm({ ...form, password: e.target.value })}
-                      onFocus={e => e.target.style.border = focusBorder}
-                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: "absolute",
-                        right: "14px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        color: C.textSecondary,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 0
-                      }}
-                    >
-                      {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
-                    </button>
-                  </div>
+            {/* OTP Verification Input */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={S.label}>Enter 6-Digit OTP</label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  style={{
+                    ...inputStyle,
+                    flex: 1,
+                    textAlign: "center",
+                    letterSpacing: "4px",
+                    fontWeight: 700,
+                    background: otpSent ? C.inputBg : C.bg,
+                    color: otpSent ? C.text : C.textLight,
+                    cursor: otpSent ? "text" : "not-allowed",
+                    opacity: otpSent ? 1 : 0.55,
+                    border: `1.5px solid ${C.border}`,
+                  }}
+                  placeholder="••••••"
+                  maxLength={6}
+                  disabled={!otpSent}
+                  value={form.otp}
+                  onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
+                  onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={timer > 0 || loading.otp}
+                  style={{
+                    ...S.btn("sm"),
+                    whiteSpace: "nowrap",
+                    width: "110px",
+                    padding: "0 10px",
+                    opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
+                  }}
+                >
+                  {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                </button>
+              </div>
+              {otpSent && resolvedCredentials && (
+                <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <Icons.check size={12} /> OTP sent to {resolvedCredentials.maskedEmail}
                 </div>
-              </>
-            ) : (
-              <>
-                {/* OTP Verification Input */}
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={S.label}>Enter 6-Digit OTP</label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input
-                      style={{
-                        ...inputStyle,
-                        flex: 1,
-                        textAlign: "center",
-                        letterSpacing: "4px",
-                        fontWeight: 700,
-                        background: otpSent ? C.inputBg : C.bg,
-                        color: otpSent ? C.text : C.textLight,
-                        cursor: otpSent ? "text" : "not-allowed",
-                        opacity: otpSent ? 1 : 0.55,
-                        border: `1.5px solid ${C.border}`,
-                      }}
-                      placeholder="••••••"
-                      maxLength={6}
-                      disabled={!otpSent}
-                      value={form.otp}
-                      onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                      onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
-                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={timer > 0 || loading.otp}
-                      style={{
-                        ...S.btn("sm"),
-                        whiteSpace: "nowrap",
-                        width: "110px",
-                        padding: "0 10px",
-                        opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
-                      }}
-                    >
-                      {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
-                    </button>
-                  </div>
-                  {otpSent && resolvedCredentials && (
-                    <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Icons.check size={12} /> OTP sent to {resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+              )}
+            </div>
 
             {/* Submit */}
             <button
@@ -368,7 +265,7 @@ export default function AdminLogin() {
                 padding: "13px 0",
                 fontSize: "14px",
                 borderRadius: "10px",
-                marginTop: "20px",
+                marginTop: "4px",
                 opacity: loading.login ? 0.8 : 1,
               }}
             >

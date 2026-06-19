@@ -1,8 +1,8 @@
 /**
- * auth.api.js — Custom JWT Auth
+ * auth.api.js — Email OTP Auth
  * ─────────────────────────────────────────────────────────────────────────
- * ✔ Backend handles: Profile storage (PostgreSQL), session management
- * ✔ Replaced Firebase with custom JWT authentication.
+ * All login is via email OTP. No password-based authentication.
+ * OTP is sent to the user's registered email via AWS SES.
  */
 import api, { saveSession, clearSession, setAccessToken } from './api';
 
@@ -43,45 +43,31 @@ export const syncSession = async () => {
   }
 };
 
-// ── OTP — SEND ───────────────────────────────────────────────────────
-export async function sendOtp(mobile) {
+// ── OTP — SEND (via email) ─────────────────────────────────────────────
+// Sends OTP to the user's registered email address.
+// Accepts identity = email or mobile number.
+export async function sendOtp(identity) {
   try {
-    const res = await api.post('/auth/send-otp', { mobile });
+    const res = await api.post('/auth/send-otp', { identity });
     return res.data;
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Failed to send OTP. Please try again.');
   }
 }
 
-export const sendRegisterOtp = (mobile) => sendOtp(mobile);
+export const sendRegisterOtp = (identity) => sendOtp(identity);
 
-// ── OTP — VERIFY & LOGIN ─────────────────────────────────────────────
-export async function verifyOtpLogin(mobile, otp) {
+// ── OTP — VERIFY ─────────────────────────────────────────────────────
+export async function verifyOtpLogin(identity, otp) {
   try {
-    const res = await api.post('/auth/verify-otp', { mobile, otp });
+    const res = await api.post('/auth/verify-otp', { identity, otp });
     return { success: true, idToken: res.data.token };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP code.');
   }
 }
 
-// ── EMAIL / PASSWORD LOGIN ───────────────────────────────────────────────
-export async function loginWithPassword(email, password) {
-  try {
-    const res = await api.post('/auth/login', { identity: email, password });
-    if (res.data && res.data.token) {
-      setAccessToken(res.data.token);
-      if (res.data.refreshToken) {
-        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
-      }
-    }
-    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
-  } catch (err) {
-    throw new Error(err.response?.data?.message || 'Invalid credentials.');
-  }
-}
-
-// ── OTP-ONLY LOGIN ───────────────────────────────────────────────────────
+// ── OTP LOGIN (the only login method) ───────────────────────────────────
 export async function loginWithOtp(identity, otp) {
   try {
     const res = await api.post('/auth/login', { identity, otp });
@@ -114,16 +100,6 @@ export async function lookupUser(identity) {
     return res.data;
   } catch (err) {
     throw new Error(err.response?.data?.message || 'User lookup failed.');
-  }
-}
-
-// ── RESET PASSWORD ──────────────────────────────────────────────────────
-export async function resetPassword(identity, otp, newPassword) {
-  try {
-    const res = await api.post('/auth/reset-password', { identity, otp, newPassword });
-    return res.data;
-  } catch (err) {
-    throw new Error(err.response?.data?.message || 'Password reset failed.');
   }
 }
 

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { sendOtp, loginWithOtp, getMe, lookupUser } from "../../api/auth.api";
+import { sendOtp, loginWithOtp, getMe } from "../../api/auth.api";
 
 export default function PartnerLogin() {
   const { C } = useTheme();
@@ -51,19 +51,10 @@ export default function PartnerLogin() {
     setInfoMsg("");
     setLoading(l => ({ ...l, otp: true }));
     try {
-      // Look up user to get mobile
-      const lookupRes = await lookupUser(form.identity.trim());
-      if (!lookupRes.success || !lookupRes.data) {
-        throw new Error(t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
-      }
-      const { email, mobile } = lookupRes.data;
-      if (!email || !mobile) {
-        throw new Error(t('partner.errors.invalidCredentials', 'Invalid credentials. Please check your details and try again.'));
-      }
-
-      await sendOtp(mobile);
+      // Send OTP — backend resolves user email from identity and sends via SES
+      const otpRes = await sendOtp(form.identity.trim());
       
-      setResolvedCredentials({ email, mobile });
+      setResolvedCredentials({ maskedEmail: otpRes.email || '****@****.com' });
       setOtpSent(true);
       setOtpSentTime(Date.now());
       setOtpAttempts(a => a + 1);
@@ -231,7 +222,7 @@ export default function PartnerLogin() {
               </div>
               {otpSent && resolvedCredentials && (
                 <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <Icons.check size={12} /> {t('partner.errors.otpSentSuccess', 'OTP code sent successfully to your mobile.')} ({resolvedCredentials.mobile.replace(/.(?=.{4})/g, "*")})
+                  <Icons.check size={12} /> {t('partner.errors.otpSentSuccess', 'OTP sent to your registered email')} ({resolvedCredentials.maskedEmail})
                 </div>
               )}
             </div>
