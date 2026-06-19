@@ -202,6 +202,7 @@ export default function PartnerLogin() {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>{t('partner.partnerLogin', 'Partner Login')}</div>
+          <div style={{ fontSize: "14px", color: C.textLight, marginTop: "8px" }}>{t('partner.loginMethodDescription', 'Choose Login with OTP or Login with Password')}</div>
         </div>
 
         {/* Form Card */}
@@ -219,10 +220,8 @@ export default function PartnerLogin() {
           <form onSubmit={handleSubmit}>
             {/* Login Method Tabs */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button type="button" onClick={() => setMethod('otp')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'otp' ? C.inputBg : 'transparent' }}>OTP</button>
-              <button type="button" onClick={() => setMethod('password')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'password' ? C.inputBg : 'transparent' }}>Password</button>
-            </div>
-
+              <button type="button" onClick={() => setMethod('otp')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'otp' ? C.inputBg : 'transparent' }}>{t('partner.loginWithOtp', 'Login with OTP')}</button>
+              <button type="button" onClick={() => setMethod('password')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'password' ? C.inputBg : 'transparent' }}>{t('partner.loginWithPassword', 'Login with Password')}</button>
             {/* Email or Mobile */}
             <div style={{ marginBottom: "14px" }}>
               <label style={S.label}>{t('partner.emailOrMobile', 'Email or Mobile Number')}</label>
