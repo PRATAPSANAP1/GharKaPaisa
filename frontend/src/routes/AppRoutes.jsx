@@ -48,9 +48,9 @@ import {
   ManageProducts,
   ManageBanks,
   ManageSections,
-  ManageServices,
-  ManageCommissions
+  ManageServices
 } from '../pages/SuperAdmin';
+import ManageCommissions from '../pages/SuperAdmin/ManageCommissions';
 
 import { 
   PartnerDashboard, 
