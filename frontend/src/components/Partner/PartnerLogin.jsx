@@ -267,7 +267,8 @@ export default function PartnerLogin() {
                 </div>
               )}
 
-              {/* OTP Verification Input */}
+            {/* OTP Verification Input (only for OTP method) */}
+            {method === 'otp' && (
             <div style={{ marginBottom: "20px" }}>
               <label style={S.label}>{t('partner.enterOtp', 'Enter 6-Digit OTP')}</label>
               <div style={{ display: "flex", gap: "8px" }}>
@@ -308,6 +309,7 @@ export default function PartnerLogin() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* Submit */}
             <button
