@@ -37,7 +37,7 @@ export default function PartnerRegister() {
   const [form, setForm] = useState({
     // Step 0 – Personal
     firstName: "", lastName: "", mobile: "", otp: "",
-    email: "", password: "", confirmPassword: "",
+    email: "",
     // Step 1 – Business
     address: "", businessCity: "", shopName: "",
     companyType: "individual", gst: "",
@@ -117,10 +117,6 @@ export default function PartnerRegister() {
       if (form.mobile !== verifiedMobile) return t("partner.errors.mobileChanged", "Mobile number changed after verification. Please verify again.");
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
-      if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password))
-        return t("partner.errors.passwordStrength", "Password must contain uppercase, lowercase and a number.");
-      if (form.password !== form.confirmPassword) return t("partner.errors.passwordsMismatch", "Passwords do not match.");
     }
     if (step === 1) {
       if (!form.address.trim()) return t("partner.errors.addressRequired", "Please enter your current address.");
@@ -193,7 +189,6 @@ export default function PartnerRegister() {
       const payload = {
         email: form.email.trim(),
         mobile: form.mobile.trim(),
-        password: form.password,
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
         current_address: form.address.trim(),
@@ -442,16 +437,6 @@ export default function PartnerRegister() {
                   placeholder={t('partner.placeholders.email', 'name@domain.com')}
                   autoComplete="email"
                 />
-              </div>
-
-              {/* Password */}
-              <div>
-                <label style={S.label}>{t('partner.password', 'Password')}</label>
-                <input type="password" {...inputProps("password")} placeholder={t('partner.placeholders.min8chars', 'Min 8 chars')} autoComplete="new-password" />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.confirmPassword', 'Confirm Password')}</label>
-                <input type="password" {...inputProps("confirmPassword")} placeholder={t('partner.placeholders.repeatPassword', 'Repeat password')} autoComplete="new-password" />
               </div>
             </div>
           )}
