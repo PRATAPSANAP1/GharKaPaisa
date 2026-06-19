@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
 import { useTheme, makeS } from "../../components/Partner/ThemeContext";
-import { sendOtp, loginWithOtp, getMe } from "../../api/auth.api";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe } from "../../api/auth.api";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {
@@ -59,7 +59,8 @@ export default function AdminLogin() {
   const login = useAuthStore((state) => state.login);
   
   // Login Form States
-  const [form, setForm] = useState({ identity: "", otp: "" });
+  const [form, setForm] = useState({ identity: "", otp: "", password: "" });
+  const [method, setMethod] = useState('otp');
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
@@ -123,28 +124,31 @@ export default function AdminLogin() {
     setToast(null);
 
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
-    if (!otpSent) return setErr("Please click 'Send OTP' first.");
-    if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
-    if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr("OTP expired. Please send a new one.");
 
     setLoading(l => ({ ...l, login: true }));
     try {
-      // OTP Login
-      const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
-      
-      // Fetch user profile info
+      let loginRes;
+
+      if (method === 'otp') {
+        if (!otpSent) return setErr("Please click 'Send OTP' first.");
+        if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
+        if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr("OTP expired. Please send a new one.");
+
+        loginRes = await loginWithOtp(form.identity.trim(), form.otp);
+      } else {
+        if (!form.password || form.password.length < 8) return setErr("Please enter your password.");
+        loginRes = await loginWithPassword(form.identity.trim(), form.password);
+      }
+
       const profile = await getMe(true);
-      
       const role = profile.role?.toUpperCase();
       if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
         throw new Error("Access denied. Admin portal is only for administrators.");
       }
 
       login(profile, loginRes.idToken);
-      
       if (role === 'ADMIN') navigate('/admin/dashboard');
       else navigate('/superadmin/dashboard');
-      
     } catch (e) {
       setErr(e.message || "Invalid credentials. Please try again.");
     } finally {
@@ -220,6 +224,40 @@ export default function AdminLogin() {
           )}
 
           <form onSubmit={handleSubmit}>
+            {/* Login Method Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => setMethod('otp')}
+                style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 10,
+                  border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                  background: method === 'otp' ? C.inputBg : 'transparent',
+                  color: C.text,
+                  cursor: 'pointer',
+                }}
+              >
+                Login with OTP
+              </button>
+              <button
+                type="button"
+                onClick={() => setMethod('password')}
+                style={{
+                  flex: 1,
+                  padding: 10,
+                  borderRadius: 10,
+                  border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                  background: method === 'password' ? C.inputBg : 'transparent',
+                  color: C.text,
+                  cursor: 'pointer',
+                }}
+              >
+                Login with Password
+              </button>
+            </div>
+
             {/* Email or Mobile */}
             <div style={{ marginBottom: "14px" }}>
               <label style={S.label}>Email or Mobile Number</label>
@@ -238,47 +276,87 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {/* OTP Verification Input */}
-            <div style={{ marginBottom: "20px" }}>
-              <label style={S.label}>Enter 6-Digit OTP</label>
-              <div style={{ display: "flex", gap: "8px" }}>
+            {method === 'password' ? (
+              <div style={{ marginBottom: "20px" }}>
+                <label style={S.label}>Password</label>
                 <input
-                  style={{
-                    ...inputStyle,
-                    flex: 1,
-                    textAlign: "center",
-                    letterSpacing: "4px",
-                    fontWeight: 700,
-                    background: otpSent ? C.inputBg : C.bg,
-                    color: otpSent ? C.text : C.textLight,
-                    cursor: otpSent ? "text" : "not-allowed",
-                    opacity: otpSent ? 1 : 0.55,
-                    border: `1.5px solid ${C.border}`,
-                  }}
-                  placeholder="••••••"
-                  maxLength={6}
-                  disabled={!otpSent}
-                  value={form.otp}
-                  onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                  onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                  style={{ ...inputStyle }}
+                  type="password"
+                  placeholder="Enter your password"
+                  value={form.password}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  onFocus={e => e.target.style.border = focusBorder}
                   onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
                 />
-                <button
-                  type="button"
-                  onClick={handleSendOtp}
-                  disabled={timer > 0 || loading.otp}
-                  style={{
-                    ...S.btn("sm"),
-                    whiteSpace: "nowrap",
-                    width: "110px",
-                    padding: "0 10px",
-                    opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
-                  }}
-                >
-                  {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
-                </button>
+                <div style={{ marginTop: 10, textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const email = form.identity.trim() || window.prompt('Enter your registered email to receive reset instructions:');
+                      if (!email) return;
+                      try {
+                        await forgotPassword(email);
+                        setToast({ message: 'Password reset instructions sent.', type: 'success' });
+                      } catch (error) {
+                        setToast({ message: error.message || 'Could not send reset instructions.', type: 'error' });
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: C.teal,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      padding: 0,
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ marginBottom: "20px" }}>
+                <label style={S.label}>Enter 6-Digit OTP</label>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    style={{
+                      ...inputStyle,
+                      flex: 1,
+                      textAlign: "center",
+                      letterSpacing: "4px",
+                      fontWeight: 700,
+                      background: otpSent ? C.inputBg : C.bg,
+                      color: otpSent ? C.text : C.textLight,
+                      cursor: otpSent ? "text" : "not-allowed",
+                      opacity: otpSent ? 1 : 0.55,
+                      border: `1.5px solid ${C.border}`,
+                    }}
+                    placeholder="••••••"
+                    maxLength={6}
+                    disabled={!otpSent}
+                    value={form.otp}
+                    onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
+                    onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={timer > 0 || loading.otp}
+                    style={{
+                      ...S.btn("sm"),
+                      whiteSpace: "nowrap",
+                      width: "110px",
+                      padding: "0 10px",
+                      opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
+                    }}
+                  >
+                    {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Submit */}
             <button
