@@ -125,9 +125,9 @@ export default function ManageCommissions() {
   };
 
   return (
-    <div style={{ padding: "24px", boxSizing: "border-box", minHeight: "100%" }}>
+    <div style={{ boxSizing: "border-box", minHeight: "100%" }}>
       {/* Title Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+      <div className="responsive-header" style={{ marginBottom: "24px", width: "100%" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 900, color: C.text, margin: 0 }}>Commission Manager</h1>
           <p style={{ fontSize: "14px", color: C.textMid, marginTop: "4px", marginBottom: 0 }}>
@@ -434,7 +434,7 @@ export default function ManageCommissions() {
               </div>
 
               {/* Commission Config (Split Row) */}
-              <div style={{ display: "flex", gap: "12px" }}>
+              <div className="responsive-split-row">
                 <div style={{ flex: 1 }}>
                   <label style={S.label}>Payout Type *</label>
                   <select
@@ -463,7 +463,7 @@ export default function ManageCommissions() {
               </div>
 
               {/* Effective Dates (Split Row) */}
-              <div style={{ display: "flex", gap: "12px" }}>
+              <div className="responsive-split-row">
                 <div style={{ flex: 1 }}>
                   <label style={S.label}>Effective From *</label>
                   <input

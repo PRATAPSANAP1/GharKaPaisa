@@ -228,7 +228,7 @@ export default function SuperAdminReports() {
   return (
     <div>
       {/* Welcome Banner */}
-      <div style={{ display: "flex", flexDirection: "column", mdDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", gap: "16px" }}>
+      <div className="responsive-header" style={{ marginBottom: "24px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>System Reports & Commissions</h2>
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage financial products commission schedules, analyze trends, and audit system-wide payouts</p>
@@ -487,7 +487,7 @@ export default function SuperAdminReports() {
         </div>
       ) : (
         /* Commission Configuration settings View */
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
           {/* Configure Commission rule Form */}
           <div style={{ ...S.card }}>
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.text, margin: "0 0 16px 0" }}>Configure Commission Rule</h3>
@@ -523,7 +523,7 @@ export default function SuperAdminReports() {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px" }}>
                 <div>
                   <label style={S.label}>Commission Type</label>
                   <select
@@ -549,7 +549,7 @@ export default function SuperAdminReports() {
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "10px" }}>
                 <div>
                   <label style={S.label}>Effective From *</label>
                   <input

@@ -151,7 +151,7 @@ const SuperAdminLayout = () => {
       </nav>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: '24px', boxSizing: 'border-box', background: C.bg }}>
+      <main className="responsive-main" style={{ flex: 1, overflowY: 'auto', boxSizing: 'border-box', background: C.bg }}>
         <Outlet />
       </main>
 

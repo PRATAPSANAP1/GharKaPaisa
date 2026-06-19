@@ -156,7 +156,7 @@ export default function SuperAdminDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Top Banner / Welcome */}
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "8px" }}>
+      <div className="responsive-header" style={{ marginBottom: "8px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>System Administrators</h2>
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage and provision administrator credentials and permission settings.</p>

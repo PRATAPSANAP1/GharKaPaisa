@@ -152,7 +152,7 @@ export default function ManageBanners() {
   return (
     <div>
       {/* ─── PAGE HEADER SECTION ─── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+      <div className="responsive-header" style={{ marginBottom: "24px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Homepage Banners</h2>
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and order active promotional slide cards featured on the customer dashboard slideshow</p>

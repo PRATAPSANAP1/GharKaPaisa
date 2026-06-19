@@ -8,3 +8,97 @@ body {
 .grecaptcha-badge {
   visibility: hidden !important;
 }
+
+/* Responsive utility classes */
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: 640px) {
+  .sm\:inline {
+    display: inline !important;
+  }
+  .sm\:hidden {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex !important;
+  }
+  .md\:block {
+    display: block !important;
+  }
+  .md\:inline {
+    display: inline !important;
+  }
+  .md\:hidden {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:flex {
+    display: flex !important;
+  }
+  .lg\:block {
+    display: block !important;
+  }
+  .lg\:hidden {
+    display: none !important;
+  }
+}
+
+/* Responsive Header layout helper */
+.responsive-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .responsive-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0;
+  }
+}
+
+/* Show hamburger menu on tablet/mobile screens (< 1024px) */
+@media (max-width: 1023px) {
+  .hamburger {
+    display: flex !important;
+  }
+}
+
+/* Responsive Main Layout Content Padding */
+.responsive-main {
+  padding: 16px !important;
+}
+
+@media (min-width: 768px) {
+  .responsive-main {
+    padding: 24px !important;
+  }
+}
+
+/* Responsive form split row */
+.responsive-split-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .responsive-split-row {
+    flex-direction: row !important;
+  }
+}
+
+
+
+
+
