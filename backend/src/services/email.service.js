@@ -1,9 +1,3 @@
-/**
- * email.service.js — AWS SES Email Service
- * ─────────────────────────────────────────────────────────────────────────
- * Sends transactional emails (OTP codes, notifications) via AWS SES.
- * Uses explicit credentials from .env for reliable authentication.
- */
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const logger = require("../utils/logger");
 
