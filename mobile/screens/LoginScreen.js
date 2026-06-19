@@ -69,7 +69,7 @@ export default function LoginScreen({ route, navigation }) {
       setResolvedMobile(mobile);
 
       // 2. Send OTP to that mobile
-      await axios.post(`${BASE_URL}/auth/send-otp`, { mobile });
+      await axios.post(`${BASE_URL}/auth/send-otp`, { identity: mobile });
 
       setOtpSent(true);
       setOtpAttempts(a => a + 1);
