@@ -606,7 +606,7 @@ const migrate = async () => {
   // Clean up all old super admin records
   const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
-  await query(`DELETE FROM users WHERE role = 'super_admin' AND email != $1`, ['sharadyohesa@gmail.com']);
+  await query(`DELETE FROM users WHERE role = 'super_admin' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
 
   // Seed Super Admin Sharad Yohesa if not exists
   const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
@@ -625,6 +625,24 @@ const migrate = async () => {
     `, [hashedPassword]);
     logger.info('Super admin Sharad Yohesa configuration verified');
   }
+
+  // Seed Super Admin Pratap Sanap if not exists
+  const { rows: [existingSuper2] } = await query(`SELECT id FROM users WHERE email = $1`, ['pratapsanap14@gmail.com']);
+  if (!existingSuper2) {
+    await query(`
+      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
+      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true, true)
+    `, ['pratapsanap14@gmail.com', '9370470692', 'Pratap Sanap', hashedPassword]);
+    logger.info('Super admin Pratap Sanap seeded successfully');
+  } else {
+    await query(`
+      UPDATE users 
+      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Pratap Sanap', mobile = '9370470692', password_hash = $1, email_verified = true
+      WHERE email = 'pratapsanap14@gmail.com'
+    `, [hashedPassword]);
+    logger.info('Super admin Pratap Sanap configuration verified');
+  }
+
 
   // ── Banners Table ─────────────────────────────────────────────────────────────
   await query(`

@@ -95,14 +95,20 @@ const seed = async () => {
   // Super Admin
   const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
-  await query(`DELETE FROM users WHERE role = 'super_admin' AND email != $1`, ['sharadyohesa@gmail.com']);
-  const { rows: [superAdmin] } = await query(`
+  await query(`DELETE FROM users WHERE role = 'super_admin' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
+  
+  await query(`
     INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash, email_verified)
     VALUES ('sharadyohesa@gmail.com', '8087179438', 'seed-superadmin-uid', 'super_admin', 'active', 'Sharad Yohesa', $1, TRUE)
     ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid', mobile = '8087179438', role = 'super_admin', status = 'active', full_name = 'Sharad Yohesa', password_hash = $1, email_verified = TRUE
-    RETURNING id
   `, [hashedPassword]);
-  logger.info('Super admin seeded with credentials');
+
+  await query(`
+    INSERT INTO users (email, mobile, firebase_uid, role, status, full_name, password_hash, email_verified)
+    VALUES ('pratapsanap14@gmail.com', '9370470692', 'seed-superadmin-uid2', 'super_admin', 'active', 'Pratap Sanap', $1, TRUE)
+    ON CONFLICT (email) DO UPDATE SET firebase_uid = 'seed-superadmin-uid2', mobile = '9370470692', role = 'super_admin', status = 'active', full_name = 'Pratap Sanap', password_hash = $1, email_verified = TRUE
+  `, [hashedPassword]);
+  logger.info('Super admins seeded with credentials');
 
   logger.info('✅ Seeding complete');
   process.exit(0);
