@@ -1,7 +1,8 @@
-const { query } = require('../config/db');
+const { query, getClient } = require('../config/db');
 const { success, created, error, notFound, paginate } = require('../utils/response');
 const { logAction } = require('../services/audit.service');
 const { getPaginationParams } = require('../utils/helpers');
+const { creditHold, releaseHold } = require('../services/wallet.service');
 
 // Create a new lead
 const createLead = async (req, res, next) => {
@@ -108,6 +109,7 @@ const listLeads = async (req, res, next) => {
 
 // Update lead status (Admin / Super Admin only)
 const updateLeadStatus = async (req, res, next) => {
+  const client = await getClient();
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -116,30 +118,140 @@ const updateLeadStatus = async (req, res, next) => {
       return error(res, 'Status is required', 400);
     }
 
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
-      return error(res, 'Invalid status value. Must be pending, approved, or rejected', 400);
+    if (!['pending', 'approved', 'rejected', 'confirmed'].includes(status)) {
+      return error(res, 'Invalid status value. Must be pending, approved, rejected, or confirmed', 400);
     }
 
-    const { rows: [existing] } = await query(
-      `SELECT * FROM leads WHERE id = $1`,
+    await client.query('BEGIN');
+
+    // Fetch existing lead with lock
+    const { rows: [lead] } = await client.query(
+      `SELECT * FROM leads WHERE id = $1 FOR UPDATE`,
       [id]
     );
 
-    if (!existing) {
+    if (!lead) {
+      await client.query('ROLLBACK');
       return notFound(res, 'Lead not found');
     }
 
-    const { rows: [updated] } = await query(
+    const previousStatus = lead.status;
+    if (previousStatus === status) {
+      await client.query('COMMIT');
+      return success(res, lead, `Lead status is already ${status}`);
+    }
+
+    // State transition triggers
+    if (status === 'approved') {
+      if (previousStatus !== 'pending') {
+        await client.query('ROLLBACK');
+        return error(res, 'Can only approve a pending lead', 400);
+      }
+
+      // Fetch the product commission value (including Partner custom commission structure override)
+      const { rows: [commDetails] } = await client.query(`
+        SELECT 
+          COALESCE(cs.commission_value, p.commission_value) as commission_value,
+          COALESCE(cs.commission_type, p.commission_type) as commission_type,
+          p.name as product_name,
+          p.category as product_category,
+          b.name as bank_name
+        FROM products p
+        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN commission_structures cs ON cs.product_id = p.id AND cs.Partner_id = $1
+        WHERE p.id = $2
+      `, [lead.partner_id, lead.product_id]);
+
+      const commissionAmount = parseFloat(commDetails?.commission_value || 0);
+
+      // Call creditHold inside the same transaction
+      const meta = {
+        reference_type: 'lead',
+        reference_id: lead.id,
+        description: `Commission credit on hold for verified lead: ${lead.customer_name}`,
+        bank_name: commDetails?.bank_name || null,
+        product_type: commDetails?.product_category || null,
+        processed_by: req.user.id
+      };
+
+      await creditHold(lead.partner_id, commissionAmount, meta, client);
+
+    } else if (status === 'confirmed') {
+      if (previousStatus !== 'approved') {
+        await client.query('ROLLBACK');
+        return error(res, 'Can only confirm an approved lead', 400);
+      }
+
+      // Find the pending transaction for this lead
+      const { rows: [txn] } = await client.query(`
+        SELECT id, amount FROM wallet_transactions 
+        WHERE reference_type = 'lead' AND reference_id = $1 AND status = 'pending'
+        LIMIT 1
+      `, [lead.id]);
+
+      if (!txn) {
+        await client.query('ROLLBACK');
+        return error(res, 'Associated pending commission transaction not found for this lead', 404);
+      }
+
+      // Release hold inside transaction
+      const meta = {
+        txn_id: txn.id,
+        reference_type: 'lead_release',
+        reference_id: lead.id,
+        processed_by: req.user.id,
+        description: `Commission hold released for confirmed lead: ${lead.customer_name}`
+      };
+
+      await releaseHold(lead.partner_id, parseFloat(txn.amount), meta, client);
+
+    } else if (status === 'rejected') {
+      if (previousStatus === 'approved') {
+        // Find the pending transaction for this lead
+        const { rows: [txn] } = await client.query(`
+          SELECT id, amount, wallet_id FROM wallet_transactions 
+          WHERE reference_type = 'lead' AND reference_id = $1 AND status = 'pending'
+          LIMIT 1
+        `, [lead.id]);
+
+        if (txn) {
+          const amount = parseFloat(txn.amount);
+
+          // Deduct from hold_balance in wallets
+          await client.query(`
+            UPDATE wallets SET
+              hold_balance = GREATEST(0, hold_balance - $1),
+              last_updated = NOW()
+            WHERE id = $2
+          `, [amount, txn.wallet_id]);
+
+          // Update transaction to rejected
+          await client.query(`
+            UPDATE wallet_transactions SET
+              status = 'rejected',
+              processed_by = $1,
+              processed_at = NOW()
+            WHERE id = $2
+          `, [req.user.id, txn.id]);
+        }
+      }
+    }
+
+    const { rows: [updated] } = await client.query(
       `UPDATE leads SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
       [status, id]
     );
 
     // Audit Log
-    await logAction(req, 'UPDATE_LEAD_STATUS', id, { status });
+    await logAction(req, 'UPDATE_LEAD_STATUS', id, { previousStatus, status });
 
+    await client.query('COMMIT');
     return success(res, updated, `Lead status updated to ${status}`);
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 

@@ -12,6 +12,7 @@ export default function SuperAdminDashboard() {
   
   // Data State
   const [admins, setAdmins] = useState([]);
+  const [businessStats, setBusinessStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   
@@ -50,8 +51,20 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const fetchBusinessStats = async () => {
+    try {
+      const res = await api.get('/reports/overview');
+      if (res.data && res.data.success) {
+        setBusinessStats(res.data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load business stats', e);
+    }
+  };
+
   useEffect(() => {
     fetchAdmins();
+    fetchBusinessStats();
   }, []);
 
   // Handle Input change
@@ -130,7 +143,17 @@ export default function SuperAdminDashboard() {
     total: admins.length,
     active: admins.filter(a => a.status === 'active' || a.isActive).length,
     suspended: admins.filter(a => a.status === 'suspended').length
-  };  return (
+  };
+
+  const bStats = businessStats || {
+    Partners: { total: 0, active: 0, pending_kyc: 0 },
+    leads: { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 },
+    withdrawal: { pending_withdrawals: 0, total_commission_paid: 0 },
+    banks: { total_banks: 0 },
+    products: { total_products: 0 }
+  };
+
+  return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       {/* Top Banner / Welcome */}
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "8px" }}>
@@ -170,35 +193,28 @@ export default function SuperAdminDashboard() {
 
       {/* Stats Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
-          <div style={{ width: "48px", height: "48px", background: `${C.teal}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal }}>
-            <Icons.profile size={24} />
+        {[
+          { label: "Total Partners", val: bStats.Partners?.total || 0, icon: <Icons.profile size={24} />, color: C.teal },
+          { label: "Active Partners", val: bStats.Partners?.active || 0, icon: <Icons.check size={24} />, color: C.green },
+          { label: "Pending KYC", val: bStats.Partners?.pending_kyc || 0, icon: <Icons.clock size={24} />, color: C.gold },
+          { label: "Total Leads", val: bStats.leads?.total_leads || 0, icon: <Icons.trending size={24} />, color: C.teal },
+          { label: "Approved Leads", val: bStats.leads?.approved_leads || 0, icon: <Icons.check size={24} />, color: C.green },
+          { label: "Rejected Leads", val: bStats.leads?.rejected_leads || 0, icon: <Icons.x size={24} />, color: C.red },
+          { label: "Commission Paid", val: `₹${parseFloat(bStats.withdrawal?.total_commission_paid || 0).toLocaleString("en-IN")}`, icon: <Icons.wallet size={24} />, color: C.green },
+          { label: "Pending Withdrawals", val: bStats.withdrawal?.pending_withdrawals || 0, icon: <Icons.clock size={24} />, color: C.gold },
+          { label: "Total Banks", val: bStats.banks?.total_banks || 0, icon: <Icons.wallet size={24} />, color: C.teal },
+          { label: "Total Products", val: bStats.products?.total_products || 0, icon: <Icons.creditCard size={24} />, color: C.teal }
+        ].map((card, idx) => (
+          <div key={idx} style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "16px" }}>
+            <div style={{ width: "40px", height: "40px", background: `${card.color}15`, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: card.color }}>
+              {card.icon}
+            </div>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>{card.val}</div>
+              <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>{card.label}</div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.total}</div>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Total Administrators</div>
-          </div>
-        </div>
-
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
-          <div style={{ width: "48px", height: "48px", background: `${C.green}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.green }}>
-            <Icons.check size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.active}</div>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Active Admins</div>
-          </div>
-        </div>
-
-        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "16px", padding: "20px" }}>
-          <div style={{ width: "48px", height: "48px", background: `${C.red}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.red }}>
-            <Icons.x size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{stats.suspended}</div>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.5px" }}>Suspended Admins</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Main Container */}

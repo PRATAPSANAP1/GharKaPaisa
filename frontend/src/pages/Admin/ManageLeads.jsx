@@ -98,6 +98,7 @@ export default function ManageLeads() {
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
+            <option value="confirmed">Bank Confirmed</option>
             <option value="rejected">Rejected</option>
           </select>
           <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px" }}>
@@ -153,11 +154,12 @@ export default function ManageLeads() {
                     <td style={{ padding: "14px 16px" }}>
                       <span style={{ 
                         ...S.tag(
-                          lead.status === "approved" ? C.green : 
+                          lead.status === "confirmed" ? C.green : 
+                          lead.status === "approved" ? C.teal : 
                           lead.status === "rejected" ? C.red : C.gold
                         )
                       }}>
-                        {lead.status}
+                        {lead.status === "confirmed" ? "Bank Confirmed" : lead.status}
                       </span>
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "right" }}>
@@ -202,8 +204,51 @@ export default function ManageLeads() {
                             Reject
                           </button>
                         </div>
+                      ) : lead.status === "approved" ? (
+                        <div style={{ display: "inline-flex", gap: "8px" }}>
+                          <button
+                            disabled={actionLoading !== null}
+                            onClick={() => handleStatusChange(lead.id, "confirmed")}
+                            style={{ 
+                              background: C.teal + "20", 
+                              color: C.teal, 
+                              border: `1px solid ${C.teal}40`,
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              transition: "all 0.15s"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = C.teal + "35"}
+                            onMouseLeave={e => e.currentTarget.style.background = C.teal + "20"}
+                          >
+                            Bank Confirm
+                          </button>
+                          <button
+                            disabled={actionLoading !== null}
+                            onClick={() => handleStatusChange(lead.id, "rejected")}
+                            style={{ 
+                              background: C.red + "20", 
+                              color: C.red, 
+                              border: `1px solid ${C.red}40`,
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              transition: "all 0.15s"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = C.red + "35"}
+                            onMouseLeave={e => e.currentTarget.style.background = C.red + "20"}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       ) : (
-                        <span style={{ fontSize: "12px", color: C.textLight }}>Verified</span>
+                        <span style={{ fontSize: "12px", color: C.textLight }}>
+                          {lead.status === "confirmed" ? "Bank Confirmed" : "Rejected"}
+                        </span>
                       )}
                     </td>
                   </tr>

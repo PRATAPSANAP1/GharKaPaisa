@@ -152,12 +152,11 @@ const uploadKYCDocuments = async (req, res, next) => {
   }
 };
 
-// GET /Partners/:PartnerId/dashboard — Partner stats summary
 const getDashboardStats = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
 
-    const [appStats, wallet, recentApps] = await Promise.all([
+    const [appStats, wallet, recentApps, leadStats, topProducts] = await Promise.all([
       query(`
         SELECT
           COUNT(*) as total,
@@ -178,6 +177,23 @@ const getDashboardStats = async (req, res, next) => {
         WHERE a.Partner_id = $1
         ORDER BY a.created_at DESC LIMIT 5
       `, [PartnerId]),
+      query(`
+        SELECT
+          COUNT(*) as total_leads,
+          COUNT(*) FILTER (WHERE status = 'approved') as approved_leads,
+          COUNT(*) FILTER (WHERE status = 'rejected') as rejected_leads,
+          COUNT(*) FILTER (WHERE status = 'pending') as pending_leads
+        FROM leads WHERE partner_id = $1
+      `, [PartnerId]),
+      query(`
+        SELECT p.id, p.name, p.image_url, b.short_code as bank_code, COUNT(l.id) as sales_count
+        FROM products p
+        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN leads l ON l.product_id = p.id AND l.partner_id = $1 AND l.status IN ('approved', 'confirmed')
+        GROUP BY p.id, p.name, p.image_url, b.short_code
+        ORDER BY sales_count DESC
+        LIMIT 5
+      `, [PartnerId])
     ]);
 
     const walletData = wallet.rows[0] ? {
@@ -189,6 +205,8 @@ const getDashboardStats = async (req, res, next) => {
       applications: appStats.rows[0],
       wallet: walletData,
       recent_applications: recentApps.rows,
+      leads: leadStats.rows[0] || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 },
+      top_products: topProducts.rows
     });
   } catch (err) {
     next(err);

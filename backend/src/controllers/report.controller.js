@@ -20,12 +20,12 @@ const getOverview = async (req, res, next) => {
       values.push(from_date, to_date + ' 23:59:59');
     }
 
-    const [apps, Partners, wallet] = await Promise.all([
+    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners] = await Promise.all([
       query(sql, values),
       query(`
         SELECT
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE u.status = 'active' AND ap.kyc_status = 'approved') as active,
+          COUNT(*) FILTER (WHERE u.status = 'active') as active,
           COUNT(*) FILTER (WHERE ap.kyc_status = 'pending' OR ap.kyc_status = 'under_review') as pending_kyc
         FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id
       `),
@@ -37,12 +37,41 @@ const getOverview = async (req, res, next) => {
           COALESCE(SUM(available_balance), 0) as total_available
         FROM wallets
       `),
+      query(`
+        SELECT
+          COUNT(*) as total_leads,
+          COUNT(*) FILTER (WHERE status = 'approved') as approved_leads,
+          COUNT(*) FILTER (WHERE status = 'rejected') as rejected_leads,
+          COUNT(*) FILTER (WHERE status = 'pending') as pending_leads,
+          COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_leads
+        FROM leads
+      `),
+      query(`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'pending') as pending_withdrawals,
+          COALESCE(SUM(amount) FILTER (WHERE status = 'processed'), 0) as total_commission_paid
+        FROM withdrawal_requests
+      `),
+      query(`SELECT COUNT(*) as total_banks FROM banks`),
+      query(`SELECT COUNT(*) as total_products FROM products`),
+      query(`
+        SELECT p.id, p.first_name, p.last_name, p.Partner_code, p.created_at, u.email, u.mobile, u.status
+        FROM Partner_profiles p
+        JOIN users u ON u.id = p.user_id
+        ORDER BY p.created_at DESC
+        LIMIT 5
+      `),
     ]);
 
     return success(res, {
       applications: apps.rows[0],
       Partners: Partners.rows[0],
       wallet: wallet.rows[0],
+      leads: leads.rows[0],
+      withdrawal: withdrawal.rows[0],
+      banks: banks.rows[0],
+      products: products.rows[0],
+      recent_partners: recentPartners.rows,
     });
   } catch (err) {
     next(err);

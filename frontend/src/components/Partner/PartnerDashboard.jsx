@@ -133,10 +133,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
   // Fallbacks
   const w = walletData || {};
-  const walletBalance = w.wallet_balance || "₹0";
-  const approvedAmount = w.approved_amount || "₹0";
-  const withdrawable = w.withdrawable || "₹0";
-  const pendingAmount = w.pending_amount || "₹0";
+  const walletBalance = w.available_balance !== undefined ? `₹${parseFloat(w.available_balance).toLocaleString("en-IN")}` : "₹0";
+  const pendingAmount = w.hold_balance !== undefined ? `₹${parseFloat(w.hold_balance).toLocaleString("en-IN")}` : "₹0";
+  const totalEarned = w.total_earned !== undefined ? `₹${parseFloat(w.total_earned).toLocaleString("en-IN")}` : "₹0";
+  const l = dashboardData?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 };
+  const topProducts = dashboardData?.top_products || [];
 
   return (
     <div style={{ maxWidth: "1280px", margin: "0 auto", paddingBottom: "20px" }}>
@@ -156,16 +157,18 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
       </div>
 
-      {/* Wallet Stats Strip */}
+      {/* Wallet and Leads Stats Strip */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
         {[
-          { label: "Wallet Balance",   val: walletBalance   },
-          { label: "Approved Amount",  val: approvedAmount },
-          { label: "Withdrawable",     val: withdrawable   },
-          { label: "Pending Amount",   val: pendingAmount   },
+          { label: "Wallet Balance",   val: walletBalance, color: C.green },
+          { label: "Pending Commission", val: pendingAmount, color: C.gold },
+          { label: "Total Earned",     val: totalEarned, color: C.teal },
+          { label: "Total Leads",      val: l.total_leads, color: C.teal },
+          { label: "Approved Leads",   val: l.approved_leads, color: C.green },
+          { label: "Rejected Leads",   val: l.rejected_leads, color: C.red },
         ].map(s => (
           <div key={s.label} style={{
-            flex: "1 1 200px",
+            flex: "1 1 180px",
             background: C.card,
             borderRadius: "16px",
             padding: "16px",
@@ -173,7 +176,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
             boxShadow: `0 2px 8px rgba(0,0,0,0.02)`
           }}>
             <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{s.label}</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: C.text, marginTop: "4px" }}>{s.val}</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: s.color || C.text, marginTop: "4px" }}>{s.val}</div>
           </div>
         ))}
       </div>
@@ -327,6 +330,30 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               {["SBI", "HDFC", "ICICI", "Axis Bank"].map(b => <BrandItem key={b} text={b} C={C} />)}
             </div>
           </SectionCard>
+
+          {/* Top Selling Products Card */}
+          <div style={{ background: C.card, borderRadius: "24px", padding: "24px", border: `1px solid ${C.border}`, boxShadow: `0 4px 12px rgba(0,0,0,0.02)` }}>
+            <h3 style={{ fontSize: "20px", fontWeight: 800, color: C.text, margin: "0 0 16px 0" }}>Top Selling Products</h3>
+            {topProducts.length === 0 ? (
+              <div style={{ fontSize: "13px", color: C.textLight }}>No product sales recorded yet.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {topProducts.map((p, idx) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: "12px", background: C.bgSecondary }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: C.card, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "11px", color: C.teal, border: `1px solid ${C.border}` }}>
+                        {p.bank_code}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: "13px", color: C.text }}>{p.name}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>Sales: {p.sales_count}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

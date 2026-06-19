@@ -11,10 +11,11 @@ const ensureWallet = async (partnerId) => {
 };
 
 // Credit money to Hold Balance (e.g. commission credit pending verification)
-const creditHold = async (partnerId, amount, meta = {}) => {
-  const client = await getClient();
+const creditHold = async (partnerId, amount, meta = {}, existingClient = null) => {
+  const client = existingClient || await getClient();
+  const isInternalTxn = !existingClient;
   try {
-    await client.query('BEGIN');
+    if (isInternalTxn) await client.query('BEGIN');
 
     // Get/ensure wallet
     let { rows: [wallet] } = await client.query(
@@ -54,23 +55,24 @@ const creditHold = async (partnerId, amount, meta = {}) => {
       meta.bank_name || null, meta.product_type || null, meta.processed_by || null
     ]);
 
-    await client.query('COMMIT');
+    if (isInternalTxn) await client.query('COMMIT');
     logger.info(`creditHold ₹${amount} (hold) for partner ${partnerId}, txn: ${txn.id}`);
     return txn;
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (isInternalTxn) await client.query('ROLLBACK');
     logger.error('creditHold failed', err.message);
     throw err;
   } finally {
-    client.release();
+    if (isInternalTxn) client.release();
   }
 };
 
 // Release money from Hold Balance to Available Balance (after hold period ends)
-const releaseHold = async (partnerId, amount, meta = {}) => {
-  const client = await getClient();
+const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) => {
+  const client = existingClient || await getClient();
+  const isInternalTxn = !existingClient;
   try {
-    await client.query('BEGIN');
+    if (isInternalTxn) await client.query('BEGIN');
 
     // Get wallet
     const { rows: [wallet] } = await client.query(
@@ -112,7 +114,7 @@ const releaseHold = async (partnerId, amount, meta = {}) => {
       ]);
     }
 
-    await client.query('COMMIT');
+    if (isInternalTxn) await client.query('COMMIT');
     logger.info(`releaseHold: Released ₹${amount} to available for partner ${partnerId}`);
 
     // Notify Partner
@@ -125,11 +127,11 @@ const releaseHold = async (partnerId, amount, meta = {}) => {
       }
     }
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (isInternalTxn) await client.query('ROLLBACK');
     logger.error('releaseHold failed', err.message);
     throw err;
   } finally {
-    client.release();
+    if (isInternalTxn) client.release();
   }
 };
 
