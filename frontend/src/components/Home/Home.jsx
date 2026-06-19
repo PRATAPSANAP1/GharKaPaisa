@@ -941,59 +941,88 @@ export default function Home({ onNavigate }) {
 
   useEffect(() => {
     const fetchBannersSettingsAndCms = async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      
-      // Fetch banners
+      const baseUrl = import.meta.env.VITE_API_URL || "https://api.gharkapaisa.in";
+
+      // 1) Fetch banners
       try {
-        const res = await fetch(`${baseUrl}/api/v1/banners`);
-        const data = await res.json();
-        if (data && data.success && data.data?.length > 0) {
-          setDynamicBanners(data.data);
+        const cachedBanners = sessionStorage.getItem('gkp_banners');
+        if (cachedBanners) {
+          setDynamicBanners(JSON.parse(cachedBanners));
+        } else {
+          const res = await fetch(`${baseUrl}/api/v1/banners`);
+          const data = await res.json();
+          if (data && data.success && data.data?.length > 0) {
+            setDynamicBanners(data.data);
+            sessionStorage.setItem('gkp_banners', JSON.stringify(data.data));
+          }
         }
       } catch (err) {
-        console.warn("Failed to load banners from backend:", err);
+        console.warn("Failed to load banners:", err);
       }
 
-      // Fetch layout visibility settings
+      // 2) Fetch Settings
       try {
-        const res = await fetch(`${baseUrl}/api/v1/settings`);
-        const data = await res.json();
-        if (data && data.success && data.data) {
-          setSettings(data.data);
+        const cachedSettings = sessionStorage.getItem('gkp_settings');
+        if (cachedSettings) {
+          setSettings(JSON.parse(cachedSettings));
+        } else {
+          const res = await fetch(`${baseUrl}/api/v1/settings`);
+          const data = await res.json();
+          if (data && data.success) {
+            setSettings(data.data);
+            sessionStorage.setItem('gkp_settings', JSON.stringify(data.data));
+          }
         }
       } catch (err) {
-        console.warn("Failed to load layout settings:", err);
+        console.warn("Failed to load settings:", err);
       }
 
-      // Fetch CMS homepage sections
+      // 3) Fetch CMS Sections
       try {
-        const res = await fetch(`${baseUrl}/api/v1/cms/sections`);
-        const data = await res.json();
-        if (data && data.success && data.data?.length > 0) {
-          setCmsSections(data.data);
+        const cachedCms = sessionStorage.getItem('gkp_cms');
+        if (cachedCms) {
+          setCmsSections(JSON.parse(cachedCms));
+        } else {
+          const res = await fetch(`${baseUrl}/api/v1/cms/sections`);
+          const data = await res.json();
+          if (data && data.success && data.data?.length > 0) {
+            setCmsSections(data.data);
+            sessionStorage.setItem('gkp_cms', JSON.stringify(data.data));
+          }
         }
       } catch (err) {
-        console.warn("Failed to load CMS layout sections:", err);
+        console.warn("Failed to load CMS:", err);
       }
 
-      // Fetch dynamic products for homepage lead generation
+      // 4) Fetch all products to create bank details
       try {
-        const res = await fetch(`${baseUrl}/api/v1/products`);
-        const data = await res.json();
-        if (data && data.success && data.data?.length > 0) {
-          // Use up to 10 active products for the attractive ticker
-          setDynamicProducts(data.data.filter(p => p.is_active).slice(0, 10));
+        const cachedProducts = sessionStorage.getItem('gkp_all_products');
+        if (cachedProducts) {
+          setDynamicProducts(JSON.parse(cachedProducts));
+        } else {
+          const res = await fetch(`${baseUrl}/api/v1/products`);
+          const data = await res.json();
+          if (data && data.success && data.data?.length > 0) {
+            setDynamicProducts(data.data);
+            sessionStorage.setItem('gkp_all_products', JSON.stringify(data.data));
+          }
         }
       } catch (err) {
-        console.warn("Failed to load dynamic products:", err);
+        console.warn("Failed to load products for banks:", err);
       }
-      
+
       // 5) Fetch active services
       try {
-        const resServices = await fetch(`${baseUrl}/api/v1/service-catalog`);
-        const dataServices = await resServices.json();
-        if (dataServices?.success) {
-          setServices(dataServices.data);
+        const cachedServices = sessionStorage.getItem('gkp_services');
+        if (cachedServices) {
+          setServices(JSON.parse(cachedServices));
+        } else {
+          const resServices = await fetch(`${baseUrl}/api/v1/service-catalog`);
+          const dataServices = await resServices.json();
+          if (dataServices?.success) {
+            setServices(dataServices.data);
+            sessionStorage.setItem('gkp_services', JSON.stringify(dataServices.data));
+          }
         }
       } catch (err) {
         console.warn("Failed to load services:", err);

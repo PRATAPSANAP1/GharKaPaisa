@@ -60,17 +60,25 @@ const Navbar = () => {
 
   useEffect(() => {
     const fetchCatalog = async () => {
+      const cached = sessionStorage.getItem('gkp_catalog');
+      if (cached) {
+        setDynamicCatalog(JSON.parse(cached));
+        return;
+      }
       try {
-        const { default: api } = await import('../api/api');
-        const res = await api.get('/products', { params: { is_active: 'true', limit: 200 } });
-        if (res.data?.success) {
-          const fetchedItems = res.data.data.map(p => ({
+        const baseUrl = import.meta.env.VITE_API_URL || "https://api.gharkapaisa.in";
+        const res = await fetch(`${baseUrl}/api/v1/products?is_active=true&limit=200`);
+        const data = await res.json();
+        if (data?.success) {
+          const fetchedItems = data.data.map(p => ({
             type: p.category.replace(/_/g, ' '),
             label: `${p.bank_name} ${p.name}`,
             desc: p.description || p.bank_code,
             target: { id: `product-${p.id}` }
           }));
-          setDynamicCatalog([...fetchedItems, ...staticLinks]);
+          const catalog = [...fetchedItems, ...staticLinks];
+          setDynamicCatalog(catalog);
+          sessionStorage.setItem('gkp_catalog', JSON.stringify(catalog));
         }
       } catch (err) {
         console.error("Failed to load catalog", err);
