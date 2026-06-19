@@ -163,7 +163,7 @@ const listWithdrawals = async (req, res, next) => {
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     const processedRows = data.rows.map(row => {
       if (shouldMask) {
@@ -175,6 +175,10 @@ const listWithdrawals = async (req, res, next) => {
           account_number: 'HIDDEN',
           ifsc_code: 'HIDDEN'
         };
+      }
+      if (row.account_number) {
+        const { decrypt } = require('../utils/crypto');
+        row.account_number = decrypt(row.account_number);
       }
       return row;
     });

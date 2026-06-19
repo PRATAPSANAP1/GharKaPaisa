@@ -6,7 +6,7 @@ const { logAction } = require('../services/audit.service');
 // Public can fetch active services, Admin can fetch all
 const listServices = async (req, res, next) => {
   try {
-    const isAdmin = req.user && ['admin', 'super_admin'].includes(req.user.role);
+    const isAdmin = req.user && ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role?.toUpperCase());
     
     let sql = `SELECT * FROM services_catalog`;
     let params = [];

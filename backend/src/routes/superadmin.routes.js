@@ -6,7 +6,7 @@ const ctrl = require('../controllers/superadmin.controller');
 
 // Require authentication and super_admin authorization globally for this router
 router.use(jwtAuth);
-router.use(roleCheck('super_admin'));
+router.use(roleCheck('SUPER_ADMIN'));
 
 router.post('/create-admin', ctrl.createAdmin);
 router.get('/admins', ctrl.listAdmins);

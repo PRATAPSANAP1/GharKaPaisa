@@ -5,12 +5,12 @@ const jwtAuth = require('../middleware/jwtAuth.middleware');
 const roleCheck = require('../middleware/role.middleware');
 
 // List leads (accessible to Partner, Admin, Super Admin)
-router.get('/', jwtAuth, roleCheck('Partner', 'admin', 'super_admin'), ctrl.listLeads);
+router.get('/', jwtAuth, roleCheck('PARTNER', 'ADMIN', 'SUPER_ADMIN'), ctrl.listLeads);
 
 // Create a new lead (accessible to Partner only)
-router.post('/', jwtAuth, roleCheck('Partner'), ctrl.createLead);
+router.post('/', jwtAuth, roleCheck('PARTNER'), ctrl.createLead);
 
 // Update lead status (accessible to Admin/Super Admin only)
-router.patch('/:id/status', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.updateLeadStatus);
+router.patch('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateLeadStatus);
 
 module.exports = router;

@@ -52,7 +52,7 @@ const listLeads = async (req, res, next) => {
     const values = [];
     let idx = 1;
 
-    if (req.user.role === 'Partner') {
+    if (req.user.role === 'PARTNER') {
       // Find partner ID
       const { rows: [partner] } = await query(
         `SELECT id FROM Partner_profiles WHERE user_id = $1`,

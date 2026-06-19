@@ -9,11 +9,7 @@ const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-secret-key-fallback');
-if (!JWT_SECRET) {
-  logger.error('FATAL ERROR: JWT_SECRET environment variable is not defined in production.');
-  process.exit(1);
-}
+const { JWT_SECRET } = require('../config/jwt.config');
 
 // ── Core: verify token ───────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
@@ -56,11 +52,14 @@ const syncUser = async (req, res, next) => {
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
     if (user.status === 'rejected')  return forbidden(res, 'Account rejected. Contact support.');
 
-    req.dbUser = user;
-    req.user = user;
+    req.dbUser = { ...user };
+    
+    // Strip sensitive fields from req.user
+    const { password_hash, verification_token, ...safeUser } = user;
+    req.user = safeUser;
 
     // Attach partner profile for Partner role
-    if (user.role === 'Partner') {
+    if ((user.role || '').toUpperCase() === 'PARTNER') {
       const { rows: [partner] } = await query(
         `SELECT id, kyc_status, first_name, last_name, Partner_code
          FROM Partner_profiles WHERE user_id = $1`,
@@ -84,9 +83,11 @@ const syncUser = async (req, res, next) => {
 
 // ── Role-based access control ──────────────────────────────────────────────
 const authorize = (...roles) => {
+  const upperRoles = roles.map(r => r.toUpperCase());
   return (req, res, next) => {
     if (!req.user) return unauthorized(res);
-    if (!roles.includes(req.user.role)) {
+    const userRole = (req.user.role || '').toUpperCase();
+    if (!upperRoles.includes(userRole)) {
       return forbidden(res, `Role '${req.user.role}' is not allowed to access this resource`);
     }
     next();
@@ -94,7 +95,7 @@ const authorize = (...roles) => {
 };
 
 const requireApprovedPartner = (req, res, next) => {
-  if (req.user.role !== 'Partner') return forbidden(res, 'Partners only');
+  if ((req.user.role || '').toUpperCase() !== 'PARTNER') return forbidden(res, 'Partners only');
   if (!req.partner) return forbidden(res, 'No partner profile found');
   if (req.partner.kyc_status !== 'approved') return forbidden(res, 'KYC not approved');
   next();
@@ -102,7 +103,8 @@ const requireApprovedPartner = (req, res, next) => {
 
 const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
   const targetId = req.params[paramName];
-  if (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'super_admin') return next();
+  const userRole = (req.user.role || '').toUpperCase();
+  if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
   if (req.user.id.toString() === targetId) return next();
   return forbidden(res);
 };

@@ -9,7 +9,7 @@ router.get('/', serviceCatalogCtrl.listServices);
 router.post('/:id/click', serviceCatalogCtrl.trackClick);
 
 // Protected Admin routes
-router.use(jwtAuth, roleCheck('super_admin', 'admin'));
+router.use(jwtAuth, roleCheck('SUPER_ADMIN', 'ADMIN'));
 router.post('/', serviceCatalogCtrl.createService);
 router.put('/:id', serviceCatalogCtrl.updateService);
 router.delete('/:id', serviceCatalogCtrl.deleteService);

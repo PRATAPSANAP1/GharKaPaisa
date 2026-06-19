@@ -11,12 +11,9 @@ const { generatePartnerCode } = require('../utils/helpers');
 const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
 const { sendOtpEmail, sendVerificationEmail } = require('../services/email.service');
-
-const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-secret-key-fallback');
-if (!JWT_SECRET) {
-  logger.error('FATAL ERROR: JWT_SECRET environment variable is not defined in production.');
-  process.exit(1);
-}
+const { sendSms } = require('../services/sms.service');
+const { encrypt } = require('../utils/crypto');
+const { JWT_SECRET, OTP_PEPPER } = require('../config/jwt.config');
 
 // ── GET /auth/me ────────────────────────────────────────────────────────────
 const getMe = async (req, res, next) => {
@@ -26,7 +23,7 @@ const getMe = async (req, res, next) => {
           ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
           ap.business_location, ap.gst_number, ap.company_type,
-          pbd.bank_name, RIGHT(pbd.account_number, 4) as account_number_last4, CONCAT('XXXX', RIGHT(pbd.account_number, 4)) as account_number, pbd.ifsc_code, pbd.account_holder_name,
+          pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
           w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
         FROM users u
         LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
@@ -36,6 +33,13 @@ const getMe = async (req, res, next) => {
       `, [req.user.id]);
 
     if (!user) return error(res, 'User not found', 404);
+
+    if (user.account_number) {
+      const { decrypt } = require('../utils/crypto');
+      const decrypted = decrypt(user.account_number);
+      user.account_number_last4 = decrypted.slice(-4);
+      user.account_number = 'XXXX' + decrypted.slice(-4);
+    }
 
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [req.user.id]);
 
@@ -55,13 +59,13 @@ const lookupUser = async (req, res, next) => {
     if (!identity) return error(res, 'Identity required', 400);
 
     const { rows: [user] } = await query(
-      `SELECT email, mobile FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
       [identity, identity]
     );
 
     if (!user) return error(res, 'User not found', 404);
 
-    return res.json({ success: true, data: user });
+    return res.json({ success: true, exists: true, data: { exists: true } });
   } catch (err) {
     next(err);
   }
@@ -104,7 +108,7 @@ const sendOtp = async (req, res, next) => {
 
     // Generate random 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
     // Store OTP hash (keyed by email for email-based verification)
@@ -165,7 +169,7 @@ const sendRegisterOtp = async (req, res, next) => {
 
     // Generate random 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
     // Store in database
@@ -175,8 +179,8 @@ const sendRegisterOtp = async (req, res, next) => {
       ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
     `, [mobile, otpHash, expiresAt]);
 
-    // Log OTP so dev/admin can read from server logs
-    logger.info(`[OTP-SMS] Registration OTP for ${mobile}: ${otp}`);
+    // Send actual SMS via the service (logs only in non-production)
+    await sendSms(mobile, `Your GharKaPaisa verification OTP is ${otp}. Valid for 5 minutes.`);
 
     return res.json({
       success: true,
@@ -193,7 +197,7 @@ const verifyOtpLogin = async (req, res, next) => {
     const { identity, otp } = req.body;
     if (!identity || !otp) return error(res, 'Identity and OTP required', 400);
 
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const { rows: [record] } = await query(`
       SELECT * FROM otp_verifications 
       WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
@@ -231,7 +235,7 @@ const login = async (req, res, next) => {
     }
 
     // Validate OTP
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const { rows: [record] } = await query(`
       SELECT * FROM otp_verifications 
       WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
@@ -316,8 +320,9 @@ const register = async (req, res, next) => {
     const {
       email, mobile, password, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number,
-      bank_name, account_number, ifsc_code, account_holder_name, role = 'Partner'
+      bank_name, account_number, ifsc_code, account_holder_name
     } = req.body;
+    const role = 'PARTNER';
 
     if (!email || !mobile) {
       return error(res, 'Email and mobile are required', 400);
@@ -347,17 +352,18 @@ const register = async (req, res, next) => {
       }
 
       const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
 
       // Insert User
       const { rows: [user] } = await client.query(
-        `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token)
-         VALUES ($1, $2, $3, $4, 'pending', FALSE, $5) RETURNING id`,
-        [email, mobile, passwordHash, role, verificationToken]
+        `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
+         VALUES ($1, $2, $3, $4, 'pending', FALSE, $5, $6) RETURNING id`,
+        [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt]
       );
 
       let PartnerCode = null;
 
-      if (role === 'Partner' || role === 'admin' || role === 'super_admin') {
+      if (role === 'PARTNER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
         // Generate Partner code using atomic sequence
         const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
         PartnerCode = generatePartnerCode(parseInt(nextval));
@@ -375,10 +381,11 @@ const register = async (req, res, next) => {
         ]);
 
         // Create bank details
+        const encryptedAccountNumber = encrypt(account_number);
         await client.query(`
           INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
           VALUES ($1, $2, $3, $4, $5)
-        `, [Partner.id, bank_name, account_number, ifsc_code, account_holder_name]);
+        `, [Partner.id, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name]);
 
         // Create wallet
         await client.query(`
@@ -422,7 +429,7 @@ const verifyEmail = async (req, res, next) => {
     }
 
     const { rows: [user] } = await query(
-      `SELECT id, email, email_verified FROM users WHERE verification_token = $1`,
+      `SELECT id, email, email_verified, verification_token_expires_at FROM users WHERE verification_token = $1`,
       [token]
     );
 
@@ -430,11 +437,16 @@ const verifyEmail = async (req, res, next) => {
       return error(res, 'Invalid or expired verification token', 400);
     }
 
+    if (user.verification_token_expires_at && new Date() > new Date(user.verification_token_expires_at)) {
+      return error(res, 'Verification token has expired', 400);
+    }
+
     await query(
       `UPDATE users 
        SET email_verified = TRUE, 
            status = CASE WHEN status = 'pending' THEN 'active' ELSE status END,
-           verification_token = NULL 
+           verification_token = NULL,
+           verification_token_expires_at = NULL
        WHERE id = $1`,
       [user.id]
     );
@@ -452,19 +464,28 @@ const verifyEmail = async (req, res, next) => {
 
 // ── POST /auth/logout ───────────────────────────────────────────────────────
 const logout = async (req, res, next) => {
-  return res.json({ success: true, message: 'Logged out successfully' });
+  try {
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      await query(`UPDATE refresh_tokens SET revoked = true WHERE token_hash = $1`, [tokenHash]);
+    }
+    return res.json({ success: true, message: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ── PUT /auth/admin/set-role ────────────────────────────────────────────────
 const setRole = async (req, res, next) => {
   try {
     const { userId, newRole } = req.body;
-    if (!['Partner', 'admin', 'super_admin', 'employee'].includes(newRole)) {
+    if (!['PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'].includes(newRole)) {
       return error(res, 'Invalid role', 400);
     }
 
     // RBAC: Admin cannot promote users to admin or super_admin
-    if (req.user.role === 'admin' && (newRole === 'super_admin' || newRole === 'admin')) {
+    if (req.user.role === 'ADMIN' && (newRole === 'SUPER_ADMIN' || newRole === 'ADMIN')) {
       return error(res, 'Admins are not allowed to promote users to administrative roles', 403);
     }
 
@@ -473,7 +494,7 @@ const setRole = async (req, res, next) => {
     if (!targetUser) return error(res, 'Target user not found', 404);
 
     // Admin cannot demote or modify other admin/super_admin accounts
-    if (req.user.role === 'admin' && (targetUser.role === 'super_admin' || targetUser.role === 'admin')) {
+    if (req.user.role === 'ADMIN' && (targetUser.role === 'SUPER_ADMIN' || targetUser.role === 'ADMIN')) {
       return error(res, 'Admins are not allowed to modify administrative accounts', 403);
     }
 

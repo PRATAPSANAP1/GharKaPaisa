@@ -134,9 +134,9 @@ export default function PartnerLogin() {
       const profile = await getMe(true);
       login(profile, loginRes.idToken);
       
-      const role = profile.role.toLowerCase();
-      if (role === 'admin') navigate(location.state?.from?.pathname || '/admin/dashboard');
-      else if (role === 'superadmin' || role === 'super_admin') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+      const role = profile.role?.toUpperCase();
+      if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+      else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
       else navigate(location.state?.from?.pathname || '/partner/dashboard');
       
     } catch (e) {

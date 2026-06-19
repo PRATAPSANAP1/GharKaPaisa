@@ -8,9 +8,9 @@ const roleCheck = require('../middleware/role.middleware');
 router.get('/', ctrl.listActiveSections);
 
 // Protected routes (Admin / Super Admin only)
-router.get('/all', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.listAllSections);
-router.post('/', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.createSection);
-router.put('/:key', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.updateSection);
-router.delete('/:key', jwtAuth, roleCheck('admin', 'super_admin'), ctrl.deleteSection);
+router.get('/all', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.listAllSections);
+router.post('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.createSection);
+router.put('/:key', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateSection);
+router.delete('/:key', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.deleteSection);
 
 module.exports = router;

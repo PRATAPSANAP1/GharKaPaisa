@@ -23,9 +23,11 @@ const getProfile = async (req, res, next) => {
 
     // Mask bank account number
     if (Partner && Partner.account_number) {
-      const accLen = Partner.account_number.length;
+      const { decrypt } = require('../utils/crypto');
+      const decrypted = decrypt(Partner.account_number);
+      const accLen = decrypted.length;
       if (accLen > 4) {
-        Partner.account_number = '*'.repeat(accLen - 4) + Partner.account_number.slice(-4);
+        Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
       } else {
         Partner.account_number = '*'.repeat(accLen);
       }
@@ -33,7 +35,7 @@ const getProfile = async (req, res, next) => {
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     if (shouldMask) {
       Partner.first_name = 'Partner';
@@ -201,7 +203,7 @@ const listPartners = async (req, res, next) => {
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     let where = 'WHERE 1=1';
     const values = [];
@@ -310,9 +312,11 @@ const getSelfProfile = async (req, res, next) => {
 
     // Mask bank account number
     if (Partner && Partner.account_number) {
-      const accLen = Partner.account_number.length;
+      const { decrypt } = require('../utils/crypto');
+      const decrypted = decrypt(Partner.account_number);
+      const accLen = decrypted.length;
       if (accLen > 4) {
-        Partner.account_number = '*'.repeat(accLen - 4) + Partner.account_number.slice(-4);
+        Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
       } else {
         Partner.account_number = '*'.repeat(accLen);
       }

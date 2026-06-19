@@ -106,7 +106,7 @@ const submitPublicApplication = async (req, res, next) => {
     }
 
     // System Admin User ID for created_by
-    const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='super_admin' LIMIT 1`);
+    const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='SUPER_ADMIN' LIMIT 1`);
     const sysUserId = sysUser.id;
 
     // Upsert customer
@@ -248,7 +248,7 @@ const listApplications = async (req, res, next) => {
     let idx = 1;
 
     // Partners can only see their own applications
-    if (req.user.role === 'Partner') {
+    if (req.user.role === 'PARTNER') {
       const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!Partner) return error(res, 'Partner profile not found', 404);
       where += ` AND a.Partner_id = $${idx++}`;
@@ -293,7 +293,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     const processedRows = data.rows.map(row => {
       if (shouldMask) {
@@ -333,7 +333,7 @@ const getApplication = async (req, res, next) => {
     if (!app) return notFound(res);
 
     // Ownership check: Partner can only view their own applications
-    if (req.user.role === 'Partner') {
+    if (req.user.role === 'PARTNER') {
       const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!Partner || app.Partner_id !== Partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
@@ -342,7 +342,7 @@ const getApplication = async (req, res, next) => {
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'admin';
+    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     if (shouldMask) {
       app.Partner_first_name = 'Partner';
@@ -373,7 +373,7 @@ const uploadApplicationDoc = async (req, res, next) => {
     if (!app) return notFound(res);
 
     // Ownership check: Partner can only upload docs for their own applications
-    if (req.user.role === 'Partner') {
+    if (req.user.role === 'PARTNER') {
       const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!Partner || app.Partner_id !== Partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');

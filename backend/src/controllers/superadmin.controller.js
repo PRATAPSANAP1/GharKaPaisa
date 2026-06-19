@@ -58,7 +58,7 @@ const createAdmin = async (req, res, next) => {
         email, mobile, password_hash, role, status, 
         full_name, employee_id, department, designation, created_by, is_active, email_verified
       )
-      VALUES ($1, $2, $3, 'admin', 'active', $4, $5, $6, $7, $8, true, true)
+      VALUES ($1, $2, $3, 'ADMIN', 'active', $4, $5, $6, $7, $8, true, true)
       RETURNING id, email, role, status`,
       [email, formattedMobile, hashedPassword, fullName, employeeId, department, designation, req.user.id]
     );
@@ -66,7 +66,7 @@ const createAdmin = async (req, res, next) => {
     logger.info(`Super admin ${req.user.email} created new Admin user: ${email}`);
 
     // Record the action in audit logs
-    await logAction(req, 'CREATE_ADMIN', dbUser.id, { email, role: 'admin' });
+    await logAction(req, 'CREATE_ADMIN', dbUser.id, { email, role: 'ADMIN' });
 
     return created(res, {
       userId: dbUser.id,
@@ -96,7 +96,7 @@ const listAdmins = async (req, res, next) => {
         created_by as "createdBy", 
         created_at as "createdAt"
       FROM users 
-      WHERE role = 'admin'
+      WHERE role = 'ADMIN'
       ORDER BY created_at DESC
     `);
     return success(res, admins);

@@ -12,11 +12,11 @@ router.get('/', ctrl.listBanners);
 router.use(jwtAuth);
 
 // Get all banners (Admin / SuperAdmin)
-router.get('/all', roleCheck('admin', 'super_admin'), ctrl.listAllBanners);
+router.get('/all', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.listAllBanners);
 
 // CRUD operations (Admin / SuperAdmin)
-router.post('/', roleCheck('admin', 'super_admin'), upload.single('image'), ctrl.createBanner);
-router.put('/:id', roleCheck('admin', 'super_admin'), upload.single('image'), ctrl.updateBanner);
-router.delete('/:id', roleCheck('admin', 'super_admin'), ctrl.deleteBanner);
+router.post('/', roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('image'), ctrl.createBanner);
+router.put('/:id', roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('image'), ctrl.updateBanner);
+router.delete('/:id', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.deleteBanner);
 
 module.exports = router;

@@ -15,27 +15,27 @@ const { validate, commissionRules } = require('../middleware/validation.middlewa
 router.use(jwtAuth);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
-router.get('/partners', roleCheck('admin', 'super_admin'), partnerCtrl.listPartners);
+router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.listPartners);
 
 // ── POST /admin/approve-kyc ──────────────────────────────────────────────────
-router.post('/approve-kyc', roleCheck('admin', 'super_admin'), partnerCtrl.approvePartnerKYC);
+router.post('/approve-kyc', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.approvePartnerKYC);
 
 // ── POST /admin/update-role ──────────────────────────────────────────────────
-router.post('/update-role', roleCheck('admin', 'super_admin'), authCtrl.setRole);
+router.post('/update-role', roleCheck('ADMIN', 'SUPER_ADMIN'), authCtrl.setRole);
 
 // ── GET /admin/applications ──────────────────────────────────────────────────
-router.get('/applications', roleCheck('admin', 'super_admin', 'employee'), appCtrl.listApplications);
+router.get('/applications', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCtrl.listApplications);
 
 // ── POST /admin/commission-rule ──────────────────────────────────────────────
-router.post('/commission-rule', roleCheck('super_admin'), commissionRules, validate, productCtrl.setCommission);
+router.post('/commission-rule', roleCheck('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
 // ── POST /admin/withdrawal/approve ───────────────────────────────────────────
-router.post('/withdrawal/approve', roleCheck('admin', 'super_admin'), walletCtrl.approveWithdrawalController);
+router.post('/withdrawal/approve', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.approveWithdrawalController);
 
 // ── POST /admin/withdrawal/reject ────────────────────────────────────────────
-router.post('/withdrawal/reject', roleCheck('admin', 'super_admin'), walletCtrl.rejectWithdrawalController);
+router.post('/withdrawal/reject', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectWithdrawalController);
 
 // ── POST /admin/wallet/adjust ────────────────────────────────────────────────
-router.post('/wallet/adjust', roleCheck('admin', 'super_admin'), walletCtrl.adminAdjustWalletController);
+router.post('/wallet/adjust', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 
 module.exports = router;

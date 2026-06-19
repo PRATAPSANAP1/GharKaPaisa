@@ -135,14 +135,14 @@ export default function AdminLogin() {
       // Fetch user profile info
       const profile = await getMe(true);
       
-      const role = profile.role.toLowerCase();
-      if (role !== 'admin' && role !== 'superadmin' && role !== 'super_admin') {
+      const role = profile.role?.toUpperCase();
+      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
         throw new Error("Access denied. Admin portal is only for administrators.");
       }
 
       login(profile, loginRes.idToken);
       
-      if (role === 'admin') navigate('/admin/dashboard');
+      if (role === 'ADMIN') navigate('/admin/dashboard');
       else navigate('/superadmin/dashboard');
       
     } catch (e) {

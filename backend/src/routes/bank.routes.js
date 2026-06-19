@@ -6,11 +6,11 @@ const ctrl = require('../controllers/bank.controller');
 
 // Require authentication and admin or superadmin authorization globally for banks CRUD
 router.use(jwtAuth);
-router.use(roleCheck('admin', 'super_admin'));
+router.use(roleCheck('ADMIN', 'SUPER_ADMIN'));
 
 router.get('/', ctrl.listAllBanks);
 router.post('/', ctrl.createBank);
 router.put('/:id', ctrl.updateBank);
-router.delete('/:id', roleCheck('super_admin'), ctrl.deleteBank);
+router.delete('/:id', roleCheck('SUPER_ADMIN'), ctrl.deleteBank);
 
 module.exports = router;

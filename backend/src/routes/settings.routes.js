@@ -21,7 +21,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // Update settings (SuperAdmin only)
-router.post('/', jwtAuth, roleCheck('super_admin'), async (req, res, next) => {
+router.post('/', jwtAuth, roleCheck('SUPER_ADMIN'), async (req, res, next) => {
   try {
     const { key, value } = req.body;
     if (!key || value === undefined) {

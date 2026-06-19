@@ -23,7 +23,6 @@ export function setAccessToken(token) {
   inMemoryAccessToken = token;
   if (token) {
     sessionStorage.setItem('gkp_access_token', token);
-    sessionStorage.setItem('token', token);
     // Sync with Zustand store
     try {
       useAuthStore.setState({ token, isAuthenticated: true });
@@ -32,7 +31,6 @@ export function setAccessToken(token) {
     }
   } else {
     sessionStorage.removeItem('gkp_access_token');
-    sessionStorage.removeItem('token');
     // Sync with Zustand store
     try {
       useAuthStore.setState({ token: null, isAuthenticated: false });
@@ -49,7 +47,6 @@ export function getAccessToken() {
 export function clearAccessToken() {
   inMemoryAccessToken = null;
   sessionStorage.removeItem('gkp_access_token');
-  sessionStorage.removeItem('token');
 }
 
 // ── Request: attach access token ──────────────────────────────────────────────
@@ -185,7 +182,6 @@ export function clearSession() {
   localStorage.removeItem('gkp_refresh_token');
   sessionStorage.removeItem('gkp_user');
   sessionStorage.removeItem('user');
-  sessionStorage.removeItem('token');
 
   try {
     useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
@@ -207,7 +203,7 @@ export function getStoredUser() {
 }
 
 export function isAuthenticated() {
-  const token = sessionStorage.getItem('gkp_access_token') || sessionStorage.getItem('token');
+  const token = sessionStorage.getItem('gkp_access_token');
   if (!token) return false;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));

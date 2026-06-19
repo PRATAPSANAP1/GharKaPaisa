@@ -108,7 +108,7 @@ const AppRoutes = () => {
         path="/partner" 
         element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['partner']}>
+            <RoleRoute allowedRoles={['PARTNER']}>
               <PartnerLayout />
             </RoleRoute>
           </ProtectedRoute>
@@ -127,7 +127,7 @@ const AppRoutes = () => {
         path="/admin" 
         element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['admin']}>
+            <RoleRoute allowedRoles={['ADMIN']}>
               <AdminLayout />
             </RoleRoute>
           </ProtectedRoute>
@@ -151,7 +151,7 @@ const AppRoutes = () => {
         path="/superadmin" 
         element={
           <ProtectedRoute>
-            <RoleRoute allowedRoles={['superadmin', 'super_admin']}>
+            <RoleRoute allowedRoles={['SUPER_ADMIN']}>
               <SuperAdminLayout />
             </RoleRoute>
           </ProtectedRoute>

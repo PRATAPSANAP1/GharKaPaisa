@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { sendRegisterOtp as sendOtp, registerPartner, lookupUser, verifyOtpLogin } from "../../api/auth.api";
+import { registerPartner, lookupUser } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -26,17 +26,12 @@ export default function PartnerRegister() {
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [verifiedMobile, setVerifiedMobile] = useState("");
-  const [timer, setTimer] = useState(0);
   const [success, setSuccess] = useState(null); // { Partner_code }
 
   // Flat form state for all steps
   const [form, setForm] = useState({
     // Step 0 – Personal
-    firstName: "", lastName: "", mobile: "", otp: "",
+    firstName: "", lastName: "", mobile: "",
     email: "",
     // Step 1 – Business
     address: "", businessCity: "", shopName: "",
@@ -48,12 +43,6 @@ export default function PartnerRegister() {
   });
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
-
-  useEffect(() => {
-    let t;
-    if (timer > 0) t = setTimeout(() => setTimer(t2 => t2 - 1), 1000);
-    return () => clearTimeout(t);
-  }, [timer]);
 
   useEffect(() => {
     return () => {};
@@ -113,9 +102,6 @@ export default function PartnerRegister() {
       if (!/^[a-zA-Z\s]+$/.test(form.lastName.trim())) return t("partner.errors.lastNameLettersOnly", "Last name can only contain letters.");
       if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
-      if (!otpSent) return t("partner.errors.mobileSendOtp", "Please send OTP to verify your mobile number.");
-      if (!phoneVerified) return t("partner.errors.mobileVerifyFirst", "Please enter the OTP and click verify mobile.");
-      if (form.mobile !== verifiedMobile) return t("partner.errors.mobileChanged", "Mobile number changed after verification. Please verify again.");
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
     }
@@ -151,12 +137,8 @@ export default function PartnerRegister() {
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // Ensure phone verified in Step 0
+    // Step 0 — check duplicate email / mobile
     if (step === 0) {
-      if (!phoneVerified) {
-        return setErr(t("partner.errors.mobileVerifyFirstMsg", "Please complete mobile verification first."));
-      }
-      // Check duplicate email / mobile
       setLoading(true);
       try {
         const lookupMobile = await lookupUser(form.mobile.trim());
@@ -203,7 +185,7 @@ export default function PartnerRegister() {
         account_holder_name: form.accountHolderName.trim(),
         aadhaar: form.aadhaar.trim(),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
-        role: "Partner",
+        role: "PARTNER",
       };
       const res = await registerPartner(payload);
       if (res.success) {
@@ -367,67 +349,11 @@ export default function PartnerRegister() {
 
               <div style={{ gridColumn: "1/-1" }}>
                 <label style={S.label}>{t('partner.mobileNumber', 'Mobile Number')}</label>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                    {...inputProps("mobile", { flex: 1 })}
-                    style={{ ...S.input, flex: 1 }}
-                    placeholder={t('partner.mobilePlaceholder', '10-digit Mobile Number')}
-                    disabled={phoneVerified}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={timer > 0 || otpLoading || phoneVerified}
-                    style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px", opacity: (timer > 0 || phoneVerified) ? 0.7 : 1 }}
-                  >
-                    {otpLoading ? t('partner.sending', 'Sending…') : timer > 0 ? `${timer}s` : t('partner.sendOtp', 'Send OTP')}
-                  </button>
-                </div>
-                {otpSent && !phoneVerified && (
-                  <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <Icons.check size={12} /> {t('partner.otpSentMobile', 'OTP sent to your mobile')}
-                  </div>
-                )}
-                {phoneVerified && (
-                  <div style={{ fontSize: "12px", color: C.green, marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontWeight: 700 }}>
-                    <Icons.check size={12} /> {t('partner.verifiedMobile', 'Mobile number verified successfully!')}
-                  </div>
-                )}
+                <input
+                  {...inputProps("mobile")}
+                  placeholder={t('partner.mobilePlaceholder', '10-digit Mobile Number')}
+                />
               </div>
-
-              {/* Removed Recaptcha Container */}
-
-              {otpSent && !phoneVerified && (
-                <div style={{ gridColumn: "1/-1" }}>
-                  <label style={S.label}>{t('partner.enterOtp', 'Enter OTP')}</label>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <input
-                      style={{
-                        ...S.input,
-                        flex: 1,
-                        background: C.inputBg,
-                        color: C.text,
-                        letterSpacing: "6px",
-                        textAlign: "center",
-                        fontSize: "16px",
-                        fontWeight: 700,
-                      }}
-                      maxLength={6}
-                      value={form.otp}
-                      onChange={e => setForm(f => ({ ...f, otp: e.target.value.replace(/\D/g, "") }))}
-                      onFocus={e => { e.target.style.border = focusBorder; }}
-                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyPhoneOtp}
-                      style={{ ...S.btn("sm"), whiteSpace: "nowrap", width: "110px", padding: "0 10px" }}
-                    >
-                      {t('partner.verifyOtp', 'Verify OTP')}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Email */}
               <div style={{ gridColumn: "1/-1" }}>

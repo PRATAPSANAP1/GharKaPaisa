@@ -26,6 +26,6 @@ router.get('/me', jwtAuth, ctrl.getMe);
 router.post('/logout', jwtAuth, ctrl.logout);
 
 // Admin-only route to set role
-router.put('/admin/set-role', authLimiter, jwtAuth, roleCheck('admin', 'super_admin'), ctrl.setRole);
+router.put('/admin/set-role', authLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.setRole);
 
 module.exports = router;

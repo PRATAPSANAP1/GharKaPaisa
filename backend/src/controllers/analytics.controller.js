@@ -6,11 +6,11 @@ const getDashboard = async (req, res, next) => {
     const { role, id, partner_id } = req.user;
     let data;
 
-    if (role === 'superadmin') {
+    if (role === 'SUPER_ADMIN') {
       data = await analyticsService.getSuperAdminDashboard();
-    } else if (role === 'admin') {
+    } else if (role === 'ADMIN') {
       data = await analyticsService.getAdminDashboard(id);
-    } else if (role === 'Partner' || role === 'partner') {
+    } else if (role === 'PARTNER') {
       if (!partner_id) return error(res, 'Partner profile missing');
       data = await analyticsService.getPartnerDashboard(partner_id);
     } else {

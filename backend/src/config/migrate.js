@@ -12,9 +12,14 @@ const migrate = async () => {
   // ── ENUM types ────────────────────────────────────────────────
   await query(`
     DO $$ BEGIN
-      CREATE TYPE user_role AS ENUM ('super_admin','admin','employee','Partner');
+      CREATE TYPE user_role AS ENUM ('SUPER_ADMIN','ADMIN','EMPLOYEE','PARTNER');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  try { await query(`ALTER TYPE user_role RENAME VALUE 'super_admin' TO 'SUPER_ADMIN'`); } catch (err) {}
+  try { await query(`ALTER TYPE user_role RENAME VALUE 'admin' TO 'ADMIN'`); } catch (err) {}
+  try { await query(`ALTER TYPE user_role RENAME VALUE 'employee' TO 'EMPLOYEE'`); } catch (err) {}
+  try { await query(`ALTER TYPE user_role RENAME VALUE 'Partner' TO 'PARTNER'`); } catch (err) {}
+  try { await query(`ALTER TABLE users ALTER COLUMN role SET DEFAULT 'PARTNER'`); } catch (err) {}
   await query(`
     DO $$ BEGIN
       CREATE TYPE user_status AS ENUM ('pending','active','suspended','rejected');
@@ -82,7 +87,7 @@ const migrate = async () => {
       firebase_uid  VARCHAR(255) UNIQUE,
       email         VARCHAR(255) UNIQUE,
       mobile        VARCHAR(15)  UNIQUE,
-      role          user_role NOT NULL DEFAULT 'Partner',
+      role          user_role NOT NULL DEFAULT 'PARTNER',
       status        user_status NOT NULL DEFAULT 'pending',
       password_hash VARCHAR(255),
       full_name     VARCHAR(255),
@@ -114,6 +119,7 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ`);
 
   // Drop password_hash — Firebase handles all credentials (idempotent)
   // await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
@@ -606,21 +612,21 @@ const migrate = async () => {
   // Clean up all old super admin records
   const bcrypt = require('bcrypt');
   const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
-  await query(`DELETE FROM users WHERE role = 'super_admin' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
+  await query(`DELETE FROM users WHERE role = 'SUPER_ADMIN' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
 
   // Seed Super Admin Sharad Yohesa if not exists
   const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
   if (!existingSuper) {
     await query(`
       INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
-      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true, true)
+      VALUES ($1, $2, 'SUPER_ADMIN', 'active', $3, $4, true, true)
     `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
     logger.info('Super admin Sharad Yohesa seeded successfully');
   } else {
     // Make sure role, status, mobile, and password are set correctly
     await query(`
       UPDATE users 
-      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1, email_verified = true
+      SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1, email_verified = true
       WHERE email = 'sharadyohesa@gmail.com'
     `, [hashedPassword]);
     logger.info('Super admin Sharad Yohesa configuration verified');
@@ -631,13 +637,13 @@ const migrate = async () => {
   if (!existingSuper2) {
     await query(`
       INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
-      VALUES ($1, $2, 'super_admin', 'active', $3, $4, true, true)
+      VALUES ($1, $2, 'SUPER_ADMIN', 'active', $3, $4, true, true)
     `, ['pratapsanap14@gmail.com', '9370470692', 'Pratap Sanap', hashedPassword]);
     logger.info('Super admin Pratap Sanap seeded successfully');
   } else {
     await query(`
       UPDATE users 
-      SET role = 'super_admin', status = 'active', is_active = true, full_name = 'Pratap Sanap', mobile = '9370470692', password_hash = $1, email_verified = true
+      SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = 'Pratap Sanap', mobile = '9370470692', password_hash = $1, email_verified = true
       WHERE email = 'pratapsanap14@gmail.com'
     `, [hashedPassword]);
     logger.info('Super admin Pratap Sanap configuration verified');
@@ -863,6 +869,21 @@ const migrate = async () => {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // Encrypt existing bank account numbers if not already encrypted
+  try {
+    const { encrypt } = require('../utils/crypto');
+    const { rows: bankDetails } = await query(`SELECT id, account_number FROM Partner_bank_details`);
+    for (const row of bankDetails) {
+      if (row.account_number && !row.account_number.includes(':')) {
+        const encrypted = encrypt(row.account_number);
+        await query(`UPDATE Partner_bank_details SET account_number = $1 WHERE id = $2`, [encrypted, row.id]);
+      }
+    }
+    logger.info('Partner bank details encryption migration completed successfully');
+  } catch (cryptoErr) {
+    logger.warn('Failed to encrypt existing bank details:', cryptoErr.message);
+  }
 
   logger.info('✅ All migrations completed successfully');
   process.exit(0);
