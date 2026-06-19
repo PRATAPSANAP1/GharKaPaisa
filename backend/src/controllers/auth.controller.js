@@ -175,6 +175,59 @@ const sendOtp = async (req, res, next) => {
   }
 };
 
+// ── POST /auth/send-registration-otp ─────────────────────────────────────────
+const sendRegistrationOtp = async (req, res, next) => {
+  try {
+    const email = normalizeIdentity(req.body.email);
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error(res, 'A valid email is required', 400);
+
+    // Generate OTP and store hash
+    const otp = String(crypto.randomInt(100000, 1000000));
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await query(`
+      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+    `, [email, otpHash, expiresAt]);
+
+    try {
+      await sendOtpEmail(email, otp);
+      logger.info(`[Registration-OTP] Sent OTP to ${email}`);
+    } catch (err) {
+      logger.error(`[Registration-OTP] Failed to send OTP to ${email}: ${err.message}`);
+      return error(res, 'Failed to send OTP. Please try again later.', 500);
+    }
+
+    const masked = email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+    return res.json({ success: true, message: `OTP sent to ${masked}`, email: masked });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/verify-registration-otp ───────────────────────────────────────
+const verifyRegistrationOtp = async (req, res, next) => {
+  try {
+    const email = normalizeIdentity(req.body.email);
+    const { otp } = req.body;
+    if (!email || !otp) return error(res, 'Email and OTP are required', 400);
+
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(String(otp)).digest('hex');
+    const { rows: [record] } = await query(`SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`, [email, otpHash]);
+    if (!record) return error(res, 'Invalid or expired OTP', 400);
+
+    // Remove OTP and mark email as pre-verified
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
+    await query(`INSERT INTO pre_verified_emails (email, verified_at) VALUES ($1, NOW()) ON CONFLICT (email) DO UPDATE SET verified_at = NOW()`, [email]);
+
+    return res.json({ success: true, message: 'Email verified for registration' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 
 // ── POST /auth/login ──────────────────────────────────────────────────────────
@@ -321,11 +374,20 @@ const register = async (req, res, next) => {
       const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
 
       // Insert User
+      // Check if email was pre-verified via registration OTP
+      const { rows: [pre] } = await client.query(`SELECT email FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
+      const emailVerified = !!pre;
+
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, 'pending', FALSE, $5, $6) RETURNING id`,
-        [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt]
+         VALUES ($1, $2, $3, $4, 'pending', $7, $5, $6) RETURNING id`,
+        [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
+
+      if (emailVerified) {
+        // Remove pre-verified marker
+        await client.query(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
+      }
 
       let PartnerCode = null;
 

@@ -123,6 +123,14 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ`);
 
+  // Table to track emails pre-verified via registration OTP
+  await query(`
+    CREATE TABLE IF NOT EXISTS pre_verified_emails (
+      email VARCHAR(255) PRIMARY KEY,
+      verified_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // Drop password_hash — Firebase handles all credentials (idempotent)
   // await query(`ALTER TABLE users DROP COLUMN IF EXISTS password_hash`);
 

@@ -53,13 +53,25 @@ export default function PartnerRegister() {
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
     aadhaar: "", pan: "",
+    emailOtp: "",
+    emailPreVerified: false,
   });
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpTimer, setEmailOtpTimer] = useState(0);
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+
   useEffect(() => {
     return () => {};
   }, []);
+
+  useEffect(() => {
+    let t;
+    if (emailOtpTimer > 0) t = setTimeout(() => setEmailOtpTimer(emailOtpTimer - 1), 1000);
+    return () => clearTimeout(t);
+  }, [emailOtpTimer]);
 
   const focusBorder = `1.5px solid ${C.teal}`;
   const inputProps = (key, extra = {}) => ({
@@ -330,14 +342,58 @@ export default function PartnerRegister() {
               </div>
 
               {/* Email */}
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
-                <input
-                  type="email"
-                  {...inputProps("email")}
-                  placeholder={t('partner.placeholders.email', 'name@domain.com')}
-                  autoComplete="email"
-                />
+              <div style={{ gridColumn: "1/-1", display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
+                  <input
+                    type="email"
+                    {...inputProps("email")}
+                    placeholder={t('partner.placeholders.email', 'name@domain.com')}
+                    autoComplete="email"
+                    disabled={form.emailPreVerified}
+                  />
+
+                  {/* Email OTP input shown after sending OTP */}
+                  {emailOtpSent && !form.emailPreVerified && (
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                      <input style={{ ...S.input, flex: 1 }} value={form.emailOtp} onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))} placeholder={t('partner.enterEmailOtp', 'Enter 6-digit OTP')} maxLength={6} />
+                      <button type="button" onClick={async () => {
+                        if (!form.email.trim()) return setErr('Please enter your email first');
+                        if (!form.emailOtp || form.emailOtp.length < 6) return setErr('Please enter the 6-digit OTP');
+                        setEmailOtpLoading(true);
+                        try {
+                          const { verifyRegistrationOtp } = await import('../../api/auth.api');
+                          await verifyRegistrationOtp(form.email.trim(), form.emailOtp);
+                          setForm(f => ({ ...f, emailPreVerified: true }));
+                          setInfoMsg('Email verified for registration');
+                          setEmailOtpSent(false);
+                        } catch (err) {
+                          setErr(err.message || 'Failed to verify OTP');
+                        } finally {
+                          setEmailOtpLoading(false);
+                        }
+                      }} style={{ ...S.btn('sm') }}>{emailOtpLoading ? 'Verifying…' : t('partner.verifyOtpButton', 'Verify')}</button>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ visibility: 'hidden' }}>.</label>
+                  <button type="button" onClick={async () => {
+                    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr('Please enter a valid email to verify');
+                    setErr(''); setInfoMsg(''); setEmailOtpLoading(true);
+                    try {
+                      const { sendRegistrationOtp } = await import('../../api/auth.api');
+                      await sendRegistrationOtp(form.email.trim());
+                      setEmailOtpSent(true);
+                      setEmailOtpTimer(120);
+                      setInfoMsg('OTP sent to email');
+                    } catch (err) {
+                      setErr(err.message || 'Failed to send OTP');
+                    } finally { setEmailOtpLoading(false); }
+                  }} style={{ ...S.btn('primary'), width: '100%' }} disabled={form.emailPreVerified}>{form.emailPreVerified ? t('partner.verified', 'Verified') : t('partner.sendVerify', 'Verify')}</button>
+                  {emailOtpTimer > 0 && <div style={{ fontSize: 12, color: C.textLight, textAlign: 'center' }}>{emailOtpTimer}s</div>}
+                </div>
               </div>
             </div>
           )}

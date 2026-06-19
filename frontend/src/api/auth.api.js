@@ -151,6 +151,25 @@ export async function verifyEmail(token) {
   }
 }
 
+// ── Registration OTP (pre-verify email) ───────────────────────────────────
+export async function sendRegistrationOtp(email) {
+  try {
+    const res = await api.post('/auth/send-registration-otp', { email });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to send registration OTP.');
+  }
+}
+
+export async function verifyRegistrationOtp(email, otp) {
+  try {
+    const res = await api.post('/auth/verify-registration-otp', { email, otp });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to verify registration OTP.');
+  }
+}
+
 export async function resendVerificationEmail(email) {
   try {
     const res = await api.post('/auth/resend-verification', { email });

@@ -15,7 +15,9 @@ const { validate, registerRules } = require('../middleware/validation.middleware
 router.post('/login', authLimiter, ctrl.login);
 router.post('/login-password', authLimiter, ctrl.loginPassword);
 router.post('/send-otp', emailActionLimiter, ctrl.sendOtp);
+router.post('/send-registration-otp', emailActionLimiter, ctrl.sendRegistrationOtp);
 router.post('/verify-otp', authLimiter, ctrl.login);
+router.post('/verify-registration-otp', authLimiter, ctrl.verifyRegistrationOtp);
 router.post('/lookup', authLimiter, ctrl.lookupUser);
 router.post('/register', authLimiter, registerRules, validate, ctrl.register);
 router.post('/forgot-password', authLimiter, ctrl.forgotPassword);
