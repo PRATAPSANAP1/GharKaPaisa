@@ -691,6 +691,8 @@ module.exports = {
   getMe,
   lookupUser,
   sendOtp,
+  sendRegistrationOtp,
+  verifyRegistrationOtp,
   login,
   loginPassword,
   register,
