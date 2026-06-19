@@ -18,7 +18,21 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Too many requests to authentication endpoints. Please try again after an hour.' }
 });
 
+// Email-triggering endpoints need a tighter limit because browser-side
+// counters can be bypassed and each successful request consumes provider quota.
+const emailActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many email requests. Please wait 15 minutes and try again.'
+  }
+});
+
 module.exports = {
   globalLimiter,
-  authLimiter
+  authLimiter,
+  emailActionLimiter
 };

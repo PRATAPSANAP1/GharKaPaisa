@@ -1,26 +1,48 @@
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const logger = require("../utils/logger");
 
-const ses = new SESClient({
-  region: process.env.AWS_REGION || "ap-south-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+const region = process.env.AWS_REGION || "ap-south-1";
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "no-reply@gharkapaisa.in";
+if ((accessKeyId && !secretAccessKey) || (!accessKeyId && secretAccessKey)) {
+  throw new Error("AWS email credentials are incomplete");
+}
+
+const sesOptions = { region };
+if (accessKeyId && secretAccessKey) {
+  sesOptions.credentials = {
+    accessKeyId,
+    secretAccessKey,
+    ...(sessionToken ? { sessionToken } : {}),
+  };
+}
+
+const ses = new SESClient(sesOptions);
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM;
+
+if (!FROM_EMAIL || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(FROM_EMAIL)) {
+  throw new Error("SES_FROM_EMAIL or MAIL_FROM must contain a valid verified sender address");
+}
 
 /**
  * Send a generic email via SES
  */
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, text }) => {
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    throw new Error("A valid recipient email address is required");
+  }
+
   const command = new SendEmailCommand({
     Source: FROM_EMAIL,
     Destination: { ToAddresses: [to] },
     Message: {
-      Subject: { Data: subject },
-      Body: { Html: { Data: html } },
+      Subject: { Data: subject, Charset: "UTF-8" },
+      Body: {
+        Html: { Data: html, Charset: "UTF-8" },
+        ...(text ? { Text: { Data: text, Charset: "UTF-8" } } : {}),
+      },
     },
   });
 
@@ -101,6 +123,7 @@ const sendOtpEmail = async (email, otp) => {
     to: email,
     subject: `${otp} — Your GharKaPaisa Login Code`,
     html,
+    text: `Your GharKaPaisa login code is ${otp}. It expires in 5 minutes.`,
   });
 };
 
@@ -174,6 +197,7 @@ const sendVerificationEmail = async (email, verificationLink) => {
     to: email,
     subject: `Verify Your Email — GharKaPaisa`,
     html,
+    text: `Verify your GharKaPaisa email address by opening this link: ${verificationLink}`,
   });
 };
 

@@ -60,7 +60,13 @@ export async function sendOtp(identity) {
 export async function verifyOtpLogin(identity, otp) {
   try {
     const res = await api.post('/auth/verify-otp', { identity, otp });
-    return { success: true, idToken: res.data.token };
+    if (res.data?.token) {
+      setAccessToken(res.data.token);
+      if (res.data.refreshToken) {
+        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
+      }
+    }
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP code.');
   }
@@ -79,6 +85,39 @@ export async function loginWithOtp(identity, otp) {
     return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP or credentials.');
+  }
+}
+
+// ── Password Login ───────────────────────────────────────────────────────
+export async function loginWithPassword(identity, password) {
+  try {
+    const res = await api.post('/auth/login-password', { identity, password });
+    if (res.data && res.data.token) {
+      setAccessToken(res.data.token);
+      if (res.data.refreshToken) localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
+    }
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Invalid credentials.');
+  }
+}
+
+// ── Forgot / Reset Password ─────────────────────────────────────────────
+export async function forgotPassword(email) {
+  try {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to request password reset.');
+  }
+}
+
+export async function resetPassword(token, password) {
+  try {
+    const res = await api.post('/auth/reset-password', { token, password });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to reset password.');
   }
 }
 
@@ -109,6 +148,15 @@ export async function verifyEmail(token) {
     return res.data;
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Email verification failed.');
+  }
+}
+
+export async function resendVerificationEmail(email) {
+  try {
+    const res = await api.post('/auth/resend-verification', { email });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Could not resend the verification email.');
   }
 }
 

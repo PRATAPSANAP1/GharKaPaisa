@@ -8,12 +8,24 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { query, getClient } = require('../config/db');
 const { generatePartnerCode } = require('../utils/helpers');
-const { success, created, error, notFound } = require('../utils/response');
+const { success, created, error } = require('../utils/response');
 const logger = require('../utils/logger');
-const { sendOtpEmail, sendVerificationEmail } = require('../services/email.service');
-const { sendSms } = require('../services/sms.service');
+const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../services/email.service');
 const { encrypt } = require('../utils/crypto');
 const { JWT_SECRET, OTP_PEPPER } = require('../config/jwt.config');
+
+const normalizeIdentity = (value) => {
+  const identity = String(value || '').trim();
+  return identity.includes('@') ? identity.toLowerCase() : identity;
+};
+
+const buildVerificationLink = (token) => {
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://gharkapaisa.in')
+    .split(',')[0]
+    .trim()
+    .replace(/\/+$/, '');
+  return `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+};
 
 // ── GET /auth/me ────────────────────────────────────────────────────────────
 const getMe = async (req, res, next) => {
@@ -55,11 +67,11 @@ const getMe = async (req, res, next) => {
 // ── POST /auth/lookup ────────────────────────────────────────────────────────────
 const lookupUser = async (req, res, next) => {
   try {
-    const { identity } = req.body;
+    const identity = normalizeIdentity(req.body.identity);
     if (!identity) return error(res, 'Identity required', 400);
 
     const { rows: [user] } = await query(
-      `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
       [identity, identity]
     );
 
@@ -91,12 +103,12 @@ const generateAndSaveRefreshToken = async (userId) => {
 // Sends a 6-digit OTP to the user's registered email via AWS SES.
 const sendOtp = async (req, res, next) => {
   try {
-    const { identity } = req.body;
+    const identity = normalizeIdentity(req.body.identity);
     if (!identity) return error(res, 'Email or mobile number required', 400);
 
     // Look up the user to get their email address
     const { rows: [user] } = await query(
-      `SELECT email, mobile, email_verified FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT email, mobile, email_verified FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
       [identity, identity]
     );
 
@@ -108,8 +120,10 @@ const sendOtp = async (req, res, next) => {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
 
+    const emailIdentity = normalizeIdentity(user.email);
+
     // Generate random 6-digit OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = String(crypto.randomInt(100000, 1000000));
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
@@ -118,7 +132,7 @@ const sendOtp = async (req, res, next) => {
       INSERT INTO otp_verifications (identity, otp_hash, expires_at)
       VALUES ($1, $2, $3)
       ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
-    `, [user.email, otpHash, expiresAt]);
+    `, [emailIdentity, otpHash, expiresAt]);
 
     // Also store by mobile if identity was mobile (so login can verify by either)
     if (user.mobile && user.mobile !== user.email) {
@@ -131,19 +145,23 @@ const sendOtp = async (req, res, next) => {
 
     // Send OTP via AWS SES email
     try {
-      await sendOtpEmail(user.email, otp);
-      logger.info(`[OTP] Email OTP sent to ${user.email}`);
+      await sendOtpEmail(emailIdentity, otp);
+      logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
     } catch (emailErr) {
-      logger.error(`[OTP] Failed to send OTP email to ${user.email}: ${emailErr.message}`);
+      logger.error(`[OTP] Failed to send OTP email to ${emailIdentity}: ${emailErr.message}`);
+      await query(
+        `DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`,
+        [emailIdentity, user.mobile || emailIdentity]
+      );
       // In development, log the OTP so developers can still test
       if (process.env.NODE_ENV !== 'production') {
-        logger.info(`[OTP-DEV] OTP for ${user.email}: ${otp}`);
+        logger.info(`[OTP-DEV] OTP for ${emailIdentity}: ${otp}`);
       }
       return error(res, 'Failed to send OTP email. Please try again later.', 500);
     }
 
     // Mask email for display: p****p@gmail.com
-    const maskedEmail = user.email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
+    const maskedEmail = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
       return first + '*'.repeat(Math.min(middle.length, 6)) + domain;
     });
 
@@ -159,40 +177,17 @@ const sendOtp = async (req, res, next) => {
 
 
 
-// ── POST /auth/verify-otp ──────────────────────────────────────────────────────────
-const verifyOtpLogin = async (req, res, next) => {
-  try {
-    const { identity, otp } = req.body;
-    if (!identity || !otp) return error(res, 'Identity and OTP required', 400);
-
-    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
-    const { rows: [record] } = await query(`
-      SELECT * FROM otp_verifications 
-      WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()
-    `, [identity, otpHash]);
-
-    if (!record) {
-      return error(res, 'Invalid or expired OTP code', 400);
-    }
-
-    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
-
-    return res.json({ success: true, message: 'OTP verified' });
-  } catch (err) {
-    next(err);
-  }
-};
-
 // ── POST /auth/login ──────────────────────────────────────────────────────────
 // Email OTP-only login. No password authentication.
 const login = async (req, res, next) => {
   try {
-    const { identity, otp } = req.body;
+    const identity = normalizeIdentity(req.body.identity);
+    const { otp } = req.body;
     if (!identity) return error(res, 'Identity is required', 400);
     if (!otp) return error(res, 'OTP is required. Please request an OTP first.', 400);
 
     const { rows: [user] } = await query(
-      `SELECT * FROM users WHERE email = $1 OR mobile = $2`,
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
       [identity, identity]
     );
 
@@ -201,6 +196,8 @@ const login = async (req, res, next) => {
     if (!user.email_verified) {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
+    if (user.status === 'suspended') return error(res, 'Account suspended', 403);
+    if (user.status === 'rejected') return error(res, 'Account rejected', 403);
 
     // Validate OTP
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
@@ -216,12 +213,10 @@ const login = async (req, res, next) => {
 
     // Also clean up matching OTP for the other identity (email/mobile)
     if (user.email && user.mobile) {
-      const otherIdentity = identity === user.email ? user.mobile : user.email;
+      const emailIdentity = normalizeIdentity(user.email);
+      const otherIdentity = identity === emailIdentity ? user.mobile : emailIdentity;
       await query(`DELETE FROM otp_verifications WHERE identity = $1`, [otherIdentity]);
     }
-
-    if (user.status === 'suspended') return error(res, 'Account suspended', 403);
-    if (user.status === 'rejected') return error(res, 'Account rejected', 403);
 
     // Generate JWT (15-minute access token)
     const token = jwt.sign(
@@ -286,10 +281,12 @@ const refresh = async (req, res, next) => {
 const register = async (req, res, next) => {
   try {
     const {
-      email, mobile, password, first_name, last_name,
+      password, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number,
       bank_name, account_number, ifsc_code, account_holder_name
     } = req.body;
+    const email = normalizeIdentity(req.body.email);
+    const mobile = normalizeIdentity(req.body.mobile);
     const role = 'PARTNER';
 
     if (!email || !mobile) {
@@ -297,12 +294,13 @@ const register = async (req, res, next) => {
     }
 
     const client = await getClient();
+    let committed = false;
     try {
       await client.query('BEGIN');
 
       // Check if user exists
       const { rows: existingUser } = await client.query(
-        `SELECT id FROM users WHERE email = $1 OR mobile = $2`,
+        `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
         [email, mobile]
       );
 
@@ -361,28 +359,139 @@ const register = async (req, res, next) => {
         `, [Partner.id]);
       }
 
-      // Send verification email via SES
+      await client.query('COMMIT');
+      committed = true;
+
+      // Send after commit so a delivered link always points to a saved account.
       try {
-        const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-        const verificationLink = `${frontendUrl}/verify-email?token=${verificationToken}`;
+        const verificationLink = buildVerificationLink(verificationToken);
         await sendVerificationEmail(email, verificationLink);
         logger.info(`[Verification] Sent verification email to ${email}`);
       } catch (emailErr) {
         logger.error(`[Verification] Failed to send verification email to ${email}: ${emailErr.message}`);
-        await client.query('ROLLBACK');
-        return error(res, 'Failed to send verification email. Please try again.', 500);
+        return created(
+          res,
+          { partner_code: PartnerCode, email, email_sent: false },
+          'Registration completed, but the verification email could not be sent. Please use resend verification.'
+        );
       }
 
-      await client.query('COMMIT');
-
       logger.info(`User registered: ${email} (${PartnerCode || role})`);
-      return created(res, { partner_code: PartnerCode, email }, 'Registration successful. A verification email has been sent. Please check your inbox.');
+      return created(res, { partner_code: PartnerCode, email, email_sent: true }, 'Registration successful. A verification email has been sent. Please check your inbox.');
     } catch (err) {
-      await client.query('ROLLBACK');
+      if (!committed) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          logger.error(`Registration rollback failed: ${rollbackErr.message}`);
+        }
+      }
       throw err;
     } finally {
       client.release();
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/verify-email ──────────────────────────────────────────────────
+// Add password-based login, forgot/reset password endpoints
+// ── POST /auth/login-password ─────────────────────────────────────────────────
+const loginPassword = async (req, res, next) => {
+  try {
+    const { identity, password } = req.body;
+    if (!identity || !password) return error(res, 'Identity and password required', 400);
+
+    const { rows: [user] } = await query(
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
+      [identity, identity]
+    );
+
+    if (!user) return error(res, 'No account found with this email or mobile', 401);
+
+    const bcrypt = require('bcryptjs');
+    if (!user.password_hash) return error(res, 'Password login not enabled for this account', 401);
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return error(res, 'Invalid credentials', 401);
+
+    if (!user.email_verified) {
+      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
+    }
+
+    if (user.status === 'suspended') return error(res, 'Account suspended', 403);
+    if (user.status === 'rejected') return error(res, 'Account rejected', 403);
+
+    // Generate JWT (15-minute access token)
+    const token = jwt.sign(
+      { id: user.id, email: user.email, phone: user.mobile, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    // Generate Refresh Token
+    const refreshToken = await generateAndSaveRefreshToken(user.id);
+
+    return res.json({ success: true, token, refreshToken });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/forgot-password ───────────────────────────────────────────────
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return error(res, 'Email required', 400);
+
+    const { rows: [user] } = await query(`SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)`, [email]);
+
+    // Always return success to avoid account enumeration
+    if (!user) return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await query(`UPDATE users SET reset_token = $1, reset_token_expires_at = $2 WHERE id = $3`, [token, expiresAt, user.id]);
+
+    // Send reset email
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+      const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+      const html = `<p>Please click the link to reset your password:</p><p><a href="${resetLink}">${resetLink}</a></p>`;
+      await sendEmail({ to: user.email, subject: 'Reset your GharKaPaisa password', html, text: `Reset link: ${resetLink}` });
+      logger.info(`[Password] Sent reset link to ${user.email}`);
+    } catch (emailErr) {
+      logger.error(`[Password] Failed to send reset email to ${user.email}: ${emailErr.message}`);
+      // still respond with generic message
+    }
+
+    return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/reset-password ────────────────────────────────────────────────
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return error(res, 'Token and new password required', 400);
+
+    const { rows: [user] } = await query(`SELECT id, reset_token_expires_at FROM users WHERE reset_token = $1`, [token]);
+    if (!user) return error(res, 'Invalid or expired token', 400);
+    if (user.reset_token_expires_at && new Date() > new Date(user.reset_token_expires_at)) {
+      return error(res, 'Reset token has expired', 400);
+    }
+
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    await query(`UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL WHERE id = $2`, [passwordHash, user.id]);
+
+    return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
     next(err);
   }
@@ -424,6 +533,48 @@ const verifyEmail = async (req, res, next) => {
     return res.json({
       success: true,
       message: 'Your email has been verified successfully!'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const email = normalizeIdentity(req.body.email);
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return error(res, 'A valid email address is required', 400);
+    }
+
+    const { rows: [user] } = await query(
+      `SELECT id, email, email_verified FROM users WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    );
+
+    // Keep this generic so the endpoint does not reveal registered addresses.
+    if (!user || user.email_verified) {
+      return res.json({
+        success: true,
+        message: 'If this address has an unverified account, a new verification email has been sent.'
+      });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await query(
+      `UPDATE users
+       SET verification_token = $1, verification_token_expires_at = $2
+       WHERE id = $3`,
+      [verificationToken, verificationTokenExpiresAt, user.id]
+    );
+
+    await sendVerificationEmail(user.email, buildVerificationLink(verificationToken));
+    logger.info(`[Verification] Resent verification email to ${user.email}`);
+
+    return res.json({
+      success: true,
+      message: 'If this address has an unverified account, a new verification email has been sent.'
     });
   } catch (err) {
     next(err);
@@ -478,10 +629,13 @@ module.exports = {
   getMe,
   lookupUser,
   sendOtp,
-  verifyOtpLogin,
   login,
+  loginPassword,
   register,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
+  resendVerificationEmail,
   logout,
   setRole,
   refresh

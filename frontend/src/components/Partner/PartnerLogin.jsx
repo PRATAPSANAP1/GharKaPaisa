@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { sendOtp, loginWithOtp, getMe } from "../../api/auth.api";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe } from "../../api/auth.api";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {
@@ -61,7 +61,8 @@ export default function PartnerLogin() {
   const { t } = useTranslation();
   const login = useAuthStore((state) => state.login);
   
-  const [form, setForm] = useState({ identity: "", otp: "" });
+  const [form, setForm] = useState({ identity: "", otp: "", password: "" });
+  const [method, setMethod] = useState('otp'); // 'otp' or 'password'
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
@@ -119,26 +120,33 @@ export default function PartnerLogin() {
     e.preventDefault();
     setErr("");
     setToast(null);
-
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
-    if (!otpSent) return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
-    if (!form.otp || form.otp.length < 6) return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
-    if (!otpSentTime || Date.now() - otpSentTime > 120000) return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
 
     setLoading(l => ({ ...l, login: true }));
     try {
-      // Verify OTP and sign in
-      const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
-      
-      // Fetch user profile info
-      const profile = await getMe(true);
-      login(profile, loginRes.idToken);
-      
-      const role = profile.role?.toUpperCase();
-      if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-      else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
-      else navigate(location.state?.from?.pathname || '/partner/dashboard');
-      
+      if (method === 'otp') {
+        if (!otpSent) return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
+        if (!form.otp || form.otp.length < 6) return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
+        if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
+
+        const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
+        const profile = await getMe(true);
+        login(profile, loginRes.idToken);
+        const role = profile.role?.toUpperCase();
+        if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+        else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+        else navigate(location.state?.from?.pathname || '/partner/dashboard');
+      } else {
+        // Password login
+        if (!form.password || form.password.length < 8) return setErr('Please enter your password.');
+        const loginRes = await loginWithPassword(form.identity.trim(), form.password);
+        const profile = await getMe(true);
+        login(profile, loginRes.idToken);
+        const role = profile.role?.toUpperCase();
+        if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+        else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+        else navigate(location.state?.from?.pathname || '/partner/dashboard');
+      }
     } catch (e) {
       setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
     } finally {
@@ -209,6 +217,12 @@ export default function PartnerLogin() {
           )}
 
           <form onSubmit={handleSubmit}>
+            {/* Login Method Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button type="button" onClick={() => setMethod('otp')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'otp' ? C.inputBg : 'transparent' }}>OTP</button>
+              <button type="button" onClick={() => setMethod('password')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'password' ? C.inputBg : 'transparent' }}>Password</button>
+            </div>
+
             {/* Email or Mobile */}
             <div style={{ marginBottom: "14px" }}>
               <label style={S.label}>{t('partner.emailOrMobile', 'Email or Mobile Number')}</label>
@@ -227,11 +241,37 @@ export default function PartnerLogin() {
               </div>
             </div>
 
-            {/* OTP Verification Input */}
+              {/* Password Input */}
+              {method === 'password' && (
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={S.label}>{t('partner.password', 'Password')}</label>
+                  <input
+                    style={{ ...inputStyle }}
+                    placeholder={t('partner.enterPassword', 'Enter your password')}
+                    type="password"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                  />
+                  <div style={{ textAlign: 'right', marginTop: 8 }}>
+                    <button type="button" onClick={async () => {
+                      const email = form.identity.trim() || window.prompt('Please enter your registered email to receive reset link:');
+                      if (!email) return;
+                      try {
+                        await forgotPassword(email);
+                        setToast({ message: 'If an account exists, a reset link has been sent to the email.', type: 'success' });
+                      } catch (err) {
+                        setToast({ message: err.message || 'Failed to request password reset', type: 'error' });
+                      }
+                    }} style={{ background: 'none', border: 'none', color: C.teal, cursor: 'pointer' }}>{t('partner.forgotPassword', 'Forgot Password?')}</button>
+                  </div>
+                </div>
+              )}
+
+              {/* OTP Verification Input */}
             <div style={{ marginBottom: "20px" }}>
               <label style={S.label}>{t('partner.enterOtp', 'Enter 6-Digit OTP')}</label>
               <div style={{ display: "flex", gap: "8px" }}>
-                <input
+                  <input
                   style={{
                     ...inputStyle,
                     flex: 1,

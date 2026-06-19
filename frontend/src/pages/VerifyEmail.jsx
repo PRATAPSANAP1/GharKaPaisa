@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { verifyEmail } from "../api/auth.api";
+import { resendVerificationEmail, verifyEmail } from "../api/auth.api";
 import { useTheme, makeS } from "../components/Partner/ThemeContext";
 
 // ── Inline keyframe styles (injected once) ──────────────────────────────────
@@ -131,6 +131,9 @@ export default function VerifyEmail() {
 
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   useEffect(() => {
     if (!token) {
@@ -158,6 +161,25 @@ export default function VerifyEmail() {
 
     return () => { cancelled = true; };
   }, [token]);
+
+  const handleResend = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setResendMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setResending(true);
+    setResendMessage("");
+    try {
+      const data = await resendVerificationEmail(normalizedEmail);
+      setResendMessage(data.message || "A new verification email has been requested.");
+    } catch (err) {
+      setResendMessage(err.message || "Could not resend the verification email.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <>
@@ -322,6 +344,32 @@ export default function VerifyEmail() {
                   <span style={{ fontSize: 13, color: C.textMid, lineHeight: 1.5 }}>
                     Try registering again, or contact support at <strong style={{ color: C.text }}>support@gharkapaisa.in</strong> if the issue persists.
                   </span>
+                </div>
+
+                <div style={{ marginBottom: 18, textAlign: "left" }}>
+                  <label style={{ ...S.label, display: "block" }}>Resend verification email</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="name@example.com"
+                      style={{ ...S.input, flex: 1, minWidth: 0 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resending}
+                      style={{ ...S.btn("primary"), padding: "0 14px", opacity: resending ? 0.7 : 1 }}
+                    >
+                      {resending ? "Sending…" : "Resend"}
+                    </button>
+                  </div>
+                  {resendMessage && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: C.textMid }}>
+                      {resendMessage}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: "flex", gap: 10 }}>

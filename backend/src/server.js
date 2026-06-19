@@ -161,8 +161,10 @@ const apiRouter = require('./routes/index');
 app.use('/api/v1', apiRouter);
 
 // ── Test Routes ────────────────────────────────────────────────
-const testEmailRoutes = require("./routes/testEmail.routes");
-app.use("/api/test-email", testEmailRoutes);
+if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE === 'true') {
+  const testEmailRoutes = require('./routes/testEmail.routes');
+  app.use('/api/test-email', testEmailRoutes);
+}
 
 // ── Error Handling ─────────────────────────────────────────────
 app.use(notFoundHandler);

@@ -1,8 +1,7 @@
 /**
  * validation.middleware.js
  * ─────────────────────────────────────────────────────────────────────────
- * Firebase Auth handles all credential validation (OTP, passwords).
- * Backend only validates business/bank profile fields on registration.
+ * Backend validation for authentication and business profile inputs.
  */
 const { body, param, query, validationResult } = require('express-validator');
 const { error } = require('../utils/response');
@@ -17,24 +16,30 @@ const validate = (req, res, next) => {
 };
 
 // ── Registration: business/bank profile fields ─────────────────────────────
-// Credential validation (email, phone, OTP) is handled by Firebase client-side.
 const registerRules = [
+  body('email')
+    .trim()
+    .isEmail().withMessage('Valid email is required')
+    .normalizeEmail(),
+  body('mobile')
+    .trim()
+    .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
-  body('email').trim().notEmpty().isEmail().withMessage('Valid email required'),
-  body('mobile').trim().notEmpty().matches(/^[6-9]\d{9}$/).withMessage('Valid mobile required'),
   body('aadhaar').trim().notEmpty().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
-  body('pan').trim().notEmpty().matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i).withMessage('Valid PAN number required'),
+  body('pan').trim().toUpperCase().notEmpty()
+    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
   body('bank_name').trim().notEmpty().withMessage('Bank name required'),
   body('account_number').trim().notEmpty().withMessage('Account number required'),
-  body('ifsc_code').matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
+  body('ifsc_code').trim().toUpperCase()
+    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
   body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
   body('company_name').trim().notEmpty().withMessage('Company name required'),
   body('company_type')
     .isIn(['individual', 'proprietorship', 'partnership', 'pvt_ltd', 'llp', 'other'])
     .withMessage('Valid company type required'),
-  body('gst_number').optional()
+  body('gst_number').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
     .withMessage('Valid GST number required'),
   body('business_location').trim().notEmpty().withMessage('Business location required'),
