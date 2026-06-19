@@ -63,7 +63,9 @@ const lookupUser = async (req, res, next) => {
       [identity, identity]
     );
 
-    if (!user) return error(res, 'User not found', 404);
+    if (!user) {
+      return res.json({ success: true, exists: false, data: { exists: false } });
+    }
 
     return res.json({ success: true, exists: true, data: { exists: true } });
   } catch (err) {

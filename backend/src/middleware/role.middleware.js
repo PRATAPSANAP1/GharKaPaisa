@@ -14,6 +14,7 @@
  */
 
 const roleCheck = (...allowedRoles) => {
+  const allowedUpper = allowedRoles.map(role => String(role).toUpperCase());
   return (req, res, next) => {
     // jwtAuth / authenticate must run before this middleware
     if (!req.user) {
@@ -23,12 +24,12 @@ const roleCheck = (...allowedRoles) => {
       });
     }
 
-    const userRole = req.user.role;
+    const userRole = String(req.user.role || '').toUpperCase();
 
-    if (!allowedRoles.includes(userRole)) {
+    if (!allowedUpper.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: `Access denied for role: ${userRole}. Required: ${allowedRoles.join(' | ')}`
+        message: `Access denied for role: ${req.user.role}. Required: ${allowedUpper.join(' | ')}`
       });
     }
 

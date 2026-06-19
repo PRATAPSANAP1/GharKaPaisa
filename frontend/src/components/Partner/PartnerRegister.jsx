@@ -106,24 +106,20 @@ export default function PartnerRegister() {
     if (step === 0) {
       setLoading(true);
       try {
-        const lookupMobile = await lookupUser(form.mobile.trim());
-        if (lookupMobile.success && lookupMobile.data) {
-          setLoading(false);
+        const mobileExists = await lookupUser(form.mobile.trim());
+        if (mobileExists?.exists) {
           return setErr(t("partner.errors.mobileExists", "This mobile number is already registered."));
         }
-      } catch (e) {
-        // If lookup fails because user not found, that's what we want
-      }
-      try {
-        const lookupEmail = await lookupUser(form.email.trim());
-        if (lookupEmail.success && lookupEmail.data) {
-          setLoading(false);
+
+        const emailExists = await lookupUser(form.email.trim());
+        if (emailExists?.exists) {
           return setErr(t("partner.errors.emailExists", "This email address is already registered."));
         }
       } catch (e) {
-        // Ignored
+        // ignore lookup failure and continue with validation
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     if (step < STEPS.length - 1) {
@@ -201,7 +197,7 @@ export default function PartnerRegister() {
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "16px" }}>
               <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t('partner.partnerCode', 'Your Partner Code')}</div>
-              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.Partner_code || success.partner_code}</div>
+              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.partner_code ?? success.Partner_code ?? ''}</div>
             </div>
 
             <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>

@@ -24,7 +24,7 @@ export const syncSession = async () => {
           id:           p.id,
           email:        p.email        || '',
           mobile:       p.mobile       || '',
-          role:         p.role         || 'Partner',
+          role:         p.role         || 'PARTNER',
           status:       p.status       || 'pending',
           first_name:   p.first_name   || '',
           last_name:    p.last_name    || '',

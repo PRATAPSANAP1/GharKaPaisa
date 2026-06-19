@@ -21,6 +21,10 @@ const validate = (req, res, next) => {
 const registerRules = [
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
+  body('email').trim().notEmpty().isEmail().withMessage('Valid email required'),
+  body('mobile').trim().notEmpty().matches(/^[6-9]\d{9}$/).withMessage('Valid mobile required'),
+  body('aadhaar').trim().notEmpty().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
+  body('pan').trim().notEmpty().matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i).withMessage('Valid PAN number required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
   body('bank_name').trim().notEmpty().withMessage('Bank name required'),
   body('account_number').trim().notEmpty().withMessage('Account number required'),
