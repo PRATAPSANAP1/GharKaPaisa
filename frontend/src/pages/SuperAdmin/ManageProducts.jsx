@@ -78,6 +78,21 @@ export default function ManageProducts() {
     }
   };
 
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this product? This will also remove any associated leads and commission structures.")) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/products/${id}`);
+      if (res.data?.success) {
+        alert("Product deleted successfully.");
+        fetchData();
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to delete product.");
+    }
+  };
+
   const openAddModal = () => {
     setEditItem(null);
     setForm({
@@ -228,6 +243,9 @@ export default function ManageProducts() {
                         </button>
                         <button onClick={() => openEditModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
                           Edit
+                        </button>
+                        <button onClick={() => handleDeleteProduct(p.id)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red, padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                          Delete
                         </button>
                       </div>
                     </td>

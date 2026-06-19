@@ -9,7 +9,7 @@ export default function LoanRepay() {
   const S = makeS(C);
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ loan_number: '', provider: 'HDFC Bank', amount: '' });
+  const [form, setForm] = useState({ loan_number: '', provider: 'HDFC Bank', mobile: '' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -21,7 +21,7 @@ export default function LoanRepay() {
         service_type: 'loan_repay',
         loan_number: form.loan_number,
         provider: form.provider,
-        amount: form.amount
+        mobile: form.mobile
       });
       setSuccess(true);
     } catch (err) {
@@ -37,7 +37,7 @@ export default function LoanRepay() {
         <div style={{ ...S.card, padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
           <div style={{ color: C.green, fontSize: "48px" }}>{Icons.CheckCircle || "✅"}</div>
           <h2 style={{ color: C.text, margin: 0 }}>Repayment Initiated</h2>
-          <p style={{ color: C.textLight }}>Your repayment of ₹{form.amount} for Loan No: {form.loan_number} is processing.</p>
+          <p style={{ color: C.textLight }}>We have received your Loan Repayment request for Loan No: {form.loan_number}. Our team will contact you shortly.</p>
           <button onClick={() => navigate('/money-transfer')} style={{ ...S.btn("primary"), marginTop: "20px" }}>
             Back to Services
           </button>
@@ -87,20 +87,19 @@ export default function LoanRepay() {
           </div>
 
           <div>
-            <label style={S.label}>Amount (₹)</label>
+            <label style={S.label}>Mobile Number</label>
             <input 
               required
-              type="number"
-              min="1"
-              placeholder="Enter amount"
+              type="tel"
+              placeholder="Enter mobile number"
               style={S.input}
-              value={form.amount}
-              onChange={e => setForm({...form, amount: e.target.value})}
+              value={form.mobile}
+              onChange={e => setForm({...form, mobile: e.target.value})}
             />
           </div>
 
           <button type="submit" disabled={loading} style={{ ...S.btn("primary"), padding: "14px", fontSize: "16px", marginTop: "10px" }}>
-            {loading ? "Processing..." : "Pay EMI"}
+            {loading ? "Submitting..." : "Submit Request"}
           </button>
         </form>
       </div>

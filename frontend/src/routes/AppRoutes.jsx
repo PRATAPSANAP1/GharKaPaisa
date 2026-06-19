@@ -84,12 +84,12 @@ const AppRoutes = () => {
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-        {/* Services Routes */}
-        <Route path="/money-transfer" element={<MoneyTransfer />} />
-        <Route path="/recharge" element={<Recharge />} />
-        <Route path="/electricity" element={<Electricity />} />
-        <Route path="/loan-repay" element={<LoanRepay />} />
-        <Route path="/fastag" element={<Fastag />} />
+        {/* Services Routes - Protected */}
+        <Route path="/money-transfer" element={<ProtectedRoute><MoneyTransfer /></ProtectedRoute>} />
+        <Route path="/recharge" element={<ProtectedRoute><Recharge /></ProtectedRoute>} />
+        <Route path="/electricity" element={<ProtectedRoute><Electricity /></ProtectedRoute>} />
+        <Route path="/loan-repay" element={<ProtectedRoute><LoanRepay /></ProtectedRoute>} />
+        <Route path="/fastag" element={<ProtectedRoute><Fastag /></ProtectedRoute>} />
         
         {/* Travel Bookings - mapped to Coming Soon for now */}
         <Route path="/travel-transit/bus-booking" element={<ComingSoon />} />

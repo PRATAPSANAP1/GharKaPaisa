@@ -18,6 +18,7 @@ router.use(authenticate, syncUser);
 router.post('/create', authorize('admin', 'super_admin'), productCtrl.createProduct);
 router.post('/', authorize('admin', 'super_admin'), productCtrl.createProduct);
 router.put('/:id', authorize('admin', 'super_admin'), productCtrl.updateProduct);
+router.delete('/:id', authorize('admin', 'super_admin'), productCtrl.deleteProduct);
 router.post('/commission', authorize('super_admin'), commissionRules, validate, productCtrl.setCommission);
 
 module.exports = router;

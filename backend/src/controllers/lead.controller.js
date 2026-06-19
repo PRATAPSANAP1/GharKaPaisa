@@ -6,9 +6,9 @@ const { getPaginationParams } = require('../utils/helpers');
 // Create a new lead
 const createLead = async (req, res, next) => {
   try {
-    const { productId, customerName, mobile } = req.body;
-    if (!productId || !customerName || !mobile) {
-      return error(res, 'Product ID, Customer Name, and Mobile are required', 400);
+    const { productId, customerName, mobile, city } = req.body;
+    if (!productId || !customerName || !mobile || !city) {
+      return error(res, 'Product ID, Customer Name, Mobile, and City are required', 400);
     }
 
     // Fetch partner profile from logged-in user id
@@ -31,9 +31,9 @@ const createLead = async (req, res, next) => {
     }
 
     const { rows: [lead] } = await query(
-      `INSERT INTO leads (partner_id, product_id, customer_name, mobile, status)
-       VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
-      [partner.id, productId, customerName, mobile]
+      `INSERT INTO leads (partner_id, product_id, customer_name, mobile, city, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`,
+      [partner.id, productId, customerName, mobile, city]
     );
 
     return created(res, lead, 'Lead created successfully');

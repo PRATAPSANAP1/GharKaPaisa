@@ -494,11 +494,13 @@ const migrate = async () => {
       product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       customer_name VARCHAR(255) NOT NULL,
       mobile        VARCHAR(15) NOT NULL,
+      city          VARCHAR(100),
       status        VARCHAR(50) DEFAULT 'pending',
       created_at    TIMESTAMPTZ DEFAULT NOW(),
       updated_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_product ON leads(product_id)`);
 

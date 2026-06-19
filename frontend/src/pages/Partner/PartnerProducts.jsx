@@ -12,6 +12,7 @@ const PartnerProducts = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [city, setCity] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const fetchProducts = async () => {
@@ -51,12 +52,13 @@ const PartnerProducts = () => {
     setSelectedProduct(product);
     setCustomerName("");
     setMobile("");
+    setCity("");
   };
 
   const handleSubmitLead = async (e) => {
     e.preventDefault();
-    if (!customerName.trim() || !mobile.trim()) {
-      return alert("Customer Name and Mobile number are required.");
+    if (!customerName.trim() || !mobile.trim() || !city.trim()) {
+      return alert("Customer Name, Mobile number, and City are required.");
     }
     if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
       return alert("Please enter a valid 10-digit mobile number.");
@@ -67,7 +69,8 @@ const PartnerProducts = () => {
       const res = await api.post('/leads', {
         productId: selectedProduct.id,
         customerName: customerName.trim(),
-        mobile: mobile.trim()
+        mobile: mobile.trim(),
+        city: city.trim()
       });
 
       if (res.data?.success) {
@@ -178,6 +181,7 @@ const PartnerProducts = () => {
                   <tr>
                     <th className="px-6 py-3 font-semibold">Customer</th>
                     <th className="px-6 py-3 font-semibold">Mobile</th>
+                    <th className="px-6 py-3 font-semibold">City</th>
                     <th className="px-6 py-3 font-semibold">Product</th>
                     <th className="px-6 py-3 font-semibold">Payout</th>
                     <th className="px-6 py-3 font-semibold">Status</th>
@@ -189,6 +193,7 @@ const PartnerProducts = () => {
                     <tr key={lead.id} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4 font-semibold text-gray-800">{lead.customer_name}</td>
                       <td className="px-6 py-4 text-gray-500">{lead.mobile}</td>
+                      <td className="px-6 py-4 text-gray-600">{lead.city || 'N/A'}</td>
                       <td className="px-6 py-4">{lead.product_name}</td>
                       <td className="px-6 py-4 font-bold text-green-600">₹{parseFloat(lead.product_commission).toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4">
@@ -255,6 +260,18 @@ const PartnerProducts = () => {
                   maxLength={10}
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 border-gray-200 text-sm font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-1.5">City *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter customer's city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
                   className="w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 border-gray-200 text-sm font-semibold"
                 />
               </div>

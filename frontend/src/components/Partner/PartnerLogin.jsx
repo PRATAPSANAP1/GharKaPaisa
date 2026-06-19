@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
@@ -10,6 +10,7 @@ export default function PartnerLogin() {
   const { C } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const login = useAuthStore((state) => state.login);
   
@@ -95,9 +96,9 @@ export default function PartnerLogin() {
       login(profile, loginRes.idToken);
       
       const role = profile.role.toLowerCase();
-      if (role === 'admin') navigate('/admin/dashboard');
-      else if (role === 'superadmin' || role === 'super_admin') navigate('/superadmin/dashboard');
-      else navigate('/partner/dashboard');
+      if (role === 'admin') navigate(location.state?.from?.pathname || '/admin/dashboard');
+      else if (role === 'superadmin' || role === 'super_admin') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+      else navigate(location.state?.from?.pathname || '/partner/dashboard');
       
     } catch (e) {
       setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));

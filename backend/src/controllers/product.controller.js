@@ -257,6 +257,39 @@ const getInsurance = async (req, res, next) => {
   }
 };
 
+// DELETE /products/:id (Admin / Super Admin)
+const deleteProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { rows: [existing] } = await query(
+      `SELECT * FROM products WHERE id = $1`,
+      [id]
+    );
+
+    if (!existing) {
+      return notFound(res, 'Product not found');
+    }
+
+    // First delete referencing commission structures and leads to avoid foreign key violations
+    await query(`DELETE FROM commission_structures WHERE product_id = $1`, [id]);
+    await query(`DELETE FROM leads WHERE product_id = $1`, [id]);
+    
+    // Now delete the product
+    await query(`DELETE FROM products WHERE id = $1`, [id]);
+
+    // Log action
+    await logAction(req, 'DELETE_PRODUCT', id, { name: existing.name });
+
+    return success(res, {}, 'Product deleted successfully');
+  } catch (err) {
+    if (err.message.includes('violates foreign key constraint')) {
+      return error(res, 'Cannot delete product because it has active customer applications associated with it. Please deactivate it instead.', 400);
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -267,5 +300,6 @@ module.exports = {
   listBanks,
   getCards,
   getLoans,
-  getInsurance
+  getInsurance,
+  deleteProduct
 };
