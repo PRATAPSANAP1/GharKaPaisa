@@ -12,7 +12,11 @@ const { success, created, error, notFound } = require('../utils/response');
 const logger = require('../utils/logger');
 const { sendOtpEmail, sendVerificationEmail } = require('../services/email.service');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa-secret-key-fallback';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-secret-key-fallback');
+if (!JWT_SECRET) {
+  logger.error('FATAL ERROR: JWT_SECRET environment variable is not defined in production.');
+  process.exit(1);
+}
 
 // ── GET /auth/me ────────────────────────────────────────────────────────────
 const getMe = async (req, res, next) => {
@@ -368,6 +372,43 @@ const register = async (req, res, next) => {
     } finally {
       client.release();
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/verify-email ──────────────────────────────────────────────────
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return error(res, 'Verification token is required', 400);
+    }
+
+    const { rows: [user] } = await query(
+      `SELECT id, email, email_verified FROM users WHERE verification_token = $1`,
+      [token]
+    );
+
+    if (!user) {
+      return error(res, 'Invalid or expired verification token', 400);
+    }
+
+    await query(
+      `UPDATE users 
+       SET email_verified = TRUE, 
+           status = CASE WHEN status = 'pending' THEN 'active' ELSE status END,
+           verification_token = NULL 
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    logger.info(`[Verification] Email verified successfully for user: ${user.email}`);
+
+    return res.json({
+      success: true,
+      message: 'Your email has been verified successfully!'
+    });
   } catch (err) {
     next(err);
   }

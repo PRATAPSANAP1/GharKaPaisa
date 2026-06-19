@@ -9,7 +9,11 @@ const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa-secret-key-fallback';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-secret-key-fallback');
+if (!JWT_SECRET) {
+  logger.error('FATAL ERROR: JWT_SECRET environment variable is not defined in production.');
+  process.exit(1);
+}
 
 // ── Core: verify token ───────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {

@@ -12,10 +12,10 @@ const globalLimiter = rateLimit({
 // Authentication rate limiter (protecting login / register / OTP endpoints)
 const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Max 10 attempts per hour
+  max: 50, // Max 50 attempts per hour
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests to authentication endpoints. Try again after an hour.' }
+  message: { success: false, message: 'Too many requests to authentication endpoints. Please try again after an hour.' }
 });
 
 module.exports = {
