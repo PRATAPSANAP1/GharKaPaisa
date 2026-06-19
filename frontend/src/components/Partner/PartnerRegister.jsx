@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { sendRegisterOtp as sendOtp, registerPartner, lookupUser } from "../../api/auth.api";
+import { sendRegisterOtp as sendOtp, registerPartner, lookupUser, verifyOtpLogin } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
@@ -93,11 +93,12 @@ export default function PartnerRegister() {
     setInfoMsg("");
     setLoading(true);
     try {
+      await verifyOtpLogin(form.mobile, form.otp);
       setPhoneVerified(true);
       setVerifiedMobile(form.mobile);
       setInfoMsg(t("partner.verifiedMobile", "Mobile number verified successfully!"));
     } catch (e) {
-      setErr(t("partner.errors.otpVerifyFailed", "Invalid OTP verification code. Please check and try again."));
+      setErr(e.message || t("partner.errors.otpVerifyFailed", "Invalid OTP verification code. Please check and try again."));
     } finally {
       setLoading(false);
     }

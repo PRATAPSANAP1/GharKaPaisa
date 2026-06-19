@@ -55,7 +55,14 @@ export async function sendOtp(identity) {
   }
 }
 
-export const sendRegisterOtp = (identity) => sendOtp(identity);
+export async function sendRegisterOtp(mobile) {
+  try {
+    const res = await api.post('/auth/send-register-otp', { mobile });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to send verification OTP.');
+  }
+}
 
 // ── OTP — VERIFY ─────────────────────────────────────────────────────
 export async function verifyOtpLogin(identity, otp) {
