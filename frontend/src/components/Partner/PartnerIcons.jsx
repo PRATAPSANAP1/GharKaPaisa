@@ -39,6 +39,7 @@ export const Icons = {
   menu: (props) => <Icon d={["M3 12h18", "M3 6h18", "M3 18h18"]} {...props} />,
   logout: (props) => <Icon d={["M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4", "M16 17l5-5-5-5", "M21 12H9"]} {...props} />,
   gift: (props) => <Icon d={["M20 12v10H4V12", "M22 7H2v5h20V7z", "M12 22V7", "M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z", "M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"]} {...props} />,
+  shield: (props) => <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" {...props} />,
   arrowRight: (props) => <Icon d="M5 12h14M12 5l7 7-7 7" {...props} />,
   arrowLeft: (props) => <Icon d="M19 12H5M12 19l-7-7 7-7" {...props} />,
 };
