@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
 import { useTheme, makeS } from "../../components/Partner/ThemeContext";
-import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe } from "../../api/auth.api";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../api/auth.api";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {
@@ -71,6 +71,50 @@ export default function AdminLogin() {
   const [err, setErr] = useState("");
   const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
 
+  // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────
+  const initMsg91 = () => {
+    return new Promise((resolve, reject) => {
+      if (window.sendOtp && window.verifyOtp) {
+        resolve();
+        return;
+      }
+      window.configuration = {
+        widgetId: "3666746f3343363439343438",
+        tokenAuth: "534683TU4WDwc8S0M6a36b963P1",
+        exposeMethods: true,
+        success: (data) => {
+          console.log('MSG91 web widget verification loaded successfully.', data);
+        },
+        failure: (error) => {
+          console.error('MSG91 web widget verification failed.', error);
+        }
+      };
+      
+      const script = document.createElement('script');
+      script.src = "https://verify.msg91.com/otp-provider.js";
+      script.type = "text/javascript";
+      script.async = true;
+      script.onload = () => {
+        if (typeof window.initSendOTP === 'function') {
+          try {
+            window.initSendOTP(window.configuration);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          resolve();
+        }
+      };
+      script.onerror = () => reject(new Error("Failed to load MSG91 web script."));
+      document.body.appendChild(script);
+    });
+  };
+
+  useEffect(() => {
+    initMsg91().catch(e => console.warn(e));
+  }, []);
+
   // Reset OTP state on identifier change
   useEffect(() => {
     setOtpSent(false);
@@ -87,7 +131,7 @@ export default function AdminLogin() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  // ── Send OTP via Email ────────────────────────────────────────────────────────────
+  // ── Send OTP via Email / SMS ────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
     if (!form.identity.trim()) return setErr("Please enter your email or mobile number.");
     
@@ -100,10 +144,47 @@ export default function AdminLogin() {
     setErr("");
     setToast(null);
     setLoading(l => ({ ...l, otp: true }));
+
+    // ── Mobile OTP flow via MSG91 SendOTP Web SDK ──────────────────────────────────
+    if (isMobile) {
+      try {
+        // 1. Verify user exists in database first
+        const lookupRes = await lookupUser(form.identity.trim());
+        if (!lookupRes || !lookupRes.success || !lookupRes.data) {
+          throw new Error("User not found. Please register first.");
+        }
+
+        // 2. Load MSG91 and call sendOtp
+        await initMsg91();
+        if (!window.sendOtp) {
+          throw new Error("MSG91 service is temporarily unavailable.");
+        }
+
+        window.sendOtp(
+          '91' + form.identity.trim(),
+          (data) => {
+            setOtpSent(true);
+            setOtpSentTime(Date.now());
+            setOtpAttempts(a => a + 1);
+            setTimer(30);
+            setToast({ message: 'Verification code sent to your mobile phone via SMS.', type: "success" });
+            setLoading(l => ({ ...l, otp: false }));
+          },
+          (errResponse) => {
+            setToast({ message: errResponse?.message || "Failed to send OTP. Please try again.", type: "error" });
+            setLoading(l => ({ ...l, otp: false }));
+          }
+        );
+      } catch (e) {
+        setToast({ message: e.message || "Failed to send OTP. Please try again.", type: "error" });
+        setLoading(l => ({ ...l, otp: false }));
+      }
+      return;
+    }
+
+    // ── Email OTP fallback via AWS SES ───────────────────────────────────────────
     try {
-      // Send OTP — backend resolves user email and sends via AWS SES
       const otpRes = await sendOtp(form.identity.trim());
-      
       setResolvedCredentials({ maskedEmail: otpRes.email || '****@****.com' });
       setOtpSent(true);
       setOtpSentTime(Date.now());
@@ -127,31 +208,77 @@ export default function AdminLogin() {
 
     setLoading(l => ({ ...l, login: true }));
     try {
-      let loginRes;
-
       if (method === 'otp') {
         if (!otpSent) return setErr("Please click 'Send OTP' first.");
         if (!form.otp || form.otp.length < 6) return setErr("Please enter the 6-digit OTP.");
         if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr("OTP expired. Please send a new one.");
 
-        loginRes = await loginWithOtp(form.identity.trim(), form.otp);
+        const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
+
+        // ── Mobile OTP verification flow via MSG91 ─────────────────────────────────
+        if (isMobile) {
+          if (!window.verifyOtp) {
+            throw new Error("MSG91 service is temporarily unavailable.");
+          }
+
+          window.verifyOtp(
+            form.otp,
+            async (verifyData) => {
+              try {
+                const tokenVal = verifyData?.accessToken || verifyData?.['access-token'] || (typeof verifyData === 'string' ? verifyData : verifyData?.data);
+                if (!tokenVal) {
+                  throw new Error("Could not retrieve verification token from MSG91.");
+                }
+
+                const loginRes = await loginWithMsg91(form.identity.trim(), tokenVal);
+                const profile = await getMe(true);
+                const role = profile.role?.toUpperCase();
+                if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+                  throw new Error("Access denied. Admin portal is only for administrators.");
+                }
+
+                login(profile, loginRes.idToken);
+                if (role === 'ADMIN') navigate('/admin/dashboard');
+                else navigate('/superadmin/dashboard');
+              } catch (errVal) {
+                setErr(errVal.message || "Invalid credentials. Please try again.");
+                setLoading(l => ({ ...l, login: false }));
+              }
+            },
+            (errResponse) => {
+              setErr(errResponse?.message || "Invalid OTP code entered.");
+              setLoading(l => ({ ...l, login: false }));
+            }
+          );
+          return;
+        }
+
+        // ── Email OTP verification flow via AWS SES ───────────────────────────────
+        const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
+        const profile = await getMe(true);
+        const role = profile.role?.toUpperCase();
+        if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+          throw new Error("Access denied. Admin portal is only for administrators.");
+        }
+
+        login(profile, loginRes.idToken);
+        if (role === 'ADMIN') navigate('/admin/dashboard');
+        else navigate('/superadmin/dashboard');
       } else {
         if (!form.password || form.password.length < 8) return setErr("Please enter your password.");
-        loginRes = await loginWithPassword(form.identity.trim(), form.password);
-      }
+        const loginRes = await loginWithPassword(form.identity.trim(), form.password);
+        const profile = await getMe(true);
+        const role = profile.role?.toUpperCase();
+        if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+          throw new Error("Access denied. Admin portal is only for administrators.");
+        }
 
-      const profile = await getMe(true);
-      const role = profile.role?.toUpperCase();
-      if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
-        throw new Error("Access denied. Admin portal is only for administrators.");
+        login(profile, loginRes.idToken);
+        if (role === 'ADMIN') navigate('/admin/dashboard');
+        else navigate('/superadmin/dashboard');
       }
-
-      login(profile, loginRes.idToken);
-      if (role === 'ADMIN') navigate('/admin/dashboard');
-      else navigate('/superadmin/dashboard');
     } catch (e) {
       setErr(e.message || "Invalid credentials. Please try again.");
-    } finally {
       setLoading(l => ({ ...l, login: false }));
     }
   };

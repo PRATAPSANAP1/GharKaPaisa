@@ -892,6 +892,20 @@ const migrate = async () => {
     )
   `);
 
+  // ── Direct Card Applications (Visitor credit card leads) ─────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS direct_card_applications (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      customer_name VARCHAR(255) NOT NULL,
+      mobile VARCHAR(15) NOT NULL,
+      bank_name VARCHAR(100) NOT NULL,
+      card_name VARCHAR(100) NOT NULL,
+      status VARCHAR(50) DEFAULT 'verified',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+
   // Encrypt existing bank account numbers if not already encrypted
   try {
     const { encrypt } = require('../utils/crypto');

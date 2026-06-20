@@ -82,6 +82,19 @@ export async function loginWithOtp(identity, otp) {
   }
 }
 
+// ── MSG91 Mobile Login ──────────────────────────────────────────────────
+export async function loginWithMsg91(mobile, accessToken) {
+  try {
+    const res = await api.post('/auth/login-msg91', { mobile, accessToken });
+    if (res.data && res.data.token) {
+      setAccessToken(res.data.token);
+    }
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Invalid SMS verification token.');
+  }
+}
+
 // ── Password Login ───────────────────────────────────────────────────────
 export async function loginWithPassword(identity, password) {
   try {
