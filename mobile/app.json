@@ -24,6 +24,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f431b92a-e8c9-4c82-9e43-00d1a5d4dcb9"
+      }
+    },
+    "owner": "pratap_sanap_01"
   }
 }

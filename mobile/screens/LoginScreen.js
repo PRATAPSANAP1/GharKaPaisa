@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
+import LogoLoader from '../components/LogoLoader';
 
 export default function LoginScreen({ route, navigation }) {
   const { role } = route.params;
@@ -127,6 +128,10 @@ export default function LoginScreen({ route, navigation }) {
       setLoading(prev => ({ ...prev, login: false }));
     }
   };
+
+  if (loading.login || loading.otp) {
+    return <LogoLoader text={loading.login ? "Verifying credentials..." : "Sending OTP code..."} />;
+  }
 
   return (
     <KeyboardAvoidingView

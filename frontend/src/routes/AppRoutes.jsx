@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import { useAuthStore } from '../store/authStore';
+import logo from '../logo.png';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
@@ -80,26 +81,42 @@ const AppRoutes = () => {
         color: '#f8fafc',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '50%',
-          border: '4px solid rgba(16, 185, 129, 0.1)',
-          borderTopColor: '#10b981',
-          animation: 'spin 1.5s linear infinite',
-          marginBottom: '20px'
-        }} />
+        <img 
+          src={logo} 
+          alt="GharKaPaisa Logo" 
+          style={{
+            width: '80px',
+            height: '80px',
+            objectFit: 'contain',
+            animation: 'snapRotate 1.5s ease-in-out infinite',
+            marginBottom: '24px'
+          }} 
+        />
         <div style={{
           fontSize: '15px',
-          fontWeight: 500,
+          fontWeight: 600,
           color: '#94a3b8',
           letterSpacing: '0.5px'
         }}>
           Initializing secure session...
         </div>
         <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
+          @keyframes snapRotate {
+            0% {
+              transform: rotate(0deg);
+            }
+            70% {
+              transform: rotate(90deg);
+            }
+            80% {
+              transform: rotate(90deg);
+            }
+            81% {
+              transform: rotate(0deg);
+            }
+            100% {
+              transform: rotate(0deg);
+            }
           }
         `}</style>
       </div>

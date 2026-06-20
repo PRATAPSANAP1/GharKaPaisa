@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
+import LogoLoader from '../components/LogoLoader';
 
 export default function DashboardScreen({ route, navigation }) {
   const { user, token } = route.params;
@@ -55,6 +56,10 @@ export default function DashboardScreen({ route, navigation }) {
       ]
     );
   };
+
+  if (loading) {
+    return <LogoLoader text="Loading your partner workspace..." />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

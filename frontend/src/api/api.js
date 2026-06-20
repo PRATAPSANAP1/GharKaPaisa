@@ -20,6 +20,20 @@ const api = axios.create({
 });
 
 let inMemoryAccessToken = null;
+let activeRequests = 0;
+
+const showLoader = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent("loader", { detail: true }));
+  }
+};
+
+const hideLoader = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent("loader", { detail: false }));
+  }
+};
+
 
 export function setAccessToken(token) {
   inMemoryAccessToken = token;
@@ -45,9 +59,18 @@ export function clearAccessToken() {
 
 // ── Request: attach access token ──────────────────────────────────────────────
 api.interceptors.request.use((config) => {
+  activeRequests++;
+  showLoader();
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
+}, (err) => {
+  activeRequests--;
+  if (activeRequests <= 0) {
+    activeRequests = 0;
+    hideLoader();
+  }
+  return Promise.reject(err);
 });
 
 // ── Response: handle 401 → attempt token refresh ──────────────────────────────
@@ -63,8 +86,20 @@ const processQueue = (error, token = null) => {
 };
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    activeRequests--;
+    if (activeRequests <= 0) {
+      activeRequests = 0;
+      hideLoader();
+    }
+    return res;
+  },
   async (err) => {
+    activeRequests--;
+    if (activeRequests <= 0) {
+      activeRequests = 0;
+      hideLoader();
+    }
     const originalRequest = err.config;
 
     // Timeout error handling
