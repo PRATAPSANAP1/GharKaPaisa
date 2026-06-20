@@ -244,22 +244,30 @@ export default function PartnerRegister() {
 
             {/* Email verification notice */}
             <div style={{
-              background: `${C.teal}12`,
-              border: `1.5px solid ${C.teal}40`,
+              background: success.email_verified ? `${C.green}12` : `${C.teal}12`,
+              border: success.email_verified ? `1.5px solid ${C.green}40` : `1.5px solid ${C.teal}40`,
               borderRadius: "12px",
               padding: "16px 18px",
               marginBottom: "18px",
               textAlign: "left",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "18px" }}>📧</span>
+                <span style={{ fontSize: "18px" }}>{success.email_verified ? "✅" : "📧"}</span>
                 <span style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>
-                  {t('partner.verifyEmailTitle', 'Verify Your Email')}
+                  {success.email_verified ? t('partner.emailVerifiedTitle', 'Email Verified') : t('partner.verifyEmailTitle', 'Verify Your Email')}
                 </span>
               </div>
               <div style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6 }}>
-                {t('partner.verifyEmailDesc', 'A verification email has been sent to')} <strong style={{ color: C.text }}>{success.email}</strong>.
-                {' '}{t('partner.verifyEmailAction', 'Please check your inbox (and spam folder) and click the verification link to activate your login.')}
+                {success.email_verified ? (
+                  <>
+                    {t('partner.emailVerifiedDesc', 'Your email address')} <strong style={{ color: C.text }}>{success.email}</strong> {t('partner.emailVerifiedDescEnd', 'has been verified successfully.')}
+                  </>
+                ) : (
+                  <>
+                    {t('partner.verifyEmailDesc', 'A verification email has been sent to')} <strong style={{ color: C.text }}>{success.email}</strong>.
+                    {' '}{t('partner.verifyEmailAction', 'Please check your inbox (and spam folder) and click the verification link to activate your login.')}
+                  </>
+                )}
               </div>
             </div>
 
@@ -424,11 +432,16 @@ export default function PartnerRegister() {
                     type="button"
                     onClick={handleSendRegistrationOtp}
                     style={{ ...S.btn('primary'), width: '100%' }}
-                    disabled={form.emailPreVerified || emailOtpLoading}
+                    disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
                   >
-                    {form.emailPreVerified ? t('partner.verified', 'Verified') : emailOtpSent ? t('partner.resendOtp', 'Resend OTP') : t('partner.sendVerify', 'Send OTP')}
+                    {form.emailPreVerified 
+                      ? t('partner.verified', 'Verified') 
+                      : emailOtpSent 
+                        ? (emailOtpTimer > 0 
+                          ? `${t('partner.resendOtp', 'Resend')} (${emailOtpTimer}s)` 
+                          : t('partner.resendOtp', 'Resend OTP')) 
+                        : t('partner.sendVerify', 'Send OTP')}
                   </button>
-                  {emailOtpTimer > 0 && <div style={{ fontSize: 12, color: C.textLight, textAlign: 'center' }}>{emailOtpTimer}s</div>}
                 </div>
               </div>
             </div>

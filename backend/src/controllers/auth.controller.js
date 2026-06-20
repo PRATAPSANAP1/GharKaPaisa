@@ -149,14 +149,22 @@ const sendOtp = async (req, res, next) => {
       logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
     } catch (emailErr) {
       logger.error(`[OTP] Failed to send OTP email to ${emailIdentity}: ${emailErr.message}`);
+      // In development, log the OTP so developers can still test and return success
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`[OTP-DEV] OTP for ${emailIdentity}: ${otp}`);
+        const maskedEmail = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
+          return first + '*'.repeat(Math.min(middle.length, 6)) + domain;
+        });
+        return res.json({
+          success: true,
+          message: `[DEV ONLY] OTP logged. OTP sent to ${maskedEmail}`,
+          email: maskedEmail
+        });
+      }
       await query(
         `DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`,
         [emailIdentity, user.mobile || emailIdentity]
       );
-      // In development, log the OTP so developers can still test
-      if (process.env.NODE_ENV !== 'production') {
-        logger.info(`[OTP-DEV] OTP for ${emailIdentity}: ${otp}`);
-      }
       return error(res, 'Failed to send OTP email. Please try again later.', 500);
     }
 
@@ -181,6 +189,15 @@ const sendRegistrationOtp = async (req, res, next) => {
     const email = normalizeIdentity(req.body.email);
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return error(res, 'A valid email is required', 400);
 
+    // Check if user already exists
+    const { rows: [existing] } = await query(
+      `SELECT id FROM users WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    );
+    if (existing) {
+      return error(res, 'This email address is already registered', 409);
+    }
+
     // Generate OTP and store hash
     const otp = String(crypto.randomInt(100000, 1000000));
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
@@ -197,6 +214,12 @@ const sendRegistrationOtp = async (req, res, next) => {
       logger.info(`[Registration-OTP] Sent OTP to ${email}`);
     } catch (err) {
       logger.error(`[Registration-OTP] Failed to send OTP to ${email}: ${err.message}`);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`[Registration-OTP-DEV] OTP for ${email}: ${otp}`);
+        const masked = email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+        return res.json({ success: true, message: `[DEV ONLY] OTP logged. OTP sent to ${masked}`, email: masked });
+      }
+      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [email]);
       return error(res, 'Failed to send OTP. Please try again later.', 500);
     }
 
@@ -425,21 +448,35 @@ const register = async (req, res, next) => {
       committed = true;
 
       // Send after commit so a delivered link always points to a saved account.
-      try {
-        const verificationLink = buildVerificationLink(verificationToken);
-        await sendVerificationEmail(email, verificationLink);
-        logger.info(`[Verification] Sent verification email to ${email}`);
-      } catch (emailErr) {
-        logger.error(`[Verification] Failed to send verification email to ${email}: ${emailErr.message}`);
-        return created(
-          res,
-          { partner_code: PartnerCode, email, email_sent: false },
-          'Registration completed, but the verification email could not be sent. Please use resend verification.'
-        );
+      if (!emailVerified) {
+        try {
+          const verificationLink = buildVerificationLink(verificationToken);
+          await sendVerificationEmail(email, verificationLink);
+          logger.info(`[Verification] Sent verification email to ${email}`);
+        } catch (emailErr) {
+          logger.error(`[Verification] Failed to send verification email to ${email}: ${emailErr.message}`);
+          if (process.env.NODE_ENV !== 'production') {
+            logger.info(`[Verification-DEV] Verification Link for ${email}: ${buildVerificationLink(verificationToken)}`);
+            return created(
+              res,
+              { partner_code: PartnerCode, email, email_sent: true, email_verified: false },
+              'Registration completed. Verification link logged in console.'
+            );
+          }
+          return created(
+            res,
+            { partner_code: PartnerCode, email, email_sent: false, email_verified: false },
+            'Registration completed, but the verification email could not be sent. Please use resend verification.'
+          );
+        }
       }
 
       logger.info(`User registered: ${email} (${PartnerCode || role})`);
-      return created(res, { partner_code: PartnerCode, email, email_sent: true }, 'Registration successful. A verification email has been sent. Please check your inbox.');
+      return created(
+        res,
+        { partner_code: PartnerCode, email, email_sent: !emailVerified, email_verified: emailVerified },
+        emailVerified ? 'Registration successful. Your email has been verified.' : 'Registration successful. A verification email has been sent. Please check your inbox.'
+      );
     } catch (err) {
       if (!committed) {
         try {
@@ -631,8 +668,20 @@ const resendVerificationEmail = async (req, res, next) => {
       [verificationToken, verificationTokenExpiresAt, user.id]
     );
 
-    await sendVerificationEmail(user.email, buildVerificationLink(verificationToken));
-    logger.info(`[Verification] Resent verification email to ${user.email}`);
+    try {
+      await sendVerificationEmail(user.email, buildVerificationLink(verificationToken));
+      logger.info(`[Verification] Resent verification email to ${user.email}`);
+    } catch (emailErr) {
+      logger.error(`[Verification] Failed to send verification email: ${emailErr.message}`);
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info(`[Verification-DEV] Verification Link: ${buildVerificationLink(verificationToken)}`);
+        return res.json({
+          success: true,
+          message: '[DEV ONLY] Verification link logged. If this address has an unverified account, a new verification email has been sent.'
+        });
+      }
+      return error(res, 'Failed to send verification email. Please try again later.', 500);
+    }
 
     return res.json({
       success: true,
