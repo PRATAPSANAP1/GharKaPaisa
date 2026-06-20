@@ -46,6 +46,7 @@ const getProfile = async (req, res, next) => {
       Partner.business_location = 'HIDDEN';
       Partner.company_name = 'HIDDEN';
       Partner.gst_number = 'HIDDEN';
+      Partner.pincode = 'HIDDEN';
       Partner.bank_name = 'HIDDEN';
       Partner.account_number = 'HIDDEN';
       Partner.ifsc_code = 'HIDDEN';
@@ -68,7 +69,7 @@ const getProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
-    const { first_name, last_name, current_address, business_location, company_name, company_type, gst_number } = req.body;
+    const { first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode } = req.body;
     await query(`
       UPDATE Partner_profiles SET
         first_name = COALESCE($1, first_name),
@@ -78,9 +79,10 @@ const updateProfile = async (req, res, next) => {
         company_name = COALESCE($5, company_name),
         company_type = COALESCE($6, company_type),
         gst_number = COALESCE($7, gst_number),
+        pincode = COALESCE($8, pincode),
         updated_at = NOW()
-      WHERE id = $8
-    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, PartnerId]);
+      WHERE id = $9
+    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId]);
     return success(res, {}, 'Profile updated');
   } catch (err) {
     next(err);

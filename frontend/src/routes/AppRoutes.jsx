@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
+import { useAuthStore } from '../store/authStore';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
@@ -61,6 +62,50 @@ import {
 } from '../pages/Partner';
 
 const AppRoutes = () => {
+  const { isInitializing, initializeAuth } = useAuthStore();
+
+  React.useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  if (isInitializing) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#0f172a',
+        color: '#f8fafc',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          border: '4px solid rgba(16, 185, 129, 0.1)',
+          borderTopColor: '#10b981',
+          animation: 'spin 1.5s linear infinite',
+          marginBottom: '20px'
+        }} />
+        <div style={{
+          fontSize: '15px',
+          fontWeight: 500,
+          color: '#94a3b8',
+          letterSpacing: '0.5px'
+        }}>
+          Initializing secure session...
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <Routes>
       {/* Public Routes */}

@@ -49,6 +49,7 @@ const PartnerProfile = () => {
                 <li><span className="text-gray-500 block text-xs">Company Name</span><span className="font-medium text-gray-800">{profile.company_name || 'N/A'}</span></li>
                 <li><span className="text-gray-500 block text-xs">Business Type</span><span className="font-medium text-gray-800">{profile.company_type || 'N/A'}</span></li>
                 <li><span className="text-gray-500 block text-xs">GST Number</span><span className="font-medium text-gray-800">{profile.gst_number || 'N/A'}</span></li>
+                <li><span className="text-gray-500 block text-xs">Pincode</span><span className="font-medium text-gray-800">{profile.pincode || 'N/A'}</span></li>
               </ul>
             </div>
           </div>

@@ -148,6 +148,7 @@ const migrate = async () => {
       company_name      VARCHAR(255),
       company_type      VARCHAR(100),
       gst_number        VARCHAR(20),
+      pincode           VARCHAR(10),
       kyc_status        kyc_status DEFAULT 'pending',
       approved_by       UUID REFERENCES users(id),
       approved_at       TIMESTAMPTZ,
@@ -160,6 +161,8 @@ const migrate = async () => {
       updated_at        TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
 
 
   // ── Partner Bank Details ────────────────────────────────────────

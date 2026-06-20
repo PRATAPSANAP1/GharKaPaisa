@@ -27,6 +27,25 @@ const buildVerificationLink = (token) => {
   return `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
 };
 
+const isProd = process.env.NODE_ENV === 'production';
+
+const setRefreshTokenCookie = (res, token) => {
+  res.cookie('refreshToken', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  });
+};
+
+const clearRefreshTokenCookie = (res) => {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax'
+  });
+};
+
 // ── GET /auth/me ────────────────────────────────────────────────────────────
 const getMe = async (req, res, next) => {
   try {
@@ -34,7 +53,7 @@ const getMe = async (req, res, next) => {
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login,
           ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
-          ap.business_location, ap.gst_number, ap.company_type,
+          ap.business_location, ap.gst_number, ap.company_type, ap.pincode,
           pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
           w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
         FROM users u
@@ -304,6 +323,7 @@ const login = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    setRefreshTokenCookie(res, refreshToken);
     return res.json({ success: true, token, refreshToken });
   } catch (err) {
     next(err);
@@ -313,7 +333,7 @@ const login = async (req, res, next) => {
 // ── POST /auth/refresh ───────────────────────────────────────────────────────
 const refresh = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
     if (!refreshToken) return error(res, 'Refresh token required', 400);
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -342,6 +362,7 @@ const refresh = async (req, res, next) => {
 
     const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id);
 
+    setRefreshTokenCookie(res, newRefreshToken);
     return res.json({
       success: true,
       token: newToken,
@@ -358,7 +379,7 @@ const register = async (req, res, next) => {
   try {
     const {
       password, first_name, last_name,
-      current_address, business_location, company_name, company_type, gst_number,
+      current_address, business_location, company_name, company_type, gst_number, pincode,
       bank_name, account_number, ifsc_code, account_holder_name
     } = req.body;
     const email = normalizeIdentity(req.body.email);
@@ -423,12 +444,12 @@ const register = async (req, res, next) => {
         const { rows: [Partner] } = await client.query(`
           INSERT INTO Partner_profiles (
             user_id, Partner_code, first_name, last_name, current_address,
-            business_location, company_name, company_type, gst_number
+            business_location, company_name, company_type, gst_number, pincode
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
-          business_location || '', company_name, company_type, gst_number || null
+          business_location || '', company_name, company_type, gst_number || null, pincode || null
         ]);
 
         // Create bank details
@@ -532,6 +553,7 @@ const loginPassword = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    setRefreshTokenCookie(res, refreshToken);
     return res.json({ success: true, token, refreshToken });
   } catch (err) {
     next(err);
@@ -695,11 +717,12 @@ const resendVerificationEmail = async (req, res, next) => {
 // ── POST /auth/logout ───────────────────────────────────────────────────────
 const logout = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
     if (refreshToken) {
       const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       await query(`UPDATE refresh_tokens SET revoked = true WHERE token_hash = $1`, [tokenHash]);
     }
+    clearRefreshTokenCookie(res);
     return res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);

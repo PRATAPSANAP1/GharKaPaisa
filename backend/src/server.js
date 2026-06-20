@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
+const cookieParser = require('cookie-parser');
 
 const logger = require('./utils/logger');
 
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
 // Parse well‑formed JSON and URL‑encoded bodies
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
+app.use(cookieParser());
 
 // ── Data Sanitization ──────────────────────────────────────────
 // Data sanitization against NoSQL query injection (included as per request)

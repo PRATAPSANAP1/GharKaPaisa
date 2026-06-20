@@ -1,38 +1,77 @@
 import { create } from 'zustand';
 
 export const useAuthStore = create((set) => ({
-  user: JSON.parse(sessionStorage.getItem('user')) || null,
-  token: sessionStorage.getItem('gkp_access_token') || null,
-  isAuthenticated: !!sessionStorage.getItem('gkp_access_token'),
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isInitializing: true,
   
   login: (userData, tokenData) => {
-    sessionStorage.setItem('user', JSON.stringify(userData));
-    sessionStorage.setItem('gkp_access_token', tokenData);
+    // Dynamically set access token in api instance to prevent circular imports
+    import('../api/api').then(({ setAccessToken }) => {
+      setAccessToken(tokenData);
+    }).catch(e => console.warn('Failed to set access token on login:', e));
+
     set({ user: userData, token: tokenData, isAuthenticated: true });
   },
   
   logout: () => {
-    const refreshToken = localStorage.getItem('gkp_refresh_token');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('gkp_access_token');
-    sessionStorage.removeItem('gkp_user');
-    localStorage.removeItem('gkp_refresh_token');
     set({ user: null, token: null, isAuthenticated: false });
+    
+    // Clear access token in api instance
+    import('../api/api').then(({ clearAccessToken }) => {
+      clearAccessToken();
+    }).catch(e => console.warn('Failed to clear access token on logout:', e));
 
-    if (refreshToken) {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
-      import('axios')
-        .then(({ default: axios }) => {
-          axios.post(`${baseUrl}/api/v1/auth/logout`, { refreshToken })
-            .catch(err => console.warn('Logout request failed:', err));
-        })
-        .catch(err => console.warn('Failed to load axios for logout:', err));
-    }
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
+    const cleanBase = baseUrl.replace(/\/+$/, '').endsWith('/api/v1') ? baseUrl.replace(/\/+$/, '') : baseUrl.replace(/\/+$/, '') + '/api/v1';
+    
+    import('axios')
+      .then(({ default: axios }) => {
+        axios.post(`${cleanBase}/auth/logout`, {}, { withCredentials: true })
+          .catch(err => console.warn('Logout request failed:', err));
+      })
+      .catch(err => console.warn('Failed to load axios for logout:', err));
   },
   
   updateUser: (updates) => set((state) => {
     const updatedUser = { ...state.user, ...updates };
-    sessionStorage.setItem('user', JSON.stringify(updatedUser));
     return { user: updatedUser };
-  })
+  }),
+
+  initializeAuth: async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
+      const cleanBase = baseUrl.replace(/\/+$/, '').endsWith('/api/v1') ? baseUrl.replace(/\/+$/, '') : baseUrl.replace(/\/+$/, '') + '/api/v1';
+      
+      const { default: axios } = await import('axios');
+      const response = await axios.post(`${cleanBase}/auth/refresh`, {}, { withCredentials: true });
+      
+      if (response.data && response.data.success) {
+        const { token } = response.data;
+        
+        // Fetch user profile using the new access token
+        const userRes = await axios.get(`${cleanBase}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (userRes.data && userRes.data.success) {
+          // Import api to set the token inside the axios default instance
+          const { setAccessToken } = await import('../api/api');
+          setAccessToken(token);
+          set({ user: userRes.data.user, token, isAuthenticated: true });
+        }
+      }
+    } catch (err) {
+      if (err?.response?.status !== 401) {
+        console.warn('Silent refresh failed on startup:', err);
+      }
+      // Clean session state
+      const { clearAccessToken } = await import('../api/api');
+      clearAccessToken();
+      set({ user: null, token: null, isAuthenticated: false });
+    } finally {
+      set({ isInitializing: false });
+    }
+  }
 }));

@@ -4,7 +4,7 @@
  * All login is via email OTP. No password-based authentication.
  * OTP is sent to the user's registered email via AWS SES.
  */
-import api, { saveSession, clearSession, setAccessToken } from './api';
+import api, { saveSession, clearSession, setAccessToken, getAccessToken } from './api';
 
 // ── Profile cache ──────────────────────────────────────────────────────────
 let cachedUser    = null;
@@ -17,7 +17,7 @@ export const syncSession = async () => {
     const { data } = await api.get('/auth/me');
     if (data.success && data.user) {
       const p = data.user;
-      const currentToken = sessionStorage.getItem('gkp_access_token');
+      const currentToken = getAccessToken();
       saveSession({
         access_token: currentToken,
         user: {
@@ -62,9 +62,6 @@ export async function verifyOtpLogin(identity, otp) {
     const res = await api.post('/auth/verify-otp', { identity, otp });
     if (res.data?.token) {
       setAccessToken(res.data.token);
-      if (res.data.refreshToken) {
-        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
-      }
     }
     return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
@@ -78,9 +75,6 @@ export async function loginWithOtp(identity, otp) {
     const res = await api.post('/auth/login', { identity, otp });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
-      if (res.data.refreshToken) {
-        localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
-      }
     }
     return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {
@@ -94,7 +88,6 @@ export async function loginWithPassword(identity, password) {
     const res = await api.post('/auth/login-password', { identity, password });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
-      if (res.data.refreshToken) localStorage.setItem('gkp_refresh_token', res.data.refreshToken);
     }
     return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
   } catch (err) {

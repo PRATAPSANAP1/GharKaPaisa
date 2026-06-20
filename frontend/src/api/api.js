@@ -16,28 +16,17 @@ const api = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
-let inMemoryAccessToken = sessionStorage.getItem('gkp_access_token') || null;
+let inMemoryAccessToken = null;
 
 export function setAccessToken(token) {
   inMemoryAccessToken = token;
-  if (token) {
-    sessionStorage.setItem('gkp_access_token', token);
-    // Sync with Zustand store
-    try {
-      useAuthStore.setState({ token, isAuthenticated: true });
-    } catch (e) {
-      console.warn("Zustand sync error:", e);
-    }
-  } else {
-    sessionStorage.removeItem('gkp_access_token');
-    // Sync with Zustand store
-    try {
-      useAuthStore.setState({ token: null, isAuthenticated: false });
-    } catch (e) {
-      console.warn("Zustand sync error:", e);
-    }
+  try {
+    useAuthStore.setState({ token, isAuthenticated: !!token });
+  } catch (e) {
+    console.warn("Zustand sync error:", e);
   }
 }
 
@@ -47,7 +36,11 @@ export function getAccessToken() {
 
 export function clearAccessToken() {
   inMemoryAccessToken = null;
-  sessionStorage.removeItem('gkp_access_token');
+  try {
+    useAuthStore.setState({ token: null, isAuthenticated: false });
+  } catch (e) {
+    console.warn("Zustand sync error:", e);
+  }
 }
 
 // ── Request: attach access token ──────────────────────────────────────────────
@@ -97,12 +90,6 @@ api.interceptors.response.use(
         return Promise.reject(err);
       }
 
-      const refreshToken = localStorage.getItem('gkp_refresh_token');
-      if (!refreshToken) {
-        clearSession();
-        return Promise.reject(err);
-      }
-
       originalRequest._retry = true;
 
       if (isRefreshing) {
@@ -121,13 +108,11 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
+        const response = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
         if (response.data && response.data.success) {
           const newToken = response.data.token;
-          const newRefreshToken = response.data.refreshToken;
           
           setAccessToken(newToken);
-          localStorage.setItem('gkp_refresh_token', newRefreshToken);
           
           api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken;
           originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
@@ -153,13 +138,8 @@ api.interceptors.response.use(
 );
 
 // ── Session helpers ────────────────────────────────────────────────────────────
-export function saveSession({ access_token, refresh_token, user }) {
+export function saveSession({ access_token, user }) {
   setAccessToken(access_token);
-  if (refresh_token) {
-    localStorage.setItem('gkp_refresh_token', refresh_token);
-  }
-  
-  sessionStorage.setItem('user', JSON.stringify(user));
   
   // Update Zustand Store
   try {
@@ -167,22 +147,10 @@ export function saveSession({ access_token, refresh_token, user }) {
   } catch (e) {
     console.warn("Zustand session save sync error:", e);
   }
-
-  sessionStorage.setItem('gkp_user', JSON.stringify({
-    id: user.id,
-    first_name: user.first_name || user.full_name || '',
-    last_name: user.last_name || '',
-    role: user.role,
-    Partner_code: user.Partner_code || user.id,
-    Partner_id: user.Partner_id,
-  }));
 }
 
 export function clearSession() {
   clearAccessToken();
-  localStorage.removeItem('gkp_refresh_token');
-  sessionStorage.removeItem('gkp_user');
-  sessionStorage.removeItem('user');
 
   try {
     useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
@@ -197,14 +165,14 @@ export function clearSession() {
 
 export function getStoredUser() {
   try {
-    return JSON.parse(sessionStorage.getItem('user') || 'null');
+    return useAuthStore.getState().user;
   } catch {
     return null;
   }
 }
 
 export function isAuthenticated() {
-  const token = sessionStorage.getItem('gkp_access_token');
+  const token = getAccessToken();
   if (!token) return false;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));

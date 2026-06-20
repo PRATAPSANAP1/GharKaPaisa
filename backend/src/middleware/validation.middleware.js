@@ -30,6 +30,7 @@ const registerRules = [
   body('pan').trim().toUpperCase().notEmpty()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
+  body('pincode').trim().notEmpty().matches(/^\d{6}$/).withMessage('Valid 6-digit Pincode required'),
   body('bank_name').trim().notEmpty().withMessage('Bank name required'),
   body('account_number').trim().notEmpty().withMessage('Account number required'),
   body('ifsc_code').trim().toUpperCase()

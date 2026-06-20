@@ -47,6 +47,10 @@ export default function PartnerRegister() {
     firstName: "", lastName: "", mobile: "",
     email: "",
     // Step 1 – Business
+    companyName: "",
+    currentAddress: "",
+    pincode: "",
+    businessLocation: "",
     companyType: "individual", gst: "",
     // Step 2 – Bank
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
@@ -98,6 +102,11 @@ export default function PartnerRegister() {
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
     }
     if (step === 1) {
+      if (!form.companyName.trim()) return t("partner.errors.companyNameRequired", "Company name is required.");
+      if (!form.currentAddress.trim()) return t("partner.errors.companyAddressRequired", "Company address is required.");
+      if (!form.pincode.trim()) return t("partner.errors.pincodeRequired", "Pincode is required.");
+      if (!/^\d{6}$/.test(form.pincode.trim())) return t("partner.errors.pincodeInvalid", "Please enter a valid 6-digit Pincode.");
+      if (!form.businessLocation.trim()) return t("partner.errors.businessLocationRequired", "City / Region is required.");
       if (form.gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(form.gst.trim())) {
         return t("partner.errors.gstInvalid", "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).");
       }
@@ -203,11 +212,12 @@ export default function PartnerRegister() {
         mobile: form.mobile.trim(),
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
-        current_address: "",
-        business_location: "",
-        company_name: "",
+        current_address: form.currentAddress.trim(),
+        business_location: form.businessLocation.trim(),
+        company_name: form.companyName.trim(),
         company_type: form.companyType,
         gst_number: form.gst ? form.gst.trim().toUpperCase() : null,
+        pincode: form.pincode.trim(),
         bank_name: form.bankName.trim(),
         account_number: form.accountNumber.trim(),
         ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
@@ -457,6 +467,24 @@ export default function PartnerRegister() {
                 </select>
               </div>
               <div>
+                <label style={S.label}>{t('partner.companyName', 'Company Name')}</label>
+                <input {...inputProps("companyName")} placeholder={t('partner.placeholders.companyName', 'Enter company name')} />
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>{t('partner.companyAddress', 'Company Address')}</label>
+                <input {...inputProps("currentAddress")} placeholder={t('partner.placeholders.companyAddress', 'Enter company address')} />
+              </div>
+              <div>
+                <label style={S.label}>{t('partner.pincode', 'Pincode')}</label>
+                <input {...inputProps("pincode")} maxLength={6} placeholder={t('partner.placeholders.pincode', '6-digit pincode')} />
+              </div>
+              <div>
+                <label style={S.label}>{t('partner.businessLocation', 'City / Region')}</label>
+                <input {...inputProps("businessLocation")} placeholder={t('partner.placeholders.businessLocation', 'e.g. Mumbai')} />
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>{t('partner.gstNumber', 'GST Number (Optional)')}</label>
+                <input {...inputProps("gst")} placeholder={t('partner.placeholders.gst', 'e.g. 27AAPFU0939F1ZV')} style={{ ...S.input, textTransform: "uppercase" }} />
               </div>
             </div>
           )}

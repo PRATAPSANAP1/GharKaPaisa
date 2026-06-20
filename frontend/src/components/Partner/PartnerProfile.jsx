@@ -228,7 +228,8 @@ export default function PartnerProfile({ partner, onLogout }) {
         ["Registered Shop Name", profile?.company_name || "Not Provided"],
         ["GSTIN Registry", profile?.gst_number || "Not Provided"],
         ["Organization Entity", getCompanyTypeLabel(profile?.company_type)],
-        ["Shop/Office Address", profile?.current_address || "Not Provided"]
+        ["Shop/Office Address", profile?.current_address || "Not Provided"],
+        ["Pincode", profile?.pincode || "Not Provided"]
       ]
     },
     {
