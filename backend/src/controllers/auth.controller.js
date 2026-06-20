@@ -31,20 +31,32 @@ const buildVerificationLink = (token) => {
 const isProd = process.env.NODE_ENV === 'production';
 
 const setRefreshTokenCookie = (res, token) => {
-  res.cookie('refreshToken', token, {
+  const cookieOptions = {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-  });
+  };
+
+  if (process.env.COOKIE_DOMAIN) {
+    cookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  res.cookie('refreshToken', token, cookieOptions);
 };
 
 const clearRefreshTokenCookie = (res) => {
-  res.clearCookie('refreshToken', {
+  const cookieOptions = {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax'
-  });
+  };
+
+  if (process.env.COOKIE_DOMAIN) {
+    cookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  res.clearCookie('refreshToken', cookieOptions);
 };
 
 // ── GET /auth/me ────────────────────────────────────────────────────────────
@@ -387,7 +399,7 @@ const loginWithMsg91 = async (req, res, next) => {
 const refresh = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
-    if (!refreshToken) return error(res, 'Refresh token required', 400);
+    if (!refreshToken) return error(res, 'Refresh token required', 401);
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 

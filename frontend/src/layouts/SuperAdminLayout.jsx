@@ -23,6 +23,7 @@ const SuperAdminLayout = () => {
     { path: '/superadmin/dashboard', label: 'Admins', icon: <Icons.profile size={16} /> },
     { path: '/superadmin/partners', label: 'Partners', icon: <Icons.profile size={16} /> },
     { path: '/superadmin/leads', label: 'Leads', icon: <Icons.trending size={16} /> },
+    { path: '/superadmin/direct-leads', label: 'Direct Card Leads', icon: <Icons.creditCard size={16} /> },
     { path: '/superadmin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
     { path: '/superadmin/banks', label: 'Lending Partners', icon: <Icons.wallet size={16} /> },
     { path: '/superadmin/products', label: 'Products', icon: <Icons.investment size={16} /> },

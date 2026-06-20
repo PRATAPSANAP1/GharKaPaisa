@@ -18,6 +18,7 @@ import * as FaIcons from "react-icons/fa";
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./CreditCards";
 import { HDFCCardsPage } from "./CreditCards/HDFCCardsPage";
+import CardApplyVerificationModal from "./CreditCards/CardApplyVerificationModal";
 import { loansData } from "./Loans";
 import { insuranceData } from "./Insurance";
 import { servicesData } from "./Services";
@@ -532,7 +533,19 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   {t('common.cancel', 'Close')}
                 </button>
                 <button 
-                  onClick={() => setSelectedDetailCard(null)}
+                  onClick={() => {
+                    const bankId = (category.id || "").replace("bank-", "");
+                    if (onItemClick) {
+                      onItemClick({ 
+                        id: `apply-${selectedDetailCard.name.toLowerCase().replace(/\s+/g, "-")}`, 
+                        label: selectedDetailCard.name,
+                        isApplyAction: true,
+                        bankId,
+                        bankName: category.title || "Partner Bank"
+                      });
+                    }
+                    setSelectedDetailCard(null);
+                  }}
                   style={{
                     flex: 2,
                     background: C.teal,
@@ -915,6 +928,7 @@ export default function Home({ onNavigate }) {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [verifyCard, setVerifyCard] = useState(null);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
   const [dynamicBanners, setDynamicBanners] = useState([]);
   const [services, setServices] = useState([]);
@@ -1464,6 +1478,62 @@ export default function Home({ onNavigate }) {
   };
 
   const handleItemClick = (item) => {
+    if (item.isApplyAction) {
+      setVerifyCard({
+        cardName: item.label,
+        bankName: item.bankName || "Partner Bank",
+        bankId: item.bankId || "unknown"
+      });
+      return;
+    }
+
+    if (activeCategory?.id === "ltf-detail-page") {
+      const matchedLtf = ltfCards.find(c => c.name === item.label);
+      if (matchedLtf) {
+        const nameLower = matchedLtf.name.toLowerCase();
+        let bankId = "unknown";
+        let bankName = "Partner Bank";
+        if (nameLower.includes("hdfc")) {
+          bankId = "hdfc";
+          bankName = "HDFC Bank";
+        } else if (nameLower.includes("axis")) {
+          bankId = "axis";
+          bankName = "Axis Bank";
+        } else if (nameLower.includes("bob") || nameLower.includes("baroda")) {
+          bankId = "bob";
+          bankName = "Bank of Baroda";
+        } else if (nameLower.includes("federal") || nameLower.includes("scapia")) {
+          bankId = "federal";
+          bankName = "Federal Bank";
+        } else if (nameLower.includes("au bank")) {
+          bankId = "au";
+          bankName = "AU Small Finance Bank";
+        } else if (nameLower.includes("idfc")) {
+          bankId = "idfc";
+          bankName = "IDFC First Bank";
+        } else if (nameLower.includes("indusind")) {
+          bankId = "indusind";
+          bankName = "IndusInd Bank";
+        } else if (nameLower.includes("onecard")) {
+          bankId = "onecard";
+          bankName = "OneCard";
+        } else if (nameLower.includes("sbm") || nameLower.includes("uni")) {
+          bankId = "sbm";
+          bankName = "SBM Bank";
+        } else if (nameLower.includes("yes bank") || nameLower.includes("kiwi")) {
+          bankId = "yes";
+          bankName = "Yes Bank";
+        }
+
+        setVerifyCard({
+          cardName: matchedLtf.name,
+          bankName,
+          bankId
+        });
+      }
+      return;
+    }
+
     if (item.id === "ltf-detail-page-trigger") {
       navigate("/credit-cards/lifetime-free-credit-cards-ltf");
       return;
@@ -1556,6 +1626,13 @@ export default function Home({ onNavigate }) {
       <>
         <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} />
         {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
+        {verifyCard && (
+          <CardApplyVerificationModal
+            card={verifyCard}
+            onClose={() => setVerifyCard(null)}
+            C={C}
+          />
+        )}
       </>
     );
   }
@@ -2155,6 +2232,13 @@ export default function Home({ onNavigate }) {
       
       {/* Show Bottom Nav only on Mobile */}
       {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
+      {verifyCard && (
+        <CardApplyVerificationModal
+          card={verifyCard}
+          onClose={() => setVerifyCard(null)}
+          C={C}
+        />
+      )}
     </div>
   );
 }

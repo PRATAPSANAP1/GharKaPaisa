@@ -10,6 +10,7 @@ import {
   FaMobileAlt, FaInfoCircle, FaStar
 } from "react-icons/fa";
 import hdfcBanner from "./image/hdfcbanner.png";
+import CardApplyVerificationModal from "./CardApplyVerificationModal";
 
 // User's provided card data with enriched category definitions for filtering
 const cards = [
@@ -330,24 +331,14 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
     fetchDbProducts();
   }, []);
 
-  const handleApplyClick = (card) => {
-    // Check if we have a direct link for this card
-    const cardData = cards.find(c => c.id === card.id || c.name === card.name);
-    if (cardData && cardData.link) {
-      window.location.href = cardData.link;
-      return;
-    }
+  const [verifyCard, setVerifyCard] = useState(null);
 
-    // Attempt to match card.name to db product name
-    const match = dbProducts.find(p => 
-      p.name.toLowerCase().includes(card.name.toLowerCase()) || 
-      card.name.toLowerCase().includes(p.name.toLowerCase())
-    );
-    if (match) {
-      navigate(`/product/${match.id}`);
-    } else {
-      navigate(`/category/credit_card`);
-    }
+  const handleApplyClick = (card) => {
+    setVerifyCard({
+      cardName: card.name,
+      bankName: "HDFC Bank",
+      bankId: "hdfc"
+    });
   };
 
   // Interaction State elements
@@ -1096,6 +1087,14 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             </div>
           </div>
         </div>
+      )}
+
+      {verifyCard && (
+        <CardApplyVerificationModal
+          card={verifyCard}
+          onClose={() => setVerifyCard(null)}
+          C={C}
+        />
       )}
 
     </div>

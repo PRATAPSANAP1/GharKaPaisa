@@ -25,6 +25,7 @@ const cmsRouter = require('./cms.routes');
 const serviceRouter = require('./service.routes');
 const serviceCatalogRouter = require('./service_catalog.routes');
 const leadRouter = require('./lead.routes');
+const cardApplicationRouter = require('./card_application.routes');
 
 // Map endpoints to sub-routers
 router.use('/auth', authRoutes);
@@ -44,5 +45,6 @@ router.use('/banks', bankRouter);
 router.use('/cms', cmsRouter);
 router.use('/services', serviceRouter);
 router.use('/leads', leadRouter);
+router.use('/card-applications', cardApplicationRouter);
 
 module.exports = router;

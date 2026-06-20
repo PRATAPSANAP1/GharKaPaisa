@@ -50,7 +50,8 @@ import {
   ManageProducts,
   ManageBanks,
   ManageSections,
-  ManageServices
+  ManageServices,
+  ManageDirectLeads
 } from '../pages/SuperAdmin';
 import ManageCommissions from '../pages/SuperAdmin/ManageCommissions';
 
@@ -221,6 +222,7 @@ const AppRoutes = () => {
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="partners" element={<ManagePartners />} />
         <Route path="leads" element={<ManageLeads />} />
+        <Route path="direct-leads" element={<ManageDirectLeads />} />
         <Route path="banners" element={<ManageBanners />} />
         <Route path="products" element={<ManageProducts />} />
         <Route path="banks" element={<ManageBanks />} />
