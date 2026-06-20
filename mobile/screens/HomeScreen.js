@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   Image, SafeAreaView, StatusBar, ScrollView,
-  Dimensions, Modal, FlatList
+  Dimensions, Modal, FlatList, Linking
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -53,10 +53,24 @@ const partnerBanks = [
 ];
 
 const ltfCards = [
-  { name: "HDFC Pixel Go Credit Card", desc: "Digital-first customizable credit card" },
-  { name: "HDFC Pixel Play Credit Card", desc: "Custom rewards on shopping and dining apps" },
-  { name: "Axis Bank Neo Credit Card", desc: "Zomato, BookMyShow and utility discounts" },
-  { name: "Axis Bank MY Zone Credit Card", desc: "Buy 1 Get 1 Free on movie tickets" }
+  { 
+    name: "HDFC Pixel Go Credit Card", 
+    desc: "Digital-first customizable credit card",
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
+  },
+  { 
+    name: "HDFC Pixel Play Credit Card", 
+    desc: "Custom rewards on shopping and dining apps",
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
+  },
+  { 
+    name: "Axis Bank Neo Credit Card", 
+    desc: "Zomato, BookMyShow and utility discounts" 
+  },
+  { 
+    name: "Axis Bank MY Zone Credit Card", 
+    desc: "Buy 1 Get 1 Free on movie tickets" 
+  }
 ];
 
 export default function HomeScreen({ navigation }) {
@@ -173,13 +187,25 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Lifetime Free Credit Cards</Text>
           {ltfCards.map((card, idx) => (
-            <View key={idx} style={styles.cardItem}>
+            <TouchableOpacity 
+              key={idx} 
+              style={styles.cardItem}
+              disabled={!card.link}
+              onPress={() => {
+                if (card.link) {
+                  Linking.openURL(card.link).catch(err => console.warn("Failed to open URL:", err));
+                }
+              }}
+            >
               <View style={styles.cardMarker} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.cardItemTitle}>{card.name}</Text>
                 <Text style={styles.cardItemDesc}>{card.desc}</Text>
               </View>
-            </View>
+              {card.link && (
+                <Text style={{ color: '#0d47a1', fontWeight: 'bold', fontSize: 12, marginRight: 4 }}>Apply ➔</Text>
+              )}
+            </TouchableOpacity>
           ))}
         </View>
 
