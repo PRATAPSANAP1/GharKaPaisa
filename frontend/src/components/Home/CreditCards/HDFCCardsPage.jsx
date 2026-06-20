@@ -118,7 +118,8 @@ const cards = [
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #FF512F 0%, #DD2476 100%)",
-    fallbackIcon: <FaRegCreditCard />
+    fallbackIcon: <FaRegCreditCard />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "pixelgo",
@@ -131,7 +132,8 @@ const cards = [
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-    fallbackIcon: <FaMobileAlt />
+    fallbackIcon: <FaMobileAlt />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "tataneuplus",
@@ -144,7 +146,8 @@ const cards = [
     fee: "Annual Fee: ₹499 (Waived on ₹1 Lakh annual spend)",
     network: "RuPay",
     gradient: "linear-gradient(135deg, #4568DC 0%, #B06AB8 100%)",
-    fallbackIcon: <FaGift />
+    fallbackIcon: <FaGift />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558"
   },
   {
     id: "tataneuinfinity",
@@ -157,7 +160,8 @@ const cards = [
     fee: "Annual Fee: ₹1,499 (Waived on ₹3 Lakhs annual spend)",
     network: "RuPay",
     gradient: "linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)",
-    fallbackIcon: <FaGift />
+    fallbackIcon: <FaGift />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558"
   },
   {
     id: "swiggy",
@@ -170,7 +174,8 @@ const cards = [
     fee: "Annual Fee: ₹500 (Waived on ₹2 Lakhs annual spend)",
     network: "Mastercard",
     gradient: "linear-gradient(135deg, #f12711 0%, #f5af19 100%)",
-    fallbackIcon: <FaShoppingBag />
+    fallbackIcon: <FaShoppingBag />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "indianoil",
@@ -183,7 +188,8 @@ const cards = [
     fee: "Annual Fee: ₹500 (Waived on ₹50k annual spend)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)",
-    fallbackIcon: <FaGift />
+    fallbackIcon: <FaGift />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558"
   },
   {
     id: "irctc",
@@ -196,7 +202,8 @@ const cards = [
     fee: "Annual Fee: ₹500 (Waived on ₹1.5 Lakhs annual spend)",
     network: "RuPay",
     gradient: "linear-gradient(135deg, #3a7bd5 0%, #3a6073 100%)",
-    fallbackIcon: <FaPlane />
+    fallbackIcon: <FaPlane />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=IRCT&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "dinersprivilege",
@@ -209,7 +216,8 @@ const cards = [
     fee: "Annual Fee: ₹2,500 (Waived on ₹3 Lakhs annual spend)",
     network: "Diners Club",
     gradient: "linear-gradient(135deg, #141e30 0%, #243b55 100%)",
-    fallbackIcon: <FaStar />
+    fallbackIcon: <FaStar />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "dinersblack",
@@ -222,7 +230,8 @@ const cards = [
     fee: "Annual Fee: ₹10,000 (Waived on ₹8 Lakhs annual spend)",
     network: "Diners Club",
     gradient: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
-    fallbackIcon: <FaStar />
+    fallbackIcon: <FaStar />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "marriott",
@@ -235,7 +244,8 @@ const cards = [
     fee: "Annual Fee: ₹3,000 (Non-waivable)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #6441A5 0%, #2a0845 100%)",
-    fallbackIcon: <FaPlane />
+    fallbackIcon: <FaPlane />,
+    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
   },
   {
     id: "shoppersstopblack",
@@ -276,7 +286,8 @@ const cards = [
     fee: "Annual Fee: Nil (Zero annual fee)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #000000 0%, #434343 100%)",
-    fallbackIcon: <FaLock />
+    fallbackIcon: <FaLock />,
+    link: "https://applyonline.hdfcbank.com/digital/etb-fixed-deposit-cc?Channel=DSA&LGCode=XYOH&SMCode=SS4558&LC1=GHAR01&LC2=GHAR01&DSACode=XYOH#nbb"
   },
   {
     id: "securednewfd",
@@ -289,7 +300,8 @@ const cards = [
     fee: "Annual Fee: Nil (Zero annual fee)",
     network: "Visa",
     gradient: "linear-gradient(135deg, #00b09b 0%, #96c93d 100%)",
-    fallbackIcon: <FaLock />
+    fallbackIcon: <FaLock />,
+    link: "https://pixel.hdfcbank.in/pixel-onboard/landing/?flow=FDLien&sourcing.assist.channelCode=DSA&sourcing.assist.branchCode=XYOH&sourcing.assist.employeeCode=S54558&sourcing.assist.dsaCode=XYOH&sourcing.assist.lgCode=GHAR01&sourcing.assist.lc1Code=GHAR01&sourcing.assist.lc2Code=GHAR01&sourcing.assist.dsaCode=XYOH"
   }
 ];
 
@@ -319,6 +331,13 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   }, []);
 
   const handleApplyClick = (card) => {
+    // Check if we have a direct link for this card
+    const cardData = cards.find(c => c.id === card.id || c.name === card.name);
+    if (cardData && cardData.link) {
+      window.location.href = cardData.link;
+      return;
+    }
+
     // Attempt to match card.name to db product name
     const match = dbProducts.find(p => 
       p.name.toLowerCase().includes(card.name.toLowerCase()) || 
