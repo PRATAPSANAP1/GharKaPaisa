@@ -748,6 +748,15 @@ const migrate = async () => {
     )
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS msg91_verified_tokens (
+      id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      token_hash  VARCHAR(64) UNIQUE NOT NULL,
+      user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      used_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // Seed initial homepage sections if empty
   const { rows: [{ count: sectionCount }] } = await query(`SELECT COUNT(*) FROM homepage_sections`);
   if (parseInt(sectionCount) === 0) {

@@ -1,136 +1,169 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import axios from 'axios';
+import { OTPWidget } from '@msg91comm/sendotp-react-native';
 import { BASE_URL } from '../config/api';
 import LogoLoader from '../components/LogoLoader';
 
+const WIDGET_ID = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID;
+const TOKEN_AUTH = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH;
+const SMS_CHANNEL = '11';
+
+const getAccessToken = (response) =>
+  response?.accessToken ||
+  response?.['access-token'] ||
+  response?.data?.accessToken ||
+  response?.data?.['access-token'] ||
+  null;
+
+const getErrorMessage = (error, fallback) =>
+  error?.response?.data?.message ||
+  error?.message ||
+  error?.data?.message ||
+  fallback;
+
 export default function LoginScreen({ route, navigation }) {
   const { role } = route.params;
-  const [identity, setIdentity] = useState('');
+  const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
-  const [resolvedMobile, setResolvedMobile] = useState('');
-  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [sdkReady, setSdkReady] = useState(false);
+  const [reqId, setReqId] = useState('');
 
-  // Timer countdown
   useEffect(() => {
-    let interval;
-    if (timer > 0) {
-      interval = setInterval(() => setTimer(prev => prev - 1), 1000);
+    if (!WIDGET_ID || !TOKEN_AUTH) {
+      console.error('MSG91 widget configuration is missing');
+      return;
     }
+
+    try {
+      OTPWidget.initializeWidget(WIDGET_ID, TOKEN_AUTH);
+      setSdkReady(true);
+    } catch (error) {
+      console.error('MSG91 widget initialization failed', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (timer <= 0) return undefined;
+    const interval = setInterval(() => setTimer((value) => value - 1), 1000);
     return () => clearInterval(interval);
   }, [timer]);
 
-  // Reset OTP state when identity changes
   useEffect(() => {
+    setOtp('');
     setOtpSent(false);
     setTimer(0);
-    setResolvedMobile('');
-  }, [identity]);
+    setReqId('');
+  }, [mobile]);
+
+  const formattedIdentifier = () => `91${mobile.trim()}`;
+
+  const validateMobile = () => {
+    if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
+      Alert.alert('Invalid mobile number', 'Enter a valid 10-digit Indian mobile number.');
+      return false;
+    }
+    if (!sdkReady) {
+      Alert.alert(
+        'SMS service unavailable',
+        'MSG91 is not configured. Add the widget ID and tokenAuth to the mobile environment.'
+      );
+      return false;
+    }
+    return true;
+  };
 
   const handleSendOtp = async () => {
-    if (!identity.trim()) {
-      Alert.alert('Error', 'Please enter your email or mobile number.');
-      return;
-    }
+    if (!validateMobile()) return;
 
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity.trim());
-    const isMobile = /^[6-9]\d{9}$/.test(identity.trim());
-    if (!isEmail && !isMobile) {
-      Alert.alert('Error', 'Please enter a valid email or 10-digit mobile number.');
-      return;
-    }
-
-    if (otpAttempts >= 3) {
-      Alert.alert('Error', 'Maximum OTP attempts reached. Please try again later.');
-      return;
-    }
-
-    setLoading(prev => ({ ...prev, otp: true }));
+    setLoading((value) => ({ ...value, otp: true }));
     try {
-      // 1. Look up user to get the registered mobile number
-      const lookupRes = await axios.post(`${BASE_URL}/auth/lookup`, {
-        identity: identity.trim()
-      });
-
-      if (!lookupRes.data.success || !lookupRes.data.data) {
-        throw new Error('User not found. Please register first.');
-      }
-
-      const { mobile } = lookupRes.data.data;
-      if (!mobile) {
-        throw new Error('No mobile number registered to this account.');
-      }
-
-      setResolvedMobile(mobile);
-
-      // 2. Send OTP to that mobile
-      await axios.post(`${BASE_URL}/auth/send-otp`, { identity: mobile });
-
+      const response = await OTPWidget.sendOTP({ identifier: formattedIdentifier() });
+      const currentReqId = response?.reqId || response?.request_id || (typeof response === 'string' ? response : response?.data);
+      setReqId(currentReqId || '');
       setOtpSent(true);
-      setOtpAttempts(a => a + 1);
       setTimer(30);
-      Alert.alert('Success', `OTP sent successfully to registerd mobile.`);
-    } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || err.message || 'Failed to send OTP.');
+      Alert.alert('OTP sent', 'A verification code was sent to your registered mobile number.');
+    } catch (error) {
+      Alert.alert('Could not send OTP', getErrorMessage(error, 'Please try again.'));
     } finally {
-      setLoading(prev => ({ ...prev, otp: false }));
+      setLoading((value) => ({ ...value, otp: false }));
+    }
+  };
+
+  const handleRetryOtp = async () => {
+    if (!validateMobile()) return;
+
+    setLoading((value) => ({ ...value, otp: true }));
+    try {
+      await OTPWidget.retryOTP({ reqId, retryChannel: 11 });
+      setTimer(30);
+      Alert.alert('OTP resent', 'A new verification code was sent by SMS.');
+    } catch (error) {
+      Alert.alert('Could not resend OTP', getErrorMessage(error, 'Please try again.'));
+    } finally {
+      setLoading((value) => ({ ...value, otp: false }));
     }
   };
 
   const handleLogin = async () => {
-    if (!identity.trim()) {
-      Alert.alert('Error', 'Please enter email or mobile.');
-      return;
-    }
+    if (!validateMobile()) return;
     if (!otpSent) {
-      Alert.alert('Error', 'Please send OTP first.');
+      Alert.alert('OTP required', 'Send an OTP first.');
       return;
     }
-    if (!otp || otp.length < 6) {
-      Alert.alert('Error', 'Please enter the 6-digit OTP.');
+    if (!/^\d{6}$/.test(otp)) {
+      Alert.alert('Invalid OTP', 'Enter the 6-digit OTP.');
       return;
     }
 
-    setLoading(prev => ({ ...prev, login: true }));
+    setLoading((value) => ({ ...value, login: true }));
     try {
-      // 1. Verify OTP and login
-      const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
-        identity: identity.trim(),
-        otp
-      });
+      const verificationResponse = await OTPWidget.verifyOTP({ reqId, otp });
+      const accessToken = getAccessToken(verificationResponse);
 
-      const token = loginRes.data.token;
-      if (!token) throw new Error('Authentication token not received.');
-
-      // 2. Fetch user profile info
-      const profileRes = await axios.get(`${BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!profileRes.data.success || !profileRes.data.user) {
-        throw new Error('Failed to retrieve user profile.');
+      if (!accessToken) {
+        throw new Error('MSG91 did not return a verification token.');
       }
 
-      const profile = profileRes.data.user;
-      
-      // Navigate to Dashboard
-      navigation.replace('Dashboard', { user: profile, token });
+      const loginResponse = await axios.post(`${BASE_URL}/auth/login-msg91`, {
+        mobile: mobile.trim(),
+        accessToken,
+      });
 
-    } catch (err) {
-      Alert.alert('Login Failed', err.response?.data?.message || err.message || 'Invalid credentials or OTP.');
+      const token = loginResponse.data.token;
+      if (!token) throw new Error('Authentication token was not received.');
+
+      const profileResponse = await axios.get(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const profile = profileResponse.data.user;
+      if (!profile) throw new Error('Failed to retrieve the user profile.');
+
+      navigation.replace('Dashboard', { user: profile, token });
+    } catch (error) {
+      Alert.alert('Login failed', getErrorMessage(error, 'Invalid or expired OTP.'));
     } finally {
-      setLoading(prev => ({ ...prev, login: false }));
+      setLoading((value) => ({ ...value, login: false }));
     }
   };
 
-  if (loading.login || loading.otp) {
-    return <LogoLoader text={loading.login ? "Verifying credentials..." : "Sending OTP code..."} />;
+  if (loading.login) {
+    return <LogoLoader text="Verifying mobile number..." />;
   }
 
   return (
@@ -138,30 +171,33 @@ export default function LoginScreen({ route, navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Back to Home</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>{role} Login</Text>
-        <Text style={styles.subtitle}>Enter your details to request access token via OTP</Text>
+        <Text style={styles.subtitle}>Sign in securely using an SMS OTP</Text>
 
-        {/* Input Identifier */}
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email or Mobile Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter email or mobile number"
-            placeholderTextColor="#999"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={identity}
-            onChangeText={setIdentity}
-            editable={!loading.login}
-          />
+          <Text style={styles.label}>Mobile Number</Text>
+          <View style={styles.mobileRow}>
+            <View style={styles.countryCode}>
+              <Text style={styles.countryCodeText}>+91</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.mobileInput]}
+              placeholder="10-digit mobile number"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={10}
+              value={mobile}
+              onChangeText={(text) => setMobile(text.replace(/\D/g, ''))}
+              editable={!loading.login}
+            />
+          </View>
         </View>
 
-        {/* Enter OTP Field */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Enter 6-Digit OTP</Text>
           <View style={styles.otpRow}>
@@ -172,41 +208,36 @@ export default function LoginScreen({ route, navigation }) {
               keyboardType="number-pad"
               maxLength={6}
               value={otp}
-              onChangeText={text => setOtp(text.replace(/\D/g, ''))}
+              onChangeText={(text) => setOtp(text.replace(/\D/g, ''))}
               editable={otpSent && !loading.login}
             />
             <TouchableOpacity
               style={[styles.sendBtn, (timer > 0 || loading.otp) && styles.disabledBtn]}
-              onPress={handleSendOtp}
+              onPress={otpSent ? handleRetryOtp : handleSendOtp}
               disabled={timer > 0 || loading.otp || loading.login}
             >
               {loading.otp ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={styles.sendBtnText}>
-                  {timer > 0 ? `${timer}s` : 'Send OTP'}
+                  {timer > 0 ? `${timer}s` : otpSent ? 'Resend' : 'Send OTP'}
                 </Text>
               )}
             </TouchableOpacity>
           </View>
-          {otpSent && resolvedMobile && (
+          {otpSent && (
             <Text style={styles.infoText}>
-              OTP sent to {resolvedMobile.replace(/.(?=.{4})/g, '*')}
+              OTP sent to +91 {mobile.replace(/.(?=.{4})/g, '*')}
             </Text>
           )}
         </View>
 
-        {/* Submit button */}
         <TouchableOpacity
-          style={[styles.loginBtn, !otpSent && styles.disabledBtn]}
+          style={[styles.loginBtn, (!otpSent || loading.login) && styles.disabledBtn]}
           onPress={handleLogin}
           disabled={!otpSent || loading.login}
         >
-          {loading.login ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.loginBtnText}>Secure Log In</Text>
-          )}
+          <Text style={styles.loginBtnText}>Verify & Log In</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -214,46 +245,14 @@ export default function LoginScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  scroll: {
-    padding: 24,
-    justifyContent: 'center',
-    flexGrow: 1,
-  },
-  backBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: 40,
-    marginTop: 20,
-  },
-  backText: {
-    color: '#0d47a1',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 32,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  scroll: { padding: 24, justifyContent: 'center', flexGrow: 1 },
+  backBtn: { alignSelf: 'flex-start', marginBottom: 40, marginTop: 20 },
+  backText: { color: '#0d47a1', fontSize: 15, fontWeight: '600' },
+  title: { fontSize: 26, fontWeight: '900', color: '#333', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 32 },
+  inputContainer: { width: '100%', marginBottom: 20 },
+  label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 8 },
   input: {
     width: '100%',
     borderWidth: 1.5,
@@ -264,18 +263,26 @@ const styles = StyleSheet.create({
     color: '#333',
     backgroundColor: '#fafafa',
   },
-  otpRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+  mobileRow: { flexDirection: 'row', alignItems: 'center' },
+  countryCode: {
+    paddingHorizontal: 14,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    backgroundColor: '#eef4fb',
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    borderRadius: 10,
+    marginRight: 8,
   },
+  countryCodeText: { color: '#333', fontSize: 15, fontWeight: '700' },
+  mobileInput: { flex: 1 },
+  otpRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
   otpInput: {
     flex: 1,
     marginRight: 10,
     textAlign: 'center',
     fontWeight: 'bold',
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   sendBtn: {
     backgroundColor: '#0d47a1',
@@ -285,11 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  sendBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   loginBtn: {
     backgroundColor: '#0d47a1',
     width: '100%',
@@ -303,18 +306,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  disabledBtn: {
-    backgroundColor: '#a5c0e7',
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#2e7d32',
-    marginTop: 6,
-    fontWeight: '600',
-  },
+  loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  disabledBtn: { backgroundColor: '#a5c0e7' },
+  infoText: { fontSize: 12, color: '#2e7d32', marginTop: 8, fontWeight: '600' },
 });

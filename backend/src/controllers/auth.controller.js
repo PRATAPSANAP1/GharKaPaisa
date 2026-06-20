@@ -13,6 +13,7 @@ const logger = require('../utils/logger');
 const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../services/email.service');
 const { encrypt } = require('../utils/crypto');
 const { JWT_SECRET, OTP_PEPPER } = require('../config/jwt.config');
+const { normalizeIndianMobile, verifyAccessToken } = require('../services/msg91.service');
 
 const normalizeIdentity = (value) => {
   const identity = String(value || '').trim();
@@ -324,6 +325,58 @@ const login = async (req, res, next) => {
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
     setRefreshTokenCookie(res, refreshToken);
+    return res.json({ success: true, token, refreshToken });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Mobile app login: MSG91 sends/verifies the SMS OTP, then the backend verifies
+// the resulting access token before issuing GharKaPaisa session tokens.
+const loginWithMsg91 = async (req, res, next) => {
+  try {
+    const mobile = normalizeIndianMobile(req.body.mobile);
+    const accessToken = String(req.body.accessToken || '').trim();
+
+    if (!mobile) return error(res, 'A valid 10-digit Indian mobile number is required', 400);
+    if (!accessToken) return error(res, 'MSG91 verification token is required', 400);
+
+    const { rows: [user] } = await query(
+      `SELECT * FROM users WHERE mobile = $1`,
+      [mobile]
+    );
+
+    if (!user) return error(res, 'No account found with this mobile number', 401);
+    if (user.status === 'suspended') return error(res, 'Account suspended', 403);
+    if (user.status === 'rejected') return error(res, 'Account rejected', 403);
+
+    try {
+      await verifyAccessToken({ accessToken, expectedMobile: mobile });
+    } catch (msg91Err) {
+      logger.warn(`[MSG91] Mobile token verification failed for ${mobile}: ${msg91Err.message}`);
+      return error(res, 'Invalid or expired SMS verification token', 401);
+    }
+
+    const msg91TokenHash = crypto.createHash('sha256').update(accessToken).digest('hex');
+    const { rowCount } = await query(
+      `INSERT INTO msg91_verified_tokens (token_hash, user_id)
+       VALUES ($1, $2)
+       ON CONFLICT (token_hash) DO NOTHING`,
+      [msg91TokenHash, user.id]
+    );
+    if (rowCount !== 1) {
+      return error(res, 'This SMS verification token has already been used', 401);
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, phone: user.mobile, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+    const refreshToken = await generateAndSaveRefreshToken(user.id);
+
+    setRefreshTokenCookie(res, refreshToken);
+    logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
     return res.json({ success: true, token, refreshToken });
   } catch (err) {
     next(err);
@@ -766,6 +819,7 @@ module.exports = {
   sendRegistrationOtp,
   verifyRegistrationOtp,
   login,
+  loginWithMsg91,
   loginPassword,
   register,
   verifyEmail,
