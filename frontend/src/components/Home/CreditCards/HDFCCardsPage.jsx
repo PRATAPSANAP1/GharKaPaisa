@@ -733,7 +733,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
       </div>
 
       {/* Content Layout - user's responsive column wrapper */}
-      <div className="max-w-7xl mx-auto px-6 mt-8">
+      <div className="max-w-7xl mx-auto px-6 mt-8 pb-12">
         <div className="grid lg:grid-cols-4 gap-6">
 
           {/* Cards Section (Left span) */}
@@ -812,7 +812,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           </div>
 
           {/* Sidebar (Right span) */}
-          <div>
+          <div style={{ marginBottom: isMobile ? "40px" : "0" }}>
 
             {/* Compare Cards box (hooked up to interactive modal) */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border">
