@@ -20,8 +20,18 @@ export const getBankApplyLink = (cardName, bankId) => {
     return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
   }
 
+  const floatLink = "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558";
+
   // HDFC Card specific links mapping
   const hdfcLinks = {
+    "freedom": floatLink,
+    "regaliagold": floatLink,
+    "moneyback": floatLink,
+    "bizgrow": floatLink,
+    "shoppersstopblack": floatLink,
+    "shoppersstop": floatLink,
+    "bizpower": floatLink,
+    "bizfirst": floatLink,
     "pixelplay": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=554558#nbb",
     "pixelgo": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=554558#nbb",
     "tataneuplus": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=554558",
