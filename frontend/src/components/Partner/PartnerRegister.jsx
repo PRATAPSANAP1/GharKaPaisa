@@ -109,7 +109,7 @@ export default function PartnerRegister() {
           widgetId: "3666746f3343363439343438",
           tokenAuth: "534683TU4WDwc8S0M6a36b963P1",
           exposeMethods: true,
-          captchaRenderId: '',
+          captchaRenderId: 'msg91-captcha-register',
           success: (data) => {
             console.log('MSG91 widget success response', data);
           },
@@ -568,6 +568,7 @@ export default function PartnerRegister() {
                       </button>
                     </div>
                   )}
+                  <div id="msg91-captcha-register" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
                 </div>
 
                 <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>

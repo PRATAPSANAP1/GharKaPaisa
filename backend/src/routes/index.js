@@ -42,8 +42,9 @@ router.use('/notifications', notificationRouter);
 router.use('/reports', reportRouter);
 router.use('/kyc', kycRouter);
 router.use('/banks', bankRouter);
-router.use('/cms', cmsRouter);
+router.use('/cms/sections', cmsRouter);
 router.use('/services', serviceRouter);
+router.use('/service-catalog', serviceCatalogRouter);
 router.use('/leads', leadRouter);
 router.use('/card-applications', cardApplicationRouter);
 

@@ -82,6 +82,7 @@ export default function AdminLogin() {
         widgetId: "3666746f3343363439343438",
         tokenAuth: "534683TU4WDwc8S0M6a36b963P1",
         exposeMethods: true,
+        captchaRenderId: "msg91-captcha-admin",
         success: (data) => {
           console.log('MSG91 web widget verification loaded successfully.', data);
         },
@@ -484,6 +485,8 @@ export default function AdminLogin() {
                 </div>
               </div>
             )}
+
+            <div id="msg91-captcha-admin" style={{ marginTop: "10px", display: "flex", justifyContent: "center" }}></div>
 
             {/* Submit */}
             <button

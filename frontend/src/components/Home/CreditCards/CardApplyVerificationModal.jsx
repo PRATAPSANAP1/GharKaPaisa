@@ -26,7 +26,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           widgetId: "3666746f3343363439343438",
           tokenAuth: "534683TU4WDwc8S0M6a36b963P1",
           exposeMethods: true,
-          captchaRenderId: '',
+          captchaRenderId: 'msg91-captcha-modal',
           success: (data) => {
             console.log('MSG91 cards success response', data);
           },
@@ -427,6 +427,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
               ) : "Send SMS Verification OTP"}
             </button>
+            <div id="msg91-captcha-modal" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
           </div>
         )}
 
