@@ -7,7 +7,7 @@ import {
   FaCheckCircle, FaArrowRight, FaQuestionCircle, 
   FaChevronDown, FaChevronUp, FaTimes, FaLock, 
   FaPlane, FaShoppingBag, FaBriefcase, FaRegCreditCard,
-  FaMobileAlt, FaInfoCircle, FaStar
+  FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp
 } from "react-icons/fa";
 import hdfcBanner from "./image/hdfcbanner.png";
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
@@ -339,6 +339,14 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
       bankName: "HDFC Bank",
       bankId: "hdfc"
     });
+  };
+
+  const handleWhatsAppShare = (card) => {
+    const cleanId = (card.id || card.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const refLink = `gharkapaisa.com/card/${cleanId}?ref=GP12345`;
+    const shareText = `Apply for the ${card.name} of HDFC Bank through GharKaPaisa! Check it out here: ${refLink}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    window.open(url, '_blank');
   };
 
   // Interaction State elements
@@ -1043,7 +1051,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
             </div>
 
             {/* Actions */}
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button 
                 onClick={() => {
                   setCompareCard1(selectedCard);
@@ -1051,18 +1059,43 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   setSelectedCard(null);
                 }}
                 style={{
-                  flex: 1,
+                  flex: "1 1 auto",
                   background: "none",
                   border: "1px solid #003B8F",
                   color: "#003B8F",
                   padding: "10px",
                   borderRadius: "10px",
-                  fontSize: "13px",
+                  fontSize: "12px",
                   fontWeight: 800,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px"
                 }}
               >
                 Compare
+              </button>
+              <button 
+                onClick={() => handleWhatsAppShare(selectedCard)}
+                style={{
+                  flex: "1 1 auto",
+                  background: "none",
+                  border: "1px solid #25D366",
+                  color: "#25D366",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px"
+                }}
+              >
+                <FaWhatsapp size={15} />
+                Share
               </button>
               <button 
                 onClick={() => {
@@ -1071,15 +1104,16 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   handleApplyClick(cardToApply);
                 }}
                 style={{
-                  flex: 2,
+                  flex: "2 1 auto",
                   background: "#003B8F",
                   color: "#ffffff",
                   border: "none",
                   padding: "10px",
                   borderRadius: "10px",
-                  fontSize: "13px",
+                  fontSize: "12px",
                   fontWeight: 800,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  textAlign: "center"
                 }}
               >
                 {t('popularCardsList.applyNow', 'Apply Now')}
