@@ -11,7 +11,7 @@ import {
   FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
   FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
-  FaPlane, FaTrain, FaBus, FaHotel, FaTimes
+  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp
 } from "react-icons/fa";
 import * as FaIcons from "react-icons/fa";
 
@@ -296,6 +296,9 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const [selectedDetailCard, setSelectedDetailCard] = useState(null);
+  const [compareCard1, setCompareCard1] = useState(null);
+  const [compareCard2, setCompareCard2] = useState(null);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   const renderBreadcrumbs = () => {
     if (!breadcrumbs) return null;
@@ -503,35 +506,180 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               {/* Close button */}
               <span 
                 onClick={() => setSelectedDetailCard(null)}
-                style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight }}
+                style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight, zIndex: 20 }}
               >
                 <FaTimes size={18} />
               </span>
 
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "18px", fontWeight: 800, color: C.text }}>
+              {/* Card Mockup Graphic */}
+              {(() => {
+                const getCardGradient = (name) => {
+                  const n = name.toLowerCase();
+                  if (n.includes('neo')) return 'linear-gradient(135deg, #87123F 0%, #5C0D2B 100%)';
+                  if (n.includes('zone')) return 'linear-gradient(135deg, #1D4ED8 0%, #0D5CAB 100%)';
+                  if (n.includes('flipkart')) return 'linear-gradient(135deg, #0D5CAB 0%, #87123F 100%)';
+                  if (n.includes('atlas')) return 'linear-gradient(135deg, #111 0%, #444 100%)';
+                  if (n.includes('eterna')) return 'linear-gradient(135deg, #FF6600 0%, #B34700 100%)';
+                  if (n.includes('premier')) return 'linear-gradient(135deg, #00A0E9 0%, #0067B1 100%)';
+                  if (n.includes('click') || n.includes('save')) return 'linear-gradient(135deg, #0067B1 0%, #004D80 100%)';
+                  if (n.includes('octane')) return 'linear-gradient(135deg, #107C41 0%, #0B5A2F 100%)';
+                  return 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+                };
+                
+                const getBankLogoText = () => {
+                  const bid = (category.id || "").toLowerCase();
+                  if (bid.includes("sbi")) return "SBI CARD";
+                  if (bid.includes("axis")) return "AXIS BANK";
+                  if (bid.includes("bob")) return "BANK OF BARODA";
+                  return category.title ? category.title.toUpperCase() : "BANK CARD";
+                };
+
+                const getNetwork = () => {
+                  const name = selectedDetailCard.name.toLowerCase();
+                  if (name.includes("rupay")) return "RuPay";
+                  if (name.includes("mastercard")) return "Mastercard";
+                  return "Visa";
+                };
+
+                return (
+                  <div style={{
+                    background: getCardGradient(selectedDetailCard.name),
+                    height: "150px",
+                    borderRadius: "20px",
+                    padding: "24px",
+                    color: "#fff",
+                    marginBottom: "20px",
+                    boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", opacity: 0.9 }}>{getBankLogoText()}</div>
+                    <div style={{ fontSize: "20px", fontWeight: 800, margin: "20px 0 10px 0" }}>{selectedDetailCard.name}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", opacity: 0.8 }}>
+                      <span>{getNetwork()}</span>
+                      <span>•••• •••• •••• 8888</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Card Info Details */}
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: 800, color: C.text }}>
                 {selectedDetailCard.name}
               </h3>
-              <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: C.textLight, lineHeight: 1.5 }}>
+              <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: C.textLight, lineHeight: 1.4 }}>
                 {selectedDetailCard.desc}
               </p>
 
+              {/* Highlights */}
+              {(() => {
+                const highlights = selectedDetailCard.highlights || (selectedDetailCard.desc ? selectedDetailCard.desc.split(/,|and/i).map(s => s.trim()).filter(Boolean).slice(0, 3) : ["Standard Benefits"]);
+                return (
+                  <div style={{ marginBottom: "16px" }}>
+                    <h4 style={{ margin: "0 0 8px 0", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", color: C.textLight, letterSpacing: "0.5px" }}>Key Features</h4>
+                    <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "12px", color: C.text, display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {highlights.map((hl, i) => (
+                        <li key={i}>{hl}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+
+              {/* Annual Fee */}
+              {(() => {
+                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                                  (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
+                return (
+                  <div style={{
+                    background: C.bgSecondary,
+                    padding: "12px",
+                    borderRadius: "10px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    marginBottom: "20px",
+                    color: C.text
+                  }}>
+                    {isCardLTF ? "Annual Fee: Zero" : "Annual Fee: ₹499 (Waived on milestone spend)"}
+                  </div>
+                );
+              })()}
+
               {/* Actions */}
-              <div style={{ display: "flex", gap: "12px" }}>
+              {(() => {
+                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                                  (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
+                return isCardLTF && (
+                  <div style={{
+                    background: "#FEF3C7",
+                    border: "1px solid #F59E0B",
+                    color: "#D97706",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    textAlign: "center",
+                    marginBottom: "12px"
+                  }}>
+                    Offer till 30 June
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button 
-                  onClick={() => setSelectedDetailCard(null)}
+                  onClick={() => {
+                    setCompareCard1(selectedDetailCard);
+                    const allBankCards = category.sections.flatMap(s => s.cards);
+                    const otherCard = allBankCards.find(c => c.name !== selectedDetailCard.name) || selectedDetailCard;
+                    setCompareCard2(otherCard);
+                    setIsCompareOpen(true);
+                    setSelectedDetailCard(null);
+                  }}
                   style={{
-                    flex: 1,
+                    flex: "1 1 auto",
                     background: "none",
-                    border: `1px solid ${C.border}`,
-                    color: C.text,
+                    border: `1px solid ${C.teal}`,
+                    color: C.teal,
                     padding: "10px",
                     borderRadius: "10px",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: 800,
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "4px"
                   }}
                 >
-                  {t('common.cancel', 'Close')}
+                  Compare
+                </button>
+                <button 
+                  onClick={() => {
+                    const cleanId = selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const refLink = `gharkapaisa.com/card/${cleanId}?ref=GP12345`;
+                    const shareText = `Apply for the ${selectedDetailCard.name} of ${category.title} through GharKaPaisa! Check it out here: ${refLink}`;
+                    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                    window.open(url, '_blank');
+                  }}
+                  style={{
+                    flex: "1 1 auto",
+                    background: "none",
+                    border: "1px solid #25D366",
+                    color: "#25D366",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "4px"
+                  }}
+                >
+                  <FaWhatsapp size={15} />
+                  Share
                 </button>
                 <button 
                   onClick={() => {
@@ -548,20 +696,161 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                     setSelectedDetailCard(null);
                   }}
                   style={{
-                    flex: 2,
+                    flex: "2 1 auto",
                     background: C.teal,
                     color: "#ffffff",
                     border: "none",
                     padding: "10px",
                     borderRadius: "10px",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: 800,
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    textAlign: "center"
                   }}
                 >
                   {t('popularCardsList.applyNow', 'Apply Now')}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generic Bank Card Compare Modal */}
+        {isCompareOpen && compareCard1 && compareCard2 && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+            backdropFilter: "blur(4px)"
+          }}>
+            <div style={{
+              background: C.card,
+              width: "100%",
+              maxWidth: "600px",
+              borderRadius: "24px",
+              border: `1px solid ${C.border}`,
+              padding: "24px",
+              position: "relative",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+              color: C.text
+            }}>
+              {/* Close button */}
+              <span 
+                onClick={() => setIsCompareOpen(false)}
+                style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight }}
+              >
+                <FaTimes size={18} />
+              </span>
+
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 900 }}>Compare {category.title}</h3>
+              
+              {/* Selector Dropdowns */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px" }}>
+                <div>
+                  <label style={{ fontSize: "11px", color: C.textLight, display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 1</label>
+                  <select 
+                    value={compareCard1.name} 
+                    onChange={(e) => setCompareCard1(category.sections.flatMap(s => s.cards).find(c => c.name === e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      background: C.bgSecondary,
+                      border: `1px solid ${C.border}`,
+                      color: C.text,
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  >
+                    {category.sections.flatMap(s => s.cards).map((c, idx) => (
+                      <option key={idx} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: "11px", color: C.textLight, display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 2</label>
+                  <select 
+                    value={compareCard2.name} 
+                    onChange={(e) => setCompareCard2(category.sections.flatMap(s => s.cards).find(c => c.name === e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px",
+                      background: C.bgSecondary,
+                      border: `1px solid ${C.border}`,
+                      color: C.text,
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      outline: "none"
+                    }}
+                  >
+                    {category.sections.flatMap(s => s.cards).map((c, idx) => (
+                      <option key={idx} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Comparison Grid Table */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", background: C.bgSecondary }}>
+                {[
+                  { 
+                    label: "Joining/Annual Fee", 
+                    val1: ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(compareCard1.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || (compareCard1.desc && (compareCard1.desc.toLowerCase().includes('lifetime free') || compareCard1.desc.toLowerCase().includes('ltf') || compareCard1.desc.toLowerCase().includes('no annual fee'))) ? "Zero" : "₹499 (Waived on milestone spend)",
+                    val2: ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(compareCard2.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || (compareCard2.desc && (compareCard2.desc.toLowerCase().includes('lifetime free') || compareCard2.desc.toLowerCase().includes('ltf') || compareCard2.desc.toLowerCase().includes('no annual fee'))) ? "Zero" : "₹499 (Waived on milestone spend)"
+                  },
+                  { 
+                    label: "Key Spend Benefit", 
+                    val1: compareCard1.desc, 
+                    val2: compareCard2.desc 
+                  },
+                  { 
+                    label: "Payment network", 
+                    val1: compareCard1.name.toLowerCase().includes('rupay') ? "RuPay" : compareCard1.name.toLowerCase().includes('mastercard') ? "Mastercard" : "Visa", 
+                    val2: compareCard2.name.toLowerCase().includes('rupay') ? "RuPay" : compareCard2.name.toLowerCase().includes('mastercard') ? "Mastercard" : "Visa" 
+                  }
+                ].map((row, idx) => (
+                  <div key={idx} style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "1.2fr 1fr 1fr", 
+                    borderBottom: idx === 2 ? "none" : `1px solid ${C.border}`,
+                    fontSize: "11px",
+                    lineHeight: 1.4
+                  }}>
+                    <div style={{ padding: "10px", fontWeight: 800, background: C.card, borderRight: `1px solid ${C.border}` }}>{row.label}</div>
+                    <div style={{ padding: "10px", borderRight: `1px solid ${C.border}`, color: C.text }}>{row.val1}</div>
+                    <div style={{ padding: "10px", color: C.text }}>{row.val2}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setIsCompareOpen(false)}
+                style={{
+                  marginTop: "20px",
+                  width: "100%",
+                  background: C.teal,
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  cursor: "pointer"
+                }}
+              >
+                Close Comparison
+              </button>
             </div>
           </div>
         )}

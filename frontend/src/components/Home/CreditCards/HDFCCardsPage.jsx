@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa";
 import hdfcBanner from "./image/hdfcbanner.png";
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
+import { ltfCards } from "./LTFCardsData";
 
 // User's provided card data with enriched category definitions for filtering
 const cards = [
@@ -1047,10 +1048,31 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               marginBottom: "20px",
               color: "var(--text-slate-800)"
             }}>
-              {t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee)}
+              {ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
+               (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero'))) ? "Annual Fee: Zero" : t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee)}
             </div>
 
             {/* Actions */}
+            {(() => {
+              const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
+                                (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero')));
+              return isCardLTF && (
+                <div style={{
+                  background: "#FEF3C7",
+                  border: "1px solid #F59E0B",
+                  color: "#D97706",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  textAlign: "center",
+                  marginBottom: "12px"
+                }}>
+                  Offer till 30 June
+                </div>
+              );
+            })()}
+
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button 
                 onClick={() => {
