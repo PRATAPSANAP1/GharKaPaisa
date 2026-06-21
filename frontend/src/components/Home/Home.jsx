@@ -299,6 +299,23 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const [compareCard1, setCompareCard1] = useState(null);
   const [compareCard2, setCompareCard2] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [dbProducts, setDbProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchDbProducts = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${baseUrl}/api/v1/products?limit=100`);
+        const data = await res.json();
+        if (data && data.success) {
+          setDbProducts(data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load products for mapping in Home.jsx:", err);
+      }
+    };
+    fetchDbProducts();
+  }, []);
 
   const renderBreadcrumbs = () => {
     if (!breadcrumbs) return null;
@@ -588,8 +605,15 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
 
               {/* Annual Fee */}
               {(() => {
-                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
-                                  (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
+                const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                let feeText = "";
+                if (dbProduct && dbProduct.annual_fee) {
+                  feeText = `Annual Fee: ${dbProduct.annual_fee}`;
+                } else {
+                  const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                                    (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
+                  feeText = isCardLTF ? "Annual Fee: Zero" : "Annual Fee: ₹499 (Waived on milestone spend)";
+                }
                 return (
                   <div style={{
                     background: C.bgSecondary,
@@ -600,16 +624,30 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                     marginBottom: "20px",
                     color: C.text
                   }}>
-                    {isCardLTF ? "Annual Fee: Zero" : "Annual Fee: ₹499 (Waived on milestone spend)"}
+                    {feeText}
                   </div>
                 );
               })()}
 
               {/* Actions */}
               {(() => {
-                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
-                                  (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
-                return isCardLTF && (
+                const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                let showBanner = false;
+                let bannerText = "";
+                
+                if (dbProduct && dbProduct.time_period) {
+                  showBanner = true;
+                  bannerText = dbProduct.time_period;
+                } else {
+                  const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                                    (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
+                  if (isCardLTF) {
+                    showBanner = true;
+                    bannerText = "Offer till 30 June";
+                  }
+                }
+                
+                return showBanner && (
                   <div style={{
                     background: "#FEF3C7",
                     border: "1px solid #F59E0B",
@@ -621,7 +659,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                     textAlign: "center",
                     marginBottom: "12px"
                   }}>
-                    Offer till 30 June
+                    {bannerText}
                   </div>
                 );
               })()}

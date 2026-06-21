@@ -1048,15 +1048,36 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               marginBottom: "20px",
               color: "var(--text-slate-800)"
             }}>
-              {ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
-               (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero'))) ? "Annual Fee: Zero" : t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee)}
+              {(() => {
+                const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                if (dbProduct && dbProduct.annual_fee) {
+                  return `Annual Fee: ${dbProduct.annual_fee}`;
+                }
+                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
+                                  (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero')));
+                return isCardLTF ? "Annual Fee: Zero" : t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee);
+              })()}
             </div>
 
             {/* Actions */}
             {(() => {
-              const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
-                                (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero')));
-              return isCardLTF && (
+              const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+              let showBanner = false;
+              let bannerText = "";
+              
+              if (dbProduct && dbProduct.time_period) {
+                showBanner = true;
+                bannerText = dbProduct.time_period;
+              } else {
+                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
+                                  (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero')));
+                if (isCardLTF) {
+                  showBanner = true;
+                  bannerText = "Offer till 30 June";
+                }
+              }
+
+              return showBanner && (
                 <div style={{
                   background: "#FEF3C7",
                   border: "1px solid #F59E0B",
@@ -1068,7 +1089,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   textAlign: "center",
                   marginBottom: "12px"
                 }}>
-                  Offer till 30 June
+                  {bannerText}
                 </div>
               );
             })()}

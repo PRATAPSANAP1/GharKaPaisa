@@ -58,16 +58,16 @@ const getProduct = async (req, res, next) => {
 // POST /products (Admin/Super Admin)
 const createProduct = async (req, res, next) => {
   try {
-    const { bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order } = req.body;
+    const { bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order, annual_fee, time_period } = req.body;
 
     // Bank existence check
     const { rows: [bank] } = await query(`SELECT id FROM banks WHERE id = $1`, [bank_id]);
     if (!bank) return error(res, 'Bank not found', 400);
 
     const { rows: [p] } = await query(`
-      INSERT INTO products (bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
-    `, [bank_id, name, category, description, JSON.stringify(features || []), JSON.stringify(eligibility || {}), commission_type || 'fixed', commission_value, min_age, max_age, min_income, display_order || 0]);
+      INSERT INTO products (bank_id, name, category, description, features, eligibility, commission_type, commission_value, min_age, max_age, min_income, display_order, annual_fee, time_period)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id
+    `, [bank_id, name, category, description, JSON.stringify(features || []), JSON.stringify(eligibility || {}), commission_type || 'fixed', commission_value, min_age, max_age, min_income, display_order || 0, annual_fee, time_period]);
 
     // Log the product creation
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -81,7 +81,7 @@ const createProduct = async (req, res, next) => {
 // PUT /products/:id (Admin)
 const updateProduct = async (req, res, next) => {
   try {
-    const { name, description, features, eligibility, commission_type, commission_value, is_active, display_order } = req.body;
+    const { name, description, features, eligibility, commission_type, commission_value, is_active, display_order, annual_fee, time_period } = req.body;
 
     if (features !== undefined) {
       if (!Array.isArray(features)) {
@@ -111,9 +111,11 @@ const updateProduct = async (req, res, next) => {
         commission_value = COALESCE($6, commission_value),
         is_active = COALESCE($7, is_active),
         display_order = COALESCE($8, display_order),
+        annual_fee = COALESCE($9, annual_fee),
+        time_period = COALESCE($10, time_period),
         updated_at = NOW()
-      WHERE id = $9
-    `, [name, description, features ? JSON.stringify(features) : null, eligibility ? JSON.stringify(eligibility) : null, commission_type, commission_value, is_active, display_order, req.params.id]);
+      WHERE id = $11
+    `, [name, description, features ? JSON.stringify(features) : null, eligibility ? JSON.stringify(eligibility) : null, commission_type, commission_value, is_active, display_order, annual_fee, time_period, req.params.id]);
 
     // Log product update
     await logAction(req, 'UPDATE_PRODUCT', req.params.id, { name, commission_value, is_active });
@@ -131,7 +133,7 @@ const getProductsByCategory = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'`),
       query(`
-        SELECT p.id, p.name, p.category, p.commission_type, p.commission_value, p.features, p.eligibility,
+        SELECT p.id, p.name, p.category, p.commission_type, p.commission_value, p.features, p.eligibility, p.annual_fee, p.time_period,
           b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
         WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active'

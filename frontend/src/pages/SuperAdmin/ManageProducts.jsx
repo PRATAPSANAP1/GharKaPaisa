@@ -31,7 +31,9 @@ export default function ManageProducts() {
     max_age: 60,
     min_income: 0,
     features: "[]", // stringified array
-    is_active: true
+    is_active: true,
+    annual_fee: "",
+    time_period: ""
   });
 
   const fetchData = async () => {
@@ -106,7 +108,9 @@ export default function ManageProducts() {
       max_age: 60,
       min_income: 0,
       features: "[\"Benefit 1\", \"Benefit 2\"]",
-      is_active: true
+      is_active: true,
+      annual_fee: "",
+      time_period: ""
     });
     setModalOpen(true);
   };
@@ -124,7 +128,9 @@ export default function ManageProducts() {
       max_age: item.eligibility?.max_age || item.max_age || 60,
       min_income: item.eligibility?.min_income || item.min_income || 0,
       features: JSON.stringify(item.features || []),
-      is_active: item.is_active
+      is_active: item.is_active,
+      annual_fee: item.annual_fee || "",
+      time_period: item.time_period || ""
     });
     setModalOpen(true);
   };
@@ -148,7 +154,9 @@ export default function ManageProducts() {
         min_income: Number(form.min_income),
         features: parsedFeatures,
         eligibility: { min_age: Number(form.min_age), max_age: Number(form.max_age), min_income: Number(form.min_income) },
-        is_active: form.is_active
+        is_active: form.is_active,
+        annual_fee: form.annual_fee.trim(),
+        time_period: form.time_period.trim()
       };
 
       let res;
@@ -317,6 +325,17 @@ export default function ManageProducts() {
               <div>
                 <label style={S.label}>Features (JSON Array) *</label>
                 <textarea required rows="2" style={{...S.input, fontFamily: "monospace"}} value={form.features} onChange={e => setForm({...form, features: e.target.value})} />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Annual Fee</label>
+                  <input placeholder="e.g. Zero or 500" style={S.input} value={form.annual_fee} onChange={e => setForm({...form, annual_fee: e.target.value})} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Time Period (Special Offer)</label>
+                  <input placeholder="e.g. Offer till 30 June" style={S.input} value={form.time_period} onChange={e => setForm({...form, time_period: e.target.value})} />
+                </div>
               </div>
 
               <div>

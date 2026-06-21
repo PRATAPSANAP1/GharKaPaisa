@@ -305,6 +305,8 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS banner_url VARCHAR(500)`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS priority INT DEFAULT 0`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS annual_fee VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS time_period VARCHAR(255)`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
