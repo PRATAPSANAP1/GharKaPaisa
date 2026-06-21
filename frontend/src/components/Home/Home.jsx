@@ -28,6 +28,7 @@ import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 import { travelTransitData } from "./TravelTransit";
 import CategoryCardItem from "./CategoryCardItem";
+import "../Home.css";
 
 // Import banner images
 import ltfBanner from "./banner/lifetimefree card.png";
