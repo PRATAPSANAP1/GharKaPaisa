@@ -7,6 +7,12 @@ export const useAuthStore = create((set) => ({
   isInitializing: true,
   
   login: (userData, tokenData) => {
+    try {
+      localStorage.setItem('gkp_logged_in', 'true');
+    } catch (e) {
+      console.warn('Failed to set login flag:', e);
+    }
+
     // Dynamically set access token in api instance to prevent circular imports
     import('../api/api').then(({ setAccessToken }) => {
       setAccessToken(tokenData);
@@ -16,6 +22,12 @@ export const useAuthStore = create((set) => ({
   },
   
   logout: () => {
+    try {
+      localStorage.removeItem('gkp_logged_in');
+    } catch (e) {
+      console.warn('Failed to remove login flag:', e);
+    }
+
     set({ user: null, token: null, isAuthenticated: false });
     
     // Clear access token in api instance
@@ -41,6 +53,11 @@ export const useAuthStore = create((set) => ({
 
   initializeAuth: async () => {
     try {
+      if (typeof window !== 'undefined' && localStorage.getItem('gkp_logged_in') !== 'true') {
+        set({ isInitializing: false });
+        return;
+      }
+
       const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
       const cleanBase = baseUrl.replace(/\/+$/, '').endsWith('/api/v1') ? baseUrl.replace(/\/+$/, '') : baseUrl.replace(/\/+$/, '') + '/api/v1';
       

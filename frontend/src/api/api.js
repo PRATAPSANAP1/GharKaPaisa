@@ -174,6 +174,11 @@ api.interceptors.response.use(
 
 // ── Session helpers ────────────────────────────────────────────────────────────
 export function saveSession({ access_token, user }) {
+  try {
+    localStorage.setItem('gkp_logged_in', 'true');
+  } catch (e) {
+    console.warn("Failed to set login flag:", e);
+  }
   setAccessToken(access_token);
   
   // Update Zustand Store
@@ -185,6 +190,11 @@ export function saveSession({ access_token, user }) {
 }
 
 export function clearSession() {
+  try {
+    localStorage.removeItem('gkp_logged_in');
+  } catch (e) {
+    console.warn("Failed to remove login flag:", e);
+  }
   clearAccessToken();
 
   try {

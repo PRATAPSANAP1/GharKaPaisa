@@ -1839,7 +1839,7 @@ export default function Home({ onNavigate }) {
             { id: "upi-cards", title: "UPI Credit Card", desc: "Pay via UPI with credit", img: upiImg, gradient: "linear-gradient(135deg, #c0392b, #962d22)" },
           ];
           const doubled = [...attractiveCards, ...attractiveCards];
-          const cardW = isMobile ? 240 : 320;
+          const cardW = isMobile ? 160 : 220;
           const gap = 16;
           const totalW = attractiveCards.length * (cardW + gap);
           return (
@@ -1862,11 +1862,11 @@ export default function Home({ onNavigate }) {
               .attractive-card {
                 width: ${cardW}px; flex-shrink: 0; border-radius: 18px; overflow: hidden;
                 cursor: pointer; transition: all 0.35s cubic-bezier(.4,0,.2,1);
-                position: relative; display: flex; flex-direction: row; align-items: center;
+                position: relative; display: flex; flex-direction: column; align-items: stretch;
                 background: ${C.bgSecondary}; border: 1px solid ${C.border};
                 padding: ${isMobile ? '8px' : '12px'};
-                gap: ${isMobile ? '10px' : '14px'};
-                height: ${isMobile ? '85px' : '110px'};
+                gap: 8px;
+                height: ${isMobile ? '190px' : '250px'};
                 box-sizing: border-box;
               }
               .attractive-card:hover {
@@ -1875,7 +1875,7 @@ export default function Home({ onNavigate }) {
                 border-color: ${C.teal};
               }
               .attractive-card-img-container {
-                width: 35%; height: 100%; border-radius: 12px; overflow: hidden;
+                width: 100%; height: ${isMobile ? '90px' : '130px'}; border-radius: 12px; overflow: hidden;
                 display: flex; align-items: center; justify-content: center; flex-shrink: 0;
               }
               .attractive-card-img {
@@ -1884,11 +1884,11 @@ export default function Home({ onNavigate }) {
               }
               .attractive-card:hover .attractive-card-img { transform: scale(1.06); }
               .attractive-card-text-container {
-                width: 65%; display: flex; flex-direction: column; justify-content: center; gap: 4px;
-                text-align: left;
+                width: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 4px;
+                text-align: left; padding: 4px 2px 0 2px;
               }
               .attractive-card-title {
-                color: ${C.text}; font-weight: 800; font-size: ${isMobile ? '12px' : '15px'};
+                color: ${C.text}; font-weight: 800; font-size: ${isMobile ? '12.5px' : '15px'};
                 line-height: 1.25; margin: 0;
               }
               .attractive-card-desc {
@@ -1917,12 +1917,12 @@ export default function Home({ onNavigate }) {
                       navigate(`/attractive-cards-loans/${slugs[card.id] || card.id}`);
                     }}
                   >
-                    {/* Left Div: Image Container */}
+                    {/* Top Div: Image Container */}
                     <div className="attractive-card-img-container" style={{ background: card.gradient }}>
                       <img src={card.img} alt={card.title} className="attractive-card-img" />
                     </div>
 
-                    {/* Right Div: Text Container */}
+                    {/* Bottom Div: Text Container */}
                     <div className="attractive-card-text-container">
                       <h3 className="attractive-card-title">{t('attractiveCards.' + card.id, card.title)}</h3>
                       <p className="attractive-card-desc">{card.desc}</p>
