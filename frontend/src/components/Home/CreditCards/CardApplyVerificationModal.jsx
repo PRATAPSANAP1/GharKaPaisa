@@ -17,16 +17,23 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
   // Load MSG91 script dynamically
   useEffect(() => {
-    const scriptId = 'msg91-otp-script-cards';
-    let script = document.getElementById(scriptId);
-
+    const scriptId = "msg91-otp-provider-script";
+    const captchaContainerId = "msg91-captcha-modal";
+    
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
+        const container = document.getElementById(captchaContainerId);
+        if (!container) return;
+        if (container.dataset.msg91Initialized === 'true' || container.children.length > 0) {
+          return;
+        }
+        container.dataset.msg91Initialized = 'true';
+
         const configuration = {
           widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
           tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
           exposeMethods: true,
-          captchaRenderId: 'msg91-captcha-modal',
+          captchaRenderId: captchaContainerId,
           success: (data) => {
             console.log('MSG91 cards success response', data);
           },
@@ -34,20 +41,44 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             console.log('MSG91 cards failure reason', error);
           }
         };
-        window.initSendOTP(configuration);
+
+        try {
+          window.initSendOTP(configuration);
+        } catch (e) {
+          console.warn("initSendOTP failed in CardApplyVerificationModal:", e);
+        }
       }
     };
+
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.querySelector('script[src*="otp-provider.js"]');
+      if (script) {
+        script.id = scriptId;
+      }
+    }
 
     if (!script) {
       script = document.createElement('script');
       script.id = scriptId;
-      script.src = 'https://verify.msg91.com/otp-provider.js';
+      script.src = "https://verify.msg91.com/otp-provider.js";
+      script.type = "text/javascript";
       script.async = true;
       script.onload = initWidget;
-      document.head.appendChild(script);
+      document.body.appendChild(script);
     } else {
-      initWidget();
+      if (typeof window.initSendOTP === 'function') {
+        initWidget();
+      } else {
+        script.addEventListener('load', initWidget);
+      }
     }
+
+    return () => {
+      if (script) {
+        script.removeEventListener('load', initWidget);
+      }
+    };
   }, []);
 
   // OTP Timer countdown

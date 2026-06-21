@@ -73,48 +73,69 @@ export default function PartnerLogin() {
   const [otpAttempts, setOtpAttempts] = useState(0);
 
   // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────
-  const initMsg91 = () => {
-    return new Promise((resolve, reject) => {
-      if (window.sendOtp && window.verifyOtp) {
-        resolve();
-        return;
-      }
-      window.configuration = {
-        widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-        tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
-        exposeMethods: true,
-        captchaRenderId: "msg91-captcha-partner",
-        success: (data) => {
-          console.log('MSG91 web widget verification loaded successfully.', data);
-        },
-        failure: (error) => {
-          console.error('MSG91 web widget verification failed.', error);
+  useEffect(() => {
+    const scriptId = "msg91-otp-provider-script";
+    const captchaContainerId = "msg91-captcha-partner";
+    
+    const initWidget = () => {
+      if (typeof window.initSendOTP === 'function') {
+        const container = document.getElementById(captchaContainerId);
+        if (!container) return;
+        if (container.dataset.msg91Initialized === 'true' || container.children.length > 0) {
+          return;
         }
-      };
-      
-      const script = document.createElement('script');
+        container.dataset.msg91Initialized = 'true';
+
+        window.configuration = {
+          widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+          tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+          exposeMethods: true,
+          captchaRenderId: captchaContainerId,
+          success: (data) => {
+            console.log('MSG91 partner login widget loaded successfully.', data);
+          },
+          failure: (error) => {
+            console.error('MSG91 partner login widget load failed.', error);
+          }
+        };
+
+        try {
+          window.initSendOTP(window.configuration);
+        } catch (e) {
+          console.warn("initSendOTP failed in PartnerLogin:", e);
+        }
+      }
+    };
+
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.querySelector('script[src*="otp-provider.js"]');
+      if (script) {
+        script.id = scriptId;
+      }
+    }
+
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
       script.src = "https://verify.msg91.com/otp-provider.js";
       script.type = "text/javascript";
       script.async = true;
-      script.onload = () => {
-        if (typeof window.initSendOTP === 'function') {
-          try {
-            window.initSendOTP(window.configuration);
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        } else {
-          resolve();
-        }
-      };
-      script.onerror = () => reject(new Error("Failed to load MSG91 web script."));
+      script.onload = initWidget;
       document.body.appendChild(script);
-    });
-  };
+    } else {
+      if (typeof window.initSendOTP === 'function') {
+        initWidget();
+      } else {
+        script.addEventListener('load', initWidget);
+      }
+    }
 
-  useEffect(() => {
-    initMsg91().catch(e => console.warn(e));
+    return () => {
+      if (script) {
+        script.removeEventListener('load', initWidget);
+      }
+    };
   }, []);
 
   // Reset OTP state on identifier change
@@ -153,10 +174,9 @@ export default function PartnerLogin() {
           throw new Error(t('partner.errors.userNotFound', 'User not found. Please register first.'));
         }
 
-        // 2. Load MSG91 and call sendOtp
-        await initMsg91();
+        // 2. Verify MSG91 sendOtp helper is ready
         if (!window.sendOtp) {
-          throw new Error("MSG91 service is temporarily unavailable.");
+          throw new Error("MSG91 service is temporarily unavailable. Please try again in a few seconds.");
         }
 
         window.sendOtp(
