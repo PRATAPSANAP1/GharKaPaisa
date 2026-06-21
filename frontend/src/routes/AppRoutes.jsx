@@ -99,7 +99,7 @@ const AppRoutes = () => {
           color: '#94a3b8',
           letterSpacing: '0.5px'
         }}>
-          Initializing secure session...
+          Welcome to GharKaPaisa...!
         </div>
         <style>{`
           @keyframes horizontalSpin {

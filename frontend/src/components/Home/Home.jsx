@@ -1884,7 +1884,7 @@ export default function Home({ onNavigate }) {
               }
               .attractive-card:hover .attractive-card-img { transform: scale(1.06); }
               .attractive-card-text-container {
-                width: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 4px;
+                width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 4px;
                 text-align: left; padding: 4px 2px 0 2px;
               }
               .attractive-card-title {
@@ -1918,7 +1918,7 @@ export default function Home({ onNavigate }) {
                     }}
                   >
                     {/* Top Div: Image Container */}
-                    <div className="attractive-card-img-container" style={{ background: card.gradient }}>
+                    <div className="attractive-card-img-container">
                       <img src={card.img} alt={card.title} className="attractive-card-img" />
                     </div>
 
