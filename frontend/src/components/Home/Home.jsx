@@ -11,7 +11,7 @@ import {
   FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
   FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
-  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp
+  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp, FaSearch
 } from "react-icons/fa";
 import * as FaIcons from "react-icons/fa";
 
@@ -300,6 +300,103 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const [compareCard2, setCompareCard2] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [dbProducts, setDbProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
+
+  // Get all cards for the current bank
+  const allBankCards = category.sections ? category.sections.flatMap(s => s.cards) : [];
+
+  // Reset/initialize comparison states when category changes or load defaults
+  useEffect(() => {
+    if (allBankCards.length > 0) {
+      setCompareCard1(allBankCards[0]);
+      setCompareCard2(allBankCards[1] || allBankCards[0]);
+    } else {
+      setCompareCard1(null);
+      setCompareCard2(null);
+    }
+    setSearchQuery("");
+    setActiveFilter("All");
+  }, [category.id]);
+
+  const getCardCategory = (card) => {
+    if (!card) return "Rewards";
+    if (card.category) return card.category;
+    const name = (card.name || "").toLowerCase();
+    const desc = (card.desc || "").toLowerCase();
+    
+    if (name.includes("cashback") || name.includes("ace") || name.includes("snapdeal") || name.includes("flipkart") || name.includes("millennia") || name.includes("swiggy") || name.includes("moneyback") || desc.includes("cashback")) {
+      return "Cashback";
+    }
+    if (name.includes("travel") || name.includes("vistara") || name.includes("irctc") || name.includes("air india") || name.includes("atlas") || name.includes("eterna") || name.includes("premier") || name.includes("fuel") || name.includes("bpcl") || name.includes("hpcl") || name.includes("octane") || name.includes("energy") || desc.includes("travel") || desc.includes("miles") || desc.includes("flyer") || desc.includes("lounge") || desc.includes("fuel")) {
+      return "Travel";
+    }
+    if (name.includes("biz") || name.includes("business") || name.includes("corporate") || name.includes("enterprise") || desc.includes("business") || desc.includes("corporate")) {
+      return "Business";
+    }
+    return "Rewards";
+  };
+
+  const getCardFee = (card) => {
+    if (!card) return "";
+    const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === card.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    if (dbProduct && dbProduct.annual_fee) {
+      return `Annual Fee: ${dbProduct.annual_fee}`;
+    }
+    const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(card.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                      (card.desc && (card.desc.toLowerCase().includes('lifetime free') || card.desc.toLowerCase().includes('ltf') || card.desc.toLowerCase().includes('no annual fee')));
+    return isCardLTF ? "Annual Fee: Zero" : "Annual Fee: ₹499 (Waived on milestone spend)";
+  };
+
+  const getCardHighlights = (card) => {
+    if (!card) return [];
+    if (card.highlights) return card.highlights;
+    return card.desc ? card.desc.split(/,|and/i).map(s => s.trim()).filter(Boolean).slice(0, 3) : ["Standard Benefits"];
+  };
+
+  const getCardNetwork = (card) => {
+    if (!card) return "Visa";
+    const name = card.name.toLowerCase();
+    if (name.includes("rupay")) return "RuPay";
+    if (name.includes("mastercard")) return "Mastercard";
+    return "Visa";
+  };
+
+  const getCardFallbackIcon = (card) => {
+    const cat = getCardCategory(card);
+    if (cat === "Travel") return <FaPlane />;
+    if (cat === "Cashback") return <FaMoneyBillWave />;
+    if (cat === "Business") return <FaBriefcase />;
+    return <FaRegCreditCard />;
+  };
+
+  const getBankBrandDetails = () => {
+    const bid = (category.id || "").toLowerCase();
+    if (bid.includes("axis")) {
+      return {
+        color: "#87123F",
+        gradient: "linear-gradient(135deg, #87123F 0%, #5C0D2B 100%)"
+      };
+    }
+    if (bid.includes("sbi")) {
+      return {
+        color: "#0067B1",
+        gradient: "linear-gradient(135deg, #0067B1 0%, #004D80 100%)"
+      };
+    }
+    if (bid.includes("bob")) {
+      return {
+        color: "#FF6600",
+        gradient: "linear-gradient(135deg, #FF6600 0%, #B34700 100%)"
+      };
+    }
+    return {
+      color: C.teal,
+      gradient: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`
+    };
+  };
+
+  const brand = getBankBrandDetails();
 
   useEffect(() => {
     const fetchDbProducts = async () => {
@@ -448,48 +545,300 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   }
 
   if (category.type === "bank-detail") {
+    // Filtered sections logic
+    const filteredSections = (category.sections || [])
+      .map(sec => {
+        const cards = sec.cards.filter(card => {
+          const cat = getCardCategory(card);
+          const matchesFilter = activeFilter === "All" || cat === activeFilter;
+          const matchesSearch = card.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                (card.desc && card.desc.toLowerCase().includes(searchQuery.toLowerCase()));
+          return matchesFilter && matchesSearch;
+        });
+        return { ...sec, cards };
+      })
+      .filter(sec => sec.cards.length > 0);
+
+    const filterCategories = ["All", "Cashback", "Travel", "Business", "Rewards"];
+
     return (
-      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
+      <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px", color: C.text }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
           <BackRow />
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {category.sections.map((sec, sIdx) => (
-              <div key={sIdx} style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
-                <h3 style={{ margin: "0 0 14px 0", fontSize: "16px", fontWeight: 800, color: C.teal }}>{sec.title}</h3>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" }}>
-                  {sec.cards.map((card, cIdx) => (
-                    <button
-                      key={cIdx}
-                      onClick={() => setSelectedDetailCard(card)}
-                      style={{
-                        background: C.bgSecondary,
+
+          {/* Premium CSS-based Hero Banner */}
+          <div style={{
+            background: C.card,
+            borderRadius: "24px",
+            padding: isMobile ? "20px" : "32px",
+            border: `1px solid ${C.border}`,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+            marginBottom: "32px",
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1.2fr 0.8fr",
+            gap: "24px",
+            alignItems: "center"
+          }}>
+            <div>
+              <h1 style={{ fontSize: isMobile ? "24px" : "32px", fontWeight: 800, color: C.text, margin: 0 }}>
+                {category.title}
+              </h1>
+              <p style={{ fontSize: "14px", color: C.textLight, marginTop: "8px", margin: 0, lineHeight: 1.5 }}>
+                Compare rates, key features, and apply online. Unlock exclusive shopping, dining, and travel rewards.
+              </p>
+            </div>
+            
+            {/* CSS Credit Card graphics banner */}
+            <div style={{
+              width: "100%",
+              height: "150px",
+              background: brand.gradient,
+              borderRadius: "16px",
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              {/* Floating card 1 */}
+              <div style={{
+                width: "150px",
+                height: "90px",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+                borderRadius: "8px",
+                padding: "8px",
+                color: "#fff",
+                boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
+                transform: "rotate(-10deg) translate(-15px, 8px)",
+                position: "absolute",
+                zIndex: 1,
+                border: "1px solid rgba(255,255,255,0.1)"
+              }}>
+                <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
+                <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 9999</div>
+                <div style={{ fontSize: "5px", opacity: 0.7 }}>PLATINUM</div>
+              </div>
+
+              {/* Floating card 2 */}
+              <div style={{
+                width: "150px",
+                height: "90px",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 100%)",
+                borderRadius: "8px",
+                padding: "8px",
+                color: "#fff",
+                boxShadow: "0 12px 25px rgba(0,0,0,0.25)",
+                transform: "rotate(5deg) translate(15px, -8px)",
+                position: "absolute",
+                zIndex: 2,
+                border: "1px solid rgba(255,255,255,0.1)"
+              }}>
+                <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
+                <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 8888</div>
+                <div style={{ fontSize: "5px", opacity: 0.7 }}>SIGNATURE</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Live Search */}
+          <div style={{ 
+            background: C.card, 
+            padding: "16px 20px", 
+            borderRadius: "16px", 
+            border: `1px solid ${C.border}`, 
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+            display: "flex", 
+            flexDirection: isMobile ? "column" : "row", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            gap: "16px",
+            marginBottom: "32px"
+          }}>
+            {/* Local Search input */}
+            <div style={{ position: "relative", width: isMobile ? "100%" : "300px" }}>
+              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight }}>
+                <FaSearch size={14} />
+              </span>
+              <input 
+                type="text" 
+                placeholder="Search credit cards..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px 10px 36px",
+                  background: C.bgSecondary,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  color: C.text,
+                  outline: "none",
+                  transition: "border-color 0.2s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = brand.color}
+                onBlur={(e) => e.target.style.borderColor = C.border}
+              />
+              {searchQuery && (
+                <span 
+                  onClick={() => setSearchQuery("")} 
+                  style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: C.textLight }}
+                >
+                  <FaTimes size={12} />
+                </span>
+              )}
+            </div>
+
+            {/* Filter Pills */}
+            <div style={{ display: "flex", gap: "8px", overflowX: "auto", width: isMobile ? "100%" : "auto", paddingBottom: isMobile ? "4px" : 0 }}>
+              {filterCategories.map((cat, idx) => {
+                const isActive = activeFilter === cat;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveFilter(cat)}
+                    style={{
+                      background: isActive ? brand.color : C.bgSecondary,
+                      color: isActive ? "#fff" : C.text,
+                      border: `1px solid ${isActive ? brand.color : C.border}`,
+                      padding: "8px 16px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Cards & Sidebar Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 300px", gap: "24px" }}>
+            
+            {/* Cards Column */}
+            <div>
+              {filteredSections.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+                  {filteredSections.map((sec, sIdx) => (
+                    <div key={sIdx}>
+                      <h2 style={{
+                        fontSize: "18px",
+                        fontWeight: 800,
                         color: C.text,
-                        border: `1px solid ${C.border}`,
-                        padding: "8px 16px",
-                        borderRadius: "20px",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        transition: "all 0.2s ease"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = C.teal;
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = C.border;
-                        e.currentTarget.style.transform = "none";
-                      }}
-                    >
-                      {card.name}
-                    </button>
+                        margin: "0 0 16px 0",
+                        paddingBottom: "8px",
+                        borderBottom: `2px solid ${brand.color}`,
+                        display: "inline-block"
+                      }}>
+                        {sec.title}
+                      </h2>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                        gap: "12px"
+                      }}>
+                        {sec.cards.map((card, cIdx) => (
+                          <button
+                            key={cIdx}
+                            onClick={() => setSelectedDetailCard(card)}
+                            style={{
+                              background: C.card,
+                              color: C.text,
+                              border: `1px solid ${C.border}`,
+                              padding: "16px",
+                              borderRadius: "16px",
+                              fontSize: "14px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-start",
+                              gap: "12px",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                              transition: "all 0.2s ease",
+                              textAlign: "left",
+                              lineHeight: 1.4,
+                              minHeight: "64px"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = brand.color;
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                              e.currentTarget.style.boxShadow = `0 4px 12px ${brand.color}15`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = C.border;
+                              e.currentTarget.style.transform = "none";
+                              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.02)";
+                            }}
+                          >
+                            <span style={{ display: "flex", alignItems: "center", color: brand.color, fontSize: "18px", flexShrink: 0 }}>
+                              {getCardFallbackIcon(card)}
+                            </span>
+                            <div>
+                              <div style={{ fontWeight: 800 }}>{card.name}</div>
+                              {card.desc && <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px", fontWeight: 500 }}>{card.desc}</div>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
+              ) : (
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", padding: "40px 20px", textAlign: "center" }}>
+                  <p style={{ color: C.textLight, margin: 0 }}>No cards match your search or filter criteria.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar Column */}
+            <div>
+              <div style={{
+                background: `linear-gradient(135deg, ${brand.color}10 0%, ${brand.color}20 100%)`,
+                borderRadius: "20px",
+                padding: "24px",
+                border: `1px solid ${brand.color}30`,
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                position: "sticky",
+                top: "24px"
+              }}>
+                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: C.text }}>
+                  Find the perfect card
+                </h3>
+                <p style={{ margin: 0, fontSize: "13px", color: C.textLight, lineHeight: 1.4 }}>
+                  Compare key details, fees, and advantages side-by-side to find the best match for your needs.
+                </p>
+                <button 
+                  onClick={() => setIsCompareOpen(true)}
+                  style={{
+                    marginTop: "8px",
+                    background: brand.color,
+                    color: "#fff",
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    border: "none",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    textAlign: "center",
+                    transition: "opacity 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = 0.9}
+                  onMouseLeave={(e) => e.target.style.opacity = 1}
+                >
+                  Compare Cards
+                </button>
               </div>
-            ))}
+            </div>
+
           </div>
         </div>
 
@@ -530,6 +879,14 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
 
               {/* Card Mockup Graphic */}
               {(() => {
+                const getBankLogoText = () => {
+                  const bid = (category.id || "").toLowerCase();
+                  if (bid.includes("sbi")) return "SBI CARD";
+                  if (bid.includes("axis")) return "AXIS BANK";
+                  if (bid.includes("bob")) return "BANK OF BARODA";
+                  return category.title ? category.title.toUpperCase() : "BANK CARD";
+                };
+
                 const getCardGradient = (name) => {
                   const n = name.toLowerCase();
                   if (n.includes('neo')) return 'linear-gradient(135deg, #87123F 0%, #5C0D2B 100%)';
@@ -541,21 +898,6 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   if (n.includes('click') || n.includes('save')) return 'linear-gradient(135deg, #0067B1 0%, #004D80 100%)';
                   if (n.includes('octane')) return 'linear-gradient(135deg, #107C41 0%, #0B5A2F 100%)';
                   return 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
-                };
-                
-                const getBankLogoText = () => {
-                  const bid = (category.id || "").toLowerCase();
-                  if (bid.includes("sbi")) return "SBI CARD";
-                  if (bid.includes("axis")) return "AXIS BANK";
-                  if (bid.includes("bob")) return "BANK OF BARODA";
-                  return category.title ? category.title.toUpperCase() : "BANK CARD";
-                };
-
-                const getNetwork = () => {
-                  const name = selectedDetailCard.name.toLowerCase();
-                  if (name.includes("rupay")) return "RuPay";
-                  if (name.includes("mastercard")) return "Mastercard";
-                  return "Visa";
                 };
 
                 return (
@@ -573,7 +915,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                     <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", opacity: 0.9 }}>{getBankLogoText()}</div>
                     <div style={{ fontSize: "20px", fontWeight: 800, margin: "20px 0 10px 0" }}>{selectedDetailCard.name}</div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", opacity: 0.8 }}>
-                      <span>{getNetwork()}</span>
+                      <span>{getCardNetwork(selectedDetailCard)}</span>
                       <span>•••• •••• •••• 8888</span>
                     </div>
                   </div>
@@ -590,7 +932,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
 
               {/* Highlights */}
               {(() => {
-                const highlights = selectedDetailCard.highlights || (selectedDetailCard.desc ? selectedDetailCard.desc.split(/,|and/i).map(s => s.trim()).filter(Boolean).slice(0, 3) : ["Standard Benefits"]);
+                const highlights = getCardHighlights(selectedDetailCard);
                 return (
                   <div style={{ marginBottom: "16px" }}>
                     <h4 style={{ margin: "0 0 8px 0", fontSize: "12px", fontWeight: 800, textTransform: "uppercase", color: C.textLight, letterSpacing: "0.5px" }}>Key Features</h4>
@@ -604,30 +946,17 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               })()}
 
               {/* Annual Fee */}
-              {(() => {
-                const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
-                let feeText = "";
-                if (dbProduct && dbProduct.annual_fee) {
-                  feeText = `Annual Fee: ${dbProduct.annual_fee}`;
-                } else {
-                  const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
-                                    (selectedDetailCard.desc && (selectedDetailCard.desc.toLowerCase().includes('lifetime free') || selectedDetailCard.desc.toLowerCase().includes('ltf') || selectedDetailCard.desc.toLowerCase().includes('no annual fee')));
-                  feeText = isCardLTF ? "Annual Fee: Zero" : "Annual Fee: ₹499 (Waived on milestone spend)";
-                }
-                return (
-                  <div style={{
-                    background: C.bgSecondary,
-                    padding: "12px",
-                    borderRadius: "10px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    marginBottom: "20px",
-                    color: C.text
-                  }}>
-                    {feeText}
-                  </div>
-                );
-              })()}
+              <div style={{
+                background: C.bgSecondary,
+                padding: "12px",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: 700,
+                marginBottom: "20px",
+                color: C.text
+              }}>
+                {getCardFee(selectedDetailCard)}
+              </div>
 
               {/* Actions */}
               {(() => {
@@ -668,7 +997,6 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 <button 
                   onClick={() => {
                     setCompareCard1(selectedDetailCard);
-                    const allBankCards = category.sections.flatMap(s => s.cards);
                     const otherCard = allBankCards.find(c => c.name !== selectedDetailCard.name) || selectedDetailCard;
                     setCompareCard2(otherCard);
                     setIsCompareOpen(true);
@@ -677,8 +1005,8 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   style={{
                     flex: "1 1 auto",
                     background: "none",
-                    border: `1px solid ${C.teal}`,
-                    color: C.teal,
+                    border: `1px solid ${brand.color}`,
+                    color: brand.color,
                     padding: "10px",
                     borderRadius: "10px",
                     fontSize: "12px",
@@ -735,7 +1063,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   }}
                   style={{
                     flex: "2 1 auto",
-                    background: C.teal,
+                    background: brand.color,
                     color: "#ffffff",
                     border: "none",
                     padding: "10px",
@@ -796,7 +1124,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   <label style={{ fontSize: "11px", color: C.textLight, display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 1</label>
                   <select 
                     value={compareCard1.name} 
-                    onChange={(e) => setCompareCard1(category.sections.flatMap(s => s.cards).find(c => c.name === e.target.value))}
+                    onChange={(e) => setCompareCard1(allBankCards.find(c => c.name === e.target.value))}
                     style={{
                       width: "100%",
                       padding: "8px 10px",
@@ -809,7 +1137,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                       outline: "none"
                     }}
                   >
-                    {category.sections.flatMap(s => s.cards).map((c, idx) => (
+                    {allBankCards.map((c, idx) => (
                       <option key={idx} value={c.name}>{c.name}</option>
                     ))}
                   </select>
@@ -819,7 +1147,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   <label style={{ fontSize: "11px", color: C.textLight, display: "block", marginBottom: "4px", fontWeight: 700 }}>Card 2</label>
                   <select 
                     value={compareCard2.name} 
-                    onChange={(e) => setCompareCard2(category.sections.flatMap(s => s.cards).find(c => c.name === e.target.value))}
+                    onChange={(e) => setCompareCard2(allBankCards.find(c => c.name === e.target.value))}
                     style={{
                       width: "100%",
                       padding: "8px 10px",
@@ -832,7 +1160,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                       outline: "none"
                     }}
                   >
-                    {category.sections.flatMap(s => s.cards).map((c, idx) => (
+                    {allBankCards.map((c, idx) => (
                       <option key={idx} value={c.name}>{c.name}</option>
                     ))}
                   </select>
@@ -842,26 +1170,16 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               {/* Comparison Grid Table */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", background: C.bgSecondary }}>
                 {[
-                  { 
-                    label: "Joining/Annual Fee", 
-                    val1: ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(compareCard1.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || (compareCard1.desc && (compareCard1.desc.toLowerCase().includes('lifetime free') || compareCard1.desc.toLowerCase().includes('ltf') || compareCard1.desc.toLowerCase().includes('no annual fee'))) ? "Zero" : "₹499 (Waived on milestone spend)",
-                    val2: ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(compareCard2.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || (compareCard2.desc && (compareCard2.desc.toLowerCase().includes('lifetime free') || compareCard2.desc.toLowerCase().includes('ltf') || compareCard2.desc.toLowerCase().includes('no annual fee'))) ? "Zero" : "₹499 (Waived on milestone spend)"
-                  },
-                  { 
-                    label: "Key Spend Benefit", 
-                    val1: compareCard1.desc, 
-                    val2: compareCard2.desc 
-                  },
-                  { 
-                    label: "Payment network", 
-                    val1: compareCard1.name.toLowerCase().includes('rupay') ? "RuPay" : compareCard1.name.toLowerCase().includes('mastercard') ? "Mastercard" : "Visa", 
-                    val2: compareCard2.name.toLowerCase().includes('rupay') ? "RuPay" : compareCard2.name.toLowerCase().includes('mastercard') ? "Mastercard" : "Visa" 
-                  }
+                  { label: "Category", val1: getCardCategory(compareCard1), val2: getCardCategory(compareCard2) },
+                  { label: "Joining/Annual Fee", val1: getCardFee(compareCard1), val2: getCardFee(compareCard2) },
+                  { label: "Key Spend Benefit", val1: getCardHighlights(compareCard1)[0], val2: getCardHighlights(compareCard2)[0] },
+                  { label: "Primary Advantage", val1: compareCard1.desc || "Standard benefits", val2: compareCard2.desc || "Standard benefits" },
+                  { label: "Payment network", val1: getCardNetwork(compareCard1), val2: getCardNetwork(compareCard2) }
                 ].map((row, idx) => (
                   <div key={idx} style={{ 
                     display: "grid", 
                     gridTemplateColumns: "1.2fr 1fr 1fr", 
-                    borderBottom: idx === 2 ? "none" : `1px solid ${C.border}`,
+                    borderBottom: idx === 4 ? "none" : `1px solid ${C.border}`,
                     fontSize: "11px",
                     lineHeight: 1.4
                   }}>
@@ -877,7 +1195,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 style={{
                   marginTop: "20px",
                   width: "100%",
-                  background: C.teal,
+                  background: brand.color,
                   color: "#ffffff",
                   border: "none",
                   padding: "10px",
