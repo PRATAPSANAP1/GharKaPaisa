@@ -22,7 +22,7 @@ export const usePartnerStore = create((set) => ({
   fetchApplications: async (params = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/partner/applications', { params });
+      const response = await api.get('/applications', { params });
       set({ applications: response.data.data, isLoading: false });
       return response.data;
     } catch (error) {

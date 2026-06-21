@@ -131,7 +131,6 @@ const requestWithdrawal = async (req, res, next) => {
     }, client);
 
     await client.query('COMMIT');
-    client.release();
 
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {

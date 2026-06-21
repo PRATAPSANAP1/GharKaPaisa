@@ -128,7 +128,7 @@ app.get('/health', async (req, res) => {
     await db.query('SELECT 1');
     res.json({
       status: 'ok',
-      service: 'FinEdge Backend API',
+      service: 'GharKaPaisa Backend API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
@@ -143,7 +143,7 @@ app.get('/health', async (req, res) => {
     logger.error('Health check failed: DB error', { error: err.message });
     res.status(503).json({
       status: 'error',
-      service: 'FinEdge Backend API',
+      service: 'GharKaPaisa Backend API',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
@@ -198,7 +198,7 @@ const startServer = async () => {
     server = app.listen(PORT, () => {
       logger.info(`
       ╔════════════════════════════════════════╗
-      ║  FinEdge API Server Running            ║
+      ║  GharKaPaisa API Server Running        ║
       ║  Port    : ${PORT}                        ║
       ║  Env     : ${(process.env.NODE_ENV || 'development').padEnd(12)}            ║
       ║  Base URL: /api/v1 (behind reverse proxy) ║

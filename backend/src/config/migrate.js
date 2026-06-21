@@ -77,6 +77,7 @@ const migrate = async () => {
 
   // Create sequence for Partner code generation
   await query(`CREATE SEQUENCE IF NOT EXISTS partner_code_seq START 1000`);
+  await query(`CREATE SEQUENCE IF NOT EXISTS app_number_seq START 10000`);
 
   // ── Users (all roles) ─────────────────────────────────────────────────────
   // firebase_uid is the primary identity — email/mobile may be null for

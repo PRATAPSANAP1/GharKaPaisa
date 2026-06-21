@@ -49,7 +49,12 @@ const submitApplication = async (req, res, next) => {
 
     // Calculate commission
     const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
-    const appNumber = generateAppNumber();
+    
+    // Generate unique collision-safe application number
+    const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
+    const date = new Date();
+    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const appNumber = `APP${datePart}${nextval}`;
 
     // Create application
     const { rows: [app] } = await client.query(`
@@ -131,7 +136,12 @@ const submitPublicApplication = async (req, res, next) => {
 
     // Calculate commission
     const commission = await calculatePartnerCommission(product_id, partnerId, loan_amount);
-    const appNumber = generateAppNumber();
+    
+    // Generate unique collision-safe application number
+    const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
+    const date = new Date();
+    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const appNumber = `APP${datePart}${nextval}`;
 
     // Create application
     const { rows: [app] } = await client.query(`
@@ -187,7 +197,7 @@ const updateStatus = async (req, res, next) => {
 
     // Credit commission on approval or disbursal, but only once
     if (status === 'approved' || status === 'disbursed') {
-      const { rows: [existingTx] } = await client.query(
+      const { rows: [existingTx] } = await query(
         `SELECT id FROM wallet_transactions WHERE application_id = $1 AND type = 'credit'`, [app.id]
       );
       if (!existingTx) {
@@ -196,14 +206,14 @@ const updateStatus = async (req, res, next) => {
           await creditCommission(app.Partner_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
         }
         // Get Partner user_id for notification
-        const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+        const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
         if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
       }
     }
 
     // Release commission on confirmed status, converting pending earnings to withdrawable balance
     if (status === 'confirmed') {
-      const { rows: [pendingTx] } = await client.query(
+      const { rows: [pendingTx] } = await query(
         `SELECT id, amount FROM wallet_transactions WHERE application_id = $1 AND type = 'credit' AND status = 'pending'`, [app.id]
       );
       if (pendingTx) {
@@ -215,16 +225,16 @@ const updateStatus = async (req, res, next) => {
           description: `Commission released for App ${app.app_number}`
         });
         // Update applications commission_status to approved
-        await client.query(`UPDATE applications SET commission_status = 'approved', updated_at = NOW() WHERE id = $1`, [app.id]);
+        await query(`UPDATE applications SET commission_status = 'approved', updated_at = NOW() WHERE id = $1`, [app.id]);
         
         // Notify Partner
-        const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+        const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
         if (Partner) await notify.commissionCredited(Partner.user_id, pendingTx.amount);
       }
     }
 
     if (status === 'rejected') {
-      const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
+      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
       if (Partner) await notify.applicationRejected(Partner.user_id, app.app_number, rejection_reason);
     }
 

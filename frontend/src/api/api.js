@@ -207,13 +207,10 @@ export function getStoredUser() {
 }
 
 export function isAuthenticated() {
-  const token = getAccessToken();
-  if (!token) return false;
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.exp * 1000 > Date.now();
+    return useAuthStore.getState().isAuthenticated;
   } catch {
-    return false;
+    return !!inMemoryAccessToken;
   }
 }
 

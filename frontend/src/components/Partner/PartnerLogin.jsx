@@ -80,8 +80,8 @@ export default function PartnerLogin() {
         return;
       }
       window.configuration = {
-        widgetId: "3666746f3343363439343438",
-        tokenAuth: "534683TU4WDwc8S0M6a36b963P1",
+        widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+        tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
         exposeMethods: true,
         captchaRenderId: "msg91-captcha-partner",
         success: (data) => {
