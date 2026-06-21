@@ -89,7 +89,7 @@ const AppRoutes = () => {
             width: '80px',
             height: '80px',
             objectFit: 'contain',
-            animation: 'snapRotate 1.5s ease-in-out infinite',
+            animation: 'horizontalSpin 2s linear infinite',
             marginBottom: '24px'
           }} 
         />
@@ -102,21 +102,12 @@ const AppRoutes = () => {
           Initializing secure session...
         </div>
         <style>{`
-          @keyframes snapRotate {
+          @keyframes horizontalSpin {
             0% {
-              transform: rotate(0deg);
-            }
-            70% {
-              transform: rotate(90deg);
-            }
-            80% {
-              transform: rotate(90deg);
-            }
-            81% {
-              transform: rotate(0deg);
+              transform: rotateY(0deg);
             }
             100% {
-              transform: rotate(0deg);
+              transform: rotateY(-360deg);
             }
           }
         `}</style>
