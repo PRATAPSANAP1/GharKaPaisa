@@ -10,6 +10,7 @@ import {
   FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp
 } from "react-icons/fa";
 import hdfcBanner from "./image/hdfcbanner.png";
+import hdfcCardImg from "./image/hdfc.png";
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
 import { ltfCards } from "./LTFCardsData";
 
@@ -793,8 +794,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                             e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
                           }}
                         >
-                          <span style={{ display: "flex", alignItems: "center", color: "#003B8F", fontSize: "15px", flexShrink: 0 }}>
-                            {card.fallbackIcon}
+                          <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                            <img src={hdfcCardImg} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} />
                           </span>
                           <span>{t(`hdfc.cards.${card.id}.name`, card.name)}</span>
                         </button>

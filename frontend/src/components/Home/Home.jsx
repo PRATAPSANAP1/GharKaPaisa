@@ -39,6 +39,13 @@ import emiNewBanner from "./banner/emi.jpeg";
 import hdfcBanner from "./banner/hdfc pixel card.png";
 import offerBanner from "./banner/offerbanner.png";
 
+// Import bank card images
+import axisCardImg from "./CreditCards/image/AXIS.png";
+import sbiCardImg from "./CreditCards/image/SBI.png";
+import iciciCardImg from "./CreditCards/image/ICICI.png";
+import kotakCardImg from "./CreditCards/image/KOTAK.png";
+import yesBankCardImg from "./CreditCards/image/yes bank.png";
+
 // Import attractive section card images
 import ltfImg from "./AttractiveSections/lifetimefree.png";
 import cibilImg from "./AttractiveSections/cibilbased.png";
@@ -263,11 +270,7 @@ function DynamicProductsList({ categoryKey, C, isMobile }) {
             </p>
           </div>
           
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${C.border}60`, paddingTop: "12px", marginTop: "8px" }}>
-            <div>
-              <span style={{ fontSize: "10px", color: C.textLight, display: "block", textTransform: "uppercase", fontWeight: 700 }}>Commission</span>
-              <span style={{ fontSize: "18px", fontWeight: 800, color: C.green }}>₹{parseFloat(prod.commission_value).toLocaleString("en-IN")}</span>
-            </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", borderTop: `1px solid ${C.border}60`, paddingTop: "12px", marginTop: "8px" }}>
             <button
               onClick={() => navigate(`/product/${prod.id}`)}
               style={{
@@ -397,6 +400,17 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   };
 
   const brand = getBankBrandDetails();
+
+  const getBankCardImage = () => {
+    const bid = (category.id || "").toLowerCase();
+    if (bid.includes("axis")) return axisCardImg;
+    if (bid.includes("sbi")) return sbiCardImg;
+    if (bid.includes("icici")) return iciciCardImg;
+    if (bid.includes("kotak")) return kotakCardImg;
+    if (bid.includes("yes")) return yesBankCardImg;
+    return null;
+  };
+  const currentBankCardImage = category.type === "bank-detail" ? getBankCardImage() : null;
 
   useEffect(() => {
     const fetchDbProducts = async () => {
@@ -778,7 +792,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                             }}
                           >
                             <span style={{ display: "flex", alignItems: "center", color: brand.color, fontSize: "18px", flexShrink: 0 }}>
-                              {getCardFallbackIcon(card)}
+                              {currentBankCardImage ? <img src={currentBankCardImage} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} /> : getCardFallbackIcon(card)}
                             </span>
                             <div>
                               <div style={{ fontWeight: 800 }}>{card.name}</div>

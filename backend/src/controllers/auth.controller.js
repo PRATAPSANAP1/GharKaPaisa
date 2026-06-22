@@ -1,9 +1,4 @@
-/**
- * auth.controller.js — Email OTP Authentication
- * ─────────────────────────────────────────────────────────────────────────
- * All login is via email OTP. No password-based login.
- * OTP is sent to the user's registered email via AWS SES.
- */
+
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { query, getClient } = require('../config/db');
@@ -13,7 +8,7 @@ const logger = require('../utils/logger');
 const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../services/email.service');
 const { encrypt } = require('../utils/crypto');
 const { JWT_SECRET, OTP_PEPPER } = require('../config/jwt.config');
-const { normalizeIndianMobile, verifyAccessToken } = require('../services/msg91.service');
+const { normalizeIndianMobile, verifyAccessToken, sendSmsOtp } = require('../services/msg91.service');
 
 const normalizeIdentity = (value) => {
   const identity = String(value || '').trim();
@@ -175,40 +170,43 @@ const sendOtp = async (req, res, next) => {
       `, [user.mobile, otpHash, expiresAt]);
     }
 
-    // Send OTP via AWS SES email
+    // Send OTP via SMS or Email based on input identity
+    const isMobileInput = /^\+?91?\d{10}$/.test(identity) || /^[6-9]\d{9}$/.test(identity);
+    let targetMasked = '';
+
     try {
-      await sendOtpEmail(emailIdentity, otp);
-      logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
-    } catch (emailErr) {
-      logger.error(`[OTP] Failed to send OTP email to ${emailIdentity}: ${emailErr.message}`);
+      if (isMobileInput && user.mobile) {
+        await sendSmsOtp(user.mobile, otp);
+        logger.info(`[OTP] SMS OTP sent to ${user.mobile}`);
+        targetMasked = '******' + user.mobile.slice(-4);
+      } else {
+        await sendOtpEmail(emailIdentity, otp);
+        logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
+        targetMasked = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+      }
+    } catch (sendErr) {
+      logger.error(`[OTP] Failed to send OTP to ${identity}: ${sendErr.message}`);
       // In development, log the OTP so developers can still test and return success
       if (process.env.NODE_ENV !== 'production') {
-        logger.info(`[OTP-DEV] OTP for ${emailIdentity}: ${otp}`);
-        const maskedEmail = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
-          return first + '*'.repeat(Math.min(middle.length, 6)) + domain;
-        });
+        logger.info(`[OTP-DEV] OTP for ${identity}: ${otp}`);
+        targetMasked = isMobileInput ? '******' + (user.mobile || '').slice(-4) : emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
         return res.json({
           success: true,
-          message: `[DEV ONLY] OTP logged. OTP sent to ${maskedEmail}`,
-          email: maskedEmail
+          message: `[DEV ONLY] OTP logged. OTP sent to ${targetMasked}`,
+          identity: targetMasked
         });
       }
       await query(
         `DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`,
         [emailIdentity, user.mobile || emailIdentity]
       );
-      return error(res, 'Failed to send OTP email. Please try again later.', 500);
+      return error(res, 'Failed to send OTP. Please try again later.', 500);
     }
-
-    // Mask email for display: p****p@gmail.com
-    const maskedEmail = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => {
-      return first + '*'.repeat(Math.min(middle.length, 6)) + domain;
-    });
 
     return res.json({
       success: true,
-      message: `OTP sent to ${maskedEmail}`,
-      email: maskedEmail
+      message: `OTP sent to ${targetMasked}`,
+      identity: targetMasked
     });
   } catch (err) {
     next(err);
