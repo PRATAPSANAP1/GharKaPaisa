@@ -12,12 +12,14 @@ const logger = require('../utils/logger');
  */
 const createAdmin = async (req, res, next) => {
   try {
-    const { 
+    let { 
       fullName, email, mobile, role,
       password, confirmPassword, department, designation 
     } = req.body;
 
-    if (!fullName || !email || !mobile || !role || !password || !confirmPassword || !department || !designation) {
+    role = role || 'ADMIN';
+
+    if (!fullName || !email || !mobile || !password || !confirmPassword || !department || !designation) {
       return error(res, 'All required fields must be provided', 400);
     }
 

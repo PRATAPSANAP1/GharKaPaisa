@@ -7,8 +7,8 @@ export default function SuperAdminDashboard() {
   const { C } = useTheme();
   const S = makeS(C);
   
-  // Tabs: 'directory' or 'create'
-  const [activeTab, setActiveTab] = useState('directory');
+  // Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
   
   // Data State
   const [admins, setAdmins] = useState([]);
@@ -107,7 +107,7 @@ export default function SuperAdminDashboard() {
           designation: ''
         });
         fetchAdmins(); // Refresh
-        setTimeout(() => setActiveTab('directory'), 1500);
+        setTimeout(() => setShowCreateModal(false), 1500);
       }
     } catch (err) {
       setFormErr(err.response?.data?.message || 'Failed to create administrative user');
@@ -162,33 +162,6 @@ export default function SuperAdminDashboard() {
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage and provision administrator credentials and permission settings.</p>
         </div>
         
-        {/* Navigation Tabs */}
-        <div style={{ display: "flex", background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "4px" }}>
-          <button
-            onClick={() => setActiveTab('directory')}
-            style={{
-              background: activeTab === 'directory' ? C.teal : "transparent",
-              color: activeTab === 'directory' ? "#fff" : C.textMid,
-              border: "none", borderRadius: "8px", padding: "8px 16px",
-              fontWeight: 700, fontSize: "13px", cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            Admins Directory
-          </button>
-          <button
-            onClick={() => setActiveTab('create')}
-            style={{
-              background: activeTab === 'create' ? C.teal : "transparent",
-              color: activeTab === 'create' ? "#fff" : C.textMid,
-              border: "none", borderRadius: "8px", padding: "8px 16px",
-              fontWeight: 700, fontSize: "13px", cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            Create New Admin
-          </button>
-        </div>
       </div>
 
       {/* Stats Cards */}
@@ -218,17 +191,24 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Main Container */}
-      {activeTab === 'directory' ? (
-        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+      <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Directory List</h3>
-            <button 
-              onClick={fetchAdmins}
-              style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }}
-              title="Refresh"
-            >
-              🔄 Refresh
-            </button>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button 
+                onClick={fetchAdmins}
+                style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }}
+                title="Refresh"
+              >
+                🔄 Refresh
+              </button>
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                style={{ ...S.btn("primary"), padding: "6px 14px", fontSize: "13px" }}
+              >
+                + Create Admin/Employee
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -245,7 +225,7 @@ export default function SuperAdminDashboard() {
             <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
               <p style={{ fontSize: "16px", margin: 0 }}>No administrators provisioned yet.</p>
               <button 
-                onClick={() => setActiveTab('create')}
+                onClick={() => setShowCreateModal(true)}
                 style={{ ...S.btn("primary"), marginTop: "16px", padding: "10px 20px" }}
               >
                 Create First Admin
@@ -323,12 +303,22 @@ export default function SuperAdminDashboard() {
             </div>
           )}
         </div>
-      ) : (
-        /* Create Admin Form */
-        <div style={{ ...S.card, maxWidth: "600px" }}>
-          <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: "14px", marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Provision Administrator</h3>
-          </div>
+
+      {/* Create Admin Modal */}
+      {showCreateModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0, 0, 0, 0.6)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(4px)"
+        }}>
+          <div style={{ ...S.card, maxWidth: "600px", width: "100%", maxHeight: "90vh", overflowY: "auto", position: "relative" }}>
+            <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: "14px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Provision Administrator</h3>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer" }}>
+                <Icons.x size={20} />
+              </button>
+            </div>
           
           <form onSubmit={handleCreateAdmin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {formErr && (
@@ -464,7 +454,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px", borderTop: `1px solid ${C.border}40`, paddingTop: "16px" }}>
               <button
                 type="button"
-                onClick={() => setActiveTab('directory')}
+                onClick={() => setShowCreateModal(false)}
                 style={S.btn("outline")}
               >
                 Cancel
@@ -478,6 +468,7 @@ export default function SuperAdminDashboard() {
               </button>
             </div>
           </form>
+          </div>
         </div>
       )}
     </div>

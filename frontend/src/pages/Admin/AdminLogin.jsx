@@ -71,6 +71,33 @@ export default function AdminLogin() {
   const [err, setErr] = useState("");
   const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
 
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      return setErr("Please enter your registered email address.");
+    }
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim());
+    if (!isEmail) {
+      return setErr("Please enter a valid email address.");
+    }
+
+    setErr("");
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail.trim());
+      setToast({ message: "Password reset instructions sent. Please check your email.", type: "success" });
+      setShowForgot(false);
+    } catch (error) {
+      setErr(error.message || "Could not send reset instructions.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
@@ -371,171 +398,231 @@ export default function AdminLogin() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Login Method Tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => setMethod('otp')}
-                style={{
-                  flex: 1,
-                  padding: 10,
-                  borderRadius: 10,
-                  border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
-                  background: method === 'otp' ? C.inputBg : 'transparent',
-                  color: C.text,
-                  cursor: 'pointer',
-                }}
-              >
-                Login with OTP
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod('password')}
-                style={{
-                  flex: 1,
-                  padding: 10,
-                  borderRadius: 10,
-                  border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
-                  background: method === 'password' ? C.inputBg : 'transparent',
-                  color: C.text,
-                  cursor: 'pointer',
-                }}
-              >
-                Login with Password
-              </button>
-            </div>
-
-            {/* Email or Mobile */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={S.label}>Email or Mobile Number</label>
-              <div style={{ position: "relative" }}>
-                <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
-                  <Icons.User size={18} />
+          {showForgot ? (
+            <form onSubmit={handleForgotSubmit}>
+              <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>
+                  Reset Password
                 </div>
-                <input
-                  style={{ ...inputStyle, paddingLeft: "42px" }}
-                  placeholder="Enter email or mobile number"
-                  value={form.identity}
-                  onChange={e => setForm({ ...form, identity: e.target.value })}
-                  onFocus={e => e.target.style.border = focusBorder}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
-              </div>
-            </div>
-
-            {method === 'password' ? (
-              <div style={{ marginBottom: "20px" }}>
-                <label style={S.label}>Password</label>
-                <input
-                  style={{ ...inputStyle }}
-                  type="password"
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  onFocus={e => e.target.style.border = focusBorder}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
-                <div style={{ marginTop: 10, textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const email = form.identity.trim() || window.prompt('Enter your registered email to receive reset instructions:');
-                      if (!email) return;
-                      try {
-                        await forgotPassword(email);
-                        setToast({ message: 'Password reset instructions sent.', type: 'success' });
-                      } catch (error) {
-                        setToast({ message: error.message || 'Could not send reset instructions.', type: 'error' });
-                      }
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: C.teal,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      padding: 0,
-                    }}
-                  >
-                    Forgot password?
-                  </button>
+                <div style={{ fontSize: "13px", color: C.textSecondary, marginTop: "6px" }}>
+                  Enter your registered email to receive password reset instructions
                 </div>
               </div>
-            ) : (
+
               <div style={{ marginBottom: "20px" }}>
-                <label style={S.label}>Enter 6-Digit OTP</label>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <label style={S.label}>Registered Email</label>
+                <div style={{ position: "relative" }}>
+                  <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
+                    <Icons.User size={18} />
+                  </div>
                   <input
-                    style={{
-                      ...inputStyle,
-                      flex: 1,
-                      textAlign: "center",
-                      letterSpacing: "4px",
-                      fontWeight: 700,
-                      background: otpSent ? C.inputBg : C.bg,
-                      color: otpSent ? C.text : C.textLight,
-                      cursor: otpSent ? "text" : "not-allowed",
-                      opacity: otpSent ? 1 : 0.55,
-                      border: `1.5px solid ${C.border}`,
-                    }}
-                    placeholder="••••••"
-                    maxLength={6}
-                    disabled={!otpSent}
-                    value={form.otp}
-                    onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                    onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                    style={{ ...inputStyle, paddingLeft: "42px" }}
+                    placeholder="Enter your email address"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    onFocus={e => e.target.style.border = focusBorder}
                     onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
                   />
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={timer > 0 || loading.otp}
-                    style={{
-                      ...S.btn("sm"),
-                      whiteSpace: "nowrap",
-                      width: "110px",
-                      padding: "0 10px",
-                      opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
-                    }}
-                  >
-                    {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
-                  </button>
                 </div>
               </div>
-            )}
 
-            <div id="msg91-captcha-admin" style={{ marginTop: "10px", display: "flex", justifyContent: "center" }}></div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                style={{
+                  ...S.btn("primary"),
+                  width: "100%",
+                  padding: "13px 0",
+                  fontSize: "14px",
+                  borderRadius: "10px",
+                  opacity: forgotLoading ? 0.8 : 1,
+                }}
+              >
+                {forgotLoading ? "Sending Instructions..." : "Send Reset Link"}
+              </button>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading.login}
-              style={{
-                ...S.btn("primary"),
-                width: "100%",
-                padding: "13px 0",
-                fontSize: "14px",
-                borderRadius: "10px",
-                marginTop: "4px",
-                opacity: loading.login ? 0.8 : 1,
-              }}
-            >
-              {loading.login ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  <span style={{
-                    width: "14px", height: "14px", borderRadius: "50%",
-                    border: "2px solid rgba(255,255,255,0.4)",
-                    borderTop: "2px solid #fff",
-                    animation: "spin 0.7s linear infinite",
-                    display: "inline-block",
-                  }} />
-                  Verifying…
-                </span>
-              ) : "Secure Log In"}
-            </button>
-          </form>
+              <div style={{ marginTop: "16px", textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgot(false);
+                    setErr("");
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: C.teal,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {/* Login Method Tabs */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setMethod('otp')}
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    borderRadius: 10,
+                    border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                    background: method === 'otp' ? C.inputBg : 'transparent',
+                    color: C.text,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Login with OTP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod('password')}
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    borderRadius: 10,
+                    border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                    background: method === 'password' ? C.inputBg : 'transparent',
+                    color: C.text,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Login with Password
+                </button>
+              </div>
+
+              {/* Email or Mobile */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={S.label}>Email or Mobile Number</label>
+                <div style={{ position: "relative" }}>
+                  <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
+                    <Icons.User size={18} />
+                  </div>
+                  <input
+                    style={{ ...inputStyle, paddingLeft: "42px" }}
+                    placeholder="Enter email or mobile number"
+                    value={form.identity}
+                    onChange={e => setForm({ ...form, identity: e.target.value })}
+                    onFocus={e => e.target.style.border = focusBorder}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                </div>
+              </div>
+
+              {method === 'password' ? (
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={S.label}>Password</label>
+                  <input
+                    style={{ ...inputStyle }}
+                    type="password"
+                    placeholder="Enter your password"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    onFocus={e => e.target.style.border = focusBorder}
+                    onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                  />
+                </div>
+              ) : (
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={S.label}>Enter 6-Digit OTP</label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input
+                      style={{
+                        ...inputStyle,
+                        flex: 1,
+                        textAlign: "center",
+                        letterSpacing: "4px",
+                        fontWeight: 700,
+                        background: otpSent ? C.inputBg : C.bg,
+                        color: otpSent ? C.text : C.textLight,
+                        cursor: otpSent ? "text" : "not-allowed",
+                        opacity: otpSent ? 1 : 0.55,
+                        border: `1.5px solid ${C.border}`,
+                      }}
+                      placeholder="••••••"
+                      maxLength={6}
+                      disabled={!otpSent}
+                      value={form.otp}
+                      onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
+                      onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
+                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={timer > 0 || loading.otp}
+                      style={{
+                        ...S.btn("sm"),
+                        whiteSpace: "nowrap",
+                        width: "110px",
+                        padding: "0 10px",
+                        opacity: (timer > 0 || loading.otp) ? 0.7 : 1,
+                      }}
+                    >
+                      {loading.otp ? "Sending…" : timer > 0 ? `${timer}s` : "Send OTP"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div id="msg91-captcha-admin" style={{ marginTop: "10px", display: "flex", justifyContent: "center" }}></div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading.login}
+                style={{
+                  ...S.btn("primary"),
+                  width: "100%",
+                  padding: "13px 0",
+                  fontSize: "14px",
+                  borderRadius: "10px",
+                  marginTop: "4px",
+                  opacity: loading.login ? 0.8 : 1,
+                }}
+              >
+                {loading.login ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
+                    <span style={{
+                      width: "14px", height: "14px", borderRadius: "50%",
+                      border: "2px solid rgba(255,255,255,0.4)",
+                      borderTop: "2px solid #fff",
+                      animation: "spin 0.7s linear infinite",
+                      display: "inline-block",
+                    }} />
+                    Verifying…
+                  </span>
+                ) : "Secure Log In"}
+              </button>
+
+              <div style={{ marginTop: "16px", textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgot(true);
+                    setForgotEmail(form.identity);
+                    setErr("");
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: C.teal,
+                    cursor: 'pointer',
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
       <style>{`
