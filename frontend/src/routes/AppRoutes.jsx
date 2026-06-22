@@ -31,6 +31,7 @@ import ComingSoon from '../pages/Services/ComingSoon';
 // Product Lead Gen
 import ProductDetails from '../pages/Product/ProductDetails';
 import ApplyForm from '../pages/Product/ApplyForm';
+import CardBenefitsPage from '../pages/Product/CardBenefitsPage';
 
 // Structured Folder Imports
 import { 
@@ -156,6 +157,7 @@ const AppRoutes = () => {
         {/* Product Lead Generation */}
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/product/:id/apply" element={<ApplyForm />} />
+        <Route path="/card-benefits/:id" element={<CardBenefitsPage />} />
       </Route>
 
       {/* Partner Routes */}

@@ -1121,12 +1121,16 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 Compare
               </button>
               <button 
-                onClick={() => handleWhatsAppShare(selectedCard)}
+                onClick={() => {
+                  const idToUse = selectedCard.id || selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  setSelectedCard(null);
+                  navigate(`/card-benefits/${idToUse}`);
+                }}
                 style={{
                   flex: "1 1 auto",
                   background: "none",
-                  border: "1px solid #25D366",
-                  color: "#25D366",
+                  border: "1px solid #003B8F",
+                  color: "#003B8F",
                   padding: "10px",
                   borderRadius: "10px",
                   fontSize: "12px",
@@ -1138,8 +1142,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   gap: "4px"
                 }}
               >
-                <FaWhatsapp size={15} />
-                Share
+                Benefits
               </button>
               <button 
                 onClick={() => {

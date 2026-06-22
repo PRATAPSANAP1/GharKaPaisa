@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { query } = require('../config/db');
 const { logAction } = require('../services/audit.service');
 const { getPaginationParams, sanitizeMobile } = require('../utils/helpers');
@@ -12,12 +13,18 @@ const logger = require('../utils/logger');
 const createAdmin = async (req, res, next) => {
   try {
     const { 
-      fullName, email, mobile, employeeId, 
+      fullName, email, mobile, role,
       password, confirmPassword, department, designation 
     } = req.body;
 
-    if (!fullName || !email || !mobile || !employeeId || !password || !confirmPassword || !department || !designation) {
+    if (!fullName || !email || !mobile || !role || !password || !confirmPassword || !department || !designation) {
       return error(res, 'All required fields must be provided', 400);
+    }
+
+    const employeeId = 'GKP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    if (!['ADMIN', 'EMPLOYEE'].includes(role)) {
+      return error(res, 'Role must be either ADMIN or EMPLOYEE', 400);
     }
 
     if (password !== confirmPassword) {
@@ -44,29 +51,35 @@ const createAdmin = async (req, res, next) => {
     }
 
     // Check if employeeId already exists
-    const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [employeeId]);
-    if (existingEmployee) {
-      return error(res, 'An administrative user with this Employee ID already exists', 400);
+    let uniqueEmployeeId = employeeId;
+    let isUnique = false;
+    while (!isUnique) {
+      const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [uniqueEmployeeId]);
+      if (existingEmployee) {
+        uniqueEmployeeId = 'GKP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+      } else {
+        isUnique = true;
+      }
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new Administrative User (ADMIN role)
+    // Insert new User
     const { rows: [dbUser] } = await query(
       `INSERT INTO users (
         email, mobile, password_hash, role, status, 
         full_name, employee_id, department, designation, created_by, is_active, email_verified
       )
-      VALUES ($1, $2, $3, 'ADMIN', 'active', $4, $5, $6, $7, $8, true, true)
+      VALUES ($1, $2, $3, $9, 'active', $4, $5, $6, $7, $8, true, true)
       RETURNING id, email, role, status`,
-      [email, formattedMobile, hashedPassword, fullName, employeeId, department, designation, req.user.id]
+      [email, formattedMobile, hashedPassword, fullName, uniqueEmployeeId, department, designation, req.user.id, role]
     );
 
-    logger.info(`Super admin ${req.user.email} created new Admin user: ${email}`);
+    logger.info(`Super admin ${req.user.email} created new user: ${email} with role: ${role}`);
 
     // Record the action in audit logs
-    await logAction(req, 'CREATE_ADMIN', dbUser.id, { email, role: 'ADMIN' });
+    await logAction(req, 'CREATE_USER', dbUser.id, { email, role: dbUser.role });
 
     return created(res, {
       userId: dbUser.id,
@@ -96,7 +109,7 @@ const listAdmins = async (req, res, next) => {
         created_by as "createdBy", 
         created_at as "createdAt"
       FROM users 
-      WHERE role = 'ADMIN'
+      WHERE role IN ('ADMIN', 'EMPLOYEE')
       ORDER BY created_at DESC
     `);
     return success(res, admins);

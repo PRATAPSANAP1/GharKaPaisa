@@ -45,7 +45,7 @@ export default function PartnerRegister() {
   const [form, setForm] = useState({
     // Step 0 – Personal
     firstName: "", lastName: "", mobile: "",
-    email: "",
+    email: "", password: "", confirmPassword: "",
     emailOtp: "",
     emailPreVerified: false,
     mobileOtp: "",
@@ -59,7 +59,7 @@ export default function PartnerRegister() {
     // Step 2 – Bank
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
-    aadhaar: "", pan: "",
+    pan: "",
   });
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
@@ -184,6 +184,11 @@ export default function PartnerRegister() {
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
+      if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
+      if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password))
+        return t("partner.errors.passwordStrength", "Password must contain uppercase, lowercase and a number.");
+      if (form.password !== form.confirmPassword) return t("partner.errors.passwordsMismatch", "Passwords do not match.");
     }
     if (step === 1) {
       if (!form.companyName.trim()) return t("partner.errors.companyNameRequired", "Company name is required.");
@@ -206,8 +211,6 @@ export default function PartnerRegister() {
       if (!form.accountHolderName.trim()) return t("partner.errors.accountHolderRequired", "Please enter account holder name.");
     }
     if (step === 3) {
-      if (!form.aadhaar.trim()) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
-      if (!/^\d{12}$/.test(form.aadhaar.trim())) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
     }
@@ -383,6 +386,7 @@ export default function PartnerRegister() {
       const payload = {
         email: form.email.trim(),
         mobile: form.mobile.trim(),
+        password: form.password,
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
         current_address: form.currentAddress.trim(),
@@ -395,7 +399,7 @@ export default function PartnerRegister() {
         account_number: form.accountNumber.trim(),
         ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
         account_holder_name: form.accountHolderName.trim(),
-        aadhaar: form.aadhaar.trim(),
+        aadhaar: "",
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
         role: "PARTNER",
       };
@@ -672,6 +676,16 @@ export default function PartnerRegister() {
                   </button>
                 </div>
               </div>
+
+              {/* Password */}
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>{t('partner.password', 'Password')}</label>
+                <input type="password" style={S.input} {...inputProps("password")} placeholder={t('partner.placeholders.min8chars', 'Min 8 chars')} autoComplete="new-password" />
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>{t('partner.confirmPassword', 'Confirm Password')}</label>
+                <input type="password" style={S.input} {...inputProps("confirmPassword")} placeholder={t('partner.placeholders.repeatPassword', 'Repeat password')} autoComplete="new-password" />
+              </div>
             </div>
           )}
 
@@ -737,11 +751,7 @@ export default function PartnerRegister() {
           {/* ── Step 3: KYC — Info Screen ─────────────────────────────────── */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div>
-                  <label style={S.label}>{t('partner.aadhaarNumber', 'Aadhaar Number')}</label>
-                  <input {...inputProps("aadhaar")} placeholder={t('partner.placeholders.aadhaar', '12-digit number')} />
-                </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "14px" }}>
                 <div>
                   <label style={S.label}>{t('partner.panNumber', 'PAN Number')}</label>
                   <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} placeholder={t('partner.placeholders.pan', '10-char alphanumeric')} />
@@ -766,9 +776,7 @@ export default function PartnerRegister() {
 
               {/* Document list */}
               {[
-                { icon: '🪪', title: t('kycDocs.aadhaarCard', 'Aadhaar Card'), desc: t('kycDocs.aadhaarDesc', 'Front & Back (PDF/Image) · Max 5MB') },
                 { icon: '🪄', title: t('kycDocs.panCard', 'PAN Card'), desc: t('kycDocs.panDesc', 'PDF or Image · Max 5MB') },
-                { icon: '🧾', title: t('kycDocs.gstCert', 'GST Certificate'), desc: t('kycDocs.gstDesc', 'Optional · Max 5MB') },
                 { icon: '🏦', title: t('kycDocs.cheque', 'Cancelled Cheque'), desc: t('kycDocs.chequeDesc', 'Image of cheque · Max 5MB') },
               ].map(doc => (
                 <div key={doc.title} style={{

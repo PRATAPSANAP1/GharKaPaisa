@@ -21,7 +21,7 @@ export default function SuperAdminDashboard() {
     fullName: '',
     email: '',
     mobile: '',
-    employeeId: '',
+    role: 'ADMIN',
     password: '',
     confirmPassword: '',
     department: 'Operations',
@@ -79,7 +79,7 @@ export default function SuperAdminDashboard() {
     setFormSuccess('');
 
     // Validations
-    if (!form.fullName || !form.email || !form.mobile || !form.employeeId || !form.password || !form.confirmPassword || !form.department || !form.designation) {
+    if (!form.fullName || !form.email || !form.mobile || !form.role || !form.password || !form.confirmPassword || !form.department || !form.designation) {
       return setFormErr('All fields marked with * are required');
     }
 
@@ -100,7 +100,7 @@ export default function SuperAdminDashboard() {
           fullName: '',
           email: '',
           mobile: '',
-          employeeId: '',
+          role: 'ADMIN',
           password: '',
           confirmPassword: '',
           department: 'Operations',
@@ -257,7 +257,7 @@ export default function SuperAdminDashboard() {
                 <thead>
                   <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
                     <th style={{ padding: "14px 16px" }}>Name</th>
-                    <th style={{ padding: "14px 16px" }}>Employee ID</th>
+                    <th style={{ padding: "14px 16px" }}>Role & Emp ID</th>
                     <th style={{ padding: "14px 16px" }}>Contact Info</th>
                     <th style={{ padding: "14px 16px" }}>Department</th>
                     <th style={{ padding: "14px 16px" }}>Designation</th>
@@ -272,6 +272,7 @@ export default function SuperAdminDashboard() {
                         {admin.fullName || 'No Name Provided'}
                       </td>
                       <td style={{ padding: "14px 16px", fontFamily: "monospace", fontSize: "12px", color: C.textMid }}>
+                        <span style={{ fontWeight: "bold", color: C.text, marginRight: "4px" }}>{admin.role}</span><br />
                         {admin.employeeId}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
@@ -383,17 +384,19 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
-              {/* Employee ID */}
+              {/* Role */}
               <div>
-                <label style={S.label}>Employee ID *</label>
-                <input
-                  name="employeeId"
-                  value={form.employeeId}
+                <label style={S.label}>Role *</label>
+                <select
+                  name="role"
+                  value={form.role}
                   onChange={handleChange}
-                  placeholder="e.g. GKP-1024"
                   style={S.input}
                   required
-                />
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="EMPLOYEE">Employee</option>
+                </select>
               </div>
 
               {/* Password */}
