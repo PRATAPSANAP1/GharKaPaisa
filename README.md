@@ -1,240 +1,132 @@
 # GharKaPaisa — Full Project Features & Technical Report
 
-Welcome to **GharKaPaisa**, a premium web and mobile application designed for credit card lead generation, partner commissions management, and multi-tenant administrative control. 
+Welcome to **GharKaPaisa**, a premium web and mobile application designed for credit card lead generation, partner commissions management, and multi-tenant administrative control.
 
-This document serves as an exhaustive, detailed technical report of all features, functionalities, interfaces, and panels implemented in the project.
-
----
-
-## ── 1. HOMEPAGE & NAVIGATION (IN DETAIL) ──
-
-The homepage serves as the primary portal for customers, referral partners, and system administrators. 
-
-### Premium Header Navigation Bar
-The header navbar is designed with modern styling, clean alignments, and a highly responsive layout:
-- **Company Logo**: A high-resolution, clickable brand logo positioned at the far left of the navbar. Clicking the logo instantly routes the user back to the homepage.
-- **Three Quick-Access Portal Buttons**:
-  - **Admin**: Routes the user directly to the Admin/SuperAdmin login panel (`/admin-login`).
-  - **Partner**: Routes the user to the registered referral partner login and dashboard workspace (`/login`).
-  - **Employee**: Points to the administrative portal login (`/admin-login`) where internal employees log in with their assigned credentials.
-- **Mode Changer (Theme Toggler)**:
-  - A custom-designed switch that enables instant toggling between **Light Mode** (sleek, high-contrast brand aesthetics with clean white and blue tones) and **Dark Mode** (deep-navy surface backgrounds, optimized for low-light environments).
-  - Synchronizes throughout all sub-routes, layout wrappers, and dashboard components.
-- **Language Translator**:
-  - A dynamic multi-language localization dropdown supporting **9 regional Indian languages**:
-    - English (EN)
-    - Hindi (HI)
-    - Marathi (MR)
-    - Gujarati (GU)
-    - Bengali (BN)
-    - Telugu (TE)
-    - Tamil (TA)
-    - Kannada (KN)
-    - Odia (OR)
-  - Dynamically updates all text content, labels, cards, and buttons on the interface to the selected language context.
-
-### Dynamic CMS-Driven Home Banners
-- Renders high-fidelity marketing banners (e.g., Lifetime Free Credit Cards, special bank cashback offers) fetched dynamically from the database and managed via the SuperAdmin CMS dashboard.
-- **Direct Banner Redirection**:
-  - Each banner is linked to a target routing URL.
-  - Clicking on a banner redirects the user directly to its target offer category page.
-  - **Example**: Clicking on the **Lifetime Free (LTF) Banner** immediately routes the user to the dedicated Lifetime Free Credit Cards category view page (e.g., `/credit-cards/lifetime-free-credit-cards-ltf`).
+Below is the structured technical documentation of all features implemented across every page and panel in the project, formatted in detailed numbered lists.
 
 ---
 
-## ── 2. BANK CATALOG & CARD OPERATIONS ──
+## ── 1. NORMAL USER / PUBLIC PAGE FEATURES ──
 
-The core of the catalog browsing experience is structured hierarchically:
-`Lending Partners (Banks) ──> Bank-Specific Credit Cards ──> Comparative Actions`
+These features are accessible to public visitors on the main website and mobile app home screen.
 
-### Lending Partners & Card Lists
-- The homepage lists active banks (Lending Partners) available on the platform, including:
-  - **HDFC Bank**
-  - **SBI Card**
-  - **Axis Bank**
-  - **ICICI Bank**
-  - **Kotak Mahindra Bank**
-  - **Yes Bank**
-  - **IDFC First Bank**
-  - **Federal Bank**
-- Clicking on a specific bank's name or logo opens a dedicated catalog of that bank's credit cards. Each card is rendered beautifully with its card image, reward highlights, annual/joining fees, and card network (Visa, Mastercard, RuPay).
-
-### Individual Card Action Buttons
-For every credit card displayed in the bank-specific catalog, three main action buttons are provided:
-1. **Compare**:
-   - Opens a custom drawer/modal comparing up to three selected credit cards side-by-side.
-   - Highlights rewards, annual fees, eligibility, and special features to help the user choose the best card.
-2. **Benefits**:
-   - Opens the dedicated **Card Benefits** page (`/card-benefits/:id` or `/card-benefits/:name-slug`) containing exhaustive details of the selected card.
-3. **Apply**:
-   - Triggers the application flow. On public pages, it opens an input modal where the user registers their details, verifies them via an SMS OTP, and is then seamlessly redirected to the banking partner's official secure credit card application link.
-
----
-
-## ── 3. CARD BENEFITS PAGE (IN DETAIL) ──
-
-When a user clicks the **Benefits** button on any credit card, it opens a highly detailed page containing information about that specific card. The page layout has been optimized to emulate a high-end native mobile application.
-
-### Layout & Scrolling Optimizations
-- **Body Scroll Blocked**: The main page container `.cbp-container` is locked at `height: 100vh` with `overflow: hidden`, preventing the entire page body from scrolling.
-- **Inner Scroll Wrapper**: Renders a custom scrollable viewport `.cbp-scrollable-content` with `overflow-y: auto`. The header bar remains fixed at the top of the screen while the card details scroll internally.
-- **High-Density Compact UI**: Spacing, margins, padding, and font sizes throughout the benefits panel have been reduced by **30-50%** to provide a compact, elegant layout that shows information efficiently without vertical scroll fatigue.
-
-### Header Bar Actions
-- **Apply Now Button**: Placed at the top navbar near the share button. Clicking it navigates the user directly to the credit card application form (`/product/:id/apply`).
-- **Universal Share Button**:
-   - Uses the browser's native **Web Share API** (`navigator.share`) to open the native OS sharing sheet on mobile devices.
-   - Allows users to share the card page to **any app** (WhatsApp, Telegram, Slack, Gmail, SMS, or system clipboard) instead of restricting to WhatsApp.
-   - Falls back to copying the link to the clipboard and redirection to the WhatsApp Web API on desktop.
-
-### Dynamic Tab Navigation Panels
-The card details are structured into several tabs for easy navigation:
-- **Special Offer**: Displays the partner commission structure, including "Total Earning" and "Card Approval & Dispatch" payouts, along with active offer validity end dates.
-- **Benefits**: Lists reward points multipliers, joining perks, milestone bonuses, dining/fuel surcharge waivers, and airport lounge access terms.
-- **Whom to Refer**: Outlines customer eligibility guidelines:
-  - Age limits (minimum and maximum ages).
-  - Income and employment criteria (salaried vs. self-employed thresholds).
-  - Mandatory KYC checklist documents (specifically restricted to **PAN Card** and **Cancelled Cheque** to streamline the application process).
-- **How It Works**: A step-by-step visual timeline explaining the application sequence:
-  1. Click apply & enter details.
-  2. Complete bank KYC / Video-KYC (V-KYC).
-  3. Verify document dispatch and card approval.
-  4. Virtual/physical card delivery.
-- **Training Video**: Embeds interactive video guides and tutorials helping partners understand how to promote the card.
-- **FAQ's**: A collapsible accordion-style layout detailing answers to common questions about card activation, charges, and rewards.
-- **T&C (Terms & Conditions)**: Displays the legal guidelines, refund policies, and official terms governing card issuance and commission claims.
+1. **Brand Logo Redirection**: A custom, high-resolution company logo placed on the top-left of the navigation bar. Clicking it returns the user to the homepage from any subpage.
+2. **Three Role Login Buttons**: Action buttons in the header navbar routing to specific sub-portals:
+   - **Admin Login**: Routes to `/admin-login` for operational managers.
+   - **Partner Login**: Routes to `/login` for referral partners.
+   - **Employee Login**: Routes to `/admin-login` for employee logins.
+3. **Mode Changer (Theme Toggler)**: A high-fidelity toggle switch in the navbar that instantly alternates the entire application styling between **Light Mode** (sleek brand branding) and **Dark Mode** (deep-navy night theme).
+4. **9-Language Translator**: A dropdown component in the header that utilizes full localization translations to switch the UI labels, headings, and buttons between English (EN), Hindi (HI), Marathi (MR), Gujarati (GU), Bengali (BN), Telugu (TE), Tamil (TA), Kannada (KN), and Odia (OR).
+5. **CMS-Driven Slider Banners**: Marketing banners rendered on the home page dynamically via the Super Admin CMS.
+6. **Direct Banner Redirection**: Each slider banner is linked to a target URL. For example, clicking the **Lifetime Free (LTF) Banner** immediately redirects the user to the Lifetime Free category page (`/credit-cards/lifetime-free-credit-cards-ltf`).
+7. **Lending Partners Grid**: Lists active lending banks (HDFC, SBI, Axis, ICICI, Kotak, Yes Bank, IDFC First, Federal Bank) on the homepage. Clicking a bank opens its card catalog page.
+8. **Bank-Specific Card Catalog**: Shows all credit cards associated with a chosen bank, complete with card photos, reward summaries, annual charges, and card networks (RuPay, Visa, Mastercard).
+9. **Card Compare Drawer**: Allows the user to select up to three credit cards and compare their joining fees, annual charges, benefits, and reward points side-by-side in a comparative overlay window.
+10. **Card Benefits Detail Routing**: Clicking the "Benefits" button on any card page routes the user to a dedicated details layout page (`/card-benefits/:id`).
+11. **Apply Now Header Button**: A prominent call-to-action button placed at the top header navbar of the benefits page for quick access. Clicking it navigates directly to the lead registration page.
+12. **Universal Share API Button**: A share button that uses the browser's native **Web Share API** (`navigator.share`) to open the native OS sharing sheet on mobile, letting users share the card benefits page to any application (WhatsApp, Telegram, SMS, Email, Slack). On desktop, it falls back to copying the link to clipboard or opening WhatsApp Web.
+13. **Customer OTP Verification Modal**: When a user clicks "Apply" on a card, it prompts them for their contact number, sends a verification OTP via SMS, validates it, and forwards them to the official bank application landing page.
+14. **Mobile-Optimized Scroll Lock Layout**: The benefits details page locks the main viewport (`height: 100vh`, `overflow: hidden`) and uses an internal scrollable div, emulating a native mobile app layout.
+15. **Compact Density UI**: Padding, spacing, margins, and text fonts on the benefits page are scaled down by **30-50%** to show maximum card details on single viewports.
+16. **Interactive Tabs Panel**: Displays detailed card information broken down into:
+    - **Special Offer**: Displays payout earnings and validity countdown.
+    - **Benefits**: Bulleted list of cashbacks, milestone vouchers, and lounge details.
+    - **Whom to Refer**: Eligibility guidelines (minimum/maximum age, minimum salary).
+    - **How It Works**: Visual horizontal timeline of steps.
+    - **Training Video**: Embedded tutorial player.
+    - **FAQs**: Collapsible accordion question cards.
+    - **T&C**: Terms, conditions, and disclaimers.
 
 ---
 
-## ── 4. PARTNER PORTAL (IN DETAIL) ──
+## ── 2. PARTNER PANEL FEATURES ──
 
-The **Partner Portal** is a comprehensive, dashboard-driven environment that empowers independent financial agents to submit customer leads, browse available products, track payout earnings, and manage account preferences.
+These features are available to referral partners to manage clients, submit leads, and request payouts.
 
-### A. Partner Registration & Simplified KYC Onboarding
-- **Account Creation**: Partners sign up using their basic details (First Name, Last Name, Email, and Mobile number).
-- **Direct Password Setting**: A secure password input is requested at registration time, enforcing length and composition checks.
-- **Simplified Document Checklist**: To remove registration friction and expedite approvals, KYC is restricted to taking only two mandatory documents:
-  - **PAN Card** (Input and document image upload)
-  - **Cancelled Cheque** (Input and document image upload)
-  - *Note*: Aadhaar card and GST options are removed to streamline onboardings.
-- **Authentication**: Supports secure login using a registered Mobile/Email & Password combination, with fallback to MSG91-backed SMS OTP verification.
-
-### B. Partner Dashboard (Analytics Hub)
-Upon logging in, partners are greeted with a dashboard displaying metrics and tools:
-- **Key Statistics Cards**:
-  - **Total Leads**: Cumulative number of customer applications submitted.
-  - **Approved Leads**: Payout-eligible approved card applications.
-  - **Pending Payouts**: Verified commissions awaiting payment release.
-  - **Total Earnings**: Lifetime earnings generated on the platform.
-- **Recent Lead Tracker**: A summary list of the partner's latest lead submissions showing customer name, card applied for, submission date, status, and comments.
-- **Referral Invitation Section**: Displays the partner's unique referral link and referral code, allowing them to invite other partners to their team.
-
-### C. Partner Marketplace (Product Catalog)
-- **Product Hub**: Partners browse all credit cards and banking products configured in the system.
-- **Search & Filter**: Quickly locate cards by bank (Lending Partner) or categories (e.g., Rewards, Cashback, Fuel, Travel, Lifetime Free).
-- **Commission Indicators**: Each card showcases the exact commission potential (e.g., ₹2,500 on approval) and active promotional validity.
-- **Unique Referral Links**: Provides two primary options for every product:
-  - **Share Link**: Instantly copies a tracking-parameter-equipped referral link to share with clients via social media or messaging platforms.
-  - **Apply Directly**: Launches the lead generation flow inside the partner's workspace to directly record details for a client.
-
-### D. Wallet & Withdrawal System
-- **Real-Time Balance**: Displays current withdrawable funds and historical withdrawals.
-- **Bank Account Setup**: Partners configure their payout bank name, branch, account number, and IFSC code.
-- **Withdrawal Requests**: Partners trigger payout requests directly to their bank account.
-- **Security Check Hold**: System applies an automated 48-hour audit hold on newly requested withdrawals to prevent fraud.
+1. **Dual-Method Login Screen**: Partners can log in securely using either their email/mobile + password, or via MSG91-backed SMS OTP authentication.
+2. **On-Registration Password Setup**: Allows partners to create a secure password directly at the time of register/signup.
+3. **Simplified KYC Submission Checklist**: Restricted to taking only two mandatory documents:
+   - **PAN Card** (Text number input and image file upload).
+   - **Cancelled Cheque** (Bank details text input and image file upload).
+   - Aadhaar card and GST options are eliminated to streamline the partner onboarding process.
+4. **Partner Dashboard Statistics Overview**: Displays real-time metrics cards for:
+   - *Total Leads* submitted.
+   - *Approved Leads* (successful card issues).
+   - *Pending Payouts* (commissions waiting to be cleared).
+   - *Total Earnings* (cumulative lifetime payout).
+5. **Product Marketplace Hub**: A partner-exclusive catalog displaying all active credit cards with the exact partner commission payouts (e.g. ₹2,200 on card dispatch).
+6. **Share Tracking Link**: A button in the marketplace that copies a unique, referral-parameterized tracking link to the clipboard. Anyone applying through this link is credited as a lead under this partner.
+7. **Direct Client Apply Form**: Allows the partner to enter customer details and submit application leads directly from their portal dashboard on behalf of their clients.
+8. **Real-time Leads Tracker**: A detailed grid listing all submitted leads, showcasing the applicant's name, mobile number, applied product, bank name, current stage status, updates history, and admin remarks.
+9. **Wallet Ledger**: Details the partner's wallet balance, pending approvals, and historical withdrawals.
+10. **Bank Account Configurator**: Fields for setting up the partner's bank name, account number, branch, and IFSC code for electronic commission transfers.
+11. **Withdrawal Request Trigger**: Allows partners to request payout of their available balance.
+12. **48-Hour Audit Hold Lock**: Automatically places newly requested withdrawals on a 48-hour security auditing hold before administrative approval.
+13. **Profile Settings**: Page to manage profile details, change passwords, and update security credentials.
 
 ---
 
-## ── 5. SUPER PARTNER / TEAM NETWORK (IN DETAIL) ──
+## ── 3. SUPER PARTNER / TEAM NETWORK FEATURES ──
 
-The **Super Partner** capability is built directly into the **Team Network** module of the Partner Portal. It enables established agents to operate as network sub-distributors, onboarding child partners and earning bonuses or overrides.
+These features allow partners to build and manage their own sub-agent referral network (downlines).
 
-### A. Building the Network
-- **Referral Sign-up**: New partners can register using a Super Partner's unique `Referral Code`.
-- **Direct Creation Modal**: Super Partners can manually add team members directly from their dashboard using the **"Add Team Member"** form. This form requires:
-  - Member's First and Last Name
-  - Email Address
-  - Mobile Number
-  - Custom Password (communicated to the team member for their first login)
-- **Automatic Association**: The backend assigns the created partner account under the parent partner ID, creating a parent-child relationship hierarchy.
-
-### B. Team Management Grid
-Super Partners monitor their downline organization through an interactive management console:
-- **Member Directory**: Lists all referred/child partners.
-- **Member Info & Contacts**: Displays profile initials, names, email addresses, and phone numbers.
-- **Unique Partner Code Tracker**: Displays each team member's assigned `Partner_code` for verification.
-- **KYC Status Indicators**: Displays real-time status of the child partner's KYC approval (`PENDING`, `APPROVED`, or `REJECTED`) represented by color-coded badges (Amber, Green, Red).
-- **Joining Timeline**: Records the exact date and time the member joined the team network.
+1. **Sub-Partner Invitation Link**: Displays a unique referral link and referral code on the partner dashboard, which invites new agents to register under this partner's network hierarchy.
+2. **Direct Sub-Partner Creation**: An inline popup modal **"Add Team Member"** that lets the Super Partner directly register a child partner by filling in their first name, last name, mobile number, email, and password.
+3. **Team Grid Console**: An interactive table that tracks the Super Partner's downline organization, displaying member names, email, phone, and joining dates.
+4. **Partner Code Monitor**: Displays the unique `Partner_code` for each child partner.
+5. **KYC Status Visualizer**: Shows color-coded badges (Amber for Pending, Green for Approved, Red for Rejected) representing the KYC document status of each child partner.
+6. **Override Payout Engine**: Links child partner transactions to the Super Partner's account, facilitating team override payouts.
 
 ---
 
-## ── 6. ADMIN PANEL (IN DETAIL) ──
+## ── 4. ADMIN PANEL FEATURES ──
 
-The **Admin Panel** is geared toward operational administrators who manage partners, verify KYC files, update lead statuses, and authorize financial withdrawals.
+These features are designed for regional and operations managers to process applications, verify documents, and clear payouts.
 
-### A. Admin Dashboard Summary
-- Shows operational stats: count of pending partner KYCs, pending withdrawals, active credit card leads, and today's total applications.
-
-### B. Partner KYC Management
-- **Verification Queue**: Lists all registered partners.
-- **KYC Details Modal**: Admins review uploaded PAN Card and Cancelled Cheque images, comparing them with text inputs.
-- **Approval Actions**: Admins approve the partner (granting access to marketplace links and withdrawals) or reject them (specifying comments/reasons sent to the partner's profile).
-
-### C. Application & Lead Management
-- Admins oversee two streams of leads:
-  1. **Partner Leads**: Credit card applications submitted by referral partners.
-  2. **Direct Leads**: Applications submitted directly by customers on the public homepage.
-- **Lead Tracking & Resolution**: Admins update the application stages (e.g., Lead Created, Bank Submission, V-KYC Done, Approved, Rejected) and input tracking reference IDs from the bank.
-
-### D. Withdrawal & Payout Control
-- Lists withdrawal requests submitted by partners.
-- Admins verify bank details against the cancelled cheque, check for the 48-hour hold duration, and mark requests as **Approved** (disbursed) or **Rejected** (returning funds to the partner's wallet).
+1. **Admin Statistics Dashboard**: Key cards showing count of pending KYC reviews, pending withdrawal requests, active leads, and recent direct card applications.
+2. **Partner Management Directory**: List of registered referral partners with sorting and searching.
+3. **KYC Document Viewer**: Modal showing PAN card and Cheque images alongside entered text parameters for comparison.
+4. **Partner Activation Control**: One-click buttons to **Approve Partner** (granting link-sharing and withdrawal rights) or **Reject Partner** (sending explanation comments).
+5. **Client Lead Resolution Panel**: View list of customer applications submitted via partners.
+6. **Bank Status Resolution**: Ability to update application status stages (e.g. Lead Created, Sent to Bank, KYC Pending, Approved, Rejected) and assign bank reference tracking numbers.
+7. **Direct Lead Management Console**: View and resolve card leads submitted directly by customers on the public homepage.
+8. **Lead Name-Slug Lookup**: Resolves alphanumeric product name slugs to database UUIDs during form submission, preventing database 400 Bad Request errors.
+9. **Withdrawal Requests Console**: Queue of requested partner payouts.
+10. **Payout Verification Checks**: Tool matching banking details with cheque files and validating if the 48-hour hold has expired before releasing funds.
+11. **Withdrawal Status Update**: Approve payout (marks as paid) or reject payout (releasing the balance back to the partner's wallet).
+12. **Forgot Password Link**: A reset option on the admin login page (`/admin-login`).
 
 ---
 
-## ── 7. SUPERADMIN PANEL (IN DETAIL) ──
+## ── 5. SUPER ADMIN PANEL FEATURES ──
 
-The **SuperAdmin Panel** is the highest level of administrative control, enabling total control over database contents, platform settings, commission structures, homepage styling, and system auditing.
+These features provide system-wide configuration, database management, and operational analytics.
 
-### A. Sidebar Navigation Overhaul
-The SuperAdmin layout organizes system features into distinct categories:
-- **USERS & ACCOUNTS**: Manage system administrators and partner registers.
-- **LEAD TRACKING**: Monitor portal leads and direct card leads.
-- **PRODUCTS & PARTNERS**: Manage banks (Lending Partners) and products (Credit Cards).
-- **MODIFY** (Collapsible accordion):
-  - **Banners Manager**: Upload carousel images, add header titles, and link them to target category routing URLs.
-  - **CMS Homepage Editor**: Modify text headings, sections, and category structures dynamically.
-- **SYSTEM UTILITIES**: Services API, Commission Manager, Audit Logs, Reports.
-- **Active Path Tracking**: The sidebar automatically tracks current navigation and expands the **MODIFY** sub-menu if the user is editing banners or CMS content.
-- **Theme Toggler Status**: Integrates a "LIGHT ☀️" / "DARK 🌙" status text label in the sidebar next to the logout button.
-
-### B. Banking & Product Configurator
-- **Lending Partners**: Admins create banks, upload bank logos, and configure integration APIs.
-- **Credit Card Configurator**: Allows absolute control over individual card entries:
-  - Add names, titles, card images, network types, card categories.
-  - Edit annual and joining fee figures.
-  - Formulate detailed rewards, joining benefits, lounges, and waivers text.
-  - Embed FAQs and Terms & Conditions.
-
-### C. Commission Manager
-- Configures how payouts are distributed to partners for each credit card:
-  - **Total Earning**: The maximum payout potential on card issuance.
-  - **Card Approval & Dispatch Payout**: The baseline commission given on approval.
-  - **Promotional Validity**: Set date schedules (e.g., "Offer valid till 30 June") showing up as dynamic countdown labels on benefits pages.
-
-### D. Audit Logs & System Telemetry
-- A security ledger recording all user actions in the database:
-  - Keeps track of which Admin logged in, changed a card payout, viewed a partner's KYC, or changed a system password.
-  - Non-editable, searchable grid for security compliance.
-
-### E. Financial Reports Engine
-- Generates system-wide analytics.
-- Admins download structured CSV/Excel reports containing filtered lists of leads, partner performance, wallet transactions, and total payouts.
+1. **Collapsible Accordion Sidebar**: Groups super admin pages into:
+   - *USERS & ACCOUNTS*: Manage system administrators and partners.
+   - *LEAD TRACKING*: Monitor portal leads and direct card leads.
+   - *PRODUCTS & PARTNERS*: Manage lending partners and product catalogs.
+   - *MODIFY*: Collapsible CMS and Banners settings.
+   - *SYSTEM UTILITIES*: Services API, Commission Manager, Audit Logs, and Reports.
+2. **Active Path Sidebar Tracker**: Automatically expands the **MODIFY** accordion menu if the user navigates to the Banners or CMS pages.
+3. **Theme Status Sidebar Label**: Integrates visual "LIGHT ☀️" / "DARK 🌙" labels in the sidebar next to the logout button.
+4. **Banners Slider Configurator**: Add/modify homepage marketing banners, upload slider image assets, and map target redirection page URLs.
+5. **Lending Partners Manager**: Create new banks, edit bank names, and configure bank logo images.
+6. **Product Catalog Builder**: Add, edit, or delete credit cards:
+   - Configure basic card info (name, fee details, networks).
+   - Enter card features, benefits, lounge rules, and waivers.
+   - Build FAQ lists.
+   - Input Terms & Conditions.
+7. **Commission Manager**: Set payout commissions for each product, specifying the **Total Earning** potential, **Card Approval & Dispatch** base pay, and the active validity end dates.
+8. **Homepage CMS Manager**: Live editors to customize landing page titles, category sections, customer testimonials, and translator word dictionaries.
+9. **Audit Logs Ledger**: Non-editable database search grid showing time, administrator name, event type, and details of all database operations.
+10. **Reports Export Engine**: Allows generating and downloading filtered CSV/Excel spreadsheets containing full transaction ledger lists, partner commission logs, and lead sheets.
 
 ---
 
-## ── 8. MOBILE APP SHELL INTEGRATION ──
+## ── 6. MOBILE APP SHELL INTEGRATION FEATURES ──
 
-- **WebView Wrapper**: Renders the responsive website inside a mobile application shell located in `/mobile`.
-- **Navigation History Interception**:
-  - Connects to React Native's `BackHandler` API. Intercepts Android's hardware back press, delegating navigation back within the WebView page history instead of quitting the application.
+These features govern the mobile application wrapper.
+
+1. **Native WebView Container**: Loads the responsive web application inside a native wrapper in `/mobile`, ensuring identical functionality and design aesthetics.
+2. **Hardware Back Button Interception**: Connects to the React Native `BackHandler` API to intercept back key presses on Android. Pressing the hardware back button navigates backward within the WebView page history instead of closing the application.
