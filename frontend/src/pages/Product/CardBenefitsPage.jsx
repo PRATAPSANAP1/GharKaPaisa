@@ -5,7 +5,7 @@ import { getCardDetails } from '../../components/Home/CreditCards/CardDetailsDat
 import { 
   FaArrowLeft, FaWhatsapp, FaGift, FaCheckCircle, 
   FaRegFileAlt, FaVideo, FaInfoCircle, FaChevronDown, FaChevronUp,
-  FaRupeeSign
+  FaRupeeSign, FaBolt, FaStar
 } from 'react-icons/fa';
 import './CardBenefitsPage.css';
 
@@ -14,10 +14,10 @@ export default function CardBenefitsPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   
-  // Format the name slightly if it's a fallback ID
   const defaultName = id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Card';
   const cardInfo = getCardDetails(id, defaultName);
   
+  const [activeTab, setActiveTab] = useState('offer');
   const [openFaq, setOpenFaq] = useState(null);
 
   const handleWhatsAppShare = () => {
@@ -28,7 +28,6 @@ export default function CardBenefitsPage() {
   };
 
   const handleApply = () => {
-    // Navigate to a generic apply flow or product flow
     alert(`Redirecting to apply for ${cardInfo.name}`);
   };
 
@@ -37,6 +36,16 @@ export default function CardBenefitsPage() {
   }
 
   const { specialOffers, features, eligibility, trainingVideoUrl, howItWorks, termsAndConditions, faqs } = cardInfo;
+
+  const tabs = [
+    { id: 'offer', label: 'Special Offer', icon: <FaGift /> },
+    { id: 'benefits', label: 'Benefits', icon: <FaStar /> },
+    { id: 'eligibility', label: 'Eligibility', icon: <FaInfoCircle /> },
+    { id: 'howItWorks', label: 'How It Works', icon: <FaBolt /> },
+    ...(trainingVideoUrl ? [{ id: 'video', label: 'Video', icon: <FaVideo /> }] : []),
+    ...(faqs && faqs.length > 0 ? [{ id: 'faqs', label: "FAQ's", icon: <FaRegFileAlt /> }] : []),
+    { id: 'tnc', label: 'T&C', icon: <FaRegFileAlt /> }
+  ];
 
   return (
     <div className="cbp-container">
@@ -53,139 +62,166 @@ export default function CardBenefitsPage() {
         </button>
       </div>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '100px' }}>
 
         {/* Hero Section */}
         <div className="cbp-hero">
           <h2 className="cbp-hero-title">{cardInfo.name}</h2>
-          <p className="cbp-hero-subtitle">Exclusive benefits and high reward earnings</p>
-          
-          <div className="cbp-glass-grid">
-            <div className="cbp-glass-card">
-              <div className="cbp-glass-label">Total Earning</div>
-              <div className="cbp-glass-value highlight">{specialOffers?.totalEarning || "N/A"}</div>
-            </div>
-            <div className="cbp-glass-card">
-              <div className="cbp-glass-label">Approval & Dispatch</div>
-              <div className="cbp-glass-value">{specialOffers?.cardApprovalDispatch || "N/A"}</div>
-            </div>
-          </div>
+          <p className="cbp-hero-subtitle">Unlock exclusive benefits and high rewards</p>
+        </div>
 
-          {specialOffers?.dateOffer && (
-            <div className="cbp-date-offer">
-              <div className="cbp-date-offer-title">
-                <FaGift size={16} /> {specialOffers.dateOffer.title}
+        {/* Dynamic Tab Navigation */}
+        <div className="cbp-tab-nav-wrapper">
+          <div className="cbp-tab-nav">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`cbp-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className="cbp-tab-icon">{tab.icon}</span>
+                <span className="cbp-tab-label">{tab.label}</span>
+                {activeTab === tab.id && <span className="cbp-tab-indicator"></span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content Area */}
+        <div className="cbp-tab-content-container">
+          
+          {/* SPECIAL OFFER TAB */}
+          {activeTab === 'offer' && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Current Offers</h3>
+              <div className="cbp-glass-grid" style={{ marginBottom: '16px' }}>
+                <div className="cbp-glass-card-dark">
+                  <div className="cbp-glass-label">Total Earning</div>
+                  <div className="cbp-glass-value highlight">{specialOffers?.totalEarning || "N/A"}</div>
+                </div>
+                <div className="cbp-glass-card-dark">
+                  <div className="cbp-glass-label">Approval & Dispatch</div>
+                  <div className="cbp-glass-value text-white">{specialOffers?.cardApprovalDispatch || "N/A"}</div>
+                </div>
               </div>
-              <div className="cbp-date-offer-text">{specialOffers.dateOffer.details}</div>
+              
+              {specialOffers?.dateOffer && (
+                <div className="cbp-date-offer">
+                  <div className="cbp-date-offer-title">
+                    <FaGift size={16} /> {specialOffers.dateOffer.title}
+                  </div>
+                  <div className="cbp-date-offer-text">{specialOffers.dateOffer.details}</div>
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        {/* Benefits & Features */}
-        <div className="cbp-section">
-          <div className="cbp-section-header">
-            <div className="cbp-section-icon blue"><FaCheckCircle size={18} /></div>
-            <h3 className="cbp-section-title">Benefits & Features</h3>
-          </div>
-          <ul className="cbp-feature-list">
-            {features?.map((f, idx) => (
-              <li key={idx} className="cbp-feature-item">
-                <FaCheckCircle className="cbp-feature-check" />
-                <span className="cbp-feature-text">{f}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Whom to Refer / Eligibility */}
-        <div className="cbp-section">
-          <div className="cbp-section-header">
-            <div className="cbp-section-icon purple"><FaInfoCircle size={18} /></div>
-            <h3 className="cbp-section-title">Eligibility & Documents</h3>
-          </div>
-          <p className="cbp-feature-text" style={{ marginBottom: '16px' }}>{eligibility?.criteria}</p>
-          
-          <div className="cbp-glass-label" style={{ color: '#64748b', fontSize: '0.8rem' }}>Required Documents</div>
-          <div className="cbp-tag-container">
-            {eligibility?.documentsRequired?.map((doc, idx) => (
-              <span key={idx} className="cbp-tag">
-                <FaRegFileAlt className="text-slate-400" /> {doc}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Training Video */}
-        {trainingVideoUrl && (
-          <div className="cbp-section">
-            <div className="cbp-section-header">
-              <div className="cbp-section-icon red"><FaVideo size={18} /></div>
-              <h3 className="cbp-section-title">Training Video</h3>
+          {/* BENEFITS TAB */}
+          {activeTab === 'benefits' && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Key Features & Benefits</h3>
+              <ul className="cbp-feature-list">
+                {features?.map((f, idx) => (
+                  <li key={idx} className="cbp-feature-item">
+                    <div className="cbp-feature-icon-wrapper"><FaCheckCircle /></div>
+                    <span className="cbp-feature-text">{f}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div style={{ aspectRatio: '16/9', background: '#f1f5f9', borderRadius: '16px', overflow: 'hidden', position: 'relative' }}>
-              <iframe 
-                width="100%" 
-                height="100%" 
-                src={trainingVideoUrl} 
-                title="Training Video" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-              ></iframe>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* How it Works */}
-        <div className="cbp-section">
-          <div className="cbp-section-header">
-            <div className="cbp-section-icon green"><FaRupeeSign size={16} /></div>
-            <h3 className="cbp-section-title">How It Works</h3>
-          </div>
-          <div style={{ paddingLeft: '8px' }}>
-            {howItWorks?.map((step, idx) => (
-              <div key={idx} className="cbp-step">
-                <div className="cbp-step-number">{idx + 1}</div>
-                <div className="cbp-step-text">{step}</div>
+          {/* ELIGIBILITY TAB */}
+          {activeTab === 'eligibility' && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Who can apply?</h3>
+              <div className="cbp-info-box">
+                <FaInfoCircle className="cbp-info-icon" />
+                <p className="cbp-info-text">{eligibility?.criteria}</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* FAQs */}
-        {faqs && faqs.length > 0 && (
-          <div className="cbp-section">
-            <div className="cbp-section-header" style={{ marginBottom: '16px' }}>
-              <h3 className="cbp-section-title">Frequently Asked Questions</h3>
+              
+              <h4 className="cbp-pane-subtitle">Documents Required</h4>
+              <div className="cbp-tag-container">
+                {eligibility?.documentsRequired?.map((doc, idx) => (
+                  <span key={idx} className="cbp-tag">
+                    <FaRegFileAlt className="text-blue-500" /> {doc}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div>
-              {faqs.map((faq, idx) => (
-                <div key={idx} className={`cbp-faq-item ${openFaq === idx ? 'active' : ''}`}>
-                  <button 
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    className="cbp-faq-btn"
-                  >
-                    {faq.q}
-                    <FaChevronDown className="cbp-faq-icon" />
-                  </button>
-                  {openFaq === idx && (
-                    <div className="cbp-faq-answer">
-                      {faq.a}
+          )}
+
+          {/* HOW IT WORKS TAB */}
+          {activeTab === 'howItWorks' && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Application Process</h3>
+              <div className="cbp-timeline">
+                {howItWorks?.map((step, idx) => (
+                  <div key={idx} className="cbp-step">
+                    <div className="cbp-step-number">{idx + 1}</div>
+                    <div className="cbp-step-content">
+                      <h4 className="cbp-step-title">Step {idx + 1}</h4>
+                      <p className="cbp-step-text">{step}</p>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* T&C */}
-        <div className="cbp-section" style={{ background: 'transparent', boxShadow: 'none', border: 'none', padding: '0 16px', marginBottom: '80px' }}>
-          <div className="cbp-glass-label" style={{ color: '#94a3b8' }}>Terms & Conditions</div>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.6', margin: 0 }}>
-            {termsAndConditions}
-          </p>
+          {/* VIDEO TAB */}
+          {activeTab === 'video' && trainingVideoUrl && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Training & Overview</h3>
+              <div className="cbp-video-container">
+                <iframe 
+                  src={trainingVideoUrl} 
+                  title="Training Video" 
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          )}
+
+          {/* FAQS TAB */}
+          {activeTab === 'faqs' && faqs && faqs.length > 0 && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Frequently Asked Questions</h3>
+              <div className="cbp-faq-list">
+                {faqs.map((faq, idx) => (
+                  <div key={idx} className={`cbp-faq-item ${openFaq === idx ? 'active' : ''}`}>
+                    <button 
+                      onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                      className="cbp-faq-btn"
+                    >
+                      <span>{faq.q}</span>
+                      <div className="cbp-faq-icon-wrapper">
+                        <FaChevronDown className="cbp-faq-icon" />
+                      </div>
+                    </button>
+                    <div className="cbp-faq-answer-wrapper">
+                      <div className="cbp-faq-answer">
+                        {faq.a}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* T&C TAB */}
+          {activeTab === 'tnc' && (
+            <div className="cbp-tab-pane slide-up">
+              <h3 className="cbp-pane-title">Terms & Conditions</h3>
+              <div className="cbp-tnc-box">
+                <p>{termsAndConditions}</p>
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>
@@ -193,6 +229,7 @@ export default function CardBenefitsPage() {
       {/* Sticky Bottom Action Bar */}
       <div className="cbp-footer">
         <button onClick={handleApply} className="cbp-apply-btn">
+          <span className="btn-glow"></span>
           Apply Now
         </button>
       </div>
