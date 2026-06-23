@@ -2,7 +2,7 @@
 
 Welcome to **GharKaPaisa**, a premium web and mobile application designed for credit card lead generation, partner commissions management, and multi-tenant administrative control. 
 
-This document serves as a detailed report of all features, functionalities, and user interfaces implemented in the project.
+This document serves as an exhaustive, detailed technical report of all features, functionalities, interfaces, and panels implemented in the project.
 
 ---
 
@@ -14,9 +14,9 @@ The homepage serves as the primary portal for customers, referral partners, and 
 The header navbar is designed with modern styling, clean alignments, and a highly responsive layout:
 - **Company Logo**: A high-resolution, clickable brand logo positioned at the far left of the navbar. Clicking the logo instantly routes the user back to the homepage.
 - **Three Quick-Access Portal Buttons**:
-  - **Admin Login**: Routes the user directly to the SuperAdmin and Admin login panel (`/admin-login`).
-  - **Partner Login**: Routes the user to the registered referral partner login and dashboard workspace (`/login`).
-  - **Employee Login**: Provides a dedicated routing pathway for organization employees to access internal management views.
+  - **Admin**: Routes the user directly to the Admin/SuperAdmin login panel (`/admin-login`).
+  - **Partner**: Routes the user to the registered referral partner login and dashboard workspace (`/login`).
+  - **Employee**: Points to the administrative portal login (`/admin-login`) where internal employees log in with their assigned credentials.
 - **Mode Changer (Theme Toggler)**:
   - A custom-designed switch that enables instant toggling between **Light Mode** (sleek, high-contrast brand aesthetics with clean white and blue tones) and **Dark Mode** (deep-navy surface backgrounds, optimized for low-light environments).
   - Synchronizes throughout all sub-routes, layout wrappers, and dashboard components.
@@ -57,7 +57,7 @@ The core of the catalog browsing experience is structured hierarchically:
   - **Yes Bank**
   - **IDFC First Bank**
   - **Federal Bank**
-- Clicking on a specific bank's name or logo opens a dedicated catalog of that bank's credit cards. Each card card is rendered beautifully with its card image, reward highlights, annual/joining fees, and card network (Visa, Mastercard, RuPay).
+- Clicking on a specific bank's name or logo opens a dedicated catalog of that bank's credit cards. Each card is rendered beautifully with its card image, reward highlights, annual/joining fees, and card network (Visa, Mastercard, RuPay).
 
 ### Individual Card Action Buttons
 For every credit card displayed in the bank-specific catalog, three main action buttons are provided:
@@ -106,46 +106,135 @@ The card details are structured into several tabs for easy navigation:
 
 ---
 
-## ── 4. PARTNER PORTAL ──
+## ── 4. PARTNER PORTAL (IN DETAIL) ──
 
-The referral partner system facilitates user enrollment, application submissions, and commission tracking.
+The **Partner Portal** is a comprehensive, dashboard-driven environment that empowers independent financial agents to submit customer leads, browse available products, track payout earnings, and manage account preferences.
 
-### Streamlined Registration & KYC
-- **Registration Form**: Captures password input directly at the time of registration with secure validation.
-- **Mandatory KYC Documents**: Reduced the document upload checklist to require only **PAN Card** and **Cancelled Cheque** (Aadhaar and GST uploads are removed) to speed up onboarding and remove friction.
-- **Authentication**: Supports dual login methods using standard Password authentication or MSG91 SMS OTP verification.
+### A. Partner Registration & Simplified KYC Onboarding
+- **Account Creation**: Partners sign up using their basic details (First Name, Last Name, Email, and Mobile number).
+- **Direct Password Setting**: A secure password input is requested at registration time, enforcing length and composition checks.
+- **Simplified Document Checklist**: To remove registration friction and expedite approvals, KYC is restricted to taking only two mandatory documents:
+  - **PAN Card** (Input and document image upload)
+  - **Cancelled Cheque** (Input and document image upload)
+  - *Note*: Aadhaar card and GST options are removed to streamline onboardings.
+- **Authentication**: Supports secure login using a registered Mobile/Email & Password combination, with fallback to MSG91-backed SMS OTP verification.
 
-### Partner Dashboard & Wallet
-- **Metrics Overview**: Tracks total applications submitted, approved leads, pending commissions, and paid out earnings.
-- **Wallet System**: Displays wallet balances and withdrawal requests matching bank account payouts, with automatic 48-hour holds on payouts for audit checks.
+### B. Partner Dashboard (Analytics Hub)
+Upon logging in, partners are greeted with a dashboard displaying metrics and tools:
+- **Key Statistics Cards**:
+  - **Total Leads**: Cumulative number of customer applications submitted.
+  - **Approved Leads**: Payout-eligible approved card applications.
+  - **Pending Payouts**: Verified commissions awaiting payment release.
+  - **Total Earnings**: Lifetime earnings generated on the platform.
+- **Recent Lead Tracker**: A summary list of the partner's latest lead submissions showing customer name, card applied for, submission date, status, and comments.
+- **Referral Invitation Section**: Displays the partner's unique referral link and referral code, allowing them to invite other partners to their team.
+
+### C. Partner Marketplace (Product Catalog)
+- **Product Hub**: Partners browse all credit cards and banking products configured in the system.
+- **Search & Filter**: Quickly locate cards by bank (Lending Partner) or categories (e.g., Rewards, Cashback, Fuel, Travel, Lifetime Free).
+- **Commission Indicators**: Each card showcases the exact commission potential (e.g., ₹2,500 on approval) and active promotional validity.
+- **Unique Referral Links**: Provides two primary options for every product:
+  - **Share Link**: Instantly copies a tracking-parameter-equipped referral link to share with clients via social media or messaging platforms.
+  - **Apply Directly**: Launches the lead generation flow inside the partner's workspace to directly record details for a client.
+
+### D. Wallet & Withdrawal System
+- **Real-Time Balance**: Displays current withdrawable funds and historical withdrawals.
+- **Bank Account Setup**: Partners configure their payout bank name, branch, account number, and IFSC code.
+- **Withdrawal Requests**: Partners trigger payout requests directly to their bank account.
+- **Security Check Hold**: System applies an automated 48-hour audit hold on newly requested withdrawals to prevent fraud.
 
 ---
 
-## ── 5. ADMIN & SUPERADMIN PANEL ──
+## ── 5. SUPER PARTNER / TEAM NETWORK (IN DETAIL) ──
 
-System administrators manage all resources, configurations, and commission payouts from the Admin Panel.
+The **Super Partner** capability is built directly into the **Team Network** module of the Partner Portal. It enables established agents to operate as network sub-distributors, onboarding child partners and earning bonuses or overrides.
 
-### Sidebar Navigation Overhaul
-The SuperAdmin dashboard is organized into clear, structured categories:
-- **USERS & ACCOUNTS**: Admins directory, Partners directory
-- **LEAD TRACKING**: Leads, Direct Card Leads
-- **PRODUCTS & PARTNERS**: Lending Partners (Banks), Products catalog
+### A. Building the Network
+- **Referral Sign-up**: New partners can register using a Super Partner's unique `Referral Code`.
+- **Direct Creation Modal**: Super Partners can manually add team members directly from their dashboard using the **"Add Team Member"** form. This form requires:
+  - Member's First and Last Name
+  - Email Address
+  - Mobile Number
+  - Custom Password (communicated to the team member for their first login)
+- **Automatic Association**: The backend assigns the created partner account under the parent partner ID, creating a parent-child relationship hierarchy.
+
+### B. Team Management Grid
+Super Partners monitor their downline organization through an interactive management console:
+- **Member Directory**: Lists all referred/child partners.
+- **Member Info & Contacts**: Displays profile initials, names, email addresses, and phone numbers.
+- **Unique Partner Code Tracker**: Displays each team member's assigned `Partner_code` for verification.
+- **KYC Status Indicators**: Displays real-time status of the child partner's KYC approval (`PENDING`, `APPROVED`, or `REJECTED`) represented by color-coded badges (Amber, Green, Red).
+- **Joining Timeline**: Records the exact date and time the member joined the team network.
+
+---
+
+## ── 6. ADMIN PANEL (IN DETAIL) ──
+
+The **Admin Panel** is geared toward operational administrators who manage partners, verify KYC files, update lead statuses, and authorize financial withdrawals.
+
+### A. Admin Dashboard Summary
+- Shows operational stats: count of pending partner KYCs, pending withdrawals, active credit card leads, and today's total applications.
+
+### B. Partner KYC Management
+- **Verification Queue**: Lists all registered partners.
+- **KYC Details Modal**: Admins review uploaded PAN Card and Cancelled Cheque images, comparing them with text inputs.
+- **Approval Actions**: Admins approve the partner (granting access to marketplace links and withdrawals) or reject them (specifying comments/reasons sent to the partner's profile).
+
+### C. Application & Lead Management
+- Admins oversee two streams of leads:
+  1. **Partner Leads**: Credit card applications submitted by referral partners.
+  2. **Direct Leads**: Applications submitted directly by customers on the public homepage.
+- **Lead Tracking & Resolution**: Admins update the application stages (e.g., Lead Created, Bank Submission, V-KYC Done, Approved, Rejected) and input tracking reference IDs from the bank.
+
+### D. Withdrawal & Payout Control
+- Lists withdrawal requests submitted by partners.
+- Admins verify bank details against the cancelled cheque, check for the 48-hour hold duration, and mark requests as **Approved** (disbursed) or **Rejected** (returning funds to the partner's wallet).
+
+---
+
+## ── 7. SUPERADMIN PANEL (IN DETAIL) ──
+
+The **SuperAdmin Panel** is the highest level of administrative control, enabling total control over database contents, platform settings, commission structures, homepage styling, and system auditing.
+
+### A. Sidebar Navigation Overhaul
+The SuperAdmin layout organizes system features into distinct categories:
+- **USERS & ACCOUNTS**: Manage system administrators and partner registers.
+- **LEAD TRACKING**: Monitor portal leads and direct card leads.
+- **PRODUCTS & PARTNERS**: Manage banks (Lending Partners) and products (Credit Cards).
 - **MODIFY** (Collapsible accordion):
-  - Banners manager (Manage carousel banners and redirection URLs)
-  - CMS Homepage editor (Manage section titles and homepage content)
-- **SYSTEM UTILITIES**: Services API, Commission Manager, Audit Logs, Reports
+  - **Banners Manager**: Upload carousel images, add header titles, and link them to target category routing URLs.
+  - **CMS Homepage Editor**: Modify text headings, sections, and category structures dynamically.
+- **SYSTEM UTILITIES**: Services API, Commission Manager, Audit Logs, Reports.
 - **Active Path Tracking**: The sidebar automatically tracks current navigation and expands the **MODIFY** sub-menu if the user is editing banners or CMS content.
 - **Theme Toggler Status**: Integrates a "LIGHT ☀️" / "DARK 🌙" status text label in the sidebar next to the logout button.
 
-### Admin Tools & Security
-- **Forgot Password**: Integrated password reset options on the admin login screen.
-- **Lead Resolution Fix**: Public form application lead submissions resolve card parameters via slug name lookups, avoiding PostgreSQL UUID mismatch exceptions (HTTP 400/422).
+### B. Banking & Product Configurator
+- **Lending Partners**: Admins create banks, upload bank logos, and configure integration APIs.
+- **Credit Card Configurator**: Allows absolute control over individual card entries:
+  - Add names, titles, card images, network types, card categories.
+  - Edit annual and joining fee figures.
+  - Formulate detailed rewards, joining benefits, lounges, and waivers text.
+  - Embed FAQs and Terms & Conditions.
+
+### C. Commission Manager
+- Configures how payouts are distributed to partners for each credit card:
+  - **Total Earning**: The maximum payout potential on card issuance.
+  - **Card Approval & Dispatch Payout**: The baseline commission given on approval.
+  - **Promotional Validity**: Set date schedules (e.g., "Offer valid till 30 June") showing up as dynamic countdown labels on benefits pages.
+
+### D. Audit Logs & System Telemetry
+- A security ledger recording all user actions in the database:
+  - Keeps track of which Admin logged in, changed a card payout, viewed a partner's KYC, or changed a system password.
+  - Non-editable, searchable grid for security compliance.
+
+### E. Financial Reports Engine
+- Generates system-wide analytics.
+- Admins download structured CSV/Excel reports containing filtered lists of leads, partner performance, wallet transactions, and total payouts.
 
 ---
 
-## ── 6. MOBILE APP SHELL INTEGRATION ──
+## ── 8. MOBILE APP SHELL INTEGRATION ──
 
-- **WebView Wrapper**: Renders the responsive web app within a mobile shell in the `/mobile` directory, maintaining the exact look and feel of the website.
-- **Hardware Back Button Interception**:
-  - Uses React Native's `BackHandler` API to intercept back navigation on Android.
-  - Pressing the hardware back button navigates backward within the WebView's page history instead of closing the application.
+- **WebView Wrapper**: Renders the responsive website inside a mobile application shell located in `/mobile`.
+- **Navigation History Interception**:
+  - Connects to React Native's `BackHandler` API. Intercepts Android's hardware back press, delegating navigation back within the WebView page history instead of quitting the application.
