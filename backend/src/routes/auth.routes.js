@@ -34,4 +34,7 @@ router.post('/logout', jwtAuth, ctrl.logout);
 // Admin-only route to set role
 router.put('/admin/set-role', authLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.setRole);
 
+// Password update with OTP (Requires JWT Auth)
+router.post('/update-password-with-otp', authLimiter, jwtAuth, ctrl.updatePasswordWithOtp);
+
 module.exports = router;

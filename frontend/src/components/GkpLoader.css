@@ -1,0 +1,38 @@
+.loader-container {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+}
+
+.loader-logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+
+  animation: logoPulseRotate 1.5s ease-in-out infinite;
+
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+
+  filter: drop-shadow(
+    0 0 15px rgba(13, 92, 171, 0.35)
+  );
+}
+
+@keyframes logoPulseRotate {
+  0% {
+    transform: rotateY(0deg);
+  }
+
+  50% {
+    transform: rotateY(75deg);
+  }
+
+  100% {
+    transform: rotateY(0deg);
+  }
+}

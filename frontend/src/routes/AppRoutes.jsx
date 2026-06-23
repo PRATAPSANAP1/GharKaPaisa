@@ -62,8 +62,17 @@ import {
   PartnerApplications, 
   PartnerWallet, 
   PartnerProfile,
-  PartnerProducts
+  PartnerProducts,
+  PartnerApplications
 } from '../pages/Partner';
+import PartnerTeam from '../pages/Partner/PartnerTeam';
+import PartnerKyc from '../pages/Partner/PartnerKyc';
+import PartnerCrm from '../pages/Partner/PartnerCrm';
+import PartnerSupport from '../pages/Partner/PartnerSupport';
+import PartnerVault from '../pages/Partner/PartnerVault';
+import PartnerMarketing from '../pages/Partner/PartnerMarketing';
+import PartnerTraining from '../pages/Partner/PartnerTraining';
+import ComingSoonModule from '../pages/Partner/ComingSoonModule';
 
 const AppRoutes = () => {
   const { isInitializing, initializeAuth } = useAuthStore();
@@ -175,10 +184,23 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PartnerDashboard />} />
-        <Route path="applications" element={<PartnerApplications />} />
-        <Route path="wallet" element={<PartnerWallet />} />
+        <Route path="marketplace" element={<PartnerProducts />} />
+        <Route path="credit-center" element={<ComingSoonModule title="Credit Card Center" />} />
+        <Route path="leads" element={<PartnerApplications />} />
+        <Route path="crm" element={<PartnerCrm />} />
+        <Route path="kyc" element={<PartnerKyc />} />
         <Route path="profile" element={<PartnerProfile />} />
-        <Route path="products" element={<PartnerProducts />} />
+        <Route path="vault" element={<PartnerVault />} />
+        <Route path="wallet" element={<PartnerWallet />} />
+        <Route path="referral" element={<PartnerTeam />} />
+        <Route path="training" element={<PartnerTraining />} />
+        <Route path="marketing" element={<PartnerMarketing />} />
+        <Route path="support" element={<PartnerSupport />} />
+        <Route path="settings" element={<ComingSoonModule title="Settings & Security" />} />
+        
+        {/* Legacy Support */}
+        <Route path="products" element={<Navigate to="../marketplace" replace />} />
+        <Route path="applications" element={<Navigate to="../leads" replace />} />
       </Route>
 
       {/* Admin Routes */}

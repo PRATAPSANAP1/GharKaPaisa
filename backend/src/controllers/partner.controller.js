@@ -240,11 +240,26 @@ const listPartners = async (req, res, next) => {
       values.push(`%${search}%`); idx++;
     }
 
+    let hasParentCol = true;
+    try {
+      await query(`SELECT parent_partner_id FROM Partner_profiles LIMIT 1`);
+    } catch(e) {
+      hasParentCol = false;
+    }
+
     const countQuery = `SELECT COUNT(*) FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id ${where}`;
+    
+    let selectFields = `ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.company_name, u.email, u.mobile, u.status, u.created_at`;
+    let joinClause = ``;
+    if (hasParentCol) {
+      selectFields += `, ap.parent_partner_id, pap.Partner_code as parent_code`;
+      joinClause = `LEFT JOIN Partner_profiles pap ON pap.id = ap.parent_partner_id`;
+    }
+
     const dataQuery = `
-      SELECT ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.company_name,
-        u.email, u.mobile, u.status, u.created_at
+      SELECT ${selectFields}
       FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id
+      ${joinClause}
       ${where} ORDER BY u.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}
     `;
 
@@ -437,6 +452,103 @@ const approvePartnerKYC = async (req, res, next) => {
   }
 };
 
+// POST /partner/:PartnerId/team (Create child partner)
+const addTeamMember = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { PartnerId } = req.params;
+    const { first_name, last_name, email, mobile, password } = req.body;
+
+    if (!first_name || !email || !mobile || !password) {
+      return error(res, 'First name, email, mobile, and password are required', 400);
+    }
+
+    // Check if parent exists
+    const { rows: [parentPartner] } = await client.query(`SELECT id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
+    if (!parentPartner) return error(res, 'Parent partner not found', 404);
+
+    await client.query('BEGIN');
+
+    // Check if user exists
+    const { rows: existingUser } = await client.query(
+      `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
+      [email, mobile]
+    );
+
+    if (existingUser.length) {
+      await client.query('ROLLBACK');
+      return error(res, 'User with this email or mobile already exists', 409);
+    }
+
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Insert user (must_change_password = true)
+    const { rows: [user] } = await client.query(
+      `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, must_change_password)
+       VALUES ($1, $2, $3, 'PARTNER', 'active', true, true) RETURNING id`,
+      [email, mobile, passwordHash]
+    );
+
+    // Generate Partner code
+    const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
+    const { generatePartnerCode } = require('../utils/helpers');
+    const partnerCode = generatePartnerCode(parseInt(nextval));
+
+    // Create child partner profile
+    const { rows: [childPartner] } = await client.query(`
+      INSERT INTO Partner_profiles (
+        user_id, Partner_code, first_name, last_name, parent_partner_id, kyc_status
+      )
+      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id
+    `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
+
+    // Create wallet
+    await client.query(`INSERT INTO wallets (Partner_id) VALUES ($1)`, [childPartner.id]);
+
+    await client.query('COMMIT');
+    return created(res, { partner_code: partnerCode }, 'Team member created successfully. They can now log in using their email and password.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// GET /partner/:PartnerId/team (List child partners)
+const getTeamMembers = async (req, res, next) => {
+  try {
+    const { PartnerId } = req.params;
+    
+    // Check if parent_partner_id column exists safely (in case migration is pending)
+    let hasParentCol = true;
+    try {
+      await query(`SELECT parent_partner_id FROM Partner_profiles LIMIT 1`);
+    } catch(e) {
+      hasParentCol = false;
+    }
+
+    if (!hasParentCol) {
+       return success(res, [], 'Team management not fully initialized yet.');
+    }
+
+    const { rows: team } = await query(`
+      SELECT ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status,
+             u.email, u.mobile, u.status, u.created_at
+      FROM Partner_profiles ap
+      JOIN users u ON u.id = ap.user_id
+      WHERE ap.parent_partner_id = $1
+      ORDER BY u.created_at DESC
+    `, [PartnerId]);
+
+    return success(res, team);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -446,5 +558,7 @@ module.exports = {
   approvePartner,
   getSelfProfile,
   uploadSelfKYC,
-  approvePartnerKYC
+  approvePartnerKYC,
+  addTeamMember,
+  getTeamMembers
 };

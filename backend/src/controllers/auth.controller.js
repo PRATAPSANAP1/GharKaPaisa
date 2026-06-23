@@ -58,7 +58,7 @@ const clearRefreshTokenCookie = (res) => {
 const getMe = async (req, res, next) => {
   try {
       const { rows: [user] } = await query(`
-        SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login,
+        SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
           ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
           ap.business_location, ap.gst_number, ap.company_type, ap.pincode,
@@ -822,6 +822,45 @@ const setRole = async (req, res, next) => {
   }
 };
 
+// ── POST /auth/update-password-with-otp ───────────────────────────────────────
+const updatePasswordWithOtp = async (req, res, next) => {
+  try {
+    const { otp, newPassword } = req.body;
+    if (!otp || !newPassword) return error(res, 'OTP and new password are required', 400);
+
+    const identity = req.user.email; // Default to email, but can fallback to mobile if needed
+
+    // Validate OTP
+    const crypto = require('crypto');
+    const { OTP_PEPPER } = require('../config/jwt.config');
+    const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
+    
+    const { rows: [record] } = await query(`
+      SELECT * FROM otp_verifications 
+      WHERE (identity = $1 OR identity = $2) AND otp_hash = $3 AND expires_at > NOW()
+    `, [req.user.email, req.user.phone, otpHash]);
+
+    if (!record) {
+      return error(res, 'Invalid or expired OTP code', 400);
+    }
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
+
+    // Hash new password
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update user password and clear must_change_password
+    await query(`
+      UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2
+    `, [passwordHash, req.user.id]);
+
+    return success(res, {}, 'Password updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getMe,
   lookupUser,
@@ -838,5 +877,6 @@ module.exports = {
   resendVerificationEmail,
   logout,
   setRole,
-  refresh
+  refresh,
+  updatePasswordWithOtp
 };

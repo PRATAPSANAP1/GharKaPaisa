@@ -40,4 +40,8 @@ router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), requireApprovedPar
 router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
 router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.approvePartner);
 
+// Team management
+router.post('/:PartnerId/team', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.addTeamMember);
+router.get('/:PartnerId/team', selfOrAdmin('PartnerId'), ctrl.getTeamMembers);
+
 module.exports = router;

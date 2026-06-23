@@ -238,7 +238,16 @@ export default function ManagePartners() {
                       {partner.first_name} {partner.last_name}
                       {partner.company_name && <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 500 }}>{partner.company_name}</div>}
                     </td>
-                    <td style={{ padding: "14px 16px", fontMono: true }}>{partner.Partner_code}</td>
+                    <td style={{ padding: "14px 16px", fontMono: true }}>
+                      <div>{partner.Partner_code}</div>
+                      {partner.parent_code && (
+                        <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>
+                          <span style={{ background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", border: `1px solid ${C.border}` }}>
+                            Child of: {partner.parent_code}
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: "14px 16px" }}>
                       <div>{partner.email}</div>
                       <div style={{ fontSize: "11px", color: C.textLight }}>{partner.mobile}</div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWalletStore } from '../../store/walletStore';
 import api from '../../api/api';
+import { MdFileDownload, MdPictureAsPdf } from 'react-icons/md';
 
 const PartnerWallet = () => {
   const fetchWallet = useWalletStore((state) => state.fetchWallet);
@@ -40,6 +41,39 @@ const PartnerWallet = () => {
     } finally {
       setRequesting(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (!transactions || transactions.length === 0) {
+      return alert("No transactions available to export.");
+    }
+
+    const headers = ['Date', 'Reference', 'Customer', 'Product', 'Bank', 'Type', 'Amount', 'Status'];
+    const rows = transactions.map(t => [
+      new Date(t.created_at).toLocaleDateString(),
+      `"${t.app_number || t.reference_id || 'N/A'}"`,
+      `"${t.customer_name || 'N/A'}"`,
+      `"${t.product_name || 'N/A'}"`,
+      `"${t.bank_code || 'N/A'}"`,
+      t.type,
+      t.amount,
+      t.status
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `wallet_statement_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
   };
 
   return (
@@ -112,8 +146,22 @@ const PartnerWallet = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
-        <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+        <div className="p-5 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50">
           <h3 className="text-lg font-semibold text-gray-800">Commission Ledger</h3>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <MdFileDownload size={18} className="text-green-600" /> Export CSV
+            </button>
+            <button 
+              onClick={handleExportPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <MdPictureAsPdf size={18} className="text-red-500" /> Save as PDF
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {transactions.length === 0 ? (

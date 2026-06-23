@@ -123,6 +123,7 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE`);
 
   // Table to track emails pre-verified via registration OTP
   await query(`
@@ -164,6 +165,7 @@ const migrate = async () => {
   `);
 
   await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES Partner_profiles(id)`);
 
 
   // ── Partner Bank Details ────────────────────────────────────────

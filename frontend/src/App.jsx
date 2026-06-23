@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { ThemeProvider } from './components/Partner/ThemeContext';
-import LoadingLogo from './components/LoadingLogo';
+import GkpLoader from './components/GkpLoader';
 import './App.css';
 
 function App() {
@@ -23,8 +23,10 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        {loading && <LoadingLogo />}
-        <AppRoutes />
+        {loading && <GkpLoader />}
+        <Suspense fallback={<GkpLoader />}>
+          <AppRoutes />
+        </Suspense>
       </BrowserRouter>
     </ThemeProvider>
   );
