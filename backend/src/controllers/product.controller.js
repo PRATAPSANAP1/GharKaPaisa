@@ -44,10 +44,24 @@ const listProducts = async (req, res, next) => {
 // GET /products/:id
 const getProduct = async (req, res, next) => {
   try {
-    const { rows: [product] } = await query(`
-      SELECT p.*, b.name as bank_name, b.short_code as bank_code
-      FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
-    `, [req.params.id]);
+    const idOrSlug = req.params.id;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
+    let product;
+    if (isUUID) {
+      const { rows } = await query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code
+        FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
+      `, [idOrSlug]);
+      product = rows[0];
+    } else {
+      const { rows } = await query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code
+        FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
+      `);
+      product = rows.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === idOrSlug.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    }
+
     if (!product) return notFound(res);
     return success(res, product);
   } catch (err) {

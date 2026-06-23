@@ -34,7 +34,7 @@ export default function ApplyForm() {
     setLoading(true);
     try {
       await api.post('/applications/public', {
-        product_id: id,
+        product_id: product?.id || id,
         customer: {
           full_name: form.full_name,
           mobile: form.mobile,
