@@ -11,7 +11,7 @@ import {
   FaChartLine, FaFileInvoiceDollar, FaCalculator, FaUsers, FaMoneyCheckAlt,
   FaStar, FaGooglePlay, FaApple, FaLinkedin, FaYoutube, FaFileAlt,
   FaBuilding as FaBuildingAlt, FaReceipt, FaBriefcase, FaHandsHelping, FaIdCard,
-  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp, FaSearch
+  FaPlane, FaTrain, FaBus, FaHotel, FaTimes, FaWhatsapp, FaSearch, FaCheckCircle
 } from "react-icons/fa";
 import * as FaIcons from "react-icons/fa";
 
@@ -1618,6 +1618,7 @@ export default function Home({ onNavigate }) {
   const [isPaused, setIsPaused] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [verifyCard, setVerifyCard] = useState(null);
+  const [selectedPopularCard, setSelectedPopularCard] = useState(null);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
   const [dynamicBanners, setDynamicBanners] = useState([]);
   const [services, setServices] = useState([]);
@@ -2638,6 +2639,7 @@ export default function Home({ onNavigate }) {
                   padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
                   transition: "all 0.2s ease", cursor: "pointer"
                 }}
+                onClick={() => setSelectedPopularCard(card)}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
                 >
@@ -2671,7 +2673,10 @@ export default function Home({ onNavigate }) {
                     <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
                     <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
                     <button 
-                      onClick={() => navigate("/credit-cards")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setVerifyCard({ cardName: card.name, bankName: card.bank, bankId: card.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                      }}
                       style={{
                         width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
                         padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
@@ -2913,6 +2918,34 @@ export default function Home({ onNavigate }) {
           onClose={() => setVerifyCard(null)}
           C={C}
         />
+      )}
+      {selectedPopularCard && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: C.card, width: "100%", maxWidth: "420px", borderRadius: "24px", padding: "24px", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.3)", color: C.text }}>
+            <span onClick={() => setSelectedPopularCard(null)} style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight, background: C.bgSecondary, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
+              <FaTimes size={16} />
+            </span>
+            <div style={{ height: "140px", display: "flex", justifyContent: "center", marginBottom: "24px", padding: "10px", background: C.bgSecondary, borderRadius: "16px" }}>
+              <img src={selectedPopularCard.image} alt={selectedPopularCard.name} style={{ height: "100%", objectFit: "contain", filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.15))" }} />
+            </div>
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "20px", fontWeight: 800 }}>{selectedPopularCard.name}</h3>
+            <div style={{ display: "inline-block", background: `${C.teal}15`, color: C.teal, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, marginBottom: "16px" }}>
+              {selectedPopularCard.bank}
+            </div>
+            <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: C.textLight, lineHeight: 1.5 }}>
+              {t('popularCardsList.' + selectedPopularCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''), selectedPopularCard.benefit)}
+            </p>
+            <button 
+              onClick={() => {
+                setVerifyCard({ cardName: selectedPopularCard.name, bankName: selectedPopularCard.bank, bankId: selectedPopularCard.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                setSelectedPopularCard(null);
+              }} 
+              style={{ width: "100%", background: C.teal, color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 800, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", boxShadow: `0 8px 16px ${C.teal}30` }}
+            >
+              <FaCheckCircle size={16} /> Apply Now
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
