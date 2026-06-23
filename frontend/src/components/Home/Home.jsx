@@ -431,24 +431,31 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const renderBreadcrumbs = () => {
     if (!breadcrumbs) return null;
     return (
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600 }}>
-        {breadcrumbs.map((crumb, idx) => (
-          <React.Fragment key={idx}>
-            {idx > 0 && <span style={{ color: C.textLight }}>/</span>}
-            {crumb.action ? (
-              <span 
-                onClick={crumb.action} 
-                style={{ color: C.teal, cursor: "pointer" }}
-                onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
-                onMouseLeave={(e) => e.target.style.textDecoration = "none"}
-              >
-                {crumb.label}
-              </span>
-            ) : (
-              <span style={{ color: C.textLight }}>{crumb.label}</span>
-            )}
-          </React.Fragment>
-        ))}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", color: "#64748b" }}>
+        {breadcrumbs.map((crumb, idx) => {
+          const isLast = idx === breadcrumbs.length - 1;
+          return (
+            <React.Fragment key={idx}>
+              {idx > 0 && <span>/</span>}
+              {isLast ? (
+                <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                  {crumb.label}
+                </span>
+              ) : crumb.action ? (
+                <span 
+                  onClick={crumb.action} 
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                  onMouseLeave={(e) => e.target.style.textDecoration = "none"}
+                >
+                  {crumb.label}
+                </span>
+              ) : (
+                <span>{crumb.label}</span>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     );
   };
@@ -1319,20 +1326,31 @@ function FastagPage({ onBack, C, isMobile, breadcrumbs }) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.textLight, marginBottom: "20px" }}>
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={idx}>
-              <span 
-                onClick={crumb.action} 
-                style={{ cursor: crumb.action ? "pointer" : "default", color: crumb.action ? C.teal : C.textLight }}
-                onMouseEnter={e => crumb.action && (e.target.style.textDecoration = "underline")}
-                onMouseLeave={e => crumb.action && (e.target.style.textDecoration = "none")}
-              >
-                {crumb.label}
-              </span>
-              {idx < breadcrumbs.length - 1 && <span>/</span>}
-            </React.Fragment>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", color: "#64748b", marginBottom: "20px" }}>
+          {breadcrumbs.map((crumb, idx) => {
+            const isLast = idx === breadcrumbs.length - 1;
+            return (
+              <React.Fragment key={idx}>
+                {idx > 0 && <span>/</span>}
+                {isLast ? (
+                  <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                    {crumb.label}
+                  </span>
+                ) : crumb.action ? (
+                  <span 
+                    onClick={crumb.action} 
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.target.style.textDecoration = "none"}
+                  >
+                    {crumb.label}
+                  </span>
+                ) : (
+                  <span>{crumb.label}</span>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
@@ -1453,20 +1471,31 @@ function TravelBookingPage({ onBack, C, isMobile, breadcrumbs }) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', sans-serif", paddingBottom: "80px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "24px 16px" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: isMobile ? "11px" : "13px", fontWeight: 700, color: C.textLight, marginBottom: "20px" }}>
-          {breadcrumbs.map((crumb, idx) => (
-            <React.Fragment key={idx}>
-              <span 
-                onClick={crumb.action} 
-                style={{ cursor: crumb.action ? "pointer" : "default", color: crumb.action ? C.teal : C.textLight }}
-                onMouseEnter={e => crumb.action && (e.target.style.textDecoration = "underline")}
-                onMouseLeave={e => crumb.action && (e.target.style.textDecoration = "none")}
-              >
-                {crumb.label}
-              </span>
-              {idx < breadcrumbs.length - 1 && <span>/</span>}
-            </React.Fragment>
-          ))}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", color: "#64748b", marginBottom: "20px" }}>
+          {breadcrumbs.map((crumb, idx) => {
+            const isLast = idx === breadcrumbs.length - 1;
+            return (
+              <React.Fragment key={idx}>
+                {idx > 0 && <span>/</span>}
+                {isLast ? (
+                  <span style={{ color: "#2563eb", fontWeight: 500 }}>
+                    {crumb.label}
+                  </span>
+                ) : crumb.action ? (
+                  <span 
+                    onClick={crumb.action} 
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.target.style.textDecoration = "none"}
+                  >
+                    {crumb.label}
+                  </span>
+                ) : (
+                  <span>{crumb.label}</span>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>

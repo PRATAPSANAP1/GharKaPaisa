@@ -625,27 +625,37 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
         }
       `}</style>
 
-      {/* Breadcrumb - using standard Home layout format */}
+      {/* Breadcrumb - user's layout structure with live action triggers */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         {breadcrumbs && (
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600 }}>
-            {breadcrumbs.map((crumb, idx) => (
-              <React.Fragment key={idx}>
-                {idx > 0 && <span style={{ color: C.textLight }}>/</span>}
-                {crumb.action ? (
-                  <span 
-                    onClick={crumb.action} 
-                    style={{ color: C.teal, cursor: "pointer" }}
-                    onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
-                    onMouseLeave={(e) => e.target.style.textDecoration = "none"}
-                  >
-                    {crumb.label}
-                  </span>
-                ) : (
-                  <span style={{ color: C.textLight }}>{crumb.label}</span>
-                )}
-              </React.Fragment>
-            ))}
+          <div className="flex items-center gap-3 text-sm text-slate-500">
+            <div onClick={onBack} style={{ cursor: "pointer", color: "var(--text-slate-800)", display: "flex", alignItems: "center" }}>
+              <FaArrowLeft size={16} />
+            </div>
+            {breadcrumbs.map((crumb, idx) => {
+              const isLast = idx === breadcrumbs.length - 1;
+              return (
+                <React.Fragment key={idx}>
+                  {idx > 0 && <span>/</span>}
+                  {isLast ? (
+                    <span className="text-blue-600 font-medium">
+                      {crumb.label}
+                    </span>
+                  ) : crumb.action ? (
+                    <span 
+                      onClick={crumb.action} 
+                      style={{ cursor: "pointer" }}
+                      onMouseEnter={(e) => e.target.style.textDecoration = "underline"}
+                      onMouseLeave={(e) => e.target.style.textDecoration = "none"}
+                    >
+                      {crumb.label}
+                    </span>
+                  ) : (
+                    <span>{crumb.label}</span>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
       </div>
