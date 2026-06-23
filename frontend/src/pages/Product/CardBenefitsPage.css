@@ -139,13 +139,22 @@
   overflow-x: auto;
   gap: 12px;
   padding-bottom: 12px;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  /* Add sleek scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .cbp-tab-nav::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.cbp-tab-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cbp-tab-nav::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
 }
 
 .cbp-tab-btn {

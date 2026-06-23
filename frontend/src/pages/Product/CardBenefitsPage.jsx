@@ -40,9 +40,9 @@ export default function CardBenefitsPage() {
   const tabs = [
     { id: 'offer', label: 'Special Offer', icon: <FaGift /> },
     { id: 'benefits', label: 'Benefits', icon: <FaStar /> },
-    { id: 'eligibility', label: 'Eligibility', icon: <FaInfoCircle /> },
+    { id: 'eligibility', label: 'Whom to Refer', icon: <FaInfoCircle /> },
     { id: 'howItWorks', label: 'How It Works', icon: <FaBolt /> },
-    ...(trainingVideoUrl ? [{ id: 'video', label: 'Video', icon: <FaVideo /> }] : []),
+    ...(trainingVideoUrl ? [{ id: 'video', label: 'Training Video', icon: <FaVideo /> }] : []),
     ...(faqs && faqs.length > 0 ? [{ id: 'faqs', label: "FAQ's", icon: <FaRegFileAlt /> }] : []),
     { id: 'tnc', label: 'T&C', icon: <FaRegFileAlt /> }
   ];
@@ -134,7 +134,7 @@ export default function CardBenefitsPage() {
           {/* ELIGIBILITY TAB */}
           {activeTab === 'eligibility' && (
             <div className="cbp-tab-pane slide-up">
-              <h3 className="cbp-pane-title">Who can apply?</h3>
+              <h3 className="cbp-pane-title">Whom to Refer</h3>
               <div className="cbp-info-box">
                 <FaInfoCircle className="cbp-info-icon" />
                 <p className="cbp-info-text">{eligibility?.criteria}</p>
