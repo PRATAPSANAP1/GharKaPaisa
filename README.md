@@ -2,7 +2,7 @@
 
 Welcome to **GharKaPaisa**, a premium web and mobile application designed for credit card lead generation, partner commissions management, and multi-tenant administrative control.
 
-Below is the structured technical documentation of all features implemented across every page and panel in the project, formatted in single-line bullet points, along with the integrated subscriptions.
+Below is the structured technical documentation of all features implemented across every page and panel in the project, formatted in single-line bullet points.
 
 ---
 
@@ -27,21 +27,106 @@ Below is the structured technical documentation of all features implemented acro
 
 ---
 
-## ── 2. PARTNER PANEL FEATURES ──
+## ── 2. PARTNER PANEL FEATURES (IN DETAIL) ──
 
-1. **Dual-Method Login**: Supports partner login using credentials (email/mobile + password) or secure SMS OTP.
-2. **On-Registration Password Setup**: Prompts partners to establish their account password during registration.
-3. **Simplified KYC Submission**: Requires only **PAN Card** and **Cancelled Cheque** uploads, removing Aadhaar and GST fields.
-4. **Partner Dashboard Statistics**: Displays summary metric cards for Total Leads, Approved Leads, Pending Payouts, and Total Earnings.
-5. **Product Marketplace Hub**: A dedicated catalog showing available cards alongside the exact commission payout partners will earn.
-6. **Share Tracking Link**: Copies a unique referral tracking URL to share with customers via messaging platforms.
-7. **Direct Client Apply Form**: Enables partners to input customer applications directly inside their portal.
-8. **Real-time Leads Tracker**: A detailed status tracking table for all client leads, displaying bank feedback and admin comments.
-9. **Wallet Ledger**: Displays active balances, pending clearances, and full withdrawal transaction histories.
-10. **Bank Account Configurator**: Fields to save bank name, account number, branch, and IFSC code for direct payouts.
-11. **Withdrawal Request Trigger**: Allows partners to request transfer of their available wallet balance to their bank account.
-12. **48-Hour Audit Hold Lock**: Places withdrawal requests on a mandatory 48-hour holds for security audit checks.
-13. **Profile Settings**: Enables updating personal details and resetting account passwords.
+### 1. Dashboard (Business Status View)
+- **Total Earnings Summary**: Displays partner's lifetime commission earnings.
+- **Available Wallet Summary**: Shows current withdrawable funds.
+- **Pending Commission Summary**: Displays commissions undergoing validation.
+- **Leads Submitted Counter**: Tracks total customer applications created by the partner.
+- **Approved Cases Counter**: Counts successful credit card approvals.
+- **Rejected Cases Counter**: Counts customer applications rejected by banks.
+- **Conversion Rate Meter**: Percentage ratio of approved cases vs. total submitted leads.
+- **Quick Action Links**: Rapid links to Apply Credit Card, Apply Loan, Refer Customer, Share Product, and Transfer Lead.
+- **Performance Chart**: Visual graphs showing Daily, Weekly, and Monthly lead volume.
+- **Commission Trend Graph**: Graphical tracking of monthly earnings progress.
+- **Product Performance Tool**: Analytics mapping top-performing banks, top products, and highest commission items.
+- **Notifications Alerts**: Displays urgent updates regarding KYC status, document rejections, and new launches.
+
+### 2. Product Marketplace (Customer Applications)
+- **Product Categories**: Sections for Credit Cards, Personal Loans, Business Loans, Home Loans, Loans Against Property, Insurance, Mutual Funds, Travel, Recharge, and Bill Payments.
+- **Product Cards**: Displays bank logo, card name, partner commission rate, eligibility requirements, and approval percentage.
+- **Action Buttons**: Direct click buttons to Apply directly, Share link via social networks, or Learn More benefits.
+- **Search Filters**: Sort inventory by lending bank name, product category, commission size, and approval rate.
+
+### 3. Lead Management (Core Lead Operations)
+- **Lead Status Stages**: Displays current stage tracking (New, In Review, Approved, Rejected, Disbursed, Commission Released).
+- **Lead Table Columns**: Tracks applicant name, mobile number, product type, bank name, submission date, status, and expected commission.
+- **Lead Actions**: Quick tools to View lead sheets, Edit applicant data, Upload KYC files, and Track progress milestones.
+
+### 4. Customer Management (Client Profiles & Follow-Ups)
+- **Customer Profile Data**: Archives client name, phone number, email, PAN card, Aadhaar, location, and occupation.
+- **Customer Activity Feed**: Logs customer's applied products, active lead pipelines, generated commissions, and admin notes.
+- **Follow-up Tooling**: Quick buttons to call the client, open a WhatsApp chat, send emails, or schedule calendar reminders.
+
+### 5. Wallet & Earnings (Financial Tracking)
+- **Wallet Metrics**: Tracks Available Balance, Pending Earnings, Released Earnings, and Lifetime Earnings.
+- **Transactions Grid**: Registers date, transaction type, transfer amount, and status for every transaction.
+- **Withdrawal Methods**: Options for direct Bank Transfer or UPI Transfer.
+- **Reports Exporter**: Generates and downloads Monthly or Yearly account reports in PDF and Excel formats.
+
+### 6. Referral Network (Sub-Agent Tree)
+- **Referral Statistics**: Tracks total referrals, active sub-agents, team revenue, and network earnings.
+- **Referral Links Hub**: Options to Copy Referral Link, Share to WhatsApp/Telegram, or download a custom QR Code.
+- **Team Structure Hierarchy**: Displays sub-partner networks across Level 1, Level 2, and Level 3 tiers in a tree view layout.
+
+### 7. Profile Hub (Partner Identity Settings)
+- **Personal Details**: Manage profile name, email, contact mobile, date of birth, gender, and home address.
+- **Professional Details**: Configures occupation status, agency name, work experience, and industry sector.
+- **Payout Bank Details**: Saves bank name, IFSC code, account number, and UPI ID for electronic transactions.
+
+### 8. KYC Center (Identity Validation)
+- **Aadhaar Verification**: Fields to upload Aadhaar front and back images with real-time verification status.
+- **PAN Verification**: Field to upload PAN card photo and record document number.
+- **Selfie Verification**: Connects to camera to take a live photo and run facial matching.
+- **Cheque Verification**: Upload portal for cancelled cheque copies to confirm bank details.
+- **GST Verification**: Fields to register GST numbers and upload certificates.
+- **Status Badges**: Shows color tags representing documents as Pending, Verified, Rejected, or Re-upload Required.
+
+### 9. Documents Vault (Secure File Manager)
+- **Vault Folders**: Categorizes uploaded items into KYC, Agreements, Bank Documents, GST Documents, and Certificates.
+- **Document Actions**: Direct buttons to View document preview, Download files, or Replace files with new versions.
+
+### 10. Training Academy (Education Center)
+- **Training Courses**: Specific tutorials for Credit Card Sales, Loan Sales, Insurance Sales, Customer Handling, and Compliance.
+- **Course Material**: Access study videos, download reference PDFs, take progress quizzes, and receive completion certificates.
+- **Certification Levels**: Ranks partners into Bronze, Silver, Gold, and Platinum achievements.
+
+### 11. Campaign Center (Promo Management)
+- **Campaign Listings**: Marketing sheets for HDFC Card Campaigns, Loan Campaigns, Festival Offers, and Insurance promotions.
+- **Campaign Tools**: Copy promo posts, share directly on WhatsApp, and download high-resolution marketing banners/posters.
+
+### 12. Marketing Materials (Creative Resources)
+- **Creative Libraries**: Repository of promotion images, videos, PDF brochures, social media templates, and banners.
+- **Search Filters**: Sort creative resources by lending bank, product type, or regional language.
+
+### 13. Notification Center (System Messages)
+- **Notification Types**: Segregates incoming alerts into Commission updates, Lead updates, Product launches, Training guides, and Announcements.
+- **Notification Controls**: Options to mark messages as read, archive historical logs, or delete old alerts.
+
+### 14. Support Center (Agent Helpline)
+- **Support Ticket Portal**: Submit tickets for technical bugs, commission discrepancies, KYC issues, or lead status errors.
+- **WhatsApp Support Link**: Quick click button launching direct WhatsApp chat with the customer support desk.
+- **Call Manager**: Action link to trigger a direct phone call to your account support manager.
+
+### 15. Reports & Analytics (Performance Metrics)
+- **Lead Analytics**: Displays graphs tracing lead submission trends, bank approvals, and rejection ratios.
+- **Revenue Analytics**: Visualizes monthly earnings trends, top-producing products, and bank-specific revenue splits.
+- **Partner Scorecard**: Evaluates performance score, activity metrics, and lead quality grades.
+
+### 16. Settings (App Security & Configs)
+- **Security Preferences**: Manage password changes, set custom Login MPINs, and enable two-factor (2FA) verification.
+- **App Preferences**: Switch between Dark Mode theme settings, update translator languages, and manage notification prompts.
+- **Session Manager**: Displays current login device details, historic login locations, and active login sessions.
+
+### 17. Travel & Utility Module (Value-Added Services)
+- **Value Services**: Integrates booking consoles for flights, buses, trains, and hotel accommodations.
+- **Utility Payments**: Portals for DTH recharges, mobile recharges, electricity bills, FASTag recharges, and money transfers.
+- **Utility Ledger**: Tracks history, commission earned, and recent transactions for all utility payments.
+
+### Portal Navigation Frameworks
+- **Bottom Navigation (Mobile Layout)**: Quick tabs for Dashboard, Products, Leads, Wallet, and Profile.
+- **Sidebar Navigation (Desktop Layout)**: Left-side links for Dashboard, Products, Lead Management, Customers, Wallet, Referrals, Training, Campaigns, Marketing Material, Travel & Utilities, Reports, Notifications, Support, Profile Hub, and Settings.
 
 ---
 
