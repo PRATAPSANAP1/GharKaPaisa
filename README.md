@@ -103,3 +103,17 @@ Below is the list of third-party service subscriptions and integrations configur
 2. **AWS S3 (Amazon Simple Storage Service)**: Secure cloud bucket storage for KYC document images, PAN cards, cancelled cheques, and marketing banners.
 3. **AWS SES (Amazon Simple Email Service) / Nodemailer**: Cloud email subscription used to send automated partner welcome messages and registration notifications.
 4. **PostgreSQL Database Server**: Relational database subscription utilized for system-wide tables, partner directories, transaction logs, and audit ledgers.
+
+---
+
+## ── 8. UPCOMING ROADMAP / NEXT FEATURES ──
+
+Below are the features planned for development and integration in the next phase of the project:
+
+1. **Travel Bookings Modules**: Custom integrations allowing users to book buses, trains, and hotels directly within the platform.
+2. **Customer CRM Portal**: A complete partner-side CRM dashboard to trace client leads, schedule follow-ups, and send lead alerts.
+3. **Document Vault Service**: A secure cloud-storage library allowing referral partners to store and retrieve client KYC documentation.
+4. **Training Academy Platform**: An interactive educational portal featuring training video guides, partner exams, and compliance courses.
+5. **Marketing Center Hub**: Custom banners creator, ready-to-share landing templates, and personalized social media post generators.
+6. **Integrated Support Ticketing**: A central hub in the partner layout allowing partners to raise help tickets and chat live with admins.
+7. **Credit Card API Integrations**: Deep direct-integrations with banking API gateways to check application statuses in real-time.
