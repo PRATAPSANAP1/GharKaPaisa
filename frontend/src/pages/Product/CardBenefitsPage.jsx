@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getCardDetails } from '../../components/Home/CreditCards/CardDetailsData';
 import { 
-  FaArrowLeft, FaWhatsapp, FaGift, FaCheckCircle, 
+  FaArrowLeft, FaShareAlt, FaGift, FaCheckCircle, 
   FaRegFileAlt, FaVideo, FaInfoCircle, FaChevronDown, FaChevronUp,
   FaRupeeSign, FaBolt, FaStar
 } from 'react-icons/fa';
@@ -20,15 +20,33 @@ export default function CardBenefitsPage() {
   const [activeTab, setActiveTab] = useState('offer');
   const [openFaq, setOpenFaq] = useState(null);
 
-  const handleWhatsAppShare = () => {
-    const refLink = `gharkapaisa.com/card-benefits/${id}?ref=GP12345`;
-    const shareText = `Apply for the ${cardInfo.name} through GharKaPaisa! Check it out here: ${refLink}`;
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-    window.open(url, '_blank');
+  const handleShare = async () => {
+    const refLink = `${window.location.origin}/card-benefits/${id}?ref=GP12345`;
+    const shareText = `Apply for the ${cardInfo.name} through GharKaPaisa! Check it out here:`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: cardInfo.name,
+          text: shareText,
+          url: refLink,
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareText} ${refLink}`);
+        alert('Share link copied to clipboard!');
+      } catch (clipErr) {
+        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + refLink)}`;
+        window.open(url, '_blank');
+      }
+    }
   };
 
   const handleApply = () => {
-    alert(`Redirecting to apply for ${cardInfo.name}`);
+    navigate(`/product/${id}/apply`);
   };
 
   if (!cardInfo) {
@@ -53,16 +71,22 @@ export default function CardBenefitsPage() {
       {/* Premium Header */}
       <div className="cbp-header">
         <button onClick={() => navigate(-1)} className="cbp-back-btn" aria-label="Go Back">
-          <FaArrowLeft size={18} />
+          <FaArrowLeft size={16} />
         </button>
         <h1 className="cbp-header-title">Product Details</h1>
-        <button onClick={handleWhatsAppShare} className="cbp-share-btn">
-          <FaWhatsapp size={18} />
-          <span>Share</span>
-        </button>
+        <div className="cbp-header-actions">
+          <button onClick={handleApply} className="cbp-header-apply-btn">
+            Apply Now
+          </button>
+          <button onClick={handleShare} className="cbp-header-share-btn" aria-label="Share">
+            <FaShareAlt size={16} />
+            <span>Share</span>
+          </button>
+        </div>
       </div>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '100px' }}>
+      <div className="cbp-scrollable-content">
+        <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '24px' }}>
 
         {/* Hero Section */}
         <div className="cbp-hero">
@@ -226,13 +250,7 @@ export default function CardBenefitsPage() {
 
       </div>
 
-      {/* Sticky Bottom Action Bar */}
-      <div className="cbp-footer">
-        <button onClick={handleApply} className="cbp-apply-btn">
-          <span className="btn-glow"></span>
-          Apply Now
-        </button>
-      </div>
+      </div> {/* end cbp-scrollable-content */}
       
     </div>
   );
