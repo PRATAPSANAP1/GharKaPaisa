@@ -103,4 +103,3 @@ Below is the list of third-party service subscriptions and integrations configur
 2. **AWS S3 (Amazon Simple Storage Service)**: Secure cloud bucket storage for KYC document images, PAN cards, cancelled cheques, and marketing banners.
 3. **AWS SES (Amazon Simple Email Service) / Nodemailer**: Cloud email subscription used to send automated partner welcome messages and registration notifications.
 4. **PostgreSQL Database Server**: Relational database subscription utilized for system-wide tables, partner directories, transaction logs, and audit ledgers.
-5. **Twilio API (Optional/Secondary)**: Secondary integration service configured for sending alternative SMS alerts.
