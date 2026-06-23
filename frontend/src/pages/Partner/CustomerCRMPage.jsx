@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  MdSearch, MdPersonAdd, MdPhone, MdOutlineWhatsApp, MdEmail, 
+  MdSearch, MdPersonAdd, MdPhone, MdOutlineWhatsapp, MdEmail, 
   MdFolder, MdAssignment, MdDateRange, MdInfoOutline, MdClose 
 } from 'react-icons/md';
 import api from '../../api/api';
@@ -214,7 +214,7 @@ export default function CustomerCRMPage() {
                   rel="noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 bg-[#25D366] text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#1EBE5D] transition-colors"
                 >
-                  <MdOutlineWhatsApp size={18} /> WhatsApp
+                  <MdOutlineWhatsapp size={18} /> WhatsApp
                 </a>
               </div>
 

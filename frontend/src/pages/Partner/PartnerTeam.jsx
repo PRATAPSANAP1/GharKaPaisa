@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   MdAdd, MdPerson, MdEmail, MdPhone, MdCheckCircle, 
   MdPendingActions, MdClose, MdContentCopy, MdShare,
-  MdOutlineQrCode2, MdOutlineWhatsApp
+  MdOutlineQrCode2, MdOutlineWhatsapp
 } from 'react-icons/md';
 import api from '../../api/api';
 import { useAuthStore } from '../../store/authStore';
@@ -109,7 +109,7 @@ export default function PartnerTeam() {
             <MdContentCopy size={18} /> Copy Link
           </button>
           <button className="flex items-center gap-2 bg-[#25D366] text-white px-4 py-2.5 rounded-xl font-bold shadow-sm hover:bg-[#1EBE5D] transition-colors">
-            <MdOutlineWhatsApp size={18} /> WhatsApp
+            <MdOutlineWhatsapp size={18} /> WhatsApp
           </button>
           <button className="flex items-center gap-2 bg-blue-500/20 text-white border border-blue-400/30 px-4 py-2.5 rounded-xl font-bold hover:bg-blue-500/30 transition-colors">
             <MdOutlineQrCode2 size={18} /> QR Code

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePartnerStore } from '../../store/partnerStore';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdPendingActions, 
-  MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsApp, MdHistory,
+  MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
   MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson, MdDomain
 } from 'react-icons/md';
 
@@ -223,7 +223,7 @@ export default function PartnerApplications() {
                         <h4 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-4">Quick Actions</h4>
                         <div className="space-y-3">
                           <button className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm">
-                            <MdOutlineWhatsApp size={20} /> WhatsApp Customer
+                            <MdOutlineWhatsapp size={20} /> WhatsApp Customer
                           </button>
                           <button className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-100 text-[#0F172A] px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm">
                             <MdPhone size={20} /> Call Customer

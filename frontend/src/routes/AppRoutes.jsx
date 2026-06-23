@@ -62,8 +62,7 @@ import {
   PartnerApplications, 
   PartnerWallet, 
   PartnerProfile,
-  PartnerProducts,
-  PartnerApplications
+  PartnerProducts
 } from '../pages/Partner';
 import PartnerTeam from '../pages/Partner/PartnerTeam';
 import PartnerKyc from '../pages/Partner/PartnerKyc';

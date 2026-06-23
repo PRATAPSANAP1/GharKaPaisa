@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePartnerStore } from '../../store/partnerStore';
 import { 
   MdSearch, MdPerson, MdPhone, MdEmail, MdWork, 
-  MdLocationOn, MdHistory, MdEvent, MdOutlineWhatsApp,
+  MdLocationOn, MdHistory, MdEvent, MdOutlineWhatsapp,
   MdNoteAdd, MdAddBox, MdCreditCard
 } from 'react-icons/md';
 
@@ -129,7 +129,7 @@ export default function PartnerCrm() {
               </div>
               <div className="flex gap-2">
                 <button className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
-                  <MdOutlineWhatsApp size={18} /> WhatsApp
+                  <MdOutlineWhatsapp size={18} /> WhatsApp
                 </button>
                 <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-bold rounded-xl transition-colors shadow-sm">
                   <MdPhone size={18} /> Call

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  MdOutlineContactSupport, MdOutlineWhatsApp, MdPhone, 
+  MdOutlineContactSupport, MdOutlineWhatsapp, MdPhone, 
   MdHelpOutline, MdKeyboardArrowDown, MdKeyboardArrowUp, MdSend 
 } from 'react-icons/md';
 
@@ -53,7 +53,7 @@ export default function SupportCenterPage() {
             rel="noreferrer" 
             className="flex items-center gap-2 bg-[#25D366] text-white px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-[#1EBE5D] transition-colors shadow-sm"
           >
-            <MdOutlineWhatsApp size={18} /> Chat RM
+            <MdOutlineWhatsapp size={18} /> Chat RM
           </a>
           <a 
             href="tel:+918239012344" 

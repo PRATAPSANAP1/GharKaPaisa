@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MdLockReset, MdClose, MdCheckCircle } from 'react-icons/md';
-import api from '../api/api';
-import { useAuthStore } from '../store/authStore';
+import api from '../../api/api';
+import { useAuthStore } from '../../store/authStore';
 
 export default function ForcePasswordChangeModal({ isOpen }) {
   const user = useAuthStore((state) => state.user);

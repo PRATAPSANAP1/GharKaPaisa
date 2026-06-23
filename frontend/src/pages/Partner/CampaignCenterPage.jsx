@@ -1,5 +1,5 @@
 import React from 'react';
-import { MdShare, MdContentCopy, MdOutlineWhatsApp, MdFileDownload, MdCampaign } from 'react-icons/md';
+import { MdShare, MdContentCopy, MdOutlineWhatsapp, MdFileDownload, MdCampaign } from 'react-icons/md';
 
 const CAMPAIGNS = [
   {
@@ -87,7 +87,7 @@ export default function CampaignCenterPage() {
                 onClick={() => handleWhatsAppShare(camp)}
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#25D366] text-white text-xs font-bold rounded-xl hover:bg-[#1EBE5D] transition-colors"
               >
-                <MdOutlineWhatsApp /> WhatsApp
+                <MdOutlineWhatsapp /> WhatsApp
               </button>
               <button 
                 onClick={() => alert("Post flyer poster downloaded!")}
