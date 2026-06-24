@@ -5,16 +5,16 @@ import {
   FaShieldAlt, FaPercent, FaHeadset, FaStar, 
   FaMoneyBillWave, FaWallet, FaArrowRight 
 } from "react-icons/fa";
-import CardApplyVerificationModal from "./CreditCards/CardApplyVerificationModal";
+import CardApplyVerificationModal from "../CreditCards/CardApplyVerificationModal";
 
 // Import logos from Loans folder
-import axisLogo from "./Loans/axis.png";
-import sbiLogo from "./Loans/sbi.png";
-import iciciLogo from "./Loans/icici.png";
-import kotakLogo from "./Loans/kotak.png";
-import idfcLogo from "./Loans/idfc.png";
-import hdfcLogo from "./Loans/hdfc.png";
-import loanBanner from "./Loans/Loan_banner.png";
+import axisLogo from "./axis.png";
+import sbiLogo from "./sbi.png";
+import iciciLogo from "./icici.png";
+import kotakLogo from "./kotak.png";
+import idfcLogo from "./idfc.png";
+import hdfcLogo from "./hdfc.png";
+import loanBanner from "./Loan_banner.png";
 
 export default function PersonalLoanPage({ onBack, C, isMobile }) {
   const { t } = useTranslation();

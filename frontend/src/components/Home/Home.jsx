@@ -28,7 +28,7 @@ import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 import { travelTransitData } from "./TravelTransit";
 import CategoryCardItem from "./CategoryCardItem";
-import PersonalLoanPage from "./PersonalLoanPage";
+import PersonalLoanPage from "./Loans/PersonalLoanPage";
 import "../Home.css";
 
 // Import banner images
