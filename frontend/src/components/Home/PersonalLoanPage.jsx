@@ -14,6 +14,7 @@ import iciciLogo from "./Loans/icici.png";
 import kotakLogo from "./Loans/kotak.png";
 import idfcLogo from "./Loans/idfc.png";
 import hdfcLogo from "./Loans/hdfc.png";
+import loanBanner from "./Loans/Loan_banner.png";
 
 export default function PersonalLoanPage({ onBack, C, isMobile }) {
   const { t } = useTranslation();
@@ -103,7 +104,7 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
 
         {/* Hero Banner */}
         <div style={{
-          background: "linear-gradient(135deg, #e0eaff 0%, #f3e8ff 100%)",
+          background: `url(${loanBanner}) no-repeat center right / contain, linear-gradient(135deg, #e0eaff 0%, #f3e8ff 100%)`,
           borderRadius: "24px",
           padding: isMobile ? "30px 20px" : "40px 60px",
           display: "flex",
@@ -157,17 +158,6 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
             </div>
           </div>
           
-          {/* Illustrations (CSS based if images not found) */}
-          {!isMobile && (
-            <div style={{ position: "absolute", right: "40px", display: "flex", gap: "20px", alignItems: "center", zIndex: 1, opacity: 0.9 }}>
-               <div style={{ fontSize: "100px", color: "#facc15", filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.1))" }}>
-                 <FaMoneyBillWave />
-               </div>
-               <div style={{ fontSize: "120px", color: "#3b82f6", filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.1))" }}>
-                 <FaWallet />
-               </div>
-            </div>
-          )}
         </div>
 
         {/* Cards Grid */}

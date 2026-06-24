@@ -2249,7 +2249,11 @@ export default function Home({ onNavigate }) {
     }
     const categoryKey = mapToCategoryKey(item);
     if (categoryKey) {
-      navigate(`/category/${categoryKey}`);
+      if (categoryKey === "personal-loan") {
+        navigate(`/attractive-cards-loans/personal-loan`);
+      } else {
+        navigate(`/category/${categoryKey}`);
+      }
       return;
     }
   };
