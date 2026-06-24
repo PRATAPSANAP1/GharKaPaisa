@@ -87,7 +87,8 @@ const getMe = async (req, res, next) => {
       user
     });
   } catch (err) {
-    next(err);
+    console.error("GET_ME_ERROR", err);
+    return res.status(500).json({ success: false, message: 'Server Error in /me: ' + err.message, stack: err.stack });
   }
 };
 
