@@ -71,12 +71,7 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
     }
   ];
 
-  const features = [
-    { icon: <FaShieldAlt />, title: "100% Secure Process", desc: "Your data is safe with us", color: "#22c55e", bg: "#dcfce7" },
-    { icon: <FaPercent />, title: "Lowest Interest Rates", desc: "Compare & choose the best", color: "#a855f7", bg: "#f3e8ff" },
-    { icon: <FaHeadset />, title: "Expert Support", desc: "We're here to help you", color: "#3b82f6", bg: "#dbeafe" },
-    { icon: <FaStar />, title: "Trusted by Millions", desc: "Across India", color: "#eab308", bg: "#fef08a" }
-  ];
+
 
   const handleApplyClick = (card) => {
     setVerifyCard({
@@ -247,37 +242,7 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
           ))}
         </div>
 
-        {/* Bottom Banner */}
-        <div style={{ 
-          background: C.card, 
-          borderRadius: "20px", 
-          padding: "24px", 
-          border: `1px solid ${C.border}`,
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
-          gap: "24px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
-        }}>
-          {features.map((feat, idx) => (
-            <div key={idx} style={{ 
-              display: "flex", alignItems: "center", gap: "16px", 
-              borderRight: !isMobile && idx < features.length - 1 ? `1px solid ${C.border}` : "none"
-            }}>
-              <div style={{ 
-                width: "40px", height: "40px", borderRadius: "50%", 
-                background: feat.bg, color: feat.color, 
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "16px"
-              }}>
-                {feat.icon}
-              </div>
-              <div>
-                <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginBottom: "2px" }}>{feat.title}</div>
-                <div style={{ fontSize: "11px", color: C.textLight }}>{feat.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+
 
       </div>
 
