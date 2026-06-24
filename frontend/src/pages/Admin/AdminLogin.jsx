@@ -98,10 +98,11 @@ export default function AdminLogin() {
     }
   };
 
+  const [captchaContainerId] = useState(`msg91-captcha-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+
   // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
-    const captchaContainerId = "msg91-captcha-admin";
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {

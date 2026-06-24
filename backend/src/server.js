@@ -48,7 +48,15 @@ app.use(helmet({
   },
 }));
 
-const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+const envOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://gharkapaisa.in",
+  "https://www.gharkapaisa.in",
+  "https://admin.gharkapaisa.in",
+  ...envOrigins
+];
 
 app.use(cors({
   origin: (origin, callback) => {

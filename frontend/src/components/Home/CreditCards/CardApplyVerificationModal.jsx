@@ -14,11 +14,11 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   // 4-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  const [captchaContainerId] = useState(`msg91-captcha-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
 
   // Load MSG91 script dynamically
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
-    const captchaContainerId = "msg91-captcha-modal";
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
@@ -458,7 +458,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
               ) : "Send SMS Verification OTP"}
             </button>
-            <div id="msg91-captcha-modal" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
+            <div id={captchaContainerId} style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
           </div>
         )}
 

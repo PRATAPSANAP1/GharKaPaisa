@@ -2259,6 +2259,14 @@ export default function Home({ onNavigate }) {
   };
 
   const handleAttractiveCategoryClick = (cat) => {
+    if (cat.id === "personal-loan") {
+      setVerifyCard({
+        cardName: cat.title || "Personal Loan",
+        bankName: "Partner Bank",
+        bankId: "personal-loan"
+      });
+      return;
+    }
     const attractiveSlugs = {
       "ltf-cards": "lifetime-free-cards",
       "cibil-loans": "cibil-loan",
@@ -2617,10 +2625,7 @@ export default function Home({ onNavigate }) {
                   <div 
                     key={`${card.id}-${idx}`} 
                     className="attractive-card"
-                    onClick={() => {
-                      const slugs = { "ltf-cards":"lifetime-free-cards","cibil-loans":"cibil-loan","hdfc-cc-loan":"loan-on-credit-card","smart-emi":"smart-emi-card","secured-cards":"fd-backed-card","upi-cards":"upi-credit-card" };
-                      navigate(`/attractive-cards-loans/${slugs[card.id] || card.id}`);
-                    }}
+                    onClick={() => handleAttractiveCategoryClick(card)}
                   >
                     {/* Top Div: Image Container */}
                     <div className="attractive-card-img-container">
@@ -2717,7 +2722,12 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 5: Loans ── */}
         {settings.section_visibility_attractive_cards !== "hide" && (
-          <Section title={t('sections.loans')} C={C}>
+          <Section 
+            title={t('sections.loans')} 
+            viewAllLabel={t('home.seeAll', 'See All')}
+            onViewAll={() => navigate("/loans")}
+            C={C}
+          >
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(6, 1fr)", gap: "10px" }}>
               {((isMobile && getSectionItems("loans", loansData).length > 8) ? getSectionItems("loans", loansData).slice(0, 7) : getSectionItems("loans", loansData)).map((item, idx) => (
                 <div key={idx}

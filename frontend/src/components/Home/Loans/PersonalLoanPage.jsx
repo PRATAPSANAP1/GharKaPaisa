@@ -16,8 +16,11 @@ import idfcLogo from "./idfc.png";
 import hdfcLogo from "./hdfc.png";
 import loanBanner from "./Loan_banner.png";
 
+import { useNavigate } from 'react-router-dom';
+
 export default function PersonalLoanPage({ onBack, C, isMobile }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [verifyCard, setVerifyCard] = useState(null);
 
   const loanCards = [
@@ -91,7 +94,7 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
           <div style={{ display: "flex", gap: "8px", fontSize: "14px", color: C.textLight }}>
             <span onClick={onBack} style={{ cursor: "pointer" }}>Home</span>
             <span>/</span>
-            <span onClick={onBack} style={{ cursor: "pointer" }}>Loans</span>
+            <span onClick={() => navigate("/loans")} style={{ cursor: "pointer" }}>Loans</span>
             <span>/</span>
             <span style={{ color: "#2563eb", fontWeight: 500 }}>Personal Loan</span>
           </div>
