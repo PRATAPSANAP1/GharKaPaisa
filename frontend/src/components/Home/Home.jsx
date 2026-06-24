@@ -2317,7 +2317,7 @@ export default function Home({ onNavigate }) {
     );
   }
 
-  if (activeCategory?.id === "personal-loan") {
+  if (activeCategory?.id === "personal-loan" || activeCategory?.id === "category-personal_loan") {
     return (
       <>
         <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
