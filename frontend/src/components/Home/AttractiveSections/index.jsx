@@ -1,7 +1,16 @@
 import React from 'react';
-import { FaRegCreditCard, FaMoneyCheckAlt, FaIdCard, FaShieldAlt, FaMobileAlt } from "react-icons/fa";
+import { FaRegCreditCard, FaMoneyCheckAlt, FaIdCard, FaShieldAlt, FaMobileAlt, FaMoneyBillWave } from "react-icons/fa";
 
 export const attractiveCategories = [
+  {
+    id: "personal-loan",
+    title: "Personal Loan",
+    label: "Personal Loan",
+    description: "Quick approval, minimal documentation and flexible repayment options.",
+    icon: <FaMoneyBillWave />,
+    gradient: "linear-gradient(135deg, #e0eaff 0%, #f3e8ff 100%)",
+    type: "custom-page"
+  },
   {
     id: "ltf-cards",
     title: "Lifetime Free Cards",

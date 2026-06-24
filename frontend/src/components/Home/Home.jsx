@@ -28,6 +28,7 @@ import { attractiveCategories } from "./AttractiveSections";
 import { popularCards } from "./PopularCards";
 import { travelTransitData } from "./TravelTransit";
 import CategoryCardItem from "./CategoryCardItem";
+import PersonalLoanPage from "./PersonalLoanPage";
 import "../Home.css";
 
 // Import banner images
@@ -1811,6 +1812,7 @@ export default function Home({ onNavigate }) {
     if (attractiveMatch) {
       const catParam = attractiveMatch[1];
       const attractiveIds = {
+        "personal-loan": "personal-loan",
         "lifetime-free-cards": "ltf-cards",
         "cibil-loan": "cibil-loans",
         "loan-on-credit-card": "hdfc-cc-loan",
@@ -1826,7 +1828,7 @@ export default function Home({ onNavigate }) {
           title: cat.title,
           titleKey: `attractiveCards.${cat.id}`,
           parentId: "attractive-sections",
-          type: "hierarchy",
+          type: cat.type || "hierarchy",
           items: cat.items
         });
       }
@@ -2311,6 +2313,15 @@ export default function Home({ onNavigate }) {
     );
   }
 
+  if (activeCategory?.id === "personal-loan") {
+    return (
+      <>
+        <PersonalLoanPage onBack={handleBack} C={C} isMobile={isMobile} />
+        {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab="home" />}
+      </>
+    );
+  }
+
   if (activeCategory) {
     return (
       <>
@@ -2520,6 +2531,7 @@ export default function Home({ onNavigate }) {
         {/* ── SECTION 2: Attractive Cards & Loans ── */}
         {settings.section_visibility_attractive_cards !== "hide" && (() => {
           const attractiveCards = [
+            { id: "personal-loan", title: "Personal Loan", desc: "Quick & easy personal loans", img: loanBanner, gradient: "linear-gradient(135deg, #e0eaff, #f3e8ff)", titleColor: "#2c3e50", descColor: "#34495e" },
             { id: "ltf-cards", title: "Lifetime Free Cards", desc: "Zero annual fees forever", img: ltfImg, gradient: "linear-gradient(135deg, #166397, #0F4F7A)" },
             { id: "cibil-loans", title: "CIBIL Loan", desc: "Personalized loan offers", img: cibilImg, gradient: "linear-gradient(135deg, #27ae60, #0c6b30)" },
             { id: "hdfc-cc-loan", title: "Loan on Credit Card", desc: "Instant cash on card limit", img: hdfcCcLoanImg, gradient: "linear-gradient(135deg, #8e44ad, #5b2c6f)" },
