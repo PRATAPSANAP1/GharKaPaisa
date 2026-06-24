@@ -98,61 +98,8 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
         </div>
 
         {/* Hero Banner */}
-        <div style={{
-          background: `url(${loanBanner}) no-repeat center right / contain, linear-gradient(135deg, #e0eaff 0%, #f3e8ff 100%)`,
-          borderRadius: "24px",
-          padding: isMobile ? "30px 20px" : "40px 60px",
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "32px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-          position: "relative",
-          overflow: "hidden"
-        }}>
-          {/* Content */}
-          <div style={{ zIndex: 2, maxWidth: isMobile ? "100%" : "60%" }}>
-            <h1 style={{ fontSize: isMobile ? "28px" : "36px", fontWeight: 800, color: "#1e293b", marginBottom: "12px" }}>
-              Personal Loan
-            </h1>
-            <p style={{ fontSize: isMobile ? "14px" : "16px", color: "#475569", marginBottom: "32px", lineHeight: 1.5 }}>
-              Quick approval, minimal documentation and flexible repayment options.
-            </p>
-            
-            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? "12px" : "24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.6)", padding: "10px 16px", borderRadius: "12px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <FaBolt size={14} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>Instant Approval</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>Quick & hassle-free</div>
-                </div>
-              </div>
-              
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.6)", padding: "10px 16px", borderRadius: "12px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <FaCalendarAlt size={14} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>Flexible Tenure</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>12 to 60 months</div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.6)", padding: "10px 16px", borderRadius: "12px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <FaCheckCircle size={14} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b" }}>Minimal Documents</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>Simple & secure</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
+        <div style={{ marginBottom: "32px", borderRadius: "24px", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+          <img src={loanBanner} alt="Personal Loan Banner" style={{ width: "100%", display: "block" }} />
         </div>
 
         {/* Cards Grid */}
