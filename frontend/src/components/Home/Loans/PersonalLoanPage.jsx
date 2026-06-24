@@ -91,7 +91,7 @@ export default function PersonalLoanPage({ onBack, C, isMobile }) {
           <div style={{ display: "flex", gap: "8px", fontSize: "14px", color: C.textLight }}>
             <span onClick={onBack} style={{ cursor: "pointer" }}>Home</span>
             <span>/</span>
-            <span onClick={onBack} style={{ cursor: "pointer" }}>Attractive Sections</span>
+            <span onClick={onBack} style={{ cursor: "pointer" }}>Loans</span>
             <span>/</span>
             <span style={{ color: "#2563eb", fontWeight: 500 }}>Personal Loan</span>
           </div>
