@@ -88,8 +88,8 @@ const AppRoutes = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: '#0f172a',
-        color: '#f8fafc',
+        background: '#ffffff',
+        color: '#0f172a',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
         <img 
@@ -106,7 +106,7 @@ const AppRoutes = () => {
         <div style={{
           fontSize: '15px',
           fontWeight: 600,
-          color: '#94a3b8',
+          color: '#334155',
           letterSpacing: '0.5px'
         }}>
           Welcome to GharKaPaisa...!
