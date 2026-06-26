@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
@@ -72,7 +72,52 @@ export default function PartnerRegister() {
   const [mobileOtpTimer, setMobileOtpTimer] = useState(0);
   const [mobileOtpLoading, setMobileOtpLoading] = useState(false);
   const [mobileVerifyLoading, setMobileVerifyLoading] = useState(false);
+  const [mobileOtpRequestId, setMobileOtpRequestId] = useState("");
   const [captchaContainerId] = useState(`msg91-captcha-register-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+  const mobileVerifyPendingRef = useRef(false);
+  const mobileVerifyTimeoutRef = useRef(null);
+
+  const getMsg91RequestId = (data) => {
+    const candidates = [
+      data?.requestId,
+      data?.request_id,
+      data?.reqId,
+      data?.otpRequestId,
+      data?.message,
+      data?.data?.requestId,
+      data?.data?.request_id,
+      data?.data?.reqId,
+      data?.data?.otpRequestId,
+      data?.data?.message,
+    ];
+
+    return candidates
+      .map(value => String(value || '').trim())
+      .find(value => /^[A-Za-z0-9_-]{8,}$/.test(value)) || "";
+  };
+
+  const completeMobileVerification = () => {
+    if (mobileVerifyTimeoutRef.current) clearTimeout(mobileVerifyTimeoutRef.current);
+    mobileVerifyPendingRef.current = false;
+    mobileVerifyTimeoutRef.current = null;
+    setForm(f => ({ ...f, mobilePreVerified: true }));
+    setMobileOtpSent(false);
+    setMobileOtpTimer(0);
+    setMobileOtpRequestId("");
+    setInfoMsg(t('partner.mobileVerified', 'Mobile number successfully verified.'));
+    setMobileVerifyLoading(false);
+  };
+
+  const failMobileVerification = (failure) => {
+    if (mobileVerifyTimeoutRef.current) clearTimeout(mobileVerifyTimeoutRef.current);
+    mobileVerifyPendingRef.current = false;
+    mobileVerifyTimeoutRef.current = null;
+    const errorMsg = typeof failure === 'string'
+      ? failure
+      : (failure?.message || t('partner.errors.verifyMobileOtpFailed', 'Incorrect OTP. Please try again.'));
+    setErr(errorMsg);
+    setMobileVerifyLoading(false);
+  };
 
   useEffect(() => {
     if (!form.email) return;
@@ -85,6 +130,7 @@ export default function PartnerRegister() {
     if (!form.mobile) return;
     setMobileOtpSent(false);
     setMobileOtpTimer(0);
+    setMobileOtpRequestId("");
     setForm(f => ({ ...f, mobilePreVerified: false, mobileOtp: '' }));
   }, [form.mobile]);
 
@@ -119,9 +165,15 @@ export default function PartnerRegister() {
           captchaRenderId: captchaContainerId,
           success: (data) => {
             console.log('MSG91 register widget loaded successfully.', data);
+            if (mobileVerifyPendingRef.current) {
+              completeMobileVerification();
+            }
           },
           failure: (error) => {
             console.error('MSG91 register widget load failed.', error);
+            if (mobileVerifyPendingRef.current) {
+              failMobileVerification(error);
+            }
           }
         };
 
@@ -242,6 +294,11 @@ export default function PartnerRegister() {
       formattedMobile,
       (data) => {
         clearTimeout(timeoutId);
+        const requestId = getMsg91RequestId(data);
+        setMobileOtpRequestId(requestId);
+        if (!requestId) {
+          console.warn('MSG91 sendOtp did not return a request id.', data);
+        }
         setMobileOtpSent(true);
         setMobileOtpTimer(120);
         setForm(f => ({ ...f, mobileOtp: '' }));
@@ -270,10 +327,12 @@ export default function PartnerRegister() {
       setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
     }, 30000);
 
-    window.retryOtp(
+    const retryArgs = [
       '11', // SMS channel for custom MSG91 configuration
       (data) => {
         clearTimeout(timeoutId);
+        const requestId = getMsg91RequestId(data);
+        if (requestId) setMobileOtpRequestId(requestId);
         setMobileOtpTimer(120);
         setForm(f => ({ ...f, mobileOtp: '' }));
         setInfoMsg(t('partner.mobileOtpResent', 'SMS OTP resent successfully.'));
@@ -285,7 +344,9 @@ export default function PartnerRegister() {
         setErr(errorMsg);
         setMobileOtpLoading(false);
       }
-    );
+    ];
+    if (mobileOtpRequestId) retryArgs.push(mobileOtpRequestId);
+    window.retryOtp(...retryArgs);
   };
 
   const handleVerifyMobileOtp = () => {
@@ -297,33 +358,37 @@ export default function PartnerRegister() {
     setInfoMsg('');
     setMobileVerifyLoading(true);
     const timeoutId = setTimeout(() => {
+      mobileVerifyPendingRef.current = false;
+      mobileVerifyTimeoutRef.current = null;
       setMobileVerifyLoading(false);
-      setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
+      setErr(
+        mobileOtpRequestId
+          ? t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.')
+          : t('partner.errors.msg91MissingRequestId', 'OTP session was not created correctly. Please resend OTP and try again.')
+      );
     }, 30000);
+    mobileVerifyPendingRef.current = true;
+    mobileVerifyTimeoutRef.current = timeoutId;
 
     if (typeof window.verifyOtp !== 'function') {
       clearTimeout(timeoutId);
+      mobileVerifyPendingRef.current = false;
+      mobileVerifyTimeoutRef.current = null;
       setMobileVerifyLoading(false);
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider not loaded.'));
     }
 
-    window.verifyOtp(
-      form.mobileOtp.trim(),
+    const verifyArgs = [
+      Number(form.mobileOtp.trim()),
       (data) => {
-        clearTimeout(timeoutId);
-        setForm(f => ({ ...f, mobilePreVerified: true }));
-        setMobileOtpSent(false);
-        setMobileOtpTimer(0);
-        setInfoMsg(t('partner.mobileVerified', 'Mobile number successfully verified.'));
-        setMobileVerifyLoading(false);
+        completeMobileVerification();
       },
       (error) => {
-        clearTimeout(timeoutId);
-        const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.verifyMobileOtpFailed', 'Incorrect OTP. Please try again.'));
-        setErr(errorMsg);
-        setMobileVerifyLoading(false);
+        failMobileVerification(error);
       }
-    );
+    ];
+    if (mobileOtpRequestId) verifyArgs.push(mobileOtpRequestId);
+    window.verifyOtp(...verifyArgs);
   };
 
   const handleSendRegistrationOtp = async () => {
