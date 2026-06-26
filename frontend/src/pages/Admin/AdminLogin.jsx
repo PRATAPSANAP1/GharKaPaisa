@@ -273,23 +273,29 @@ console.log("==============================");
           // Wrap MSG91 callbacks in a Promise so errors propagate to the
           // outer catch and loading state is always reset.
           await new Promise((resolve, reject) => {
-           window.verifyOtp(
-  form.otp,
+  window.verifyOtp(
+    form.otp,
 
-  async (verifyData) => {
-    console.log("========== VERIFY RESPONSE ==========");
-    console.log(verifyData);
-    console.log(JSON.stringify(verifyData, null, 2));
-    console.log("====================================");
+    (verifyData) => {
+      console.log("========== VERIFY RESPONSE ==========");
+      console.log(verifyData);
+      console.log("TYPE:", typeof verifyData);
+      console.log(JSON.stringify(verifyData, null, 2));
+      console.log("====================================");
 
-    return;
-  },
+      reject(new Error("Debug completed. Check browser console."));
+    },
 
-  (err) => {
-    console.log(err);
-  }
-);
-          });
+    (errResponse) => {
+      console.log("VERIFY ERROR");
+      console.log(errResponse);
+
+      reject(
+        new Error(errResponse?.message || "Invalid OTP code entered.")
+      );
+    }
+  );
+});
 
           // At this point login succeeded; getMe & login() already called inside
           // the promise. We just need to navigate. Re-fetch role from store or
