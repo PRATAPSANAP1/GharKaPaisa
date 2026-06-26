@@ -16,7 +16,6 @@ import {
 // ── Toast Notification Component ──────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {
   const isSuccess = type === "success";
-
   useEffect(() => {
     const timer = setTimeout(onClose, 5000);
     return () => clearTimeout(timer);
@@ -171,27 +170,30 @@ export default function AdminLogin() {
           });
         }
 
-        console.log("STEP 1");
-
-window.sendOtp(
-  "91" + form.identity.trim(),
-
-  (data) => {
-    console.log("STEP 2 SUCCESS");
-    console.log(data);
-
-    setLoading((l) => ({ ...l, otp: false }));
-  },
-
-  (err) => {
-    console.log("STEP 3 FAILED");
-    console.log(err);
-
-    setLoading((l) => ({ ...l, otp: false }));
-  }
-);
-
-console.log("STEP 4");
+        window.sendOtp(
+          "91" + form.identity.trim(),
+          () => {
+            setOtpSent(true);
+            setOtpSentTime(Date.now());
+            setOtpAttempts((a) => a + 1);
+            setTimer(30);
+            setToast({
+              message:
+                "Verification code sent to your mobile phone via SMS.",
+              type: "success",
+            });
+            setLoading((l) => ({ ...l, otp: false }));
+          },
+          (errResponse) => {
+            setToast({
+              message:
+                errResponse?.message ||
+                "Failed to send OTP. Please try again.",
+              type: "error",
+            });
+            setLoading((l) => ({ ...l, otp: false }));
+          }
+        );
       } catch (e) {
         setToast({
           message: e.message || "Failed to send OTP. Please try again.",

@@ -4,8 +4,9 @@ import App from './App.jsx'
 import './i18n';
 import { initMsg91 } from './msg91Init';   // ADD THIS
 
-initMsg91();                                // ADD THIS — runs once before React renders
-
+window.addEventListener("load", () => {
+    initMsg91();
+});
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
