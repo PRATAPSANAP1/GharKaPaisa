@@ -115,7 +115,7 @@ export default function AdminLogin() {
 
         window.configuration = {
           widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-          tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+          tokenAuth: String(import.meta.env.VITE_MSG91_TOKEN_AUTH) === "true",
           exposeMethods: true,
           captchaRenderId: captchaContainerId,
           success: (data) => {
