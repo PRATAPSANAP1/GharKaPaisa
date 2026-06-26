@@ -189,9 +189,22 @@ export default function PartnerLogin() {
           throw new Error("MSG91 service is loading. Please wait a moment and try again.");
         }
 
+        // 3. Safety timeout — if MSG91 never calls back, unblock the UI
+        let callbackFired = false;
+        const timeoutId = setTimeout(() => {
+          if (!callbackFired) {
+            callbackFired = true;
+            setToast({ message: "OTP service did not respond. Please refresh the page and try again.", type: "error" });
+            setLoading(l => ({ ...l, otp: false }));
+          }
+        }, 15000);
+
         window.sendOtp(
           '91' + form.identity.trim(),
           (data) => {
+            if (callbackFired) return;
+            callbackFired = true;
+            clearTimeout(timeoutId);
             setOtpSent(true);
             setOtpSentTime(Date.now());
             setOtpAttempts(a => a + 1);
@@ -201,6 +214,9 @@ export default function PartnerLogin() {
             setLoading(l => ({ ...l, otp: false }));
           },
           (errResponse) => {
+            if (callbackFired) return;
+            callbackFired = true;
+            clearTimeout(timeoutId);
             setToast({ message: errResponse?.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
             setLoading(l => ({ ...l, otp: false }));
           }
@@ -238,21 +254,43 @@ export default function PartnerLogin() {
     setLoading(l => ({ ...l, login: true }));
     try {
       if (method === 'otp') {
-        if (!otpSent) return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
-        if (!form.otp || form.otp.length < 6) return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
-        if (!otpSentTime || Date.now() - otpSentTime > 300000) return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
+        if (!otpSent) {
+          setLoading(l => ({ ...l, login: false }));
+          return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
+        }
+        if (!form.otp || form.otp.length < 6) {
+          setLoading(l => ({ ...l, login: false }));
+          return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
+        }
+        if (!otpSentTime || Date.now() - otpSentTime > 300000) {
+          setLoading(l => ({ ...l, login: false }));
+          return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
+        }
 
         const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
 
         // ── Mobile OTP verification flow via MSG91 ─────────────────────────────────
         if (isMobile) {
-          if (!window.verifyOtp) {
-            throw new Error("MSG91 service is temporarily unavailable.");
+          if (typeof window.verifyOtp !== 'function') {
+            throw new Error("MSG91 service is temporarily unavailable. Please refresh the page.");
           }
+
+          // Safety timeout — if MSG91 never calls back, unblock the UI
+          let verifyDone = false;
+          const verifyTimeout = setTimeout(() => {
+            if (!verifyDone) {
+              verifyDone = true;
+              setErr("Verification timed out. Please try again.");
+              setLoading(l => ({ ...l, login: false }));
+            }
+          }, 15000);
 
           window.verifyOtp(
             form.otp,
             async (verifyData) => {
+              if (verifyDone) return;
+              verifyDone = true;
+              clearTimeout(verifyTimeout);
               try {
                 const tokenVal = verifyData?.accessToken || verifyData?.['access-token'] || (typeof verifyData === 'string' ? verifyData : verifyData?.data);
                 if (!tokenVal) {
@@ -272,6 +310,9 @@ export default function PartnerLogin() {
               }
             },
             (errResponse) => {
+              if (verifyDone) return;
+              verifyDone = true;
+              clearTimeout(verifyTimeout);
               setErr(errResponse?.message || "Invalid OTP code entered.");
               setLoading(l => ({ ...l, login: false }));
             }
@@ -289,7 +330,10 @@ export default function PartnerLogin() {
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       } else {
         // Password login
-        if (!form.password || form.password.length < 8) return setErr('Please enter your password.');
+        if (!form.password || form.password.length < 8) {
+          setLoading(l => ({ ...l, login: false }));
+          return setErr('Please enter your password.');
+        }
         const loginRes = await loginWithPassword(form.identity.trim(), form.password);
         const profile = await getMe(true);
         login(profile, loginRes.idToken);
