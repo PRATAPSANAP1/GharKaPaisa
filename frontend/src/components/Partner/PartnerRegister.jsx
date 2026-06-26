@@ -71,6 +71,8 @@ export default function PartnerRegister() {
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
   const [mobileOtpTimer, setMobileOtpTimer] = useState(0);
   const [mobileOtpLoading, setMobileOtpLoading] = useState(false);
+  const [mobileVerifyLoading, setMobileVerifyLoading] = useState(false);
+  const [captchaContainerId] = useState(`msg91-captcha-register-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
 
   useEffect(() => {
     if (!form.email) return;
@@ -100,7 +102,6 @@ export default function PartnerRegister() {
 
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
-    const captchaContainerId = "msg91-captcha-register";
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
@@ -161,7 +162,7 @@ export default function PartnerRegister() {
         script.removeEventListener('load', initWidget);
       }
     };
-  }, []);
+  }, [captchaContainerId]);
 
   const focusBorder = `1.5px solid ${C.teal}`;
   const inputProps = (key, extra = {}) => ({
@@ -226,8 +227,13 @@ export default function PartnerRegister() {
     setMobileOtpLoading(true);
 
     const formattedMobile = '91' + form.mobile.trim();
+    const timeoutId = setTimeout(() => {
+      setMobileOtpLoading(false);
+      setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
+    }, 30000);
 
     if (typeof window.sendOtp !== 'function') {
+      clearTimeout(timeoutId);
       setMobileOtpLoading(false);
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider is loading. Please try again in a moment.'));
     }
@@ -235,12 +241,15 @@ export default function PartnerRegister() {
     window.sendOtp(
       formattedMobile,
       (data) => {
+        clearTimeout(timeoutId);
         setMobileOtpSent(true);
         setMobileOtpTimer(120);
+        setForm(f => ({ ...f, mobileOtp: '' }));
         setInfoMsg(t('partner.mobileOtpSent', 'SMS OTP sent successfully.'));
         setMobileOtpLoading(false);
       },
       (error) => {
+        clearTimeout(timeoutId);
         const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
         setErr(errorMsg);
         setMobileOtpLoading(false);
@@ -256,15 +265,22 @@ export default function PartnerRegister() {
     setErr('');
     setInfoMsg('');
     setMobileOtpLoading(true);
+    const timeoutId = setTimeout(() => {
+      setMobileOtpLoading(false);
+      setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
+    }, 30000);
 
     window.retryOtp(
-      null, // channel null (default SMS)
+      '11', // SMS channel for custom MSG91 configuration
       (data) => {
+        clearTimeout(timeoutId);
         setMobileOtpTimer(120);
+        setForm(f => ({ ...f, mobileOtp: '' }));
         setInfoMsg(t('partner.mobileOtpResent', 'SMS OTP resent successfully.'));
         setMobileOtpLoading(false);
       },
       (error) => {
+        clearTimeout(timeoutId);
         const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.resendMobileOtpFailed', 'Failed to resend SMS OTP.'));
         setErr(errorMsg);
         setMobileOtpLoading(false);
@@ -273,32 +289,39 @@ export default function PartnerRegister() {
   };
 
   const handleVerifyMobileOtp = () => {
-    if (!form.mobileOtp.trim()) {
-      return setErr(t('partner.errors.enterMobileOtp', 'Please enter the OTP.'));
+    if (!/^\d{6}$/.test(form.mobileOtp.trim())) {
+      return setErr(t('partner.errors.enterMobileOtp', 'Please enter the 6-digit OTP.'));
     }
 
     setErr('');
     setInfoMsg('');
-    setMobileOtpLoading(true);
+    setMobileVerifyLoading(true);
+    const timeoutId = setTimeout(() => {
+      setMobileVerifyLoading(false);
+      setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
+    }, 30000);
 
     if (typeof window.verifyOtp !== 'function') {
-      setMobileOtpLoading(false);
+      clearTimeout(timeoutId);
+      setMobileVerifyLoading(false);
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider not loaded.'));
     }
 
     window.verifyOtp(
       form.mobileOtp.trim(),
       (data) => {
+        clearTimeout(timeoutId);
         setForm(f => ({ ...f, mobilePreVerified: true }));
         setMobileOtpSent(false);
         setMobileOtpTimer(0);
         setInfoMsg(t('partner.mobileVerified', 'Mobile number successfully verified.'));
-        setMobileOtpLoading(false);
+        setMobileVerifyLoading(false);
       },
       (error) => {
+        clearTimeout(timeoutId);
         const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.verifyMobileOtpFailed', 'Incorrect OTP. Please try again.'));
         setErr(errorMsg);
-        setMobileOtpLoading(false);
+        setMobileVerifyLoading(false);
       }
     );
   };
@@ -415,6 +438,8 @@ export default function PartnerRegister() {
       setLoading(false);
     }
   };
+
+  const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0);
 
   // ── Success Screen ──────────────────────────────────────────────────────────
   if (success) {
@@ -584,25 +609,30 @@ export default function PartnerRegister() {
 
                   {/* Mobile OTP input shown after sending OTP */}
                   {mobileOtpSent && !form.mobilePreVerified && (
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'stretch' }}>
                       <input
                         style={{ ...S.input, flex: 1 }}
                         value={form.mobileOtp}
                         onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
-                        placeholder={t('partner.enterMobileOtp', 'Enter OTP')}
+                        placeholder={t('partner.enterMobileOtp', 'Enter 6-digit SMS OTP')}
                         maxLength={6}
                       />
                       <button
                         type="button"
                         onClick={handleVerifyMobileOtp}
-                        disabled={mobileOtpLoading}
-                        style={{ ...S.btn('sm') }}
+                        disabled={mobileVerifyLoading || form.mobileOtp.trim().length < 6}
+                        style={{ ...S.btn('primary'), minWidth: 170, opacity: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? 0.7 : 1 }}
                       >
-                        {mobileOtpLoading ? t('partner.verifying', 'Verifying…') : t('partner.verifyOtpButton', 'Verify')}
+                        {mobileVerifyLoading ? t('partner.verifying', 'Verifying…') : t('partner.verifyMobileNumber', 'Verify Mobile Number')}
                       </button>
                     </div>
                   )}
-                  <div id="msg91-captcha-register" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
+                  {mobileOtpSent && !form.mobilePreVerified && (
+                    <div style={{ fontSize: 12, color: C.textLight, marginTop: 6 }}>
+                      {t('partner.mobileOtpHelp', 'Enter the SMS OTP above, then click Verify Mobile Number.')}
+                    </div>
+                  )}
+                  <div id={captchaContainerId} style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
                 </div>
 
                 <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -610,8 +640,9 @@ export default function PartnerRegister() {
                   <button
                     type="button"
                     onClick={mobileOtpSent ? handleResendMobileOtp : handleSendMobileOtp}
-                    style={{ ...S.btn('primary'), width: '100%' }}
-                    disabled={form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0)}
+                    style={{ ...S.btn('primary'), width: '100%', opacity: mobileActionDisabled ? 0.7 : 1 }}
+                    disabled={mobileActionDisabled}
+                    title={mobileOtpSent && mobileOtpTimer > 0 ? t('partner.waitBeforeResend', 'Please wait before requesting another OTP.') : ''}
                   >
                     {form.mobilePreVerified 
                       ? t('partner.verified', 'Verified') 
