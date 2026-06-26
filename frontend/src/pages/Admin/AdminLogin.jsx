@@ -136,17 +136,17 @@ export default function AdminLogin() {
       msg91Initialized = true;
 
       window.configuration = {
-        widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-        tokenAuth: String(import.meta.env.VITE_MSG91_TOKEN_AUTH) === "true",
-        exposeMethods: true,
-        captchaRenderId: CAPTCHA_CONTAINER_ID,
-        success: (data) => {
-          console.log("MSG91 admin widget loaded successfully.", data);
-        },
-        failure: (error) => {
-          console.error("MSG91 admin widget load failed.", error);
-        },
-      };
+  widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+  tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,   // ← plain string, e.g. "534683TU4WDwc8S0M6a36b963P1"
+  exposeMethods: true,
+  captchaRenderId: CAPTCHA_CONTAINER_ID,
+  success: (data) => {
+    console.log("MSG91 admin widget loaded successfully.", data);
+  },
+  failure: (error) => {
+    console.error("MSG91 admin widget load failed.", error);
+  },
+};
 
       try {
         window.initSendOTP(window.configuration);
