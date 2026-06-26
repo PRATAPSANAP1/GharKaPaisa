@@ -30,61 +30,77 @@ const findVerifiedIdentifier = (payload) => {
 };
 
 const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
-  if (!accessToken || typeof accessToken !== 'string') {
-    throw new Error('MSG91 access token is required');
+  if (!accessToken || typeof accessToken !== "string") {
+    throw new Error("MSG91 access token is required");
   }
 
- const response = await axios.post(
-  VERIFY_ACCESS_TOKEN_URL,
-  {
-    authkey: getAuthKey(),
-    "access-token": accessToken,
-  },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-  }
-);
+  try {
+    console.log("=========== VERIFY REQUEST ===========");
+    console.log("URL:", VERIFY_ACCESS_TOKEN_URL);
+    console.log("AuthKey:", getAuthKey());
+    console.log("AccessToken:", accessToken);
+    console.log("Expected Mobile:", expectedMobile);
 
-console.log("=================================");
-console.log("VERIFY ACCESS TOKEN RESPONSE");
-console.log(JSON.stringify(response.data, null, 2));
-console.log("=================================");
+    const response = await axios.post(
+      VERIFY_ACCESS_TOKEN_URL,
+      {
+        authkey: getAuthKey(),
+        "access-token": accessToken,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        timeout: 10000,
+      }
+    );
 
+    console.log("=========== VERIFY SUCCESS ===========");
+    console.log(JSON.stringify(response.data, null, 2));
+    console.log("======================================");
 
-  const payload = response.data || {};
-  const verificationSucceeded =
-    payload.success === true ||
-    payload.type === 'success' ||
-    payload.status === 'success' ||
-    payload.status === true;
+    const payload = response.data || {};
 
-  if (!verificationSucceeded) {
-    const reason = payload.message || payload.error || 'MSG91 token verification failed';
-    const err = new Error(reason);
-    err.code = 'MSG91_TOKEN_INVALID';
+    const verificationSucceeded =
+      payload.success === true ||
+      payload.type === "success" ||
+      payload.status === "success" ||
+      payload.status === true;
+
+    if (!verificationSucceeded) {
+      throw new Error(
+        payload.message || payload.error || "MSG91 verification failed"
+      );
+    }
+
+    const requestedMobile = normalizeIndianMobile(expectedMobile);
+    const verifiedIdentifier = findVerifiedIdentifier(payload);
+    const verifiedMobile = normalizeIndianMobile(verifiedIdentifier);
+
+    console.log("Requested:", requestedMobile);
+    console.log("Verified :", verifiedMobile);
+
+    if (!verifiedIdentifier || !verifiedMobile) {
+      throw new Error("MSG91 did not return verified mobile.");
+    }
+
+    if (requestedMobile !== verifiedMobile) {
+      throw new Error("Verified mobile mismatch.");
+    }
+
+    return payload;
+
+  } catch (err) {
+
+    console.log("=========== VERIFY FAILED ===========");
+    console.log("Status :", err.response?.status);
+    console.log("Data   :", JSON.stringify(err.response?.data, null, 2));
+    console.log("Error  :", err.message);
+    console.log("=====================================");
+
     throw err;
   }
-
-  const requestedMobile = normalizeIndianMobile(expectedMobile);
-  const verifiedIdentifier = findVerifiedIdentifier(payload);
-  const verifiedMobile = normalizeIndianMobile(verifiedIdentifier);
-
-  if (!verifiedIdentifier || !verifiedMobile) {
-    const err = new Error('MSG91 response did not include the verified mobile number');
-    err.code = 'MSG91_IDENTIFIER_MISSING';
-    throw err;
-  }
-
-  if (!requestedMobile || verifiedMobile !== requestedMobile) {
-    const err = new Error('Verified mobile number does not match the login request');
-    err.code = 'MSG91_IDENTIFIER_MISMATCH';
-    throw err;
-  }
-
-  return payload;
 };
 
 const sendSmsOtp = async (mobile, otp) => {
