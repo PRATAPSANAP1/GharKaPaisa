@@ -171,30 +171,27 @@ export default function AdminLogin() {
           });
         }
 
-        window.sendOtp(
-          "91" + form.identity.trim(),
-          () => {
-            setOtpSent(true);
-            setOtpSentTime(Date.now());
-            setOtpAttempts((a) => a + 1);
-            setTimer(30);
-            setToast({
-              message:
-                "Verification code sent to your mobile phone via SMS.",
-              type: "success",
-            });
-            setLoading((l) => ({ ...l, otp: false }));
-          },
-          (errResponse) => {
-            setToast({
-              message:
-                errResponse?.message ||
-                "Failed to send OTP. Please try again.",
-              type: "error",
-            });
-            setLoading((l) => ({ ...l, otp: false }));
-          }
-        );
+        console.log("STEP 1");
+
+window.sendOtp(
+  "91" + form.identity.trim(),
+
+  (data) => {
+    console.log("STEP 2 SUCCESS");
+    console.log(data);
+
+    setLoading((l) => ({ ...l, otp: false }));
+  },
+
+  (err) => {
+    console.log("STEP 3 FAILED");
+    console.log(err);
+
+    setLoading((l) => ({ ...l, otp: false }));
+  }
+);
+
+console.log("STEP 4");
       } catch (e) {
         setToast({
           message: e.message || "Failed to send OTP. Please try again.",
