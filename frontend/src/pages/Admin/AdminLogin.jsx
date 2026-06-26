@@ -666,7 +666,17 @@ export default function AdminLogin() {
                 </div>
               )}
 
-
+<div
+    id="msg91-captcha-global"
+    style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "80px",
+        marginTop: "15px",
+        marginBottom: "10px",
+    }}
+></div>
 
               {/* Submit */}
               <button
