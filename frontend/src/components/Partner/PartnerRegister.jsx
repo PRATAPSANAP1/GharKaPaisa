@@ -149,36 +149,40 @@ export default function PartnerRegister() {
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
 
-    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    // ✅ Set configuration BEFORE script loads — MSG91 auto-reads this at parse-time
     window.configuration = {
       widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
       tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
       exposeMethods: true,
       captchaRenderId: captchaContainerId,
       success: (data) => {
-        console.log('MSG91 register widget ready.', data);
+        console.log('MSG91 register widget ready (auto-init).', data);
         if (mobileVerifyPendingRef.current) {
           completeMobileVerification();
         }
       },
       failure: (error) => {
-        console.error('MSG91 register widget load failed.', error);
+        console.error('MSG91 register widget auto-init failed.', error);
         if (mobileVerifyPendingRef.current) {
           failMobileVerification(error);
         }
       }
     };
-    
+
     const initWidget = () => {
+      // If SDK already auto-initialized, skip manual init
+      if (typeof window.sendOtp === 'function') {
+        console.log('MSG91 sendOtp already available — skipping initSendOTP.');
+        return;
+      }
+
+      // Fallback: manually initialize if auto-init didn't expose sendOtp
       if (typeof window.initSendOTP === 'function') {
         const container = document.getElementById(captchaContainerId);
         if (!container) return;
-        if (container.dataset.msg91Initialized === 'true' || container.children.length > 0) {
-          return;
-        }
-        container.dataset.msg91Initialized = 'true';
 
         try {
+          console.log('MSG91 auto-init did not expose sendOtp — calling initSendOTP manually.');
           window.initSendOTP(window.configuration);
         } catch (e) {
           console.warn("initSendOTP failed in PartnerRegister:", e);
@@ -189,9 +193,7 @@ export default function PartnerRegister() {
     let script = document.getElementById(scriptId);
     if (!script) {
       script = document.querySelector('script[src*="otp-provider.js"]');
-      if (script) {
-        script.id = scriptId;
-      }
+      if (script) script.id = scriptId;
     }
 
     if (!script) {
@@ -203,17 +205,19 @@ export default function PartnerRegister() {
       script.onload = initWidget;
       document.body.appendChild(script);
     } else {
-      if (typeof window.initSendOTP === 'function') {
-        initWidget();
-      } else {
-        script.addEventListener('load', initWidget);
-      }
+      initWidget();
     }
 
-    return () => {
-      if (script) {
-        script.removeEventListener('load', initWidget);
+    // Poll for readiness — MSG91 may expose sendOtp slightly after onload
+    const readyPoll = setInterval(() => {
+      if (typeof window.sendOtp === 'function') {
+        clearInterval(readyPoll);
       }
+    }, 500);
+
+    return () => {
+      clearInterval(readyPoll);
+      if (script) script.removeEventListener('load', initWidget);
     };
   }, [captchaContainerId]);
 

@@ -21,7 +21,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
 
-    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    // ✅ Set configuration BEFORE script loads — MSG91 auto-reads this at parse-time
     window.configuration = {
       widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
       tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
@@ -34,15 +34,15 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         console.log('MSG91 cards failure reason', error);
       }
     };
-    
+
     const initWidget = () => {
+      if (typeof window.sendOtp === 'function') {
+        return;
+      }
+
       if (typeof window.initSendOTP === 'function') {
         const container = document.getElementById(captchaContainerId);
         if (!container) return;
-        if (container.dataset.msg91Initialized === 'true' || container.children.length > 0) {
-          return;
-        }
-        container.dataset.msg91Initialized = 'true';
 
         try {
           window.initSendOTP(window.configuration);
@@ -55,9 +55,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     let script = document.getElementById(scriptId);
     if (!script) {
       script = document.querySelector('script[src*="otp-provider.js"]');
-      if (script) {
-        script.id = scriptId;
-      }
+      if (script) script.id = scriptId;
     }
 
     if (!script) {
@@ -69,17 +67,16 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       script.onload = initWidget;
       document.body.appendChild(script);
     } else {
-      if (typeof window.initSendOTP === 'function') {
-        initWidget();
-      } else {
-        script.addEventListener('load', initWidget);
-      }
+      initWidget();
     }
 
+    const readyPoll = setInterval(() => {
+      if (typeof window.sendOtp === 'function') clearInterval(readyPoll);
+    }, 500);
+
     return () => {
-      if (script) {
-        script.removeEventListener('load', initWidget);
-      }
+      clearInterval(readyPoll);
+      if (script) script.removeEventListener('load', initWidget);
     };
   }, []);
 
