@@ -169,16 +169,12 @@ export default function AdminLogin() {
               "MSG91 widget is still loading. Please wait a moment and try again.",
           });
         }
-console.log("========== SEND OTP ==========");
-console.log("Captcha Verified:", window.isCaptchaVerified());
-console.log("sendOtp exists:", typeof window.sendOtp);
-console.log("Number:", "91" + form.identity.trim());
-console.log("==============================");
+
        window.sendOtp(
   "91" + form.identity.trim(),
 
   (data) => {
-    console.log("✅ SEND OTP SUCCESS", data);
+    console.log("SEND OTP SUCCESS", data);
 
     setOtpSent(true);
     setOtpSentTime(Date.now());
@@ -194,11 +190,12 @@ console.log("==============================");
   },
 
   (error) => {
-    console.log("❌ SEND OTP ERROR", error);
+    console.log("SEND OTP ERROR", error);
 
     setToast({
       message: error.message || "Failed to send OTP",
       type: "error",
+
     });
 
     setLoading(l => ({ ...l, otp: false }));
@@ -276,19 +273,54 @@ console.log("==============================");
   window.verifyOtp(
     form.otp,
 
-    (verifyData) => {
-      console.log("========== VERIFY RESPONSE ==========");
-      console.log(verifyData);
-      console.log("TYPE:", typeof verifyData);
-      console.log(JSON.stringify(verifyData, null, 2));
-      console.log("====================================");
+    async (verifyData) => {
+      try {
+        console.log("VERIFY RESPONSE:", verifyData);
 
-      reject(new Error("Debug completed. Check browser console."));
+        const tokenVal =
+          verifyData?.message ??
+          verifyData?.["access-token"] ??
+          verifyData?.accessToken ??
+          verifyData?.token ??
+          verifyData?.data?.accessToken ??
+          verifyData?.data?.token ??
+          (typeof verifyData === "string" ? verifyData : null);
+
+        if (!tokenVal) {
+          console.log("MSG91 Verify Response:", verifyData);
+          throw new Error("Could not retrieve verification token from MSG91.");
+        }
+
+        console.log("MSG91 TOKEN:", tokenVal);
+
+        const loginRes = await loginWithMsg91(
+          form.identity.trim(),
+          tokenVal
+        );
+
+        console.log("LOGIN RESPONSE:", loginRes);
+
+        const profile = await getMe(true);
+        console.log("PROFILE:", profile);
+
+        const role = profile.role?.toUpperCase();
+
+        if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
+          throw new Error(
+            "Access denied. Admin portal is only for administrators."
+          );
+        }
+
+        login(profile, loginRes.idToken);
+
+        resolve(role);
+      } catch (err) {
+        reject(err);
+      }
     },
 
     (errResponse) => {
-      console.log("VERIFY ERROR");
-      console.log(errResponse);
+      console.log("VERIFY ERROR:", errResponse);
 
       reject(
         new Error(errResponse?.message || "Invalid OTP code entered.")
