@@ -273,46 +273,22 @@ console.log("==============================");
           // Wrap MSG91 callbacks in a Promise so errors propagate to the
           // outer catch and loading state is always reset.
           await new Promise((resolve, reject) => {
-            window.verifyOtp(
-              form.otp,
-              async (verifyData) => {
-                try {
-                  const tokenVal =
-                    verifyData?.["access-token"] ??
-                    verifyData?.accessToken ??
-                    (typeof verifyData === "string" ? verifyData : null);
+           window.verifyOtp(
+  form.otp,
 
-                  if (!tokenVal) {
-                    throw new Error("Could not retrieve verification token from MSG91.");
-                  }
+  async (verifyData) => {
+    console.log("========== VERIFY RESPONSE ==========");
+    console.log(verifyData);
+    console.log(JSON.stringify(verifyData, null, 2));
+    console.log("====================================");
 
-                  const loginRes = await loginWithMsg91(
-                    form.identity.trim(),
-                    tokenVal
-                  );
-                  const profile = await getMe(true);
-                  const role = profile.role?.toUpperCase();
+    return;
+  },
 
-                  if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
-                    throw new Error(
-                      "Access denied. Admin portal is only for administrators."
-                    );
-                  }
-
-                  login(profile, loginRes.idToken);
-                  resolve(role);
-                } catch (innerErr) {
-                  reject(innerErr);
-                }
-              },
-              (errResponse) => {
-                reject(
-                  new Error(
-                    errResponse?.message || "Invalid OTP code entered."
-                  )
-                );
-              }
-            );
+  (err) => {
+    console.log(err);
+  }
+);
           });
 
           // At this point login succeeded; getMe & login() already called inside
