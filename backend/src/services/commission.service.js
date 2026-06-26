@@ -65,31 +65,95 @@ const releaseCommission = async (applicationId, adminUserId) => {
 };
 
 const reverseCommission = async (applicationId, adminUserId, reason) => {
-  // In case of a chargeback or rejection after approval
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    
+
     const { rows: [app] } = await client.query(`
       SELECT * FROM applications WHERE id = $1 FOR UPDATE
     `, [applicationId]);
-    
+
     if (!app) throw new Error('Application not found');
-    
-    // TODO: Depending on if it was in 'hold' or 'processed', we deduct from available or hold.
-    // Assuming for now it's a simple rejection before release:
-    if (app.commission_status === 'pending') {
-      await client.query(`
-        UPDATE wallets SET hold_balance = GREATEST(0, hold_balance - $1) WHERE Partner_id = $2
-      `, [app.commission_amount, app.Partner_id]);
-      
-      await client.query(`
-        UPDATE applications SET commission_status = 'rejected', updated_at = NOW() WHERE id = $1
-      `, [app.id]);
+    if (app.commission_status === 'rejected') throw new Error('Commission already reversed');
+    if (!app.commission_amount || parseFloat(app.commission_amount) <= 0) {
+      throw new Error('No commission to reverse');
     }
-    
-    await logAction(adminUserId, 'REVERSE_COMMISSION', app.id, { reason, amount: app.commission_amount });
-    
+
+    const amount = parseFloat(app.commission_amount);
+    const partnerId = app.Partner_id;
+    const priorStatus = app.commission_status;
+
+    const { rows: [wallet] } = await client.query(`
+      SELECT id, hold_balance, available_balance, total_earned
+      FROM wallets WHERE Partner_id = $1 FOR UPDATE
+    `, [partnerId]);
+    if (!wallet) throw new Error('Wallet not found');
+
+    if (priorStatus === 'pending') {
+      if (parseFloat(wallet.hold_balance) < amount) {
+        throw new Error(`Insufficient hold balance for reversal. Hold: ₹${wallet.hold_balance}`);
+      }
+
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = hold_balance - $1,
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+
+      await client.query(`
+        UPDATE wallet_transactions SET
+          status = 'rejected',
+          processed_at = NOW(),
+          processed_by = $1,
+          description = COALESCE(description, '') || ' [Reversed]'
+        WHERE application_id = $2 AND type = 'credit' AND status IN ('pending', 'approved')
+      `, [adminUserId, applicationId]);
+    } else if (priorStatus === 'approved' || priorStatus === 'processed') {
+      if (parseFloat(wallet.available_balance) < amount) {
+        throw new Error(`Insufficient available balance for reversal. Available: ₹${wallet.available_balance}`);
+      }
+
+      await client.query(`
+        UPDATE wallets SET
+          available_balance = available_balance - $1,
+          total_earned = GREATEST(0, total_earned - $1),
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+
+      await client.query(`
+        INSERT INTO wallet_transactions (
+          wallet_id, partner_id, application_id, type, amount, status, description,
+          reference_type, reference_id, processed_by, processed_at
+        ) VALUES ($1, $2, $3, 'debit', $4, 'approved', $5, 'commission_reversal', $6, $7, NOW())
+      `, [
+        wallet.id,
+        partnerId,
+        applicationId,
+        amount,
+        `Commission reversed for App ${app.app_number}${reason ? `: ${reason}` : ''}`,
+        applicationId,
+        adminUserId,
+      ]);
+    } else {
+      throw new Error(`Cannot reverse commission in status: ${priorStatus}`);
+    }
+
+    await client.query(`
+      UPDATE applications SET
+        commission_status = 'rejected',
+        rejection_reason = COALESCE($2, rejection_reason),
+        updated_at = NOW()
+      WHERE id = $1
+    `, [applicationId, reason || null]);
+
+    await logAction(adminUserId, 'REVERSE_COMMISSION', applicationId, {
+      reason,
+      amount,
+      prior_status: priorStatus,
+    });
+
     await client.query('COMMIT');
     return true;
   } catch (err) {

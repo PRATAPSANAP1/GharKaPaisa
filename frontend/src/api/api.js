@@ -1,5 +1,5 @@
 /**
- * api.js — Central Axios instance for https://api.gharkapaisa.in/api/v1
+ * api.js — Central Axios instance (see config/api.js for base URL)
  *
  * Features:
  *  - Injects Authorization header from in-memory / sessionStorage on every request
@@ -8,9 +8,9 @@
  */
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { getApiV1Url } from '../config/api';
 
-const rawBase = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
-const BASE_URL = rawBase.replace(/\/+$/, '').endsWith('/api/v1') ? rawBase.replace(/\/+$/, '') : rawBase.replace(/\/+$/, '') + '/api/v1';
+const BASE_URL = getApiV1Url();
 
 const api = axios.create({
   baseURL: BASE_URL,

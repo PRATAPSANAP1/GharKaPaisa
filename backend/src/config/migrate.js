@@ -627,44 +627,57 @@ const migrate = async () => {
     `);
   }
 
-  // Clean up all old super admin records
-  const bcrypt = require('bcrypt');
-  const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
-  await query(`DELETE FROM users WHERE role = 'SUPER_ADMIN' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
+  // Seed super admins only when SUPER_ADMIN_SEED_PASSWORD is explicitly configured
+  const seedPassword = process.env.SUPER_ADMIN_SEED_PASSWORD;
+  const resetPassword = process.env.SUPER_ADMIN_RESET_PASSWORD === 'true';
 
-  // Seed Super Admin Sharad Yohesa if not exists
-  const { rows: [existingSuper] } = await query(`SELECT id FROM users WHERE email = $1`, ['sharadyohesa@gmail.com']);
-  if (!existingSuper) {
-    await query(`
-      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
-      VALUES ($1, $2, 'SUPER_ADMIN', 'active', $3, $4, true, true)
-    `, ['sharadyohesa@gmail.com', '8087179438', 'Sharad Yohesa', hashedPassword]);
-    logger.info('Super admin Sharad Yohesa seeded successfully');
-  } else {
-    // Make sure role, status, mobile, and password are set correctly
-    await query(`
-      UPDATE users 
-      SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = 'Sharad Yohesa', mobile = '8087179438', password_hash = $1, email_verified = true
-      WHERE email = 'sharadyohesa@gmail.com'
-    `, [hashedPassword]);
-    logger.info('Super admin Sharad Yohesa configuration verified');
-  }
+  const parseSuperAdminSeeds = () => {
+    const raw = process.env.SUPER_ADMIN_SEEDS;
+    if (!raw) {
+      return [
+        { email: 'sharadyohesa@gmail.com', mobile: '8087179438', name: 'Sharad Yohesa' },
+        { email: 'pratapsanap14@gmail.com', mobile: '9370470692', name: 'Pratap Sanap' },
+      ];
+    }
+    return raw.split(',').map((entry) => {
+      const [email, mobile, name] = entry.trim().split(':');
+      return { email: email?.trim(), mobile: mobile?.trim(), name: name?.trim() };
+    }).filter((admin) => admin.email && admin.mobile && admin.name);
+  };
 
-  // Seed Super Admin Pratap Sanap if not exists
-  const { rows: [existingSuper2] } = await query(`SELECT id FROM users WHERE email = $1`, ['pratapsanap14@gmail.com']);
-  if (!existingSuper2) {
-    await query(`
-      INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
-      VALUES ($1, $2, 'SUPER_ADMIN', 'active', $3, $4, true, true)
-    `, ['pratapsanap14@gmail.com', '9370470692', 'Pratap Sanap', hashedPassword]);
-    logger.info('Super admin Pratap Sanap seeded successfully');
+  if (!seedPassword) {
+    logger.warn('SUPER_ADMIN_SEED_PASSWORD not set — skipping super admin seed (existing accounts unchanged).');
   } else {
-    await query(`
-      UPDATE users 
-      SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = 'Pratap Sanap', mobile = '9370470692', password_hash = $1, email_verified = true
-      WHERE email = 'pratapsanap14@gmail.com'
-    `, [hashedPassword]);
-    logger.info('Super admin Pratap Sanap configuration verified');
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(seedPassword, 10);
+    const superAdmins = parseSuperAdminSeeds();
+
+    for (const admin of superAdmins) {
+      const { rows: [existing] } = await query(`SELECT id FROM users WHERE email = $1`, [admin.email]);
+      if (!existing) {
+        await query(`
+          INSERT INTO users (email, mobile, role, status, full_name, password_hash, is_active, email_verified)
+          VALUES ($1, $2, 'SUPER_ADMIN', 'active', $3, $4, true, true)
+        `, [admin.email, admin.mobile, admin.name, hashedPassword]);
+        logger.info(`Super admin seeded: ${admin.email}`);
+      } else if (resetPassword) {
+        await query(`
+          UPDATE users
+          SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = $1,
+              mobile = $2, password_hash = $3, email_verified = true
+          WHERE email = $4
+        `, [admin.name, admin.mobile, hashedPassword, admin.email]);
+        logger.info(`Super admin password reset: ${admin.email}`);
+      } else {
+        await query(`
+          UPDATE users
+          SET role = 'SUPER_ADMIN', status = 'active', is_active = true, full_name = $1,
+              mobile = $2, email_verified = true
+          WHERE email = $3
+        `, [admin.name, admin.mobile, admin.email]);
+        logger.info(`Super admin verified (password unchanged): ${admin.email}`);
+      }
+    }
   }
 
 

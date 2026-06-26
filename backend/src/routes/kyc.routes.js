@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const kycController = require('../controllers/kyc.controller');
+const jwtAuth = require('../middleware/jwtAuth.middleware');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { upload } = require('../services/s3.service');
 
-// Partner self-service routes
-router.get('/me', authenticate, kycController.getKyc);
-router.post('/me/documents', authenticate, upload.single('document'), kycController.uploadDocument);
+// Partner self-service routes (jwtAuth attaches partner_id via syncUser)
+router.get('/me', jwtAuth, kycController.getKyc);
+router.post('/me/documents', jwtAuth, upload.single('document'), kycController.uploadDocument);
 
 // Admin/Superadmin routes
 router.use(authenticate, authorize('ADMIN', 'SUPER_ADMIN'));

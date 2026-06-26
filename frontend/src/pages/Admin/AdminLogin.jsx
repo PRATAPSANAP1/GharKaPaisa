@@ -128,6 +128,13 @@ export default function AdminLogin() {
 
         try {
           window.initSendOTP(window.configuration);
+         console.log("========== MSG91 ==========");
+console.log("Widget ID:", import.meta.env.VITE_MSG91_WIDGET_ID);
+console.log("Container:", captchaContainerId);
+console.log("initSendOTP:", window.initSendOTP);
+console.log("sendOtp:", window.sendOtp);
+console.log("verifyOtp:", window.verifyOtp);
+console.log("===========================");
         } catch (e) {
           console.warn("initSendOTP failed in AdminLogin:", e);
         }
@@ -572,8 +579,14 @@ export default function AdminLogin() {
                 </div>
               )}
 
-              <div id="msg91-captcha-admin" style={{ marginTop: "10px", display: "flex", justifyContent: "center" }}></div>
-
+             <div
+    id={captchaContainerId}
+    style={{
+        marginTop: "10px",
+        display: "flex",
+        justifyContent: "center"
+    }}
+></div>
               {/* Submit */}
               <button
                 type="submit"

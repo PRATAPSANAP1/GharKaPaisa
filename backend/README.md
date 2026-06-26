@@ -1,14 +1,16 @@
-# FinEdge Backend API
+# GharKaPaisa Backend API
 
-Node.js + Express + PostgreSQL backend for the FinEdge Partner Panel.
+Node.js + Express + PostgreSQL backend for the GharKaPaisa partner platform (credit card lead generation, commissions, and admin control).
 
 ## Stack
+
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js
-- **Database**: PostgreSQL 15 (AWS RDS)
-- **Storage**: AWS S3 (KYC documents)
-- **Auth**: JWT (access + refresh tokens)
-- **OTP**: Twilio SMS
+- **Database**: PostgreSQL 15
+- **Storage**: AWS S3 (KYC documents, banners)
+- **Auth**: JWT access tokens + httpOnly refresh cookies
+- **OTP**: MSG91 SMS
+- **Email**: AWS SES / Nodemailer
 - **Logging**: Winston
 
 ---
@@ -21,12 +23,12 @@ npm install
 
 # 2. Configure environment
 cp .env.example .env
-# Edit .env with your DB, AWS, Twilio credentials
+# Edit .env with DB, AWS, MSG91, JWT secrets
 
-# 3. Run migrations
+# 3. Run migrations (creates schema + optional super-admin seed)
 npm run migrate
 
-# 4. Seed initial data (banks, products, super admin)
+# 4. Seed banks & products
 npm run seed
 
 # 5. Start dev server
@@ -36,43 +38,34 @@ npm run dev
 npm start
 ```
 
+### Super admin seeding
+
+Super admins are created **only when** `SUPER_ADMIN_SEED_PASSWORD` is set in `.env`.
+
+```env
+SUPER_ADMIN_SEED_PASSWORD=your_secure_password
+SUPER_ADMIN_RESET_PASSWORD=false
+SUPER_ADMIN_SEEDS=admin@example.com:9999999999:Admin Name
+```
+
+- On first run: creates accounts from `SUPER_ADMIN_SEEDS`
+- On subsequent runs: verifies role/status but **does not change passwords**
+- Set `SUPER_ADMIN_RESET_PASSWORD=true` to force a password reset
+
 ---
 
 ## Project Structure
 
 ```
 src/
-├── config/
-│   ├── db.js            # PostgreSQL pool
-│   ├── migrate.js       # Schema migrations
-│   └── seed.js          # Initial data
-├── controllers/
-│   ├── auth.controller.js
-│   ├── partner.controller.js
-│   ├── application.controller.js
-│   ├── wallet.controller.js
-│   ├── product.controller.js
-│   ├── notification.controller.js
-│   └── report.controller.js
-├── middleware/
-│   ├── auth.middleware.js       # JWT + RBAC
-│   ├── validation.middleware.js # express-validator rules
-│   └── error.middleware.js      # Global error handler
-├── routes/
-│   ├── index.js
-│   ├── auth.routes.js
-│   ├── partner.routes.js
-│   └── routes.js        # app/wallet/product/notif/report
-├── services/
-│   ├── otp.service.js
-│   ├── s3.service.js
-│   ├── wallet.service.js
-│   └── notification.service.js
-├── utils/
-│   ├── logger.js
-│   ├── response.js
-│   ├── helpers.js
-│   └── jwt.js
+├── config/          # db, migrate, seed, jwt
+├── controllers/     # HTTP handlers
+├── middleware/      # auth, roles, validation, rate limits
+├── routes/          # /api/v1 route modules
+├── services/        # wallet, commission, kyc, s3, msg91, email
+├── jobs/            # CRON: commission release, reports
+├── data/            # static catalogs (e.g. training modules)
+├── templates/       # email HTML templates
 └── server.js
 ```
 
@@ -80,135 +73,77 @@ src/
 
 ## API Endpoints
 
-### Base URL: `http://localhost:5000/api/v1`
+### Base URL
+
+- Local: `http://localhost:5000/api/v1`
+- Production: `https://api.gharkapaisa.in/api/v1`
 
 ### Authentication
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/auth/register` | Partner self-registration | Public |
-| POST | `/auth/login` | Password login | Public |
-| POST | `/auth/otp/send` | Send OTP to mobile | Public |
-| POST | `/auth/otp/verify` | OTP login | Public |
-| POST | `/auth/refresh` | Refresh access token | Public |
-| POST | `/auth/logout` | Logout (revoke token) | Bearer |
-| GET  | `/auth/me` | Get current user | Bearer |
 
-### Partners
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/Partners` | List all Partners | admin, super_admin |
-| GET | `/Partners/:id/profile` | Partner profile | self, admin |
-| PUT | `/Partners/:id/profile` | Update profile | self, admin |
-| POST | `/Partners/:id/kyc` | Upload KYC docs (multipart) | self, admin |
-| GET | `/Partners/:id/dashboard` | Dashboard stats | self, admin |
-| PATCH | `/Partners/:id/approve` | Approve/reject KYC | admin, super_admin |
-
-**KYC Upload Fields** (multipart/form-data):
-- `aadhaar` — Aadhaar card image/PDF
-- `pan` — PAN card image/PDF
-- `gst_cert` — GST certificate
-- `cancelled_cheque` — Bank cheque
-- `aadhaar_number` — text
-- `pan_number` — text
-
-### Applications
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/applications` | List applications (filtered) | all |
-| GET | `/applications/:id` | Application detail | all |
-| POST | `/applications` | Submit new application | Partner (KYC approved) |
-| PATCH | `/applications/:id/status` | Update status | admin, employee |
-| POST | `/applications/:id/documents` | Upload doc | all |
-
-**Submit Application Body:**
-```json
-{
-  "product_id": "uuid",
-  "loan_amount": 500000,
-  "notes": "Optional notes",
-  "customer": {
-    "full_name": "Rahul Sharma",
-    "mobile": "9876543210",
-    "email": "rahul@example.com",
-    "dob": "1990-01-15",
-    "pan_number": "ABCDE1234F",
-    "monthly_income": 50000,
-    "employment_type": "salaried",
-    "city": "Mumbai",
-    "state": "Maharashtra",
-    "pincode": "400001",
-    "employer": "TCS Ltd"
-  }
-}
-```
-
-**Update Status Body:**
-```json
-{
-  "status": "approved",
-  "approved_amount": 480000,
-  "bank_ref_number": "HDFC202601234",
-  "notes": "Approved after verification"
-}
-```
-Status values: `submitted` → `under_review` → `approved` / `rejected` / `disbursed`
-
-### Wallet
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/wallet/:PartnerId` | Wallet summary | self, admin |
-| GET | `/wallet/:PartnerId/transactions` | Statement | self, admin |
-| GET | `/wallet/:PartnerId/case-summary` | Per-product stats | self, admin |
-| POST | `/wallet/:PartnerId/withdraw` | Request withdrawal | self (KYC approved) |
-| GET | `/wallet/withdrawals` | All pending withdrawals | admin, super_admin |
-| PATCH | `/wallet/withdrawals/:id/process` | Approve/reject | super_admin |
-
-**Withdrawal Body:**
-```json
-{ "amount": 5000 }
-```
-
-**Process Withdrawal Body:**
-```json
-{
-  "approved": true,
-  "utr_number": "UTR123456789",
-  "rejection_reason": null
-}
-```
-
-### Products
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/products` | List products | all |
-| GET | `/products/categories` | Grouped by category | all |
-| GET | `/products/:id` | Product detail | all |
-| POST | `/products` | Create product | admin, super_admin |
-| PUT | `/products/:id` | Update product | admin, super_admin |
-| POST | `/products/commission` | Set commission structure | super_admin |
-| GET | `/banks` | List banks | all |
-
-**Query Params for /products:**
-- `category` — credit_card, personal_loan, home_loan, etc.
-- `bank_id` — filter by bank
-- `is_active` — true/false
-- `search` — search by name
-- `page`, `limit`
-
-### Notifications
-| Method | Endpoint | Description | Roles |
-|--------|----------|-------------|-------|
-| GET | `/notifications` | List (supports `?unread_only=true`) | all |
-| PATCH | `/notifications/:id/read` | Mark one read | all |
-| PATCH | `/notifications/read-all` | Mark all read | all |
-
-### Reports (Admin/Super Admin only)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/reports/overview` | KPIs — apps, Partners, wallet totals |
-| GET | `/reports/applications-by-product` | Per-product breakdown |
-| GET | `/reports/top-Partners` | Top earning Partners |
-| GET | `/reports/monthly-trend` | Last 12 months chart data |
+| POST | `/auth/register` | Partner registration |
+| POST | `/auth/login-password` | Email/password login |
+| POST | `/auth/login-msg91` | MSG91 OTP login |
+| POST | `/auth/send-otp` | Send email OTP |
+| POST | `/auth/refresh` | Refresh access token (cookie) |
+| POST | `/auth/logout` | Revoke refresh token |
+| GET | `/auth/me` | Current user profile |
+
+### Partner (self-service)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/partner/profile` | Partner profile |
+| POST | `/partner/upload-docs` | Upload KYC (multipart) |
+| GET | `/partner/customers` | CRM customer list |
+| GET | `/partner/training` | Training module catalog |
+| GET | `/kyc/me` | KYC documents & status |
+
+### Applications & Leads
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/applications` | List applications (role-filtered) |
+| POST | `/applications` | Submit application (KYC-approved partner) |
+| PATCH | `/applications/:id/status` | Update status (admin/employee) |
+| POST | `/card-applications` | Public direct card lead (post-OTP) |
+
+### Wallet
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/wallet/:PartnerId` | Wallet summary |
+| GET | `/wallet/:PartnerId/transactions` | Statement |
+| POST | `/wallet/:PartnerId/withdraw` | Request withdrawal |
+| PATCH | `/wallet/withdrawals/:id/process` | Approve/reject (super admin) |
+
+Commissions enter **hold balance** first (`COMMISSION_CREDIT_HOLD_HOURS`, default 48h), then auto-release to available balance.
+
+### Admin / Super Admin
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/Partners` | List partners |
+| PATCH | `/Partners/:id/approve` | Approve/reject partner KYC |
+| GET/POST | `/products`, `/banks`, `/banners` | Catalog & CMS |
+| GET | `/reports/*` | Analytics & exports |
+| GET | `/superadmin/*` | Elevated system management |
+
+---
+
+## Roles
+
+PostgreSQL enum `user_role`:
+
+| Role | Access |
+|------|--------|
+| `PARTNER` | Submit leads, wallet, KYC, team |
+| `EMPLOYEE` | Lead status updates |
+| `ADMIN` | Partner & lead management, withdrawals |
+| `SUPER_ADMIN` | Full system, CMS, commissions, audit |
+
+Use uppercase role strings everywhere (`PARTNER`, not `partner`).
 
 ---
 
@@ -216,81 +151,36 @@ Status values: `submitted` → `under_review` → `approved` / `rejected` / `dis
 
 **Success:**
 ```json
-{
-  "success": true,
-  "message": "Success",
-  "data": { ... },
-  "timestamp": "2026-06-12T10:00:00Z"
-}
-```
-
-**Paginated:**
-```json
-{
-  "success": true,
-  "data": [...],
-  "pagination": { "total": 100, "page": 1, "limit": 20, "totalPages": 5 }
-}
+{ "success": true, "message": "Success", "data": {}, "timestamp": "..." }
 ```
 
 **Error:**
 ```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": [{ "field": "mobile", "message": "Valid 10-digit mobile required" }]
-}
+{ "success": false, "message": "Validation failed", "timestamp": "..." }
 ```
 
 ---
 
-## Role Permissions Summary
+## Environment Variables
 
-| Feature | Partner | Employee | Admin | Super Admin |
-|---------|-------|----------|-------|-------------|
-| Register | ✅ | — | — | — |
-| Submit Application | ✅ (KYC approved) | ✅ | ✅ | ✅ |
-| Update App Status | ❌ | ✅ | ✅ | ✅ |
-| View Own Wallet | ✅ | ❌ | ✅ | ✅ |
-| Request Withdrawal | ✅ | ❌ | ❌ | ✅ |
-| Approve Withdrawal | ❌ | ❌ | ❌ | ✅ |
-| Manage Partners | ❌ | ❌ | ✅ | ✅ |
-| Manage Products | ❌ | ❌ | ✅ | ✅ |
-| Set Commission | ❌ | ❌ | ❌ | ✅ |
-| Reports | ❌ | ❌ | ✅ | ✅ |
+See `.env.example` for the full list. Required for production:
+
+- `DB_*` — PostgreSQL connection
+- `JWT_SECRET`, `JWT_REFRESH_SECRET` — min 32 chars each
+- `AWS_*` — S3 bucket for documents
+- `MSG91_AUTH_KEY` — SMS OTP
+- `FRONTEND_URL` — CORS whitelist (comma-separated)
+- `ENCRYPTION_KEY` — AES-256-GCM for bank account numbers
 
 ---
 
-## Deployment (AWS EC2)
+## Deployment
 
 ```bash
-# Install Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Clone & setup
-git clone https://github.com/your-org/finedge-backend.git
-cd finedge-backend
 npm install --production
-
-# Setup PM2
-npm install -g pm2
-pm2 start src/server.js --name finedge-api
-pm2 startup && pm2 save
-
-# Nginx reverse proxy (port 5000 → 80/443)
-# Add SSL via Certbot
+npm run migrate   # with SUPER_ADMIN_SEED_PASSWORD set once
+npm run seed
+pm2 start src/server.js --name gharkapaisa-api
 ```
 
----
-
-## Environment Variables Reference
-
-See `.env.example` for all required variables.
-
-**Required for production:**
-- `DB_*` — RDS PostgreSQL connection
-- `JWT_SECRET` — Min 32 chars, cryptographically random
-- `AWS_*` — S3 bucket for KYC documents
-- `TWILIO_*` — OTP delivery
-- `FRONTEND_URL` — CORS origin whitelist
+Health check: `GET /health`

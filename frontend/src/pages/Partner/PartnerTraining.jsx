@@ -1,20 +1,46 @@
-import React, { useState } from 'react';
-import { 
-  MdPlayCircleOutline, MdOutlineMenuBook, MdCheckCircle, 
+import React, { useEffect, useState } from 'react';
+import {
+  MdPlayCircleOutline, MdOutlineMenuBook, MdCheckCircle,
   MdAccessTime, MdStar, MdPlayArrow
 } from 'react-icons/md';
-
-const MODULES = [
-  { id: 't1', title: 'Welcome to GharKaPaisa', type: 'Video', duration: '5:30', category: 'Onboarding', status: 'completed' },
-  { id: 't2', title: 'How to use the Partner Dashboard', type: 'Video', duration: '12:45', category: 'Platform Guide', status: 'completed' },
-  { id: 't3', title: 'Mastering the Customer CRM', type: 'Video', duration: '8:20', category: 'Platform Guide', status: 'in_progress' },
-  { id: 't4', title: 'Understanding Credit Card Categories', type: 'Article', duration: '10 min read', category: 'Product Knowledge', status: 'not_started' },
-  { id: 't5', title: 'Pitching Personal Loans effectively', type: 'Video', duration: '15:00', category: 'Sales Training', status: 'not_started' },
-  { id: 't6', title: 'Compliance & RBI Guidelines', type: 'Article', duration: '20 min read', category: 'Legal', status: 'not_started' },
-];
+import api from '../../api/api';
 
 export default function PartnerTraining() {
-  const [activeModule, setActiveModule] = useState(MODULES[2]);
+  const [modules, setModules] = useState([]);
+  const [activeModule, setActiveModule] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        const response = await api.get('/partner/training');
+        const data = response.data?.data || [];
+        setModules(data);
+        setActiveModule(data.find((m) => m.status === 'in_progress') || data[0] || null);
+      } catch (err) {
+        console.error('Failed to load training modules', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadModules();
+  }, []);
+
+  const completedCount = modules.filter((m) => m.status === 'completed').length;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!activeModule) {
+    return (
+      <div className="text-center py-20 text-slate-500 font-medium">No training modules available yet.</div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto pb-10">
@@ -81,14 +107,14 @@ export default function PartnerTraining() {
           <h3 className="text-xl font-bold text-[#0F172A]">Training Modules</h3>
           <div className="mt-4 flex items-center gap-3">
             <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-[#25D366] w-1/3"></div>
+              <div className="h-full bg-[#25D366]" style={{ width: modules.length ? `${(completedCount / modules.length) * 100}%` : '0%' }} />
             </div>
-            <span className="text-sm font-bold text-slate-500">2/6 Completed</span>
+            <span className="text-sm font-bold text-slate-500">{completedCount}/{modules.length} Completed</span>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-          {MODULES.map((mod, idx) => (
+          {modules.map((mod, idx) => (
             <div 
               key={mod.id}
               onClick={() => setActiveModule(mod)}

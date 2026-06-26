@@ -1,30 +1,62 @@
-import React, { useState } from 'react';
-import { 
-  MdFolderSpecial, MdPictureAsPdf, MdDownload, 
-  MdVisibility, MdVerifiedUser, MdOutlineInsertDriveFile
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../api/api';
+import {
+  MdFolderSpecial, MdPictureAsPdf, MdDownload,
+  MdVisibility, MdVerifiedUser, MdOutlineInsertDriveFile, MdAdd
 } from 'react-icons/md';
 
-const DOCUMENTS = [
-  { id: 'doc1', title: 'Partner ID Card', type: 'PDF', size: '2.4 MB', date: '2026-06-15', category: 'Identity', verified: true },
-  { id: 'doc2', title: 'Authorized Channel Partner Certificate', type: 'PDF', size: '1.1 MB', date: '2026-06-15', category: 'Certificate', verified: true },
-  { id: 'doc3', title: 'Master Service Agreement', type: 'PDF', size: '5.6 MB', date: '2026-06-14', category: 'Legal', verified: true },
-  { id: 'doc4', title: 'Commission Slab Chart (Q3 2026)', type: 'PDF', size: '800 KB', date: '2026-06-01', category: 'Resource', verified: false },
-  { id: 'doc5', title: 'Cancelled Cheque (Bank Proof)', type: 'JPG', size: '1.2 MB', date: '2026-06-14', category: 'KYC', verified: true },
-  { id: 'doc6', title: 'Aadhaar Card Copy', type: 'PDF', size: '3.1 MB', date: '2026-06-14', category: 'KYC', verified: true },
-  { id: 'doc7', title: 'PAN Card Copy', type: 'JPG', size: '900 KB', date: '2026-06-14', category: 'KYC', verified: true },
-];
+const DOC_LABELS = {
+  aadhaar: 'Aadhaar Card',
+  pan: 'PAN Card',
+  gst_cert: 'GST Certificate',
+  cancelled_cheque: 'Cancelled Cheque',
+};
+
+const DOC_CATEGORIES = {
+  aadhaar: 'KYC',
+  pan: 'KYC',
+  gst_cert: 'KYC',
+  cancelled_cheque: 'KYC',
+};
 
 export default function PartnerVault() {
+  const [documents, setDocuments] = useState([]);
   const [filter, setFilter] = useState('All');
-  
-  const categories = ['All', ...new Set(DOCUMENTS.map(d => d.category))];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filteredDocs = filter === 'All' ? DOCUMENTS : DOCUMENTS.filter(d => d.category === filter);
+  useEffect(() => {
+    const loadDocuments = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await api.get('/kyc/me');
+        const docs = response.data?.data?.documents || [];
+        setDocuments(docs.map((doc) => ({
+          id: doc.id,
+          title: DOC_LABELS[doc.doc_type] || doc.doc_type,
+          type: (doc.file_url || '').toLowerCase().includes('.pdf') ? 'PDF' : 'Image',
+          date: doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : '—',
+          category: DOC_CATEGORIES[doc.doc_type] || 'KYC',
+          verified: doc.verified,
+          fileUrl: doc.file_url,
+          docNumber: doc.doc_number,
+        })));
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load documents.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDocuments();
+  }, []);
+
+  const categories = ['All', ...new Set(documents.map((d) => d.category))];
+  const filteredDocs = filter === 'All' ? documents : documents.filter((d) => d.category === filter);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-10">
-      
-      {/* Header */}
       <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex items-center gap-4">
@@ -33,12 +65,12 @@ export default function PartnerVault() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#0F172A]">Document Vault</h2>
-              <p className="text-[#64748B] font-medium mt-1">Securely access your KYC documents, agreements, and certificates.</p>
+              <p className="text-[#64748B] font-medium mt-1">Your uploaded KYC documents from the verification center.</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setFilter(cat)}
@@ -53,60 +85,82 @@ export default function PartnerVault() {
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredDocs.map(doc => (
-          <div key={doc.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md hover:border-[#0D5CAB]/30 transition-all flex flex-col group">
-            
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
-                {doc.type === 'PDF' ? <MdPictureAsPdf size={24} /> : <MdOutlineInsertDriveFile size={24} className="text-blue-500" />}
-              </div>
-              {doc.verified && (
-                <span className="text-[#25D366]" title="Verified Document">
-                  <MdVerifiedUser size={20} />
-                </span>
-              )}
-            </div>
-
-            <h3 className="font-bold text-[#0F172A] mb-1 group-hover:text-[#0D5CAB] transition-colors line-clamp-2">
-              {doc.title}
-            </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2 mt-auto">
-              {doc.type} • {doc.size}
-            </p>
-
-            <div className="flex gap-2 pt-4 border-t border-slate-100 mt-auto">
-              <button className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors">
-                <MdVisibility size={18} /> View
-              </button>
-              <button className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-[#0D5CAB] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#083E7A] transition-colors">
-                <MdDownload size={18} /> Download
-              </button>
-            </div>
-
-          </div>
-        ))}
-
-        {/* Upload Placeholder */}
-        <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100 hover:border-[#0D5CAB]/50 transition-all min-h-[200px]">
-          <div className="w-12 h-12 bg-white shadow-sm text-slate-400 rounded-full flex items-center justify-center mb-3">
-            <MdAdd size={24} />
-          </div>
-          <h3 className="font-bold text-[#0F172A] mb-1">Upload Document</h3>
-          <p className="text-xs text-slate-500 max-w-[200px]">Only JPG, PNG, or PDF formats are allowed. Max 5MB.</p>
+      {loading && (
+        <div className="flex justify-center py-16">
+          <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full" />
         </div>
-      </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm font-medium">{error}</div>
+      )}
+
+      {!loading && !error && filteredDocs.length === 0 && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
+          <p className="text-slate-600 font-medium mb-4">No documents uploaded yet.</p>
+          <Link to="/partner/kyc" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0D5CAB] text-white rounded-xl text-sm font-bold">
+            Upload KYC Documents
+          </Link>
+        </div>
+      )}
+
+      {!loading && filteredDocs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredDocs.map((doc) => (
+            <div key={doc.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md hover:border-[#0D5CAB]/30 transition-all flex flex-col group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+                  {doc.type === 'PDF' ? <MdPictureAsPdf size={24} /> : <MdOutlineInsertDriveFile size={24} className="text-blue-500" />}
+                </div>
+                {doc.verified && (
+                  <span className="text-[#25D366]" title="Verified Document">
+                    <MdVerifiedUser size={20} />
+                  </span>
+                )}
+              </div>
+
+              <h3 className="font-bold text-[#0F172A] mb-1 group-hover:text-[#0D5CAB] transition-colors line-clamp-2">
+                {doc.title}
+              </h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                {doc.type} • {doc.date}
+              </p>
+              {doc.docNumber && (
+                <p className="text-xs text-slate-500 font-mono mb-4">{doc.docNumber}</p>
+              )}
+
+              <div className="flex gap-2 pt-4 border-t border-slate-100 mt-auto">
+                <a
+                  href={doc.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors"
+                >
+                  <MdVisibility size={18} /> View
+                </a>
+                <a
+                  href={doc.fileUrl}
+                  download
+                  className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-[#0D5CAB] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#083E7A] transition-colors"
+                >
+                  <MdDownload size={18} /> Download
+                </a>
+              </div>
+            </div>
+          ))}
+
+          <Link
+            to="/partner/kyc"
+            className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-slate-100 hover:border-[#0D5CAB]/50 transition-all min-h-[200px]"
+          >
+            <div className="w-12 h-12 bg-white shadow-sm text-slate-400 rounded-full flex items-center justify-center mb-3">
+              <MdAdd size={24} />
+            </div>
+            <h3 className="font-bold text-[#0F172A] mb-1">Upload Document</h3>
+            <p className="text-xs text-slate-500 max-w-[200px]">Manage KYC uploads from the KYC center.</p>
+          </Link>
+        </div>
+      )}
     </div>
   );
-}
-
-// Temporary internal component due to missing import from standard icons
-function MdAdd({size}) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-  )
 }

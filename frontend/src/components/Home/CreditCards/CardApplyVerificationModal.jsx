@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/fa";
 import { getBankApplyLink } from "./cardLinkHelper";
+import { getApiV1Url } from "../../../config/api";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
@@ -165,7 +166,6 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       async (data) => {
         // OTP Verified successfully! Call backend API to record direct card application
         try {
-          const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
           const payload = {
             customerName: customerName.trim(),
             mobile: mobile.trim(),
@@ -173,7 +173,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             cardName: card.cardName || "Credit Card"
           };
 
-          const response = await fetch(`${baseUrl}/api/v1/card-applications`, {
+          const response = await fetch(`${getApiV1Url()}/card-applications`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'

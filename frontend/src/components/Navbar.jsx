@@ -7,6 +7,7 @@ import logo from '../logo.png';
 import { ThemeToggle, useTheme } from './Partner/ThemeContext';
 import { useSearchStore } from '../store/searchStore';
 import LanguageSwitcher from './LanguageSwitcher';
+import { getApiV1Url } from '../config/api';
 
 const staticLinks = [
   { type: "info", label: "Terms and Conditions", target: { id: "terms-and-conditions" } },
@@ -66,8 +67,7 @@ const Navbar = () => {
         return;
       }
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "https://api.gharkapaisa.in";
-        const res = await fetch(`${baseUrl}/api/v1/products?is_active=true&limit=200`);
+        const res = await fetch(`${getApiV1Url()}/products?is_active=true&limit=200`);
         const data = await res.json();
         if (data?.success) {
           const fetchedItems = data.data.map(p => ({

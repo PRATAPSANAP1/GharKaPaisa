@@ -85,36 +85,49 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
 const sendSmsOtp = async (mobile, otp) => {
   const authKey = getAuthKey();
   const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
+
   if (!templateId) {
-    throw new Error('MSG91_OTP_TEMPLATE_ID is not configured');
+    throw new Error("MSG91_OTP_TEMPLATE_ID is not configured");
   }
 
   const normalized = normalizeIndianMobile(mobile);
+
   if (!normalized) {
-    throw new Error('Invalid Indian mobile number');
+    throw new Error("Invalid Indian mobile number");
   }
 
   const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${normalized}&authkey=${authKey}&otp=${otp}`;
 
-  const response = await axios.post(
-    url,
-    {
-      number: otp // To satisfy the ##number## variable in the template
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      timeout: 10000,
-    }
-  );
+  try {
+    console.log("========== MSG91 ==========");
+    console.log("URL:", url);
+    console.log("Template:", templateId);
+    console.log("Mobile:", normalized);
 
-  const payload = response.data || {};
-  if (payload.type === 'error' || payload.status === 'error') {
-    throw new Error(payload.message || 'Failed to send SMS OTP via MSG91');
+    const response = await axios.post(
+      url,
+      {},
+      {
+        headers: {
+          Accept: "application/json"
+        },
+        timeout: 10000
+      }
+    );
+
+    console.log("MSG91 Response:", response.data);
+
+    return response.data;
+
+  } catch (err) {
+    console.error("========== MSG91 ERROR ==========");
+    console.error("Status:", err.response?.status);
+    console.error("Response:", JSON.stringify(err.response?.data, null, 2));
+    console.error("Message:", err.message);
+    console.error("================================");
+
+    throw err;
   }
-  return payload;
 };
 
 module.exports = {

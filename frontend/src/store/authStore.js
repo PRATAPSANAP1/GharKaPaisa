@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getApiV1Url } from '../config/api';
 
 export const useAuthStore = create((set) => ({
   user: null,
@@ -35,12 +36,11 @@ export const useAuthStore = create((set) => ({
       clearAccessToken();
     }).catch(e => console.warn('Failed to clear access token on logout:', e));
 
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
-    const cleanBase = baseUrl.replace(/\/+$/, '').endsWith('/api/v1') ? baseUrl.replace(/\/+$/, '') : baseUrl.replace(/\/+$/, '') + '/api/v1';
-    
+    const baseUrl = getApiV1Url();
+
     import('axios')
       .then(({ default: axios }) => {
-        axios.post(`${cleanBase}/auth/logout`, {}, { withCredentials: true })
+        axios.post(`${baseUrl}/auth/logout`, {}, { withCredentials: true })
           .catch(err => console.warn('Logout request failed:', err));
       })
       .catch(err => console.warn('Failed to load axios for logout:', err));
@@ -58,17 +58,16 @@ export const useAuthStore = create((set) => ({
         return;
       }
 
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.gharkapaisa.in';
-      const cleanBase = baseUrl.replace(/\/+$/, '').endsWith('/api/v1') ? baseUrl.replace(/\/+$/, '') : baseUrl.replace(/\/+$/, '') + '/api/v1';
+      const baseUrl = getApiV1Url();
       
       const { default: axios } = await import('axios');
-      const response = await axios.post(`${cleanBase}/auth/refresh`, {}, { withCredentials: true });
+      const response = await axios.post(`${baseUrl}/auth/refresh`, {}, { withCredentials: true });
       
       if (response.data && response.data.success) {
         const { token } = response.data;
         
         // Fetch user profile using the new access token
-        const userRes = await axios.get(`${cleanBase}/auth/me`, {
+        const userRes = await axios.get(`${baseUrl}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         

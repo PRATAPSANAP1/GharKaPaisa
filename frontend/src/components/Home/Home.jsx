@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../Partner/ThemeContext";
 import { useSearchStore } from "../../store/searchStore";
+import { getApiV1Url } from "../../config/api";
 import {
   FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft,
   FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar,
@@ -202,8 +203,7 @@ function DynamicProductsList({ categoryKey, C, isMobile }) {
       setLoading(true);
       setError("");
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await fetch(`${baseUrl}/api/v1/products?category=${categoryKey}`);
+        const res = await fetch(`${getApiV1Url()}/products?category=${categoryKey}`);
         const data = await res.json();
         if (data && data.success) {
           setProducts(data.data);
@@ -416,8 +416,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   useEffect(() => {
     const fetchDbProducts = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await fetch(`${baseUrl}/api/v1/products?limit=100`);
+        const res = await fetch(`${getApiV1Url()}/products?limit=100`);
         const data = await res.json();
         if (data && data.success) {
           setDbProducts(data.data);
@@ -1646,7 +1645,7 @@ export default function Home({ onNavigate }) {
 
   useEffect(() => {
     const fetchBannersSettingsAndCms = async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || "https://api.gharkapaisa.in";
+      const apiBase = getApiV1Url();
 
       // 1) Fetch banners
       try {
@@ -1654,7 +1653,7 @@ export default function Home({ onNavigate }) {
         if (cachedBanners) {
           setDynamicBanners(JSON.parse(cachedBanners));
         } else {
-          const res = await fetch(`${baseUrl}/api/v1/banners`);
+          const res = await fetch(`${apiBase}/banners`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             setDynamicBanners(data.data);
@@ -1671,7 +1670,7 @@ export default function Home({ onNavigate }) {
         if (cachedSettings) {
           setSettings(JSON.parse(cachedSettings));
         } else {
-          const res = await fetch(`${baseUrl}/api/v1/settings`);
+          const res = await fetch(`${apiBase}/settings`);
           const data = await res.json();
           if (data && data.success) {
             setSettings(data.data);
@@ -1688,7 +1687,7 @@ export default function Home({ onNavigate }) {
         if (cachedCms) {
           setCmsSections(JSON.parse(cachedCms));
         } else {
-          const res = await fetch(`${baseUrl}/api/v1/cms/sections`);
+          const res = await fetch(`${apiBase}/cms/sections`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             setCmsSections(data.data);
@@ -1705,7 +1704,7 @@ export default function Home({ onNavigate }) {
         if (cachedProducts) {
           setDynamicProducts(JSON.parse(cachedProducts));
         } else {
-          const res = await fetch(`${baseUrl}/api/v1/products`);
+          const res = await fetch(`${apiBase}/products`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             setDynamicProducts(data.data);
@@ -1722,7 +1721,7 @@ export default function Home({ onNavigate }) {
         if (cachedServices) {
           setServices(JSON.parse(cachedServices));
         } else {
-          const resServices = await fetch(`${baseUrl}/api/v1/service-catalog`);
+          const resServices = await fetch(`${apiBase}/service-catalog`);
           const dataServices = await resServices.json();
           if (dataServices?.success) {
             setServices(dataServices.data);

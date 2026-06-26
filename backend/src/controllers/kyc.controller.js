@@ -4,7 +4,7 @@ const { success, error, notFound } = require('../utils/response');
 
 const getKyc = async (req, res, next) => {
   try {
-    const partnerId = req.params.partnerId || req.user.partner_id;
+    const partnerId = req.params.partnerId || req.user.partner_id || req.partner?.id;
     if (!partnerId) return error(res, 'Partner ID required');
     const data = await kycService.getPartnerKyc(partnerId);
     return success(res, data);
@@ -15,7 +15,7 @@ const getKyc = async (req, res, next) => {
 
 const uploadDocument = async (req, res, next) => {
   try {
-    const partnerId = req.params.partnerId || req.user.partner_id;
+    const partnerId = req.params.partnerId || req.user.partner_id || req.partner?.id;
     const { doc_type, doc_number } = req.body;
     
     if (!partnerId) return error(res, 'Partner ID required');

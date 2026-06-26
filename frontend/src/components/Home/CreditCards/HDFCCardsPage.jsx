@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa";
 import hdfcBanner from "./image/hdfcbanner.png";
 import hdfcCardImg from "./image/hdfc.png";
+import { getApiV1Url } from '../../../config/api';
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
 import { ltfCards } from "./LTFCardsData";
 
@@ -320,8 +321,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
   useEffect(() => {
     const fetchDbProducts = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await fetch(`${baseUrl}/api/v1/products?limit=100`);
+        const res = await fetch(`${getApiV1Url()}/products?limit=100`);
         const data = await res.json();
         if (data && data.success) {
           setDbProducts(data.data);

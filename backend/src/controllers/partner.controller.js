@@ -517,6 +517,62 @@ const addTeamMember = async (req, res, next) => {
   }
 };
 
+// GET /partner/customers — CRM customer list for logged-in partner
+const listPartnerCustomers = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows } = await query(`
+      SELECT
+        c.id,
+        c.full_name,
+        c.mobile,
+        c.email,
+        c.pan_number,
+        c.aadhaar_last4,
+        c.city,
+        c.state,
+        c.employment_type,
+        c.monthly_income,
+        c.employer,
+        MIN(a.created_at) AS first_application_at,
+        COUNT(a.id)::int AS application_count,
+        json_agg(json_build_object(
+          'id', a.id,
+          'app_number', a.app_number,
+          'status', a.status,
+          'product_name', p.name,
+          'bank_name', b.name,
+          'bank_code', b.short_code,
+          'commission_amount', a.commission_amount,
+          'created_at', a.created_at
+        ) ORDER BY a.created_at DESC) AS applications
+      FROM customers c
+      JOIN applications a ON a.customer_id = c.id
+      JOIN products p ON p.id = a.product_id
+      JOIN banks b ON b.id = p.bank_id
+      WHERE a.Partner_id = $1
+      GROUP BY c.id
+      ORDER BY MAX(a.created_at) DESC
+    `, [partnerId]);
+
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /partner/training — training academy module catalog
+const getTrainingModules = async (req, res, next) => {
+  try {
+    const modules = require('../data/trainingModules');
+    return success(res, modules);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /partner/:PartnerId/team (List child partners)
 const getTeamMembers = async (req, res, next) => {
   try {
@@ -560,5 +616,7 @@ module.exports = {
   uploadSelfKYC,
   approvePartnerKYC,
   addTeamMember,
-  getTeamMembers
+  getTeamMembers,
+  listPartnerCustomers,
+  getTrainingModules,
 };

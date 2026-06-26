@@ -19,5 +19,7 @@ router.use(jwtAuth);
 router.post('/register', registerRules, validate, authCtrl.register);
 router.post('/upload-docs', kycUpload, partnerCtrl.uploadSelfKYC);
 router.get('/profile', partnerCtrl.getSelfProfile);
+router.get('/customers', partnerCtrl.listPartnerCustomers);
+router.get('/training', partnerCtrl.getTrainingModules);
 
 module.exports = router;
