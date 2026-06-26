@@ -34,20 +34,25 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
     throw new Error('MSG91 access token is required');
   }
 
-  const response = await axios.post(
-    VERIFY_ACCESS_TOKEN_URL,
-    {
-      authkey: getAuthKey(),
-      'access-token': accessToken,
+ const response = await axios.post(
+  VERIFY_ACCESS_TOKEN_URL,
+  {
+    authkey: getAuthKey(),
+    "access-token": accessToken,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      timeout: 10000,
-    }
-  );
+  }
+);
+
+console.log("=================================");
+console.log("VERIFY ACCESS TOKEN RESPONSE");
+console.log(JSON.stringify(response.data, null, 2));
+console.log("=================================");
+
 
   const payload = response.data || {};
   const verificationSucceeded =
@@ -120,14 +125,12 @@ const sendSmsOtp = async (mobile, otp) => {
     return response.data;
 
   } catch (err) {
-    console.error("========== MSG91 ERROR ==========");
-    console.error("Status:", err.response?.status);
-    console.error("Response:", JSON.stringify(err.response?.data, null, 2));
-    console.error("Message:", err.message);
-    console.error("================================");
-
+    console.log("=========== VERIFY ERROR ===========");
+    console.log("Status:", err.response?.status);
+    console.log("Data:", JSON.stringify(err.response?.data, null, 2));
+    console.log("====================================");
     throw err;
-  }
+}
 };
 
 module.exports = {
