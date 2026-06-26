@@ -73,7 +73,6 @@ export default function PartnerRegister() {
   const [mobileOtpLoading, setMobileOtpLoading] = useState(false);
   const [mobileVerifyLoading, setMobileVerifyLoading] = useState(false);
   const [mobileOtpRequestId, setMobileOtpRequestId] = useState("");
-  const [captchaContainerId] = useState(`msg91-captcha-register-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
   const mobileVerifyPendingRef = useRef(false);
   const mobileVerifyTimeoutRef = useRef(null);
 
@@ -146,80 +145,7 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  useEffect(() => {
-    const scriptId = "msg91-otp-provider-script";
-
-    // ✅ Set configuration BEFORE script loads — MSG91 auto-reads this at parse-time
-    window.configuration = {
-      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
-      exposeMethods: true,
-      captchaRenderId: captchaContainerId,
-      success: (data) => {
-        console.log('MSG91 register widget ready (auto-init).', data);
-        if (mobileVerifyPendingRef.current) {
-          completeMobileVerification();
-        }
-      },
-      failure: (error) => {
-        console.error('MSG91 register widget auto-init failed.', error);
-        if (mobileVerifyPendingRef.current) {
-          failMobileVerification(error);
-        }
-      }
-    };
-
-    const initWidget = () => {
-      // If SDK already auto-initialized, skip manual init
-      if (typeof window.sendOtp === 'function') {
-        console.log('MSG91 sendOtp already available — skipping initSendOTP.');
-        return;
-      }
-
-      // Fallback: manually initialize if auto-init didn't expose sendOtp
-      if (typeof window.initSendOTP === 'function') {
-        const container = document.getElementById(captchaContainerId);
-        if (!container) return;
-
-        try {
-          console.log('MSG91 auto-init did not expose sendOtp — calling initSendOTP manually.');
-          window.initSendOTP(window.configuration);
-        } catch (e) {
-          console.warn("initSendOTP failed in PartnerRegister:", e);
-        }
-      }
-    };
-
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.querySelector('script[src*="otp-provider.js"]');
-      if (script) script.id = scriptId;
-    }
-
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = "https://verify.msg91.com/otp-provider.js";
-      script.type = "text/javascript";
-      script.async = true;
-      script.onload = initWidget;
-      document.body.appendChild(script);
-    } else {
-      initWidget();
-    }
-
-    // Poll for readiness — MSG91 may expose sendOtp slightly after onload
-    const readyPoll = setInterval(() => {
-      if (typeof window.sendOtp === 'function') {
-        clearInterval(readyPoll);
-      }
-    }, 500);
-
-    return () => {
-      clearInterval(readyPoll);
-      if (script) script.removeEventListener('load', initWidget);
-    };
-  }, [captchaContainerId]);
+  
 
   const focusBorder = `1.5px solid ${C.teal}`;
   const inputProps = (key, extra = {}) => ({
@@ -702,7 +628,7 @@ export default function PartnerRegister() {
                       {t('partner.mobileOtpHelp', 'Enter the SMS OTP above, then click Verify Mobile Number.')}
                     </div>
                   )}
-                  <div id={captchaContainerId} style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
+                  
                 </div>
 
                 <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>

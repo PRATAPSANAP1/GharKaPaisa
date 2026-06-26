@@ -15,70 +15,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   // 4-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
-  const [captchaContainerId] = useState(`msg91-captcha-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
 
-  // Load MSG91 script dynamically
-  useEffect(() => {
-    const scriptId = "msg91-otp-provider-script";
-
-    // ✅ Set configuration BEFORE script loads — MSG91 auto-reads this at parse-time
-    window.configuration = {
-      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
-      exposeMethods: true,
-      captchaRenderId: captchaContainerId,
-      success: (data) => {
-        console.log('MSG91 cards widget ready.', data);
-      },
-      failure: (error) => {
-        console.log('MSG91 cards failure reason', error);
-      }
-    };
-
-    const initWidget = () => {
-      if (typeof window.sendOtp === 'function') {
-        return;
-      }
-
-      if (typeof window.initSendOTP === 'function') {
-        const container = document.getElementById(captchaContainerId);
-        if (!container) return;
-
-        try {
-          window.initSendOTP(window.configuration);
-        } catch (e) {
-          console.warn("initSendOTP failed in CardApplyVerificationModal:", e);
-        }
-      }
-    };
-
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.querySelector('script[src*="otp-provider.js"]');
-      if (script) script.id = scriptId;
-    }
-
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = "https://verify.msg91.com/otp-provider.js";
-      script.type = "text/javascript";
-      script.async = true;
-      script.onload = initWidget;
-      document.body.appendChild(script);
-    } else {
-      initWidget();
-    }
-
-    const readyPoll = setInterval(() => {
-      if (typeof window.sendOtp === 'function') clearInterval(readyPoll);
-    }, 500);
-
-    return () => {
-      clearInterval(readyPoll);
-      if (script) script.removeEventListener('load', initWidget);
-    };
-  }, []);
 
   // OTP Timer countdown
   useEffect(() => {
@@ -456,7 +393,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
               ) : "Send SMS Verification OTP"}
             </button>
-            <div id={captchaContainerId} style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}></div>
+         
           </div>
         )}
 

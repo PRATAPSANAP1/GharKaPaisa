@@ -65,11 +65,6 @@ function Toast({ message, type = "success", onClose }) {
   );
 }
 
-// ── Module-level flag to prevent double-init in React Strict Mode ─────────────
-let msg91Initialized = false;
-
-// ── Stable captcha container ID (no useState needed) ─────────────────────────
-const CAPTCHA_CONTAINER_ID = `msg91-captcha-admin`;
 
 export default function AdminLogin() {
   const { C } = useTheme();
@@ -121,78 +116,6 @@ export default function AdminLogin() {
     }
   };
 
-  // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────────
-  useEffect(() => {
-    const scriptId = "msg91-otp-provider-script";
-
-    // ✅ Set configuration BEFORE script loads — MSG91 auto-reads this at parse-time
-    window.configuration = {
-      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
-      exposeMethods: true,
-      captchaRenderId: CAPTCHA_CONTAINER_ID,
-      success: (data) => {
-        console.log("MSG91 admin widget ready.", data);
-      },
-      failure: (error) => {
-        console.error("MSG91 admin widget load failed.", error);
-      },
-    };
-
-    const initWidget = () => {
-      if (typeof window.sendOtp === 'function') {
-        console.log('MSG91 sendOtp already available — skipping initSendOTP.');
-        msg91Initialized = true;
-        return;
-      }
-
-      if (msg91Initialized) return;
-      if (typeof window.initSendOTP !== "function") return;
-
-      const container = document.getElementById(CAPTCHA_CONTAINER_ID);
-      if (!container) return;
-
-      msg91Initialized = true;
-
-      try {
-        console.log('MSG91 auto-init did not expose sendOtp — calling initSendOTP manually.');
-        window.initSendOTP(window.configuration);
-      } catch (e) {
-        console.warn("initSendOTP failed in AdminLogin:", e);
-        msg91Initialized = false;
-      }
-    };
-
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.querySelector('script[src*="otp-provider.js"]');
-      if (script) script.id = scriptId;
-    }
-
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://verify.msg91.com/otp-provider.js";
-      script.type = "text/javascript";
-      script.async = true;
-      script.onload = initWidget;
-      document.body.appendChild(script);
-    } else {
-      initWidget();
-    }
-
-    const readyPoll = setInterval(() => {
-      if (typeof window.sendOtp === 'function') {
-        msg91Initialized = true;
-        clearInterval(readyPoll);
-      }
-    }, 500);
-
-    return () => {
-      clearInterval(readyPoll);
-      if (script) script.removeEventListener("load", initWidget);
-    };
-  }, []);
 
   // ── Reset OTP state when identifier changes ───────────────────────────────────
   useEffect(() => {
@@ -290,9 +213,8 @@ export default function AdminLogin() {
       setOtpAttempts((a) => a + 1);
       setTimer(30);
       setToast({
-        message: `OTP sent to your registered email (${
-          otpRes.email || "****@****.com"
-        })`,
+        message: `OTP sent to your registered email (${otpRes.email || "****@****.com"
+          })`,
         type: "success",
       });
     } catch (e) {
@@ -347,16 +269,12 @@ export default function AdminLogin() {
               async (verifyData) => {
                 try {
                   const tokenVal =
-                    verifyData?.accessToken ||
-                    verifyData?.["access-token"] ||
-                    (typeof verifyData === "string"
-                      ? verifyData
-                      : verifyData?.data);
+                    verifyData?.["access-token"] ??
+                    verifyData?.accessToken ??
+                    (typeof verifyData === "string" ? verifyData : null);
 
                   if (!tokenVal) {
-                    throw new Error(
-                      "Could not retrieve verification token from MSG91."
-                    );
+                    throw new Error("Could not retrieve verification token from MSG91.");
                   }
 
                   const loginRes = await loginWithMsg91(
@@ -742,22 +660,14 @@ export default function AdminLogin() {
                       {loading.otp
                         ? "Sending…"
                         : timer > 0
-                        ? `${timer}s`
-                        : "Send OTP"}
+                          ? `${timer}s`
+                          : "Send OTP"}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* MSG91 Captcha Container */}
-              <div
-                id={CAPTCHA_CONTAINER_ID}
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              />
+
 
               {/* Submit */}
               <button
