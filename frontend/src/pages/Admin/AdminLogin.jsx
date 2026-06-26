@@ -125,6 +125,20 @@ export default function AdminLogin() {
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
 
+    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    window.configuration = {
+      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+      exposeMethods: true,
+      captchaRenderId: CAPTCHA_CONTAINER_ID,
+      success: (data) => {
+        console.log("MSG91 admin widget ready.", data);
+      },
+      failure: (error) => {
+        console.error("MSG91 admin widget load failed.", error);
+      },
+    };
+
     const initWidget = () => {
       // Guard: skip if already initialized (handles React Strict Mode double-invoke)
       if (msg91Initialized) return;
@@ -134,19 +148,6 @@ export default function AdminLogin() {
       if (!container) return;
 
       msg91Initialized = true;
-
-      window.configuration = {
-  widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-  tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,   // ← plain string, e.g. "534683TU4WDwc8S0M6a36b963P1"
-  exposeMethods: true,
-  captchaRenderId: CAPTCHA_CONTAINER_ID,
-  success: (data) => {
-    console.log("MSG91 admin widget loaded successfully.", data);
-  },
-  failure: (error) => {
-    console.error("MSG91 admin widget load failed.", error);
-  },
-};
 
       try {
         window.initSendOTP(window.configuration);

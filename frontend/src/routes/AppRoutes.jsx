@@ -62,7 +62,9 @@ import {
   PartnerApplications, 
   PartnerWallet, 
   PartnerProfile,
-  PartnerProducts
+  PartnerProducts,
+  SettingsPage,
+  TravelUtilitiesPage
 } from '../pages/Partner';
 import PartnerTeam from '../pages/Partner/PartnerTeam';
 import PartnerKyc from '../pages/Partner/PartnerKyc';
@@ -71,7 +73,6 @@ import PartnerSupport from '../pages/Partner/PartnerSupport';
 import PartnerVault from '../pages/Partner/PartnerVault';
 import PartnerMarketing from '../pages/Partner/PartnerMarketing';
 import PartnerTraining from '../pages/Partner/PartnerTraining';
-import ComingSoonModule from '../pages/Partner/ComingSoonModule';
 
 const AppRoutes = () => {
   const { isInitializing, initializeAuth } = useAuthStore();
@@ -184,7 +185,7 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PartnerDashboard />} />
         <Route path="marketplace" element={<PartnerProducts />} />
-        <Route path="credit-center" element={<ComingSoonModule title="Credit Card Center" />} />
+        <Route path="credit-center" element={<PartnerProducts />} />
         <Route path="leads" element={<PartnerApplications />} />
         <Route path="crm" element={<PartnerCrm />} />
         <Route path="kyc" element={<PartnerKyc />} />
@@ -195,7 +196,8 @@ const AppRoutes = () => {
         <Route path="training" element={<PartnerTraining />} />
         <Route path="marketing" element={<PartnerMarketing />} />
         <Route path="support" element={<PartnerSupport />} />
-        <Route path="settings" element={<ComingSoonModule title="Settings & Security" />} />
+        <Route path="travel" element={<TravelUtilitiesPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         
         {/* Legacy Support */}
         <Route path="products" element={<Navigate to="../marketplace" replace />} />

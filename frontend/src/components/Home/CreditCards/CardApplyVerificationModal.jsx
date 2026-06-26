@@ -20,6 +20,20 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   // Load MSG91 script dynamically
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
+
+    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    window.configuration = {
+      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+      exposeMethods: true,
+      captchaRenderId: captchaContainerId,
+      success: (data) => {
+        console.log('MSG91 cards widget ready.', data);
+      },
+      failure: (error) => {
+        console.log('MSG91 cards failure reason', error);
+      }
+    };
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
@@ -30,21 +44,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         }
         container.dataset.msg91Initialized = 'true';
 
-        const configuration = {
-          widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-          tokenAuth: String(import.meta.env.VITE_MSG91_TOKEN_AUTH) === "true",
-          exposeMethods: true,
-          captchaRenderId: captchaContainerId,
-          success: (data) => {
-            console.log('MSG91 cards success response', data);
-          },
-          failure: (error) => {
-            console.log('MSG91 cards failure reason', error);
-          }
-        };
-
         try {
-          window.initSendOTP(configuration);
+          window.initSendOTP(window.configuration);
         } catch (e) {
           console.warn("initSendOTP failed in CardApplyVerificationModal:", e);
         }

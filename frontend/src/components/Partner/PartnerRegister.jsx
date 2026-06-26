@@ -148,6 +148,26 @@ export default function PartnerRegister() {
 
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
+
+    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    window.configuration = {
+      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+      exposeMethods: true,
+      captchaRenderId: captchaContainerId,
+      success: (data) => {
+        console.log('MSG91 register widget ready.', data);
+        if (mobileVerifyPendingRef.current) {
+          completeMobileVerification();
+        }
+      },
+      failure: (error) => {
+        console.error('MSG91 register widget load failed.', error);
+        if (mobileVerifyPendingRef.current) {
+          failMobileVerification(error);
+        }
+      }
+    };
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
@@ -158,27 +178,8 @@ export default function PartnerRegister() {
         }
         container.dataset.msg91Initialized = 'true';
 
-        const configuration = {
-          widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-          tokenAuth: String(import.meta.env.VITE_MSG91_TOKEN_AUTH) === "true",
-          exposeMethods: true,
-          captchaRenderId: captchaContainerId,
-          success: (data) => {
-            console.log('MSG91 register widget loaded successfully.', data);
-            if (mobileVerifyPendingRef.current) {
-              completeMobileVerification();
-            }
-          },
-          failure: (error) => {
-            console.error('MSG91 register widget load failed.', error);
-            if (mobileVerifyPendingRef.current) {
-              failMobileVerification(error);
-            }
-          }
-        };
-
         try {
-          window.initSendOTP(configuration);
+          window.initSendOTP(window.configuration);
         } catch (e) {
           console.warn("initSendOTP failed in PartnerRegister:", e);
         }

@@ -73,31 +73,36 @@ export default function PartnerLogin() {
   const [otpAttempts, setOtpAttempts] = useState(0);
 
   // ── MSG91 Web SDK Dynamic Loader ─────────────────────────────────────────
+  const [msg91Ready, setMsg91Ready] = useState(false);
+
   useEffect(() => {
     const scriptId = "msg91-otp-provider-script";
     const captchaContainerId = "msg91-captcha-partner";
+
+    // ✅ Set configuration FIRST — MSG91 reads window.configuration at script parse-time
+    window.configuration = {
+      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+      tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
+      exposeMethods: true,
+      captchaRenderId: captchaContainerId,
+      success: (data) => {
+        console.log('MSG91 partner login widget ready.', data);
+        setMsg91Ready(true);
+      },
+      failure: (error) => {
+        console.error('MSG91 partner login widget load failed.', error);
+      }
+    };
     
     const initWidget = () => {
       if (typeof window.initSendOTP === 'function') {
         const container = document.getElementById(captchaContainerId);
         if (!container) return;
         if (container.dataset.msg91Initialized === 'true' || container.children.length > 0) {
+          setMsg91Ready(typeof window.sendOtp === 'function');
           return;
         }
         container.dataset.msg91Initialized = 'true';
-
-        window.configuration = {
-          widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-          tokenAuth: String(import.meta.env.VITE_MSG91_TOKEN_AUTH) === "true",
-          exposeMethods: true,
-          captchaRenderId: captchaContainerId,
-          success: (data) => {
-            console.log('MSG91 partner login widget loaded successfully.', data);
-          },
-          failure: (error) => {
-            console.error('MSG91 partner login widget load failed.', error);
-          }
-        };
 
         try {
           window.initSendOTP(window.configuration);
@@ -129,6 +134,11 @@ export default function PartnerLogin() {
       } else {
         script.addEventListener('load', initWidget);
       }
+    }
+
+    // If sendOtp is already available (e.g. navigated back to this page)
+    if (typeof window.sendOtp === 'function') {
+      setMsg91Ready(true);
     }
 
     return () => {
@@ -170,13 +180,13 @@ export default function PartnerLogin() {
       try {
         // 1. Verify user exists in database first
         const lookupRes = await lookupUser(form.identity.trim());
-        if (!lookupRes || !lookupRes.success || !lookupRes.data) {
+        if (!lookupRes || !lookupRes.success || !lookupRes.data?.exists) {
           throw new Error(t('partner.errors.userNotFound', 'User not found. Please register first.'));
         }
 
         // 2. Verify MSG91 sendOtp helper is ready
-        if (!window.sendOtp) {
-          throw new Error("MSG91 service is temporarily unavailable. Please try again in a few seconds.");
+        if (typeof window.sendOtp !== 'function') {
+          throw new Error("MSG91 service is loading. Please wait a moment and try again.");
         }
 
         window.sendOtp(
@@ -185,7 +195,8 @@ export default function PartnerLogin() {
             setOtpSent(true);
             setOtpSentTime(Date.now());
             setOtpAttempts(a => a + 1);
-            setTimer(30);
+            setTimer(120);
+            setMsg91Ready(true);
             setToast({ message: t('partner.errors.otpSentSuccessMobile', 'Verification code sent to your mobile phone via SMS.'), type: "success" });
             setLoading(l => ({ ...l, otp: false }));
           },
