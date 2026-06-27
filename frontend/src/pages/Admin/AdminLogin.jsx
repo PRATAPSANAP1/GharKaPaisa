@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
 import { useTheme, makeS } from "../../components/Partner/ThemeContext";
-import { initMsg91 } from "../../msg91Init";
+import { useMsg91Captcha } from "../../hooks/useMsg91Captcha";
 import {
   sendOtp,
   loginWithOtp,
@@ -75,53 +75,9 @@ export default function AdminLogin() {
   // ── Form State ───────────────────────────────────────────────────────────────
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("otp");
-  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
-  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
-
-  useEffect(() => {
-    initMsg91(captchaId);
-  }, [captchaId]);
-
-  useEffect(() => {
-    let wasVerified = false;
-    const interval = setInterval(() => {
-      let token = '';
-      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
-        try {
-          token = window.hcaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
-        try {
-          token = window.grecaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token) {
-        const els = document.querySelectorAll('textarea, input');
-        for (const el of els) {
-          const name = el.getAttribute('name') || '';
-          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-            if (el.value.trim()) {
-              token = el.value.trim();
-              break;
-            }
-          }
-        }
-      }
-      const verified = !!token;
-      setIsCaptchaVerified(verified);
-      
-      if (verified && !wasVerified) {
-        console.log('[MSG91] TCaptcha verified');
-        wasVerified = true;
-      } else if (!verified && wasVerified) {
-        console.log('[MSG91] TCaptcha verification cleared/expired');
-        wasVerified = false;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  // ── MSG91 Captcha (singleton hook — no duplicate polling/init) ──────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha();
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
@@ -215,9 +171,7 @@ export default function AdminLogin() {
         }
 
         // 2. Ensure MSG91 widget is ready
-        const sendOtpExists = typeof window.sendOtp === 'function';
-        console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
-        if (!sendOtpExists) {
+        if (!sdkReady) {
           setLoading((l) => ({ ...l, otp: false }));
           return setToast({
             type: "error",
@@ -228,6 +182,7 @@ export default function AdminLogin() {
 
         const formattedMobile = '91' + form.identity.trim();
         console.log(`[MSG91] Calling window.sendOtp for admin: ${formattedMobile}`);
+        console.time('MSG91_SendOTP');
 
         let callbackFired = false;
         const timeoutId = setTimeout(() => {
@@ -248,6 +203,7 @@ export default function AdminLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.timeEnd('MSG91_SendOTP');
             console.log('[MSG91] Success response:', data);
             setOtpSent(true);
             setOtpSentTime(Date.now());
@@ -263,6 +219,7 @@ export default function AdminLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.timeEnd('MSG91_SendOTP');
             console.error('[MSG91] Failure response:', error);
             setToast({
               message: error.message || "Failed to send OTP",

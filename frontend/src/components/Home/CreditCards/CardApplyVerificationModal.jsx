@@ -3,7 +3,7 @@ import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/
 
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../config/api";
-import { initMsg91 } from "../../../msg91Init";
+import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
@@ -14,53 +14,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
-
-  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
-
-  useEffect(() => {
-    initMsg91(captchaId);
-  }, [captchaId]);
-
-  useEffect(() => {
-    let wasVerified = false;
-    const interval = setInterval(() => {
-      let token = '';
-      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
-        try {
-          token = window.hcaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
-        try {
-          token = window.grecaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token) {
-        const els = document.querySelectorAll('textarea, input');
-        for (const el of els) {
-          const name = el.getAttribute('name') || '';
-          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-            if (el.value.trim()) {
-              token = el.value.trim();
-              break;
-            }
-          }
-        }
-      }
-      const verified = !!token;
-      setIsCaptchaVerified(verified);
-      
-      if (verified && !wasVerified) {
-        console.log('[MSG91] TCaptcha verified');
-        wasVerified = true;
-      } else if (!verified && wasVerified) {
-        console.log('[MSG91] TCaptcha verification cleared/expired');
-        wasVerified = false;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  // ── MSG91 Captcha (singleton hook — no duplicate polling/init) ──────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha();
   
   // 6-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -84,9 +39,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       return setErrorMsg("Please complete the captcha verification first.");
     }
 
-    const sendOtpExists = typeof window.sendOtp === 'function';
-    console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
-    if (!sendOtpExists) {
+    if (!sdkReady) {
       console.error('[MSG91] window.sendOtp is not ready or failed to load');
       return setErrorMsg("OTP provider is not fully initialized. Please wait a moment and try again.");
     }
@@ -101,6 +54,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setLoading(true);
     const formattedMobile = '91' + mobile.trim();
     console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
+    console.time('MSG91_SendOTP');
 
     let callbackFired = false;
     const timeoutId = setTimeout(() => {
@@ -119,6 +73,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           if (callbackFired) return;
           callbackFired = true;
           clearTimeout(timeoutId);
+          console.timeEnd('MSG91_SendOTP');
           console.log('[MSG91] Success response:', data);
           setOtpSent(true);
           setOtpTimer(120);
@@ -129,6 +84,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           if (callbackFired) return;
           callbackFired = true;
           clearTimeout(timeoutId);
+          console.timeEnd('MSG91_SendOTP');
           console.error('[MSG91] Failure response:', error);
           const errMsg = typeof error === 'string' ? error : (error?.message || "Failed to send OTP. Please try again.");
           setErrorMsg(errMsg);

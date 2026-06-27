@@ -2,11 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './i18n';
-import { initMsg91 } from './msg91Init';   // ADD THIS
+import { preloadMsg91SDK } from './msg91Init';
 
-window.addEventListener("load", () => {
-    initMsg91();
-});
+// Load MSG91 SDK script once at app startup (no container needed yet)
+preloadMsg91SDK();
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

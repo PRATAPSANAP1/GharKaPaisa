@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { initMsg91 } from "../../msg91Init";
+import { useMsg91Captcha } from "../../hooks/useMsg91Captcha";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../api/auth.api";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
@@ -64,53 +64,9 @@ export default function PartnerLogin() {
   
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState('otp'); // 'otp' or 'password'
-  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
-  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
-
-  useEffect(() => {
-    initMsg91(captchaId);
-  }, [captchaId]);
-
-  useEffect(() => {
-    let wasVerified = false;
-    const interval = setInterval(() => {
-      let token = '';
-      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
-        try {
-          token = window.hcaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
-        try {
-          token = window.grecaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token) {
-        const els = document.querySelectorAll('textarea, input');
-        for (const el of els) {
-          const name = el.getAttribute('name') || '';
-          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-            if (el.value.trim()) {
-              token = el.value.trim();
-              break;
-            }
-          }
-        }
-      }
-      const verified = !!token;
-      setIsCaptchaVerified(verified);
-      
-      if (verified && !wasVerified) {
-        console.log('[MSG91] TCaptcha verified');
-        wasVerified = true;
-      } else if (!verified && wasVerified) {
-        console.log('[MSG91] TCaptcha verification cleared/expired');
-        wasVerified = false;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  // ── MSG91 Captcha (singleton hook — no duplicate polling/init) ──────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha();
 
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -167,9 +123,7 @@ export default function PartnerLogin() {
         }
 
         // 2. Verify MSG91 sendOtp helper is ready
-        const sendOtpExists = typeof window.sendOtp === 'function';
-        console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
-        if (!sendOtpExists) {
+        if (!sdkReady) {
           throw new Error("OTP service is loading. Please wait a moment and try again.");
         }
 
@@ -186,6 +140,7 @@ export default function PartnerLogin() {
 
         const formattedMobile = '91' + form.identity.trim();
         console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
+        console.time('MSG91_SendOTP');
 
         window.sendOtp(
           formattedMobile,
@@ -193,12 +148,12 @@ export default function PartnerLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.timeEnd('MSG91_SendOTP');
             console.log('[MSG91] Success response:', data);
             setOtpSent(true);
             setOtpSentTime(Date.now());
             setOtpAttempts(a => a + 1);
             setTimer(120);
-            setMsg91Ready(true);
             setToast({ message: t('partner.errors.otpSentSuccessMobile', 'Verification code sent to your mobile phone via SMS.'), type: "success" });
             setLoading(l => ({ ...l, otp: false }));
           },
@@ -206,6 +161,7 @@ export default function PartnerLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.timeEnd('MSG91_SendOTP');
             console.error('[MSG91] Failure response:', errResponse);
             setToast({ message: errResponse?.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
             setLoading(l => ({ ...l, otp: false }));

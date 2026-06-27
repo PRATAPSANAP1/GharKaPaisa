@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
-import { initMsg91 } from "../../msg91Init";
+import { useMsg91Captcha } from "../../hooks/useMsg91Captcha";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
@@ -153,55 +153,8 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
-
-  useEffect(() => {
-    let wasVerified = false;
-    const interval = setInterval(() => {
-      let token = '';
-      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
-        try {
-          token = window.hcaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
-        try {
-          token = window.grecaptcha.getResponse();
-        } catch (e) {}
-      }
-      if (!token) {
-        const els = document.querySelectorAll('textarea, input');
-        for (const el of els) {
-          const name = el.getAttribute('name') || '';
-          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-            if (el.value.trim()) {
-              token = el.value.trim();
-              break;
-            }
-          }
-        }
-      }
-      const verified = !!token;
-      setIsCaptchaVerified(verified);
-      
-      if (verified && !wasVerified) {
-        console.log('[MSG91] TCaptcha verified');
-        wasVerified = true;
-      } else if (!verified && wasVerified) {
-        console.log('[MSG91] TCaptcha verification cleared/expired');
-        wasVerified = false;
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
-
-  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
-
-  useEffect(() => {
-    if (step === 0) {
-      initMsg91(captchaId);
-    }
-  }, [step, captchaId]);
+  // ── MSG91 Captcha (singleton hook — only active on step 0) ───────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: step === 0 });
 
   
 
@@ -285,20 +238,20 @@ export default function PartnerRegister() {
       setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
     }, 30000);
 
-    const sendOtpExists = typeof window.sendOtp === 'function';
-    console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
-    if (!sendOtpExists) {
+    if (!sdkReady) {
       clearTimeout(timeoutId);
       setMobileOtpLoading(false);
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider is loading. Please try again in a moment.'));
     }
 
     console.log(`[MSG91] Calling window.sendOtp for mobile: ${formattedMobile}`);
+    console.time('MSG91_SendOTP');
     try {
       window.sendOtp(
         formattedMobile,
         (data) => {
           clearTimeout(timeoutId);
+          console.timeEnd('MSG91_SendOTP');
           console.log('[MSG91] Mobile Success response:', data);
           const requestId = getMsg91RequestId(data);
           setMobileOtpRequestId(requestId);
@@ -313,6 +266,7 @@ export default function PartnerRegister() {
         },
         (error) => {
           clearTimeout(timeoutId);
+          console.timeEnd('MSG91_SendOTP');
           console.error('[MSG91] Mobile Failure response:', error);
           const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
           setErr(errorMsg);
