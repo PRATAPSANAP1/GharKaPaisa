@@ -363,7 +363,7 @@ const getSelfProfile = async (req, res, next) => {
 
     return success(res, { ...Partner, kyc_documents: kyc });
   } catch (err) {
-    next(err);
+    return res.status(500).json({ success: false, message: err.message, stack: err.stack });
   }
 };
 
