@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
+import { initMsg91 } from "../../msg91Init";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../api/auth.api";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
@@ -63,6 +64,11 @@ export default function PartnerLogin() {
   
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState('otp'); // 'otp' or 'password'
+
+  useEffect(() => {
+    initMsg91();
+  }, []);
+
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
@@ -433,6 +439,19 @@ export default function PartnerLogin() {
             )}
 
         
+            {/* reCAPTCHA container */}
+            <div
+              id="msg91-captcha-global"
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: "80px",
+                marginTop: "15px",
+                marginBottom: "10px",
+              }}
+            ></div>
+
             {/* Submit */}
             <button
               type="submit"

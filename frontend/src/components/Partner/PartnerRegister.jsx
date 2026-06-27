@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "./PartnerIcons";
 import { useTheme, makeS } from "./ThemeContext";
+import { initMsg91 } from "../../msg91Init";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../api/auth.api";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
@@ -144,6 +145,12 @@ export default function PartnerRegister() {
     if (mobileOtpTimer > 0) t = setTimeout(() => setMobileOtpTimer(mobileOtpTimer - 1), 1000);
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
+
+  useEffect(() => {
+    if (step === 0) {
+      initMsg91();
+    }
+  }, [step]);
 
   
 
@@ -650,6 +657,20 @@ export default function PartnerRegister() {
                   </button>
                 </div>
               </div>
+
+              {/* reCAPTCHA container */}
+              <div
+                id="msg91-captcha-global"
+                style={{
+                  gridColumn: "1/-1",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  minHeight: "80px",
+                  marginTop: "10px",
+                  marginBottom: "10px",
+                }}
+              ></div>
 
               {/* Email */}
               <div style={{ gridColumn: "1/-1", display: 'flex', gap: 10, alignItems: 'flex-start' }}>

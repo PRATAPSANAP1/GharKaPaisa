@@ -3,16 +3,21 @@ import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/
 
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../config/api";
+import { initMsg91 } from "../../../msg91Init";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
-const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    initMsg91();
+  }, []);
   
   // 4-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);

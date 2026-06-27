@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { Icons } from "../../components/Partner/PartnerIcons";
 import { useTheme, makeS } from "../../components/Partner/ThemeContext";
+import { initMsg91 } from "../../msg91Init";
 import {
   sendOtp,
   loginWithOtp,
@@ -74,6 +75,10 @@ export default function AdminLogin() {
   // ── Form State ───────────────────────────────────────────────────────────────
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("otp");
+
+  useEffect(() => {
+    initMsg91();
+  }, []);
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
