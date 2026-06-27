@@ -195,11 +195,13 @@ export default function PartnerRegister() {
     return () => clearInterval(interval);
   }, []);
 
+  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
+
   useEffect(() => {
     if (step === 0) {
-      initMsg91();
+      initMsg91(captchaId);
     }
-  }, [step]);
+  }, [step, captchaId]);
 
   
 
@@ -780,7 +782,7 @@ export default function PartnerRegister() {
 
               {/* reCAPTCHA container */}
               <div
-                id="msg91-captcha-global"
+                id={captchaId}
                 style={{
                   gridColumn: "1/-1",
                   display: "flex",

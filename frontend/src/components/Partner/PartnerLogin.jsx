@@ -66,9 +66,11 @@ export default function PartnerLogin() {
   const [method, setMethod] = useState('otp'); // 'otp' or 'password'
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
+  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
+
   useEffect(() => {
-    initMsg91();
-  }, []);
+    initMsg91(captchaId);
+  }, [captchaId]);
 
   useEffect(() => {
     let wasVerified = false;
@@ -506,7 +508,7 @@ export default function PartnerLogin() {
         
             {/* reCAPTCHA container */}
             <div
-              id="msg91-captcha-global"
+              id={captchaId}
               style={{
                 display: "flex",
                 justifyContent: "center",

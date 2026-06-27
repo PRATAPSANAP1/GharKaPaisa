@@ -1,18 +1,18 @@
 let scriptLoaded = false;
 
-export function initMsg91() {
+export function initMsg91(dynamicId = 'msg91-captcha-global') {
   window.configuration = {
     widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
     tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
     exposeMethods: true,
-    captchaRenderId: 'msg91-captcha-global',
+    captchaRenderId: dynamicId,
     success: (data) => console.log('[MSG91] Widget ready', data),
     failure: (err) => console.error('[MSG91] Widget failed', err),
   };
 
-  const container = document.getElementById('msg91-captcha-global');
+  const container = document.getElementById(dynamicId);
   if (!container) {
-    console.log('[MSG91] Captcha container not found in DOM, deferring initialization.');
+    console.log(`[MSG91] Captcha container ${dynamicId} not found in DOM, deferring initialization.`);
     return;
   }
 

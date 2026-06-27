@@ -16,9 +16,11 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
+  const [captchaId] = useState(() => `msg91-captcha-${Math.random().toString(36).substr(2, 9)}`);
+
   useEffect(() => {
-    initMsg91();
-  }, []);
+    initMsg91(captchaId);
+  }, [captchaId]);
 
   useEffect(() => {
     let wasVerified = false;
@@ -380,7 +382,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
           {/* reCAPTCHA container */}
           <div
-            id="msg91-captcha-global"
+            id={captchaId}
             style={{
               display: "flex",
               justifyContent: "center",
