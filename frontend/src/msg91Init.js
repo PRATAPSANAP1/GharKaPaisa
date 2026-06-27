@@ -14,21 +14,25 @@ export function initMsg91() {
     return;
   }
 
+  // Remove existing script to force a fresh re-execution of the widget
   const existing = document.getElementById('msg91-otp-provider-script');
   if (existing) {
-    if (typeof window.initSendOTP === 'function') {
-      try {
-        window.initSendOTP(window.configuration);
-      } catch (e) {
-        console.error('[MSG91] Failed to re-init send OTP:', e);
-      }
+    try {
+      existing.remove();
+    } catch (e) {
+      console.error('[MSG91] Failed to remove existing script:', e);
     }
-    return;
   }
+
+  // Clean up old references to ensure the fresh script initializes cleanly
+  try {
+    delete window.sendOtp;
+    delete window.initSendOTP;
+  } catch (e) {}
 
   const script = document.createElement('script');
   script.id = 'msg91-otp-provider-script';
-  script.src = 'https://verify.msg91.com/otp-provider.js';
+  script.src = 'https://verify.msg91.com/otp-provider.js?t=' + Date.now();
   script.async = true;
   script.onload = () => {
     if (typeof window.initSendOTP === 'function') {

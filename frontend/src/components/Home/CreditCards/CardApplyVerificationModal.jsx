@@ -321,7 +321,17 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         )}
 
           {/* reCAPTCHA container */}
-          <div id="msg91-captcha-global" style={{ marginBottom: '16px' }}></div>
+          <div
+            id="msg91-captcha-global"
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "80px",
+              marginTop: "10px",
+              marginBottom: "10px",
+            }}
+          ></div>
 
         {/* STEP 1: Enter Name and Mobile */}
         {step === 1 && (
