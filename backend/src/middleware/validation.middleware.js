@@ -26,8 +26,8 @@ const registerRules = [
     .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
-  body('aadhaar').trim().notEmpty().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
-  body('pan').trim().toUpperCase().notEmpty()
+  body('aadhaar').optional({ checkFalsy: true }).trim().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
+  body('pan').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
   body('pincode').trim().notEmpty().matches(/^\d{6}$/).withMessage('Valid 6-digit Pincode required'),
