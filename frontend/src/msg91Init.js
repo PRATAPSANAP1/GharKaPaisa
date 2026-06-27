@@ -1,6 +1,100 @@
 let scriptLoaded = false;
 
+function setupCaptchaPatches() {
+  // --- hCaptcha Patching ---
+  if (!window.hcaptchaPatched) {
+    let _hcaptcha = window.hcaptcha;
+    
+    // Helper to patch a defined hcaptcha object
+    const patchHCaptcha = (val) => {
+      if (val && typeof val.render === 'function' && !val.render.isPatched) {
+        const originalRender = val.render;
+        val.render = function(container, config) {
+          try {
+            const el = typeof container === 'string' ? document.getElementById(container) : container;
+            if (el && el.innerHTML.trim() !== '') {
+              console.log('[hCaptcha] Container already populated, skipping duplicate render.');
+              return null;
+            }
+            return originalRender.call(this, container, config);
+          } catch (e) {
+            if (e.message && (e.message.includes('already rendered') || e.message.includes('already'))) {
+              console.log('[hCaptcha] Caught duplicate render error gracefully.');
+              return null;
+            }
+            throw e;
+          }
+        };
+        val.render.isPatched = true;
+      }
+    };
+
+    // Patch current instance if exists
+    if (_hcaptcha) patchHCaptcha(_hcaptcha);
+
+    try {
+      Object.defineProperty(window, 'hcaptcha', {
+        get() { return _hcaptcha; },
+        set(val) {
+          _hcaptcha = val;
+          patchHCaptcha(val);
+        },
+        configurable: true
+      });
+      window.hcaptchaPatched = true;
+    } catch (err) {
+      console.error('[MSG91] Failed to patch hcaptcha setter:', err);
+    }
+  }
+
+  // --- Google reCAPTCHA Patching ---
+  if (!window.grecaptchaPatched) {
+    let _grecaptcha = window.grecaptcha;
+    
+    const patchGRecaptcha = (val) => {
+      if (val && typeof val.render === 'function' && !val.render.isPatched) {
+        const originalRender = val.render;
+        val.render = function(container, config) {
+          try {
+            const el = typeof container === 'string' ? document.getElementById(container) : container;
+            if (el && el.innerHTML.trim() !== '') {
+              console.log('[grecaptcha] Container already populated, skipping duplicate render.');
+              return null;
+            }
+            return originalRender.call(this, container, config);
+          } catch (e) {
+            if (e.message && (e.message.includes('already rendered') || e.message.includes('already'))) {
+              console.log('[grecaptcha] Caught duplicate render error gracefully.');
+              return null;
+            }
+            throw e;
+          }
+        };
+        val.render.isPatched = true;
+      }
+    };
+
+    if (_grecaptcha) patchGRecaptcha(_grecaptcha);
+
+    try {
+      Object.defineProperty(window, 'grecaptcha', {
+        get() { return _grecaptcha; },
+        set(val) {
+          _grecaptcha = val;
+          patchGRecaptcha(val);
+        },
+        configurable: true
+      });
+      window.grecaptchaPatched = true;
+    } catch (err) {
+      console.error('[MSG91] Failed to patch grecaptcha setter:', err);
+    }
+  }
+}
+
 export function initMsg91(dynamicId = 'msg91-captcha-global') {
+  setupCaptchaPatches();
+  
   window.configuration = {
     widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
     tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,

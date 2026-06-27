@@ -102,10 +102,23 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     const formattedMobile = '91' + mobile.trim();
     console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
 
+    let callbackFired = false;
+    const timeoutId = setTimeout(() => {
+      if (!callbackFired) {
+        callbackFired = true;
+        console.error('[MSG91] Send OTP callback timeout');
+        setErrorMsg("OTP service did not respond. Please refresh the page and try again.");
+        setLoading(false);
+      }
+    }, 15000);
+
     try {
       window.sendOtp(
         formattedMobile,
         (data) => {
+          if (callbackFired) return;
+          callbackFired = true;
+          clearTimeout(timeoutId);
           console.log('[MSG91] Success response:', data);
           setOtpSent(true);
           setOtpTimer(120);
@@ -113,6 +126,9 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           setLoading(false);
         },
         (error) => {
+          if (callbackFired) return;
+          callbackFired = true;
+          clearTimeout(timeoutId);
           console.error('[MSG91] Failure response:', error);
           const errMsg = typeof error === 'string' ? error : (error?.message || "Failed to send OTP. Please try again.");
           setErrorMsg(errMsg);
@@ -120,6 +136,10 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         }
       );
     } catch (err) {
+      if (!callbackFired) {
+        callbackFired = true;
+        clearTimeout(timeoutId);
+      }
       console.error('[MSG91] Exception caught calling sendOtp:', err);
       setErrorMsg("An unexpected error occurred. Please try again.");
       setLoading(false);

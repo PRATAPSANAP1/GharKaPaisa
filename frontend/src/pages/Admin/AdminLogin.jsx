@@ -229,9 +229,25 @@ export default function AdminLogin() {
         const formattedMobile = '91' + form.identity.trim();
         console.log(`[MSG91] Calling window.sendOtp for admin: ${formattedMobile}`);
 
+        let callbackFired = false;
+        const timeoutId = setTimeout(() => {
+          if (!callbackFired) {
+            callbackFired = true;
+            console.error('[MSG91] Send OTP callback timeout');
+            setToast({
+              message: "OTP service did not respond. Please refresh the page and try again.",
+              type: "error",
+            });
+            setLoading(l => ({ ...l, otp: false }));
+          }
+        }, 15000);
+
         window.sendOtp(
           formattedMobile,
           (data) => {
+            if (callbackFired) return;
+            callbackFired = true;
+            clearTimeout(timeoutId);
             console.log('[MSG91] Success response:', data);
             setOtpSent(true);
             setOtpSentTime(Date.now());
@@ -244,6 +260,9 @@ export default function AdminLogin() {
             setLoading(l => ({ ...l, otp: false }));
           },
           (error) => {
+            if (callbackFired) return;
+            callbackFired = true;
+            clearTimeout(timeoutId);
             console.error('[MSG91] Failure response:', error);
             setToast({
               message: error.message || "Failed to send OTP",
