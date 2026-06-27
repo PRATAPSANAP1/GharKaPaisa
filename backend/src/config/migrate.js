@@ -251,6 +251,15 @@ const migrate = async () => {
     END $$;
   `);
 
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='kyc_documents' AND column_name='agent_id') THEN
+        ALTER TABLE kyc_documents RENAME COLUMN agent_id TO Partner_id;
+      END IF;
+    END $$;
+  `);
+
   // ── KYC Documents ────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS kyc_documents (
