@@ -37,8 +37,9 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'none'"],
-      frameAncestors: ["'none'"],
+      defaultSrc: ["'self'", "https:", "data:"],
+      frameAncestors: ["'self'", "https://www.google.com", "https://*.msg91.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://verify.msg91.com", "https://www.google.com"],
     },
   },
   hsts: {

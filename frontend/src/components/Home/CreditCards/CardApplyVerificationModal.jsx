@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/fa";
-import ReCAPTCHA from "react-google-recaptcha";
+
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../config/api";
 
@@ -314,6 +314,9 @@ const [captchaToken, setCaptchaToken] = useState(null);
             {errorMsg}
           </div>
         )}
+
+          {/* reCAPTCHA container */}
+          <div id="msg91-captcha-global" style={{ marginBottom: '16px' }}></div>
 
         {/* STEP 1: Enter Name and Mobile */}
         {step === 1 && (
