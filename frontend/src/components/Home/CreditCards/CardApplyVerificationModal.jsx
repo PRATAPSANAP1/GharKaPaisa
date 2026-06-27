@@ -14,9 +14,28 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   useEffect(() => {
     initMsg91();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const els = document.querySelectorAll('textarea, input');
+      let verified = false;
+      for (const el of els) {
+        const name = el.getAttribute('name') || '';
+        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+          if (el.value.trim()) {
+            verified = true;
+            break;
+          }
+        }
+      }
+      setIsCaptchaVerified(verified);
+    }, 500);
+    return () => clearInterval(interval);
   }, []);
   
   // 6-box OTP state
@@ -35,6 +54,9 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
   const handleSendOtp = () => {
     setErrorMsg("");
+    if (!isCaptchaVerified) {
+      return setErrorMsg("Please complete the captcha verification first.");
+    }
     if (!customerName.trim()) {
       return setErrorMsg("Please enter your name.");
     }
@@ -393,7 +415,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
             <button
               onClick={handleSendOtp}
-              disabled={loading}
+              disabled={loading || !isCaptchaVerified}
               style={{
                 width: "100%",
                 background: C.teal || '#0ea5e9',
@@ -403,7 +425,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 padding: "14px",
                 fontSize: "14px",
                 fontWeight: 700,
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: (loading || !isCaptchaVerified) ? "not-allowed" : "pointer",
+                opacity: (loading || !isCaptchaVerified) ? 0.6 : 1,
                 transition: "opacity 0.2s",
                 display: "flex",
                 alignItems: "center",
@@ -416,7 +439,11 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
               ) : "Send SMS Verification OTP"}
             </button>
-         
+            {!isCaptchaVerified && (
+              <div style={{ color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "8px", textAlign: "center", fontWeight: 500 }}>
+                Please complete the security verification to enable OTP.
+              </div>
+            )}
           </div>
         )}
 

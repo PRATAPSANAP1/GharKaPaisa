@@ -153,6 +153,26 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const els = document.querySelectorAll('textarea, input');
+      let verified = false;
+      for (const el of els) {
+        const name = el.getAttribute('name') || '';
+        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+          if (el.value.trim()) {
+            verified = true;
+            break;
+          }
+        }
+      }
+      setIsCaptchaVerified(verified);
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (step === 0) {
       initMsg91();
@@ -221,6 +241,10 @@ export default function PartnerRegister() {
   };
 
   const handleSendMobileOtp = () => {
+    setErr('');
+    if (!isCaptchaVerified) {
+      return setErr("Please complete the captcha verification first.");
+    }
     if (!form.mobile.trim()) return setErr(t('partner.errors.mobileRequired', 'Please enter your mobile number.'));
     if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return setErr(t('partner.errors.mobileInvalid', 'Please enter a valid 10-digit mobile number.'));
 
@@ -342,6 +366,10 @@ export default function PartnerRegister() {
   };
 
   const handleSendRegistrationOtp = async () => {
+    setErr('');
+    if (!isCaptchaVerified) {
+      return setErr("Please complete the captcha verification first.");
+    }
     if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr(t('partner.errors.emailInvalid', 'Please enter a valid email address.'));
 
@@ -471,7 +499,7 @@ export default function PartnerRegister() {
     }
   };
 
-  const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0);
+  const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0) || !isCaptchaVerified;
 
   // ── Success Screen ──────────────────────────────────────────────────────────
   if (success) {
@@ -688,7 +716,7 @@ export default function PartnerRegister() {
                   <button
                     type="button"
                     onClick={mobileOtpSent ? handleResendMobileOtp : handleSendMobileOtp}
-                    style={{ ...S.btn('primary'), width: '100%', opacity: mobileActionDisabled ? 0.7 : 1 }}
+                    style={{ ...S.btn('primary'), width: '100%', opacity: mobileActionDisabled ? 0.6 : 1, cursor: mobileActionDisabled ? 'not-allowed' : 'pointer' }}
                     disabled={mobileActionDisabled}
                     title={mobileOtpSent && mobileOtpTimer > 0 ? t('partner.waitBeforeResend', 'Please wait before requesting another OTP.') : ''}
                   >
@@ -702,6 +730,11 @@ export default function PartnerRegister() {
                   </button>
                 </div>
               </div>
+              {!isCaptchaVerified && !form.mobilePreVerified && (
+                <div style={{ gridColumn: "1/-1", color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "-8px", marginBottom: "8px", fontWeight: 500 }}>
+                  Please complete the security verification to enable OTP.
+                </div>
+              )}
 
               {/* reCAPTCHA container */}
               <div
@@ -759,8 +792,8 @@ export default function PartnerRegister() {
                   <button
                     type="button"
                     onClick={handleSendRegistrationOtp}
-                    style={{ ...S.btn('primary'), width: '100%' }}
-                    disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
+                    style={{ ...S.btn('primary'), width: '100%', opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 0.6 : 1, cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 'not-allowed' : 'pointer' }}
+                    disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified}
                   >
                     {form.emailPreVerified 
                       ? t('partner.verified', 'Verified') 
@@ -772,6 +805,11 @@ export default function PartnerRegister() {
                   </button>
                 </div>
               </div>
+              {!isCaptchaVerified && !form.emailPreVerified && (
+                <div style={{ gridColumn: "1/-1", color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "-8px", marginBottom: "8px", fontWeight: 500 }}>
+                  Please complete the security verification to enable OTP.
+                </div>
+              )}
 
               {/* Password */}
               <div style={{ gridColumn: "1/-1" }}>

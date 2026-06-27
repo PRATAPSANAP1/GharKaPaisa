@@ -75,9 +75,28 @@ export default function AdminLogin() {
   // ── Form State ───────────────────────────────────────────────────────────────
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("otp");
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   useEffect(() => {
     initMsg91();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const els = document.querySelectorAll('textarea, input');
+      let verified = false;
+      for (const el of els) {
+        const name = el.getAttribute('name') || '';
+        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+          if (el.value.trim()) {
+            verified = true;
+            break;
+          }
+        }
+      }
+      setIsCaptchaVerified(verified);
+    }, 500);
+    return () => clearInterval(interval);
   }, []);
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -137,6 +156,10 @@ export default function AdminLogin() {
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
+    setErr("");
+    if (!isCaptchaVerified) {
+      return setErr("Please complete the captcha verification first.");
+    }
     if (!form.identity.trim())
       return setErr("Please enter your email or mobile number.");
 
@@ -676,13 +699,14 @@ export default function AdminLogin() {
                     <button
                       type="button"
                       onClick={handleSendOtp}
-                      disabled={timer > 0 || loading.otp}
+                      disabled={timer > 0 || loading.otp || !isCaptchaVerified}
                       style={{
                         ...S.btn("sm"),
                         whiteSpace: "nowrap",
                         width: "110px",
                         padding: "0 10px",
-                        opacity: timer > 0 || loading.otp ? 0.7 : 1,
+                        opacity: timer > 0 || loading.otp || !isCaptchaVerified ? 0.6 : 1,
+                        cursor: timer > 0 || loading.otp || !isCaptchaVerified ? "not-allowed" : "pointer",
                       }}
                     >
                       {loading.otp
@@ -692,6 +716,11 @@ export default function AdminLogin() {
                           : "Send OTP"}
                     </button>
                   </div>
+                  {!isCaptchaVerified && (
+                    <div style={{ color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "6px", fontWeight: 500 }}>
+                      Please complete the security verification to enable OTP.
+                    </div>
+                  )}
                 </div>
               )}
 
