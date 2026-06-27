@@ -174,7 +174,7 @@ const migrate = async () => {
       id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       Partner_id            UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
       bank_name           VARCHAR(100) NOT NULL,
-      account_number      VARCHAR(50) NOT NULL,
+      account_number      VARCHAR(255) NOT NULL,
       ifsc_code           VARCHAR(15) NOT NULL,
       account_holder_name VARCHAR(255) NOT NULL,
       is_verified         BOOLEAN DEFAULT FALSE,
@@ -183,6 +183,8 @@ const migrate = async () => {
       updated_at          TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  await query(`ALTER TABLE Partner_bank_details ALTER COLUMN account_number TYPE VARCHAR(255)`);
 
   // ── Database Schema Alignment (Migrate agent tables/columns to partner) ──
   await query(`
