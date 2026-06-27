@@ -1,3 +1,5 @@
+let scriptLoaded = false;
+
 export function initMsg91() {
   window.configuration = {
     widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
@@ -14,27 +16,41 @@ export function initMsg91() {
     return;
   }
 
-  // Remove existing script to force a fresh re-execution of the widget
-  const existing = document.getElementById('msg91-otp-provider-script');
-  if (existing) {
-    try {
-      existing.remove();
-    } catch (e) {
-      console.error('[MSG91] Failed to remove existing script:', e);
+  // If script was already loaded, clear the container and re-initialize the widget
+  if (scriptLoaded) {
+    container.innerHTML = '';
+    if (typeof window.initSendOTP === 'function') {
+      try {
+        window.initSendOTP(window.configuration);
+      } catch (e) {
+        console.error('[MSG91] Failed to re-init send OTP:', e);
+      }
     }
+    return;
   }
 
-  // Clean up old references to ensure the fresh script initializes cleanly
-  try {
-    delete window.sendOtp;
-    delete window.initSendOTP;
-  } catch (e) {}
+  // First-time load: append the script
+  const existing = document.getElementById('msg91-otp-provider-script');
+  if (existing) {
+    // Script tag exists but our flag was reset (e.g. HMR) — just re-init
+    scriptLoaded = true;
+    container.innerHTML = '';
+    if (typeof window.initSendOTP === 'function') {
+      try {
+        window.initSendOTP(window.configuration);
+      } catch (e) {
+        console.error('[MSG91] Failed to re-init send OTP:', e);
+      }
+    }
+    return;
+  }
 
   const script = document.createElement('script');
   script.id = 'msg91-otp-provider-script';
-  script.src = 'https://verify.msg91.com/otp-provider.js?t=' + Date.now();
+  script.src = 'https://verify.msg91.com/otp-provider.js';
   script.async = true;
   script.onload = () => {
+    scriptLoaded = true;
     if (typeof window.initSendOTP === 'function') {
       try {
         window.initSendOTP(window.configuration);
