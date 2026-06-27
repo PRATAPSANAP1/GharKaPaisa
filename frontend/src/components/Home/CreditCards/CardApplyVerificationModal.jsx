@@ -19,9 +19,9 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     initMsg91();
   }, []);
   
-  // 4-box OTP state
-  const [otpDigits, setOtpDigits] = useState(["", "", "", ""]);
-  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+  // 6-box OTP state
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
 
 
   // OTP Timer countdown
@@ -73,7 +73,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
     setErrorMsg("");
     setLoading(true);
-    setOtpDigits(["", "", "", ""]);
+    setOtpDigits(["", "", "", "", "", ""]);
 
     window.retryOtp(
       null, // channel null (default SMS)
@@ -91,8 +91,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
   const handleVerifyOtp = async () => {
     const fullOtp = otpDigits.join("");
-    if (fullOtp.length < 4) {
-      return setErrorMsg("Please enter the 4-digit OTP.");
+    if (fullOtp.length < 6) {
+      return setErrorMsg("Please enter the 6-digit OTP.");
     }
 
     setErrorMsg("");
@@ -165,7 +165,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setOtpDigits(newDigits);
 
     // Auto-focus next box
-    if (value && index < 3) {
+    if (value && index < 5) {
       otpRefs[index + 1].current.focus();
     }
   };
@@ -180,7 +180,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   // Handle Paste
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").trim().substring(0, 4);
+    const pastedData = e.clipboardData.getData("text").trim().substring(0, 6);
     if (!/^\d+$/.test(pastedData)) return;
 
     const newDigits = [...otpDigits];
@@ -193,7 +193,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setOtpDigits(newDigits);
 
     // Focus last filled box
-    const focusIdx = Math.min(pastedData.length, 3);
+    const focusIdx = Math.min(pastedData.length, 5);
     if (otpRefs[focusIdx] && otpRefs[focusIdx].current) {
       otpRefs[focusIdx].current.focus();
     }
@@ -417,7 +417,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           </div>
         )}
 
-        {/* STEP 2: Enter OTP in 4 boxes */}
+        {/* STEP 2: Enter OTP in 6 boxes */}
         {step === 2 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div style={{ textAlign: "center" }}>
@@ -426,8 +426,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
               </div>
             </div>
 
-            {/* 4 Digit Input Fields */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "14px" }} onPaste={handleOtpPaste}>
+            {/* 6 Digit Input Fields */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "10px" }} onPaste={handleOtpPaste}>
               {otpDigits.map((digit, idx) => (
                 <input
                   key={idx}
