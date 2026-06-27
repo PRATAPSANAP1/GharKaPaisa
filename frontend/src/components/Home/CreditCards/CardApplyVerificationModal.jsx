@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/fa";
+import ReCAPTCHA from "react-google-recaptcha";
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../config/api";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
+const [captchaToken, setCaptchaToken] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otpSent, setOtpSent] = useState(false);
