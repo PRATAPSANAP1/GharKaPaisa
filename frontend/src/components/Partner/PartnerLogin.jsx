@@ -71,19 +71,41 @@ export default function PartnerLogin() {
   }, []);
 
   useEffect(() => {
+    let wasVerified = false;
     const interval = setInterval(() => {
-      const els = document.querySelectorAll('textarea, input');
-      let verified = false;
-      for (const el of els) {
-        const name = el.getAttribute('name') || '';
-        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-          if (el.value.trim()) {
-            verified = true;
-            break;
+      let token = '';
+      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+        try {
+          token = window.hcaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+        try {
+          token = window.grecaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token) {
+        const els = document.querySelectorAll('textarea, input');
+        for (const el of els) {
+          const name = el.getAttribute('name') || '';
+          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+            if (el.value.trim()) {
+              token = el.value.trim();
+              break;
+            }
           }
         }
       }
+      const verified = !!token;
       setIsCaptchaVerified(verified);
+      
+      if (verified && !wasVerified) {
+        console.log('[MSG91] TCaptcha verified');
+        wasVerified = true;
+      } else if (!verified && wasVerified) {
+        console.log('[MSG91] TCaptcha verification cleared/expired');
+        wasVerified = false;
+      }
     }, 500);
     return () => clearInterval(interval);
   }, []);
@@ -115,8 +137,10 @@ export default function PartnerLogin() {
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
+    console.log('[MSG91] Send OTP button clicked (PartnerLogin)');
     setErr("");
     if (!isCaptchaVerified) {
+      console.warn('[MSG91] Send OTP blocked: Captcha not verified');
       return setErr("Please complete the captcha verification first.");
     }
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
@@ -141,8 +165,10 @@ export default function PartnerLogin() {
         }
 
         // 2. Verify MSG91 sendOtp helper is ready
-        if (typeof window.sendOtp !== 'function') {
-          throw new Error("MSG91 service is loading. Please wait a moment and try again.");
+        const sendOtpExists = typeof window.sendOtp === 'function';
+        console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
+        if (!sendOtpExists) {
+          throw new Error("OTP service is loading. Please wait a moment and try again.");
         }
 
         // 3. Safety timeout — if MSG91 never calls back, unblock the UI
@@ -150,17 +176,22 @@ export default function PartnerLogin() {
         const timeoutId = setTimeout(() => {
           if (!callbackFired) {
             callbackFired = true;
+            console.error('[MSG91] Send OTP callback timeout');
             setToast({ message: "OTP service did not respond. Please refresh the page and try again.", type: "error" });
             setLoading(l => ({ ...l, otp: false }));
           }
         }, 15000);
 
+        const formattedMobile = '91' + form.identity.trim();
+        console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
+
         window.sendOtp(
-          '91' + form.identity.trim(),
+          formattedMobile,
           (data) => {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.log('[MSG91] Success response:', data);
             setOtpSent(true);
             setOtpSentTime(Date.now());
             setOtpAttempts(a => a + 1);
@@ -173,11 +204,13 @@ export default function PartnerLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
+            console.error('[MSG91] Failure response:', errResponse);
             setToast({ message: errResponse?.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
             setLoading(l => ({ ...l, otp: false }));
           }
         );
       } catch (e) {
+        console.error('[MSG91] Exception caught sending mobile OTP:', e);
         setToast({ message: e.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
         setLoading(l => ({ ...l, otp: false }));
       }
@@ -186,7 +219,9 @@ export default function PartnerLogin() {
 
     // ── Email OTP fallback via AWS SES ───────────────────────────────────────────
     try {
+      console.log(`[Email OTP] Sending email OTP to: ${form.identity.trim()}`);
       const otpRes = await sendOtp(form.identity.trim());
+      console.log('[Email OTP] Success response:', otpRes);
       setResolvedCredentials({ maskedEmail: otpRes.email || '****@****.com' });
       setOtpSent(true);
       setOtpSentTime(Date.now());
@@ -194,6 +229,7 @@ export default function PartnerLogin() {
       setTimer(30);
       setToast({ message: t('partner.errors.otpSentSuccess', 'OTP sent to your registered email') + ` (${otpRes.email || '****@****.com'})`, type: "success" });
     } catch (e) {
+      console.error('[Email OTP] Failure:', e);
       setToast({ message: e.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
     } finally {
       setLoading(l => ({ ...l, otp: false }));

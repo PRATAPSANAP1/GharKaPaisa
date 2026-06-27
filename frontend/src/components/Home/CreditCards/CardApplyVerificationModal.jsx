@@ -21,19 +21,41 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   }, []);
 
   useEffect(() => {
+    let wasVerified = false;
     const interval = setInterval(() => {
-      const els = document.querySelectorAll('textarea, input');
-      let verified = false;
-      for (const el of els) {
-        const name = el.getAttribute('name') || '';
-        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-          if (el.value.trim()) {
-            verified = true;
-            break;
+      let token = '';
+      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+        try {
+          token = window.hcaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+        try {
+          token = window.grecaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token) {
+        const els = document.querySelectorAll('textarea, input');
+        for (const el of els) {
+          const name = el.getAttribute('name') || '';
+          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+            if (el.value.trim()) {
+              token = el.value.trim();
+              break;
+            }
           }
         }
       }
+      const verified = !!token;
       setIsCaptchaVerified(verified);
+      
+      if (verified && !wasVerified) {
+        console.log('[MSG91] TCaptcha verified');
+        wasVerified = true;
+      } else if (!verified && wasVerified) {
+        console.log('[MSG91] TCaptcha verification cleared/expired');
+        wasVerified = false;
+      }
     }, 500);
     return () => clearInterval(interval);
   }, []);
@@ -53,10 +75,20 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   }, [otpTimer]);
 
   const handleSendOtp = () => {
+    console.log('[MSG91] Send OTP button clicked (CardApplyVerificationModal)');
     setErrorMsg("");
     if (!isCaptchaVerified) {
+      console.warn('[MSG91] Send OTP blocked: Captcha not verified');
       return setErrorMsg("Please complete the captcha verification first.");
     }
+
+    const sendOtpExists = typeof window.sendOtp === 'function';
+    console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
+    if (!sendOtpExists) {
+      console.error('[MSG91] window.sendOtp is not ready or failed to load');
+      return setErrorMsg("OTP provider is not fully initialized. Please wait a moment and try again.");
+    }
+
     if (!customerName.trim()) {
       return setErrorMsg("Please enter your name.");
     }
@@ -66,26 +98,30 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
     setLoading(true);
     const formattedMobile = '91' + mobile.trim();
+    console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
 
-    if (typeof window.sendOtp !== 'function') {
+    try {
+      window.sendOtp(
+        formattedMobile,
+        (data) => {
+          console.log('[MSG91] Success response:', data);
+          setOtpSent(true);
+          setOtpTimer(120);
+          setStep(2);
+          setLoading(false);
+        },
+        (error) => {
+          console.error('[MSG91] Failure response:', error);
+          const errMsg = typeof error === 'string' ? error : (error?.message || "Failed to send OTP. Please try again.");
+          setErrorMsg(errMsg);
+          setLoading(false);
+        }
+      );
+    } catch (err) {
+      console.error('[MSG91] Exception caught calling sendOtp:', err);
+      setErrorMsg("An unexpected error occurred. Please try again.");
       setLoading(false);
-      return setErrorMsg("OTP provider is loading. Please try again in a moment.");
     }
-
-    window.sendOtp(
-      formattedMobile,
-      (data) => {
-        setOtpSent(true);
-        setOtpTimer(120);
-        setStep(2);
-        setLoading(false);
-      },
-      (error) => {
-        const errMsg = typeof error === 'string' ? error : (error?.message || "Failed to send OTP. Please try again.");
-        setErrorMsg(errMsg);
-        setLoading(false);
-      }
-    );
   };
 
   const handleResendOtp = () => {
@@ -414,6 +450,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             </div>
 
             <button
+              type="button"
               onClick={handleSendOtp}
               disabled={loading || !isCaptchaVerified}
               style={{

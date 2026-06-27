@@ -82,19 +82,41 @@ export default function AdminLogin() {
   }, []);
 
   useEffect(() => {
+    let wasVerified = false;
     const interval = setInterval(() => {
-      const els = document.querySelectorAll('textarea, input');
-      let verified = false;
-      for (const el of els) {
-        const name = el.getAttribute('name') || '';
-        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-          if (el.value.trim()) {
-            verified = true;
-            break;
+      let token = '';
+      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+        try {
+          token = window.hcaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+        try {
+          token = window.grecaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token) {
+        const els = document.querySelectorAll('textarea, input');
+        for (const el of els) {
+          const name = el.getAttribute('name') || '';
+          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+            if (el.value.trim()) {
+              token = el.value.trim();
+              break;
+            }
           }
         }
       }
+      const verified = !!token;
       setIsCaptchaVerified(verified);
+      
+      if (verified && !wasVerified) {
+        console.log('[MSG91] TCaptcha verified');
+        wasVerified = true;
+      } else if (!verified && wasVerified) {
+        console.log('[MSG91] TCaptcha verification cleared/expired');
+        wasVerified = false;
+      }
     }, 500);
     return () => clearInterval(interval);
   }, []);
@@ -156,8 +178,10 @@ export default function AdminLogin() {
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
+    console.log('[MSG91] Send OTP button clicked (AdminLogin)');
     setErr("");
     if (!isCaptchaVerified) {
+      console.warn('[MSG91] Send OTP blocked: Captcha not verified');
       return setErr("Please complete the captcha verification first.");
     }
     if (!form.identity.trim())
@@ -189,8 +213,10 @@ export default function AdminLogin() {
         }
 
         // 2. Ensure MSG91 widget is ready
-        if (typeof window.sendOtp !== "function") {
-          setLoading((l) => ({ ...l, otp: false })); // FIX: reset loading before returning
+        const sendOtpExists = typeof window.sendOtp === 'function';
+        console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
+        if (!sendOtpExists) {
+          setLoading((l) => ({ ...l, otp: false }));
           return setToast({
             type: "error",
             message:
@@ -198,38 +224,34 @@ export default function AdminLogin() {
           });
         }
 
-       window.sendOtp(
-  "91" + form.identity.trim(),
+        const formattedMobile = '91' + form.identity.trim();
+        console.log(`[MSG91] Calling window.sendOtp for admin: ${formattedMobile}`);
 
-  (data) => {
-    console.log("SEND OTP SUCCESS", data);
-
-    setOtpSent(true);
-    setOtpSentTime(Date.now());
-    setOtpAttempts(a => a + 1);
-    setTimer(30);
-
-    setToast({
-      message: "Verification code sent to your mobile phone via SMS.",
-      type: "success",
-    });
-
-    setLoading(l => ({ ...l, otp: false }));
-  },
-
-  (error) => {
-    console.log("SEND OTP ERROR", error);
-
-    setToast({
-      message: error.message || "Failed to send OTP",
-      type: "error",
-
-    });
-
-    setLoading(l => ({ ...l, otp: false }));
-  }
-);
+        window.sendOtp(
+          formattedMobile,
+          (data) => {
+            console.log('[MSG91] Success response:', data);
+            setOtpSent(true);
+            setOtpSentTime(Date.now());
+            setOtpAttempts(a => a + 1);
+            setTimer(30);
+            setToast({
+              message: "Verification code sent to your mobile phone via SMS.",
+              type: "success",
+            });
+            setLoading(l => ({ ...l, otp: false }));
+          },
+          (error) => {
+            console.error('[MSG91] Failure response:', error);
+            setToast({
+              message: error.message || "Failed to send OTP",
+              type: "error",
+            });
+            setLoading(l => ({ ...l, otp: false }));
+          }
+        );
       } catch (e) {
+        console.error('[MSG91] Exception caught sending mobile OTP:', e);
         setToast({
           message: e.message || "Failed to send OTP. Please try again.",
           type: "error",
@@ -241,17 +263,19 @@ export default function AdminLogin() {
 
     // ── Email OTP via AWS SES ────────────────────────────────────────────────────
     try {
+      console.log(`[Email OTP] Sending email OTP to: ${form.identity.trim()}`);
       const otpRes = await sendOtp(form.identity.trim());
+      console.log('[Email OTP] Success response:', otpRes);
       setOtpSent(true);
       setOtpSentTime(Date.now());
       setOtpAttempts((a) => a + 1);
       setTimer(30);
       setToast({
-        message: `OTP sent to your registered email (${otpRes.email || "****@****.com"
-          })`,
+        message: `OTP sent to your registered email (${otpRes.email || "****@****.com"})`,
         type: "success",
       });
     } catch (e) {
+      console.error('[Email OTP] Failure:', e);
       setToast({
         message: e.message || "Failed to send OTP. Please try again.",
         type: "error",

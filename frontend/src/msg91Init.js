@@ -51,6 +51,7 @@ export function initMsg91() {
   script.async = true;
   script.onload = () => {
     scriptLoaded = true;
+    console.log('[MSG91] SDK loaded successfully');
     if (typeof window.initSendOTP === 'function') {
       try {
         window.initSendOTP(window.configuration);

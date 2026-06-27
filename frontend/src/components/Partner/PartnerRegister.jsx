@@ -156,19 +156,41 @@ export default function PartnerRegister() {
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
   useEffect(() => {
+    let wasVerified = false;
     const interval = setInterval(() => {
-      const els = document.querySelectorAll('textarea, input');
-      let verified = false;
-      for (const el of els) {
-        const name = el.getAttribute('name') || '';
-        if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
-          if (el.value.trim()) {
-            verified = true;
-            break;
+      let token = '';
+      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
+        try {
+          token = window.hcaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+        try {
+          token = window.grecaptcha.getResponse();
+        } catch (e) {}
+      }
+      if (!token) {
+        const els = document.querySelectorAll('textarea, input');
+        for (const el of els) {
+          const name = el.getAttribute('name') || '';
+          if (name.includes('recaptcha-response') || name.includes('captcha-response')) {
+            if (el.value.trim()) {
+              token = el.value.trim();
+              break;
+            }
           }
         }
       }
+      const verified = !!token;
       setIsCaptchaVerified(verified);
+      
+      if (verified && !wasVerified) {
+        console.log('[MSG91] TCaptcha verified');
+        wasVerified = true;
+      } else if (!verified && wasVerified) {
+        console.log('[MSG91] TCaptcha verification cleared/expired');
+        wasVerified = false;
+      }
     }, 500);
     return () => clearInterval(interval);
   }, []);
@@ -241,8 +263,10 @@ export default function PartnerRegister() {
   };
 
   const handleSendMobileOtp = () => {
+    console.log('[MSG91] Send Mobile OTP button clicked (PartnerRegister)');
     setErr('');
     if (!isCaptchaVerified) {
+      console.warn('[MSG91] Send Mobile OTP blocked: Captcha not verified');
       return setErr("Please complete the captcha verification first.");
     }
     if (!form.mobile.trim()) return setErr(t('partner.errors.mobileRequired', 'Please enter your mobile number.'));
@@ -255,37 +279,50 @@ export default function PartnerRegister() {
     const formattedMobile = '91' + form.mobile.trim();
     const timeoutId = setTimeout(() => {
       setMobileOtpLoading(false);
+      console.error('[MSG91] Send Mobile OTP callback timeout');
       setErr(t('partner.errors.msg91Timeout', 'OTP provider did not respond. Please refresh and try again.'));
     }, 30000);
 
-    if (typeof window.sendOtp !== 'function') {
+    const sendOtpExists = typeof window.sendOtp === 'function';
+    console.log(`[MSG91] window.sendOtp exists: ${sendOtpExists}`);
+    if (!sendOtpExists) {
       clearTimeout(timeoutId);
       setMobileOtpLoading(false);
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider is loading. Please try again in a moment.'));
     }
 
-    window.sendOtp(
-      formattedMobile,
-      (data) => {
-        clearTimeout(timeoutId);
-        const requestId = getMsg91RequestId(data);
-        setMobileOtpRequestId(requestId);
-        if (!requestId) {
-          console.warn('MSG91 sendOtp did not return a request id.', data);
+    console.log(`[MSG91] Calling window.sendOtp for mobile: ${formattedMobile}`);
+    try {
+      window.sendOtp(
+        formattedMobile,
+        (data) => {
+          clearTimeout(timeoutId);
+          console.log('[MSG91] Mobile Success response:', data);
+          const requestId = getMsg91RequestId(data);
+          setMobileOtpRequestId(requestId);
+          if (!requestId) {
+            console.warn('MSG91 sendOtp did not return a request id.', data);
+          }
+          setMobileOtpSent(true);
+          setMobileOtpTimer(120);
+          setForm(f => ({ ...f, mobileOtp: '' }));
+          setInfoMsg(t('partner.mobileOtpSent', 'SMS OTP sent successfully.'));
+          setMobileOtpLoading(false);
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          console.error('[MSG91] Mobile Failure response:', error);
+          const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
+          setErr(errorMsg);
+          setMobileOtpLoading(false);
         }
-        setMobileOtpSent(true);
-        setMobileOtpTimer(120);
-        setForm(f => ({ ...f, mobileOtp: '' }));
-        setInfoMsg(t('partner.mobileOtpSent', 'SMS OTP sent successfully.'));
-        setMobileOtpLoading(false);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
-        setErr(errorMsg);
-        setMobileOtpLoading(false);
-      }
-    );
+      );
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error('[MSG91] Exception caught calling sendOtp for mobile:', err);
+      setErr("An unexpected error occurred. Please try again.");
+      setMobileOtpLoading(false);
+    }
   };
 
   const handleResendMobileOtp = () => {
@@ -366,8 +403,10 @@ export default function PartnerRegister() {
   };
 
   const handleSendRegistrationOtp = async () => {
+    console.log('[MSG91] Send Email OTP button clicked (PartnerRegister)');
     setErr('');
     if (!isCaptchaVerified) {
+      console.warn('[MSG91] Send Email OTP blocked: Captcha not verified');
       return setErr("Please complete the captcha verification first.");
     }
     if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
@@ -376,12 +415,15 @@ export default function PartnerRegister() {
     setErr('');
     setInfoMsg('');
     setEmailOtpLoading(true);
+    console.log(`[Email OTP] Sending email registration OTP to: ${form.email.trim()}`);
     try {
-      await sendRegistrationOtp(form.email.trim());
+      const res = await sendRegistrationOtp(form.email.trim());
+      console.log('[Email OTP] Success response:', res);
       setEmailOtpSent(true);
       setEmailOtpTimer(120);
       setInfoMsg(t('partner.emailOtpSent', 'OTP sent to your email address.'));
     } catch (err) {
+      console.error('[Email OTP] Failure response:', err);
       setErr(err.message || t('partner.errors.sendOtpFailed', 'Failed to send OTP. Please try again.'));
     } finally {
       setEmailOtpLoading(false);
