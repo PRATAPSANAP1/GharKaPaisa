@@ -329,9 +329,12 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
               alignItems: "center",
               minHeight: "80px",
               marginTop: "10px",
-              marginBottom: "10px",
+              marginBottom: "5px",
             }}
           ></div>
+          <div style={{ fontSize: "11.5px", color: C.textLight || "#64748b", textAlign: "center", marginBottom: "12px", fontWeight: 600 }}>
+            Note: First resolve the captcha, then verify/send OTP.
+          </div>
 
         {/* STEP 1: Enter Name and Mobile */}
         {step === 1 && (

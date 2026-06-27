@@ -703,9 +703,12 @@ export default function AdminLogin() {
         alignItems: "center",
         minHeight: "80px",
         marginTop: "15px",
-        marginBottom: "10px",
+        marginBottom: "5px",
     }}
 ></div>
+<div style={{ fontSize: "11.5px", color: C.textLight || "#64748b", textAlign: "center", marginBottom: "12px", fontWeight: 600 }}>
+  Note: First resolve the captcha, then verify/send OTP.
+</div>
 
               {/* Submit */}
               <button
