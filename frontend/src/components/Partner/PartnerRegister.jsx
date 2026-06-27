@@ -42,11 +42,14 @@ export default function PartnerRegister() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null); // { Partner_code }
 
+  const [aadhaarBackendError, setAadhaarBackendError] = useState("");
+
   // Flat form state for all steps
   const [form, setForm] = useState({
     // Step 0 – Personal
     firstName: "", lastName: "", mobile: "",
     email: "", password: "", confirmPassword: "",
+    aadhaar: "",
     emailOtp: "",
     emailPreVerified: false,
     mobileOtp: "",
@@ -135,6 +138,10 @@ export default function PartnerRegister() {
   }, [form.mobile]);
 
   useEffect(() => {
+    setAadhaarBackendError("");
+  }, [form.aadhaar]);
+
+  useEffect(() => {
     let t;
     if (emailOtpTimer > 0) t = setTimeout(() => setEmailOtpTimer(emailOtpTimer - 1), 1000);
     return () => clearTimeout(t);
@@ -175,6 +182,11 @@ export default function PartnerRegister() {
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
+      
+      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
+      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
+      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
+
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
       if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password))
@@ -425,7 +437,7 @@ export default function PartnerRegister() {
         account_number: form.accountNumber.trim(),
         ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
         account_holder_name: form.accountHolderName.trim(),
-        aadhaar: "",
+        aadhaar: form.aadhaar.replace(/[\s-]/g, ""),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
         role: "PARTNER",
       };
@@ -433,9 +445,26 @@ export default function PartnerRegister() {
       if (res.success) {
         setSuccess({ ...res.data, email: form.email });
       } else {
+        if (res.errors && Array.isArray(res.errors)) {
+          const aadhaarErr = res.errors.find(e => e.field === 'aadhaar');
+          if (aadhaarErr) {
+            setStep(0);
+            setAadhaarBackendError(aadhaarErr.message);
+            return;
+          }
+        }
         setErr(res.message || t("partner.errors.registrationFailed", "Registration failed. Please try again."));
       }
     } catch (e) {
+      const resData = e.response?.data;
+      if (resData && resData.errors && Array.isArray(resData.errors)) {
+        const aadhaarErr = resData.errors.find(errObj => errObj.field === 'aadhaar');
+        if (aadhaarErr) {
+          setStep(0);
+          setAadhaarBackendError(aadhaarErr.message);
+          return;
+        }
+      }
       setErr(e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
     } finally {
       setLoading(false);
@@ -597,6 +626,22 @@ export default function PartnerRegister() {
               <div>
                 <label style={S.label}>{t('partner.lastName', 'Last Name')}</label>
                 <input {...inputProps("lastName")} />
+              </div>
+
+              {/* Aadhaar Number */}
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>{t('partner.aadhaarNumber', 'Aadhaar Number')}</label>
+                <input
+                  type="text"
+                  placeholder={t('partner.aadhaarPlaceholder', 'Enter 12-digit Aadhaar Number')}
+                  maxLength={19}
+                  {...inputProps("aadhaar")}
+                />
+                {aadhaarBackendError && (
+                  <div style={{ color: C.red || '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>
+                    {aadhaarBackendError}
+                  </div>
+                )}
               </div>
 
               {/* Mobile */}
@@ -806,53 +851,44 @@ export default function PartnerRegister() {
                 </div>
               </div>
 
-              {/* Header */}
-              <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
-                <div style={{
-                  width: '64px', height: '64px', borderRadius: '50%',
-                  background: `${C.teal}15`, color: C.teal,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 14px',
-                }}>
-                  <Icons.shield size={28} />
-                </div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: C.text }}>{t('partner.kycDocuments', 'KYC Documents')}</div>
-                <div style={{ fontSize: '13px', color: C.textMid, marginTop: '6px', lineHeight: 1.5 }}>
-                  {t('partner.docVerificationDesc', 'Document verification is done after your account is activated.')}
-                </div>
-              </div>
-
-              {/* Document list */}
-              {[
-                { icon: '🪄', title: t('kycDocs.panCard', 'PAN Card'), desc: t('kycDocs.panDesc', 'PDF or Image · Max 5MB') },
-                { icon: '🏦', title: t('kycDocs.cheque', 'Cancelled Cheque'), desc: t('kycDocs.chequeDesc', 'Image of cheque · Max 5MB') },
-              ].map(doc => (
-                <div key={doc.title} style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  background: C.bgSecondary,
-                  border: `1.5px solid ${C.border}`,
-                  borderRadius: '12px', padding: '14px 16px',
-                  opacity: 0.7,
-                }}>
-                  <span style={{ fontSize: '22px' }}>{doc.icon}</span>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>{doc.title}</div>
-                    <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{doc.desc}</div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Info banner */}
+              {/* Document Uploads Informational Card */}
               <div style={{
-                background: `${C.gold}14`,
-                border: `1px solid ${C.gold}35`,
-                borderRadius: '10px', padding: '14px 16px',
-                display: 'flex', gap: '10px', alignItems: 'flex-start',
+                background: C.bgSecondary || '#f8fafc',
+                border: `1.5px solid ${C.border || '#e2e8f0'}`,
+                borderRadius: '16px',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                alignItems: 'center',
+                textAlign: 'center',
+                marginTop: '10px'
               }}>
-                <span style={{ fontSize: '18px', lineHeight: 1 }}>ℹ️</span>
-                <div style={{ fontSize: '13px', color: C.gold, lineHeight: 1.6 }}>
-                  <strong>{t('partner.warnings.docUploadTitle', 'Document uploads are available after activation.')}</strong><br />
-                  {t('partner.warnings.docUploadDesc', 'You can submit them from your Partner Profile dashboard once our team reviews your application (24–48 hours).')}
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: `${C.teal || '#0ea5e9'}15`,
+                  color: C.teal || '#0ea5e9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                }}>
+                  📄
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: C.text || '#1e293b' }}>
+                    {t('partner.documentUploadsTitle', 'Document Uploads')}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: C.textMid || '#475569', lineHeight: 1.6 }}>
+                    <p style={{ margin: 0, fontWeight: 700, color: C.text }}>
+                      {t('partner.documentUploadsSubtitle', 'Document uploads are available after activation.')}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      {t('partner.documentUploadsDesc', 'You can upload your PAN Card and Cancelled Cheque from your Partner Dashboard after our team reviews and activates your partner account. This review typically takes 24–48 hours.')}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
