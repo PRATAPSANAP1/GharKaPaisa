@@ -170,6 +170,10 @@ Below is the structured technical documentation of all features implemented acro
 8. **Homepage CMS Manager**: Modifies titles, text sections, testimonials, and translator word dictionaries dynamically.
 9. **Audit Logs Ledger**: Non-editable database search grid tracking all administrator actions.
 10. **Reports Export Engine**: Generates CSV/Excel files for leads, partner wallets, and transaction histories.
+11. **Partner Account Status Management**: Comprehensive partner status controls supporting six states (*Active*, *Inactive*, *Pending Verification*, *Suspended*, *Rejected*, *Blocked*) from the details panel. Super Admin actions prompt confirmation dialogs, update the PG database, write entries to the Audit Log, and restrict blocked/suspended users from logging into the partner network with custom messages.
+12. **User Profile Dropdown**: Top navbar profile avatar displaying logged-in user details, name, and role. Click toggles a dropdown menu containing Profile, My Account, Change Password, Notifications, Activity Log, Settings, and Logout with click-outside auto-close listener.
+13. **Sidebar Admin Privacy Mode Toggle**: Moved the Admin Privacy Mode setting from page controls to the desktop sidebar footer and mobile hamburger menu (next to theme controls) for cross-session persistence.
+14. **Navbar Cleanliness**: Removed Dark Mode toggle from the top header navigation bar to declutter header layouts.
 
 ---
 
@@ -202,3 +206,49 @@ Below are the features planned for development and integration in the next phase
 5. **Marketing Center Hub**: Custom banners creator, ready-to-share landing templates, and personalized social media post generators.
 6. **Integrated Support Ticketing**: A central hub in the partner layout allowing partners to raise help tickets and chat live with admins.
 7. **Credit Card API Integrations**: Deep direct-integrations with banking API gateways to check application statuses in real-time.
+
+---
+
+## ── 9. ENTERPRISE REFALTORED FOLDER STRUCTURE ──
+
+The project has been refactored from a type-based organization into a clean, feature-modular enterprise-level structure.
+
+### 📁 Frontend Module Architecture (`frontend/src/`)
+Reusable visual elements and contexts are isolated from business logic:
+- `src/components/`: Reusable, design-system components organized in folders:
+  - `Loader/`: Standardized spinner displays (`GkpLoader`, `LoadingLogo`).
+  - `LanguageSwitcher/`: Localization controls.
+  - `Navbar/`: Main header layout elements.
+  - `ThemeSwitcher/`: System appearance switch.
+  - `Icon/`: SVG vector libraries (`PartnerIcons`).
+- `src/contexts/`: Shared React contexts (`ThemeContext`).
+- `src/modules/`: Feature-modular business domains:
+  - `authentication/`: Authentication pages (`login`, `register`, `forgot-password`, `reset-password`, `otp`).
+  - `admin/`: Staff/Admin components (`dashboard`, `users`, `reports`).
+  - `super-admin/`: Superadmin settings (`cms`, `crm`, `banners`, `audit`).
+  - `partner/`: Partner networks (`wallet`, `kyc`, `leads`, `products`, `profile`).
+  - `home/`: Public portal elements (`Home`, `Contact`, policies).
+  - `products/`: Lead-generation engines (`ProductDetails`, `ApplyForm`).
+  - `cms/`: Static information panels (`MoneyTransfer`, `ComingSoon`).
+
+### 📁 Backend Module Architecture (`backend/src/`)
+Organized by functional modules matching frontend business components:
+- `database/`: Contains `migrations/` and `seeders/` to manage raw database setup.
+- `controllers/`: Reorganized into feature sub-folders (`auth/`, `admin/`, `superAdmin/`, `partner/`, `bank/`, `product/`, `wallet/`, `report/`, `cms/`, `notification/`).
+- `routes/`: Structured endpoint directories matching modular controllers.
+- `services/`: Domain-specific processing libraries (`auth/`, `partner/`, `wallet/`, `notification/`, `report/`, `analytics/`).
+- `validators/`: Verification middlewares (`auth/`, `partner/`).
+
+### 🔌 Module Dependency Flow Overview
+```mermaid
+graph TD
+  AppRoutes --> layouts
+  AppRoutes --> modules
+  modules/partner --> services/partner.api
+  modules/admin --> services/admin.api
+  modules/super-admin --> services/superadmin.api
+  backend/routes --> backend/controllers
+  backend/controllers --> backend/services
+  backend/services --> backend/database
+```
+

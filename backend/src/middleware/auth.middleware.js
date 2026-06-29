@@ -9,7 +9,7 @@ const { query } = require('../config/db');
 const { unauthorized, forbidden } = require('../utils/response');
 const logger = require('../utils/logger');
 
-const { JWT_SECRET } = require('../config/jwt.config');
+const { JWT_SECRET } = require('../config/jwt.config.js');
 
 // ── Core: verify token ───────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { useTheme } from '../components/Partner/ThemeContext';
-import { ThemeToggle } from '../components/Partner/ThemeContext';
-import { Icons } from '../components/Partner/PartnerIcons';
+import { useTheme } from '../contexts/ThemeContext';
+import { ThemeToggle } from '../contexts/ThemeContext';
+import { Icons } from '../components/Icon/PartnerIcons';
+import api from '../api/api';
 import logo from '../logo.png';
-import '../components/Navbar.css';
+import '../components/Navbar/Navbar.css';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -31,9 +33,87 @@ const Chevron = ({ open, color = "currentColor", size = 16 }) => (
 
 const SuperAdminLayout = () => {
   const { C, isDark } = useTheme();
+  const { i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Profile Dropdown state
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Privacy Mode settings state
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
+
+  const fetchPrivacySetting = async () => {
+    try {
+      const res = await api.get("/settings");
+      if (res.data?.success) {
+        setPrivacyMode(res.data.data.admin_privacy_mode === "on");
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings:", e);
+    }
+  };
+
+  const togglePrivacyMode = async () => {
+    setLoadingPrivacy(true);
+    const newValue = !privacyMode ? "on" : "off";
+    try {
+      const res = await api.post("/settings", { key: "admin_privacy_mode", value: newValue });
+      if (res.data?.success) {
+        setPrivacyMode(!privacyMode);
+      }
+    } catch (e) {
+      console.error("Failed to update privacy setting:", e);
+    } finally {
+      setLoadingPrivacy(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrivacySetting();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  const getInitials = () => {
+    if (user?.full_name) {
+      return user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+    return "SA";
+  };
+
+  const dropdownItemStyle = {
+    background: "none",
+    border: "none",
+    padding: "10px 16px",
+    width: "100%",
+    textAlign: "left",
+    fontSize: "13px",
+    fontWeight: 600,
+    color: C.text,
+    cursor: "pointer",
+    transition: "background 0.2s",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
+  };
 
   // Responsive Layout Detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -305,6 +385,79 @@ const SuperAdminLayout = () => {
                 <ThemeToggle />
               </div>
 
+              {/* Privacy Mode widget */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 16px",
+                borderRadius: "10px",
+                background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "16px" }}>🔒</span>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>
+                    Privacy Mode
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={togglePrivacyMode}
+                  disabled={loadingPrivacy}
+                  style={{
+                    background: privacyMode ? C.red : C.teal,
+                    color: "#fff",
+                    border: "none",
+                    padding: "4px 10px",
+                    borderRadius: "6px",
+                    fontWeight: 700,
+                    fontSize: "11px",
+                    cursor: "pointer",
+                  }}
+                >
+                  {loadingPrivacy ? "..." : privacyMode ? "ON" : "OFF"}
+                </button>
+              </div>
+
+              {/* Language Changer widget */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 16px",
+                borderRadius: "10px",
+                background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: C.text, fontSize: "13px", fontWeight: 700 }}>
+                  🌐 Language
+                </div>
+                <select 
+                  value={i18n.language} 
+                  onChange={(e) => i18n.changeLanguage(e.target.value)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    border: `1px solid ${C.border}`,
+                    background: C.inputBg,
+                    color: C.text,
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    outline: "none",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="hi">हिंदी</option>
+                  <option value="mr">मराठी</option>
+                  <option value="te">తెలుగు</option>
+                  <option value="kn">ಕನ್ನಡ</option>
+                  <option value="ta">தமிழ்</option>
+                  <option value="bn">বাংলা</option>
+                  <option value="gu">ગુજરાતી</option>
+                  <option value="or">ଓଡ଼ିଆ</option>
+                </select>
+              </div>
+
               <button
                 onClick={handleLogout}
                 style={{
@@ -390,6 +543,40 @@ const SuperAdminLayout = () => {
               <ThemeToggle />
             </div>
 
+            {/* Privacy Mode widget */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "16px" }}>🔒</span>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>
+                  Privacy Mode
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={togglePrivacyMode}
+                disabled={loadingPrivacy}
+                style={{
+                  background: privacyMode ? C.red : C.teal,
+                  color: "#fff",
+                  border: "none",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  fontWeight: 700,
+                  fontSize: "11px",
+                  cursor: "pointer",
+                }}
+              >
+                {loadingPrivacy ? "..." : privacyMode ? "ON" : "OFF"}
+              </button>
+            </div>
+
             <button
               onClick={handleLogout}
               style={{
@@ -424,8 +611,8 @@ const SuperAdminLayout = () => {
         height: '100%',
         overflow: 'hidden',
       }}>
-        {/* Header - shown on mobile only since we have sidebar for desktop */}
-        {isMobile && (
+        {/* Header - shown on mobile, persistent on desktop */}
+        {isMobile ? (
           <nav className="navbar" style={{ background: C.card, borderBottom: `1px solid ${C.border}`, flexShrink: 0, padding: '12px 24px' }}>
             <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <button className={`hamburger ${menuOpen ? 'active' : ''}`} onClick={toggleLink} style={{ margin: 0, filter: C.text === '#fff' ? 'invert(1)' : 'none' }}>
@@ -438,7 +625,6 @@ const SuperAdminLayout = () => {
             </div>
             
             <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <ThemeToggle />
               <button
                 onClick={handleLogout}
                 style={{
@@ -459,6 +645,170 @@ const SuperAdminLayout = () => {
               </button>
             </div>
           </nav>
+        ) : (
+          <header style={{
+            height: "70px",
+            background: C.card,
+            borderBottom: `1px solid ${C.border}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 24px",
+            flexShrink: 0,
+            boxSizing: "border-box"
+          }}>
+            {/* Search Input Bar */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "300px", position: "relative" }}>
+              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex", alignItems: "center" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
+              <input 
+                type="text" 
+                placeholder="Search panel..."
+                style={{
+                  width: "100%",
+                  padding: "8px 12px 8px 36px",
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  color: C.text,
+                  background: C.inputBg,
+                  outline: "none",
+                  transition: "all 0.2s"
+                }}
+              />
+            </div>
+
+            {/* Actions: Language, Theme, User Profile */}
+            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              <select 
+                value={i18n.language} 
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "10px",
+                  border: `1.5px solid ${C.border}`,
+                  background: C.inputBg,
+                  color: C.text,
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  outline: "none"
+                }}
+              >
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="or">ଓଡ଼ିଆ (Odia)</option>
+              </select>
+
+              <div ref={dropdownRef} style={{ position: "relative", borderLeft: `1px solid ${C.border}`, paddingLeft: "20px" }}>
+                {/* Profile Clickable Avatar */}
+                <div 
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", userSelect: "none" }}
+                >
+                  <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: C.teal, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 }}>
+                    {getInitials()}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: C.text, display: "flex", alignItems: "center", gap: "4px" }}>
+                      {user?.full_name || "Super Admin"} <span style={{ fontSize: "10px" }}>▼</span>
+                    </span>
+                    <span style={{ fontSize: "11px", color: C.textLight }}>System Owner</span>
+                  </div>
+                </div>
+
+                {/* Dropdown Menu */}
+                {showProfileDropdown && (
+                  <div style={{
+                    position: "absolute",
+                    top: "48px",
+                    right: 0,
+                    width: "220px",
+                    background: C.card,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "12px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                    zIndex: 1000,
+                    padding: "8px 0",
+                    display: "flex",
+                    flexDirection: "column"
+                  }}>
+                    {/* Header info */}
+                    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, marginBottom: "4px" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
+                        {user?.full_name || "Super Admin"}
+                      </div>
+                      <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
+                        {user?.email || "admin@gharkapaisa.in"}
+                      </div>
+                    </div>
+
+                    {/* Menu links */}
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      👤 Profile
+                    </button>
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      💼 My Account
+                    </button>
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      🔑 Change Password
+                    </button>
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      🔔 Notifications
+                    </button>
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/audit-logs"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      📋 Activity Log
+                    </button>
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/settings"); }}
+                      className="profile-dropdown-item"
+                      style={dropdownItemStyle}
+                    >
+                      ⚙️ Settings
+                    </button>
+                    <div style={{ height: "1px", background: C.border, margin: "6px 0" }} />
+                    <button 
+                      onClick={() => { setShowProfileDropdown(false); handleLogout(); }}
+                      className="profile-dropdown-item"
+                      style={{ ...dropdownItemStyle, color: C.red }}
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
         )}
 
         {/* Dynamic Inner Page Content */}

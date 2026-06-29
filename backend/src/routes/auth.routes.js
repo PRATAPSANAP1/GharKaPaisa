@@ -5,11 +5,11 @@
  */
 const express = require('express');
 const router  = express.Router();
-const jwtAuth = require('../middleware/jwtAuth.middleware');
-const roleCheck = require('../middleware/role.middleware');
-const { authLimiter, emailActionLimiter } = require('../middleware/rateLimit.middleware');
-const ctrl = require('../controllers/auth.controller');
-const { validate, registerRules } = require('../middleware/validation.middleware');
+const jwtAuth = require('../middleware/jwtAuth.middleware.js');
+const roleCheck = require('../middleware/role.middleware.js');
+const { authLimiter, emailActionLimiter } = require('../middleware/rateLimit.middleware.js');
+const ctrl = require('../controllers/auth/auth.controller.js');
+const { validate, registerRules } = require('../middleware/validation.middleware.js');
 
 // ── Public Auth Routes ──────────────────────────────────────────────────────────
 router.post('/login', authLimiter, ctrl.login);

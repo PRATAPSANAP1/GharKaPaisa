@@ -1,2 +1,2 @@
-import Home from './Home';
+import Home from '../../modules/home/Home';
 export default Home;

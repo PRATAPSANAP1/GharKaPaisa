@@ -7,25 +7,25 @@ const express = require('express');
 const router = express.Router();
 
 // Import all sub-routers
-const authRoutes = require('./auth.routes');
-const PartnerRoutes = require('./partner.routes');
-const partnerSelfRouter = require('./partner.self.routes');
-const adminRouter = require('./admin.routes');
-const superadminRoutes = require('./superadmin.routes');
-const bannerRouter = require('./banner.routes');
-const settingsRouter = require('./settings.routes');
-const kycRouter = require('./kyc.routes');
-const applicationRouter = require('./application.routes');
-const walletRouter = require('./wallet.routes');
-const productRouter = require('./product.routes');
-const notificationRouter = require('./notification.routes');
-const reportRouter = require('./report.routes');
-const bankRouter = require('./bank.routes');
-const cmsRouter = require('./cms.routes');
-const serviceRouter = require('./service.routes');
-const serviceCatalogRouter = require('./service_catalog.routes');
-const leadRouter = require('./lead.routes');
-const cardApplicationRouter = require('./card_application.routes');
+const authRoutes = require('./auth.routes.js');
+const PartnerRoutes = require('./partner/partner.routes.js');
+const partnerSelfRouter = require('./partner/partner.self.routes.js');
+const adminRouter = require('./admin/admin.routes.js');
+const superadminRoutes = require('./settings/superadmin.routes.js');
+const bannerRouter = require('./cms/banner.routes.js');
+const settingsRouter = require('./settings/settings.routes.js');
+const kycRouter = require('./partner/kyc.routes.js');
+const applicationRouter = require('./admin/application.routes.js');
+const walletRouter = require('./wallet/wallet.routes.js');
+const productRouter = require('./cms/product.routes.js');
+const notificationRouter = require('./settings/notification.routes.js');
+const reportRouter = require('./reports/report.routes.js');
+const bankRouter = require('./cms/bank.routes.js');
+const cmsRouter = require('./cms/cms.routes.js');
+const serviceRouter = require('./cms/service.routes.js');
+const serviceCatalogRouter = require('./cms/service_catalog.routes.js');
+const leadRouter = require('./admin/lead.routes.js');
+const cardApplicationRouter = require('./cards/card_application.routes.js');
 
 // Map endpoints to sub-routers
 router.use('/auth', authRoutes);

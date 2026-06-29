@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/api";
-import { useTheme, makeS } from "../../components/Partner/ThemeContext";
-import { Icons } from "../../components/Partner/PartnerIcons";
+import { useTheme, makeS } from "../../contexts/ThemeContext";
+import { Icons } from "../../components/Icon/PartnerIcons";
 
 export default function ManageServices() {
   const { C } = useTheme();

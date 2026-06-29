@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { 
   MdDashboard, MdStorefront, MdCreditCard, MdLeaderboard, 
@@ -8,7 +9,7 @@ import {
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout
 } from 'react-icons/md';
 import logo from '../logo.png';
-import ForcePasswordChangeModal from '../components/Partner/ForcePasswordChangeModal';
+import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
@@ -37,6 +38,7 @@ const MOBILE_BOTTOM_NAV = [
 ];
 
 export default function PartnerLayout() {
+  const { i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
@@ -100,7 +102,25 @@ export default function PartnerLayout() {
           })}
         </div>
 
-        <div className="p-4 border-t border-slate-100">
+        <div className="p-4 border-t border-slate-100 flex flex-col gap-3">
+          <div className="flex items-center justify-between px-2 text-sm text-slate-500 font-medium">
+            <span>🌐 Language:</span>
+            <select 
+              value={i18n.language} 
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              className="border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 text-xs font-bold outline-none cursor-pointer"
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी</option>
+              <option value="mr">मराठी</option>
+              <option value="te">తెలుగు</option>
+              <option value="kn">ಕನ್ನಡ</option>
+              <option value="ta">தமிழ்</option>
+              <option value="bn">বাংলা</option>
+              <option value="gu">ગુજરાતી</option>
+              <option value="or">ଓଡ଼ିଆ</option>
+            </select>
+          </div>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-colors"
@@ -147,7 +167,28 @@ export default function PartnerLayout() {
               </NavLink>
             );
           })}
-          <div className="pt-4 pb-10 border-t border-slate-100 mt-4">
+          <div className="pt-4 pb-10 border-t border-slate-100 mt-4 flex flex-col gap-4">
+            <div className="flex items-center justify-between px-2 text-sm text-slate-600 font-bold">
+              <span>🌐 Choose Language:</span>
+              <select 
+                value={i18n.language} 
+                onChange={(e) => {
+                  i18n.changeLanguage(e.target.value);
+                  setMobileMenuOpen(false);
+                }}
+                className="border border-slate-300 rounded-xl px-3 py-1.5 bg-slate-50 text-slate-800 text-sm font-bold outline-none cursor-pointer"
+              >
+                <option value="en">English</option>
+                <option value="hi">हिंदी</option>
+                <option value="mr">मराठी</option>
+                <option value="te">తెలుగు</option>
+                <option value="kn">ಕನ್ನಡ</option>
+                <option value="ta">தமிழ்</option>
+                <option value="bn">বাংলা</option>
+                <option value="gu">ગુજરાતી</option>
+                <option value="or">ଓଡ଼ିଆ</option>
+              </select>
+            </div>
             <button 
               onClick={handleLogout}
               className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl bg-red-50 text-red-600 font-bold"

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
-import { ThemeProvider } from './components/Partner/ThemeContext';
-import GkpLoader from './components/GkpLoader';
+import { ThemeProvider } from './contexts/ThemeContext';
+import GkpLoader from './components/Loader/GkpLoader';
 import './App.css';
 
 function App() {

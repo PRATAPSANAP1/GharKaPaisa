@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { query } = require('../config/db');
-const { releaseHold } = require('../services/wallet.service');
+const { releaseHold } = require('../services/wallet/wallet.service.js');
 const logger = require('../utils/logger');
 
 // Run every hour to check for pending commissions that have passed their hold period

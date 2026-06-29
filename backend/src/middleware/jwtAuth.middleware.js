@@ -1,4 +1,4 @@
-const { authenticate, syncUser } = require('./auth.middleware');
+const { authenticate, syncUser } = require('./auth.middleware.js');
 
 /**
  * jwtAuth middleware wrapper

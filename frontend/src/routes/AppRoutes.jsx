@@ -12,67 +12,63 @@ import SuperAdminLayout from '../layouts/SuperAdminLayout';
 import PublicLayout from '../layouts/PublicLayout';
 
 // Public Pages
-import Home from '../components/Home';
-import Contact from '../components/Contact';
-import PartnerLogin from '../components/Partner/PartnerLogin';
-import PartnerRegister from '../components/Partner/PartnerRegister';
-import VerifyEmail from '../pages/VerifyEmail';
-import ResetPassword from '../pages/ResetPassword';
-import TermsAndConditions from '../pages/TermsAndConditions';
-import PrivacyPolicy from '../pages/PrivacyPolicy';
+import Home from '../modules/home/Home';
+import Contact from '../modules/home/Contact';
+import PartnerLogin from '../modules/authentication/login/PartnerLogin';
+import PartnerRegister from '../modules/authentication/register/PartnerRegister';
+import VerifyEmail from '../modules/authentication/register/VerifyEmail';
+import ResetPassword from '../modules/authentication/reset-password/ResetPassword';
+import TermsAndConditions from '../modules/home/TermsAndConditions';
+import PrivacyPolicy from '../modules/home/PrivacyPolicy';
 
 // Services Pages
-import MoneyTransfer from '../pages/Services/MoneyTransfer';
-import Recharge from '../pages/Services/Recharge';
-import Electricity from '../pages/Services/Electricity';
-import LoanRepay from '../pages/Services/LoanRepay';
-import Fastag from '../pages/Services/Fastag';
-import ComingSoon from '../pages/Services/ComingSoon';
+import MoneyTransfer from '../modules/cms/MoneyTransfer';
+import Recharge from '../modules/cms/Recharge';
+import Electricity from '../modules/cms/Electricity';
+import LoanRepay from '../modules/cms/LoanRepay';
+import Fastag from '../modules/cms/Fastag';
+import ComingSoon from '../modules/cms/ComingSoon';
 
 // Product Lead Gen
-import ProductDetails from '../pages/Product/ProductDetails';
-import ApplyForm from '../pages/Product/ApplyForm';
-import CardBenefitsPage from '../pages/Product/CardBenefitsPage';
+import ProductDetails from '../modules/products/ProductDetails';
+import ApplyForm from '../modules/products/ApplyForm';
+import CardBenefitsPage from '../modules/products/CardBenefitsPage';
 
-// Structured Folder Imports
-import { 
-  AdminDashboard, 
-  AdminLogin, 
-  ManageApplications, 
-  ManagePartners, 
-  ManageWithdrawals,
-  ManageLeads
-} from '../pages/Admin';
+// Admin Pages
+import AdminDashboard from '../modules/admin/dashboard/AdminDashboard';
+import AdminLogin from '../modules/authentication/login/AdminLogin';
+import ManageApplications from '../modules/admin/reports/ManageApplications';
+import ManagePartners from '../modules/admin/users/ManagePartners';
+import ManageWithdrawals from '../modules/admin/users/ManageWithdrawals';
+import ManageLeads from '../modules/admin/users/ManageLeads';
 
-import { 
-  SuperAdminDashboard, 
-  SuperAdminReports, 
-  AuditLogs, 
-  ManageBanners, 
-  ManageProducts,
-  ManageBanks,
-  ManageSections,
-  ManageServices,
-  ManageDirectLeads
-} from '../pages/SuperAdmin';
-import ManageCommissions from '../pages/SuperAdmin/ManageCommissions';
+// Super Admin Pages
+import SuperAdminDashboard from '../modules/super-admin/dashboard/SuperAdminDashboard';
+import SuperAdminReports from '../modules/super-admin/reports/SuperAdminReports';
+import AuditLogs from '../modules/super-admin/audit/AuditLogs';
+import ManageBanners from '../modules/super-admin/banners/ManageBanners';
+import ManageProducts from '../modules/super-admin/cms/ManageProducts';
+import ManageBanks from '../modules/super-admin/cms/ManageBanks';
+import ManageSections from '../modules/super-admin/cms/ManageSections';
+import ManageServices from '../pages/SuperAdmin/ManageServices';
+import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
+import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
 
-import { 
-  PartnerDashboard, 
-  PartnerApplications, 
-  PartnerWallet, 
-  PartnerProfile,
-  PartnerProducts,
-  SettingsPage,
-  TravelUtilitiesPage
-} from '../pages/Partner';
-import PartnerTeam from '../pages/Partner/PartnerTeam';
-import PartnerKyc from '../pages/Partner/PartnerKyc';
-import PartnerCrm from '../pages/Partner/PartnerCrm';
-import PartnerSupport from '../pages/Partner/PartnerSupport';
-import PartnerVault from '../pages/Partner/PartnerVault';
-import PartnerMarketing from '../pages/Partner/PartnerMarketing';
-import PartnerTraining from '../pages/Partner/PartnerTraining';
+// Partner Pages
+import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
+import PartnerApplications from '../modules/partner/leads/PartnerApplications';
+import PartnerWallet from '../modules/partner/wallet/PartnerWallet';
+import PartnerProfile from '../modules/partner/profile/PartnerProfile';
+import PartnerProducts from '../modules/partner/products/PartnerProducts';
+import SettingsPage from '../modules/partner/dashboard/SettingsPage';
+import TravelUtilitiesPage from '../modules/partner/products/TravelUtilitiesPage';
+import PartnerTeam from '../modules/partner/dashboard/PartnerTeam';
+import PartnerKyc from '../modules/partner/kyc/PartnerKyc';
+import PartnerCrm from '../modules/partner/leads/PartnerCrm';
+import PartnerSupport from '../modules/partner/dashboard/PartnerSupport';
+import PartnerVault from '../modules/partner/profile/PartnerVault';
+import PartnerMarketing from '../modules/partner/dashboard/PartnerMarketing';
+import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
 
 const AppRoutes = () => {
   const { isInitializing, initializeAuth } = useAuthStore();

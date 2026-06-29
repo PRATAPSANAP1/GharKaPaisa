@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "../../Partner/ThemeContext";
+import { useTheme } from "../../../contexts/ThemeContext";
 import { 
   FaArrowLeft, FaGift, FaShieldAlt, FaClock, FaSearch, 
   FaCheckCircle, FaArrowRight, FaQuestionCircle, 

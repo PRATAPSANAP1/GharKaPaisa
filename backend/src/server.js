@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { globalLimiter } = require('./middleware/rateLimit.middleware');
+const { globalLimiter } = require('./middleware/rateLimit.middleware.js');
 const path = require('path');
 const fs = require('fs');
 const xss = require('xss-clean');
@@ -23,7 +23,7 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
+const { notFoundHandler, errorHandler } = require('./middleware/error.middleware.js');
 const db = require('./config/db');
 
 // Ensure logs directory exists
@@ -173,7 +173,7 @@ app.use('/api/v1', apiRouter);
 
 // ── Test Routes ────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE === 'true') {
-  const testEmailRoutes = require('./routes/testEmail.routes');
+  const testEmailRoutes = require('./routes/settings/testEmail.routes.js');
   app.use('/api/test-email', testEmailRoutes);
 }
 
@@ -192,15 +192,15 @@ const startServer = async () => {
     logger.info('Database connection verified successfully.');
 
     // Start matured commission releases check
-    const { releaseMaturedCommissions } = require('./services/wallet.service');
+    const { releaseMaturedCommissions } = require('./services/wallet/wallet.service.js');
     releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
     setInterval(() => {
       releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
     }, 15 * 60 * 1000);
 
     // Initialize scheduled CRON jobs
-    const { initCommissionJobs } = require('./jobs/commission.job');
-    const { initReportJobs } = require('./jobs/report.job');
+    const { initCommissionJobs } = require('./jobs/commission.job.js');
+    const { initReportJobs } = require('./jobs/report.job.js');
     initCommissionJobs();
     initReportJobs();
 
