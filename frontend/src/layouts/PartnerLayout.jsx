@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { 
-  MdDashboard, MdStorefront, MdCreditCard, MdLeaderboard, 
-  MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder, 
-  MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign, 
+import { useTheme } from '../contexts/ThemeContext';
+import { ThemeToggle } from '../contexts/ThemeContext';
+import {
+  MdDashboard, MdStorefront, MdCreditCard, MdLeaderboard,
+  MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
+  MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout
 } from 'react-icons/md';
 import logo from '../logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
+import '../components/Navbar/Navbar.css';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
@@ -38,16 +41,24 @@ const MOBILE_BOTTOM_NAV = [
 ];
 
 export default function PartnerLayout() {
+  const { C, isDark } = useTheme();
   const { i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const kycStatus = user?.kyc_status || 'pending';
   const isKycApproved = kycStatus === 'approved';
-  
+
   // Force user to the KYC page if not approved, unless they are already there or on profile
   const isKycPage = location.pathname.includes('/partner/kyc');
   const isProfilePage = location.pathname.includes('/partner/profile');
@@ -59,124 +70,159 @@ export default function PartnerLayout() {
     navigate('/');
   };
 
+  // ── Color Constants ─────────────────────────────────
+  const BRAND = '#0D5CAB';
+  const BRAND_DARK = '#083E7A';
+  const SIDEBAR_TEXT = '#64748B';
+  const SIDEBAR_BG = C.card;
+  const MAIN_BG = C.bg;
+
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans text-[#0F172A]">
+    <div style={{
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      height: '100vh',
+      background: MAIN_BG,
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      color: C.text,
+      overflow: 'hidden',
+    }}>
       <ForcePasswordChangeModal isOpen={user?.must_change_password} />
-      
-      {/* DESKTOP SIDEBAR */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 shadow-sm z-20">
-        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-          <img src={logo} alt="Logo" className="h-8" />
-          <h2 className="text-xl font-bold text-[#0D5CAB]">Partner Panel</h2>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
-            const isDisabled = !isKycApproved && item.id !== 'kyc' && item.id !== 'profile' && item.id !== 'settings';
-            
-            if (isDisabled) {
-              return (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-[15px] text-slate-300 cursor-not-allowed" title="Complete KYC to unlock">
-                  <Icon size={20} />
-                  {item.label}
-                </div>
-              );
-            }
 
-            return (
-              <NavLink
-                key={item.id}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-[15px] ${
-                  isActive 
-                  ? 'bg-[#0D5CAB] text-white shadow-md' 
-                  : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0D5CAB]'
-                }`}
-              >
-                <Icon size={20} className={isActive ? 'text-white' : 'text-[#64748B]'} />
-                {item.label}
-              </NavLink>
-            );
-          })}
-        </div>
-
-        <div className="p-4 border-t border-slate-100 flex flex-col gap-3">
-          <div className="flex items-center justify-between px-2 text-sm text-slate-500 font-medium">
-            <span>🌐 Language:</span>
-            <select 
-              value={i18n.language} 
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 text-xs font-bold outline-none cursor-pointer"
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी</option>
-              <option value="mr">मराठी</option>
-              <option value="te">తెలుగు</option>
-              <option value="kn">ಕನ್ನಡ</option>
-              <option value="ta">தமிழ்</option>
-              <option value="bn">বাংলা</option>
-              <option value="gu">ગુજરાતી</option>
-              <option value="or">ଓଡ଼ିଆ</option>
-            </select>
+      {/* ──── DESKTOP SIDEBAR ──── */}
+      {!isMobile && (
+        <aside style={{
+          width: '280px',
+          background: SIDEBAR_BG,
+          borderRight: `1px solid ${C.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+          height: '100%',
+          overflow: 'hidden',
+        }}>
+          {/* Logo */}
+          <div style={{
+            padding: '20px 24px',
+            borderBottom: `1px solid ${C.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}>
+            <img src={logo} alt="Logo" style={{ height: '32px' }} />
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>Partner Panel</h2>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-colors"
-          >
-            <MdLogout size={20} />
-            Logout
-          </button>
-        </div>
-      </aside>
 
-      {/* MOBILE HEADER (When Mobile Menu is Closed) */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-30 flex items-center justify-between px-4">
-        <img src={logo} alt="Logo" className="h-6" />
-        <button onClick={() => setMobileMenuOpen(true)} className="p-2 text-[#64748B] bg-slate-50 rounded-lg">
-          <MdMenu size={24} />
-        </button>
-      </div>
+          {/* Nav Items */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px 12px',
+          }}>
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              const isDisabled = !isKycApproved && item.id !== 'kyc' && item.id !== 'profile' && item.id !== 'settings';
 
-      {/* MOBILE FULLSCREEN MENU */}
-      <div className={`md:hidden fixed inset-0 bg-white z-50 transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
-        <div className="h-16 border-b border-slate-200 flex items-center justify-between px-4 bg-white">
-          <h2 className="text-lg font-bold text-[#0D5CAB]">All Modules</h2>
-          <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-[#64748B] bg-slate-50 rounded-lg">
-            <MdClose size={24} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-2">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname.startsWith(item.path);
-            return (
-              <NavLink
-                key={item.id}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold ${
-                  isActive 
-                  ? 'bg-[#0D5CAB] text-white shadow-md' 
-                  : 'bg-slate-50 text-[#334155]'
-                }`}
-              >
-                <Icon size={22} className={isActive ? 'text-white' : 'text-[#0D5CAB]'} />
-                {item.label}
-              </NavLink>
-            );
-          })}
-          <div className="pt-4 pb-10 border-t border-slate-100 mt-4 flex flex-col gap-4">
-            <div className="flex items-center justify-between px-2 text-sm text-slate-600 font-bold">
-              <span>🌐 Choose Language:</span>
-              <select 
-                value={i18n.language} 
-                onChange={(e) => {
-                  i18n.changeLanguage(e.target.value);
-                  setMobileMenuOpen(false);
+              if (isDisabled) {
+                return (
+                  <div key={item.id} title="Complete KYC to unlock" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: isDark ? '#555' : '#cbd5e1',
+                    cursor: 'not-allowed',
+                    marginBottom: '4px',
+                  }}>
+                    <Icon size={20} />
+                    {item.label}
+                  </div>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: isActive ? '#fff' : C.text,
+                    background: isActive ? BRAND : 'transparent',
+                    boxShadow: isActive ? `0 4px 12px ${BRAND}40` : 'none',
+                    textDecoration: 'none',
+                    transition: 'all 0.2s',
+                    marginBottom: '4px',
+                  }}
+                >
+                  <Icon size={20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </div>
+
+          {/* Sidebar Footer */}
+          <div style={{
+            padding: '16px',
+            borderTop: `1px solid ${C.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}>
+            {/* Theme toggle */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
+                  {isDark ? 'DARK' : 'LIGHT'}
+                </span>
+              </div>
+              <ThemeToggle />
+            </div>
+
+            {/* Language Selector */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
+                🌐 Language
+              </div>
+              <select
+                value={i18n.language}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: `1px solid ${C.border}`,
+                  background: C.inputBg || C.card,
+                  color: C.text,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  outline: 'none',
+                  cursor: 'pointer',
                 }}
-                className="border border-slate-300 rounded-xl px-3 py-1.5 bg-slate-50 text-slate-800 text-sm font-bold outline-none cursor-pointer"
               >
                 <option value="en">English</option>
                 <option value="hi">हिंदी</option>
@@ -189,32 +235,288 @@ export default function PartnerLayout() {
                 <option value="or">ଓଡ଼ିଆ</option>
               </select>
             </div>
-            <button 
+
+            {/* Logout */}
+            <button
               onClick={handleLogout}
-              className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl bg-red-50 text-red-600 font-bold"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
+                color: '#EF4444',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
             >
-              <MdLogout size={22} />
-              Sign Out
+              <MdLogout size={18} />
+              Logout
             </button>
           </div>
-        </div>
-      </div>
+        </aside>
+      )}
 
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col md:relative pt-16 md:pt-0 pb-20 md:pb-0 overflow-y-auto bg-[#F8FAFC]">
+      {/* ──── MOBILE TOP HEADER ──── */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '56px',
+          background: C.card,
+          borderBottom: `1px solid ${C.border}`,
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+        }}>
+          <img src={logo} alt="Logo" style={{ height: '28px' }} />
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            style={{
+              padding: '8px',
+              background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <MdMenu size={24} style={{ color: SIDEBAR_TEXT }} />
+          </button>
+        </div>
+      )}
+
+      {/* ──── MOBILE FULLSCREEN MENU ──── */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: C.card,
+          zIndex: 50,
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+        }}>
+          {/* Menu Header */}
+          <div style={{
+            height: '56px',
+            borderBottom: `1px solid ${C.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 16px',
+            flexShrink: 0,
+          }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>All Modules</h2>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                padding: '8px',
+                background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <MdClose size={24} style={{ color: SIDEBAR_TEXT }} />
+            </button>
+          </div>
+
+          {/* Menu Nav Items */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '15px',
+                    color: isActive ? '#fff' : C.text,
+                    background: isActive ? BRAND : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
+                    boxShadow: isActive ? `0 4px 12px ${BRAND}40` : 'none',
+                    textDecoration: 'none',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <Icon size={22} style={{ color: isActive ? '#fff' : BRAND }} />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+
+            {/* Mobile Footer Controls */}
+            <div style={{
+              paddingTop: '16px',
+              marginTop: '16px',
+              borderTop: `1px solid ${C.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              paddingBottom: '40px',
+            }}>
+              {/* Theme Toggle */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
+                    {isDark ? 'DARK' : 'LIGHT'}
+                  </span>
+                </div>
+                <ThemeToggle />
+              </div>
+
+              {/* Language Selector */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
+                  🌐 Language
+                </div>
+                <select
+                  value={i18n.language}
+                  onChange={(e) => {
+                    i18n.changeLanguage(e.target.value);
+                    setMobileMenuOpen(false);
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: `1px solid ${C.border}`,
+                    background: C.inputBg || C.card,
+                    color: C.text,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="hi">हिंदी</option>
+                  <option value="mr">मराठी</option>
+                  <option value="te">తెలుగు</option>
+                  <option value="kn">ಕನ್ನಡ</option>
+                  <option value="ta">தமிழ்</option>
+                  <option value="bn">বাংলা</option>
+                  <option value="gu">ગુજરાતી</option>
+                  <option value="or">ଓଡ଼ିଆ</option>
+                </select>
+              </div>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
+                  color: '#EF4444',
+                  border: 'none',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <MdLogout size={22} />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ──── MAIN CONTENT AREA ──── */}
+      <main style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        paddingTop: isMobile ? '56px' : 0,
+        paddingBottom: isMobile ? '64px' : 0,
+        overflowY: 'auto',
+        background: MAIN_BG,
+        position: 'relative',
+      }}>
         {/* KYC Mandatory Banner */}
         {!isKycApproved && (
-          <div className="bg-amber-500 text-white px-4 py-3 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2">
+          <div style={{
+            background: '#F59E0B',
+            color: '#fff',
+            padding: '12px 16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '12px',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MdVerifiedUser size={24} />
-              <div className="font-medium text-sm">
-                <strong>KYC Action Required:</strong> Your KYC status is currently <span className="uppercase font-bold text-amber-900 bg-white/20 px-1 rounded">{kycStatus}</span>. You must complete verification to access all features.
+              <div style={{ fontWeight: 500, fontSize: '14px' }}>
+                <strong>KYC Action Required:</strong> Your KYC status is currently{' '}
+                <span style={{
+                  textTransform: 'uppercase',
+                  fontWeight: 800,
+                  color: '#78350F',
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                }}>{kycStatus}</span>. You must complete verification to access all features.
               </div>
             </div>
             {!isKycPage && (
-              <button 
-                onClick={() => navigate('/partner/kyc')} 
-                className="bg-white text-amber-600 px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm whitespace-nowrap hover:bg-amber-50 transition-colors"
+              <button
+                onClick={() => navigate('/partner/kyc')}
+                style={{
+                  background: '#fff',
+                  color: '#D97706',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  border: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
               >
                 Verify Now
               </button>
@@ -222,19 +524,60 @@ export default function PartnerLayout() {
           </div>
         )}
 
-        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full relative">
+        <div style={{
+          flex: 1,
+          padding: isMobile ? '16px' : '24px 32px',
+          maxWidth: '1280px',
+          margin: '0 auto',
+          width: '100%',
+          position: 'relative',
+          boxSizing: 'border-box',
+        }}>
           {isBlocked ? (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#F8FAFC]/90 backdrop-blur-sm p-6 text-center">
-              <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-6 shadow-sm">
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: isDark ? 'rgba(30,30,40,0.92)' : 'rgba(248,250,252,0.92)',
+              backdropFilter: 'blur(4px)',
+              padding: '24px',
+              textAlign: 'center',
+            }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                background: '#FEF3C7',
+                color: '#F59E0B',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '24px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              }}>
                 <MdVerifiedUser size={40} />
               </div>
-              <h2 className="text-2xl font-bold text-[#0F172A] mb-3">Complete Your KYC First</h2>
-              <p className="text-[#64748B] max-w-md mb-6 leading-relaxed">
+              <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginBottom: '12px' }}>Complete Your KYC First</h2>
+              <p style={{ color: C.textLight || SIDEBAR_TEXT, maxWidth: '400px', marginBottom: '24px', lineHeight: 1.6 }}>
                 As per regulatory guidelines, you must complete your KYC verification before accessing the partner marketplace, lead management, and wallet features.
               </p>
-              <button 
-                onClick={() => navigate('/partner/kyc')} 
-                className="bg-[#0D5CAB] text-white px-8 py-3 rounded-xl font-bold shadow-md hover:bg-[#083E7A] transition-all"
+              <button
+                onClick={() => navigate('/partner/kyc')}
+                style={{
+                  background: BRAND,
+                  color: '#fff',
+                  padding: '12px 32px',
+                  borderRadius: '12px',
+                  fontWeight: 800,
+                  border: 'none',
+                  boxShadow: `0 4px 12px ${BRAND}40`,
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                }}
               >
                 Proceed to KYC Center
               </button>
@@ -245,52 +588,86 @@ export default function PartnerLayout() {
         </div>
       </main>
 
-      {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] z-40 px-2 pb-safe">
-        <div className="flex justify-around items-center h-16">
-          {MOBILE_BOTTOM_NAV.map((nav) => {
-            const Icon = nav.icon;
-            const isActive = location.pathname.startsWith(nav.path);
-            return (
-              <NavLink
-                key={nav.path}
-                to={nav.path}
-                className="flex flex-col items-center justify-center w-full h-full gap-1"
-              >
-                <Icon size={24} className={isActive ? 'text-[#0D5CAB]' : 'text-[#94A3B8]'} />
-                <span className={`text-[10px] font-bold ${isActive ? 'text-[#0D5CAB]' : 'text-[#94A3B8]'}`}>
-                  {nav.label}
-                </span>
-              </NavLink>
-            );
-          })}
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="flex flex-col items-center justify-center w-full h-full gap-1"
-          >
-            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-[#F1F5F9]">
-              <MdMenu size={18} className="text-[#64748B]" />
-            </div>
-            <span className="text-[10px] font-bold text-[#64748B]">More</span>
-          </button>
-        </div>
-      </nav>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #cbd5e1;
-          border-radius: 4px;
-        }
-        .pb-safe {
-          padding-bottom: env(safe-area-inset-bottom);
-        }
-      `}} />
+      {/* ──── MOBILE BOTTOM NAVIGATION ──── */}
+      {isMobile && (
+        <nav style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: C.card,
+          borderTop: `1px solid ${C.border}`,
+          boxShadow: '0 -4px 10px rgba(0,0,0,0.03)',
+          zIndex: 40,
+          padding: '0 8px',
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            height: '60px',
+          }}>
+            {MOBILE_BOTTOM_NAV.map((nav) => {
+              const Icon = nav.icon;
+              const isActive = location.pathname.startsWith(nav.path);
+              return (
+                <NavLink
+                  key={nav.path}
+                  to={nav.path}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                    gap: '4px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Icon size={24} style={{ color: isActive ? BRAND : '#94A3B8' }} />
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: isActive ? BRAND : '#94A3B8',
+                  }}>
+                    {nav.label}
+                  </span>
+                </NavLink>
+              );
+            })}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                gap: '4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <div style={{
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+              }}>
+                <MdMenu size={18} style={{ color: SIDEBAR_TEXT }} />
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: SIDEBAR_TEXT }}>More</span>
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
