@@ -76,6 +76,7 @@ export default function PartnerLogin() {
   const [resolvedCredentials, setResolvedCredentials] = useState(null);
   const [otpSentTime, setOtpSentTime] = useState(null);
   const [otpAttempts, setOtpAttempts] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
  
   
@@ -389,13 +390,38 @@ export default function PartnerLogin() {
               {method === 'password' && (
                 <div style={{ marginBottom: "14px" }}>
                   <label style={S.label}>{t('partner.password', 'Password')}</label>
-                  <input
-                    style={{ ...inputStyle }}
-                    placeholder={t('partner.enterPassword', 'Enter your password')}
-                    type="password"
-                    value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      style={{ ...inputStyle, paddingRight: "44px" }}
+                      placeholder={t('partner.enterPassword', 'Enter your password')}
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      onFocus={e => e.target.style.border = focusBorder}
+                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? "Encrypt (Hide)" : "Decrypt (Show)"}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        padding: "4px",
+                        cursor: "pointer",
+                        color: C.textSecondary,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
+                    </button>
+                  </div>
                   <div style={{ textAlign: 'right', marginTop: 8 }}>
                     <button type="button" onClick={async () => {
                       const email = form.identity.trim() || window.prompt('Please enter your registered email to receive reset link:');

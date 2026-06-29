@@ -90,6 +90,7 @@ export default function AdminLogin() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // ── Forgot Password ──────────────────────────────────────────────────────────
   const handleForgotSubmit = async (e) => {
@@ -650,19 +651,42 @@ export default function AdminLogin() {
               {method === "password" ? (
                 <div style={{ marginBottom: "20px" }}>
                   <label style={S.label}>Password</label>
-                  <input
-                    style={{ ...inputStyle }}
-                    type="password"
-                    placeholder="Enter your password"
-                    value={form.password}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
-                    onFocus={(e) => (e.target.style.border = focusBorder)}
-                    onBlur={(e) =>
-                      (e.target.style.border = `1.5px solid ${C.border}`)
-                    }
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      style={{ ...inputStyle, paddingRight: "44px" }}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={form.password}
+                      onChange={(e) =>
+                        setForm({ ...form, password: e.target.value })
+                      }
+                      onFocus={(e) => (e.target.style.border = focusBorder)}
+                      onBlur={(e) =>
+                        (e.target.style.border = `1.5px solid ${C.border}`)
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? "Encrypt (Hide)" : "Decrypt (Show)"}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        padding: "4px",
+                        cursor: "pointer",
+                        color: C.textSecondary,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div style={{ marginBottom: "20px" }}>
