@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePartnerStore } from '../../../store/partnerStore';
+import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
 import StyledDashboard from './PartnerDashboardComponent';
 

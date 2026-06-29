@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../../api/api';
+import api from '../../../services/api';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
   MdFolderSpecial, MdPictureAsPdf, MdDownload,
   MdVisibility, MdVerifiedUser, MdOutlineInsertDriveFile, MdAdd
@@ -21,6 +22,9 @@ const DOC_CATEGORIES = {
 };
 
 export default function PartnerVault() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const [documents, setDocuments] = useState([]);
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -56,27 +60,40 @@ export default function PartnerVault() {
   const filteredDocs = filter === 'All' ? documents : documents.filter((d) => d.category === filter);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-10">
-      <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-[#0D5CAB]/10 text-[#0D5CAB] rounded-full flex items-center justify-center">
-              <MdFolderSpecial size={32} />
+    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+
+      {/* Header card */}
+      <div style={{ ...S.card, padding: '24px 28px', borderRadius: '16px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: `${C.primary}15`, color: C.primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <MdFolderSpecial size={28} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#0F172A]">Document Vault</h2>
-              <p className="text-[#64748B] font-medium mt-1">Your uploaded KYC documents from the verification center.</p>
+              <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Document Vault</h2>
+              <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0', fontWeight: 500 }}>
+                Your uploaded KYC documents from the verification center.
+              </p>
             </div>
           </div>
 
-          <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', flexWrap: 'nowrap' }}>
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setFilter(cat)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${
-                  filter === cat ? 'bg-[#0D5CAB] text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
+                style={{
+                  padding: '8px 16px', borderRadius: '10px', fontSize: '13px',
+                  fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                  background: filter === cat ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.bgSecondary,
+                  color: filter === cat ? '#fff' : C.textMid,
+                  boxShadow: filter === cat ? `0 4px 14px ${C.primary}30` : 'none'
+                }}
               >
                 {cat}
               </button>
@@ -85,79 +102,136 @@ export default function PartnerVault() {
         </div>
       </div>
 
+      {/* Loading */}
       {loading && (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full" />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: '50%',
+            border: `3px solid ${C.border}`, borderTopColor: C.primary,
+            animation: 'spin .8s linear infinite', display: 'inline-block'
+          }} />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       )}
 
+      {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm font-medium">{error}</div>
+        <div style={{
+          background: `${C.red}12`, border: `1px solid ${C.red}25`,
+          color: C.red, borderRadius: '12px', padding: '14px 18px',
+          fontSize: '13px', fontWeight: 600
+        }}>
+          {error}
+        </div>
       )}
 
+      {/* Empty state */}
       {!loading && !error && filteredDocs.length === 0 && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-10 text-center">
-          <p className="text-slate-600 font-medium mb-4">No documents uploaded yet.</p>
-          <Link to="/partner/kyc" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0D5CAB] text-white rounded-xl text-sm font-bold">
+        <div style={{
+          background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px',
+          padding: '48px 24px', textAlign: 'center'
+        }}>
+          <p style={{ color: C.textMid, fontWeight: 600, marginBottom: '16px' }}>No documents uploaded yet.</p>
+          <Link to="/partner/kyc" style={{
+            ...S.btn('primary'), textDecoration: 'none',
+            padding: '10px 22px', fontSize: '13px', borderRadius: '10px'
+          }}>
             Upload KYC Documents
           </Link>
         </div>
       )}
 
+      {/* Document grid */}
       {!loading && filteredDocs.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: '20px'
+        }}>
           {filteredDocs.map((doc) => (
-            <div key={doc.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:shadow-md hover:border-[#0D5CAB]/30 transition-all flex flex-col group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
-                  {doc.type === 'PDF' ? <MdPictureAsPdf size={24} /> : <MdOutlineInsertDriveFile size={24} className="text-blue-500" />}
+            <div key={doc.id} style={{
+              ...S.card, padding: '20px', borderRadius: '16px',
+              display: 'flex', flexDirection: 'column',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '12px',
+                  background: doc.type === 'PDF' ? `${C.red}12` : `${C.primary}12`,
+                  color: doc.type === 'PDF' ? C.red : C.primary,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {doc.type === 'PDF' ? <MdPictureAsPdf size={22} /> : <MdOutlineInsertDriveFile size={22} />}
                 </div>
                 {doc.verified && (
-                  <span className="text-[#25D366]" title="Verified Document">
-                    <MdVerifiedUser size={20} />
+                  <span style={{ color: C.green }} title="Verified Document">
+                    <MdVerifiedUser size={18} />
                   </span>
                 )}
               </div>
 
-              <h3 className="font-bold text-[#0F172A] mb-1 group-hover:text-[#0D5CAB] transition-colors line-clamp-2">
-                {doc.title}
-              </h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{doc.title}</h3>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>
                 {doc.type} • {doc.date}
               </p>
               {doc.docNumber && (
-                <p className="text-xs text-slate-500 font-mono mb-4">{doc.docNumber}</p>
+                <p style={{ fontSize: '12px', color: C.textMid, fontFamily: 'monospace', margin: '0 0 8px' }}>{doc.docNumber}</p>
               )}
 
-              <div className="flex gap-2 pt-4 border-t border-slate-100 mt-auto">
+              <div style={{
+                display: 'flex', gap: '8px', paddingTop: '14px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
+              }}>
                 <a
                   href={doc.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors"
+                  style={{
+                    flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                    padding: '10px', background: C.bgSecondary, color: C.textMid,
+                    borderRadius: '10px', fontSize: '13px', fontWeight: 700,
+                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none'
+                  }}
                 >
-                  <MdVisibility size={18} /> View
+                  <MdVisibility size={16} /> View
                 </a>
                 <a
                   href={doc.fileUrl}
                   download
-                  className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-[#0D5CAB] text-white rounded-xl text-sm font-bold shadow-sm hover:bg-[#083E7A] transition-colors"
+                  style={{
+                    flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
+                    padding: '10px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                    color: '#fff', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
+                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none'
+                  }}
                 >
-                  <MdDownload size={18} /> Download
+                  <MdDownload size={16} /> Download
                 </a>
               </div>
             </div>
           ))}
 
+          {/* Upload more CTA card */}
           <Link
             to="/partner/kyc"
-            className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-slate-100 hover:border-[#0D5CAB]/50 transition-all min-h-[200px]"
+            style={{
+              border: `2px dashed ${C.border}`, borderRadius: '16px',
+              padding: '20px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+              textDecoration: 'none', minHeight: '200px',
+              transition: 'all 0.15s ease', background: 'transparent'
+            }}
           >
-            <div className="w-12 h-12 bg-white shadow-sm text-slate-400 rounded-full flex items-center justify-center mb-3">
-              <MdAdd size={24} />
+            <div style={{
+              width: 44, height: 44, borderRadius: '50%', background: C.card,
+              boxShadow: `0 2px 8px rgba(0,0,0,0.06)`, color: C.textLight,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px'
+            }}>
+              <MdAdd size={22} />
             </div>
-            <h3 className="font-bold text-[#0F172A] mb-1">Upload Document</h3>
-            <p className="text-xs text-slate-500 max-w-[200px]">Manage KYC uploads from the KYC center.</p>
+            <h3 style={{ fontWeight: 700, color: C.text, fontSize: '14px', margin: '0 0 4px' }}>Upload Document</h3>
+            <p style={{ fontSize: '12px', color: C.textLight, maxWidth: '200px', margin: 0 }}>
+              Manage KYC uploads from the KYC center.
+            </p>
           </Link>
         </div>
       )}

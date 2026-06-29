@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import {
@@ -10,7 +10,7 @@ import {
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout
 } from 'react-icons/md';
-import logo from '../logo.png';
+import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
 import '../components/Navbar/Navbar.css';
 

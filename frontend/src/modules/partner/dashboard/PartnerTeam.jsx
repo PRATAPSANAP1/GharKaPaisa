@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdAdd, MdPerson, MdEmail, MdPhone, MdCheckCircle, 
-  MdPendingActions, MdClose, MdContentCopy, MdShare,
+  MdPendingActions, MdClose, MdContentCopy,
   MdOutlineQrCode2, MdOutlineWhatsapp
 } from 'react-icons/md';
-import api from '../../../api/api';
-import { useAuthStore } from '../../../store/authStore';
+import api from '../../../services/api';
+import { useAuthStore } from '../../../app/store/authStore';
 
 export default function PartnerTeam() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const user = useAuthStore((state) => state.user);
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,128 +79,193 @@ export default function PartnerTeam() {
 
   const treeData = buildTree();
 
+  const thStyle = {
+    padding: '12px 18px', fontSize: '11px', fontWeight: 700,
+    color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px',
+    textAlign: 'left', borderBottom: `1px solid ${C.border}`
+  };
+
+  const tdStyle = {
+    padding: '14px 18px', fontSize: '13px', color: C.textMid,
+    borderBottom: `1px solid ${C.border}`
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
         <div>
-          <h2 className="text-2xl font-bold text-[#0F172A]">Referral Network</h2>
-          <p className="text-[#64748B] text-sm mt-1">Grow your team and earn passive income on their sales.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Referral Network</h2>
+          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Grow your team and earn passive income on their sales.</p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 bg-[#0D5CAB] text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:bg-[#083E7A] transition-colors"
+          style={{
+            ...S.btn('primary'), border: 'none', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
+          }}
         >
           <MdAdd size={20} /> Add Direct Partner
         </button>
       </div>
 
       {/* Referral Tools Banner */}
-      <div className="bg-gradient-to-br from-[#0D5CAB] to-[#0A4A8A] rounded-2xl p-6 md:p-8 shadow-md text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-[0.05] rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+      <div style={{
+        background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+        borderRadius: '16px',
+        padding: '24px 28px',
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '20px'
+      }}>
+        <div style={{
+          position: 'absolute', right: 0, top: 0, width: 200, height: 200,
+          background: '#fff', opacity: 0.05, borderRadius: '50%', filter: 'blur(40px)',
+          marginRight: '-40px', marginTop: '-40px', pointerEvents: 'none'
+        }} />
         
-        <div className="z-10 w-full md:w-auto text-center md:text-left">
-          <h3 className="text-xl font-bold mb-2">Invite Partners & Earn 10% Lifetime</h3>
-          <p className="text-blue-100 text-sm max-w-md mx-auto md:mx-0">Share your unique partner link. Anyone who registers and sells products will generate override commissions for you.</p>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>Invite Partners & Earn 10% Lifetime</h3>
+          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, maxWidth: '440px' }}>
+            Share your unique partner link. Anyone who registers and sells products will generate override commissions for you.
+          </p>
         </div>
 
-        <div className="z-10 flex flex-wrap justify-center gap-3 w-full md:w-auto">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
           <button 
             onClick={copyReferralLink}
-            className="flex items-center gap-2 bg-white text-[#0D5CAB] px-4 py-2.5 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px', background: C.card, color: C.primary,
+              borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '13px',
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            }}
           >
-            <MdContentCopy size={18} /> Copy Link
+            <MdContentCopy size={16} /> Copy Link
           </button>
-          <button className="flex items-center gap-2 bg-[#25D366] text-white px-4 py-2.5 rounded-xl font-bold shadow-sm hover:bg-[#1EBE5D] transition-colors">
-            <MdOutlineWhatsapp size={18} /> WhatsApp
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 18px', background: '#25D366', color: '#fff',
+            borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '13px',
+            cursor: 'pointer'
+          }}>
+            <MdOutlineWhatsapp size={16} /> WhatsApp
           </button>
-          <button className="flex items-center gap-2 bg-blue-500/20 text-white border border-blue-400/30 px-4 py-2.5 rounded-xl font-bold hover:bg-blue-500/30 transition-colors">
-            <MdOutlineQrCode2 size={18} /> QR Code
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 18px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+            borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 700, fontSize: '13px',
+            cursor: 'pointer'
+          }}>
+            <MdOutlineQrCode2 size={16} /> QR Code
           </button>
         </div>
       </div>
 
       {/* Network View Controls */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex border-b border-slate-100 p-2 gap-2 bg-slate-50">
-          <button
-            onClick={() => setActiveTab('tree')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-              activeTab === 'tree' ? 'bg-white text-[#0D5CAB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'
-            }`}
-          >
-            Graphical Tree
-          </button>
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-              activeTab === 'list' ? 'bg-white text-[#0D5CAB] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'
-            }`}
-          >
-            List View
-          </button>
+      <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{
+          display: 'flex', borderBottom: `1px solid ${C.border}`,
+          padding: '6px', gap: '6px', background: C.bgSecondary
+        }}>
+          {['tree', 'list'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '10px 24px', borderRadius: '10px', fontSize: '13px',
+                fontWeight: 700, border: 'none', cursor: 'pointer',
+                background: activeTab === tab ? C.card : 'transparent',
+                color: activeTab === tab ? C.primary : C.textMid,
+                boxShadow: activeTab === tab ? '0 2px 6px rgba(0,0,0,0.04)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {tab === 'tree' ? 'Graphical Tree' : 'List View'}
+            </button>
+          ))}
         </div>
 
-        <div className="p-6">
+        <div style={{ padding: '24px' }}>
           {error ? (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100">{error}</div>
+            <div style={{
+              padding: '14px 18px', background: `${C.red}12`, border: `1px solid ${C.red}25`,
+              color: C.red, borderRadius: '12px', fontWeight: 600, fontSize: '13px'
+            }}>{error}</div>
           ) : loading ? (
-            <div className="flex justify-center p-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0D5CAB]"></div>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <span style={{
+                width: 32, height: 32, borderRadius: '50%',
+                border: `3px solid ${C.border}`, borderTopColor: C.primary,
+                animation: 'spin .8s linear infinite', display: 'inline-block'
+              }} />
             </div>
           ) : team.length === 0 ? (
-            <div className="text-center py-12 px-4 text-slate-500">
-              <MdShare className="mx-auto text-4xl text-slate-300 mb-3" />
-              <h3 className="text-lg font-bold text-[#0F172A] mb-1">Your Network is Empty</h3>
-              <p className="font-medium max-w-sm mx-auto">Use the referral link above to invite sub-partners and start building your downline.</p>
+            <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
+              <MdPerson size={44} style={{ color: C.border, marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>Your Network is Empty</h3>
+              <p style={{ fontSize: '13px', color: C.textMid, maxWidth: '340px', margin: '0 auto' }}>
+                Use the referral link above to invite sub-partners and start building your downline.
+              </p>
             </div>
           ) : activeTab === 'list' ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', whitespace: 'nowrap' }}>
                 <thead>
-                  <tr className="bg-slate-50 text-xs font-bold text-[#64748B] uppercase tracking-wider border-b border-slate-200">
-                    <th className="p-4 rounded-tl-xl">Partner Info</th>
-                    <th className="p-4">Contact</th>
-                    <th className="p-4">Code / Level</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 rounded-tr-xl">Joined</th>
+                  <tr style={{ background: C.bgSecondary }}>
+                    <th style={thStyle}>Partner Info</th>
+                    <th style={thStyle}>Contact</th>
+                    <th style={thStyle}>Code / Level</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Joined</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {team.map((member) => (
-                    <tr key={member.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 text-[#0D5CAB] flex items-center justify-center font-bold">
+                    <tr key={member.id}>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: `${C.primary}12`, color: C.primary,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 700, fontSize: '14px', border: `1px solid ${C.primary}20`
+                          }}>
                             {member.first_name?.[0] || 'T'}
                           </div>
                           <div>
-                            <p className="font-bold text-[#0F172A]">{member.first_name} {member.last_name}</p>
+                            <p style={{ fontWeight: 700, color: C.text, margin: 0 }}>{member.first_name} {member.last_name}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-[#334155] font-medium"><MdEmail className="text-slate-400" /> {member.email}</div>
-                        <div className="flex items-center gap-2 text-sm text-[#334155] font-medium"><MdPhone className="text-slate-400" /> {member.mobile}</div>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MdEmail style={{ color: C.textLight }} /> {member.email}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MdPhone style={{ color: C.textLight }} /> {member.mobile}</div>
+                        </div>
                       </td>
-                      <td className="p-4">
-                        <span className="font-mono text-[#0D5CAB] bg-blue-50 px-2 py-1 rounded border border-blue-100 font-bold text-xs inline-block mb-1">
+                      <td style={tdStyle}>
+                        <span style={{
+                          fontFamily: 'monospace', color: C.primary, background: `${C.primary}12`,
+                          padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.primary}20`,
+                          fontWeight: 700, fontSize: '11px', display: 'inline-block', marginBottom: '4px'
+                        }}>
                           {member.Partner_code}
                         </span>
-                        <div className="text-xs font-bold text-slate-400">Level 1 (Direct)</div>
+                        <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 600 }}>Level 1 (Direct)</div>
                       </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
-                          member.kyc_status === 'approved' ? 'bg-green-50 text-green-700 border border-green-200' :
-                          member.kyc_status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
-                          'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {member.kyc_status === 'approved' ? <MdCheckCircle size={12} /> : <MdPendingActions size={12} />}
+                      <td style={tdStyle}>
+                        <span style={S.tag(member.kyc_status === 'approved' ? C.green : member.kyc_status === 'rejected' ? C.red : C.gold)}>
                           {member.kyc_status || 'PENDING'}
                         </span>
                       </td>
-                      <td className="p-4 text-sm font-medium text-[#64748B]">
+                      <td style={{ ...tdStyle, fontWeight: 500 }}>
                         {new Date(member.created_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -206,54 +275,79 @@ export default function PartnerTeam() {
             </div>
           ) : (
             /* GRAPHICAL TREE VIEW */
-            <div className="p-4 overflow-x-auto">
-              <div className="flex flex-col items-center">
+            <div style={{ padding: '16px 0', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '600px' }}>
+                
                 {/* Root Node (You) */}
-                <div className="flex flex-col items-center relative">
-                  <div className="bg-[#0F172A] text-white p-4 rounded-xl shadow-lg border border-slate-700 w-64 text-center z-10">
-                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <MdPerson size={24} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                  <div style={{
+                    background: C.bgSecondary, border: `1px solid ${C.border}`,
+                    padding: '16px', borderRadius: '14px', width: '220px', textCenter: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center'
+                  }}>
+                    <div style={{
+                      width: 40, height: 40, background: C.card, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: C.primary, border: `1px solid ${C.border}`, marginBottom: '8px'
+                    }}>
+                      <MdPerson size={20} />
                     </div>
-                    <h4 className="font-bold">You</h4>
-                    <p className="text-xs text-slate-400 mt-1 font-mono">{user?.PartnerCode || 'GKP-ROOT'}</p>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>You</h4>
+                    <p style={{ fontSize: '11px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0 0' }}>{user?.PartnerCode || 'GKP-ROOT'}</p>
                   </div>
-                  {/* Stem down from root */}
-                  <div className="w-px h-8 bg-slate-300"></div>
                   
-                  {/* Horizontal Connector */}
+                  {/* Stem down from root */}
+                  <div style={{ width: 1, height: 32, background: C.border }} />
+                  
+                  {/* Horizontal Line Connector */}
                   {treeData.length > 1 && (
-                    <div className="w-full h-px bg-slate-300 relative" style={{ width: `${(treeData.length - 1) * 280}px` }}></div>
+                    <div style={{
+                      width: `${(treeData.length - 1) * 260}px`,
+                      height: 1, background: C.border
+                    }} />
                   )}
 
                   {/* Level 1 Nodes */}
-                  <div className="flex gap-4 pt-8 relative w-full justify-center">
-                    {treeData.map((member, idx) => (
-                      <div key={member.id} className="flex flex-col items-center relative w-[280px]">
-                        {/* Stem up to horizontal line */}
-                        <div className="absolute -top-8 w-px h-8 bg-slate-300"></div>
+                  <div style={{ display: 'flex', gap: '20px', paddingTop: '32px', position: 'relative', justifyContent: 'center' }}>
+                    {treeData.map((member) => (
+                      <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '240px', position: 'relative' }}>
+                        {/* Line up from node */}
+                        <div style={{ position: 'absolute', top: '-32px', width: 1, height: 32, background: C.border }} />
                         
-                        {/* Level 1 Node Card */}
-                        <div className="bg-white border-2 border-[#0D5CAB] p-4 rounded-xl shadow-sm w-56 text-center z-10 relative">
-                          <h4 className="font-bold text-[#0F172A] truncate">{member.first_name} {member.last_name}</h4>
-                          <p className="text-xs text-slate-500 mt-1 font-mono">{member.Partner_code}</p>
-                          <span className={`inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            member.kyc_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                          }`}>
+                        {/* Node Card */}
+                        <div style={{
+                          background: C.card, border: `2px solid ${C.primary}`,
+                          padding: '14px', borderRadius: '12px', width: '200px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)', textAlign: 'center'
+                        }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: 700, color: C.text, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {member.first_name} {member.last_name}
+                          </h4>
+                          <p style={{ fontSize: '11px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0' }}>{member.Partner_code}</p>
+                          <span style={S.tag(member.kyc_status === 'approved' ? C.green : C.gold)}>
                             L1 • {member.kyc_status}
                           </span>
                         </div>
 
-                        {/* Sub-children (Level 2 Mock) */}
+                        {/* Level 2 Sub-children Mock */}
                         {member.children && member.children.length > 0 && (
                           <>
-                            <div className="w-px h-8 bg-slate-300"></div>
-                            <div className="flex gap-4">
+                            <div style={{ width: 1, height: 24, background: C.border }} />
+                            <div style={{ display: 'flex', gap: '10px' }}>
                               {member.children.map(child => (
-                                <div key={child.id} className="flex flex-col items-center relative">
-                                  <div className="bg-slate-50 border border-slate-300 p-3 rounded-xl shadow-sm w-48 text-center z-10">
-                                    <h4 className="font-bold text-[#334155] text-sm truncate">{child.first_name} {child.last_name}</h4>
-                                    <p className="text-[10px] text-slate-400 mt-1 font-mono">{child.Partner_code}</p>
-                                    <span className="inline-block mt-2 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-200 text-slate-600">
+                                <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  <div style={{
+                                    background: C.bgSecondary, border: `1px solid ${C.border}`,
+                                    padding: '10px', borderRadius: '10px', width: '160px', textAlign: 'center'
+                                  }}>
+                                    <h4 style={{ fontSize: '12px', fontWeight: 700, color: C.text, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                      {child.first_name} {child.last_name}
+                                    </h4>
+                                    <p style={{ fontSize: '10px', fontFamily: 'monospace', color: C.textLight, margin: '3px 0' }}>{child.Partner_code}</p>
+                                    <span style={{
+                                      fontSize: '9px', fontWeight: 700, color: C.textLight, background: C.card,
+                                      padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase'
+                                    }}>
                                       L2 • {child.kyc_status}
                                     </span>
                                   </div>
@@ -266,6 +360,7 @@ export default function PartnerTeam() {
                     ))}
                   </div>
                 </div>
+
               </div>
             </div>
           )}
@@ -274,59 +369,101 @@ export default function PartnerTeam() {
 
       {/* Add Direct Partner Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-[#0F172A]">Add Direct Partner</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, borderRadius: '20px', w: '100%', maxWidth: '440px',
+            overflow: 'hidden', border: `1px solid ${C.border}`,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
+              background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Add Direct Partner</h3>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
                 <MdClose size={20} />
               </button>
             </div>
 
-            <div className="p-6">
-              {addError && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-100 font-medium">{addError}</div>}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {addError && <div style={{
+                padding: '10px 14px', background: `${C.red}12`, border: `1px solid ${C.red}25`,
+                color: C.red, borderRadius: '10px', fontSize: '13px', fontWeight: 600
+              }}>{addError}</div>}
               
-              <form id="add-team-form" onSubmit={handleAddSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form id="add-team-form" onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label className="block text-sm font-bold text-[#334155] mb-1.5">First Name *</label>
-                    <input type="text" required value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
+                    <label style={S.label}>First Name *</label>
+                    <input type="text" required value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} style={S.input} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-[#334155] mb-1.5">Last Name</label>
-                    <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
+                    <label style={S.label}>Last Name</label>
+                    <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} style={S.input} />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-[#334155] mb-1.5">Email Address *</label>
-                  <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
+                  <label style={S.label}>Email Address *</label>
+                  <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} style={S.input} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-[#334155] mb-1.5">Mobile Number *</label>
-                  <input type="tel" required pattern="[0-9]{10}" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
+                  <label style={S.label}>Mobile Number *</label>
+                  <input type="tel" required pattern="[0-9]{10}" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} style={S.input} />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-[#334155] mb-1.5">Initial Password *</label>
-                  <input type="text" required minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
-                  <p className="text-xs font-semibold text-amber-600 mt-2 bg-amber-50 p-2 rounded border border-amber-100">User will be forced to change this upon first login.</p>
+                  <label style={S.label}>Initial Password *</label>
+                  <input type="text" required minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={S.input} />
+                  <p style={{
+                    fontSize: '11px', color: C.gold, background: `${C.gold}12`,
+                    padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.gold}25`,
+                    margin: '8px 0 0', fontWeight: 600
+                  }}>
+                    User will be forced to change this upon first login.
+                  </p>
                 </div>
               </form>
             </div>
 
-            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
-              <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 rounded-xl font-bold text-[#64748B] bg-white border border-slate-200 hover:bg-slate-100 transition-colors">
+            <div style={{
+              padding: '16px 20px', borderTop: `1px solid ${C.border}`,
+              background: C.bgSecondary, display: 'flex', gap: '10px'
+            }}>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} style={{
+                ...S.btn('outline'), flex: 1, padding: '10px', fontSize: '14px', borderRadius: '10px'
+              }}>
                 Cancel
               </button>
-              <button type="submit" form="add-team-form" disabled={addLoading} className="flex-[2] py-3 bg-[#0D5CAB] text-white rounded-xl font-bold shadow-md hover:bg-[#083E7A] transition-colors disabled:opacity-70 flex justify-center items-center gap-2">
-                {addLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Create Partner Account'}
+              <button type="submit" form="add-team-form" disabled={addLoading} style={{
+                ...S.btn('primary'), flex: 2, padding: '10px', fontSize: '14px', border: 'none', borderRadius: '10px',
+                cursor: addLoading ? 'not-allowed' : 'pointer', opacity: addLoading ? 0.7 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {addLoading ? (
+                  <span style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                    animation: 'spin .8s linear infinite', display: 'inline-block'
+                  }} />
+                ) : 'Create Partner Account'}
               </button>
             </div>
           </div>
         </div>
       )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

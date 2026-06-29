@@ -1,6 +1,6 @@
 const cron = require('node-cron');
-const { query } = require('../config/db');
-const logger = require('../utils/logger');
+const { query } = require('../config/database');
+const logger = require('../config/logger');
 
 // Just an example of a report job that might compile daily stats into a table or send an email
 const compileDailyReports = async () => {

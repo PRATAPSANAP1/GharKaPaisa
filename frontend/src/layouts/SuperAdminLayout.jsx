@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
-import api from '../api/api';
-import logo from '../logo.png';
+import api from '../services/api';
+import logo from '../assets/logos/logo.png';
 import '../components/Navbar/Navbar.css';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────

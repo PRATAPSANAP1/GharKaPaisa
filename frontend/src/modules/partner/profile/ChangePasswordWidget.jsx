@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { MdLock, MdCheckCircle } from 'react-icons/md';
-import api from '../../../api/api';
-import { useAuthStore } from '../../../store/authStore';
+import api from '../../../services/api';
+import { useAuthStore } from '../../../app/store/authStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 
 export default function ChangePasswordWidget() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const user = useAuthStore((state) => state.user);
   const [step, setStep] = useState(1);
   const [otp, setOtp] = useState('');
@@ -40,28 +44,42 @@ export default function ChangePasswordWidget() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mt-6">
-      <div className="p-6 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
-        <MdLock className="text-gray-500" size={20} />
-        <h3 className="text-lg font-bold text-gray-800">Security</h3>
+    <div style={{
+      background: C.card, borderRadius: '14px', border: `1px solid ${C.border}`,
+      overflow: 'hidden', marginTop: '8px'
+    }}>
+      <div style={{
+        padding: '14px 20px', borderBottom: `1px solid ${C.border}`,
+        background: C.bgSecondary, display: 'flex', alignItems: 'center', gap: '8px'
+      }}>
+        <MdLock style={{ color: C.textMid }} size={18} />
+        <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: 0 }}>Security</h3>
       </div>
-      
-      <div className="p-6">
+
+      <div style={{ padding: '20px' }}>
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-100">
+          <div style={{
+            background: `${C.red}12`, color: C.red, padding: '10px 14px',
+            borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+            marginBottom: '16px', border: `1px solid ${C.red}25`
+          }}>
             {error}
           </div>
         )}
 
         {step === 1 && (
           <div>
-            <p className="text-gray-600 mb-4">
+            <p style={{ color: C.textMid, fontSize: '14px', margin: '0 0 16px', lineHeight: 1.6 }}>
               Update your account password securely. We will send a verification code to your registered email or mobile to confirm it's you.
             </p>
             <button
               onClick={handleSendOtp}
               disabled={loading}
-              className="bg-white border border-[#0D5CAB] text-[#0D5CAB] px-6 py-2 rounded-lg font-semibold hover:bg-[#0D5CAB] hover:text-white transition-colors disabled:opacity-50"
+              style={{
+                ...S.btn('outline'), padding: '10px 24px', fontSize: '14px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
+              }}
             >
               {loading ? 'Sending Code...' : 'Change Password'}
             </button>
@@ -69,44 +87,50 @@ export default function ChangePasswordWidget() {
         )}
 
         {step === 2 && (
-          <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-sm">
-            <p className="text-sm text-gray-500 mb-4">
-              Verification code sent to <strong>{user?.email || user?.mobile}</strong>
+          <form onSubmit={handleUpdatePassword} style={{ maxWidth: '380px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
+              Verification code sent to <strong style={{ color: C.text }}>{user?.email || user?.mobile}</strong>
             </p>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Verification Code</label>
+              <label style={S.label}>Verification Code</label>
               <input
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB]"
+                style={S.input}
                 placeholder="Enter 6-digit code"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">New Password</label>
+              <label style={S.label}>New Password</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB]"
+                style={S.input}
                 placeholder="Enter new password"
                 required
               />
             </div>
-            <div className="flex gap-2 mt-4">
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg"
+                style={{
+                  ...S.btn('ghost'), padding: '10px 20px', fontSize: '14px',
+                  color: C.textMid, cursor: 'pointer'
+                }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-[#0D5CAB] text-white py-2 rounded-lg font-bold hover:bg-[#083E7A] transition-colors disabled:opacity-50"
+                style={{
+                  ...S.btn('primary'), flex: 1, padding: '10px 20px', fontSize: '14px',
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1
+                }}
               >
                 {loading ? 'Updating...' : 'Update Password'}
               </button>
@@ -115,11 +139,15 @@ export default function ChangePasswordWidget() {
         )}
 
         {step === 3 && (
-          <div className="flex items-center gap-3 text-green-600 bg-green-50 p-4 rounded-lg">
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            background: `${C.green}12`, padding: '16px 20px', borderRadius: '12px',
+            color: C.green
+          }}>
             <MdCheckCircle size={24} />
             <div>
-              <h4 className="font-bold">Password Updated Successfully</h4>
-              <p className="text-sm mt-1">Your account is secure.</p>
+              <h4 style={{ fontWeight: 700, fontSize: '15px', margin: 0 }}>Password Updated Successfully</h4>
+              <p style={{ fontSize: '13px', margin: '4px 0 0', opacity: 0.85 }}>Your account is secure.</p>
             </div>
           </div>
         )}

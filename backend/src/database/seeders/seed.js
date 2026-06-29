@@ -1,6 +1,6 @@
 require('dotenv').config();
-const { query } = require('../../config/db');
-const logger = require('../../utils/logger');
+const { query } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const BANKS = [
   { name: 'HDFC Bank', short_code: 'HDFC' },

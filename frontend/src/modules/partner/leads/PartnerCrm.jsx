@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { usePartnerStore } from '../../../store/partnerStore';
+import { usePartnerStore } from '../../../app/store/partnerStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
   MdSearch, MdPerson, MdPhone, MdEmail, MdWork,
   MdLocationOn, MdHistory, MdOutlineWhatsapp,
@@ -7,16 +8,25 @@ import {
 } from 'react-icons/md';
 
 export default function PartnerCrm() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const fetchCustomers = usePartnerStore((state) => state.fetchCustomers);
   const customers = usePartnerStore((state) => state.customers);
   const isLoading = usePartnerStore((state) => state.isLoading);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [width, setWidth] = useState(window.innerWidth);
 
   useEffect(() => {
     fetchCustomers();
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [fetchCustomers]);
+
+  const isMobile = width < 992;
 
   const filteredCustomers = (customers || []).filter((c) =>
     c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,172 +41,258 @@ export default function PartnerCrm() {
     window.location.href = `tel:+91${mobile}`;
   };
 
+  const crmContainerStyle = {
+    display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
+    gap: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    height: isMobile ? 'auto' : 'calc(100vh - 160px)',
+    paddingBottom: '40px'
+  };
+
+  const listPaneStyle = {
+    width: isMobile ? '100%' : '340px',
+    background: C.card,
+    borderRadius: '16px',
+    border: `1px solid ${C.border}`,
+    display: 'flex',
+    flexDirection: 'column',
+    height: isMobile ? '400px' : '100%',
+    overflow: 'hidden',
+    flexShrink: 0
+  };
+
+  const detailPaneStyle = {
+    flex: 1,
+    minWidth: 0,
+    background: C.card,
+    borderRadius: '16px',
+    border: `1px solid ${C.border}`,
+    overflowY: 'auto',
+    height: isMobile ? 'auto' : '100%',
+    padding: isMobile ? '20px' : '32px',
+    position: 'relative'
+  };
+
+  const labelStyle = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' };
+  const valStyle = { fontSize: '14px', fontWeight: 600, color: C.text, display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 0' };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto h-[calc(100vh-8rem)]">
-      <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden shrink-0">
-        <div className="p-5 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-[#0F172A] mb-4">Customer CRM</h2>
-          <div className="relative">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+    <div style={crmContainerStyle}>
+      {/* ═══ CUSTOMER LIST SIDEBAR ═══ */}
+      <div style={listPaneStyle}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}` }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 14px' }}>Customer CRM</h2>
+          <div style={{ position: 'relative' }}>
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
             <input
               type="text"
               placeholder="Search by name or mobile..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] text-sm font-medium"
+              style={{ ...S.input, paddingLeft: '36px', paddingTop: '10px', paddingBottom: '10px' }}
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {isLoading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin w-6 h-6 border-2 border-[#0D5CAB] border-t-transparent rounded-full" />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+              <span style={{
+                width: 24, height: 24, borderRadius: '50%',
+                border: `2px solid ${C.border}`, borderTopColor: C.primary,
+                animation: 'spin .8s linear infinite', display: 'inline-block'
+              }} />
             </div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-10 px-4 text-slate-500">
-              <MdPerson className="mx-auto text-4xl text-slate-300 mb-2" />
-              <p className="font-medium">No customers found.</p>
-              <p className="text-sm mt-1">Customers appear here after you submit leads.</p>
+            <div style={{ textCenter: 'center', padding: '30px 16px', color: C.textLight, textAlign: 'center' }}>
+              <MdPerson size={36} style={{ color: C.border, marginBottom: '8px' }} />
+              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>No customers found.</p>
+              <p style={{ fontSize: '12px', margin: '4px 0 0' }}>Customers appear here after you submit leads.</p>
             </div>
           ) : (
-            filteredCustomers.map((customer) => (
-              <div
-                key={customer.id}
-                onClick={() => setSelectedCustomer(customer)}
-                className={`p-4 rounded-xl cursor-pointer border transition-all ${
-                  selectedCustomer?.id === customer.id
-                    ? 'bg-[#0D5CAB] border-[#0D5CAB] text-white shadow-md'
-                    : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <h4 className={`font-bold ${selectedCustomer?.id === customer.id ? 'text-white' : 'text-[#0F172A]'}`}>
-                  {customer.full_name}
-                </h4>
-                <div className={`flex items-center gap-4 mt-1 text-sm ${selectedCustomer?.id === customer.id ? 'text-blue-100' : 'text-slate-500'}`}>
-                  <span className="flex items-center gap-1"><MdPhone size={14} /> {customer.mobile}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase">
-                    {customer.application_count} Products
-                  </span>
+            filteredCustomers.map((customer) => {
+              const isSelected = selectedCustomer?.id === customer.id;
+              return (
+                <div
+                  key={customer.id}
+                  onClick={() => setSelectedCustomer(customer)}
+                  style={{
+                    padding: '14px', borderRadius: '12px', cursor: 'pointer',
+                    border: `1px solid ${isSelected ? C.primary : C.border}`,
+                    background: isSelected ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.card,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: isSelected ? '#fff' : C.text }}>
+                    {customer.full_name}
+                  </h4>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px',
+                    fontSize: '12px', color: isSelected ? 'rgba(255,255,255,0.8)' : C.textMid
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MdPhone size={13} /> {customer.mobile}
+                    </span>
+                    <span style={{
+                      padding: '2px 6px', borderRadius: '4px',
+                      background: isSelected ? 'rgba(255,255,255,0.2)' : C.bgSecondary,
+                      fontSize: '9px', fontWeight: 700, uppercase: 'true'
+                    }}>
+                      {customer.application_count} Products
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-y-auto h-full p-6 md:p-8 relative">
+      {/* ═══ DETAIL VIEW PANE ═══ */}
+      <div style={detailPaneStyle}>
         {selectedCustomer ? (
-          <div className="animate-in fade-in duration-200 space-y-8 pb-10">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#F8FAFC] border border-slate-200 rounded-full flex items-center justify-center text-[#0D5CAB]">
-                  <MdPerson size={32} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
+              alignItems: 'center', gap: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', items: 'center', gap: '16px' }}>
+                <div style={{
+                  width: 52, height: 52, background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary
+                }}>
+                  <MdPerson size={28} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-[#0F172A]">{selectedCustomer.full_name}</h2>
-                  <p className="text-slate-500 font-medium">
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedCustomer.full_name}</h2>
+                  <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0', fontWeight: 500 }}>
                     Customer since {selectedCustomer.first_application_at
                       ? new Date(selectedCustomer.first_application_at).getFullYear()
                       : '—'}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={() => openWhatsApp(selectedCustomer.mobile)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', background: '#25D366', color: '#fff', border: 'none',
+                    borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                  }}
                 >
                   <MdOutlineWhatsapp size={18} /> WhatsApp
                 </button>
                 <button
                   type="button"
                   onClick={() => openCall(selectedCustomer.mobile)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-bold rounded-xl transition-colors shadow-sm"
+                  style={{
+                    ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 16px', borderRadius: '10px', fontSize: '13px',
+                    color: C.textMid, border: `1px solid ${C.border}`
+                  }}
                 >
                   <MdPhone size={18} /> Call
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Profile Info and Products applied */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
               <div>
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MdPerson /> Profile Information
                 </h3>
-                <div className="bg-[#F8FAFC] border border-slate-100 rounded-xl p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Mobile</p>
-                      <p className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><MdPhone className="text-slate-400" /> {selectedCustomer.mobile || '—'}</p>
+                      <span style={labelStyle}>Mobile</span>
+                      <span style={valStyle}><MdPhone size={14} style={{ color: C.textLight }} /> {selectedCustomer.mobile || '—'}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Email</p>
-                      <p className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><MdEmail className="text-slate-400" /> {selectedCustomer.email || '—'}</p>
+                      <span style={labelStyle}>Email</span>
+                      <span style={valStyle}><MdEmail size={14} style={{ color: C.textLight }} /> {selectedCustomer.email || '—'}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Employment</p>
-                      <p className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><MdWork className="text-slate-400" /> {selectedCustomer.employment_type || '—'}</p>
+                      <span style={labelStyle}>Employment</span>
+                      <span style={valStyle}><MdWork size={14} style={{ color: C.textLight }} /> {selectedCustomer.employment_type || '—'}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">City</p>
-                      <p className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><MdLocationOn className="text-slate-400" /> {[selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(', ') || '—'}</p>
+                      <span style={labelStyle}>City</span>
+                      <span style={valStyle}><MdLocationOn size={14} style={{ color: C.textLight }} /> {[selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(', ') || '—'}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">PAN</p>
-                      <p className="font-semibold text-slate-800 font-mono mt-0.5 bg-white px-2 py-0.5 rounded border inline-block">{selectedCustomer.pan_number || '—'}</p>
+                      <span style={labelStyle}>PAN</span>
+                      <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>{selectedCustomer.pan_number || '—'}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase">Aadhaar</p>
-                      <p className="font-semibold text-slate-800 font-mono mt-0.5 bg-white px-2 py-0.5 rounded border inline-block">
+                      <span style={labelStyle}>Aadhaar</span>
+                      <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>
                         {selectedCustomer.aadhaar_last4 ? `XXXX-XXXX-${selectedCustomer.aadhaar_last4}` : '—'}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MdCreditCard /> Products Applied
                 </h3>
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(selectedCustomer.applications || []).map((p) => (
-                    <div key={p.app_number || p.id} className="p-4 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors bg-white">
-                      <div className="flex justify-between items-start">
+                    <div key={p.app_number || p.id} style={{ padding: '14px', border: `1px solid ${C.border}`, borderRadius: '12px', background: C.card }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <h4 className="font-bold text-[#0F172A] text-sm">{p.product_name}</h4>
-                          <p className="text-xs text-slate-500 mt-1">{p.bank_code} • {new Date(p.created_at).toLocaleDateString()}</p>
+                          <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{p.product_name}</h4>
+                          <p style={{ fontSize: '12px', color: C.textLight, margin: '4px 0 0' }}>{p.bank_code} • {new Date(p.created_at).toLocaleDateString()}</p>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                          p.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
-                          p.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
+                        <span style={S.tag(p.status === 'approved' ? C.green : p.status === 'rejected' ? C.red : C.gold)}>
                           {p.status?.replace('_', ' ')}
                         </span>
                       </div>
                     </div>
                   ))}
-                  <button type="button" className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:bg-slate-50 hover:text-[#0D5CAB] transition-colors flex items-center justify-center gap-2">
-                    <MdAddBox size={20} /> Recommend New Product
+                  <button type="button" style={{
+                    width: '100%', padding: '12px', border: `1px dashed ${C.border}`,
+                    borderRadius: '12px', color: C.textMid, fontWeight: 700, fontSize: '13px',
+                    background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '6px'
+                  }}>
+                    <MdAddBox size={18} /> Recommend New Product
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="pt-6 border-t border-slate-100">
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            {/* Application Timeline */}
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '24px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MdHistory /> Application Timeline
               </h3>
-              <div className="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-1 before:-translate-x-px before:h-full before:w-0.5 before:bg-slate-200">
+              <div style={{
+                position: 'relative', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '20px'
+              }}>
+                <div style={{
+                  position: 'absolute', top: 4, bottom: 4, left: 5, width: 2, background: C.border
+                }} />
                 {(selectedCustomer.applications || []).map((app) => (
-                  <div key={app.id} className="relative z-10">
-                    <div className="absolute -left-[27px] w-5 h-5 bg-white border-2 border-[#0D5CAB] rounded-full" />
-                    <h4 className="text-sm font-bold text-[#0F172A]">{app.product_name}</h4>
-                    <p className="text-xs text-slate-400 mb-1">{new Date(app.created_at).toLocaleDateString()} • {app.status?.replace('_', ' ')}</p>
-                    <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm text-slate-600">
+                  <div key={app.id} style={{ position: 'relative' }}>
+                    <div style={{
+                      position: 'absolute', left: '-24px', top: '2px', width: 12, height: 12,
+                      borderRadius: '50%', background: C.card, border: `2.5px solid ${C.primary}`,
+                      marginLeft: '-1px'
+                    }} />
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{app.product_name}</h4>
+                    <p style={{ fontSize: '11px', color: C.textLight, margin: '2px 0 6px' }}>{new Date(app.created_at).toLocaleDateString()} • {app.status?.replace('_', ' ')}</p>
+                    <div style={{
+                      background: C.bgSecondary, border: `1px solid ${C.border}`,
+                      padding: '10px 14px', borderRadius: '8px', fontSize: '13px', color: C.textMid
+                    }}>
                       {app.bank_name} — App #{app.app_number}
                     </div>
                   </div>
@@ -205,15 +301,25 @@ export default function PartnerCrm() {
             </div>
           </div>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F8FAFC]/50 text-center p-6">
-            <div className="w-20 h-20 bg-slate-100 text-slate-300 rounded-full flex items-center justify-center mb-4">
-              <MdPerson size={40} />
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '300px', height: '100%', textAlign: 'center'
+          }}>
+            <div style={{
+              width: 72, height: 72, bg: C.bgSecondary, border: `1px solid ${C.border}`,
+              color: C.textLight, borderRadius: '50%', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', marginBottom: '16px', background: C.bgSecondary
+            }}>
+              <MdPerson size={36} />
             </div>
-            <h2 className="text-xl font-bold text-[#0F172A] mb-2">Select a Customer</h2>
-            <p className="text-slate-500 max-w-sm">Choose a customer from the left panel to view their profile and application history.</p>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>Select a Customer</h2>
+            <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '340px', margin: 0 }}>
+              Choose a customer from the left panel to view their profile and application history.
+            </p>
           </div>
         )}
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

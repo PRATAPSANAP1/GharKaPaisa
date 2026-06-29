@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
   MdPlayCircleOutline, MdOutlineMenuBook, MdCheckCircle,
   MdAccessTime, MdStar, MdPlayArrow
 } from 'react-icons/md';
-import api from '../../../api/api';
+import api from '../../../services/api';
 
 export default function PartnerTraining() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const [modules, setModules] = useState([]);
   const [activeModule, setActiveModule] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,71 +34,106 @@ export default function PartnerTraining() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full" />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+        <span style={{
+          width: 32, height: 32, borderRadius: '50%',
+          border: `3px solid ${C.border}`, borderTopColor: C.primary,
+          animation: 'spin .8s linear infinite', display: 'inline-block'
+        }} />
       </div>
     );
   }
 
   if (!activeModule) {
     return (
-      <div className="text-center py-20 text-slate-500 font-medium">No training modules available yet.</div>
+      <div style={{ textAlign: 'center', padding: '60px 0', color: C.textLight, fontWeight: 500 }}>
+        No training modules available yet.
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto pb-10">
+    <div style={{ display: 'flex', flexDirection: 'row', gap: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px', flexWrap: 'wrap' }}>
       
       {/* Left Column: Player & Active Content */}
-      <div className="w-full lg:w-2/3 space-y-6 shrink-0">
+      <div style={{ flex: 2, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
         {/* Video Player Placeholder */}
-        <div className="bg-black rounded-2xl aspect-video relative overflow-hidden flex items-center justify-center shadow-lg group cursor-pointer border border-slate-800">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+        <div style={{
+          background: '#000', borderRadius: '16px', aspectRatio: '16/9',
+          position: 'relative', overflow: 'hidden', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          border: `1px solid ${C.border}`, cursor: 'pointer'
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)'
+          }} />
           
           {activeModule.type === 'Video' ? (
-            <div className="w-20 h-20 bg-[#0D5CAB]/90 hover:bg-[#0EA5E9] text-white rounded-full flex items-center justify-center transition-all transform group-hover:scale-110 shadow-[0_0_30px_rgba(13,92,171,0.5)] z-10">
-              <MdPlayArrow size={40} className="ml-2" />
+            <div style={{
+              width: 64, height: 64, background: C.primary, color: '#fff',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 0 24px ${C.primary}50`, zIndex: 10
+            }}>
+              <MdPlayArrow size={32} style={{ marginLeft: '4px' }} />
             </div>
           ) : (
-            <div className="w-20 h-20 bg-white/10 text-white rounded-full flex items-center justify-center backdrop-blur-sm z-10 border border-white/20">
-              <MdOutlineMenuBook size={40} />
+            <div style={{
+              width: 64, height: 64, background: 'rgba(255, 255, 255, 0.1)', color: '#fff',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(4px)', zIndex: 10, border: '1px solid rgba(255,255,255,0.2)'
+            }}>
+              <MdOutlineMenuBook size={32} />
             </div>
           )}
 
-          <div className="absolute bottom-6 left-6 z-10 right-6">
-            <span className="px-3 py-1 bg-[#0D5CAB] text-white text-[10px] font-bold uppercase tracking-wider rounded-md mb-3 inline-block">
+          <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', zIndex: 10 }}>
+            <span style={{
+              padding: '4px 10px', background: C.primary, color: '#fff',
+              fontSize: '9px', fontWeight: 700, uppercase: 'true', letterSpacing: '0.5px',
+              borderRadius: '6px', marginBottom: '8px', display: 'inline-block'
+            }}>
               {activeModule.category}
             </span>
-            <h2 className="text-2xl md:text-3xl font-bold text-white">{activeModule.title}</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: 0 }}>{activeModule.title}</h2>
           </div>
         </div>
 
         {/* Content Description */}
-        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex flex-wrap items-center gap-6 mb-6 pb-6 border-b border-slate-100">
-            <div className="flex items-center gap-2 text-slate-500 font-medium">
-              <MdAccessTime size={20} /> {activeModule.duration}
+        <div style={{ ...S.card, padding: '28px', borderRadius: '16px' }}>
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', items: 'center', gap: '20px',
+            marginBottom: '20px', paddingBottom: '20px', borderBottom: `1px solid ${C.border}`
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: C.textMid, fontSize: '14px', fontWeight: 600 }}>
+              <MdAccessTime size={18} /> {activeModule.duration}
             </div>
-            <div className="flex items-center gap-2 text-slate-500 font-medium">
-              <MdStar size={20} className="text-amber-400" /> 4.8 Rating
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: C.textMid, fontSize: '14px', fontWeight: 600 }}>
+              <MdStar size={18} style={{ color: '#F59E0B' }} /> 4.8 Rating
             </div>
             {activeModule.status === 'completed' && (
-              <div className="flex items-center gap-2 text-green-600 font-bold ml-auto bg-green-50 px-3 py-1 rounded-lg">
-                <MdCheckCircle size={20} /> Completed
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px', color: C.green,
+                fontWeight: 700, marginLeft: 'auto', background: `${C.green}12`,
+                padding: '4px 10px', borderRadius: '8px', fontSize: '12px'
+              }}>
+                <MdCheckCircle size={18} /> Completed
               </div>
             )}
           </div>
 
-          <h3 className="text-lg font-bold text-[#0F172A] mb-3">About this module</h3>
-          <p className="text-slate-600 leading-relaxed mb-6">
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>About this module</h3>
+          <p style={{ fontSize: '14px', color: C.textMid, lineHeight: 1.6, margin: '0 0 24px' }}>
             In this module, you will learn the essential skills required to maximize your earnings on GharKaPaisa. 
             We cover practical strategies, real-world examples, and common pitfalls to avoid when pitching to customers. 
             Make sure to take notes!
           </p>
 
           {activeModule.status !== 'completed' && (
-            <button className="px-6 py-3 bg-[#0D5CAB] text-white font-bold rounded-xl shadow-sm hover:bg-[#083E7A] transition-colors">
+            <button style={{
+              ...S.btn('primary'), border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', cursor: 'pointer'
+            }}>
               Mark as Completed
             </button>
           )}
@@ -102,49 +141,63 @@ export default function PartnerTraining() {
       </div>
 
       {/* Right Column: Playlist */}
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden max-h-[800px]">
-        <div className="p-6 border-b border-slate-100 bg-slate-50">
-          <h3 className="text-xl font-bold text-[#0F172A]">Training Modules</h3>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-[#25D366]" style={{ width: modules.length ? `${(completedCount / modules.length) * 100}%` : '0%' }} />
+      <div style={{
+        ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden',
+        flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column',
+        maxHeight: '600px'
+      }}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Training Modules</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              flex: 1, height: '6px', background: C.border, borderRadius: '3px', overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%', background: C.green,
+                width: modules.length ? `${(completedCount / modules.length) * 100}%` : '0%'
+              }} />
             </div>
-            <span className="text-sm font-bold text-slate-500">{completedCount}/{modules.length} Completed</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{completedCount}/{modules.length} Completed</span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-          {modules.map((mod, idx) => (
-            <div 
-              key={mod.id}
-              onClick={() => setActiveModule(mod)}
-              className={`p-4 rounded-xl cursor-pointer border transition-all flex gap-4 ${
-                activeModule.id === mod.id 
-                ? 'bg-blue-50 border-[#0D5CAB]/30 shadow-sm' 
-                : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              <div className="shrink-0 mt-1">
-                {mod.status === 'completed' ? (
-                  <MdCheckCircle size={24} className="text-[#25D366]" />
-                ) : mod.type === 'Video' ? (
-                  <MdPlayCircleOutline size={24} className={activeModule.id === mod.id ? 'text-[#0D5CAB]' : 'text-slate-400'} />
-                ) : (
-                  <MdOutlineMenuBook size={24} className={activeModule.id === mod.id ? 'text-[#0D5CAB]' : 'text-slate-400'} />
-                )}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {modules.map((mod, idx) => {
+            const isActive = activeModule.id === mod.id;
+            return (
+              <div 
+                key={mod.id}
+                onClick={() => setActiveModule(mod)}
+                style={{
+                  padding: '12px 14px', borderRadius: '12px', cursor: 'pointer',
+                  border: `1px solid ${isActive ? C.primary : C.border}`,
+                  background: isActive ? `${C.primary}12` : C.card,
+                  transition: 'all 0.15s ease', display: 'flex', gap: '12px'
+                }}
+              >
+                <div style={{ shrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center' }}>
+                  {mod.status === 'completed' ? (
+                    <MdCheckCircle size={22} style={{ color: C.green }} />
+                  ) : mod.type === 'Video' ? (
+                    <MdPlayCircleOutline size={22} style={{ color: isActive ? C.primary : C.textLight }} />
+                  ) : (
+                    <MdOutlineMenuBook size={22} style={{ color: isActive ? C.primary : C.textLight }} />
+                  )}
+                </div>
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', margin: '0 0 2px' }}>Module {idx + 1}</p>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 2px', color: isActive ? C.primary : C.text, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {mod.title}
+                  </h4>
+                  <p style={{ fontSize: '11px', color: C.textLight, margin: 0 }}>{mod.duration}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Module {idx + 1}</p>
-                <h4 className={`font-bold text-sm mb-1 line-clamp-2 ${activeModule.id === mod.id ? 'text-[#0D5CAB]' : 'text-[#0F172A]'}`}>
-                  {mod.title}
-                </h4>
-                <p className="text-xs font-medium text-slate-500">{mod.duration}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

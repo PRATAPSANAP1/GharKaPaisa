@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { resetPassword } from "../../../api/auth.api.js";
+import { resetPassword } from "../../../services/auth.api.js";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 

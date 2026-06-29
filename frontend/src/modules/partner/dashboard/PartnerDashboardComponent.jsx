@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import partnerService from "../../../api/partner.api.js";
-import walletService from "../../../api/wallet.api.js";
+import partnerService from "../../../services/partner.api.js";
+import walletService from "../../../services/wallet.api.js";
 
 // Reusable Components matching the HTML design
 function BrandItem({ text, C }) {

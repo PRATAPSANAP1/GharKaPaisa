@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../../app/store/authStore";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
-import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../api/auth.api.js";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 
 // ── Toast Notification Component ─────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {

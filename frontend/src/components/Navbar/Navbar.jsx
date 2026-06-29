@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FaSearch } from 'react-icons/fa';
 import './Navbar.css';
-import logo from '../../logo.png';
+import logo from '../../assets/logos/logo.png';
 import { ThemeToggle, useTheme } from '../../contexts/ThemeContext';
-import { useSearchStore } from '../../store/searchStore';
+import { useSearchStore } from '../../app/store/searchStore';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
 import { getApiV1Url } from '../../config/api';
 

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { MdLockReset, MdClose, MdCheckCircle } from 'react-icons/md';
-import api from '../../../api/api';
-import { useAuthStore } from '../../../store/authStore';
+import { MdLockReset, MdCheckCircle } from 'react-icons/md';
+import api from '../../../services/api';
+import { useAuthStore } from '../../../app/store/authStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 
 export default function ForcePasswordChangeModal({ isOpen }) {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const [step, setStep] = useState(1); // 1: Info, 2: OTP Sent, 3: Success
@@ -43,33 +47,63 @@ export default function ForcePasswordChangeModal({ isOpen }) {
     }
   };
 
+  const overlayStyle = {
+    position: 'fixed', inset: 0, zIndex: 100,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+    padding: '16px'
+  };
+
+  const modalStyle = {
+    background: C.card, borderRadius: '20px', width: '100%', maxWidth: '440px',
+    overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+    border: `1px solid ${C.border}`
+  };
+
+  const headerStyle = {
+    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+    padding: '28px', textAlign: 'center'
+  };
+
+  const errStyle = {
+    background: `${C.red}12`, color: C.red, padding: '10px 14px',
+    borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+    marginBottom: '16px', border: `1px solid ${C.red}25`
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0F172A]/80 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative">
-        <div className="bg-[#0D5CAB] p-6 text-center">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <MdLockReset size={32} className="text-white" />
+    <div style={overlayStyle}>
+      <div style={modalStyle}>
+        {/* Header */}
+        <div style={headerStyle}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 12px'
+          }}>
+            <MdLockReset size={28} style={{ color: '#fff' }} />
           </div>
-          <h2 className="text-xl font-bold text-white">Action Required</h2>
-          <p className="text-blue-100 text-sm mt-1">Please secure your account</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', margin: 0 }}>Action Required</h2>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '6px 0 0' }}>Please secure your account</p>
         </div>
 
-        <div className="p-6">
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-100">
-              {error}
-            </div>
-          )}
+        {/* Body */}
+        <div style={{ padding: '24px' }}>
+          {error && <div style={errStyle}>{error}</div>}
 
           {step === 1 && (
-            <div className="text-center">
-              <p className="text-[#334155] mb-6">
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 24px' }}>
                 As a new team member, you must change your temporary password before accessing the partner portal. We will send a verification code to your registered email to proceed.
               </p>
               <button
                 onClick={handleSendOtp}
                 disabled={loading}
-                className="w-full bg-[#0D5CAB] text-white py-3 rounded-xl font-bold hover:bg-[#083E7A] transition-colors disabled:opacity-70"
+                style={{
+                  ...S.btn('primary'), width: '100%', padding: '14px',
+                  fontSize: '15px', borderRadius: '12px', border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
+                }}
               >
                 {loading ? 'Sending Code...' : 'Send Verification Code'}
               </button>
@@ -77,28 +111,28 @@ export default function ForcePasswordChangeModal({ isOpen }) {
           )}
 
           {step === 2 && (
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              <p className="text-sm text-[#64748B] text-center mb-4">
-                A verification code has been sent to <strong>{user?.email}</strong>.
+            <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ fontSize: '13px', color: C.textMid, textAlign: 'center', margin: 0 }}>
+                A verification code has been sent to <strong style={{ color: C.text }}>{user?.email}</strong>.
               </p>
               <div>
-                <label className="block text-sm font-semibold text-[#334155] mb-1">Verification Code</label>
+                <label style={S.label}>Verification Code</label>
                 <input
                   type="text"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB]"
+                  style={{ ...S.input, borderRadius: '12px', padding: '14px 16px' }}
                   placeholder="Enter 6-digit code"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#334155] mb-1">New Password</label>
+                <label style={S.label}>New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB]"
+                  style={{ ...S.input, borderRadius: '12px', padding: '14px 16px' }}
                   placeholder="Enter new strong password"
                   required
                 />
@@ -106,7 +140,12 @@ export default function ForcePasswordChangeModal({ isOpen }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#0D5CAB] text-white py-3 rounded-xl font-bold hover:bg-[#083E7A] transition-colors disabled:opacity-70 mt-2"
+                style={{
+                  ...S.btn('primary'), width: '100%', padding: '14px',
+                  fontSize: '15px', borderRadius: '12px', border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
+                  marginTop: '4px'
+                }}
               >
                 {loading ? 'Updating...' : 'Update Password'}
               </button>
@@ -114,15 +153,18 @@ export default function ForcePasswordChangeModal({ isOpen }) {
           )}
 
           {step === 3 && (
-            <div className="text-center py-4">
-              <MdCheckCircle size={64} className="text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-[#0F172A] mb-2">Password Updated!</h3>
-              <p className="text-[#64748B] mb-6">
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <MdCheckCircle size={56} style={{ color: C.green, marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '0 0 8px' }}>Password Updated!</h3>
+              <p style={{ color: C.textMid, fontSize: '14px', margin: '0 0 24px' }}>
                 Your password has been successfully secured. You can now access your partner portal.
               </p>
               <button
                 onClick={() => window.location.reload()}
-                className="w-full bg-[#0D5CAB] text-white py-3 rounded-xl font-bold hover:bg-[#083E7A] transition-colors"
+                style={{
+                  ...S.btn('primary'), width: '100%', padding: '14px',
+                  fontSize: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer'
+                }}
               >
                 Continue to Dashboard
               </button>

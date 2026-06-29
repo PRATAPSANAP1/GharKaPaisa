@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../../../store/authStore';
-import { usePartnerStore } from '../../../store/partnerStore';
-import api from '../../../api/api';
+import { useAuthStore } from '../../../app/store/authStore';
+import { usePartnerStore } from '../../../app/store/partnerStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import { MdUploadFile, MdCheckCircle, MdPendingActions, MdError } from 'react-icons/md';
 
 export default function PartnerKyc() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const user = useAuthStore((state) => state.user);
   const profile = usePartnerStore((state) => state.profile);
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
@@ -21,6 +25,9 @@ export default function PartnerKyc() {
   const [documentNumbers, setDocumentNumbers] = useState({
     pan_number: ''
   });
+
+  const [panHov, setPanHov] = useState(false);
+  const [chequeHov, setChequeHov] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -77,29 +84,38 @@ export default function PartnerKyc() {
   const isUnderReview = kycStatus === 'under_review';
   const isRejected = kycStatus === 'rejected';
 
+  // Dynamic colors for the banner
+  const bannerBg = isApproved ? `${C.green}15` : isUnderReview ? `${C.gold}15` : isRejected ? `${C.red}15` : `${C.bgSecondary}`;
+  const bannerBorder = isApproved ? C.green : isUnderReview ? C.gold : isRejected ? C.red : C.border;
+  const bannerColor = isApproved ? C.green : isUnderReview ? C.gold : isRejected ? C.red : C.text;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-[#0F172A]">KYC Center</h2>
-        <p className="text-[#64748B] mt-1">Complete your identity verification to unlock full partner features.</p>
+    <div style={{ maxWidth: '768px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>KYC Center</h2>
+        <p style={{ fontSize: '14px', color: C.textLight, margin: 0 }}>Complete your identity verification to unlock full partner features.</p>
       </div>
 
       {/* Status Banner */}
-      <div className={`p-4 rounded-xl flex items-center gap-3 border ${
-        isApproved ? 'bg-green-50 border-green-200 text-green-700' :
-        isUnderReview ? 'bg-amber-50 border-amber-200 text-amber-700' :
-        isRejected ? 'bg-red-50 border-red-200 text-red-700' :
-        'bg-slate-50 border-slate-200 text-slate-700'
-      }`}>
-        {isApproved ? <MdCheckCircle size={24} /> : 
-         isRejected ? <MdError size={24} /> : 
-         <MdPendingActions size={24} />}
+      <div style={{
+        padding: '16px',
+        borderRadius: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        background: bannerBg,
+        border: `1px solid ${bannerBorder}`,
+        color: bannerColor
+      }}>
+        {isApproved ? <MdCheckCircle size={24} style={{ color: C.green }} /> : 
+         isRejected ? <MdError size={24} style={{ color: C.red }} /> : 
+         <MdPendingActions size={24} style={{ color: C.gold }} />}
         
         <div>
-          <h3 className="font-bold">
-            Current Status: <span className="uppercase">{kycStatus}</span>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, textTransform: 'uppercase', color: bannerColor }}>
+            Current Status: {kycStatus}
           </h3>
-          <p className="text-sm mt-0.5 opacity-90">
+          <p style={{ fontSize: '13px', margin: '4px 0 0 0', opacity: 0.9, color: C.textMid }}>
             {isApproved ? 'Your KYC is verified. You have full access to the platform.' :
              isUnderReview ? 'Your documents are currently being reviewed by our team.' :
              isRejected ? `Your KYC was rejected. Reason: ${profile?.rejection_reason || 'Invalid documents'}. Please re-submit.` :
@@ -110,64 +126,135 @@ export default function PartnerKyc() {
 
       {/* Upload Form */}
       {(!isApproved && !isUnderReview) && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <form onSubmit={handleSubmit} style={{
+          background: C.card,
+          borderRadius: '16px',
+          border: `1px solid ${C.border}`,
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+        }}>
           {errorMsg && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: `${C.red}15`,
+              border: `1px solid ${C.red}30`,
+              color: C.red,
+              fontSize: '13px',
+              fontWeight: 600
+            }}>
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm border border-green-100">
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: `${C.green}15`,
+              border: `1px solid ${C.green}30`,
+              color: C.green,
+              fontSize: '13px',
+              fontWeight: 600
+            }}>
               {successMsg}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-[#334155] mb-1">PAN Card Number *</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={S.label}>PAN Card Number *</label>
               <input
                 type="text"
                 required
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl uppercase focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20"
+                style={{ ...S.input, textTransform: 'uppercase' }}
                 placeholder="ABCDE1234F"
                 value={documentNumbers.pan_number}
                 onChange={(e) => setDocumentNumbers({...documentNumbers, pan_number: e.target.value.toUpperCase()})}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-[#334155] mb-1">Upload PAN Card (Image/PDF) *</label>
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors relative cursor-pointer">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={S.label}>Upload PAN Card (Image/PDF) *</label>
+              <div 
+                onMouseEnter={() => setPanHov(true)}
+                onMouseLeave={() => setPanHov(false)}
+                style={{
+                  border: `2px dashed ${panHov ? C.teal : C.border}`,
+                  borderRadius: '12px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: C.bgSecondary,
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
                 <input 
                   type="file" 
                   accept=".jpg,.jpeg,.png,.pdf" 
                   onChange={(e) => handleFileChange(e, 'pan')}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer'
+                  }}
                   required
                 />
-                <MdUploadFile size={32} className="text-[#94A3B8] mb-2" />
-                <span className="text-sm font-medium text-[#334155]">
+                <MdUploadFile size={36} style={{ color: C.textLight, marginBottom: '8px' }} />
+                <span style={{ fontSize: '14px', fontWeight: 600, color: C.text, textAlign: 'center' }}>
                   {files.pan ? files.pan.name : 'Click or drag file to upload'}
                 </span>
-                <span className="text-xs text-[#64748B] mt-1">Max 5MB</span>
+                <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px' }}>Max 5MB</span>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-[#334155] mb-1">Upload Cancelled Cheque (Image/PDF) *</label>
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors relative cursor-pointer">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={S.label}>Upload Cancelled Cheque (Image/PDF) *</label>
+              <div 
+                onMouseEnter={() => setChequeHov(true)}
+                onMouseLeave={() => setChequeHov(false)}
+                style={{
+                  border: `2px dashed ${chequeHov ? C.teal : C.border}`,
+                  borderRadius: '12px',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: C.bgSecondary,
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
                 <input 
                   type="file" 
                   accept=".jpg,.jpeg,.png,.pdf" 
                   onChange={(e) => handleFileChange(e, 'cancelled_cheque')}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0,
+                    cursor: 'pointer'
+                  }}
                   required
                 />
-                <MdUploadFile size={32} className="text-[#94A3B8] mb-2" />
-                <span className="text-sm font-medium text-[#334155]">
+                <MdUploadFile size={36} style={{ color: C.textLight, marginBottom: '8px' }} />
+                <span style={{ fontSize: '14px', fontWeight: 600, color: C.text, textAlign: 'center' }}>
                   {files.cancelled_cheque ? files.cancelled_cheque.name : 'Click or drag file to upload'}
                 </span>
-                <span className="text-xs text-[#64748B] mt-1">Max 5MB</span>
+                <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px' }}>Max 5MB</span>
               </div>
             </div>
           </div>
@@ -175,11 +262,35 @@ export default function PartnerKyc() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-[#0D5CAB] text-white rounded-xl font-bold shadow-md hover:bg-[#083E7A] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+            style={{
+              ...S.btn('primary'),
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '14px',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
           >
-            {loading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+            {loading && (
+              <span style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderTop: '2px solid #ffffff',
+                animation: 'spin 0.8s linear infinite',
+                display: 'inline-block'
+              }} />
+            )}
             {loading ? 'Uploading Documents...' : 'Submit KYC Documents'}
           </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </form>
       )}
     </div>

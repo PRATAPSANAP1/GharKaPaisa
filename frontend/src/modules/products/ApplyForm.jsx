@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import api from '../../api/api';
+import api from '../../services/api';
 import { useTheme, makeS } from '../../contexts/ThemeContext';
 import { Icons } from '../../components/Icon/PartnerIcons';
 

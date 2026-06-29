@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { usePartnerStore } from '../../../store/partnerStore';
+import { usePartnerStore } from '../../../app/store/partnerStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdPendingActions, 
   MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
-  MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson, MdDomain
+  MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson
 } from 'react-icons/md';
 
 const STAGES = [
@@ -14,6 +15,9 @@ const STAGES = [
 ];
 
 export default function PartnerApplications() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const fetchApplications = usePartnerStore((state) => state.fetchApplications);
   const applications = usePartnerStore((state) => state.applications);
   const isLoading = usePartnerStore((state) => state.isLoading);
@@ -35,11 +39,11 @@ export default function PartnerApplications() {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'approved': return 'bg-green-100 text-green-700 border-green-200';
-      case 'disbursed': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'rejected': return 'bg-red-100 text-red-700 border-red-200';
-      case 'under_review': return 'bg-blue-100 text-blue-700 border-blue-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'approved': return C.green;
+      case 'disbursed': return C.green;
+      case 'rejected': return C.red;
+      case 'under_review': return C.gold;
+      default: return C.textLight;
     }
   };
 
@@ -61,38 +65,43 @@ export default function PartnerApplications() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
       {/* Header & Filters */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div style={{ ...S.card, padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
           <div>
-            <h2 className="text-2xl font-bold text-[#0F172A]">Lead Management</h2>
-            <p className="text-[#64748B] text-sm mt-1">Track and manage your customer applications in real-time.</p>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Lead Management</h2>
+            <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Track and manage your customer applications in real-time.</p>
           </div>
           
-          <div className="flex gap-2">
-            <button className="flex items-center gap-2 bg-[#F8FAFC] text-[#334155] px-4 py-2 rounded-xl font-medium border border-slate-200 hover:bg-slate-50 transition-colors text-sm">
-              <MdFilterList size={18} /> Export List
-            </button>
-          </div>
+          <button style={{
+            ...S.btn('outline'), padding: '8px 16px', fontSize: '13px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <MdFilterList size={18} /> Export List
+          </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 pt-2">
-          <div className="relative flex-1">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: '100%' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
             <input 
               type="text" 
               placeholder="Search by customer name or App ID..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB]"
+              style={{ ...S.input, paddingLeft: '38px' }}
             />
           </div>
+          
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-[#334155] focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20"
+            style={{
+              ...S.input, width: 'auto', minWidth: '180px',
+              backgroundImage: 'none', appearance: 'auto', cursor: 'pointer'
+            }}
           >
             <option value="all">All Statuses</option>
             <option value="submitted">New / Submitted</option>
@@ -106,142 +115,199 @@ export default function PartnerApplications() {
 
       {/* Leads List */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full"></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: '50%',
+            border: `3px solid ${C.border}`, borderTopColor: C.primary,
+            animation: 'spin .8s linear infinite', display: 'inline-block'
+          }} />
         </div>
       ) : filteredApps.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
-          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MdHistory size={32} />
+        <div style={{ ...S.card, padding: '48px 24px', textAlign: 'center', borderRadius: '16px' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', background: C.bgSecondary,
+            color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px'
+          }}>
+            <MdHistory size={28} />
           </div>
-          <h3 className="text-lg font-bold text-[#0F172A] mb-1">No Leads Found</h3>
-          <p className="text-[#64748B]">You don't have any applications matching the current filters.</p>
+          <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>No Leads Found</h3>
+          <p style={{ color: C.textMid, margin: 0 }}>You don't have any applications matching the current filters.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {filteredApps.map((app) => {
             const isExpanded = expandedId === app.app_number;
             const currentStep = getStepProgress(app.status);
             const isRejected = app.status === 'rejected';
+            const statusColor = getStatusColor(app.status);
 
             return (
-              <div key={app.app_number} className={`bg-white rounded-2xl border transition-all duration-200 shadow-sm overflow-hidden ${isExpanded ? 'border-[#0D5CAB]' : 'border-slate-200 hover:border-slate-300'}`}>
+              <div 
+                key={app.app_number} 
+                style={{
+                  ...S.card, padding: 0, overflow: 'hidden', borderRadius: '16px',
+                  border: `1px solid ${isExpanded ? C.primary : C.border}`
+                }}
+              >
                 
                 {/* Lead Header (Always Visible) */}
                 <div 
-                  className="p-5 cursor-pointer flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
+                  style={{
+                    padding: '20px', cursor: 'pointer', display: 'flex', flexWrap: 'wrap',
+                    alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+                    background: isExpanded ? C.bgSecondary : 'transparent'
+                  }}
                   onClick={() => setExpandedId(isExpanded ? null : app.app_number)}
                 >
-                  <div className="flex gap-4 items-center">
-                    <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-xl shadow-sm text-slate-400">
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: '240px' }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%', background: C.bgSecondary,
+                      color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px'
+                    }}>
                       <MdPerson />
                     </div>
                     <div>
-                      <h3 className="font-bold text-[#0F172A] text-lg flex items-center gap-2">
-                        {app.customer_name} 
-                      </h3>
-                      <p className="text-sm font-medium text-[#64748B] flex items-center gap-2 mt-0.5">
-                        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">{app.app_number}</span> • 
-                        {app.product_name}
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: 0 }}>{app.customer_name}</h3>
+                      <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 6px', borderRadius: '4px', fontSize: '11px', color: C.textMid }}>{app.app_number}</span>
+                        <span>•</span>
+                        <span>{app.product_name}</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-[#64748B] font-medium uppercase tracking-wide">Expected Commission</p>
-                      <p className="font-bold text-[#0F172A]">₹{app.commission_amount || 'TBD'}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ textAlign: 'right', display: 'none', sm: 'block' }}>
+                      <span style={{ fontSize: '10px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expected Commission</span>
+                      <strong style={{ fontSize: '15px', color: C.text, fontWeight: 700 }}>₹{app.commission_amount || 'TBD'}</strong>
                     </div>
                     
-                    <div className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-sm font-bold capitalize ${getStatusColor(app.status)}`}>
+                    <span style={{ ...S.tag(statusColor), display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px' }}>
                       {getStatusIcon(app.status)} {app.status.replace('_', ' ')}
-                    </div>
+                    </span>
                     
-                    <button className="text-slate-400 hover:text-[#0D5CAB] p-1">
-                      {isExpanded ? <MdKeyboardArrowUp size={24} /> : <MdKeyboardArrowDown size={24} />}
+                    <button style={{ background: 'none', border: 'none', color: C.textLight, cursor: 'pointer', padding: 4 }}>
+                      {isExpanded ? <MdKeyboardArrowUp size={20} /> : <MdKeyboardArrowDown size={20} />}
                     </button>
                   </div>
                 </div>
 
                 {/* Expanded Timeline & Details */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50 p-5 md:p-6 animate-in slide-in-from-top-2 duration-200">
+                  <div style={{
+                    borderTop: `1px solid ${C.border}`, background: C.bgSecondary,
+                    padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px'
+                  }}>
                     
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Left: Amazon-style Timeline */}
-                      <div className="lg:col-span-2">
-                        <h4 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-6">Application Timeline</h4>
-                        
-                        <div className="relative pl-6 space-y-8 before:absolute before:inset-0 before:ml-8 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
-                          
-                          <div className="relative flex items-center justify-between md:justify-around text-sm font-medium text-[#64748B]">
-                            {/* Desktop Horizontal Line */}
-                            <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -z-10 hidden md:block rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${isRejected ? 'bg-red-500' : 'bg-green-500'} transition-all duration-500`}
-                                style={{ width: `${isRejected ? 100 : ((currentStep - 1) / (STAGES.length - 1)) * 100}%` }}
-                              ></div>
-                            </div>
-
-                            {STAGES.map((stage, idx) => {
-                              const isCompleted = currentStep >= stage.step;
-                              const isActive = currentStep === stage.step && !isRejected;
-                              
-                              return (
-                                <div key={stage.id} className="relative flex flex-row md:flex-col items-center gap-4 md:gap-2 bg-slate-50 md:bg-transparent py-2 md:py-0 w-full md:w-auto z-10">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 border-slate-50 shadow-sm transition-colors duration-300 ${
-                                    isRejected ? 'bg-red-500 text-white' :
-                                    isCompleted ? 'bg-green-500 text-white' : 
-                                    isActive ? 'bg-[#0D5CAB] text-white' : 'bg-slate-200 text-slate-400'
-                                  }`}>
-                                    {isRejected ? <MdCancel size={16} /> : <MdCheckCircle size={16} />}
-                                  </div>
-                                  <div className={`text-left md:text-center ${isActive ? 'text-[#0D5CAB] font-bold' : isCompleted ? 'text-green-600 font-bold' : isRejected ? 'text-red-500 font-bold' : ''}`}>
-                                    {stage.label}
-                                    {idx === 0 && <span className="block text-xs font-normal text-slate-400 mt-0.5">{new Date(app.created_at).toLocaleDateString()}</span>}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                        </div>
-
-                        {isRejected && (
-                          <div className="mt-6 bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 flex items-start gap-3">
-                            <MdCancel className="mt-0.5 shrink-0" size={20} />
-                            <div>
-                              <p className="font-bold text-sm">Application Rejected</p>
-                              <p className="text-sm mt-1">This application did not meet the bank's criteria during verification.</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Quick Actions & Details */}
-                      <div>
-                        <h4 className="text-sm font-bold text-[#0F172A] uppercase tracking-wider mb-4">Quick Actions</h4>
-                        <div className="space-y-3">
-                          <button className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1EBE5D] text-white px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm">
-                            <MdOutlineWhatsapp size={20} /> WhatsApp Customer
-                          </button>
-                          <button className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-100 text-[#0F172A] px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm">
-                            <MdPhone size={20} /> Call Customer
-                          </button>
-                        </div>
-
-                        <div className="mt-8 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Lead Details</h4>
-                          <ul className="space-y-2 text-sm">
-                            <li className="flex justify-between"><span className="text-slate-500">Bank</span> <span className="font-medium text-slate-700">{app.bank_code || 'N/A'}</span></li>
-                            <li className="flex justify-between"><span className="text-slate-500">Date Applied</span> <span className="font-medium text-slate-700">{new Date(app.created_at).toLocaleDateString()}</span></li>
-                            <li className="flex justify-between"><span className="text-slate-500">Commission</span> <span className="font-medium text-green-600">₹{app.commission_amount || '0'}</span></li>
-                          </ul>
-                        </div>
-                      </div>
+                    {/* Left: Timeline */}
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 20px' }}>
+                        Application Timeline
+                      </h4>
                       
+                      <div style={{
+                        display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
+                        gap: '16px', position: 'relative', zIndex: 1
+                      }}>
+                        {STAGES.map((stage, idx) => {
+                          const isCompleted = currentStep >= stage.step;
+                          const isActive = currentStep === stage.step && !isRejected;
+                          const color = isRejected ? C.red : isCompleted ? C.green : isActive ? C.primary : C.border;
+                          
+                          return (
+                            <div key={stage.id} style={{
+                              display: 'flex', flexDirection: 'column', alignItems: 'center',
+                              gap: '6px', flex: 1, minWidth: '70px', position: 'relative'
+                            }}>
+                              {/* Horizontal connector line */}
+                              {idx < STAGES.length - 1 && (
+                                <div style={{
+                                  position: 'absolute', top: '14px', left: 'calc(50% + 14px)',
+                                  width: 'calc(100% - 28px)', height: '2px',
+                                  background: (currentStep > stage.step && !isRejected) ? C.green : C.border,
+                                  zIndex: -1
+                                }} />
+                              )}
+
+                              <div style={{
+                                width: 28, height: 28, borderRadius: '50%',
+                                background: isCompleted ? color : C.card,
+                                border: `2.5px solid ${color}`,
+                                color: isCompleted ? '#fff' : color,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '14px', fontWeight: 700
+                              }}>
+                                {isCompleted ? '✓' : stage.step}
+                              </div>
+                              
+                              <div style={{
+                                fontSize: '12px', fontWeight: (isActive || isCompleted) ? 700 : 500,
+                                color: isActive ? C.primary : isCompleted ? C.green : C.textMid,
+                                textAlign: 'center'
+                              }}>
+                                {stage.label}
+                                {idx === 0 && <span style={{ display: 'block', fontSize: '10px', color: C.textLight, fontWeight: 500, marginTop: '2px' }}>{new Date(app.created_at).toLocaleDateString()}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {isRejected && (
+                        <div style={{
+                          marginTop: '20px', padding: '12px 16px', borderRadius: '10px',
+                          background: `${C.red}12`, border: `1px solid ${C.red}25`,
+                          color: C.red, display: 'flex', gap: '8px', alignItems: 'flex-start'
+                        }}>
+                          <MdCancel size={18} style={{ marginTop: '2px' }} />
+                          <div>
+                            <p style={{ fontWeight: 700, fontSize: '13px', margin: 0 }}>Application Rejected</p>
+                            <p style={{ fontSize: '12px', margin: '2px 0 0' }}>This application did not meet the bank's criteria during verification.</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
+                    {/* Right: Quick Actions & Info */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 12px' }}>
+                          Quick Actions
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <button style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            padding: '10px', background: '#25D366', color: '#fff', border: 'none',
+                            borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                          }}>
+                            <MdOutlineWhatsapp size={18} /> WhatsApp Customer
+                          </button>
+                          <button style={{
+                            ...S.btn('outline'), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            padding: '10px', borderRadius: '10px', fontSize: '13px', border: `1px solid ${C.border}`,
+                            color: C.textMid
+                          }}>
+                            <MdPhone size={18} /> Call Customer
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: C.card, border: `1px solid ${C.border}`,
+                        borderRadius: '12px', padding: '14px'
+                      }}>
+                        <h4 style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                          Lead Details
+                        </h4>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                          <li style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: C.textMid }}>Bank</span> <span style={{ fontWeight: 600, color: C.text }}>{app.bank_code || 'N/A'}</span></li>
+                          <li style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: C.textMid }}>Date Applied</span> <span style={{ fontWeight: 600, color: C.text }}>{new Date(app.created_at).toLocaleDateString()}</span></li>
+                          <li style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: C.textMid }}>Commission</span> <span style={{ fontWeight: 700, color: C.green }}>₹{app.commission_amount || '0'}</span></li>
+                        </ul>
+                      </div>
+                    </div>
+                    
                   </div>
                 )}
               </div>
@@ -249,6 +315,7 @@ export default function PartnerApplications() {
           })}
         </div>
       )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

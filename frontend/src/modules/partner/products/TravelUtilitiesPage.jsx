@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdFlight, MdHotel, MdDirectionsBus, MdTrain, 
   MdSmartphone, MdTv, MdFlashOn, MdLocalAtm, 
-  MdAssignmentTurnedIn, MdHistory 
+  MdHistory 
 } from 'react-icons/md';
 
 const SERVICES = [
@@ -20,6 +21,9 @@ const UTILITIES = [
 ];
 
 export default function TravelUtilitiesPage() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const [activeTab, setActiveTab] = useState('flights');
   const [transactions, setTransactions] = useState([
     { id: 'TXN-0931', service: 'Mobile Recharge', customer: '9823012930', amount: '₹299', date: '23/06/2026', status: 'Success', commission: '₹4.50' }
@@ -47,133 +51,172 @@ export default function TravelUtilitiesPage() {
     alert('Transaction processed successfully! Commission credited to wallet.');
   };
 
+  const getLabel1 = () => {
+    if (activeTab === 'flights' || activeTab === 'hotels') return 'Traveler Name / Hotel City';
+    if (activeTab === 'recharge' || activeTab === 'dth') return 'Mobile / Customer ID';
+    if (activeTab === 'electricity') return 'Consumer Number';
+    return 'FASTag Vehicle Number';
+  };
+
+  const getLabel2 = () => {
+    if (activeTab === 'flights') return 'Destination Code';
+    if (activeTab === 'recharge' || activeTab === 'dth') return 'Operator / Circle';
+    if (activeTab === 'electricity') return 'State Electricity Board';
+    return 'Optional details';
+  };
+
+  const allTabs = [...SERVICES, ...UTILITIES];
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-10">
-      
-      {/* Title */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h2 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2">
-          <MdFlight className="text-[#0D5CAB]" /> Travel & Utility Services
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+
+      {/* Title Card */}
+      <div style={{ ...S.card, padding: '24px 28px', borderRadius: '16px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <MdFlight style={{ color: C.primary }} /> Travel & Utility Services
         </h2>
-        <p className="text-[#64748B] text-sm mt-1">Book travel tickets or process bills for clients to earn instant margin payouts.</p>
+        <p style={{ fontSize: '14px', color: C.textMid, margin: 0 }}>
+          Book travel tickets or process bills for clients to earn instant margin payouts.
+        </p>
       </div>
 
-      {/* Grid of travel and utility recharges */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Form and selectors */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            
-            {/* Travel Services Menu */}
-            <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-2">
-              {[...SERVICES, ...UTILITIES].map(item => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button 
-                    key={item.id}
-                    onClick={() => { setActiveTab(item.id); setForm({ field1: '', field2: '', amount: '' }); }}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${isActive ? 'bg-[#0D5CAB] text-white shadow-sm' : 'bg-white border border-slate-200 text-[#334155] hover:bg-slate-50'}`}
-                  >
-                    <Icon size={16} /> {item.label}
-                  </button>
-                );
-              })}
-            </div>
+      {/* Main Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
 
-            {/* Service Form */}
-            <form onSubmit={handleServiceSubmit} className="p-6 space-y-4">
-              <h3 className="text-md font-bold text-[#0F172A] uppercase tracking-wide">
-                {activeTab.replace('_', ' ').toUpperCase()} Form
-              </h3>
+        {/* Form Area */}
+        <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">
-                    {activeTab === 'flights' || activeTab === 'hotels' ? 'Traveler Name / Hotel City' : 
-                     activeTab === 'recharge' || activeTab === 'dth' ? 'Mobile / Customer ID' : 
-                     activeTab === 'electricity' ? 'Consumer Number' : 'FASTag Vehicle Number'} *
-                  </label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={form.field1} 
-                    onChange={e => setForm({ ...form, field1: e.target.value })} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-1">
-                    {activeTab === 'flights' ? 'Destination Code' : 
-                     activeTab === 'recharge' || activeTab === 'dth' ? 'Operator / Circle' : 
-                     activeTab === 'electricity' ? 'State Electricity Board' : 'Optional details'}
-                  </label>
-                  <input 
-                    type="text" 
-                    value={form.field2} 
-                    onChange={e => setForm({ ...form, field2: e.target.value })} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20" 
-                  />
-                </div>
-              </div>
+          {/* Tab strip */}
+          <div style={{
+            padding: '14px 18px', background: C.bgSecondary,
+            borderBottom: `1px solid ${C.border}`,
+            display: 'flex', flexWrap: 'wrap', gap: '6px'
+          }}>
+            {allTabs.map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setForm({ field1: '', field2: '', amount: '' }); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 14px', borderRadius: '10px', fontSize: '12px',
+                    fontWeight: 700, border: 'none', cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.card,
+                    color: isActive ? '#fff' : C.textMid,
+                    boxShadow: isActive ? `0 4px 14px ${C.primary}30` : 'none',
+                    ...(isActive ? {} : { border: `1px solid ${C.border}` })
+                  }}
+                >
+                  <Icon size={14} /> {item.label}
+                </button>
+              );
+            })}
+          </div>
 
+          {/* Form */}
+          <form onSubmit={handleServiceSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
+              {activeTab.replace('_', ' ').toUpperCase()} Form
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
-                <label className="block text-sm font-bold text-slate-600 mb-1">Transaction Amount (₹) *</label>
-                <input 
-                  type="number" 
-                  required 
-                  value={form.amount} 
-                  onChange={e => setForm({ ...form, amount: e.target.value })} 
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20" 
+                <label style={S.label}>{getLabel1()} *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.field1}
+                  onChange={e => setForm({ ...form, field1: e.target.value })}
+                  style={S.input}
                 />
               </div>
+              <div>
+                <label style={S.label}>{getLabel2()}</label>
+                <input
+                  type="text"
+                  value={form.field2}
+                  onChange={e => setForm({ ...form, field2: e.target.value })}
+                  style={S.input}
+                />
+              </div>
+            </div>
 
-              <button type="submit" className="bg-[#0D5CAB] hover:bg-[#083E7A] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all">
-                Submit Transaction
-              </button>
-            </form>
+            <div>
+              <label style={S.label}>Transaction Amount (₹) *</label>
+              <input
+                type="number"
+                required
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                style={S.input}
+              />
+            </div>
 
-          </div>
+            <button type="submit" style={{
+              ...S.btn('primary'), padding: '12px 24px', fontSize: '14px',
+              border: 'none', borderRadius: '10px', cursor: 'pointer', alignSelf: 'flex-start'
+            }}>
+              Submit Transaction
+            </button>
+          </form>
         </div>
 
-        {/* Right: History & Ledger */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-6">
-          <h3 className="text-lg font-bold text-[#0F172A] border-b border-slate-100 pb-3 flex items-center gap-2">
+        {/* Right: Ledger sidebar */}
+        <div style={{ ...S.card, padding: '24px', borderRadius: '16px', alignSelf: 'flex-start' }}>
+          <h3 style={{
+            fontSize: '16px', fontWeight: 700, color: C.text, margin: '0 0 16px',
+            paddingBottom: '12px', borderBottom: `1px solid ${C.border}`,
+            display: 'flex', alignItems: 'center', gap: 8
+          }}>
             <MdHistory /> Utility Ledger
           </h3>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total volume</span>
-                <span className="text-lg font-bold text-[#0F172A]">₹{transactions.reduce((acc, t) => acc + parseInt(t.amount.replace('₹', '')), 0).toLocaleString('en-IN')}</span>
-              </div>
-              <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Commission</span>
-                <span className="text-lg font-bold text-green-600">₹{transactions.reduce((acc, t) => acc + parseFloat(t.commission.replace('₹', '')), 0).toFixed(2)}</span>
-              </div>
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+            <div style={{
+              background: C.bgSecondary, border: `1px solid ${C.border}`,
+              padding: '12px', borderRadius: '12px', textAlign: 'center'
+            }}>
+              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>Total Volume</span>
+              <span style={{ fontSize: '17px', fontWeight: 800, color: C.text }}>
+                ₹{transactions.reduce((acc, t) => acc + parseInt(t.amount.replace('₹', '')), 0).toLocaleString('en-IN')}
+              </span>
             </div>
-
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {transactions.map(t => (
-                <div key={t.id} className="text-xs p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center">
-                  <div>
-                    <span className="font-bold text-[#0F172A]">{t.service}</span>
-                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{t.id} • {t.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-[#0F172A]">{t.amount}</span>
-                    <p className="text-[10px] text-green-600 font-bold mt-0.5">+{t.commission}</p>
-                  </div>
-                </div>
-              ))}
+            <div style={{
+              background: C.bgSecondary, border: `1px solid ${C.border}`,
+              padding: '12px', borderRadius: '12px', textAlign: 'center'
+            }}>
+              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>Commission</span>
+              <span style={{ fontSize: '17px', fontWeight: 800, color: C.green }}>
+                ₹{transactions.reduce((acc, t) => acc + parseFloat(t.commission.replace('₹', '')), 0).toFixed(2)}
+              </span>
             </div>
           </div>
+
+          {/* Transaction list */}
+          <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {transactions.map(t => (
+              <div key={t.id} style={{
+                fontSize: '12px', padding: '12px', background: C.bgSecondary,
+                border: `1px solid ${C.border}`, borderRadius: '12px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div>
+                  <span style={{ fontWeight: 700, color: C.text }}>{t.service}</span>
+                  <p style={{ fontSize: '10px', color: C.textLight, fontFamily: 'monospace', margin: '3px 0 0' }}>{t.id} • {t.date}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontWeight: 700, color: C.text }}>{t.amount}</span>
+                  <p style={{ fontSize: '10px', color: C.green, fontWeight: 700, margin: '3px 0 0' }}>+{t.commission}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-
       </div>
-
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
-  MdSupportAgent, MdAdd, MdSearch, MdFilterList, 
+  MdSupportAgent, MdAdd, MdSearch, 
   MdCheckCircle, MdPendingActions, MdClose, MdSend,
   MdOutlineForum
 } from 'react-icons/md';
@@ -12,11 +13,23 @@ const MOCK_TICKETS = [
 ];
 
 export default function PartnerSupport() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = width < 992;
 
   const filteredTickets = MOCK_TICKETS.filter(t => {
     const matchSearch = t.subject.toLowerCase().includes(searchTerm.toLowerCase()) || t.id.toLowerCase().includes(searchTerm.toLowerCase());
@@ -26,172 +39,290 @@ export default function PartnerSupport() {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'open': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'open': return C.gold;
       case 'resolved':
-      case 'closed': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
+      case 'closed': return C.green;
+      default: return C.textLight;
     }
   };
 
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
+    gap: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    height: isMobile ? 'auto' : 'calc(100vh - 160px)',
+    paddingBottom: '40px'
+  };
+
+  const listPaneStyle = {
+    width: isMobile ? '100%' : '340px',
+    background: C.card,
+    borderRadius: '16px',
+    border: `1px solid ${C.border}`,
+    display: 'flex',
+    flexDirection: 'column',
+    height: isMobile ? '380px' : '100%',
+    overflow: 'hidden',
+    flexShrink: 0
+  };
+
+  const chatPaneStyle = {
+    flex: 1,
+    minWidth: 0,
+    background: C.card,
+    borderRadius: '16px',
+    border: `1px solid ${C.border}`,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    height: isMobile ? '500px' : '100%',
+    position: 'relative'
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto h-[calc(100vh-8rem)] pb-6">
+    <div style={containerStyle}>
       
-      {/* Left Column: Ticket List */}
-      <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden shrink-0">
-        <div className="p-5 border-b border-slate-100 space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <MdSupportAgent className="text-[#0D5CAB]" /> Helpdesk
+      {/* ═══ LEFT COLUMN: TICKET LIST ═══ */}
+      <div style={listPaneStyle}>
+        <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MdSupportAgent style={{ color: C.primary }} /> Helpdesk
             </h2>
             <button 
               onClick={() => setIsNewTicketModalOpen(true)}
-              className="bg-[#0D5CAB] hover:bg-[#083E7A] text-white p-2 rounded-xl shadow-sm transition-colors"
+              style={{
+                background: C.primary, border: 'none', color: '#fff',
+                width: 36, height: 36, borderRadius: '10px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                boxShadow: `0 4px 12px ${C.primary}30`
+              }}
               title="Create New Ticket"
             >
               <MdAdd size={20} />
             </button>
           </div>
           
-          <div className="relative">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <div style={{ position: 'relative' }}>
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
             <input 
               type="text" 
               placeholder="Search ticket ID or subject..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] text-sm font-medium"
+              style={{ ...S.input, paddingLeft: '36px', paddingTop: '10px', paddingBottom: '10px' }}
             />
           </div>
 
-          <div className="flex gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button onClick={() => setActiveTab('all')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeTab === 'all' ? 'bg-white text-[#0D5CAB] shadow-sm' : 'text-slate-500'}`}>All</button>
-            <button onClick={() => setActiveTab('open')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeTab === 'open' ? 'bg-white text-[#0D5CAB] shadow-sm' : 'text-slate-500'}`}>Open</button>
-            <button onClick={() => setActiveTab('resolved')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeTab === 'resolved' ? 'bg-white text-[#0D5CAB] shadow-sm' : 'text-slate-500'}`}>Closed</button>
+          <div style={{
+            display: 'flex', gap: '2px', background: C.bgSecondary,
+            padding: '3px', borderRadius: '10px', border: `1px solid ${C.border}`
+          }}>
+            {['all', 'open', 'resolved'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  flex: 1, padding: '6px 0', fontSize: '11px', fontWeight: 700,
+                  border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  background: activeTab === tab ? C.card : 'transparent',
+                  color: activeTab === tab ? C.primary : C.textMid,
+                  boxShadow: activeTab === tab ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tab.toUpperCase()}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filteredTickets.length === 0 ? (
-            <div className="text-center py-10 px-4 text-slate-500">
-              <MdOutlineForum className="mx-auto text-4xl text-slate-300 mb-2" />
-              <p className="font-medium">No tickets found.</p>
+            <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
+              <MdOutlineForum size={36} style={{ color: C.border, marginBottom: '8px' }} />
+              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>No tickets found.</p>
             </div>
           ) : (
-            filteredTickets.map(tkt => (
-              <div 
-                key={tkt.id}
-                onClick={() => setSelectedTicket(tkt)}
-                className={`p-4 rounded-xl cursor-pointer border transition-all ${
-                  selectedTicket?.id === tkt.id 
-                  ? 'bg-blue-50 border-[#0D5CAB]/30 shadow-sm' 
-                  : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs font-mono font-bold text-slate-500">{tkt.id}</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getStatusColor(tkt.status)}`}>
-                    {tkt.status}
-                  </span>
+            filteredTickets.map(tkt => {
+              const isSelected = selectedTicket?.id === tkt.id;
+              return (
+                <div 
+                  key={tkt.id}
+                  onClick={() => setSelectedTicket(tkt)}
+                  style={{
+                    padding: '14px', borderRadius: '12px', cursor: 'pointer',
+                    border: `1px solid ${isSelected ? C.primary : C.border}`,
+                    background: isSelected ? `${C.primary}12` : C.card,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: C.textLight }}>{tkt.id}</span>
+                    <span style={S.tag(getStatusColor(tkt.status))}>{tkt.status}</span>
+                  </div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: C.text, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {tkt.subject}
+                  </h4>
+                  <p style={{ fontSize: '11px', color: C.textLight, margin: '8px 0 0', fontWeight: 500 }}>{tkt.date}</p>
                 </div>
-                <h4 className="font-bold text-[#0F172A] text-sm line-clamp-2">{tkt.subject}</h4>
-                <p className="text-xs text-slate-400 mt-2 font-medium">{tkt.date}</p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Right Column: Ticket Detail View */}
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full relative">
+      {/* ═══ RIGHT COLUMN: TICKET DETAIL VIEW ═══ */}
+      <div style={chatPaneStyle}>
         {selectedTicket ? (
           <>
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
+            {/* Detail Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
+              background: C.bgSecondary, display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', flexShrink: 0
+            }}>
               <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-lg font-bold text-[#0F172A]">{selectedTicket.subject}</h2>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getStatusColor(selectedTicket.status)}`}>
-                    {selectedTicket.status}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedTicket.subject}</h2>
+                  <span style={S.tag(getStatusColor(selectedTicket.status))}>{selectedTicket.status}</span>
                 </div>
-                <p className="text-sm font-mono text-slate-500">{selectedTicket.id} • Created on {selectedTicket.date}</p>
+                <p style={{ fontSize: '12px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0 0' }}>
+                  {selectedTicket.id} • Created on {selectedTicket.date}
+                </p>
               </div>
-              <button className="text-slate-400 hover:text-[#0F172A] p-2 bg-white rounded-xl shadow-sm border border-slate-200 transition-colors">
+              <button style={{
+                background: C.card, border: `1px solid ${C.border}`, color: C.green,
+                width: 36, height: 36, borderRadius: '10px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+              }}>
                 <MdCheckCircle size={20} title="Mark as Resolved" />
               </button>
             </div>
 
             {/* Chat Thread */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/50">
-              {selectedTicket.messages.map((msg, idx) => (
-                <div key={idx} className={`flex flex-col ${msg.sender === 'partner' ? 'items-end' : 'items-start'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {msg.sender === 'partner' ? 'You' : 'Support Team'}
+            <div style={{
+              flex: 1, overflowY: 'auto', padding: '20px',
+              background: C.bgSecondary, display: 'flex', flexDirection: 'column', gap: '20px'
+            }}>
+              {selectedTicket.messages.map((msg, idx) => {
+                const isPartner = msg.sender === 'partner';
+                return (
+                  <div key={idx} style={{
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: isPartner ? 'flex-end' : 'flex-start'
+                  }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>
+                      {isPartner ? 'You' : 'Support Team'}
                     </span>
+                    <div style={{
+                      padding: '12px 16px', borderRadius: '16px', maxWidth: '80%',
+                      fontSize: '13px', lineHeight: 1.5,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                      background: isPartner ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.card,
+                      color: isPartner ? '#fff' : C.text,
+                      border: isPartner ? 'none' : `1px solid ${C.border}`,
+                      borderTopRightRadius: isPartner ? '2px' : '16px',
+                      borderTopLeftRadius: isPartner ? '16px' : '2px',
+                    }}>
+                      {msg.text}
+                    </div>
                   </div>
-                  <div className={`p-4 rounded-2xl max-w-[80%] text-sm shadow-sm ${
-                    msg.sender === 'partner' 
-                    ? 'bg-[#0D5CAB] text-white rounded-tr-sm' 
-                    : 'bg-white border border-slate-200 text-[#0F172A] rounded-tl-sm'
-                  }`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Reply Box */}
+            {/* Reply Input Box */}
             {selectedTicket.status !== 'closed' && selectedTicket.status !== 'resolved' ? (
-              <div className="p-4 border-t border-slate-200 bg-white shrink-0">
-                <div className="relative">
+              <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
+                <div style={{ position: 'relative' }}>
                   <textarea 
-                    rows="3"
+                    rows="2"
                     placeholder="Type your reply here..."
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    className="w-full p-4 pr-14 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] resize-none text-sm font-medium"
-                  ></textarea>
+                    style={{ ...S.input, paddingRight: '52px', resize: 'none', borderRadius: '12px' }}
+                  />
                   <button 
-                    className="absolute right-3 bottom-3 p-2 bg-[#0D5CAB] text-white rounded-lg shadow-sm hover:bg-[#083E7A] transition-colors disabled:opacity-50"
                     disabled={!replyText.trim()}
+                    style={{
+                      position: 'absolute', right: '10px', bottom: '10px',
+                      width: 36, height: 36, borderRadius: '8px', border: 'none',
+                      background: C.primary, color: '#fff', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      opacity: replyText.trim() ? 1 : 0.5
+                    }}
                   >
                     <MdSend size={18} />
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="p-4 border-t border-slate-200 bg-slate-50 text-center text-sm font-bold text-slate-400 shrink-0">
+              <div style={{
+                padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bgSecondary,
+                textAlign: 'center', fontSize: '13px', fontWeight: 700, color: C.textLight, flexShrink: 0
+              }}>
                 This ticket has been resolved and is closed to new replies.
               </div>
             )}
           </>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 text-center p-6">
-            <div className="w-20 h-20 bg-white border border-slate-200 text-slate-300 rounded-full flex items-center justify-center mb-4 shadow-sm">
-              <MdSupportAgent size={40} />
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', height: '100%', minHeight: '300px', textAlign: 'center', padding: '24px'
+          }}>
+            <div style={{
+              width: 72, height: 72, bg: C.bgSecondary, border: `1px solid ${C.border}`,
+              color: C.textLight, borderRadius: '50%', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', marginBottom: '16px', background: C.bgSecondary
+            }}>
+              <MdSupportAgent size={36} />
             </div>
-            <h2 className="text-xl font-bold text-[#0F172A] mb-2">How can we help?</h2>
-            <p className="text-slate-500 max-w-sm">Select a ticket from the left to view the conversation, or create a new ticket to get assistance from our team.</p>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>How can we help?</h2>
+            <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '340px', margin: 0 }}>
+              Select a ticket from the left to view the conversation, or create a new ticket to get assistance from our team.
+            </p>
           </div>
         )}
       </div>
 
       {/* New Ticket Modal */}
       {isNewTicketModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden relative flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-[#0F172A]">Create New Ticket</h3>
-              <button onClick={() => setIsNewTicketModalOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, borderRadius: '20px', width: '100%', maxWidth: '440px',
+            overflow: 'hidden', border: `1px solid ${C.border}`,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column'
+          }}>
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
+              background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Create New Ticket</h3>
+              <button 
+                onClick={() => setIsNewTicketModalOpen(false)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
                 <MdClose size={20} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">Category *</label>
-                <select className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium">
+                <label style={S.label}>Category *</label>
+                <select style={{
+                  ...S.input, appearance: 'auto', backgroundImage: 'none'
+                }}>
                   <option>Commission & Payouts</option>
                   <option>Lead Status & Tracking</option>
                   <option>KYC & Profile Update</option>
@@ -201,21 +332,34 @@ export default function PartnerSupport() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">Subject *</label>
-                <input type="text" placeholder="Brief summary of the issue" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium" />
+                <label style={S.label}>Subject *</label>
+                <input type="text" placeholder="Brief summary of the issue" style={S.input} />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">Description *</label>
-                <textarea rows="4" placeholder="Provide details about your issue..." className="w-full p-4 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium resize-none"></textarea>
+                <label style={S.label}>Description *</label>
+                <textarea rows="3" placeholder="Provide details about your issue..." style={{ ...S.input, resize: 'none' }} />
               </div>
             </div>
 
-            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3">
-              <button onClick={() => setIsNewTicketModalOpen(false)} className="flex-1 py-3 rounded-xl font-bold text-[#64748B] bg-white border border-slate-200 hover:bg-slate-100 transition-colors">
+            <div style={{
+              padding: '16px 20px', borderTop: `1px solid ${C.border}`,
+              background: C.bgSecondary, display: 'flex', gap: '10px'
+            }}>
+              <button 
+                onClick={() => setIsNewTicketModalOpen(false)}
+                style={{
+                  ...S.btn('outline'), flex: 1, padding: '10px', fontSize: '14px', borderRadius: '10px'
+                }}
+              >
                 Cancel
               </button>
-              <button onClick={() => setIsNewTicketModalOpen(false)} className="flex-[2] py-3 bg-[#0D5CAB] text-white rounded-xl font-bold shadow-md hover:bg-[#083E7A] transition-colors">
+              <button 
+                onClick={() => setIsNewTicketModalOpen(false)}
+                style={{
+                  ...S.btn('primary'), flex: 2, padding: '10px', fontSize: '14px', border: 'none', borderRadius: '10px'
+                }}
+              >
                 Submit Ticket
               </button>
             </div>

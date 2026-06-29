@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
-import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../api/auth.api.js";
+import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
 
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 

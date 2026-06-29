@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 

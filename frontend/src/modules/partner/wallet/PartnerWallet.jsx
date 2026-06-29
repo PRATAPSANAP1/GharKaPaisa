@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useWalletStore } from '../../../store/walletStore';
-import api from '../../../api/api';
+import { useWalletStore } from '../../../app/store/walletStore';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import { MdFileDownload, MdPictureAsPdf } from 'react-icons/md';
 
 const PartnerWallet = () => {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const fetchWallet = useWalletStore((state) => state.fetchWallet);
   const fetchTransactions = useWalletStore((state) => state.fetchTransactions);
   const wallet = useWalletStore((state) => state.wallet);
@@ -76,55 +80,61 @@ const PartnerWallet = () => {
     window.print();
   };
 
+  // Stat card helper
+  const statCards = [
+    { label: 'Pending Commission', value: wallet?.hold_balance, color: C.gold, hint: 'Awaiting bank confirmation / disbursal' },
+    { label: 'Withdrawable Wallet', value: wallet?.available_balance, color: C.green, hint: 'Ready to be transferred to your bank' },
+    { label: 'Total Earned', value: wallet?.total_earned, color: C.primary, hint: 'Lifetime earnings on GharKaPaisa' },
+  ];
+
+  const thStyle = {
+    padding: '12px 18px', fontSize: '11px', fontWeight: 700,
+    color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px',
+    textAlign: 'left', whiteSpace: 'nowrap'
+  };
+
+  const tdStyle = {
+    padding: '14px 18px', fontSize: '14px', color: C.text,
+    borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap'
+  };
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">My Wallet</h2>
-          <p className="text-sm text-gray-500">Track your earnings and request withdrawals</p>
-        </div>
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+
+      {/* Header */}
+      <div>
+        <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>My Wallet</h2>
+        <p style={{ fontSize: '14px', color: C.textLight, margin: 0 }}>Track your earnings and request withdrawals</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-yellow-600">
-            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path></svg>
+      {/* Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+        {statCards.map((stat, i) => (
+          <div key={i} style={{
+            ...S.card, padding: '24px', borderRadius: '16px', position: 'relative', overflow: 'hidden'
+          }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>
+              {stat.label}
+            </h3>
+            <p style={{ fontSize: '28px', fontWeight: 800, color: stat.color, margin: '0 0 8px' }}>
+              ₹{parseFloat(stat.value || 0).toLocaleString('en-IN')}
+            </p>
+            <p style={{ fontSize: '12px', color: C.textLight, margin: 0 }}>{stat.hint}</p>
           </div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Pending Commission</h3>
-          <p className="text-3xl font-bold text-yellow-600 mt-2">₹{parseFloat(wallet?.hold_balance || 0).toLocaleString('en-IN')}</p>
-          <p className="text-xs text-gray-400 mt-2">Awaiting bank confirmation / disbursal</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-green-600">
-            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
-          </div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Withdrawable Wallet</h3>
-          <p className="text-3xl font-bold text-green-600 mt-2">₹{parseFloat(wallet?.available_balance || 0).toLocaleString('en-IN')}</p>
-          <p className="text-xs text-gray-400 mt-2">Ready to be transferred to your bank</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-blue-600">
-            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path></svg>
-          </div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Earned</h3>
-          <p className="text-3xl font-bold text-blue-600 mt-2">₹{parseFloat(wallet?.total_earned || 0).toLocaleString('en-IN')}</p>
-          <p className="text-xs text-gray-400 mt-2">Lifetime earnings on GharKaPaisa</p>
-        </div>
+        ))}
       </div>
 
-      {/* Withdrawal Action */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Request Bank Transfer</h3>
-        <form onSubmit={handleWithdraw} className="flex gap-4 items-end">
-          <div className="flex-1 max-w-xs">
-            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Amount to Withdraw</label>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-gray-500 font-medium">₹</span>
+      {/* Withdrawal Form */}
+      <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
+        <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 16px' }}>Request Bank Transfer</h3>
+        <form onSubmit={handleWithdraw} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px', maxWidth: '320px' }}>
+            <label style={S.label}>Amount to Withdraw</label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textMid, fontWeight: 600 }}>₹</span>
               <input 
                 type="number" 
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                style={{ ...S.input, paddingLeft: '32px' }}
                 placeholder="Enter amount"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -137,83 +147,100 @@ const PartnerWallet = () => {
           <button 
             type="submit" 
             disabled={requesting || !wallet?.available_balance || wallet.available_balance < 100}
-            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{
+              ...S.btn('primary'), padding: '12px 28px', fontSize: '14px',
+              border: 'none', borderRadius: '10px',
+              cursor: requesting ? 'not-allowed' : 'pointer',
+              opacity: (requesting || !wallet?.available_balance || wallet.available_balance < 100) ? 0.5 : 1
+            }}
           >
             {requesting ? 'Processing...' : 'Withdraw Funds'}
           </button>
         </form>
-        <p className="text-xs text-gray-500 mt-2">Funds are transferred to your registered bank account via NEFT/IMPS.</p>
+        <p style={{ fontSize: '12px', color: C.textLight, margin: '10px 0 0' }}>
+          Funds are transferred to your registered bank account via NEFT/IMPS.
+        </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mt-8 overflow-hidden">
-        <div className="p-5 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/50">
-          <h3 className="text-lg font-semibold text-gray-800">Commission Ledger</h3>
-          <div className="flex gap-3">
-            <button 
+      {/* Commission Ledger Table */}
+      <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{
+          padding: '18px 24px', borderBottom: `1px solid ${C.border}`,
+          background: C.bgSecondary, display: 'flex', flexWrap: 'wrap',
+          justifyContent: 'space-between', alignItems: 'center', gap: '12px'
+        }}>
+          <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: 0 }}>Commission Ledger</h3>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
               onClick={handleExportCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              style={{
+                ...S.btn('outline'), padding: '8px 16px', fontSize: '13px',
+                display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '10px'
+              }}
             >
-              <MdFileDownload size={18} className="text-green-600" /> Export CSV
+              <MdFileDownload size={16} style={{ color: C.green }} /> Export CSV
             </button>
-            <button 
+            <button
               onClick={handleExportPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+              style={{
+                ...S.btn('outline'), padding: '8px 16px', fontSize: '13px',
+                display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '10px'
+              }}
             >
-              <MdPictureAsPdf size={18} className="text-red-500" /> Save as PDF
+              <MdPictureAsPdf size={16} style={{ color: C.red }} /> Save as PDF
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        <div style={{ overflowX: 'auto' }}>
           {transactions.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <div style={{ padding: '48px 24px', textAlign: 'center', color: C.textLight }}>
               No commission or withdrawal records found.
             </div>
           ) : (
-            <table className="w-full text-left text-sm text-gray-600 whitespace-nowrap">
-              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
-                <tr>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Date</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Reference</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Customer</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Product & Bank</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Type</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Amount</th>
-                  <th className="px-5 py-3 font-semibold uppercase tracking-wider text-xs">Status</th>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.bgSecondary }}>
+                  <th style={thStyle}>Date</th>
+                  <th style={thStyle}>Reference</th>
+                  <th style={thStyle}>Customer</th>
+                  <th style={thStyle}>Product & Bank</th>
+                  <th style={thStyle}>Type</th>
+                  <th style={thStyle}>Amount</th>
+                  <th style={thStyle}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {transactions.map((t, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-4">{new Date(t.created_at).toLocaleDateString()}</td>
-                    <td className="px-5 py-4 font-medium text-gray-800">
+                  <tr key={idx}>
+                    <td style={tdStyle}>{new Date(t.created_at).toLocaleDateString()}</td>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>
                       {t.app_number || t.reference_id || 'N/A'}
                     </td>
-                    <td className="px-5 py-4">
-                      {t.customer_name || '—'}
-                    </td>
-                    <td className="px-5 py-4">
+                    <td style={tdStyle}>{t.customer_name || '—'}</td>
+                    <td style={tdStyle}>
                       {t.product_name ? (
                         <div>
-                          <div className="font-medium text-gray-800">{t.product_name}</div>
-                          <div className="text-xs text-gray-500">{t.bank_code}</div>
+                          <div style={{ fontWeight: 600, color: C.text }}>{t.product_name}</div>
+                          <div style={{ fontSize: '12px', color: C.textLight }}>{t.bank_code}</div>
                         </div>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span style={{ color: C.textLight }}>—</span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${t.type === 'credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <td style={tdStyle}>
+                      <span style={S.tag(t.type === 'credit' ? C.green : C.red)}>
                         {t.type}
                       </span>
                     </td>
-                    <td className={`px-5 py-4 font-bold ${t.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                    <td style={{ ...tdStyle, fontWeight: 700, color: t.type === 'credit' ? C.green : C.red }}>
                       {t.type === 'credit' ? '+' : '-'}₹{parseFloat(t.amount).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-5 py-4">
-                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full 
-                        ${(t.status === 'approved' || t.status === 'processed') ? 'bg-green-100 text-green-800' : 
-                          t.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    <td style={tdStyle}>
+                      <span style={S.tag(
+                        (t.status === 'approved' || t.status === 'processed') ? C.green :
+                        t.status === 'rejected' ? C.red : C.gold
+                      )}>
                         {t.status}
                       </span>
                     </td>
@@ -224,6 +251,8 @@ const PartnerWallet = () => {
           )}
         </div>
       </div>
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 };

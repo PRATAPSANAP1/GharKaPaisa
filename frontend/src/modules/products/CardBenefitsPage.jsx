@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getCardDetails } from '../../components/Home/CreditCards/CardDetailsData';
+import { getCardDetails } from '../home/components/CreditCards/CardDetailsData';
 import { 
   FaArrowLeft, FaShareAlt, FaGift, FaCheckCircle, 
   FaRegFileAlt, FaVideo, FaInfoCircle, FaChevronDown, FaChevronUp,
   FaRupeeSign, FaBolt, FaStar
 } from 'react-icons/fa';
-import '../../pages/Product/CardBenefitsPage.css';
+import './CardBenefitsPage.css';
 
 export default function CardBenefitsPage() {
   const { id } = useParams();

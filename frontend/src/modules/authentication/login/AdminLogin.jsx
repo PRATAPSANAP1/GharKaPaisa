@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../../store/authStore";
+import { useAuthStore } from "../../../app/store/authStore";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
@@ -12,7 +12,7 @@ import {
   getMe,
   loginWithMsg91,
   lookupUser,
-} from "../../../api/auth.api.js";
+} from "../../../services/auth.api.js";
 
 // ── Toast Notification Component ──────────────────────────────────────────────
 function Toast({ message, type = "success", onClose }) {

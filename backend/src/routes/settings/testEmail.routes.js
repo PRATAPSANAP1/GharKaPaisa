@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { sendEmail } = require("../../services/auth/email.service.js");
+const { sendEmail } = require("../../services/email/email.service.js");
 
 router.get("/send", async (req, res) => {
   try {

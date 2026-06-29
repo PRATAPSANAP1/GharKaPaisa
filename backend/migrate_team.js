@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { query } = require('./src/config/db');
+const { query } = require('./src/config/database');
 
 async function migrate() {
   try {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdCampaign, MdDownload, MdShare, MdImage, 
   MdOutlineOndemandVideo, MdOutlineMenuBook
@@ -14,6 +15,9 @@ const MATERIALS = [
 ];
 
 export default function PartnerMarketing() {
+  const { C } = useTheme();
+  const S = makeS(C);
+  
   const [filter, setFilter] = useState('All');
   
   const categories = ['All', 'Credit Cards', 'Loans', 'Brochure', 'Recruitment'];
@@ -22,44 +26,73 @@ export default function PartnerMarketing() {
 
   const getIcon = (type) => {
     switch(type) {
-      case 'Image': return <MdImage size={40} className="text-[#0D5CAB]" />;
-      case 'Video': return <MdOutlineOndemandVideo size={40} className="text-red-500" />;
-      case 'Document': return <MdOutlineMenuBook size={40} className="text-amber-500" />;
-      default: return <MdImage size={40} className="text-slate-400" />;
+      case 'Image': return <MdImage size={40} style={{ color: C.primary }} />;
+      case 'Video': return <MdOutlineOndemandVideo size={40} style={{ color: C.red }} />;
+      case 'Document': return <MdOutlineMenuBook size={40} style={{ color: C.gold }} />;
+      default: return <MdImage size={40} style={{ color: C.textLight }} />;
     }
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-10">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#0F172A] to-[#1E293B] rounded-2xl p-8 shadow-md text-white relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-[#0D5CAB] opacity-20 rounded-full blur-3xl -mr-20 -mt-20"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
-              <MdCampaign size={32} className="text-[#38BDF8]" />
+      <div style={{
+        background: `linear-gradient(135deg, ${C.navyMid || C.bgSecondary}, ${C.navy || C.bg})`,
+        borderRadius: '16px',
+        padding: '28px',
+        color: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
+        border: `1px solid ${C.border}`
+      }}>
+        <div style={{
+          position: 'absolute', right: 0, top: 0, width: 200, height: 200,
+          background: C.primary, opacity: 0.15, borderRadius: '50%', filter: 'blur(60px)',
+          marginRight: '-40px', marginTop: '-40px'
+        }} />
+        <div style={{
+          position: 'relative', zIndex: 1, display: 'flex', flexWrap: 'wrap',
+          justifyContent: 'space-between', alignItems: 'center', gap: '20px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: 56, height: 56, background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <MdCampaign size={28} style={{ color: C.greenLight || C.teal }} />
             </div>
             <div>
-              <h2 className="text-3xl font-bold mb-1">Marketing Center</h2>
-              <p className="text-slate-300 font-medium max-w-lg">Download official, high-converting promotional materials to share on WhatsApp, Instagram, and Facebook.</p>
+              <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>Marketing Center</h2>
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: 0, maxWidth: '480px' }}>
+                Download official, high-converting promotional materials to share on WhatsApp, Instagram, and Facebook.
+              </p>
             </div>
           </div>
-          <button className="whitespace-nowrap px-6 py-3 bg-[#0D5CAB] hover:bg-[#0EA5E9] text-white rounded-xl font-bold transition-colors shadow-sm">
+          <button style={{
+            ...S.btn('primary'), padding: '10px 20px', fontSize: '13px', border: 'none', borderRadius: '10px'
+          }}>
             Request Custom Banner
           </button>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
         {categories.map(cat => (
           <button
             key={cat}
             onClick={() => setFilter(cat)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${
-              filter === cat ? 'bg-[#0F172A] text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+            style={{
+              padding: '8px 16px', borderRadius: '10px', fontSize: '13px',
+              fontWeight: 700, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+              background: filter === cat ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.bgSecondary,
+              color: filter === cat ? '#fff' : C.textMid,
+              boxShadow: filter === cat ? `0 4px 14px ${C.primary}30` : 'none',
+              ...(filter === cat ? {} : { border: `1px solid ${C.border}` })
+            }}
           >
             {cat}
           </button>
@@ -67,31 +100,55 @@ export default function PartnerMarketing() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
         {filteredMaterials.map((item) => (
-          <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition-all flex flex-col">
+          <div key={item.id} style={{
+            ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease'
+          }}>
             
             {/* Preview Area */}
-            <div className="h-40 bg-slate-100 flex items-center justify-center relative overflow-hidden">
-              {/* Pattern Background for aesthetic */}
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+            <div style={{
+              height: '140px', background: C.bgSecondary, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', position: 'relative'
+            }}>
+              <div style={{
+                position: 'absolute', inset: 0, opacity: 0.05,
+                backgroundImage: `radial-gradient(${C.text} 1px, transparent 1px)`,
+                backgroundSize: '10px 10px'
+              }} />
               {getIcon(item.type)}
             </div>
 
             {/* Details */}
-            <div className="p-5 flex-1 flex flex-col">
-              <span className="text-[10px] font-bold text-[#0D5CAB] uppercase tracking-wider mb-1 bg-blue-50 self-start px-2 py-0.5 rounded">
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <span style={{
+                ...S.tag(C.primary), alignSelf: 'flex-start',
+                padding: '2px 8px', fontSize: '9px', marginBottom: '8px'
+              }}>
                 {item.category}
               </span>
-              <h3 className="font-bold text-[#0F172A] mb-1 line-clamp-2">{item.title}</h3>
-              <p className="text-xs font-medium text-slate-400 mb-4">{item.type} • {item.resolution}</p>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {item.title}
+              </h3>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>{item.type} • {item.resolution}</p>
 
-              <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                <button className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-slate-50 text-slate-600 hover:text-[#0F172A] hover:bg-slate-100 rounded-xl text-sm font-bold transition-colors">
-                  <MdShare size={18} /> Share
+              <div style={{
+                display: 'flex', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
+              }}>
+                <button style={{
+                  flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
+                  padding: '8px', background: C.bgSecondary, color: C.textMid,
+                  borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
+                }}>
+                  <MdShare size={16} /> Share
                 </button>
-                <button className="flex-1 flex justify-center items-center gap-1.5 py-2.5 bg-[#0D5CAB] text-white hover:bg-[#083E7A] rounded-xl text-sm font-bold shadow-sm transition-colors">
-                  <MdDownload size={18} /> Get
+                <button style={{
+                  flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
+                  padding: '8px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                  color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
+                }}>
+                  <MdDownload size={16} /> Get
                 </button>
               </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
-import { useSearchStore } from "../../store/searchStore";
+import { useSearchStore } from "../../app/store/searchStore";
 import { getApiV1Url } from "../../config/api";
 import {
   FaMobileAlt, FaBolt, FaMoneyBillWave, FaChevronRight, FaChevronLeft,
@@ -17,57 +17,57 @@ import {
 import * as FaIcons from "react-icons/fa";
 
 // Import modular data lists
-import { bankCardsDetails, ltfCards } from "../../components/Home/CreditCards/index";
-import { HDFCCardsPage } from "../../components/Home/CreditCards/HDFCCardsPage";
-import CardApplyVerificationModal from "../../components/Home/CreditCards/CardApplyVerificationModal";
-import { loansData } from "../../components/Home/Loans/index";
-import { insuranceData } from "../../components/Home/Insurance/index";
-import { servicesData } from "../../components/Home/Services/index";
-import { banksList, trustBanks } from "../../components/Home/banks/banksData";
-import { moneyTransfer } from "../../components/Home/MoneyTransfer/index";
-import { attractiveCategories } from "../../components/Home/AttractiveSections/index";
-import { popularCards } from "../../components/Home/PopularCards/index";
-import { travelTransitData } from "../../components/Home/TravelTransit/index";
-import CategoryCardItem from "../../components/Home/CategoryCardItem";
-import PersonalLoanPage from "../../components/Home/Loans/PersonalLoanPage";
+import { bankCardsDetails, ltfCards } from "./components/CreditCards/index";
+import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
+import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
+import { loansData } from "./components/Loans/index";
+import { insuranceData } from "./components/Insurance/index";
+import { servicesData } from "./components/Services/index";
+import { banksList, trustBanks } from "./components/banks/banksData";
+import { moneyTransfer } from "./components/MoneyTransfer/index";
+import { attractiveCategories } from "./components/AttractiveSections/index";
+import { popularCards } from "./components/PopularCards/index";
+import { travelTransitData } from "./components/TravelTransit/index";
+import CategoryCardItem from "./components/CategoryCardItem";
+import PersonalLoanPage from "./components/Loans/PersonalLoanPage";
 import "./Home.css";
 
 // Import banner images
-import ltfBanner from "../../components/Home/banner/lifetimefree card.png";
-import loanBanner from "../../components/Home/banner/loan.png";
-import insuranceBanner from "../../components/Home/banner/insurance.png";
-import emiBanner from "../../components/Home/banner/smart emi.png";
-import emiNewBanner from "../../components/Home/banner/emi.jpeg";
-import hdfcBanner from "../../components/Home/banner/hdfc pixel card.png";
-import offerBanner from "../../components/Home/banner/offerbanner.png";
+import ltfBanner from "./components/banner/lifetimefree card.png";
+import loanBanner from "./components/banner/loan.png";
+import insuranceBanner from "./components/banner/insurance.png";
+import emiBanner from "./components/banner/smart emi.png";
+import emiNewBanner from "./components/banner/emi.jpeg";
+import hdfcBanner from "./components/banner/hdfc pixel card.png";
+import offerBanner from "./components/banner/offerbanner.png";
 
 // Import bank card images
-import axisCardImg from "../../components/Home/CreditCards/image/AXIS.png";
-import sbiCardImg from "../../components/Home/CreditCards/image/SBI.png";
-import iciciCardImg from "../../components/Home/CreditCards/image/ICICI.png";
-import kotakCardImg from "../../components/Home/CreditCards/image/KOTAK.png";
-import yesBankCardImg from "../../components/Home/CreditCards/image/yes bank.png";
+import axisCardImg from "./components/CreditCards/image/AXIS.png";
+import sbiCardImg from "./components/CreditCards/image/SBI.png";
+import iciciCardImg from "./components/CreditCards/image/ICICI.png";
+import kotakCardImg from "./components/CreditCards/image/KOTAK.png";
+import yesBankCardImg from "./components/CreditCards/image/yes bank.png";
 
 // Import attractive section card images
-import ltfImg from "../../components/Home/AttractiveSections/lifetimefree.png";
-import cibilImg from "../../components/Home/AttractiveSections/cibilbased.png";
-import hdfcCcLoanImg from "../../components/Home/AttractiveSections/loan on credit card.png";
-import smartEmiImg from "../../components/Home/AttractiveSections/smart emi.png";
-import securedImg from "../../components/Home/AttractiveSections/fd backed.png";
-import upiImg from "../../components/Home/AttractiveSections/upi.png";
+import ltfImg from "./components/AttractiveSections/lifetimefree.png";
+import cibilImg from "./components/AttractiveSections/cibilbased.png";
+import hdfcCcLoanImg from "./components/AttractiveSections/loan on credit card.png";
+import smartEmiImg from "./components/AttractiveSections/smart emi.png";
+import securedImg from "./components/AttractiveSections/fd backed.png";
+import upiImg from "./components/AttractiveSections/upi.png";
 
 // Import money transfer images
-import toMobileImg from "../../components/Home/MoneyTransfer/tomobile.png";
-import rechargeImg from "../../components/Home/MoneyTransfer/recharge.png";
-import electricityImg from "../../components/Home/MoneyTransfer/electricitybill.png";
-import loanRepayImg from "../../components/Home/MoneyTransfer/loan.png";
-import fastagImg from "../../components/Home/MoneyTransfer/fastag.png";
+import toMobileImg from "./components/MoneyTransfer/tomobile.png";
+import rechargeImg from "./components/MoneyTransfer/recharge.png";
+import electricityImg from "./components/MoneyTransfer/electricitybill.png";
+import loanRepayImg from "./components/MoneyTransfer/loan.png";
+import fastagImg from "./components/MoneyTransfer/fastag.png";
 
 // Import travel transit images
-import flightImg from "../../components/Home/TravelTransit/flight.png";
-import trainImg from "../../components/Home/TravelTransit/train.png";
-import busImg from "../../components/Home/TravelTransit/bus.png";
-import hotelImg from "../../components/Home/TravelTransit/hotel.png";
+import flightImg from "./components/TravelTransit/flight.png";
+import trainImg from "./components/TravelTransit/train.png";
+import busImg from "./components/TravelTransit/bus.png";
+import hotelImg from "./components/TravelTransit/hotel.png";
 
 
 // ── Responsive Hook ──────────────────────────────────────────────

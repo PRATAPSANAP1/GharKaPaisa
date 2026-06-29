@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { pool } = require('./src/config/db');
+const { pool } = require('./src/config/database');
 const bcrypt = require('bcryptjs');
 
 async function createDeveloperAccount() {

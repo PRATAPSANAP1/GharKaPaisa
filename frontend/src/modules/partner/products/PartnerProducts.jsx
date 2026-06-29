@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../api/api';
+import api from '../../../services/api';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, MdAccessTime, MdInfoOutline } from 'react-icons/md';
 
 const CATEGORIES = [
@@ -15,6 +16,9 @@ const CATEGORIES = [
 const BANKS = ['All Banks', 'HDFC', 'SBI', 'Axis', 'ICICI', 'BOB', 'IndusInd', 'AU Small Finance', 'IDFC'];
 
 export default function PartnerProducts() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -94,228 +98,297 @@ export default function PartnerProducts() {
     return matchSearch && matchCategory && matchBank;
   });
 
+  const sectionLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' };
+
   return (
-    <div className="flex flex-col md:flex-row gap-6 max-w-7xl mx-auto pb-10">
+    <div style={{ display: 'flex', gap: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px', flexWrap: 'wrap' }}>
       
-      {/* SIDEBAR FILTERS */}
-      <aside className="w-full md:w-64 shrink-0 space-y-6">
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
-          <h3 className="font-bold text-[#0F172A] mb-4 flex items-center gap-2">
+      {/* ═══ SIDEBAR FILTERS ═══ */}
+      <aside style={{ width: '240px', flexShrink: 0 }}>
+        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
+          <h3 style={{ fontWeight: 700, color: C.text, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '15px' }}>
             <MdFilterList /> Filter Market
           </h3>
-          
-          <div className="space-y-6">
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Categories</h4>
-              <div className="flex flex-col gap-1">
-                {CATEGORIES.map(cat => (
-                  <button 
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={`text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      activeCategory === cat.id 
-                      ? 'bg-[#0D5CAB] text-white' 
-                      : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            <div className="w-full h-px bg-slate-100"></div>
+          {/* Categories */}
+          <p style={sectionLabel}>Categories</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+            {CATEGORIES.map(cat => {
+              const isActive = activeCategory === cat.id;
+              return (
+                <button 
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    textAlign: 'left', padding: '8px 12px', borderRadius: '10px',
+                    fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
+                    color: isActive ? '#fff' : C.textMid,
+                  }}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
 
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Filter by Bank</h4>
-              <div className="flex flex-col gap-1">
-                {BANKS.map(bank => (
-                  <label key={bank} className="flex items-center gap-3 px-2 py-1.5 cursor-pointer group">
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                      activeBank === bank ? 'bg-[#0D5CAB] border-[#0D5CAB]' : 'border-slate-300 group-hover:border-[#0D5CAB]'
-                    }`}>
-                      {activeBank === bank && <MdCheckCircle className="text-white text-xs" />}
-                    </div>
-                    <span className={`text-sm font-medium ${activeBank === bank ? 'text-[#0F172A]' : 'text-[#64748B]'}`}>{bank}</span>
-                    {/* Hidden actual radio input for accessibility */}
-                    <input 
-                      type="radio" 
-                      name="bankFilter" 
-                      value={bank}
-                      checked={activeBank === bank}
-                      onChange={(e) => setActiveBank(e.target.value)}
-                      className="hidden"
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
+          <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
-            <div className="w-full h-px bg-slate-100"></div>
+          {/* Banks */}
+          <p style={sectionLabel}>Filter by Bank</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+            {BANKS.map(bank => {
+              const isActive = activeBank === bank;
+              return (
+                <label key={bank} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '6px 8px', cursor: 'pointer'
+                }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '4px',
+                    border: `1.5px solid ${isActive ? C.primary : C.border}`,
+                    background: isActive ? C.primary : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s ease', flexShrink: 0
+                  }}>
+                    {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
+                  <input 
+                    type="radio" 
+                    name="bankFilter" 
+                    value={bank}
+                    checked={activeBank === bank}
+                    onChange={(e) => setActiveBank(e.target.value)}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              );
+            })}
+          </div>
 
-            <div>
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Quick Features</h4>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-lg border border-green-200 cursor-pointer hover:bg-green-100 transition-colors">High Approval</span>
-                <span className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors">Lifetime Free</span>
-                <span className="px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-bold rounded-lg border border-purple-200 cursor-pointer hover:bg-purple-100 transition-colors">Highest Payout</span>
-              </div>
-            </div>
+          <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
+          {/* Quick Features */}
+          <p style={sectionLabel}>Quick Features</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {[
+              { label: 'High Approval', color: C.green },
+              { label: 'Lifetime Free', color: C.gold },
+              { label: 'Highest Payout', color: C.primary }
+            ].map(f => (
+              <span key={f.label} style={{
+                ...S.tag(f.color), padding: '6px 10px', fontSize: '11px', cursor: 'pointer'
+              }}>
+                {f.label}
+              </span>
+            ))}
           </div>
         </div>
       </aside>
 
-      {/* MAIN CONTENT GRID */}
-      <main className="flex-1 space-y-6">
-        
-        {/* Header Search */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-4 justify-between">
-          <div className="relative flex-1 w-full max-w-md">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+      {/* ═══ MAIN CONTENT ═══ */}
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+        {/* Search Header */}
+        <div style={{
+          ...S.card, padding: '14px 20px', borderRadius: '14px',
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', justifyContent: 'space-between'
+        }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: '420px' }}>
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
             <input 
               type="text" 
               placeholder="Search products, cards, loans..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium"
+              style={{ ...S.input, paddingLeft: '38px' }}
             />
           </div>
-          <div className="text-sm font-bold text-slate-500 shrink-0">
-            Showing <span className="text-[#0F172A]">{filteredProducts.length}</span> Products
-          </div>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, flexShrink: 0 }}>
+            Showing <span style={{ color: C.text }}>{filteredProducts.length}</span> Products
+          </span>
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl font-medium">
+          <div style={{
+            padding: '14px 18px', background: `${C.red}12`, border: `1px solid ${C.red}25`,
+            color: C.red, borderRadius: '12px', fontWeight: 600, fontSize: '13px'
+          }}>
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-20">
-             <div className="animate-spin w-8 h-8 border-4 border-[#0D5CAB] border-t-transparent rounded-full"></div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
+            <span style={{
+              width: 32, height: 32, borderRadius: '50%',
+              border: `3px solid ${C.border}`, borderTopColor: C.primary,
+              animation: 'spin .8s linear infinite', display: 'inline-block'
+            }} />
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
-             <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
-               <MdSearch size={32} />
-             </div>
-             <h3 className="text-lg font-bold text-[#0F172A] mb-1">No products found</h3>
-             <p className="text-[#64748B]">Try adjusting your filters or search terms.</p>
-             <button 
-               onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
-               className="mt-6 text-[#0D5CAB] font-bold hover:underline"
-             >
-               Clear all filters
-             </button>
+          <div style={{
+            ...S.card, padding: '60px 24px', textAlign: 'center', borderRadius: '16px'
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', background: C.bgSecondary,
+              color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <MdSearch size={28} />
+            </div>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>No products found</h3>
+            <p style={{ color: C.textMid, margin: '0 0 20px' }}>Try adjusting your filters or search terms.</p>
+            <button
+              onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
+              style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
+            >
+              Clear all filters
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
             {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-[#0D5CAB]/30 transition-all flex flex-col justify-between group">
-                
+              <div key={product.id} style={{
+                ...S.card, padding: '20px', borderRadius: '16px',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                transition: 'all 0.2s ease'
+              }}>
                 <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="px-3 py-1 text-xs font-bold bg-blue-50 text-[#0D5CAB] rounded-lg uppercase tracking-wide">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <span style={S.tag(C.primary)}>
                       {product.category?.replace(/_/g, ' ') || 'Finance'}
                     </span>
-                    <span className="text-xs font-bold text-[#64748B] bg-slate-100 px-2.5 py-1 rounded-md uppercase tracking-wider">
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, color: C.textMid,
+                      background: C.bgSecondary, padding: '4px 10px', borderRadius: '6px',
+                      textTransform: 'uppercase', letterSpacing: '0.5px'
+                    }}>
                       {product.bank_code || 'BANK'}
                     </span>
                   </div>
-                  
-                  <div className="flex gap-4">
-                    {/* Placeholder image box */}
-                    <div className="w-16 h-16 shrink-0 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+
+                  <div style={{ display: 'flex', gap: '14px' }}>
+                    <div style={{
+                      width: 56, height: 56, flexShrink: 0, background: C.bgSecondary,
+                      borderRadius: '12px', border: `1px solid ${C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                    }}>
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-2" />
+                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }} />
                       ) : (
-                        <MdLocalOffer className="text-slate-300 text-2xl" />
+                        <MdLocalOffer style={{ color: C.textLight, fontSize: '24px' }} />
                       )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-[#0F172A] mb-1 group-hover:text-[#0D5CAB] transition-colors">{product.name}</h3>
-                      <p className="text-sm text-[#64748B] line-clamp-2">{product.description || 'No specific details provided for this product.'}</p>
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{product.name}</h3>
+                      <p style={{ fontSize: '13px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {product.description || 'No specific details provided for this product.'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Highlights Bar */}
-                  <div className="flex items-center gap-4 mt-5 mb-5 p-3 bg-[#F8FAFC] rounded-xl border border-slate-100">
-                    <div className="flex flex-col">
-                       <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1"><MdCheckCircle /> Approval</span>
-                       <span className="text-sm font-extrabold text-[#0F172A]">82%</span>
-                    </div>
-                    <div className="w-px h-8 bg-slate-200"></div>
-                    <div className="flex flex-col">
-                       <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1"><MdAccessTime /> Time</span>
-                       <span className="text-sm font-extrabold text-[#0F172A]">2 Days</span>
-                    </div>
-                    <div className="w-px h-8 bg-slate-200"></div>
-                    <div className="flex flex-col">
-                       <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1"><MdInfoOutline /> CIBIL</span>
-                       <span className="text-sm font-extrabold text-[#0F172A]">750+</span>
-                    </div>
+                  {/* Highlights */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '16px',
+                    margin: '16px 0', padding: '12px', background: C.bgSecondary,
+                    borderRadius: '12px', border: `1px solid ${C.border}`
+                  }}>
+                    {[
+                      { icon: MdCheckCircle, label: 'Approval', val: '82%' },
+                      { icon: MdAccessTime, label: 'Time', val: '2 Days' },
+                      { icon: MdInfoOutline, label: 'CIBIL', val: '750+' },
+                    ].map((h, i) => (
+                      <React.Fragment key={h.label}>
+                        {i > 0 && <div style={{ width: 1, height: 28, background: C.border }} />}
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <h.icon size={12} /> {h.label}
+                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{h.val}</span>
+                        </div>
+                      </React.Fragment>
+                    ))}
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 pt-4 flex justify-between items-center mt-auto">
+                {/* Footer */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                   <div>
-                    <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">Your Payout</span>
-                    <span className="text-xl font-extrabold text-[#22C55E]">₹{parseFloat(product.commission_value).toLocaleString('en-IN')}</span>
+                    <span style={{ fontSize: '10px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Your Payout</span>
+                    <span style={{ fontSize: '20px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-white text-[#0D5CAB] border border-[#0D5CAB]/30 font-bold rounded-xl hover:bg-blue-50 transition-colors text-sm shadow-sm hidden sm:block">
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={{
+                      ...S.btn('outline'), padding: '8px 16px', fontSize: '13px', borderRadius: '10px'
+                    }}>
                       Details
                     </button>
                     <button
                       onClick={() => handleApply(product)}
-                      className="px-6 py-2 bg-[#0D5CAB] text-white font-bold rounded-xl hover:bg-[#083E7A] transition-colors text-sm shadow-md"
+                      style={{
+                        ...S.btn('primary'), padding: '8px 20px', fontSize: '13px',
+                        border: 'none', borderRadius: '10px', cursor: 'pointer'
+                      }}
                     >
                       Apply Now
                     </button>
                   </div>
                 </div>
-
               </div>
             ))}
           </div>
         )}
       </main>
 
-      {/* Apply Lead Modal Overlay */}
+      {/* ═══ LEAD SUBMISSION MODAL ═══ */}
       {selectedProduct && (
-        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200 relative">
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, width: '100%', maxWidth: '440px',
+            borderRadius: '20px', overflow: 'hidden', border: `1px solid ${C.border}`,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative'
+          }}>
             <button
               onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-[#0F172A] transition bg-slate-50 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                position: 'absolute', top: '14px', right: '14px',
+                background: C.bgSecondary, border: 'none', cursor: 'pointer',
+                width: 32, height: 32, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: C.textMid, fontSize: '16px', fontWeight: 700
+              }}
             >
               ✕
             </button>
 
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-[#0F172A] mb-1">Add Customer Lead</h3>
-              <p className="text-sm text-[#64748B]">
-                Applying for <strong className="text-[#0D5CAB]">{selectedProduct.name}</strong>.
+            <div style={{ padding: '24px', borderBottom: `1px solid ${C.border}` }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>Add Customer Lead</h3>
+              <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
+                Applying for <strong style={{ color: C.primary }}>{selectedProduct.name}</strong>.
               </p>
             </div>
 
-            <form onSubmit={handleSubmitLead} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitLead} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">Customer Full Name *</label>
+                <label style={S.label}>Customer Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Rahul Sharma"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium transition-all"
+                  style={S.input}
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">Mobile Number *</label>
+                <label style={S.label}>Mobile Number *</label>
                 <input
                   type="tel"
                   required
@@ -323,42 +396,58 @@ export default function PartnerProducts() {
                   maxLength={10}
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-4 py-3 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium transition-all"
+                  style={S.input}
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-bold text-[#334155] mb-1.5">City *</label>
+                <label style={S.label}>City *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Mumbai"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#F8FAFC] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0D5CAB]/20 focus:border-[#0D5CAB] font-medium transition-all"
+                  style={S.input}
                 />
               </div>
 
-              <div className="flex gap-3 pt-6">
+              <div style={{ display: 'flex', gap: '10px', paddingTop: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setSelectedProduct(null)}
-                  className="flex-1 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-[#64748B] hover:bg-slate-50 transition-colors"
+                  style={{
+                    ...S.btn('outline'), flex: 1, padding: '12px', fontSize: '14px',
+                    borderRadius: '12px', cursor: 'pointer'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-[2] py-3 bg-[#0D5CAB] text-white text-sm font-bold rounded-xl hover:bg-[#083E7A] shadow-md transition-colors disabled:opacity-70 flex items-center justify-center"
+                  style={{
+                    ...S.btn('primary'), flex: 2, padding: '12px', fontSize: '14px',
+                    border: 'none', borderRadius: '12px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    opacity: submitting ? 0.7 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
                 >
-                  {submitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : 'Submit Application'}
+                  {submitting ? (
+                    <span style={{
+                      width: 18, height: 18, borderRadius: '50%',
+                      border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                      animation: 'spin .8s linear infinite', display: 'inline-block'
+                    }} />
+                  ) : 'Submit Application'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

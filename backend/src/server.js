@@ -3,14 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { globalLimiter } = require('./middleware/rateLimit.middleware.js');
+const { globalLimiter } = require('./middleware/rate-limit/rateLimit.middleware.js');
 const path = require('path');
 const fs = require('fs');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const cookieParser = require('cookie-parser');
 
-const logger = require('./utils/logger');
+const logger = require('./config/logger');
 
 // Register process exception handlers early
 process.on('uncaughtException', (err) => {
@@ -23,8 +23,8 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-const { notFoundHandler, errorHandler } = require('./middleware/error.middleware.js');
-const db = require('./config/db');
+const { notFoundHandler, errorHandler } = require('./middleware/error/error.middleware.js');
+const db = require('./config/database');
 
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../logs');
@@ -192,7 +192,7 @@ const startServer = async () => {
     logger.info('Database connection verified successfully.');
 
     // Start matured commission releases check
-    const { releaseMaturedCommissions } = require('./services/wallet/wallet.service.js');
+    const { releaseMaturedCommissions } = require('./modules/wallet/service.js');
     releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
     setInterval(() => {
       releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));

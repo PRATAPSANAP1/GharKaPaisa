@@ -1,6 +1,6 @@
 require('dotenv').config();
-const { query } = require('../../config/db');
-const logger = require('../../utils/logger');
+const { query } = require('../../config/database');
+const logger = require('../../config/logger');
 
 const migrate = async () => {
   logger.info('Running migrations...');
@@ -940,7 +940,7 @@ const migrate = async () => {
 
   // Encrypt existing bank account numbers if not already encrypted
   try {
-    const { encrypt } = require('../../utils/crypto');
+    const { encrypt } = require('../../utils/helpers/crypto');
     const { rows: bankDetails } = await query(`SELECT id, account_number FROM Partner_bank_details`);
     for (const row of bankDetails) {
       if (row.account_number && !row.account_number.includes(':')) {

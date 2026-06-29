@@ -2,8 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
-import { useAuthStore } from '../store/authStore';
-import logo from '../logo.png';
+import { useAuthStore } from '../app/store/authStore';
+import logo from '../assets/logos/logo.png';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
@@ -50,7 +50,7 @@ import ManageBanners from '../modules/super-admin/banners/ManageBanners';
 import ManageProducts from '../modules/super-admin/cms/ManageProducts';
 import ManageBanks from '../modules/super-admin/cms/ManageBanks';
 import ManageSections from '../modules/super-admin/cms/ManageSections';
-import ManageServices from '../pages/SuperAdmin/ManageServices';
+import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
 

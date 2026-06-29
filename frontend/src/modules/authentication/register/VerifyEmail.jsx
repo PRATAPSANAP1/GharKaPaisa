@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { resendVerificationEmail, verifyEmail } from "../../../api/auth.api.js";
+import { resendVerificationEmail, verifyEmail } from "../../../services/auth.api.js";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 
 // ── Inline keyframe styles (injected once) ──────────────────────────────────

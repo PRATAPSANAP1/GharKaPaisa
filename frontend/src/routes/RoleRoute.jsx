@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../app/store/authStore';
 
 const RoleRoute = ({ children, allowedRoles }) => {
   const user = useAuthStore((state) => state.user);

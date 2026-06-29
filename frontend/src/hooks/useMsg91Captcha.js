@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { initMsg91Widget, onCaptchaChange, offCaptchaChange, isSdkReady } from '../msg91Init';
+import { initMsg91Widget, onCaptchaChange, offCaptchaChange, isSdkReady } from '../app/msg91Init';
 
 /**
  * Shared React hook for MSG91 captcha integration.
