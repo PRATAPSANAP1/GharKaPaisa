@@ -27,11 +27,15 @@ const logAction = async (userIdOrReq, action, targetId = null, details = null, r
     }
   }
 
+  // Ensure targetId is a valid UUID or null to prevent database type mismatch crashes
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
+  const finalTargetId = isUuid ? targetId : null;
+
   try {
     await query(
       `INSERT INTO audit_logs (user_id, action, target_id, details, role, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, action, targetId, details ? JSON.stringify(details) : null, finalRole, finalIp]
+      [userId, action, finalTargetId, details ? JSON.stringify(details) : null, finalRole, finalIp]
     );
   } catch (err) {
     logger.error(`Failed to write to audit logs: ${err.message}`, { userId, action, targetId });
