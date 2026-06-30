@@ -638,9 +638,9 @@ export default function PartnerKyc() {
                               : 'Pending Verification'}
                           </span>
                         )}
-                        {dbDoc?.id && (
+                        {(dbDoc?.id || dbDoc?.doc_type) && (
                           <button
-                            onClick={() => handleViewFile(dbDoc.id)}
+                            onClick={() => handleViewFile(dbDoc.id || dbDoc.doc_type)}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',

@@ -95,10 +95,28 @@ const viewDocument = async (req, res, next) => {
     }
 
     // Fetch the document details from kyc_documents
-    const { rows: [doc] } = await query(
-      `SELECT s3_key, Partner_id FROM kyc_documents WHERE id = $1`,
-      [docId]
-    );
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docId);
+    let doc;
+    if (isUuid) {
+      const { rows: [result] } = await query(
+        `SELECT s3_key, Partner_id FROM kyc_documents WHERE id = $1`,
+        [docId]
+      );
+      doc = result;
+    } else {
+      // Fallback: fetch using partner's profile ID and doc_type
+      const { rows: [partner] } = await query(
+        `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+        [user.id]
+      );
+      if (partner) {
+        const { rows: [result] } = await query(
+          `SELECT s3_key, Partner_id FROM kyc_documents WHERE Partner_id = $1 AND doc_type = $2`,
+          [partner.id, docId]
+        );
+        doc = result;
+      }
+    }
 
     if (!doc) {
       return notFound(res, 'Document not found.');

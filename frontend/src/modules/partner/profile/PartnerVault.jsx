@@ -69,7 +69,7 @@ export default function PartnerVault() {
         const docs = response.data?.data?.documents || [];
         console.log('[Vault Load] Raw documents fetched from backend:', docs);
         setDocuments(docs.map((doc) => ({
-          id: doc.id,
+          id: doc.id || doc.doc_type,
           title: DOC_LABELS[doc.doc_type] || doc.doc_type,
           type: (doc.file_url || '').toLowerCase().includes('.pdf') ? 'PDF' : 'Image',
           date: doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : '—',
