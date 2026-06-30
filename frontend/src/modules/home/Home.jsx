@@ -300,6 +300,7 @@ function DynamicProductsList({ categoryKey, C, isMobile }) {
 function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [selectedDetailCard, setSelectedDetailCard] = useState(null);
   const [compareCard1, setCompareCard1] = useState(null);
   const [compareCard2, setCompareCard2] = useState(null);
