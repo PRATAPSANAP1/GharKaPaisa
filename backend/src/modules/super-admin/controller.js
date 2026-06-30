@@ -328,6 +328,7 @@ const updatePartnerStatus = async (req, res, next) => {
 
     return success(res, {}, `Partner status updated from ${oldStatus} to ${newStatus} successfully.`);
   } catch (err) {
+    logger.error('updatePartnerStatus failed:', { error: err.message, stack: err.stack, body: req.body });
     next(err);
   }
 };

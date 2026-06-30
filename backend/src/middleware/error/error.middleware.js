@@ -39,7 +39,7 @@ const errorHandler = (err, req, res, next) => {
     return error(res, 'Referenced record not found', 400);
   }
   if (err.code === '22P02') {  // invalid UUID
-    return error(res, 'Invalid ID format', 400);
+    return error(res, `Invalid ID format: ${err.message}`, 400);
   }
   if (err.code === '23502') { // not null violation
     return error(res, 'Required field missing', 400);
