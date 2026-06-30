@@ -9,7 +9,6 @@ import {
   FaPlane, FaShoppingBag, FaBriefcase, FaRegCreditCard,
   FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp
 } from "react-icons/fa";
-import hdfcBanner from "./image/hdfcbanner.png";
 import hdfcCardImg from "./image/hdfc.png";
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
@@ -661,31 +660,54 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
         )}
       </div>
 
-      {/* Hero Banner - user's requested layout with fallback handling */}
+      {/* Hero Banner - matching SBI premium hero layout */}
       <div className="max-w-7xl mx-auto px-6">
-        <div className="bg-white rounded-3xl p-responsive shadow-sm border">
-          <div className="grid md:grid-cols-2 gap-6 items-center">
-            
-            <div style={{ padding: isMobile ? "10px 0" : "0" }}>
-              <h1 className="text-responsive-title font-bold text-slate-800" style={{ margin: 0, textAlign: isMobile ? "center" : "left" }}>
-                {t('hdfc.title', 'HDFC Bank Credit Cards')}
-              </h1>
-            </div>
-
-            {/* Banner image slot */}
-            <div>
-              <img
-                src={hdfcBanner}
-                alt="HDFC Bank Credit Cards Banner"
-                style={{
-                  width: "100%",
-                  borderRadius: "20px",
-                  boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-                  display: "block"
-                }}
-              />
-            </div>
-
+        <div style={{
+          background: C.card || "#ffffff",
+          borderRadius: "24px",
+          padding: isMobile ? "20px" : "32px",
+          border: `1px solid ${C.border || "#e2e8f0"}`,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+          marginBottom: "32px",
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "1.2fr 0.8fr",
+          gap: "24px",
+          alignItems: "center"
+        }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? "24px" : "32px", fontWeight: 800, color: C.text || "#1e293b", margin: 0 }}>
+              {t('hdfc.title', 'HDFC Bank Credit Cards')}
+            </h1>
+            <p style={{ fontSize: "14px", color: C.textLight || "#64748b", marginTop: "8px", margin: 0, lineHeight: 1.5 }}>
+              Compare rates, key features, and apply online. Unlock exclusive shopping, dining, and travel rewards.
+            </p>
+          </div>
+          
+          {/* CSS Credit Card graphics banner */}
+          <div style={{
+            width: "100%",
+            height: "150px",
+            background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
+            borderRadius: "16px",
+            position: "relative",
+            overflow: "hidden",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <img 
+              src={hdfcCardImg} 
+              alt="HDFC Bank Credit Card" 
+              style={{ 
+                height: "85%", 
+                width: "auto", 
+                objectFit: "contain",
+                borderRadius: "10px",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+              }} 
+            />
           </div>
         </div>
       </div>
