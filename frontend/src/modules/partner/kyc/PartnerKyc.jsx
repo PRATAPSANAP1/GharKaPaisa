@@ -3,6 +3,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
+import { Link } from 'react-router-dom';
 import { 
   MdUploadFile, MdCheckCircle, MdPendingActions, MdError, 
   MdHelpOutline, MdSecurity, MdVisibility, MdDescription, 
