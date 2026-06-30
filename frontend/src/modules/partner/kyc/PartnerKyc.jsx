@@ -48,6 +48,10 @@ export default function PartnerKyc() {
   }, [fetchProfile]);
 
   const handleViewFile = async (docId) => {
+    if (!docId || docId === 'undefined') {
+      alert('Secure document ID is missing. Please refresh the page or try re-logging.');
+      return;
+    }
     try {
       const res = await api.get(`/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {

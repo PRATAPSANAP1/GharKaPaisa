@@ -31,6 +31,10 @@ export default function PartnerVault() {
   const [error, setError] = useState('');
 
   const handleViewOrDownload = async (docId, shouldDownload = false) => {
+    if (!docId || docId === 'undefined') {
+      alert('Secure document ID is missing. Please refresh the page or try re-logging.');
+      return;
+    }
     try {
       const res = await api.get(`/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
