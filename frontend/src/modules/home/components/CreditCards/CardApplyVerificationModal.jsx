@@ -570,22 +570,6 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           </div>
         )}
 
-        {/* Security badge footer */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "6px",
-          fontSize: "10.5px",
-          color: C.textLight || "#64748b",
-          borderTop: `1px solid ${C.border || '#e2e8f0'}60`,
-          paddingTop: "14px",
-          marginTop: "4px"
-        }}>
-          <FaCheckCircle style={{ color: C.green || "#22c55e" }} />
-          <span>Secured MSG91 verification gateway</span>
-        </div>
-
       </div>
 
       <style>{`
