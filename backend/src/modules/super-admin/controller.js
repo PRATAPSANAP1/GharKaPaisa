@@ -278,8 +278,13 @@ const updatePartnerStatus = async (req, res, next) => {
       return error(res, 'userId and status are required', 400);
     }
 
-    const validStatuses = ['active', 'inactive', 'pending_verification', 'suspended', 'rejected', 'blocked'];
-    if (!validStatuses.includes(status.toLowerCase())) {
+    let checkStatus = status.toLowerCase();
+    if (checkStatus === 'pending_verification') {
+      checkStatus = 'pending';
+    }
+
+    const validStatuses = ['active', 'inactive', 'pending', 'suspended', 'rejected', 'blocked'];
+    if (!validStatuses.includes(checkStatus)) {
       return error(res, `Invalid status value. Must be one of: ${validStatuses.join(', ')}`, 400);
     }
 
@@ -310,7 +315,7 @@ const updatePartnerStatus = async (req, res, next) => {
     }
 
     const oldStatus = targetUser.status;
-    const newStatus = status.toLowerCase();
+    const newStatus = checkStatus;
 
     // Update in database
     await query(

@@ -286,14 +286,14 @@ export default function ManagePartners() {
                         background: 
                           partner.status === "active" ? `${C.green}15` : 
                           partner.status === "inactive" ? `${C.textLight}15` : 
-                          partner.status === "pending_verification" ? `${C.gold}15` : 
+                          (partner.status === "pending" || partner.status === "pending_verification") ? `${C.gold}15` : 
                           partner.status === "suspended" ? `${C.red}15` : 
                           partner.status === "rejected" ? `${C.red}15` : 
                           partner.status === "blocked" ? `${C.red}15` : `${C.border}`,
                         color: 
                           partner.status === "active" ? C.green : 
                           partner.status === "inactive" ? C.textLight : 
-                          partner.status === "pending_verification" ? C.gold : 
+                          (partner.status === "pending" || partner.status === "pending_verification") ? C.gold : 
                           partner.status === "suspended" ? C.red : 
                           partner.status === "rejected" ? C.red : 
                           partner.status === "blocked" ? C.red : C.textMid,
@@ -484,7 +484,7 @@ export default function ManagePartners() {
                       >
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
-                        <option value="pending_verification">Pending Verification</option>
+                        <option value="pending">Pending Verification</option>
                         <option value="suspended">Suspended</option>
                         <option value="rejected">Rejected</option>
                         <option value="blocked">Blocked</option>
