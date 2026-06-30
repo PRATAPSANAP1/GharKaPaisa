@@ -99,7 +99,7 @@ const uploadKYCDocuments = async (req, res, next) => {
     // S3 configuration check
     const isS3Configured = !!process.env.AWS_S3_BUCKET;
     if (!isS3Configured) {
-      return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+      return error(res, 'S3 bucket is not configured.', 503);
     }
 
     const uploaded = [];
@@ -380,7 +380,7 @@ const uploadSelfKYC = async (req, res, next) => {
     // S3 configuration check
     const isS3Configured = !!process.env.AWS_S3_BUCKET;
     if (!isS3Configured) {
-      return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+      return error(res, 'S3 bucket is not configured.', 503);
     }
 
     const uploaded = [];

@@ -97,10 +97,11 @@ const createProduct = async (req, res, next) => {
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (isS3Configured) {
-        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
-        image_url = url;
+      if (!isS3Configured) {
+        return error(res, 'S3 bucket is not configured.', 503);
       }
+      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
+      image_url = url;
     }
 
     // Bank existence check
@@ -180,18 +181,19 @@ const updateProduct = async (req, res, next) => {
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (isS3Configured) {
-        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
-        image_url = url;
+      if (!isS3Configured) {
+        return error(res, 'S3 bucket is not configured.', 503);
+      }
+      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
+      image_url = url;
 
-        // Delete old S3 image
-        if (existing.image_url && existing.image_url.includes(process.env.AWS_S3_BUCKET)) {
-          try {
-            const parts = existing.image_url.split('.com/');
-            if (parts[1]) await deleteFromS3(parts[1]);
-          } catch (s3Err) {
-            console.error('Failed to delete old product image from S3', s3Err);
-          }
+      // Delete old S3 image
+      if (existing.image_url && existing.image_url.includes(process.env.AWS_S3_BUCKET)) {
+        try {
+          const parts = existing.image_url.split('.com/');
+          if (parts[1]) await deleteFromS3(parts[1]);
+        } catch (s3Err) {
+          console.error('Failed to delete old product image from S3', s3Err);
         }
       }
     }

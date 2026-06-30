@@ -37,7 +37,7 @@ const createBanner = async (req, res, next) => {
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
-        return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+        return error(res, 'S3 bucket is not configured.', 503);
       }
       const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banners');
       image_url = url;
@@ -81,7 +81,7 @@ const updateBanner = async (req, res, next) => {
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
-        return error(res, 'S3 storage service is not configured. Upload failed.', 503);
+        return error(res, 'S3 bucket is not configured.', 503);
       }
       const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banners');
       image_url = url;

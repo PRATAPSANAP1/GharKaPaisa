@@ -49,10 +49,11 @@ const createBank = async (req, res, next) => {
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (isS3Configured) {
-        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
-        logo_url = url;
+      if (!isS3Configured) {
+        return error(res, 'S3 bucket is not configured.', 503);
       }
+      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
+      logo_url = url;
     }
 
     // Check if short_code already exists
@@ -96,18 +97,19 @@ const updateBank = async (req, res, next) => {
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (isS3Configured) {
-        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
-        logo_url = url;
+      if (!isS3Configured) {
+        return error(res, 'S3 bucket is not configured.', 503);
+      }
+      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
+      logo_url = url;
 
-        // Optionally delete the old file from S3 if it was an S3 key
-        if (existing.logo_url && existing.logo_url.includes(process.env.AWS_S3_BUCKET)) {
-          try {
-            const parts = existing.logo_url.split('.com/');
-            if (parts[1]) await deleteFromS3(parts[1]);
-          } catch (s3Err) {
-            console.error('Failed to delete old bank logo from S3', s3Err);
-          }
+      // Optionally delete the old file from S3 if it was an S3 key
+      if (existing.logo_url && existing.logo_url.includes(process.env.AWS_S3_BUCKET)) {
+        try {
+          const parts = existing.logo_url.split('.com/');
+          if (parts[1]) await deleteFromS3(parts[1]);
+        } catch (s3Err) {
+          console.error('Failed to delete old bank logo from S3', s3Err);
         }
       }
     }
