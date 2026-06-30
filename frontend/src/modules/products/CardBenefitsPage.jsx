@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getCardDetails } from '../home/components/CreditCards/CardDetailsData';
+import { getApiV1Url } from '../../config/api';
 import { 
   FaArrowLeft, FaShareAlt, FaGift, FaCheckCircle, 
   FaRegFileAlt, FaVideo, FaInfoCircle, FaChevronDown, FaChevronUp,
@@ -14,8 +15,78 @@ export default function CardBenefitsPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   
+  const [dbProduct, setDbProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch(`${getApiV1Url()}/products/${id}`);
+        const data = await response.json();
+        if (data && data.success) {
+          setDbProduct(data.data);
+        } else {
+          // Try fetching all and matching by slug if direct fetch failed/returned 404
+          const res = await fetch(`${getApiV1Url()}/products?limit=100`);
+          const allData = await res.json();
+          if (allData && allData.success) {
+            const matched = allData.data.find(p => {
+              const pClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const idClean = id.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+              return p.id.toString() === id.toString() || 
+                     pClean === idClean || 
+                     pClean.includes(idClean) || 
+                     idClean.includes(pClean);
+            });
+            if (matched) {
+              setDbProduct(matched);
+            }
+          }
+        }
+      } catch (err) {
+        try {
+          const res = await fetch(`${getApiV1Url()}/products?limit=100`);
+          const allData = await res.json();
+          if (allData && allData.success) {
+            const matched = allData.data.find(p => {
+              const pClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const idClean = id.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+              return p.id.toString() === id.toString() || 
+                     pClean === idClean || 
+                     pClean.includes(idClean) || 
+                     idClean.includes(pClean);
+            });
+            if (matched) {
+              setDbProduct(matched);
+            }
+          }
+        } catch (innerErr) {
+          console.error("Error matching slug:", innerErr);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id]);
+
   const defaultName = id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Card';
-  const cardInfo = getCardDetails(id, defaultName);
+  const localCardDetails = getCardDetails(id, defaultName);
+
+  const cardInfo = dbProduct ? {
+    ...localCardDetails,
+    name: dbProduct.name,
+    specialOffers: {
+      totalEarning: dbProduct.payout_details || localCardDetails.specialOffers.totalEarning,
+      cardApprovalDispatch: dbProduct.time_period || localCardDetails.specialOffers.cardApprovalDispatch,
+      dateOffer: localCardDetails.specialOffers.dateOffer
+    },
+    features: dbProduct.features ? dbProduct.features.split('|') : localCardDetails.features,
+    eligibility: {
+      criteria: dbProduct.eligibility || localCardDetails.eligibility.criteria,
+      documentsRequired: dbProduct.documents_required ? dbProduct.documents_required.split('|') : localCardDetails.eligibility.documentsRequired
+    }
+  } : localCardDetails;
   
   const [activeTab, setActiveTab] = useState('offer');
   const [openFaq, setOpenFaq] = useState(null);
@@ -46,8 +117,13 @@ export default function CardBenefitsPage() {
   };
 
   const handleApply = () => {
-    navigate(`/product/${id}/apply`);
+    const applyId = dbProduct ? dbProduct.id : id;
+    navigate(`/product/${applyId}/apply`);
   };
+
+  if (loading) {
+    return <div className="text-center p-12 font-bold text-gray-500">Loading benefits...</div>;
+  }
 
   if (!cardInfo) {
     return <div className="text-center p-12 font-bold text-gray-500">Product not found.</div>;
