@@ -30,6 +30,16 @@ export const getBankApplyLink = (cardName, bankId) => {
     return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
   }
 
+  // DCB Bank Cards (and handle user's bcb typo)
+  if (bankLower === 'dcb' || bankLower === 'bcb' || nameLower.includes('dcb') || nameLower.includes('bcb')) {
+    return "https://get.novio.in/j84P/va2pvtwb";
+  }
+
+  // SBM Bank Cards
+  if (bankLower === 'sbm' || nameLower.includes('sbm')) {
+    return "https://get.novio.in/j84P/7tnakuu8";
+  }
+
   const floatLink = "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558";
 
   // HDFC Card specific links mapping
