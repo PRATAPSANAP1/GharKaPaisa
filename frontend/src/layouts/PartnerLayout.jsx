@@ -65,6 +65,12 @@ export default function PartnerLayout() {
   const isSettingsPage = location.pathname.includes('/partner/settings');
   const isBlocked = !isKycApproved && !isKycPage && !isProfilePage && !isSettingsPage;
 
+  useEffect(() => {
+    if (!isKycApproved && !isKycPage && !isProfilePage && !isSettingsPage) {
+      navigate('/partner/kyc');
+    }
+  }, [isKycApproved, isKycPage, isProfilePage, isSettingsPage, navigate]);
+
   const handleLogout = () => {
     logout();
     navigate('/');
