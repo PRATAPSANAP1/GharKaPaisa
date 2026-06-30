@@ -14,6 +14,7 @@ import hdfcCardImg from "./image/hdfc.png";
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
 import { ltfCards } from "./LTFCardsData";
+import { getCardSpecificImage } from "./cardImageHelper";
 
 // User's provided card data with enriched category definitions for filtering
 const cards = [
@@ -817,7 +818,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                           }}
                         >
                           <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-                            <img src={hdfcCardImg} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} />
+                            <img src={getCardSpecificImage(card.name) || hdfcCardImg} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} />
                           </span>
                           <span>{t(`hdfc.cards.${card.id}.name`, card.name)}</span>
                         </button>
@@ -1028,21 +1029,26 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
             {/* Card Visual Header */}
             <div style={{
-              background: selectedCard.gradient,
-              padding: "24px",
-              borderRadius: "16px",
-              color: "#fff",
+              height: "160px",
+              borderRadius: "20px",
               marginBottom: "20px",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-              position: "relative",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "none",
               overflow: "hidden"
             }}>
-              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1px", opacity: 0.9 }}>HDFC BANK</div>
-              <div style={{ fontSize: "20px", fontWeight: 800, margin: "20px 0 10px 0" }}>{t(`hdfc.cards.${selectedCard.id}.name`, selectedCard.name)}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", opacity: 0.8 }}>
-                <span>{selectedCard.network}</span>
-                <span>•••• •••• •••• 8888</span>
-              </div>
+              <img 
+                src={getCardSpecificImage(selectedCard.name) || hdfcCardImg} 
+                alt={selectedCard.name} 
+                style={{ 
+                  height: "100%", 
+                  width: "auto", 
+                  objectFit: "contain",
+                  borderRadius: "12px"
+                }} 
+              />
             </div>
 
             {/* Card Info Details */}

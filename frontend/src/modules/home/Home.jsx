@@ -19,6 +19,7 @@ import * as FaIcons from "react-icons/fa";
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./components/CreditCards/index";
 import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
+import { getCardSpecificImage } from "./components/CreditCards/cardImageHelper";
 import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
 import { loansData } from "./components/Loans/index";
 import { insuranceData } from "./components/Insurance/index";
@@ -394,6 +395,24 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
         gradient: "linear-gradient(135deg, #FF6600 0%, #B34700 100%)"
       };
     }
+    if (bid.includes("icici")) {
+      return {
+        color: "#E27D22",
+        gradient: "linear-gradient(135deg, #052F5F 0%, #E27D22 100%)"
+      };
+    }
+    if (bid.includes("kotak")) {
+      return {
+        color: "#EE1C25",
+        gradient: "linear-gradient(135deg, #EE1C25 0%, #B3141B 100%)"
+      };
+    }
+    if (bid.includes("yes")) {
+      return {
+        color: "#004F9F",
+        gradient: "linear-gradient(135deg, #004F9F 0%, #002D5C 100%)"
+      };
+    }
     return {
       color: C.teal,
       gradient: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`
@@ -410,6 +429,15 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
     if (bid.includes("kotak")) return kotakCardImg;
     if (bid.includes("yes")) return yesBankCardImg;
     return null;
+  };
+  const resolveCardImage = (cardName = "") => {
+    const name = (cardName || "").toLowerCase();
+    if (name.includes("axis")) return axisCardImg;
+    if (name.includes("sbi")) return sbiCardImg;
+    if (name.includes("icici")) return iciciCardImg;
+    if (name.includes("kotak")) return kotakCardImg;
+    if (name.includes("yes")) return yesBankCardImg;
+    return getBankCardImage();
   };
   const currentBankCardImage = category.type === "bank-detail" ? getBankCardImage() : null;
 
@@ -623,43 +651,59 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
               alignItems: "center",
               justifyContent: "center"
             }}>
-              {/* Floating card 1 */}
-              <div style={{
-                width: "150px",
-                height: "90px",
-                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
-                borderRadius: "8px",
-                padding: "8px",
-                color: "#fff",
-                boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                transform: "rotate(-10deg) translate(-15px, 8px)",
-                position: "absolute",
-                zIndex: 1,
-                border: "1px solid rgba(255,255,255,0.1)"
-              }}>
-                <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
-                <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 9999</div>
-                <div style={{ fontSize: "5px", opacity: 0.7 }}>PLATINUM</div>
-              </div>
+              {currentBankCardImage ? (
+                <img 
+                  src={currentBankCardImage} 
+                  alt="Bank Credit Card" 
+                  style={{ 
+                    height: "85%", 
+                    width: "auto", 
+                    objectFit: "contain",
+                    borderRadius: "10px",
+                    boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+                  }} 
+                />
+              ) : (
+                <>
+                  {/* Floating card 1 */}
+                  <div style={{
+                    width: "150px",
+                    height: "90px",
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    color: "#fff",
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
+                    transform: "rotate(-10deg) translate(-15px, 8px)",
+                    position: "absolute",
+                    zIndex: 1,
+                    border: "1px solid rgba(255,255,255,0.1)"
+                  }}>
+                    <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
+                    <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 9999</div>
+                    <div style={{ fontSize: "5px", opacity: 0.7 }}>PLATINUM</div>
+                  </div>
 
-              {/* Floating card 2 */}
-              <div style={{
-                width: "150px",
-                height: "90px",
-                background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 100%)",
-                borderRadius: "8px",
-                padding: "8px",
-                color: "#fff",
-                boxShadow: "0 12px 25px rgba(0,0,0,0.25)",
-                transform: "rotate(5deg) translate(15px, -8px)",
-                position: "absolute",
-                zIndex: 2,
-                border: "1px solid rgba(255,255,255,0.1)"
-              }}>
-                <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
-                <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 8888</div>
-                <div style={{ fontSize: "5px", opacity: 0.7 }}>SIGNATURE</div>
-              </div>
+                  {/* Floating card 2 */}
+                  <div style={{
+                    width: "150px",
+                    height: "90px",
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 100%)",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    color: "#fff",
+                    boxShadow: "0 12px 25px rgba(0,0,0,0.25)",
+                    transform: "rotate(5deg) translate(15px, -8px)",
+                    position: "absolute",
+                    zIndex: 2,
+                    border: "1px solid rgba(255,255,255,0.1)"
+                  }}>
+                    <div style={{ fontSize: "5px", fontWeight: 700, opacity: 0.9 }}>{category.title ? category.title.toUpperCase() : "CREDIT CARD"}</div>
+                    <div style={{ fontSize: "7px", fontWeight: 700, margin: "15px 0 8px 0" }}>•••• •••• •••• 8888</div>
+                    <div style={{ fontSize: "5px", opacity: 0.7 }}>SIGNATURE</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -799,7 +843,15 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                             }}
                           >
                             <span style={{ display: "flex", alignItems: "center", color: brand.color, fontSize: "18px", flexShrink: 0 }}>
-                              {currentBankCardImage ? <img src={currentBankCardImage} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} /> : getCardFallbackIcon(card)}
+                              {(getCardSpecificImage(card.name) || currentBankCardImage) ? (
+                                <img 
+                                  src={getCardSpecificImage(card.name) || currentBankCardImage} 
+                                  alt="Card" 
+                                  style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} 
+                                />
+                              ) : (
+                                getCardFallbackIcon(card)
+                              )}
                             </span>
                             <div>
                               <div style={{ fontWeight: 800 }}>{card.name}</div>
@@ -900,6 +952,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
 
               {/* Card Mockup Graphic */}
               {(() => {
+                const cardImg = getCardSpecificImage(selectedDetailCard.name) || resolveCardImage(selectedDetailCard.name) || currentBankCardImage;
                 const getBankLogoText = () => {
                   const bid = (category.id || "").toLowerCase();
                   if (bid.includes("sbi")) return "SBI CARD";
@@ -920,6 +973,33 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                   if (n.includes('octane')) return 'linear-gradient(135deg, #107C41 0%, #0B5A2F 100%)';
                   return 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
                 };
+
+                if (cardImg) {
+                  return (
+                    <div style={{
+                      height: "160px",
+                      borderRadius: "20px",
+                      marginBottom: "20px",
+                      boxShadow: "0 8px 25px rgba(0,0,0,0.12)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "none",
+                      overflow: "hidden"
+                    }}>
+                      <img 
+                        src={cardImg} 
+                        alt={selectedDetailCard.name} 
+                        style={{ 
+                          height: "100%", 
+                          width: "auto", 
+                          objectFit: "contain",
+                          borderRadius: "12px"
+                        }} 
+                      />
+                    </div>
+                  );
+                }
 
                 return (
                   <div style={{
@@ -1043,17 +1123,15 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                 </button>
                 <button 
                   onClick={() => {
-                    const cleanId = selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    const refLink = `gharkapaisa.com/card/${cleanId}?ref=GP12345`;
-                    const shareText = `Apply for the ${selectedDetailCard.name} of ${category.title} through GharKaPaisa! Check it out here: ${refLink}`;
-                    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-                    window.open(url, '_blank');
+                    const idToUse = selectedDetailCard.id || selectedDetailCard.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    setSelectedDetailCard(null);
+                    navigate(`/card-benefits/${idToUse}`);
                   }}
                   style={{
                     flex: "1 1 auto",
                     background: "none",
-                    border: "1px solid #25D366",
-                    color: "#25D366",
+                    border: `1px solid ${brand.color}`,
+                    color: brand.color,
                     padding: "10px",
                     borderRadius: "10px",
                     fontSize: "12px",
@@ -1065,8 +1143,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
                     gap: "4px"
                   }}
                 >
-                  <FaWhatsapp size={15} />
-                  Share
+                  Benefits
                 </button>
                 <button 
                   onClick={() => {
