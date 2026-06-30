@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getCardDetails } from '../home/components/CreditCards/CardDetailsData';
 import { getApiV1Url } from '../../config/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import CardApplyVerificationModal from '../home/components/CreditCards/CardApplyVerificationModal';
 import { 
   FaArrowLeft, FaShareAlt, FaGift, FaCheckCircle, 
   FaRegFileAlt, FaVideo, FaInfoCircle, FaChevronDown, FaChevronUp,
@@ -14,9 +16,11 @@ export default function CardBenefitsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { C } = useTheme();
   
   const [dbProduct, setDbProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -117,8 +121,7 @@ export default function CardBenefitsPage() {
   };
 
   const handleApply = () => {
-    const applyId = dbProduct ? dbProduct.id : id;
-    navigate(`/product/${applyId}/apply`);
+    setIsApplyModalOpen(true);
   };
 
   if (loading) {
@@ -322,6 +325,17 @@ export default function CardBenefitsPage() {
 
       </div>
 
+      {isApplyModalOpen && (
+        <CardApplyVerificationModal 
+          card={{
+            cardName: cardInfo.name,
+            bankName: dbProduct ? dbProduct.bank_name : (id.includes('hdfc') ? 'HDFC Bank' : id.includes('sbi') ? 'SBI Card' : id.includes('axis') ? 'Axis Bank' : id.includes('icici') ? 'ICICI Bank' : id.includes('idfc') ? 'IDFC FIRST Bank' : id.includes('bob') ? 'Bank of Baroda' : 'Credit Card'),
+            bankId: dbProduct ? (dbProduct.bank_id || dbProduct.bank_name.toLowerCase().replace(/[^a-z]/g, '')) : (id.includes('hdfc') ? 'hdfc' : id.includes('sbi') ? 'sbi' : id.includes('axis') ? 'axis' : id.includes('icici') ? 'icici' : id.includes('idfc') ? 'idfc' : id.includes('bob') ? 'bob' : '')
+          }}
+          onClose={() => setIsApplyModalOpen(false)}
+          C={C}
+        />
+      )}
       </div> {/* end cbp-scrollable-content */}
       
     </div>
