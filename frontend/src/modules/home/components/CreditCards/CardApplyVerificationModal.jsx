@@ -64,7 +64,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         setErrorMsg("OTP service did not respond. Please refresh the page and try again.");
         setLoading(false);
       }
-    }, 15000);
+    }, 30000);
 
     try {
       window.sendOtp(
