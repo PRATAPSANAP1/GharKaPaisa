@@ -10,9 +10,19 @@ export const getBankApplyLink = (cardName, bankId) => {
     return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa177&axisreferralcode=WMMNYOH1";
   }
 
+  // SBI Bank Cards (connect all to SBI link)
+  if (bankLower === 'sbi' || nameLower.includes('sbi') || nameLower.includes('state bank')) {
+    return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+  }
+
+  // IDFC Bank Cards (connect all to IDFC link)
+  if (bankLower === 'idfc' || nameLower.includes('idfc')) {
+    return "https://www.idfcfirst.bank.in/credit-card/ntb-diy/apply";
+  }
+
   // BOB Bank Cards (connect all to the BOB link)
   if (bankLower === 'bob' || nameLower.includes('bob') || nameLower.includes('baroda')) {
-    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=GHAR01";
+    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY30";
   }
 
   // Federal Bank / Scapia Cards (make Scapia Federal Card correct)
@@ -34,8 +44,8 @@ export const getBankApplyLink = (cardName, bankId) => {
     "bizfirst": floatLink,
     "pixelplay": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
     "pixelgo": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "tataneuplus": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "tataneuinfinity": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
+    "tataneuplus": "https://www.tataneu.com/creditcard/",
+    "tataneuinfinity": "https://www.tataneu.com/creditcard/",
     "swiggy": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
     "indianoil": "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
     "irctc": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=IRCT&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
