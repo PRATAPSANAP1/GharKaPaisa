@@ -164,7 +164,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             // Successfully saved lead. Now redirect visitor to bank application page
             const applyLink = getBankApplyLink(card.cardName, card.bankId);
             if (applyLink) {
-              window.open(applyLink, '_blank', 'noopener,noreferrer');
+              window.location.href = applyLink;
             } else {
               console.warn("No specific bank link resolved for", card.cardName);
             }
@@ -178,7 +178,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           // Fallback redirect even if backend saving fails temporarily
           const applyLink = getBankApplyLink(card.cardName, card.bankId);
           if (applyLink) {
-            window.open(applyLink, '_blank', 'noopener,noreferrer');
+            window.location.href = applyLink;
           }
           onClose();
         } finally {
