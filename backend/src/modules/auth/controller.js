@@ -308,7 +308,7 @@ const login = async (req, res, next) => {
       if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
       if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
       if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending' || user.status === 'pending_verification') {
+      if (user.status === 'pending') {
         return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
       }
       return error(res, 'Your account is currently not active. Please contact support.', 403);
@@ -371,7 +371,7 @@ const loginWithMsg91 = async (req, res, next) => {
       if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
       if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
       if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending' || user.status === 'pending_verification') {
+      if (user.status === 'pending') {
         return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
       }
       return error(res, 'Your account is currently not active. Please contact support.', 403);
@@ -625,7 +625,7 @@ const loginPassword = async (req, res, next) => {
       if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
       if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
       if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending' || user.status === 'pending_verification') {
+      if (user.status === 'pending') {
         return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
       }
       return error(res, 'Your account is currently not active. Please contact support.', 403);
