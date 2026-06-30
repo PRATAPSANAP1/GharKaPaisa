@@ -344,7 +344,7 @@ export default function PartnerKyc() {
                 { step: 1, label: 'Pending', sub: 'Completed' },
                 { step: 2, label: 'Documents Uploaded', sub: isApproved || isUnderReview || isRejected ? 'Completed' : 'Current Step' },
                 { step: 3, label: 'Under Review', sub: isApproved ? 'Completed' : isUnderReview ? 'In Progress' : 'Pending' },
-                { step: 4, label: 'Approved', sub: isApproved ? 'Completed' : 'Pending' }
+                { step: 4, label: isRejected ? 'Rejected' : 'Approved', sub: isApproved ? 'Completed' : isRejected ? 'Action Required' : 'Pending' }
               ].map((s, idx) => {
                 const state = getStepState(s.step);
                 const stepColor = getStepColor(state);
@@ -363,7 +363,7 @@ export default function PartnerKyc() {
                         width: '32px',
                         height: '32px',
                         borderRadius: '50%',
-                        background: state === 'completed' ? `${primaryColor}10` : state === 'current' ? `${secondaryColor}15` : isDark ? '#334155' : '#F1F5F9',
+                        background: state === 'completed' ? `${successColor}10` : state === 'current' ? `${secondaryColor}15` : state === 'failed' ? `${errorColor}10` : isDark ? '#334155' : '#F1F5F9',
                         border: `2px solid ${stepColor}`,
                         display: 'flex',
                         alignItems: 'center',
@@ -374,22 +374,20 @@ export default function PartnerKyc() {
                         transition: 'all 0.3s',
                         marginBottom: '8px'
                       }}>
-                        {state === 'completed' ? '✓' : s.step}
+                        {state === 'completed' ? '✓' : state === 'failed' ? '✗' : s.step}
                       </div>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: textPrimary, textAlign: 'center', display: 'block' }}>
                         {s.label}
                       </span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: stepColor, marginTop: '2px' }}>
-                        {s.sub}
-                      </span>
+                      <span style={{ fontSize: '10px', color: stepColor, textAlign: 'center', marginTop: '2px' }}>{s.sub}</span>
                     </div>
 
-                    {/* Connecting Line */}
+                    {/* Line between circles */}
                     {idx < 3 && (
                       <div style={{
                         flex: 1,
                         height: '2px',
-                        background: getStepState(s.step + 1) === 'completed' ? primaryColor : getStepState(s.step) === 'completed' && getStepState(s.step + 1) === 'current' ? secondaryColor : isDark ? '#334155' : '#E2E8F0',
+                        background: getStepState(s.step + 1) === 'completed' ? successColor : getStepState(s.step + 1) === 'failed' ? errorColor : getStepState(s.step) === 'completed' && getStepState(s.step + 1) === 'current' ? secondaryColor : isDark ? '#334155' : '#E2E8F0',
                         marginTop: '-24px',
                         zIndex: 1,
                         transition: 'all 0.3s'
@@ -401,9 +399,149 @@ export default function PartnerKyc() {
             </div>
           </div>
 
-          {/* Form OR Submitted List Card */}
-          {(!isApproved && !isUnderReview) ? (
-            /* Upload Documents Form */
+          {/* Submitted Documents List Card (if they exist) */}
+          {profile?.kyc_documents && profile.kyc_documents.length > 0 && (
+            <div style={{
+              background: cardBg,
+              border: `1px solid ${cardBorder}`,
+              borderRadius: '20px',
+              padding: '28px',
+              boxShadow: cardShadow
+            }}>
+              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: '16px', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>Submitted Documents</h3>
+                <p style={{ fontSize: '13px', color: textSecondary, margin: '4px 0 0 0' }}>
+                  {isApproved ? 'Your uploaded documents are verified.' : isRejected ? 'Your previously uploaded documents were rejected. Please upload correct documents below.' : 'Your documents have been uploaded successfully. Verification is currently active.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {documentsToRender.map((docItem) => {
+                  const dbDoc = getDoc(docItem.key);
+                  console.log(`[KYC Render] type: ${docItem.key}, dbDoc:`, dbDoc);
+                  const uploadTime = getUploadTime(dbDoc);
+
+                  return (
+                    <div key={docItem.key} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: isDark ? '#1E293B' : '#F8FAFC',
+                      border: `1px solid ${cardBorder}`,
+                      borderRadius: '16px',
+                      padding: '16px 20px',
+                      transition: 'transform 0.15s ease'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: `${primaryColor}10`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {docItem.icon}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: textPrimary }}>{docItem.label}</span>
+                          <span style={{ fontSize: '11px', color: textSecondary }}>
+                            {dbDoc ? `Uploaded on ${uploadTime}` : 'Not Uploaded'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                         {dbDoc && (
+                          <span style={{
+                            background: dbDoc.verified 
+                              ? `${successColor}15` 
+                              : isRejected 
+                              ? `${errorColor}15` 
+                              : isUnderReview 
+                              ? `${secondaryColor}15` 
+                              : `${secondaryColor}15`,
+                            color: dbDoc.verified 
+                              ? successColor 
+                              : isRejected 
+                              ? errorColor 
+                              : secondaryColor,
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700
+                          }}>
+                            {dbDoc.verified 
+                              ? 'Verified' 
+                              : isRejected 
+                              ? 'Rejected' 
+                              : isUnderReview 
+                              ? 'Under Review' 
+                              : 'Pending Verification'}
+                          </span>
+                        )}
+                        {(dbDoc?.id || dbDoc?.doc_type) && (
+                          <button
+                            onClick={() => handleViewFile(dbDoc.id || dbDoc.doc_type)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              textDecoration: 'none',
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: primaryColor,
+                              border: `1px solid ${primaryColor}20`,
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              background: '#FFFFFF',
+                              boxShadow: '0 2px 4px rgba(37,99,235,0.03)',
+                              transition: 'all 0.2s',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <MdVisibility size={15} /> View
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* View All Documents link to Vault */}
+              <div style={{
+                marginTop: '24px',
+                display: 'flex',
+                justifyContent: 'center',
+                borderTop: `1px solid ${cardBorder}`,
+                paddingTop: '20px'
+              }}>
+                <Link
+                  to="/partner/vault"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: primaryColor,
+                    background: `${primaryColor}10`,
+                    padding: '10px 24px',
+                    borderRadius: '10px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <MdUploadFile size={16} /> View All Documents
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Documents Form */}
+          {(!isApproved && !isUnderReview) && (
             <form onSubmit={handleSubmit} style={{
               background: cardBg,
               border: `1px solid ${cardBorder}`,
@@ -415,7 +553,9 @@ export default function PartnerKyc() {
               gap: '24px'
             }}>
               <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: '16px', marginBottom: '8px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>Identity Document Upload</h3>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>
+                  {isRejected ? 'Re-upload Identity Documents' : 'Identity Document Upload'}
+                </h3>
                 <p style={{ fontSize: '13px', color: textSecondary, margin: '4px 0 0 0' }}>Provide your government credentials. All uploads must be clearly readable original documents.</p>
               </div>
 
@@ -558,143 +698,6 @@ export default function PartnerKyc() {
                 {loading ? 'Uploading Documents...' : 'Submit Documents for Verification'}
               </button>
             </form>
-          ) : (
-            /* Submitted Documents List Card */
-            <div style={{
-              background: cardBg,
-              border: `1px solid ${cardBorder}`,
-              borderRadius: '20px',
-              padding: '28px',
-              boxShadow: cardShadow
-            }}>
-              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: '16px', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>Submitted Documents</h3>
-                <p style={{ fontSize: '13px', color: textSecondary, margin: '4px 0 0 0' }}>Your documents have been uploaded successfully. Verification is currently active.</p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {documentsToRender.map((docItem) => {
-                  const dbDoc = getDoc(docItem.key);
-                  console.log(`[KYC Render] type: ${docItem.key}, dbDoc:`, dbDoc);
-                  const uploadTime = getUploadTime(dbDoc);
-
-                  return (
-                    <div key={docItem.key} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: isDark ? '#1E293B' : '#F8FAFC',
-                      border: `1px solid ${cardBorder}`,
-                      borderRadius: '16px',
-                      padding: '16px 20px',
-                      transition: 'transform 0.15s ease'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '10px',
-                          background: `${primaryColor}10`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {docItem.icon}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: textPrimary }}>{docItem.label}</span>
-                          <span style={{ fontSize: '11px', color: textSecondary }}>
-                            {dbDoc ? `Uploaded on ${uploadTime}` : 'Not Uploaded'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                         {dbDoc && (
-                          <span style={{
-                            background: dbDoc.verified 
-                              ? `${successColor}15` 
-                              : isRejected 
-                              ? `${errorColor}15` 
-                              : isUnderReview 
-                              ? `${secondaryColor}15` 
-                              : `${secondaryColor}15`,
-                            color: dbDoc.verified 
-                              ? successColor 
-                              : isRejected 
-                              ? errorColor 
-                              : secondaryColor,
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: 700
-                          }}>
-                            {dbDoc.verified 
-                              ? 'Verified' 
-                              : isRejected 
-                              ? 'Rejected' 
-                              : isUnderReview 
-                              ? 'Under Review' 
-                              : 'Pending Verification'}
-                          </span>
-                        )}
-                        {(dbDoc?.id || dbDoc?.doc_type) && (
-                          <button
-                            onClick={() => handleViewFile(dbDoc.id || dbDoc.doc_type)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              textDecoration: 'none',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              color: primaryColor,
-                              border: `1px solid ${primaryColor}20`,
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              background: '#FFFFFF',
-                              boxShadow: '0 2px 4px rgba(37,99,235,0.03)',
-                              transition: 'all 0.2s',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <MdVisibility size={15} /> View
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* View All Documents link to Vault */}
-              <div style={{
-                marginTop: '24px',
-                display: 'flex',
-                justifyContent: 'center',
-                borderTop: `1px solid ${cardBorder}`,
-                paddingTop: '20px'
-              }}>
-                <Link
-                  to="/partner/vault"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: primaryColor,
-                    background: `${primaryColor}10`,
-                    padding: '10px 24px',
-                    borderRadius: '10px',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <MdUploadFile size={16} /> View All Documents
-                </Link>
-              </div>
-            </div>
           )}
 
           {/* Security Banner */}

@@ -21,6 +21,12 @@ const getProfile = async (req, res, next) => {
     `, [PartnerId]);
     if (!Partner) return notFound(res);
 
+    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
+    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
+    const isSuperAdmin = req.user && req.user.role === 'SUPER_ADMIN';
+    const isAdmin = req.user && req.user.role === 'ADMIN';
+    const shouldMask = (isAdmin && isPrivacyOn) || (!isSuperAdmin && !isAdmin);
+
     // Decrypt bank account number
     if (Partner && Partner.account_number) {
       const { decrypt } = require('../../utils/helpers/crypto');
@@ -35,10 +41,6 @@ const getProfile = async (req, res, next) => {
         logger.error('Failed to decrypt bank account number:', err.message);
       }
     }
-
-    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
-    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
     if (shouldMask) {
       Partner.first_name = 'Partner';
