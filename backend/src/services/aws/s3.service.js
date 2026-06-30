@@ -5,13 +5,18 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../../config/logger');
 
-const s3Client = new S3Client({
+const s3Options = {
   region: process.env.AWS_REGION || 'ap-south-1',
-  credentials: {
+};
+
+if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  s3Options.credentials = {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+  };
+}
+
+const s3Client = new S3Client(s3Options);
 
 const BUCKET = process.env.AWS_S3_BUCKET;
 if (!BUCKET) {

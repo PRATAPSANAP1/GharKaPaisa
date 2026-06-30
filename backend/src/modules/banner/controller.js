@@ -35,7 +35,7 @@ const createBanner = async (req, res, next) => {
 
     // Check if a file is uploaded
     if (req.file) {
-      const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+      const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
         return error(res, 'S3 storage service is not configured. Upload failed.', 503);
       }
@@ -79,7 +79,7 @@ const updateBanner = async (req, res, next) => {
     if (!existing) return notFound(res, 'Banner not found');
 
     if (req.file) {
-      const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+      const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
         return error(res, 'S3 storage service is not configured. Upload failed.', 503);
       }

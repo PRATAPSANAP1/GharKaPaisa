@@ -96,7 +96,7 @@ const createProduct = async (req, res, next) => {
     }
 
     if (req.file) {
-      const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+      const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (isS3Configured) {
         const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
         image_url = url;
@@ -179,7 +179,7 @@ const updateProduct = async (req, res, next) => {
     }
 
     if (req.file) {
-      const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+      const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (isS3Configured) {
         const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
         image_url = url;

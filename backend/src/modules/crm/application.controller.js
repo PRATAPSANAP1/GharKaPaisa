@@ -374,7 +374,7 @@ const uploadApplicationDoc = async (req, res, next) => {
     if (!file) return error(res, 'No file uploaded');
 
     // S3 configuration check
-    const isS3Configured = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_S3_BUCKET;
+    const isS3Configured = !!process.env.AWS_S3_BUCKET;
     if (!isS3Configured) {
       return error(res, 'S3 storage service is not configured. Upload failed.', 503);
     }
