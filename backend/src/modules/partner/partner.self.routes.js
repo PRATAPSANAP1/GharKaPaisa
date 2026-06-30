@@ -7,7 +7,8 @@ const { upload } = require('../../services/aws/s3.service.js');
 const { validate, registerRules } = require('../../middleware/validation/validation.middleware.js');
 
 const kycUpload = upload.fields([
-  { name: 'aadhaar', maxCount: 1 },
+  { name: 'aadhaar_front', maxCount: 1 },
+  { name: 'aadhaar_back', maxCount: 1 },
   { name: 'pan', maxCount: 1 },
   { name: 'gst_cert', maxCount: 1 },
   { name: 'cancelled_cheque', maxCount: 1 },
