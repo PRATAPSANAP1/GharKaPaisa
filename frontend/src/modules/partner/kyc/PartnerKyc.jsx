@@ -183,6 +183,16 @@ export default function PartnerKyc() {
     return textLight;
   };
 
+  const getMostRecentUploadDate = () => {
+    if (!profile?.kyc_documents || profile.kyc_documents.length === 0) return null;
+    const dates = profile.kyc_documents
+      .map(d => d.uploaded_at ? new Date(d.uploaded_at).getTime() : 0)
+      .filter(t => t > 0);
+    if (dates.length === 0) return null;
+    const maxTime = Math.max(...dates);
+    return new Date(maxTime).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   const documentsToRender = [
     { key: 'pan', label: 'PAN Card', icon: <MdDescription size={20} color={secondaryColor} /> },
     { key: 'cancelled_cheque', label: 'Bank Account Proof', icon: <MdAccountBalance size={20} color={successColor} /> }
@@ -310,7 +320,7 @@ export default function PartnerKyc() {
               boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
             }}>
               {isApproved ? 'Verified Partner' :
-               isUnderReview ? 'Est. Time: 24–48 Hours' :
+               isUnderReview ? (getMostRecentUploadDate() ? `Submitted on: ${getMostRecentUploadDate()}` : 'Under Review') :
                isRejected ? 'Action Required' :
                'Awaiting Upload'}
             </div>
@@ -331,10 +341,10 @@ export default function PartnerKyc() {
               position: 'relative'
             }}>
               {[
-                { step: 1, label: 'Basic Information', sub: 'Completed' },
-                { step: 2, label: 'Document Upload', sub: isApproved || isUnderReview || isRejected ? 'Completed' : 'Current Step' },
+                { step: 1, label: 'Pending', sub: 'Completed' },
+                { step: 2, label: 'Documents Uploaded', sub: isApproved || isUnderReview || isRejected ? 'Completed' : 'Current Step' },
                 { step: 3, label: 'Under Review', sub: isApproved ? 'Completed' : isUnderReview ? 'In Progress' : 'Pending' },
-                { step: 4, label: 'Verified', sub: isApproved ? 'Completed' : 'Pending' }
+                { step: 4, label: 'Approved', sub: isApproved ? 'Completed' : 'Pending' }
               ].map((s, idx) => {
                 const state = getStepState(s.step);
                 const stepColor = getStepColor(state);
@@ -600,16 +610,34 @@ export default function PartnerKyc() {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{
-                          background: `${successColor}15`,
-                          color: successColor,
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700
-                        }}>
-                          Uploaded
-                        </span>
+                         {dbDoc && (
+                          <span style={{
+                            background: dbDoc.verified 
+                              ? `${successColor}15` 
+                              : isRejected 
+                              ? `${errorColor}15` 
+                              : isUnderReview 
+                              ? `${secondaryColor}15` 
+                              : `${secondaryColor}15`,
+                            color: dbDoc.verified 
+                              ? successColor 
+                              : isRejected 
+                              ? errorColor 
+                              : secondaryColor,
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700
+                          }}>
+                            {dbDoc.verified 
+                              ? 'Verified' 
+                              : isRejected 
+                              ? 'Rejected' 
+                              : isUnderReview 
+                              ? 'Under Review' 
+                              : 'Pending Verification'}
+                          </span>
+                        )}
                         {dbDoc?.id && (
                           <button
                             onClick={() => handleViewFile(dbDoc.id)}

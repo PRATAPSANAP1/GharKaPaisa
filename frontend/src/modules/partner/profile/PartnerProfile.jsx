@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import ChangePasswordWidget from './ChangePasswordWidget';
 import { 
   MdPerson, MdBusinessCenter, MdAccountBalance, MdSecurity,
-  MdEdit, MdCheckCircle, MdSchool, MdWork, MdCreditCard
+  MdEdit, MdCheckCircle, MdCreditCard, MdClose
 } from 'react-icons/md';
 
 const tabs = [
   { id: 'personal',     label: 'Personal Details',   icon: MdPerson },
-  { id: 'professional', label: 'Professional Info',   icon: MdBusinessCenter },
+  { id: 'professional', label: 'Business Details',   icon: MdBusinessCenter },
   { id: 'bank',         label: 'Bank Details',        icon: MdAccountBalance },
   { id: 'security',     label: 'Security & Access',   icon: MdSecurity },
 ];
@@ -23,10 +24,45 @@ export default function PartnerProfile() {
   const isLoading = usePartnerStore((state) => state.isLoading);
 
   const [activeTab, setActiveTab] = useState('personal');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    company_name: '',
+    current_address: '',
+    pincode: ''
+  });
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  useEffect(() => {
+    if (profile) {
+      setEditForm({
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        company_name: profile.company_name || '',
+        current_address: profile.current_address || '',
+        pincode: profile.pincode || ''
+      });
+    }
+  }, [profile]);
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      await api.put(`/Partners/${profile.id}/profile`, editForm);
+      await fetchProfile();
+      setIsEditing(false);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -45,7 +81,6 @@ export default function PartnerProfile() {
     return <p style={{ color: C.red, padding: 24 }}>Failed to load profile.</p>;
   }
 
-  // helpers
   const fieldLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px' };
   const fieldValue = { fontSize: '15px', fontWeight: 600, color: C.text, margin: 0 };
   const sectionCard = { ...S.card, padding: '28px', borderRadius: '16px' };
@@ -98,9 +133,9 @@ export default function PartnerProfile() {
           </div>
 
           {/* Edit button */}
-          <button style={{
+          <button onClick={() => setIsEditing(true)} style={{
             ...S.btn('outline'), padding: '8px 18px', fontSize: '13px', borderRadius: '10px',
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4
+            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer'
           }}>
             <MdEdit size={16} /> Edit Profile
           </button>
@@ -162,50 +197,33 @@ export default function PartnerProfile() {
                   <p style={fieldLabel}>Pincode</p>
                   <p style={fieldValue}>{profile.pincode || '—'}</p>
                 </div>
+                <div>
+                  <p style={fieldLabel}>KYC Status</p>
+                  <p style={{ ...fieldValue, textTransform: 'capitalize', color: kycTagColor }}>{profile.kyc_status}</p>
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'professional' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={sectionCard}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <MdWork style={{ color: C.primary }} /> Business Profile
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                  <div>
-                    <p style={fieldLabel}>Company / Agency Name</p>
-                    <p style={fieldValue}>{profile.company_name || 'Individual Freelancer'}</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>Entity Type</p>
-                    <p style={fieldValue}>{profile.company_type || 'Sole Proprietor'}</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>GST Number</p>
-                    <p style={{ ...fieldValue, fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>
-                      {profile.gst_number || 'Not Registered'}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>Years of Experience</p>
-                    <p style={fieldValue}>5+ Years (Mock)</p>
-                  </div>
+            <div style={sectionCard}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <MdBusinessCenter style={{ color: C.primary }} /> Business Details
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
+                <div>
+                  <p style={fieldLabel}>Company / Agency Name</p>
+                  <p style={fieldValue}>{profile.company_name || 'Individual Freelancer'}</p>
                 </div>
-              </div>
-              <div style={sectionCard}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <MdSchool style={{ color: C.primary }} /> Educational Qualifications
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                  <div>
-                    <p style={fieldLabel}>Highest Degree</p>
-                    <p style={fieldValue}>Bachelor of Commerce</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>Institution</p>
-                    <p style={fieldValue}>Mumbai University</p>
-                  </div>
+                <div>
+                  <p style={fieldLabel}>Entity Type</p>
+                  <p style={fieldValue}>{profile.company_type || 'Sole Proprietor'}</p>
+                </div>
+                <div>
+                  <p style={fieldLabel}>GST Number</p>
+                  <p style={{ ...fieldValue, fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>
+                    {profile.gst_number || 'Not Registered'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -231,10 +249,16 @@ export default function PartnerProfile() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                     <div>
-                      <h4 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: 0 }}>HDFC Bank Ltd.</h4>
-                      <p style={{ fontSize: '13px', color: C.textMid, margin: '2px 0 0' }}>Savings Account</p>
+                      <h4 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: 0 }}>
+                        {profile.bank_name || 'No Bank Linked'}
+                      </h4>
+                      <p style={{ fontSize: '13px', color: C.textMid, margin: '2px 0 0' }}>Payout Account</p>
                     </div>
-                    <span style={S.tag(C.green)}>Verified</span>
+                    {profile.bank_verified !== undefined && (
+                      <span style={S.tag(profile.bank_verified ? C.green : C.gold)}>
+                        {profile.bank_verified ? 'Verified' : 'Pending Verification'}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{
@@ -243,15 +267,21 @@ export default function PartnerProfile() {
                   }}>
                     <div>
                       <p style={fieldLabel}>Account Number</p>
-                      <p style={{ ...fieldValue, fontFamily: 'monospace' }}>XXXX-XXXX-8921</p>
+                      <p style={{ ...fieldValue, fontFamily: 'monospace' }}>
+                        {profile.account_number || '—'}
+                      </p>
                     </div>
                     <div>
                       <p style={fieldLabel}>IFSC Code</p>
-                      <p style={{ ...fieldValue, fontFamily: 'monospace' }}>HDFC0001234</p>
+                      <p style={{ ...fieldValue, fontFamily: 'monospace' }}>
+                        {profile.ifsc_code || '—'}
+                      </p>
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <p style={fieldLabel}>Account Holder Name</p>
-                      <p style={fieldValue}>{profile.first_name} {profile.last_name}</p>
+                      <p style={fieldValue}>
+                        {profile.account_holder_name || `${profile.first_name} ${profile.last_name}`}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -274,6 +304,62 @@ export default function PartnerProfile() {
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px',
+            width: '90%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '20px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Edit Profile</h3>
+              <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMid }}>
+                <MdClose size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>First Name</label>
+                  <input type="text" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Last Name</label>
+                  <input type="text" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Company Name</label>
+                <input type="text" value={editForm.company_name} onChange={e => setEditForm({...editForm, company_name: e.target.value})} style={{ ...S.input, padding: '10px' }} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Residential Address</label>
+                <textarea value={editForm.current_address} onChange={e => setEditForm({...editForm, current_address: e.target.value})} style={{ ...S.input, padding: '10px', minHeight: '60px', resize: 'none' }} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Pincode</label>
+                <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} />
+              </div>
+
+              <button type="submit" disabled={editLoading} style={{
+                ...S.btn('primary'), width: '100%', padding: '12px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, color: '#fff'
+              }}>
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

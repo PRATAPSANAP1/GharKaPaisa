@@ -21,15 +21,18 @@ const getProfile = async (req, res, next) => {
     `, [PartnerId]);
     if (!Partner) return notFound(res);
 
-    // Mask bank account number
+    // Decrypt bank account number
     if (Partner && Partner.account_number) {
       const { decrypt } = require('../../utils/helpers/crypto');
-      const decrypted = decrypt(Partner.account_number);
-      const accLen = decrypted.length;
-      if (accLen > 4) {
-        Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
-      } else {
-        Partner.account_number = '*'.repeat(accLen);
+      try {
+        const decrypted = decrypt(Partner.account_number);
+        if (shouldMask) {
+          Partner.account_number = 'HIDDEN';
+        } else {
+          Partner.account_number = decrypted;
+        }
+      } catch (err) {
+        logger.error('Failed to decrypt bank account number:', err.message);
       }
     }
 

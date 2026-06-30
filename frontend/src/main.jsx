@@ -47,6 +47,19 @@ console.error = function (...args) {
   origError.apply(console, args);
 };
 
+const origTime = console.time;
+const origTimeEnd = console.timeEnd;
+
+console.time = function (label) {
+  if (label && (label.includes('MSG91') || label.includes('Captcha') || label.includes('TCaptcha'))) return;
+  if (typeof origTime === 'function') origTime.call(console, label);
+};
+
+console.timeEnd = function (label) {
+  if (label && (label.includes('MSG91') || label.includes('Captcha') || label.includes('TCaptcha'))) return;
+  if (typeof origTimeEnd === 'function') origTimeEnd.call(console, label);
+};
+
 // Silence unhandled rejections globally for expected authentication errors
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
