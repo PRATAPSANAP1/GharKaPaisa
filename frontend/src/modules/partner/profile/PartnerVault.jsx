@@ -31,6 +31,8 @@ export default function PartnerVault() {
   const [error, setError] = useState('');
 
   const handleViewOrDownload = async (docId, shouldDownload = false) => {
+    console.log('[Vault] handleViewOrDownload called with docId:', docId);
+    console.log('[Vault] current documents state:', documents);
     if (!docId || docId === 'undefined') {
       alert('Secure document ID is missing. Please refresh the page or try re-logging.');
       return;
@@ -65,6 +67,7 @@ export default function PartnerVault() {
       try {
         const response = await api.get('/kyc/me');
         const docs = response.data?.data?.documents || [];
+        console.log('[Vault Load] Raw documents fetched from backend:', docs);
         setDocuments(docs.map((doc) => ({
           id: doc.id,
           title: DOC_LABELS[doc.doc_type] || doc.doc_type,
