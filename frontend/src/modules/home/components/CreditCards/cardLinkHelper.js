@@ -7,7 +7,7 @@ export const getBankApplyLink = (cardName, bankId) => {
 
   // Axis Bank Cards (connect all to the Axis referral link)
   if (bankLower === 'axis' || nameLower.includes('axis')) {
-    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa177&axisreferralcode=WMMNYOH1";
+    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_964083";
   }
 
   // SBI Bank Cards (connect all to SBI link)
