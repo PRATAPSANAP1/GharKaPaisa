@@ -25,8 +25,6 @@ export default function PartnerKyc() {
   const [showGuidelines, setShowGuidelines] = useState(false);
   
   const [files, setFiles] = useState({
-    aadhaar_front: null,
-    aadhaar_back: null,
     pan: null,
     cancelled_cheque: null
   });
@@ -37,8 +35,6 @@ export default function PartnerKyc() {
 
   // Hover states for file uploads
   const [hovStates, setHovStates] = useState({
-    aadhaar_front: false,
-    aadhaar_back: false,
     pan: false,
     cancelled_cheque: false
   });
@@ -83,8 +79,8 @@ export default function PartnerKyc() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!files.aadhaar_front || !files.aadhaar_back || !files.pan || !files.cancelled_cheque) {
-      setErrorMsg('Please upload all required documents: Aadhaar Front, Aadhaar Back, PAN Card, and Bank Proof.');
+    if (!files.pan || !files.cancelled_cheque) {
+      setErrorMsg('Please upload all required documents: PAN Card and Cancelled Cheque.');
       return;
     }
     if (!documentNumbers.pan_number.trim()) {
@@ -97,8 +93,6 @@ export default function PartnerKyc() {
     setSuccessMsg('');
 
     const formData = new FormData();
-    formData.append('aadhaar_front', files.aadhaar_front);
-    formData.append('aadhaar_back', files.aadhaar_back);
     formData.append('pan', files.pan);
     formData.append('cancelled_cheque', files.cancelled_cheque);
     formData.append('pan_number', documentNumbers.pan_number.trim());
@@ -108,7 +102,7 @@ export default function PartnerKyc() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setSuccessMsg('Documents uploaded successfully! Your KYC is now under review.');
-      setFiles({ aadhaar_front: null, aadhaar_back: null, pan: null, cancelled_cheque: null });
+      setFiles({ pan: null, cancelled_cheque: null });
       fetchProfile(); // Refresh profile to update KYC status
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Failed to upload documents. Ensure your AWS S3 config is correct.');
@@ -188,10 +182,8 @@ export default function PartnerKyc() {
   };
 
   const documentsToRender = [
-    { key: 'aadhaar_front', label: 'Aadhaar Card (Front)', icon: <MdDescription size={20} color={primaryColor} /> },
-    { key: 'aadhaar_back', label: 'Aadhaar Card (Back)', icon: <MdDescription size={20} color={primaryColor} /> },
-    { key: 'cancelled_cheque', label: 'Bank Account Proof', icon: <MdAccountBalance size={20} color={successColor} /> },
-    { key: 'pan', label: 'PAN Card', icon: <MdDescription size={20} color={secondaryColor} /> }
+    { key: 'pan', label: 'PAN Card', icon: <MdDescription size={20} color={secondaryColor} /> },
+    { key: 'cancelled_cheque', label: 'Bank Account Proof', icon: <MdAccountBalance size={20} color={successColor} /> }
   ];
 
   return (
@@ -469,8 +461,6 @@ export default function PartnerKyc() {
                 gap: '20px'
               }}>
                 {[
-                  { id: 'aadhaar_front', label: 'Aadhaar Card (Front) *' },
-                  { id: 'aadhaar_back', label: 'Aadhaar Card (Back) *' },
                   { id: 'pan', label: 'PAN Card Photo *' },
                   { id: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Passbook *' }
                 ].map((upField) => (

@@ -105,11 +105,10 @@ const uploadKYCDocuments = async (req, res, next) => {
     const uploaded = [];
 
     const docMap = {
-      aadhaar_front: { number: aadhaar_number, label: 'Aadhaar Front' },
-      aadhaar_back: { number: null, label: 'Aadhaar Back' },
+      aadhaar: { number: aadhaar_number, label: 'Aadhaar' },
       pan: { number: pan_number, label: 'PAN' },
-      cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
       gst_cert: { number: null, label: 'GST Certificate' },
+      cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
     };
 
     const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
@@ -387,11 +386,10 @@ const uploadSelfKYC = async (req, res, next) => {
     const uploaded = [];
 
     const docMap = {
-      aadhaar_front: { number: aadhaar_number, label: 'Aadhaar Front' },
-      aadhaar_back: { number: null, label: 'Aadhaar Back' },
+      aadhaar: { number: aadhaar_number, label: 'Aadhaar' },
       pan: { number: pan_number, label: 'PAN' },
-      cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
       gst_cert: { number: null, label: 'GST Certificate' },
+      cancelled_cheque: { number: null, label: 'Cancelled Cheque' },
     };
 
     const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
