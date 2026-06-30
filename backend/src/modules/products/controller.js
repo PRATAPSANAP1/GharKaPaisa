@@ -60,7 +60,11 @@ const getProduct = async (req, res, next) => {
         SELECT p.*, b.name as bank_name, b.short_code as bank_code
         FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
       `);
-      product = rows.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === idOrSlug.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      product = rows.find(p => {
+        const nameClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const slugClean = idOrSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return nameClean === slugClean || nameClean.includes(slugClean) || slugClean.includes(nameClean);
+      });
     }
 
     if (!product) return notFound(res);

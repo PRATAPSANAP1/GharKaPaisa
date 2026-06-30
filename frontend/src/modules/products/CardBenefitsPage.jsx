@@ -85,10 +85,10 @@ export default function CardBenefitsPage() {
       cardApprovalDispatch: dbProduct.time_period || localCardDetails.specialOffers.cardApprovalDispatch,
       dateOffer: localCardDetails.specialOffers.dateOffer
     },
-    features: dbProduct.features ? dbProduct.features.split('|') : localCardDetails.features,
+    features: Array.isArray(dbProduct.features) ? dbProduct.features : (typeof dbProduct.features === 'string' ? dbProduct.features.split('|') : localCardDetails.features),
     eligibility: {
       criteria: dbProduct.eligibility || localCardDetails.eligibility.criteria,
-      documentsRequired: dbProduct.documents_required ? dbProduct.documents_required.split('|') : localCardDetails.eligibility.documentsRequired
+      documentsRequired: Array.isArray(dbProduct.documents_required) ? dbProduct.documents_required : (typeof dbProduct.documents_required === 'string' ? dbProduct.documents_required.split('|') : localCardDetails.eligibility.documentsRequired)
     }
   } : localCardDetails;
   
