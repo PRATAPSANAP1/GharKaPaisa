@@ -160,7 +160,7 @@ export default function ManagePartners() {
 
   const handleViewDocument = async (docId) => {
     if (!docId || docId === 'undefined') {
-      alert('Secure document ID is missing. Please refresh the page or try re-logging.');
+      alert("Document not available.");
       return;
     }
     try {
@@ -409,7 +409,8 @@ export default function ManagePartners() {
                           </div>
                           <button
                             onClick={() => handleViewDocument(doc.id)}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: "pointer" }}
+                            disabled={!doc.id || doc.id === 'undefined'}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: (!doc.id || doc.id === 'undefined') ? C.textLight : C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: (!doc.id || doc.id === 'undefined') ? "not-allowed" : "pointer" }}
                           >
                             <Icons.eye size={14} /> View File
                           </button>
