@@ -1,6 +1,8 @@
 const kycService = require('./kyc.service.js');
 const { uploadToS3 } = require('../../services/aws/s3.service.js');
 const { success, error, notFound } = require('../../utils/response/response');
+const { query } = require('../../config/database');
+const { getSignedDownloadUrl } = require('../../services/aws/s3.service.js');
 
 const getKyc = async (req, res, next) => {
   try {
@@ -63,9 +65,82 @@ const updateStatus = async (req, res, next) => {
   }
 };
 
+const viewDocument = async (req, res, next) => {
+  try {
+    const { docId } = req.params;
+
+    // Get JWT token from query parameter or header
+    let token = req.headers.authorization?.split(' ')[1] || req.query.token;
+    if (!token) {
+      return error(res, 'Authentication required. No token provided.', 401);
+    }
+
+    // Verify the token
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../../config/jwt.js');
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return error(res, 'Invalid or expired token.', 401);
+    }
+
+    // Fetch user and profile details from database
+    const { rows: [user] } = await query(
+      `SELECT id, role, status FROM users WHERE id = $1`,
+      [decodedToken.id]
+    );
+    if (!user || user.status === 'suspended' || user.status === 'rejected') {
+      return error(res, 'User account is inactive or suspended.', 403);
+    }
+
+    // Fetch the document details from kyc_documents
+    const { rows: [doc] } = await query(
+      `SELECT s3_key, Partner_id FROM kyc_documents WHERE id = $1`,
+      [docId]
+    );
+
+    if (!doc) {
+      return notFound(res, 'Document not found.');
+    }
+
+    // Authorization check: Admin/Superadmin or document owner
+    const userRole = (user.role || '').toUpperCase();
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+
+    let isOwner = false;
+    if (userRole === 'PARTNER') {
+      const { rows: [partner] } = await query(
+        `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+        [user.id]
+      );
+      if (partner && partner.id === doc.partner_id) {
+        isOwner = true;
+      }
+    }
+
+    if (!isAdmin && !isOwner) {
+      return error(res, 'Access denied. You do not have permission to view this document.', 403);
+    }
+
+    // Generate S3 signed URL
+    const signedUrl = await getSignedDownloadUrl(doc.s3_key);
+
+    // Support both redirect and JSON output depending on query parameter
+    if (req.query.redirect === 'true') {
+      return res.redirect(signedUrl);
+    }
+
+    return success(res, { url: signedUrl });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getKyc,
   uploadDocument,
   verifyDocument,
-  updateStatus
+  updateStatus,
+  viewDocument
 };

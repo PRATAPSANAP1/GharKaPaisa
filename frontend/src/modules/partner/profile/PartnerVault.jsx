@@ -30,6 +30,30 @@ export default function PartnerVault() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const handleViewOrDownload = async (docId, shouldDownload = false) => {
+    try {
+      const res = await api.get(`/kyc/documents/${docId}/view`);
+      if (res.data?.success && res.data?.data?.url) {
+        if (shouldDownload) {
+          const link = document.createElement('a');
+          link.href = res.data.data.url;
+          link.setAttribute('download', '');
+          link.setAttribute('target', '_blank');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          window.open(res.data.data.url, '_blank');
+        }
+      } else {
+        alert('Failed to get secure link');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Error generating secure link');
+    }
+  };
+
   useEffect(() => {
     const loadDocuments = async () => {
       setLoading(true);
@@ -181,31 +205,30 @@ export default function PartnerVault() {
               <div style={{
                 display: 'flex', gap: '8px', paddingTop: '14px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
               }}>
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => handleViewOrDownload(doc.id, false)}
                   style={{
                     flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
                     padding: '10px', background: C.bgSecondary, color: C.textMid,
                     borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none'
+                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <MdVisibility size={16} /> View
-                </a>
-                <a
-                  href={doc.fileUrl}
-                  download
+                </button>
+                <button
+                  onClick={() => handleViewOrDownload(doc.id, true)}
                   style={{
                     flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
                     padding: '10px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
                     color: '#fff', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none'
+                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <MdDownload size={16} /> Download
-                </a>
+                </button>
               </div>
             </div>
           ))}

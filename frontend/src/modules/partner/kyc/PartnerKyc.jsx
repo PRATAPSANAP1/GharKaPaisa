@@ -46,6 +46,20 @@ export default function PartnerKyc() {
     fetchProfile();
   }, [fetchProfile]);
 
+  const handleViewFile = async (docId) => {
+    try {
+      const res = await api.get(`/kyc/documents/${docId}/view`);
+      if (res.data?.success && res.data?.data?.url) {
+        window.open(res.data.data.url, '_blank');
+      } else {
+        alert('Failed to get secure view link');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Error generating secure view link');
+    }
+  };
+
   const handleFileChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
@@ -598,11 +612,9 @@ export default function PartnerKyc() {
                         }}>
                           Uploaded
                         </span>
-                        {dbDoc?.file_url && (
-                          <a
-                            href={dbDoc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {dbDoc?.id && (
+                          <button
+                            onClick={() => handleViewFile(dbDoc.id)}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -616,11 +628,12 @@ export default function PartnerKyc() {
                               borderRadius: '8px',
                               background: '#FFFFFF',
                               boxShadow: '0 2px 4px rgba(37,99,235,0.03)',
-                              transition: 'all 0.2s'
+                              transition: 'all 0.2s',
+                              cursor: 'pointer'
                             }}
                           >
                             <MdVisibility size={15} /> View
-                          </a>
+                          </button>
                         )}
                       </div>
                     </div>

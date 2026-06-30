@@ -54,7 +54,7 @@ const getProfile = async (req, res, next) => {
     }
 
     const { rows: kyc } = await query(
-      `SELECT doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
+      `SELECT id, doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
     );
 
     const processedKyc = shouldMask ? [] : kyc;
@@ -359,7 +359,7 @@ const getSelfProfile = async (req, res, next) => {
     }
 
     const { rows: kyc } = await query(
-      `SELECT doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [Partner.id]
+      `SELECT id, doc_type, doc_number, file_url, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [Partner.id]
     );
 
     return success(res, { ...Partner, kyc_documents: kyc });

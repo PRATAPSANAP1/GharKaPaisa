@@ -158,6 +158,19 @@ export default function ManagePartners() {
     }
   };
 
+  const handleViewDocument = async (docId) => {
+    try {
+      const res = await api.get(`/kyc/documents/${docId}/view`);
+      if (res.data?.success && res.data?.data?.url) {
+        window.open(res.data.data.url, '_blank');
+      } else {
+        alert("Failed to generate secure view link.");
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || "Error generating secure view link.");
+    }
+  };
+
   return (
     <div>
       {/* Title */}
@@ -390,14 +403,12 @@ export default function ManagePartners() {
                             <div style={{ fontSize: "12px", fontWeight: 700, textTransform: "capitalize", color: C.text }}>{doc.doc_type.replace("_", " ")}</div>
                             <div style={{ fontSize: "10px", color: C.textLight }}>No: {doc.doc_number || "N/A"} • Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</div>
                           </div>
-                          <a
-                            href={doc.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: C.teal, fontWeight: 700, textDecoration: "none" }}
+                          <button
+                            onClick={() => handleViewDocument(doc.id)}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: "pointer" }}
                           >
                             <Icons.eye size={14} /> View File
-                          </a>
+                          </button>
                         </div>
                       ))}
                     </div>
