@@ -42,7 +42,7 @@ export const getCardDetails = (id, name = "Credit Card") => {
     id,
     name,
     specialOffers: {
-      totalEarning: "Up to ₹1500",
+      totalEarning: "",
       cardApprovalDispatch: "₹1000",
       dateOffer: {
         title: "May 2026 Offer",

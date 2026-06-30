@@ -197,12 +197,14 @@ export default function CardBenefitsPage() {
           {activeTab === 'offer' && (
             <div className="cbp-tab-pane slide-up">
               <h3 className="cbp-pane-title">Current Offers</h3>
-              <div className="cbp-glass-grid" style={{ marginBottom: '16px', gridTemplateColumns: '1fr', maxWidth: '280px', margin: '0 auto 16px auto' }}>
-                <div className="cbp-glass-card-dark" style={{ textAlign: 'center' }}>
-                  <div className="cbp-glass-label">Total Earning</div>
-                  <div className="cbp-glass-value highlight">{specialOffers?.totalEarning || "N/A"}</div>
+              {specialOffers?.totalEarning && (
+                <div className="cbp-glass-grid" style={{ marginBottom: '16px', gridTemplateColumns: '1fr', maxWidth: '280px', margin: '0 auto 16px auto' }}>
+                  <div className="cbp-glass-card-dark" style={{ textAlign: 'center' }}>
+                    <div className="cbp-glass-label">Total Earning</div>
+                    <div className="cbp-glass-value highlight">{specialOffers.totalEarning}</div>
+                  </div>
                 </div>
-              </div>
+              )}
               
               {specialOffers?.dateOffer && (
                 <div className="cbp-date-offer">
