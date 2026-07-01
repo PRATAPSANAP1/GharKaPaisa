@@ -364,6 +364,7 @@ const login = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
@@ -433,6 +434,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
@@ -682,6 +684,7 @@ const loginPassword = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);

@@ -6,6 +6,7 @@ import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
+import { FaHandshake, FaUserCog, FaCrown, FaBriefcase } from 'react-icons/fa';
 
 import logoImg from "../../../assets/logos/logo.png";
 
@@ -270,7 +271,11 @@ export default function PartnerLogin() {
                 loginStore(profile, loginRes.idToken);
                 
                 if (loginRes.redirect) {
-                  navigate(location.state?.from?.pathname || loginRes.redirect);
+                  if (loginRes.redirect.startsWith('http')) {
+                    window.location.href = loginRes.redirect;
+                  } else {
+                    navigate(location.state?.from?.pathname || loginRes.redirect);
+                  }
                 } else {
                   const role = profile.role?.toUpperCase();
                   if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
@@ -308,7 +313,11 @@ export default function PartnerLogin() {
       loginStore(profile, loginRes.idToken);
       
       if (loginRes.redirect) {
-        navigate(location.state?.from?.pathname || loginRes.redirect);
+        if (loginRes.redirect.startsWith('http')) {
+          window.location.href = loginRes.redirect;
+        } else {
+          navigate(location.state?.from?.pathname || loginRes.redirect);
+        }
       } else {
         const role = profile.role?.toUpperCase();
         if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
@@ -323,6 +332,7 @@ export default function PartnerLogin() {
 
   const getRoleDisplayName = (r) => {
     if (r === "PARTNER") return t("login.rolePartner", "Partner");
+    if (r === "EMPLOYEE") return t("login.roleEmployee", "Employee");
     if (r === "ADMIN") return t("login.roleAdmin", "Admin");
     if (r === "SUPER_ADMIN") return t("login.roleSuperAdmin", "Super Admin");
     return r;
@@ -438,20 +448,28 @@ export default function PartnerLogin() {
                   id: "PARTNER",
                   title: t("login.rolePartner", "Partner"),
                   desc: t("login.rolePartnerDesc", "Earn by helping customers with financial products."),
-                  icon: "👨💼",
+                  icon: <FaHandshake size={20} color="#2563EB" />,
                   color: "#EFF6FF",
-                  iconColor: "#2563EB",
                   cardId: "role-card-partner",
                   titleId: "role-title-partner",
                   descId: "role-desc-partner"
                 },
                 {
+                  id: "EMPLOYEE",
+                  title: t("login.roleEmployee", "Employee"),
+                  desc: t("login.roleEmployeeDesc", "Update lead status and perform operations."),
+                  icon: <FaBriefcase size={20} color="#F97316" />,
+                  color: "#FFF7ED",
+                  cardId: "role-card-employee",
+                  titleId: "role-title-employee",
+                  descId: "role-desc-employee"
+                },
+                {
                   id: "ADMIN",
                   title: t("login.roleAdmin", "Admin"),
                   desc: t("login.roleAdminDesc", "Manage operations and oversee team activities."),
-                  icon: "👨💻",
+                  icon: <FaUserCog size={20} color="#10B981" />,
                   color: "#ECFDF5",
-                  iconColor: "#10B981",
                   cardId: "role-card-admin",
                   titleId: "role-title-admin",
                   descId: "role-desc-admin"
@@ -460,9 +478,8 @@ export default function PartnerLogin() {
                   id: "SUPER_ADMIN",
                   title: t("login.roleSuperAdmin", "Super Admin"),
                   desc: t("login.roleSuperAdminDesc", "Full access to platform administration."),
-                  icon: "👑",
+                  icon: <FaCrown size={20} color="#8B5CF6" />,
                   color: "#F5F3FF",
-                  iconColor: "#8B5CF6",
                   cardId: "role-card-super-admin",
                   titleId: "role-title-super-admin",
                   descId: "role-desc-super-admin"
@@ -483,11 +500,10 @@ export default function PartnerLogin() {
                   >
                     {/* Role Icon Circle */}
                     <div style={{
-                      width: "48px",
-                      height: "48px",
+                      width: "44px",
+                      height: "44px",
                       borderRadius: "50%",
                       background: roleItem.color,
-                      fontSize: "22px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -498,14 +514,14 @@ export default function PartnerLogin() {
 
                     {/* Text Details */}
                     <div style={{ flex: 1 }}>
-                      <div id={roleItem.titleId} style={{ fontSize: "15px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
-                      <div id={roleItem.descId} style={{ fontSize: "11.5px", color: C.textMid || "#64748B", marginTop: "3px", lineHeight: 1.4 }}>{roleItem.desc}</div>
+                      <div id={roleItem.titleId} style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
+                      <div id={roleItem.descId} style={{ fontSize: "11px", color: C.textMid || "#64748B", marginTop: "2px", lineHeight: 1.3 }}>{roleItem.desc}</div>
                     </div>
 
                     {/* Custom Checked Radio input */}
                     <div style={{
-                      width: "18px",
-                      height: "18px",
+                      width: "16px",
+                      height: "16px",
                       borderRadius: "50%",
                       border: isSelected ? "5px solid #2563EB" : `2px solid ${C.border}`,
                       background: isSelected ? "#FFFFFF" : "transparent",
@@ -992,7 +1008,7 @@ export default function PartnerLogin() {
           background: ${C.card};
           border: 1.5px solid ${C.border};
           border-radius: 20px;
-          padding: 16px;
+          padding: 12px 16px;
           display: flex;
           align-items: center;
           gap: 14px;
@@ -1042,8 +1058,8 @@ export default function PartnerLogin() {
           
           /* Step 1 horizontal cards layout */
           .role-cards-container {
-            flex-direction: row;
-            align-items: center;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 16px;
           }
           
@@ -1051,8 +1067,8 @@ export default function PartnerLogin() {
             flex-direction: column;
             align-items: center;
             text-align: center;
-            padding: 24px 16px;
-            height: 220px;
+            padding: 20px 16px;
+            height: 200px;
             justify-content: space-between;
           }
           
