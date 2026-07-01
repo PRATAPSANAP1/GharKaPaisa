@@ -59,9 +59,8 @@ export default function PartnerLogin() {
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("otp"); // "otp" or "password"
 
-  // MSG91 Captcha (disabled on login page per requirements)
-  const { sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: false });
-  const isCaptchaVerified = true;
+  // MSG91 Captcha (active on Step 2 only)
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: loginStep === 2 });
 
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -914,6 +913,9 @@ export default function PartnerLogin() {
                     )}
                   </div>
 
+
+                  {/* MSG91 reCAPTCHA mount container */}
+                  {method === "otp" && <div id={captchaId} style={{ display: "flex", justifyContent: "center", minHeight: "40px", marginTop: "4px" }} />}
 
                   {/* Primary Secure Submit Button */}
                   <button
