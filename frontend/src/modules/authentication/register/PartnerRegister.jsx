@@ -9,7 +9,7 @@ import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp
 import logoImg from "../../../assets/logos/logo.png";
 import welcomeBgImg from "./welcome pg-bg.png";
 
-const STEPS = ["Account", "Credentials", "Identity", "Company 1", "Company 2", "Bank", "KYC"];
+const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
   { label: "Individual", value: "individual" },
@@ -55,7 +55,7 @@ export default function PartnerRegister() {
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [selectedLang, setSelectedLang] = useState(i18n.language || "en");
 
-  const [step, setStep] = useState(0); // Forms nested in step 3
+  const [step, setStep] = useState(0); // 0 = Personal, 1 = Business, 2 = Bank, 3 = KYC
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -197,8 +197,8 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  // ── MSG91 Captcha (only active on step 3.3 which is step === 2) ───────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 2 });
+  // ── MSG91 Captcha (only active on step 3.1 Personal where step === 0) ───────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 0 });
 
   const focusBorder = `1.5px solid #0D6EFD`;
   const inputProps = (key, extra = {}) => ({
@@ -211,18 +211,22 @@ export default function PartnerRegister() {
 
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
-    if (step === 0) { // Sub-step 1: Account (Full Name + Mobile verification)
+    if (step === 0) { // Step 1: Personal
       if (!fullName.trim()) return "Please enter your full name.";
       if (!form.firstName.trim()) return t("partner.errors.firstNameRequired", "Please enter your first name.");
       if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return t("partner.errors.firstNameLettersOnly", "First name can only contain letters.");
       if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
       if (!form.mobilePreVerified) return "Please verify your mobile number with OTP before continuing.";
-    }
-    if (step === 1) { // Sub-step 2: Credentials (Email verification + Password)
+
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
       if (!form.emailPreVerified) return "Please verify your email address with OTP before continuing.";
+
+      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
+      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
+      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
+      if (!isCaptchaVerified) return "Please solve the reCAPTCHA security verification to continue.";
 
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
@@ -230,17 +234,9 @@ export default function PartnerRegister() {
         return t("partner.errors.passwordStrength", "Password must contain uppercase, lowercase and a number.");
       if (form.password !== form.confirmPassword) return t("partner.errors.passwordsMismatch", "Passwords do not match.");
     }
-    if (step === 2) { // Sub-step 3: Identity & Captcha (Aadhaar + reCAPTCHA check)
-      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
-      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
-      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
-      if (!isCaptchaVerified) return "Please solve the reCAPTCHA security verification to continue.";
-    }
-    if (step === 3) { // Sub-step 4: Business details 1 (Company Type + Name + Address)
+    if (step === 1) { // Step 2: Business details
       if (!form.companyName.trim()) return t("partner.errors.companyNameRequired", "Company name is required.");
       if (!form.currentAddress.trim()) return t("partner.errors.companyAddressRequired", "Company address is required.");
-    }
-    if (step === 4) { // Sub-step 5: Business details 2 (Pincode + City + GST)
       if (!form.pincode.trim()) return t("partner.errors.pincodeRequired", "Pincode is required.");
       if (!/^\d{6}$/.test(form.pincode.trim())) return t("partner.errors.pincodeInvalid", "Please enter a valid 6-digit Pincode.");
       if (!form.businessLocation.trim()) return t("partner.errors.businessLocationRequired", "City / Region is required.");
@@ -248,7 +244,7 @@ export default function PartnerRegister() {
         return t("partner.errors.gstInvalid", "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).");
       }
     }
-    if (step === 5) { // Sub-step 6: Bank Account details
+    if (step === 2) { // Step 3: Bank Account details
       if (!form.bankName.trim()) return t("partner.errors.bankNameRequired", "Please enter your bank name.");
       if (!form.accountNumber.trim()) return t("partner.errors.accountNumberRequired", "Please enter your account number.");
       if (!/^\d{9,18}$/.test(form.accountNumber.trim())) return t("partner.errors.accountNumberInvalid", "Please enter a valid 9 to 18-digit account number.");
@@ -258,7 +254,7 @@ export default function PartnerRegister() {
       }
       if (!form.accountHolderName.trim()) return t("partner.errors.accountHolderRequired", "Please enter account holder name.");
     }
-    if (step === 6) { // Sub-step 7: KYC (PAN + Terms checkbox)
+    if (step === 3) { // Step 4: KYC Details
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
       if (!form.termsAgreed) return "You must agree to the Terms & Conditions and Privacy Policy to proceed.";
@@ -447,7 +443,7 @@ export default function PartnerRegister() {
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // Sub-step 1: Check duplicate mobile on submit
+    // Step 0 check duplicate mobile / email on next
     if (step === 0) {
       setLoading(true);
       try {
@@ -455,16 +451,7 @@ export default function PartnerRegister() {
         if (mobileExists?.exists) {
           return setErr(t("partner.errors.mobileExists", "This mobile number is already registered."));
         }
-      } catch (e) {
-      } finally {
-        setLoading(false);
-      }
-    }
 
-    // Sub-step 2: Check duplicate email on submit
-    if (step === 1) {
-      setLoading(true);
-      try {
         const emailExists = await lookupUser(form.email.trim());
         if (emailExists?.exists) {
           return setErr(t("partner.errors.emailExists", "This email address is already registered."));
@@ -510,7 +497,7 @@ export default function PartnerRegister() {
         if (res.errors && Array.isArray(res.errors)) {
           const aadhaarErr = res.errors.find(e => e.field === 'aadhaar');
           if (aadhaarErr) {
-            setStep(2); // Redirect back to Identity step
+            setStep(0); // Redirect back to Personal step
             setAadhaarBackendError(aadhaarErr.message);
             return;
           }
@@ -522,7 +509,7 @@ export default function PartnerRegister() {
       if (resData && resData.errors && Array.isArray(resData.errors)) {
         const aadhaarErr = resData.errors.find(errObj => errObj.field === 'aadhaar');
         if (aadhaarErr) {
-          setStep(2); // Redirect back to Identity step
+          setStep(0); // Redirect back to Personal step
           setAadhaarBackendError(aadhaarErr.message);
           return;
         }
@@ -1132,31 +1119,25 @@ export default function PartnerRegister() {
               </button>
             </div>
 
-            {/* Step indicator */}
+            {/* Step indicator (Showing exactly 3 steps: Welcome, Preferences, Register) */}
             {renderOnboardingProgress()}
 
             {/* Form Title & Subtitle */}
             <div style={{ textAlign: "center", marginBottom: "12px", flexShrink: 0 }}>
               <h2 style={{ fontSize: "18px", fontWeight: 900, margin: 0, color: C.text }}>
                 {step === 0 && t("onboarding.createAccountTitle", "Create Your Partner Account")}
-                {step === 1 && "Account Credentials"}
-                {step === 2 && "Aadhaar & Verification"}
-                {step === 3 && "Business Information (1/2)"}
-                {step === 4 && "Business Information (2/2)"}
-                {step === 5 && "Bank Account Details"}
-                {step === 6 && "KYC Details"}
+                {step === 1 && "Business Information"}
+                {step === 2 && "Bank Account Details"}
+                {step === 3 && "Identity & KYC Details"}
               </h2>
               <p style={{ fontSize: "11px", color: C.textLight || "#64748B", marginTop: "3px", margin: 0 }}>
                 {step === 0 && t("onboarding.createAccountSubtitle", "Complete your details to become a verified GharKaPaisa Partner")}
-                {step === 1 && "Define your access email and password credentials"}
-                {step === 2 && "Enter Aadhaar card number and security check"}
-                {step === 3 && "Specify your company type and firm name"}
-                {step === 4 && "Provide business address and region details"}
-                {step === 5 && "Enter your settlement bank account details"}
-                {step === 6 && "Provide document numbers to start registration"}
+                {step === 1 && "Specify your business details and location parameters"}
+                {step === 2 && "Enter your settlement bank account details"}
+                {step === 3 && "Provide document numbers to start registration"}
               </p>
               <div style={{ fontSize: "10px", fontWeight: 800, color: "#0D6EFD", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Step {step + 1} of {STEPS.length}
+                {t('partner.steps.' + STEPS[step].toLowerCase(), STEPS[step])} Info ({step + 1} of {STEPS.length})
               </div>
             </div>
 
@@ -1201,7 +1182,7 @@ export default function PartnerRegister() {
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.1: Account Details ── */}
+              {/* ── STEP 1: Personal Details ── */}
               {step === 0 && (
                 <div className="form-grid-layout">
                   
@@ -1287,15 +1268,9 @@ export default function PartnerRegister() {
                       </div>
                     )}
                   </div>
-                </div>
-              )}
 
-              {/* ── SUB-STEP 3.2: Account Credentials ── */}
-              {step === 1 && (
-                <div className="form-grid-layout">
-                  
                   {/* Email & OTP */}
-                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.emailAddress", "Email Address")}</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <div style={{ position: "relative", flex: 1 }}>
@@ -1361,6 +1336,26 @@ export default function PartnerRegister() {
                     )}
                   </div>
 
+                  {/* Aadhaar Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
+                      <input 
+                        type="text" 
+                        placeholder="Enter 12-digit Aadhaar" 
+                        maxLength={12}
+                        {...inputProps("aadhaar")}
+                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
+                      />
+                    </div>
+                    {aadhaarBackendError && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {aadhaarBackendError}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Password */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.password", "Password")}</label>
@@ -1402,44 +1397,17 @@ export default function PartnerRegister() {
                       </span>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* ── SUB-STEP 3.3: Aadhaar & Captcha Verification ── */}
-              {step === 2 && (
-                <div className="form-grid-layout">
-                  {/* Aadhaar Number */}
-                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
-                      <input 
-                        type="text" 
-                        placeholder="Enter 12-digit Aadhaar Number" 
-                        maxLength={12}
-                        {...inputProps("aadhaar")}
-                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
-                      />
-                    </div>
-                    {aadhaarBackendError && (
-                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
-                        {aadhaarBackendError}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* reCAPTCHA check container */}
-                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
-                    <label style={S.label}>Security Verification</label>
-                    <div id={captchaId} style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80px" }} />
+                  {/* Captcha */}
+                  <div className="form-full-width" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60px", marginTop: "4px" }}>
+                    <div id={captchaId} />
                   </div>
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.4: Business details 1 ── */}
-              {step === 3 && (
+              {/* ── STEP 2: Business details ── */}
+              {step === 1 && (
                 <div className="form-grid-layout">
-                  
                   {/* Partner Type */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>Partner Type</label>
@@ -1461,13 +1429,7 @@ export default function PartnerRegister() {
                     <label style={S.label}>Company Address</label>
                     <input {...inputProps("currentAddress")} placeholder="Full business address" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
-                </div>
-              )}
 
-              {/* ── SUB-STEP 3.5: Business details 2 ── */}
-              {step === 4 && (
-                <div className="form-grid-layout">
-                  
                   {/* Pincode */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>Pincode</label>
@@ -1488,12 +1450,11 @@ export default function PartnerRegister() {
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.6: Bank Details ── */}
-              {step === 5 && (
+              {/* ── STEP 3: Bank Details ── */}
+              {step === 2 && (
                 <div className="form-grid-layout">
-                  
                   {/* Bank Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.bankName", "Bank Name")}</label>
                     <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder="Search and select your bank" style={{ ...S.input, paddingVertical: "10px" }} />
                     <datalist id="onboarding-bank-list">
@@ -1502,29 +1463,28 @@ export default function PartnerRegister() {
                   </div>
 
                   {/* Account Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.accountNumber", "Account Number")}</label>
                     <input {...inputProps("accountNumber")} placeholder="Enter settlement account number" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* IFSC Code */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.ifscCode", "IFSC Code")}</label>
                     <input {...inputProps("ifsc")} placeholder="Enter 11-digit IFSC code" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
                   </div>
 
                   {/* Account Holder Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.accountHolderName", "Account Holder Name")}</label>
                     <input {...inputProps("accountHolderName")} placeholder="Name as per bank records" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.7: KYC Details ── */}
-              {step === 6 && (
+              {/* ── STEP 4: KYC Details ── */}
+              {step === 3 && (
                 <div className="form-grid-layout">
-                  
                   {/* PAN Number */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
