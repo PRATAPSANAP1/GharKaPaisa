@@ -653,7 +653,6 @@ export default function PartnerLogin() {
 
               {/* Main credentials card container */}
               <div 
-                className="card-scrollable"
                 style={{
                   background: C.card,
                   border: `1.5px solid ${C.border}`,
@@ -664,7 +663,8 @@ export default function PartnerLogin() {
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
-                  margin: "4px 0"
+                  margin: "4px 0",
+                  overflow: "hidden"
                 }}
               >
                 
