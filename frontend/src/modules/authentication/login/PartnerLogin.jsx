@@ -9,6 +9,7 @@ import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginW
 import { FaHandshake, FaUserCog, FaCrown, FaBriefcase } from 'react-icons/fa';
 
 import logoImg from "../../../assets/logos/logo.png";
+import welcomeBgImg from "../register/welcome pg-bg.png";
 
 // Toast Notification
 function Toast({ message, type = "success", onClose }) {
@@ -435,26 +436,40 @@ export default function PartnerLogin() {
                 background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(46, 144, 250, 0.08))",
                 border: `1.5px solid ${C.border}`,
                 borderRadius: "24px",
-                padding: "32px 24px",
+                padding: "24px",
                 height: "100%",
                 boxSizing: "border-box",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
-                textAlign: "left"
+                textAlign: "left",
+                position: "relative",
+                overflow: "hidden"
               }}>
-                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start" }} />
-                
-                <div>
-                  <div style={{ fontSize: "56px", marginBottom: "16px" }}>👨‍💼</div>
-                  <h2 id="label-role-panel-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.rolePanelTitle", "Welcome to GharKaPaisa")}</h2>
-                  <p id="label-role-panel-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
+                <div style={{ flexShrink: 0 }}>
+                  <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain", marginBottom: "12px" }} />
+                  <h2 id="label-role-panel-title" style={{ fontSize: "18px", fontWeight: 900, margin: "0 0 6px 0", color: C.text }}>{t("login.rolePanelTitle", "Welcome to GharKaPaisa")}</h2>
+                  <p id="label-role-panel-desc" style={{ fontSize: "11.5px", color: C.textMid, lineHeight: 1.4, margin: 0 }}>
                     {t("login.rolePanelDesc", "Select the role that fits your workflow to continue securely. Partner accounts can submit financial leads and track earnings, while administrative accounts oversee operations.")}
                   </p>
                 </div>
 
-                <div id="label-role-ssl-banner" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
-                  {t("login.sslBannerText", "256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT")}
+                {/* Illustration Image Graphic */}
+                <div style={{
+                  flex: 1,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  width: "100%",
+                  marginTop: "16px",
+                  overflow: "hidden",
+                  borderRadius: "16px"
+                }}>
+                  <img 
+                    src={welcomeBgImg} 
+                    alt="Welcome Illustration" 
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+                  />
                 </div>
               </div>
             </div>
