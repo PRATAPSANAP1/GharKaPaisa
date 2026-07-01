@@ -197,7 +197,7 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  // ── MSG91 Captcha (only active on step 3.1 Personal where step === 0) ───────────────
+  // ── MSG91 Captcha ───────────────
   const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 0 });
 
   const focusBorder = `1.5px solid #0D6EFD`;
@@ -212,21 +212,21 @@ export default function PartnerRegister() {
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) { // Step 1: Personal
-      if (!fullName.trim()) return "Please enter your full name.";
+      if (!fullName.trim()) return t("partner.errors.enterFullName", "Please enter your full name.");
       if (!form.firstName.trim()) return t("partner.errors.firstNameRequired", "Please enter your first name.");
       if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return t("partner.errors.firstNameLettersOnly", "First name can only contain letters.");
       if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
-      if (!form.mobilePreVerified) return "Please verify your mobile number with OTP before continuing.";
+      if (!form.mobilePreVerified) return t("partner.errors.verifyMobile", "Please verify your mobile number with OTP before continuing.");
 
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
-      if (!form.emailPreVerified) return "Please verify your email address with OTP before continuing.";
+      if (!form.emailPreVerified) return t("partner.errors.verifyEmail", "Please verify your email address with OTP before continuing.");
 
       const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
       if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
       if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
-      if (!isCaptchaVerified) return "Please solve the reCAPTCHA security verification to continue.";
+      if (!isCaptchaVerified) return t("partner.errors.captchaVerify", "Please solve the reCAPTCHA security verification to continue.");
 
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
@@ -257,7 +257,7 @@ export default function PartnerRegister() {
     if (step === 3) { // Step 4: KYC Details
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
-      if (!form.termsAgreed) return "You must agree to the Terms & Conditions and Privacy Policy to proceed.";
+      if (!form.termsAgreed) return t("partner.errors.acceptTerms", "You must agree to the Terms & Conditions and Privacy Policy to proceed.");
     }
     return null;
   };
@@ -286,14 +286,11 @@ export default function PartnerRegister() {
     }
 
     console.log(`[MSG91] Calling window.sendOtp for mobile: ${formattedMobile}`);
-    console.time('MSG91_SendOTP');
     try {
       window.sendOtp(
         formattedMobile,
         (data) => {
           clearTimeout(timeoutId);
-          console.timeEnd('MSG91_SendOTP');
-          console.log('[MSG91] Mobile Success response:', data);
           const requestId = getMsg91RequestId(data);
           setMobileOtpRequestId(requestId);
           setMobileOtpSent(true);
@@ -304,7 +301,6 @@ export default function PartnerRegister() {
         },
         (error) => {
           clearTimeout(timeoutId);
-          console.timeEnd('MSG91_SendOTP');
           console.error('[MSG91] Mobile Failure response:', error);
           const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
           setErr(errorMsg);
@@ -313,7 +309,6 @@ export default function PartnerRegister() {
       );
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error('[MSG91] Exception caught calling sendOtp for mobile:', err);
       setErr("An unexpected error occurred. Please try again.");
       setMobileOtpLoading(false);
     }
@@ -397,7 +392,6 @@ export default function PartnerRegister() {
   };
 
   const handleSendRegistrationOtp = async () => {
-    console.log('[Email OTP] Send Email OTP button clicked');
     setErr('');
     if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr(t('partner.errors.emailInvalid', 'Please enter a valid email address.'));
@@ -525,7 +519,7 @@ export default function PartnerRegister() {
   // ── Render Onboarding Top Progress Bar ─────────────────────────────────────
   const renderOnboardingProgress = () => {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "320px", width: "100%", margin: "0 auto 16px", position: "relative", flexShrink: 0 }}>
+      <div id="onboarding-progress-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "320px", width: "100%", margin: "0 auto 16px", position: "relative", flexShrink: 0 }}>
         {/* Connecting Line */}
         <div style={{
           position: "absolute",
@@ -548,7 +542,7 @@ export default function PartnerRegister() {
         }} />
         
         {/* Step 1: Welcome */}
-        <div style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: "pointer" }} onClick={() => setOnboardingStep(1)}>
+        <div id="progress-step-1" style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: "pointer" }} onClick={() => setOnboardingStep(1)}>
           <div style={{
             width: "32px",
             height: "32px",
@@ -566,13 +560,13 @@ export default function PartnerRegister() {
           }}>
             {onboardingStep > 1 ? "✓" : "1"}
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+          <span id="label-step-1-welcome" style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
             {t("onboarding.welcomeStep", "Welcome")}
           </span>
         </div>
 
         {/* Step 2: Preferences */}
-        <div style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: onboardingStep >= 2 ? "pointer" : "default" }} onClick={() => onboardingStep >= 2 && setOnboardingStep(2)}>
+        <div id="progress-step-2" style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: onboardingStep >= 2 ? "pointer" : "default" }} onClick={() => onboardingStep >= 2 && setOnboardingStep(2)}>
           <div style={{
             width: "32px",
             height: "32px",
@@ -590,13 +584,13 @@ export default function PartnerRegister() {
           }}>
             {onboardingStep > 2 ? "✓" : "2"}
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+          <span id="label-step-2-pref" style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
             {t("onboarding.prefStep", "Preferences")}
           </span>
         </div>
 
         {/* Step 3: Register */}
-        <div style={{ zIndex: 2, textAlign: "center", width: "80px" }}>
+        <div id="progress-step-3" style={{ zIndex: 2, textAlign: "center", width: "80px" }}>
           <div style={{
             width: "32px",
             height: "32px",
@@ -614,7 +608,7 @@ export default function PartnerRegister() {
           }}>
             3
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+          <span id="label-step-3-register" style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
             {t("onboarding.regStep", "Register")}
           </span>
         </div>
@@ -631,7 +625,7 @@ export default function PartnerRegister() {
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: `${C.green}18`, color: C.green, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <Icons.check size={28} />
             </div>
-            <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, marginBottom: "10px" }}>
+            <div id="success-title" style={{ fontSize: "22px", fontWeight: 900, color: C.text, marginBottom: "10px" }}>
               {t('partner.registrationSuccessful', 'Registration Successful!')}
             </div>
 
@@ -646,11 +640,11 @@ export default function PartnerRegister() {
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                 <span style={{ fontSize: "18px" }}>{success.email_verified ? "✅" : "📧"}</span>
-                <span style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>
+                <span id="success-email-title" style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>
                   {success.email_verified ? t('partner.emailVerifiedTitle', 'Email Verified') : t('partner.verifyEmailTitle', 'Verify Your Email')}
                 </span>
               </div>
-              <div style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6 }}>
+              <div id="success-email-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6 }}>
                 {success.email_verified ? (
                   <>
                     {t('partner.emailVerifiedDesc', 'Your email address')} <strong style={{ color: C.text }}>{success.email}</strong> {t('partner.emailVerifiedDescEnd', 'has been verified successfully.')}
@@ -665,15 +659,15 @@ export default function PartnerRegister() {
             </div>
 
             <div style={{ background: C.bgSecondary, borderRadius: "12px", padding: "14px 20px", marginBottom: "16px" }}>
-              <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t('partner.partnerCode', 'Your Partner Code')}</div>
-              <div style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.partner_code ?? success.Partner_code ?? ''}</div>
+              <div id="success-code-label" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>{t('partner.partnerCode', 'Your Partner Code')}</div>
+              <div id="success-code-value" style={{ fontSize: "24px", fontWeight: 900, color: C.primary, letterSpacing: "4px", marginTop: "4px" }}>{success.partner_code ?? success.Partner_code ?? ''}</div>
             </div>
 
-            <div style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>
+            <div id="success-team-desc" style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px", lineHeight: 1.6 }}>
               {t('partner.partnerSubmittedDesc', 'Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.')}
             </div>
 
-            <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%", borderRadius: "14px" }}>
+            <button id="btn-success-login" onClick={onBack} style={{ ...S.btn("primary"), width: "100%", borderRadius: "14px" }}>
               {t('partner.goToLogin', 'Go to Login')}
             </button>
           </div>
@@ -731,9 +725,11 @@ export default function PartnerRegister() {
                   flexDirection: "column",
                   gap: "1px"
                 }}>
-                  <span style={{ fontSize: "8px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>Total Earnings</span>
-                  <span style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
-                  <span style={{ fontSize: "9px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "1px" }}>
+                  <span id="welcome-floating-earnings-label" style={{ fontSize: "8px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>
+                    {t("onboarding.totalEarnings", "Total Earnings")}
+                  </span>
+                  <span id="welcome-floating-earnings-value" style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
+                  <span id="welcome-floating-earnings-trend" style={{ fontSize: "9px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "1px" }}>
                     ▲ 12.5%
                   </span>
                 </div>
@@ -745,6 +741,7 @@ export default function PartnerRegister() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
                 <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "28px", objectFit: "contain" }} />
                 <button 
+                  id="btn-welcome-skip"
                   onClick={() => setOnboardingStep(2)}
                   style={{
                     background: "transparent",
@@ -756,7 +753,7 @@ export default function PartnerRegister() {
                     padding: "4px 8px"
                   }}
                 >
-                  Skip
+                  {t("onboarding.skip", "Skip")}
                 </button>
               </div>
 
@@ -765,19 +762,19 @@ export default function PartnerRegister() {
 
               {/* Header Text */}
               <div style={{ textAlign: "left", flexShrink: 0, marginBottom: "8px" }}>
-                <h1 style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
+                <h1 id="onboarding-welcome-title" style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
                   {t("onboarding.welcomeTo", "Welcome to")}{" "}
                   <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                     GharKaPaisa
                   </span>
                 </h1>
-                <p style={{ fontSize: "11px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "2px", margin: 0 }}>
+                <p id="onboarding-welcome-subtitle" style={{ fontSize: "11px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "2px", margin: 0 }}>
                   {t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}
                 </p>
               </div>
 
               {/* Platform Description */}
-              <p style={{
+              <p id="onboarding-welcome-desc" style={{
                 fontSize: "12px",
                 lineHeight: 1.4,
                 color: C.textMid || "#475569",
@@ -797,10 +794,10 @@ export default function PartnerRegister() {
                 flexShrink: 0
               }}>
                 {[
-                  { title: t("onboarding.feature1", "High Commission"), icon: "💎" },
-                  { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒" },
-                  { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡" },
-                  { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊" }
+                  { title: t("onboarding.feature1", "High Commission"), icon: "💎", id: "feat-1" },
+                  { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒", id: "feat-2" },
+                  { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡", id: "feat-3" },
+                  { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊", id: "feat-4" }
                 ].map((feat, i) => (
                   <div 
                     key={i} 
@@ -816,13 +813,14 @@ export default function PartnerRegister() {
                     }}
                   >
                     <span style={{ fontSize: "12px" }}>{feat.icon}</span>
-                    <span style={{ fontSize: "10px", fontWeight: 700, color: C.text }}>{feat.title}</span>
+                    <span id={feat.id} style={{ fontSize: "10px", fontWeight: 700, color: C.text }}>{feat.title}</span>
                   </div>
                 ))}
               </div>
 
               {/* Bottom Button */}
               <button
+                id="btn-get-started"
                 onClick={() => setOnboardingStep(2)}
                 style={{
                   background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
@@ -842,7 +840,7 @@ export default function PartnerRegister() {
                   flexShrink: 0
                 }}
               >
-                {t("onboarding.getStarted", "Get Started")} <Icons.arrowRight size={14} />
+                <span id="label-get-started">{t("onboarding.getStarted", "Get Started")}</span> <Icons.arrowRight size={14} />
               </button>
             </div>
           </div>
@@ -855,6 +853,7 @@ export default function PartnerRegister() {
             {/* Top Back bar */}
             <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
               <button 
+                id="btn-pref-back-arrow"
                 onClick={() => setOnboardingStep(1)}
                 style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
               >
@@ -867,10 +866,10 @@ export default function PartnerRegister() {
 
             {/* Title & Subtitle */}
             <div style={{ textAlign: "center", marginBottom: "14px", flexShrink: 0 }}>
-              <h2 style={{ fontSize: "20px", fontWeight: 900, margin: 0, color: C.text }}>
+              <h2 id="onboarding-pref-title" style={{ fontSize: "20px", fontWeight: 900, margin: 0, color: C.text }}>
                 {t("onboarding.personalizeTitle", "Personalize Your Experience")}
               </h2>
-              <p style={{ fontSize: "12px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+              <p id="onboarding-pref-subtitle" style={{ fontSize: "12px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
                 {t("onboarding.personalizeSubtitle", "Choose your preferred language and theme to continue")}
               </p>
             </div>
@@ -878,7 +877,7 @@ export default function PartnerRegister() {
             <div className="preferences-layout">
               {/* Section 1: Choose Language */}
               <div className="preferences-section">
-                <h3 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
+                <h3 id="label-choose-language" style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
                   {t("onboarding.chooseLanguage", "Choose Your Language")}
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
@@ -887,6 +886,7 @@ export default function PartnerRegister() {
                     return (
                       <div
                         key={lang.code}
+                        id={`lang-card-${lang.code}`}
                         onClick={() => handleLangSelect(lang.code)}
                         style={{
                           background: isSelected ? "rgba(13, 110, 253, 0.08)" : C.card,
@@ -901,7 +901,7 @@ export default function PartnerRegister() {
                         }}
                       >
                         <div style={{ fontSize: "18px", marginBottom: "4px" }}>{lang.flag}</div>
-                        <div style={{ fontSize: "11px", fontWeight: 800, color: C.text }}>{lang.label}</div>
+                        <div id={`lang-label-${lang.code}`} style={{ fontSize: "11px", fontWeight: 800, color: C.text }}>{lang.label}</div>
                         {isSelected && (
                           <div style={{
                             position: "absolute",
@@ -928,12 +928,13 @@ export default function PartnerRegister() {
 
               {/* Section 2: Choose Theme */}
               <div className="preferences-section">
-                <h3 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
+                <h3 id="label-choose-theme" style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
                   {t("onboarding.chooseTheme", "Choose Theme")}
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", flex: 1, alignItems: "center" }}>
                   {/* Light Mode */}
                   <div
+                    id="theme-card-light"
                     onClick={() => handleThemeSelect("light")}
                     style={{
                       background: C.card,
@@ -951,7 +952,7 @@ export default function PartnerRegister() {
                       justifyContent: "center"
                     }}
                   >
-                    <div style={{ fontSize: "12px", fontWeight: 800, color: C.text }}>
+                    <div id="theme-label-light" style={{ fontSize: "12px", fontWeight: 800, color: C.text }}>
                       {t("onboarding.lightMode", "Light Mode")}
                     </div>
                     
@@ -992,6 +993,7 @@ export default function PartnerRegister() {
 
                   {/* Dark Mode */}
                   <div
+                    id="theme-card-dark"
                     onClick={() => handleThemeSelect("dark")}
                     style={{
                       background: C.card,
@@ -1009,7 +1011,7 @@ export default function PartnerRegister() {
                       justifyContent: "center"
                     }}
                   >
-                    <div style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
+                    <div id="theme-label-dark" style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
                       {t("onboarding.darkMode", "Dark Mode")}
                     </div>
                     
@@ -1054,6 +1056,7 @@ export default function PartnerRegister() {
             {/* Bottom Actions Row */}
             <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexShrink: 0 }}>
               <button
+                id="btn-pref-back"
                 onClick={() => setOnboardingStep(1)}
                 style={{
                   background: C.card,
@@ -1071,9 +1074,10 @@ export default function PartnerRegister() {
                   gap: "6px"
                 }}
               >
-                <Icons.arrowLeft size={14} /> {t("onboarding.back", "Back")}
+                <Icons.arrowLeft size={14} /> <span id="label-pref-back">{t("onboarding.back", "Back")}</span>
               </button>
               <button
+                id="btn-pref-continue"
                 onClick={() => { setOnboardingStep(3); setStep(0); }}
                 style={{
                   background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
@@ -1092,7 +1096,7 @@ export default function PartnerRegister() {
                   boxShadow: "0 4px 14px rgba(13, 110, 253, 0.2)"
                 }}
               >
-                {t("onboarding.continue", "Continue")} <Icons.arrowRight size={14} />
+                <span id="label-pref-continue">{t("onboarding.continue", "Continue")}</span> <Icons.arrowRight size={14} />
               </button>
             </div>
           </div>
@@ -1105,6 +1109,7 @@ export default function PartnerRegister() {
             {/* Top Back bar */}
             <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
               <button 
+                id="btn-register-back-arrow"
                 onClick={() => {
                   setErr("");
                   if (step === 0) {
@@ -1119,42 +1124,44 @@ export default function PartnerRegister() {
               </button>
             </div>
 
-            {/* Step indicator (Showing exactly 3 steps: Welcome, Preferences, Register) */}
+            {/* Step indicator */}
             {renderOnboardingProgress()}
 
             {/* Form Title & Subtitle */}
-            <div style={{ textAlign: "center", marginBottom: "12px", flexShrink: 0 }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 900, margin: 0, color: C.text }}>
+            <div style={{ textAlign: "center", marginBottom: "10px", flexShrink: 0 }}>
+              <h2 id="onboarding-register-title" style={{ fontSize: "18px", fontWeight: 900, margin: 0, color: C.text }}>
                 {step === 0 && t("onboarding.createAccountTitle", "Create Your Partner Account")}
-                {step === 1 && "Business Information"}
-                {step === 2 && "Bank Account Details"}
-                {step === 3 && "Identity & KYC Details"}
+                {step === 1 && t("onboarding.businessInfoTitle", "Business Information")}
+                {step === 2 && t("onboarding.bankInfoTitle", "Bank Account Details")}
+                {step === 3 && t("onboarding.kycInfoTitle", "Identity & KYC Details")}
               </h2>
-              <p style={{ fontSize: "11px", color: C.textLight || "#64748B", marginTop: "3px", margin: 0 }}>
+              <p id="onboarding-register-subtitle" style={{ fontSize: "11px", color: C.textLight || "#64748B", marginTop: "3px", margin: 0 }}>
                 {step === 0 && t("onboarding.createAccountSubtitle", "Complete your details to become a verified GharKaPaisa Partner")}
-                {step === 1 && "Specify your business details and location parameters"}
-                {step === 2 && "Enter your settlement bank account details"}
-                {step === 3 && "Provide document numbers to start registration"}
+                {step === 1 && t("onboarding.businessInfoSubtitle", "Specify your business details and location parameters")}
+                {step === 2 && t("onboarding.bankInfoSubtitle", "Enter your settlement bank account details")}
+                {step === 3 && t("onboarding.kycInfoSubtitle", "Provide document numbers to start registration")}
               </p>
-              <div style={{ fontSize: "10px", fontWeight: 800, color: "#0D6EFD", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                {t('partner.steps.' + STEPS[step].toLowerCase(), STEPS[step])} Info ({step + 1} of {STEPS.length})
+              <div id="register-substep-indicator" style={{ fontSize: "10px", fontWeight: 800, color: "#0D6EFD", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                {t('partner.steps.' + STEPS[step].toLowerCase(), STEPS[step])} {t("onboarding.infoStepSuffix", "Info")} ({step + 1} of {STEPS.length})
               </div>
             </div>
 
-            {/* White Card Container */}
-            <div style={{
-              background: C.card,
-              border: `1.5px solid ${C.border}`,
-              borderRadius: "20px",
-              padding: "16px",
-              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.04)",
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              overflow: "hidden",
-              margin: "6px 0"
-            }}>
+            {/* Scrollable White Card Container */}
+            <div 
+              className="card-scrollable"
+              style={{
+                background: C.card,
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "20px",
+                padding: "16px",
+                boxShadow: "0 6px 20px rgba(0, 0, 0, 0.04)",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-start",
+                margin: "6px 0"
+              }}
+            >
               
               {/* Error Box */}
               {err && (
@@ -1188,14 +1195,14 @@ export default function PartnerRegister() {
                   
                   {/* Full Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.fullName", "Full Name")}</label>
+                    <label id="label-full-name" style={S.label}>{t("onboarding.fullName", "Full Name")}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.User size={14} /></span>
                       <input 
                         type="text" 
                         value={fullName}
                         onChange={handleFullNameChange}
-                        placeholder="Enter your full name" 
+                        placeholder={t("onboarding.fullNamePlaceholder", "Enter your full name")} 
                         style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                         onFocus={e => (e.target.style.border = focusBorder)}
                         onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
@@ -1205,20 +1212,21 @@ export default function PartnerRegister() {
 
                   {/* Mobile & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.mobileNumber", "Mobile Number")}</label>
+                    <label id="label-mobile" style={S.label}>{t("onboarding.mobileNumber", "Mobile Number")}</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <div style={{ position: "relative", flex: 1 }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.phone size={14} /></span>
                         <input
                           type="tel"
                           {...inputProps("mobile")}
-                          placeholder="10-digit Mobile Number"
+                          placeholder={t("onboarding.mobilePlaceholder", "10-digit Mobile Number")}
                           style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                           disabled={form.mobilePreVerified}
                         />
                       </div>
                       
                       <button
+                        id="btn-send-mobile-otp"
                         type="button"
                         onClick={mobileOtpSent ? handleResendMobileOtp : handleSendMobileOtp}
                         style={{
@@ -1234,7 +1242,7 @@ export default function PartnerRegister() {
                         }}
                         disabled={mobileActionDisabled}
                       >
-                        {form.mobilePreVerified ? "✓ Verified" : mobileOtpSent ? "Resend" : "Send OTP"}
+                        {form.mobilePreVerified ? t("onboarding.otpVerified", "✓ Verified") : mobileOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
                       </button>
                     </div>
 
@@ -1245,10 +1253,11 @@ export default function PartnerRegister() {
                           style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.mobileOtp}
                           onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
-                          placeholder="Enter 6-digit SMS OTP"
+                          placeholder={t("onboarding.enterSmsOtp", "Enter 6-digit SMS OTP")}
                           maxLength={6}
                         />
                         <button
+                          id="btn-verify-mobile-otp"
                           type="button"
                           onClick={handleVerifyMobileOtp}
                           disabled={mobileVerifyLoading || form.mobileOtp.trim().length < 6}
@@ -1263,7 +1272,7 @@ export default function PartnerRegister() {
                             cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
                         >
-                          {mobileVerifyLoading ? "Verifying..." : "Verify OTP"}
+                          {mobileVerifyLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}
                         </button>
                       </div>
                     )}
@@ -1271,14 +1280,14 @@ export default function PartnerRegister() {
 
                   {/* Email & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.emailAddress", "Email Address")}</label>
+                    <label id="label-email" style={S.label}>{t("onboarding.emailAddress", "Email Address")}</label>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <div style={{ position: "relative", flex: 1 }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.mail size={14} /></span>
                         <input
                           type="email"
                           {...inputProps("email")}
-                          placeholder="name@domain.com"
+                          placeholder={t("onboarding.emailPlaceholder", "name@domain.com")}
                           style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                           disabled={form.emailPreVerified}
                           autoComplete="email"
@@ -1286,6 +1295,7 @@ export default function PartnerRegister() {
                       </div>
                       
                       <button
+                        id="btn-send-email-otp"
                         type="button"
                         onClick={handleSendRegistrationOtp}
                         style={{
@@ -1301,7 +1311,7 @@ export default function PartnerRegister() {
                         }}
                         disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
                       >
-                        {form.emailPreVerified ? "✓ Verified" : emailOtpSent ? "Resend" : "Send OTP"}
+                        {form.emailPreVerified ? t("onboarding.otpVerified", "✓ Verified") : emailOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
                       </button>
                     </div>
 
@@ -1312,10 +1322,11 @@ export default function PartnerRegister() {
                           style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.emailOtp}
                           onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
-                          placeholder="Enter 6-digit Email OTP"
+                          placeholder={t("onboarding.enterEmailOtp", "Enter 6-digit Email OTP")}
                           maxLength={6}
                         />
                         <button
+                          id="btn-verify-email-otp"
                           type="button"
                           onClick={handleVerifyRegistrationOtp}
                           disabled={emailOtpLoading || form.emailOtp.trim().length < 6}
@@ -1330,7 +1341,7 @@ export default function PartnerRegister() {
                             cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
                         >
-                          {emailOtpLoading ? "Verifying..." : "Verify OTP"}
+                          {emailOtpLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}
                         </button>
                       </div>
                     )}
@@ -1338,19 +1349,19 @@ export default function PartnerRegister() {
 
                   {/* Aadhaar Number */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
+                    <label id="label-aadhaar" style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
                       <input 
                         type="text" 
-                        placeholder="Enter 12-digit Aadhaar" 
+                        placeholder={t("onboarding.aadhaarPlaceholder", "Enter 12-digit Aadhaar")} 
                         maxLength={12}
                         {...inputProps("aadhaar")}
                         style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                       />
                     </div>
                     {aadhaarBackendError && (
-                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                      <div id="error-aadhaar-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
                         {aadhaarBackendError}
                       </div>
                     )}
@@ -1358,12 +1369,12 @@ export default function PartnerRegister() {
 
                   {/* Password */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.password", "Password")}</label>
+                    <label id="label-password" style={S.label}>{t("onboarding.password", "Password")}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
                       <input 
                         type={showPassword ? "text" : "password"} 
-                        placeholder="Choose password (min 8 chars)" 
+                        placeholder={t("onboarding.passwordPlaceholder", "Choose password (min 8 chars)")} 
                         {...inputProps("password")}
                         style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
                         autoComplete="new-password"
@@ -1379,12 +1390,12 @@ export default function PartnerRegister() {
 
                   {/* Confirm Password */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.confirmPassword", "Confirm Password")}</label>
+                    <label id="label-confirm-password" style={S.label}>{t("onboarding.confirmPassword", "Confirm Password")}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
                       <input 
                         type={showConfirmPassword ? "text" : "password"} 
-                        placeholder="Repeat your password" 
+                        placeholder={t("onboarding.confirmPasswordPlaceholder", "Repeat your password")} 
                         {...inputProps("confirmPassword")}
                         style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
                         autoComplete="new-password"
@@ -1410,7 +1421,7 @@ export default function PartnerRegister() {
                 <div className="form-grid-layout">
                   {/* Partner Type */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Partner Type</label>
+                    <label id="label-partner-type" style={S.label}>{t("onboarding.partnerType", "Partner Type")}</label>
                     <select style={{ ...S.input, paddingVertical: "10px" }} value={form.companyType} onChange={set("companyType")}>
                       {COMPANY_TYPES.map(c => (
                         <option key={c.value} value={c.value}>{c.label}</option>
@@ -1420,32 +1431,32 @@ export default function PartnerRegister() {
 
                   {/* Company Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Company Name</label>
-                    <input {...inputProps("companyName")} placeholder="Enter company / firm name" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-company-name" style={S.label}>{t("onboarding.companyName", "Company Name")}</label>
+                    <input {...inputProps("companyName")} placeholder={t("onboarding.companyNamePlaceholder", "Enter company / firm name")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* Company Address */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Company Address</label>
-                    <input {...inputProps("currentAddress")} placeholder="Full business address" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-company-address" style={S.label}>{t("onboarding.companyAddress", "Company Address")}</label>
+                    <input {...inputProps("currentAddress")} placeholder={t("onboarding.companyAddressPlaceholder", "Full business address")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* Pincode */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Pincode</label>
-                    <input {...inputProps("pincode")} maxLength={6} placeholder="6-digit pincode" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-pincode" style={S.label}>{t("onboarding.pincode", "Pincode")}</label>
+                    <input {...inputProps("pincode")} maxLength={6} placeholder={t("onboarding.pincodePlaceholder", "6-digit pincode")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* City / Region */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>City / Region</label>
-                    <input {...inputProps("businessLocation")} placeholder="e.g. Mumbai, Maharashtra" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-city-region" style={S.label}>{t("onboarding.cityRegion", "City / Region")}</label>
+                    <input {...inputProps("businessLocation")} placeholder={t("onboarding.cityRegionPlaceholder", "e.g. Mumbai, Maharashtra")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* GST Number */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.gstNumber", "GST Number (Optional)")}</label>
-                    <input {...inputProps("gst")} placeholder="e.g. 27AAPFU0939F1ZV" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
+                    <label id="label-gst" style={S.label}>{t("onboarding.gstNumber", "GST Number (Optional)")}</label>
+                    <input {...inputProps("gst")} placeholder={t("onboarding.gstPlaceholder", "e.g. 27AAPFU0939F1ZV")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
                   </div>
                 </div>
               )}
@@ -1455,8 +1466,8 @@ export default function PartnerRegister() {
                 <div className="form-grid-layout">
                   {/* Bank Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.bankName", "Bank Name")}</label>
-                    <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder="Search and select your bank" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-bank-name" style={S.label}>{t("onboarding.bankName", "Bank Name")}</label>
+                    <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder={t("onboarding.bankNamePlaceholder", "Search and select your bank")} style={{ ...S.input, paddingVertical: "10px" }} />
                     <datalist id="onboarding-bank-list">
                       {INDIA_BANKS.map(bank => <option key={bank} value={bank} />)}
                     </datalist>
@@ -1464,20 +1475,20 @@ export default function PartnerRegister() {
 
                   {/* Account Number */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.accountNumber", "Account Number")}</label>
-                    <input {...inputProps("accountNumber")} placeholder="Enter settlement account number" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-account-number" style={S.label}>{t("onboarding.accountNumber", "Account Number")}</label>
+                    <input {...inputProps("accountNumber")} placeholder={t("onboarding.accountNumberPlaceholder", "Enter settlement account number")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* IFSC Code */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.ifscCode", "IFSC Code")}</label>
-                    <input {...inputProps("ifsc")} placeholder="Enter 11-digit IFSC code" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
+                    <label id="label-ifsc" style={S.label}>{t("onboarding.ifscCode", "IFSC Code")}</label>
+                    <input {...inputProps("ifsc")} placeholder={t("onboarding.ifscPlaceholder", "Enter 11-digit IFSC code")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
                   </div>
 
                   {/* Account Holder Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.accountHolderName", "Account Holder Name")}</label>
-                    <input {...inputProps("accountHolderName")} placeholder="Name as per bank records" style={{ ...S.input, paddingVertical: "10px" }} />
+                    <label id="label-holder-name" style={S.label}>{t("onboarding.accountHolderName", "Account Holder Name")}</label>
+                    <input {...inputProps("accountHolderName")} placeholder={t("onboarding.accountHolderPlaceholder", "Name as per bank records")} style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
                 </div>
               )}
@@ -1487,8 +1498,8 @@ export default function PartnerRegister() {
                 <div className="form-grid-layout">
                   {/* PAN Number */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
-                    <input {...inputProps("pan")} placeholder="Enter 10-char PAN" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
+                    <label id="label-pan" style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
+                    <input {...inputProps("pan")} placeholder={t("onboarding.panPlaceholder", "Enter 10-char PAN")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
                   </div>
 
                   {/* Info callout card */}
@@ -1501,7 +1512,7 @@ export default function PartnerRegister() {
                     color: C.textMid,
                     lineHeight: 1.4
                   }}>
-                    <strong>Note:</strong> Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).
+                    <strong id="label-note-prefix">{t("onboarding.notePrefix", "Note:")}</strong> {t("onboarding.noteMessage", "Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).")}
                   </div>
 
                   {/* Terms Checkbox */}
@@ -1513,8 +1524,8 @@ export default function PartnerRegister() {
                       onChange={e => setForm(f => ({ ...f, termsAgreed: e.target.checked }))}
                       style={{ marginTop: "2px", width: "14px", height: "14px", cursor: "pointer" }}
                     />
-                    <label htmlFor="termsAgreed" style={{ fontSize: "11px", color: C.textMid, cursor: "pointer", userSelect: "none" }}>
-                      I agree to the <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Terms & Conditions</span> and <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Privacy Policy</span>.
+                    <label id="label-terms" htmlFor="termsAgreed" style={{ fontSize: "11px", color: C.textMid, cursor: "pointer", userSelect: "none" }}>
+                      {t("onboarding.termsAgreement", "I agree to the Terms & Conditions and Privacy Policy.")}
                     </label>
                   </div>
                 </div>
@@ -1525,6 +1536,7 @@ export default function PartnerRegister() {
             {/* Bottom Actions Row */}
             <div style={{ display: "flex", gap: "10px", marginTop: "auto", flexShrink: 0 }}>
               <button
+                id="btn-register-back"
                 type="button"
                 onClick={() => {
                   setErr("");
@@ -1550,9 +1562,10 @@ export default function PartnerRegister() {
                   gap: "6px"
                 }}
               >
-                <Icons.arrowLeft size={14} /> {step === 0 ? t("onboarding.back", "Back") : "Previous"}
+                <Icons.arrowLeft size={14} /> <span id="label-register-back">{step === 0 ? t("onboarding.back", "Back") : t("onboarding.previous", "Previous")}</span>
               </button>
               <button
+                id="btn-register-next"
                 type="button"
                 onClick={handleStepSubmit}
                 disabled={loading}
@@ -1582,24 +1595,25 @@ export default function PartnerRegister() {
                       borderTop: "2px solid #fff",
                       animation: "spin 0.7s linear infinite"
                     }} />
-                    Submitting...
+                    {t("onboarding.submitting", "Submitting...")}
                   </span>
                 ) : step === STEPS.length - 1 ? (
-                  <>Create Account <Icons.check size={14} /></>
+                  <><span id="label-register-create-account">{t("onboarding.createAccount", "Create Account")}</span> <Icons.check size={14} /></>
                 ) : (
-                  <>{t("onboarding.continue", "Continue")} <Icons.arrowRight size={14} /></>
+                  <><span id="label-register-continue">{t("onboarding.continue", "Continue")}</span> <Icons.arrowRight size={14} /></>
                 )}
               </button>
             </div>
 
             {/* Bottom Log-in Link */}
             <div style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: C.textLight, flexShrink: 0 }}>
-              Already have an account?{" "}
+              <span id="label-already-have-account">{t("onboarding.alreadyHaveAccount", "Already have an account?")}</span>{" "}
               <span 
+                id="link-go-to-login"
                 onClick={onBack} 
                 style={{ color: "#0D6EFD", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
               >
-                Login
+                {t("onboarding.login", "Login")}
               </span>
             </div>
 
@@ -1683,6 +1697,19 @@ export default function PartnerRegister() {
         
         .form-full-width {
           width: 100%;
+        }
+        
+        .card-scrollable {
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(13, 110, 253, 0.2) transparent;
+        }
+        .card-scrollable::-webkit-scrollbar {
+          width: 6px;
+        }
+        .card-scrollable::-webkit-scrollbar-thumb {
+          background-color: rgba(13, 110, 253, 0.2);
+          border-radius: 3px;
         }
         
         @media (min-width: 992px) {

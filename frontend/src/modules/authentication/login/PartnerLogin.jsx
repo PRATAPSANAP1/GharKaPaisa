@@ -129,7 +129,7 @@ export default function PartnerLogin() {
     setErr("");
     if (!isCaptchaVerified) {
       console.warn('[MSG91] Send OTP blocked: Captcha not verified');
-      return setErr("Please complete the captcha verification first.");
+      return setErr(t("partner.errors.completeCaptcha", "Please complete the captcha verification first."));
     }
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
     
@@ -152,7 +152,7 @@ export default function PartnerLogin() {
 
         // 2. Verify MSG91 sendOtp helper is ready
         if (!sdkReady) {
-          throw new Error("OTP service is loading. Please wait a moment and try again.");
+          throw new Error(t("partner.errors.msg91NotLoaded", "OTP provider is loading. Please wait a moment and try again."));
         }
 
         let callbackFired = false;
@@ -160,7 +160,7 @@ export default function PartnerLogin() {
           if (!callbackFired) {
             callbackFired = true;
             console.error('[MSG91] Send OTP callback timeout');
-            setToast({ message: "OTP service did not respond. Please refresh the page and try again.", type: "error" });
+            setToast({ message: t("partner.errors.msg91Timeout", "OTP provider did not respond. Please refresh and try again."), type: "error" });
             setLoading(l => ({ ...l, otp: false }));
           }
         }, 15000);
@@ -248,7 +248,7 @@ export default function PartnerLogin() {
           const verifyTimeout = setTimeout(() => {
             if (!verifyDone) {
               verifyDone = true;
-              setErr("Verification timed out. Please try again.");
+              setErr(t("partner.errors.verificationTimeout", "Verification timed out. Please try again."));
               setLoading(l => ({ ...l, login: false }));
             }
           }, 15000);
@@ -286,7 +286,7 @@ export default function PartnerLogin() {
               if (verifyDone) return;
               verifyDone = true;
               clearTimeout(verifyTimeout);
-              setErr(errResponse?.message || "Invalid OTP code entered.");
+              setErr(errResponse?.message || t("partner.errors.invalidOtpEntered", "Invalid OTP code entered."));
               setLoading(l => ({ ...l, login: false }));
             }
           );
@@ -299,7 +299,7 @@ export default function PartnerLogin() {
         // Password login
         if (!form.password) {
           setLoading(l => ({ ...l, login: false }));
-          return setErr('Please enter your password.');
+          return setErr(t("partner.errors.enterPassword", "Please enter your password."));
         }
         loginRes = await loginWithPassword(form.identity.trim(), form.password, selectedRole);
       }
@@ -322,16 +322,16 @@ export default function PartnerLogin() {
   };
 
   const getRoleDisplayName = (r) => {
-    if (r === "PARTNER") return "Partner";
-    if (r === "ADMIN") return "Admin";
-    if (r === "SUPER_ADMIN") return "Super Admin";
+    if (r === "PARTNER") return t("login.rolePartner", "Partner");
+    if (r === "ADMIN") return t("login.roleAdmin", "Admin");
+    if (r === "SUPER_ADMIN") return t("login.roleSuperAdmin", "Super Admin");
     return r;
   };
 
   const renderLoginProgress = () => {
     const isStep1 = loginStep === 1;
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "240px", width: "100%", margin: "0 auto 20px", position: "relative" }}>
+      <div id="login-progress-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "240px", width: "100%", margin: "0 auto 20px", position: "relative" }}>
         {/* Connection Line */}
         <div style={{
           position: "absolute",
@@ -345,7 +345,7 @@ export default function PartnerLogin() {
         }} />
         
         {/* Step 1 Circle */}
-        <div style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
+        <div id="login-progress-step-1" style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
           <div style={{
             width: "32px",
             height: "32px",
@@ -362,11 +362,11 @@ export default function PartnerLogin() {
           }}>
             {isStep1 ? "1" : "✓"}
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#2563EB" }}>Step 1</span>
+          <span id="label-login-step-1" style={{ fontSize: "11px", fontWeight: 700, color: "#2563EB" }}>{t("login.step1Text", "Step 1")}</span>
         </div>
 
         {/* Step 2 Circle */}
-        <div style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
+        <div id="login-progress-step-2" style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
           <div style={{
             width: "32px",
             height: "32px",
@@ -384,7 +384,7 @@ export default function PartnerLogin() {
           }}>
             2
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: isStep1 ? "#64748B" : "#2563EB" }}>Step 2</span>
+          <span id="label-login-step-2" style={{ fontSize: "11px", fontWeight: 700, color: isStep1 ? "#64748B" : "#2563EB" }}>{t("login.step2Text", "Step 2")}</span>
         </div>
       </div>
     );
@@ -425,9 +425,9 @@ export default function PartnerLogin() {
               
               {renderLoginProgress()}
 
-              <h1 style={{ fontSize: "26px", fontWeight: 900, margin: 0, color: C.text }}>Welcome Back!</h1>
-              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
-                Login securely to continue your journey
+              <h1 id="login-welcome-title" style={{ fontSize: "26px", fontWeight: 900, margin: 0, color: C.text }}>{t("login.welcomeTitle", "Welcome Back!")}</h1>
+              <p id="login-welcome-subtitle" style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                {t("login.welcomeSubtitle", "Login securely to continue your journey")}
               </p>
             </div>
 
@@ -436,33 +436,43 @@ export default function PartnerLogin() {
               {[
                 {
                   id: "PARTNER",
-                  title: "Partner",
-                  desc: "Earn by helping customers with financial products.",
+                  title: t("login.rolePartner", "Partner"),
+                  desc: t("login.rolePartnerDesc", "Earn by helping customers with financial products."),
                   icon: "👨💼",
                   color: "#EFF6FF",
-                  iconColor: "#2563EB"
+                  iconColor: "#2563EB",
+                  cardId: "role-card-partner",
+                  titleId: "role-title-partner",
+                  descId: "role-desc-partner"
                 },
                 {
                   id: "ADMIN",
-                  title: "Admin",
-                  desc: "Manage operations and oversee team activities.",
+                  title: t("login.roleAdmin", "Admin"),
+                  desc: t("login.roleAdminDesc", "Manage operations and oversee team activities."),
                   icon: "👨💻",
                   color: "#ECFDF5",
-                  iconColor: "#10B981"
+                  iconColor: "#10B981",
+                  cardId: "role-card-admin",
+                  titleId: "role-title-admin",
+                  descId: "role-desc-admin"
                 },
                 {
                   id: "SUPER_ADMIN",
-                  title: "Super Admin",
-                  desc: "Full access to platform administration.",
+                  title: t("login.roleSuperAdmin", "Super Admin"),
+                  desc: t("login.roleSuperAdminDesc", "Full access to platform administration."),
                   icon: "👑",
                   color: "#F5F3FF",
-                  iconColor: "#8B5CF6"
+                  iconColor: "#8B5CF6",
+                  cardId: "role-card-super-admin",
+                  titleId: "role-title-super-admin",
+                  descId: "role-desc-super-admin"
                 }
               ].map((roleItem) => {
                 const isSelected = selectedRole === roleItem.id;
                 return (
                   <div
                     key={roleItem.id}
+                    id={roleItem.cardId}
                     onClick={() => handleRoleSelect(roleItem.id)}
                     className="role-card"
                     style={{
@@ -488,8 +498,8 @@ export default function PartnerLogin() {
 
                     {/* Text Details */}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "15px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
-                      <div style={{ fontSize: "11.5px", color: C.textMid || "#64748B", marginTop: "3px", lineHeight: 1.4 }}>{roleItem.desc}</div>
+                      <div id={roleItem.titleId} style={{ fontSize: "15px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
+                      <div id={roleItem.descId} style={{ fontSize: "11.5px", color: C.textMid || "#64748B", marginTop: "3px", lineHeight: 1.4 }}>{roleItem.desc}</div>
                     </div>
 
                     {/* Custom Checked Radio input */}
@@ -513,9 +523,10 @@ export default function PartnerLogin() {
             <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12px", color: C.textLight }}>
                 <span>🛡️</span>
-                <span>Your data is 100% secure with us</span>
+                <span id="label-data-secure">{t("login.dataSecure", "Your data is 100% secure with us")}</span>
               </div>
               <button
+                id="btn-role-continue"
                 onClick={() => setLoginStep(2)}
                 style={{
                   background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
@@ -534,7 +545,7 @@ export default function PartnerLogin() {
                   gap: "6px"
                 }}
               >
-                Continue <Icons.arrowRight size={16} />
+                <span id="label-role-continue">{t("login.continue", "Continue")}</span> <Icons.arrowRight size={16} />
               </button>
             </div>
 
@@ -563,14 +574,14 @@ export default function PartnerLogin() {
                 
                 <div>
                   <div style={{ fontSize: "56px", marginBottom: "16px" }}>🔒</div>
-                  <h2 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>Secure Gateway</h2>
-                  <p style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
-                    Please enter your registered credentials or verify via OTP to access your secure dashboard.
+                  <h2 id="label-secure-gateway-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.secureGatewayTitle", "Secure Gateway")}</h2>
+                  <p id="label-secure-gateway-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
+                    {t("login.secureGatewayDesc", "Please enter your registered credentials or verify via OTP to access your secure dashboard.")}
                   </p>
                 </div>
 
-                <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
-                  256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT
+                <div id="label-ssl-banner" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
+                  {t("login.sslBannerText", "256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT")}
                 </div>
               </div>
             </div>
@@ -580,6 +591,7 @@ export default function PartnerLogin() {
               {/* Top back & logo */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexShrink: 0 }} className="login-step2-header">
                 <button 
+                  id="btn-login-back"
                   onClick={() => { setLoginStep(1); setErr(""); }} 
                   style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
                 >
@@ -607,34 +619,37 @@ export default function PartnerLogin() {
                   fontWeight: 700,
                   color: "#2563EB"
                 }}>
-                  <span>👤 Logging in as <strong>{getRoleDisplayName(selectedRole)}</strong></span>
+                  <span id="label-logging-in-as">👤 {t("login.loggingInAs", "Logging in as")} <strong>{getRoleDisplayName(selectedRole)}</strong></span>
                   <span 
+                    id="link-change-role"
                     onClick={() => { setLoginStep(1); setErr(""); }}
                     style={{ color: "#E02424", cursor: "pointer", textDecoration: "underline", fontSize: "11px", fontWeight: 800 }}
                   >
-                    Change
+                    {t("login.changeRole", "Change")}
                   </span>
                 </div>
               </div>
 
               {/* Main credentials card container */}
-              <div style={{
-                background: C.card,
-                border: `1.5px solid ${C.border}`,
-                borderRadius: "24px",
-                padding: "20px",
-                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)",
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                overflow: "hidden",
-                margin: "4px 0"
-              }}>
+              <div 
+                className="card-scrollable"
+                style={{
+                  background: C.card,
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: "24px",
+                  padding: "20px",
+                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)",
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  margin: "4px 0"
+                }}
+              >
                 
-                <h2 style={{ fontSize: "18px", fontWeight: 900, margin: "0 0 3px 0", color: C.text, textAlign: "center" }}>Login to Your Account</h2>
-                <p style={{ fontSize: "11px", color: C.textLight || "#64748B", margin: "0 0 12px 0", textAlign: "center" }}>
-                  Choose your preferred login method
+                <h2 id="login-credentials-title" style={{ fontSize: "18px", fontWeight: 900, margin: "0 0 3px 0", color: C.text, textAlign: "center" }}>{t("login.loginToAccount", "Login to Your Account")}</h2>
+                <p id="login-credentials-subtitle" style={{ fontSize: "11px", color: C.textLight || "#64748B", margin: "0 0 12px 0", textAlign: "center" }}>
+                  {t("login.chooseLoginMethod", "Choose your preferred login method")}
                 </p>
 
                 {/* Segmented Login method toggle */}
@@ -648,6 +663,7 @@ export default function PartnerLogin() {
                   flexShrink: 0
                 }}>
                   <button
+                    id="btn-toggle-otp"
                     onClick={() => { setMethod("otp"); setErr(""); }}
                     style={{
                       flex: 1,
@@ -662,9 +678,10 @@ export default function PartnerLogin() {
                       transition: "all 0.2s ease"
                     }}
                   >
-                    Login with OTP
+                    {t("login.loginWithOtp", "Login with OTP")}
                   </button>
                   <button
+                    id="btn-toggle-password"
                     onClick={() => { setMethod("password"); setErr(""); }}
                     style={{
                       flex: 1,
@@ -679,7 +696,7 @@ export default function PartnerLogin() {
                       transition: "all 0.2s ease"
                     }}
                   >
-                    Login with Password
+                    {t("login.loginWithPassword", "Login with Password")}
                   </button>
                 </div>
 
@@ -701,7 +718,7 @@ export default function PartnerLogin() {
                   
                   {/* Username Input */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Email or Mobile Number</label>
+                    <label id="label-login-identity" style={S.label}>{t("login.emailOrMobile", "Email or Mobile Number")}</label>
                     <div style={{ position: "relative" }}>
                       <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>
                         {/^[6-9]\d{9}$/.test(form.identity.trim()) ? <Icons.phone size={14} /> : <Icons.mail size={14} />}
@@ -710,7 +727,7 @@ export default function PartnerLogin() {
                         type="text"
                         value={form.identity}
                         onChange={e => setForm(f => ({ ...f, identity: e.target.value }))}
-                        placeholder="Enter email or mobile number"
+                        placeholder={t("login.identityPlaceholder", "Enter email or mobile number")}
                         style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                         onFocus={e => (e.target.style.border = focusBorder)}
                         onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
@@ -722,7 +739,7 @@ export default function PartnerLogin() {
                   {/* ── OTP Fields Render ── */}
                   {method === "otp" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <label style={S.label}>Enter 6-Digit OTP</label>
+                      <label id="label-login-otp" style={S.label}>{t("login.enterOtpLabel", "Enter 6-Digit OTP")}</label>
                       <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                         
                         {/* 6 OTP Inputs */}
@@ -754,6 +771,7 @@ export default function PartnerLogin() {
 
                         {/* Send OTP button */}
                         <button
+                          id="btn-login-send-otp"
                           type="button"
                           onClick={handleSendOtp}
                           disabled={loading.otp || (otpSent && timer > 0)}
@@ -773,12 +791,12 @@ export default function PartnerLogin() {
                             gap: "4px"
                           }}
                         >
-                          {loading.otp ? "Sending..." : otpSent ? (timer > 0 ? `Resend (${timer}s)` : "Resend") : "Send OTP"}
+                          {loading.otp ? t("login.otpSending", "Sending...") : otpSent ? (timer > 0 ? `${t("login.otpResend", "Resend")} (${timer}s)` : t("login.otpResend", "Resend")) : t("login.otpSend", "Send OTP")}
                         </button>
                       </div>
 
-                      <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
-                        We'll send a secure verification code to your registered mobile/email.
+                      <div id="label-otp-helper" style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
+                        {t("login.otpHelperNote", "We'll send a secure verification code to your registered mobile/email.")}
                       </div>
                     </div>
                   )}
@@ -786,14 +804,14 @@ export default function PartnerLogin() {
                   {/* ── Password Field Render ── */}
                   {method === "password" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <label style={S.label}>Password</label>
+                      <label id="label-login-password" style={S.label}>{t("login.passwordLabel", "Password")}</label>
                       <div style={{ position: "relative" }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
                         <input
                           type={showPassword ? "text" : "password"}
                           value={form.password}
                           onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                          placeholder="Enter password"
+                          placeholder={t("login.passwordPlaceholder", "Enter password")}
                           style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
                           onFocus={e => (e.target.style.border = focusBorder)}
                           onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
@@ -812,16 +830,17 @@ export default function PartnerLogin() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <input type="checkbox" id="rememberMe" style={{ cursor: "pointer" }} />
-                      <label htmlFor="rememberMe" style={{ color: C.textMid, cursor: "pointer" }}>Remember me</label>
+                      <label id="label-remember-me" htmlFor="rememberMe" style={{ color: C.textMid, cursor: "pointer" }}>{t("login.rememberMe", "Remember me")}</label>
                     </div>
                     {method === "otp" ? (
-                      <span style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}>Forgot Mobile Number?</span>
+                      <span id="link-forgot-mobile" style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}>{t("login.forgotMobile", "Forgot Mobile Number?")}</span>
                     ) : (
                       <span 
+                        id="link-forgot-password"
                         onClick={() => navigate("/reset-password")}
                         style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
                       >
-                        Forgot Password?
+                        {t("login.forgotPassword", "Forgot Password?")}
                       </span>
                     )}
                   </div>
@@ -831,6 +850,7 @@ export default function PartnerLogin() {
 
                   {/* Primary Secure Submit Button */}
                   <button
+                    id="btn-login-submit"
                     type="submit"
                     disabled={loading.login}
                     style={{
@@ -860,12 +880,12 @@ export default function PartnerLogin() {
                           borderTop: "2px solid #fff",
                           animation: "spin 0.7s linear infinite"
                         }} />
-                        Verifying...
+                        {t("login.verifying", "Verifying...")}
                       </span>
                     ) : (
                       <>
                         <span>🔒</span>
-                        <span>Secure Login</span>
+                        <span id="label-login-secure">{t("login.secureLoginButton", "Secure Login")}</span>
                       </>
                     )}
                   </button>
@@ -874,14 +894,15 @@ export default function PartnerLogin() {
                 {/* Divider OR */}
                 <div style={{ display: "flex", alignItems: "center", margin: "10px 0", flexShrink: 0 }}>
                   <div style={{ flex: 1, height: "1px", background: C.border }} />
-                  <span style={{ fontSize: "10px", fontWeight: 800, color: C.textLight, padding: "0 10px" }}>OR</span>
+                  <span id="label-login-or" style={{ fontSize: "10px", fontWeight: 800, color: C.textLight, padding: "0 10px" }}>{t("login.dividerOr", "OR")}</span>
                   <div style={{ flex: 1, height: "1px", background: C.border }} />
                 </div>
 
                 {/* Google Login Mock button */}
                 <button
+                  id="btn-google-login"
                   type="button"
-                  onClick={() => setToast({ message: "Google OAuth is coming soon!", type: "info" })}
+                  onClick={() => setToast({ message: t("login.googleOAuthComingSoon", "Google OAuth is coming soon!"), type: "info" })}
                   style={{
                     background: C.card,
                     color: C.textMid,
@@ -902,7 +923,7 @@ export default function PartnerLogin() {
                   <svg width="16" height="16" viewBox="0 0 24 24">
                     <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.478 0-6.3-2.822-6.3-6.3s2.822-6.3 6.3-6.3c1.63 0 3.11.62 4.23 1.63l3.29-3.29C19.24 2.24 15.93 1 12.24 1 6.032 1 12.24s5.032 11.24 11.24 11.24c5.898 0 10.745-4.26 11.24-10.285v-2.91H12.24z"/>
                   </svg>
-                  <span>Continue with Google</span>
+                  <span id="label-google-login">{t("login.googleLoginButton", "Continue with Google")}</span>
                 </button>
 
               </div>
@@ -910,19 +931,20 @@ export default function PartnerLogin() {
               {/* Bottom Action / Footer */}
               <div style={{ flexShrink: 0, marginTop: "8px" }}>
                 <div style={{ textAlign: "center", fontSize: "12.5px", color: C.textLight }}>
-                  Don't have an account?{" "}
+                  <span id="label-dont-have-account">{t("login.dontHaveAccount", "Don't have an account?")}</span>{" "}
                   <span 
+                    id="link-become-partner"
                     onClick={() => navigate("/register")} 
                     style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
                   >
-                    Become a Partner →
+                    {t("login.becomePartner", "Become a Partner →")}
                   </span>
                 </div>
 
                 {/* SSL Trusted Footer */}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: C.textLight, marginTop: "14px", borderTop: `1px solid ${C.border}`, paddingTop: "8px" }}>
-                  <span>🔒 256-bit SSL Secure</span>
-                  <span>Trusted by 10,000+ Partners</span>
+                  <span id="label-ssl-secure">{t("login.sslSecure", "🔒 256-bit SSL Secure")}</span>
+                  <span id="label-trusted-partners">{t("login.trustedPartners", "Trusted by 10,000+ Partners")}</span>
                 </div>
               </div>
             </div>
@@ -997,6 +1019,19 @@ export default function PartnerLogin() {
           flex-direction: column;
           justify-content: space-between;
           height: 100%;
+        }
+        
+        .card-scrollable {
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(37, 99, 235, 0.2) transparent;
+        }
+        .card-scrollable::-webkit-scrollbar {
+          width: 6px;
+        }
+        .card-scrollable::-webkit-scrollbar-thumb {
+          background-color: rgba(37, 99, 235, 0.2);
+          border-radius: 3px;
         }
         
         @media (min-width: 992px) {
