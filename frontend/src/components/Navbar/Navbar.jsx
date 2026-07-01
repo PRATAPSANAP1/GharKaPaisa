@@ -222,43 +222,44 @@ const Navbar = () => {
                   background: "transparent",
                   border: "none",
                   color: C.text,
-                  fontSize: "20px",
+                  fontSize: "13px",
+                  fontWeight: 700,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  padding: "6px",
-                  borderRadius: "50%",
+                  gap: "6px",
+                  padding: "8px 12px",
+                  borderRadius: "10px",
                   transition: "background 0.2s"
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                title={t('nav.signIn', 'Sign In')}
-                aria-label="Sign In"
               >
-                <FaSignInAlt />
+                <FaSignInAlt style={{ fontSize: "14px" }} />
+                <span>{t('nav.signIn', 'Login')}</span>
               </button>
               <button 
                 onClick={() => navigate('/register')}
                 style={{
-                  background: "transparent",
+                  background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
                   border: "none",
-                  color: C.text,
-                  fontSize: "20px",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  padding: "6px",
-                  borderRadius: "50%",
-                  transition: "background 0.2s"
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  boxShadow: "0 4px 10px rgba(13, 110, 253, 0.15)",
+                  transition: "transform 0.2s, opacity 0.2s"
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                title={t('nav.signUp', 'Sign Up')}
-                aria-label="Sign Up"
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = 0.9; e.currentTarget.style.transform = "scale(1.02)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = 1; e.currentTarget.style.transform = "scale(1)"; }}
               >
-                <FaUserPlus />
+                <FaUserPlus style={{ fontSize: "14px" }} />
+                <span>{t('nav.signUp', 'Register')}</span>
               </button>
             </>
           )}
