@@ -870,9 +870,7 @@ export default function PartnerLogin() {
                         </button>
                       </div>
 
-                      <div id="label-otp-helper" style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
-                        {t("login.otpHelperNote", "We'll send a secure verification code to your registered mobile/email.")}
-                      </div>
+
                     </div>
                   )}
 
@@ -902,11 +900,7 @@ export default function PartnerLogin() {
                   )}
 
                   {/* Remember & Links Row */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <input type="checkbox" id="rememberMe" style={{ cursor: "pointer" }} />
-                      <label id="label-remember-me" htmlFor="rememberMe" style={{ color: C.textMid, cursor: "pointer" }}>{t("login.rememberMe", "Remember me")}</label>
-                    </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
                     {method === "otp" ? (
                       <span id="link-forgot-mobile" style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}>{t("login.forgotMobile", "Forgot Mobile Number?")}</span>
                     ) : (
