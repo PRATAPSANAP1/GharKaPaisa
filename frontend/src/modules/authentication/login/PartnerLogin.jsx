@@ -429,140 +429,179 @@ export default function PartnerLogin() {
         {loginStep === 1 && (
           <div className="login-step1-layout">
             
-            {/* Top Logo & Title */}
-            <div style={{ textAlign: "center", flexShrink: 0 }}>
-              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "40px", objectFit: "contain", marginBottom: "16px" }} />
-              
-              {renderLoginProgress()}
+            {/* Left side panel (hidden on mobile, beautiful secure info on desktop) */}
+            <div className="login-step1-left">
+              <div style={{
+                background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(46, 144, 250, 0.08))",
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "24px",
+                padding: "32px 24px",
+                height: "100%",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                textAlign: "left"
+              }}>
+                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start" }} />
+                
+                <div>
+                  <div style={{ fontSize: "56px", marginBottom: "16px" }}>👨‍💼</div>
+                  <h2 id="label-role-panel-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.rolePanelTitle", "Welcome to GharKaPaisa")}</h2>
+                  <p id="label-role-panel-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
+                    {t("login.rolePanelDesc", "Select the role that fits your workflow to continue securely. Partner accounts can submit financial leads and track earnings, while administrative accounts oversee operations.")}
+                  </p>
+                </div>
 
-              <h1 id="login-welcome-title" style={{ fontSize: "26px", fontWeight: 900, margin: 0, color: C.text }}>{t("login.welcomeTitle", "Welcome Back!")}</h1>
-              <p id="login-welcome-subtitle" style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
-                {t("login.welcomeSubtitle", "Login securely to continue your journey")}
-              </p>
-            </div>
-
-            {/* Role cards container */}
-            <div className="role-cards-container">
-              {[
-                {
-                  id: "PARTNER",
-                  title: t("login.rolePartner", "Partner"),
-                  desc: t("login.rolePartnerDesc", "Earn by helping customers with financial products."),
-                  icon: <FaHandshake size={20} color="#2563EB" />,
-                  color: "#EFF6FF",
-                  cardId: "role-card-partner",
-                  titleId: "role-title-partner",
-                  descId: "role-desc-partner"
-                },
-                {
-                  id: "EMPLOYEE",
-                  title: t("login.roleEmployee", "Employee"),
-                  desc: t("login.roleEmployeeDesc", "Update lead status and perform operations."),
-                  icon: <FaBriefcase size={20} color="#F97316" />,
-                  color: "#FFF7ED",
-                  cardId: "role-card-employee",
-                  titleId: "role-title-employee",
-                  descId: "role-desc-employee"
-                },
-                {
-                  id: "ADMIN",
-                  title: t("login.roleAdmin", "Admin"),
-                  desc: t("login.roleAdminDesc", "Manage operations and oversee team activities."),
-                  icon: <FaUserCog size={20} color="#10B981" />,
-                  color: "#ECFDF5",
-                  cardId: "role-card-admin",
-                  titleId: "role-title-admin",
-                  descId: "role-desc-admin"
-                },
-                {
-                  id: "SUPER_ADMIN",
-                  title: t("login.roleSuperAdmin", "Super Admin"),
-                  desc: t("login.roleSuperAdminDesc", "Full access to platform administration."),
-                  icon: <FaCrown size={20} color="#8B5CF6" />,
-                  color: "#F5F3FF",
-                  cardId: "role-card-super-admin",
-                  titleId: "role-title-super-admin",
-                  descId: "role-desc-super-admin"
-                }
-              ].map((roleItem) => {
-                const isSelected = selectedRole === roleItem.id;
-                return (
-                  <div
-                    key={roleItem.id}
-                    id={roleItem.cardId}
-                    onClick={() => handleRoleSelect(roleItem.id)}
-                    className="role-card"
-                    style={{
-                      border: isSelected ? "2.5px solid #2563EB" : `1.5px solid ${C.border}`,
-                      boxShadow: isSelected ? "0 8px 24px rgba(37, 99, 235, 0.15)" : "none",
-                      transform: isSelected ? "translateY(-2px)" : "translateY(0)"
-                    }}
-                  >
-                    {/* Role Icon Circle */}
-                    <div style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "50%",
-                      background: roleItem.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0
-                    }}>
-                      {roleItem.icon}
-                    </div>
-
-                    {/* Text Details */}
-                    <div style={{ flex: 1 }}>
-                      <div id={roleItem.titleId} style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
-                      <div id={roleItem.descId} style={{ fontSize: "11px", color: C.textMid || "#64748B", marginTop: "2px", lineHeight: 1.3 }}>{roleItem.desc}</div>
-                    </div>
-
-                    {/* Custom Checked Radio input */}
-                    <div style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      border: isSelected ? "5px solid #2563EB" : `2px solid ${C.border}`,
-                      background: isSelected ? "#FFFFFF" : "transparent",
-                      boxSizing: "border-box",
-                      transition: "all 0.2s ease",
-                      flexShrink: 0,
-                      marginTop: "auto"
-                    }} />
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Bottom Section */}
-            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12px", color: C.textLight }}>
-                <span>🛡️</span>
-                <span id="label-data-secure">{t("login.dataSecure", "Your data is 100% secure with us")}</span>
+                <div id="label-role-ssl-banner" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
+                  {t("login.sslBannerText", "256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT")}
+                </div>
               </div>
-              <button
-                id="btn-role-continue"
-                onClick={() => setLoginStep(2)}
-                style={{
-                  background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "16px",
-                  padding: "14px 20px",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  width: "100%",
-                  cursor: "pointer",
-                  boxShadow: "0 6px 20px rgba(37, 99, 235, 0.35)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px"
-                }}
-              >
-                <span id="label-role-continue">{t("login.continue", "Continue")}</span> <Icons.arrowRight size={16} />
-              </button>
+            </div>
+
+            {/* Right side role selection form */}
+            <div className="login-step1-right">
+              {/* Top Logo & Title */}
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                {/* Logo centered */}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
+                  <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
+                </div>
+                
+                {renderLoginProgress()}
+
+                <h1 id="login-welcome-title" style={{ fontSize: "22px", fontWeight: 900, margin: "6px 0 0 0", color: C.text }}>{t("login.welcomeTitle", "Welcome Back!")}</h1>
+                <p id="login-welcome-subtitle" style={{ fontSize: "11px", color: C.textLight || "#64748B", margin: "2px 0 0 0" }}>
+                  {t("login.welcomeSubtitle", "Login securely to continue your journey")}
+                </p>
+              </div>
+
+              {/* Role cards container */}
+              <div className="role-cards-container" style={{ margin: "14px 0 10px" }}>
+                {[
+                  {
+                    id: "PARTNER",
+                    title: t("login.rolePartner", "Partner"),
+                    desc: t("login.rolePartnerDesc", "Earn by helping customers with financial products."),
+                    icon: <FaHandshake size={18} color="#2563EB" />,
+                    color: "#EFF6FF",
+                    cardId: "role-card-partner",
+                    titleId: "role-title-partner",
+                    descId: "role-desc-partner"
+                  },
+                  {
+                    id: "EMPLOYEE",
+                    title: t("login.roleEmployee", "Employee"),
+                    desc: t("login.roleEmployeeDesc", "Update lead status and perform operations."),
+                    icon: <FaBriefcase size={18} color="#F97316" />,
+                    color: "#FFF7ED",
+                    cardId: "role-card-employee",
+                    titleId: "role-title-employee",
+                    descId: "role-desc-employee"
+                  },
+                  {
+                    id: "ADMIN",
+                    title: t("login.roleAdmin", "Admin"),
+                    desc: t("login.roleAdminDesc", "Manage operations and oversee team activities."),
+                    icon: <FaUserCog size={18} color="#10B981" />,
+                    color: "#ECFDF5",
+                    cardId: "role-card-admin",
+                    titleId: "role-title-admin",
+                    descId: "role-desc-admin"
+                  },
+                  {
+                    id: "SUPER_ADMIN",
+                    title: t("login.roleSuperAdmin", "Super Admin"),
+                    desc: t("login.roleSuperAdminDesc", "Full access to platform administration."),
+                    icon: <FaCrown size={18} color="#8B5CF6" />,
+                    color: "#F5F3FF",
+                    cardId: "role-card-super-admin",
+                    titleId: "role-title-super-admin",
+                    descId: "role-desc-super-admin"
+                  }
+                ].map((roleItem) => {
+                  const isSelected = selectedRole === roleItem.id;
+                  return (
+                    <div
+                      key={roleItem.id}
+                      id={roleItem.cardId}
+                      onClick={() => handleRoleSelect(roleItem.id)}
+                      className="role-card"
+                      style={{
+                        border: isSelected ? "2px solid #2563EB" : `1.5px solid ${C.border}`,
+                        boxShadow: isSelected ? "0 4px 12px rgba(37, 99, 235, 0.1)" : "none",
+                        padding: "10px 14px",
+                        gap: "12px",
+                        borderRadius: "16px"
+                      }}
+                    >
+                      {/* Role Icon Circle */}
+                      <div style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        background: roleItem.color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        {roleItem.icon}
+                      </div>
+
+                      {/* Text Details */}
+                      <div style={{ flex: 1 }}>
+                        <div id={roleItem.titleId} style={{ fontSize: "12.5px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
+                        <div id={roleItem.descId} style={{ fontSize: "10px", color: C.textMid || "#64748B", marginTop: "1px", lineHeight: 1.25 }}>{roleItem.desc}</div>
+                      </div>
+
+                      {/* Custom Checked Radio input */}
+                      <div style={{
+                        width: "14px",
+                        height: "14px",
+                        borderRadius: "50%",
+                        border: isSelected ? "4px solid #2563EB" : `1.5px solid ${C.border}`,
+                        background: isSelected ? "#FFFFFF" : "transparent",
+                        boxSizing: "border-box",
+                        transition: "all 0.2s ease",
+                        flexShrink: 0
+                      }} />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Section */}
+              <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: C.textLight }}>
+                  <span>🛡️</span>
+                  <span id="label-data-secure">{t("login.dataSecure", "Your data is 100% secure with us")}</span>
+                </div>
+                <button
+                  id="btn-role-continue"
+                  onClick={() => setLoginStep(2)}
+                  disabled={!selectedRole}
+                  style={{
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "11px 16px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    width: "100%",
+                    cursor: !selectedRole ? "not-allowed" : "pointer",
+                    opacity: !selectedRole ? 0.6 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 14px rgba(37, 99, 235, 0.2)"
+                  }}
+                >
+                  <span id="label-role-continue">{t("login.continue", "Continue")}</span> <Icons.arrowRight size={14} />
+                </button>
+              </div>
             </div>
 
           </div>
@@ -958,6 +997,17 @@ export default function PartnerLogin() {
           height: 100%;
           justify-content: space-between;
         }
+
+        .login-step1-left {
+          display: none;
+        }
+
+        .login-step1-right {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 100%;
+        }
         
         .role-cards-container {
           display: flex;
@@ -1000,18 +1050,42 @@ export default function PartnerLogin() {
           height: 100%;
         }
         
-         @media (min-width: 992px) {
-           .onboarding-container {
-             max-width: 860px;
-             max-height: 560px;
-           }
-           
-           /* Step 1 horizontal cards layout */
-           .role-cards-container {
-             display: grid;
-             grid-template-columns: 1fr 1fr;
-             gap: 16px;
-           }
+        @media (min-width: 992px) {
+          .onboarding-container {
+            max-width: 860px;
+            max-height: 560px;
+          }
+          
+          /* Step 1 side-by-side layout */
+          .login-step1-layout {
+            flex-direction: row;
+            gap: 32px;
+            align-items: center;
+            height: 100%;
+          }
+          
+          .login-step1-left {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+          }
+          
+          .login-step1-right {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+          }
+
+          /* Step 1 vertical list override inside split layout */
+          .role-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
           
           /* Step 2 side-by-side layout */
           .login-step2-layout {
