@@ -663,8 +663,7 @@ export default function PartnerLogin() {
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
-                  margin: "4px 0",
-                  overflow: "hidden"
+                  margin: "4px 0"
                 }}
               >
                 
@@ -1001,40 +1000,18 @@ export default function PartnerLogin() {
           height: 100%;
         }
         
-        .card-scrollable {
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(37, 99, 235, 0.2) transparent;
-        }
-        .card-scrollable::-webkit-scrollbar {
-          width: 6px;
-        }
-        .card-scrollable::-webkit-scrollbar-thumb {
-          background-color: rgba(37, 99, 235, 0.2);
-          border-radius: 3px;
-        }
-        
-        @media (min-width: 992px) {
-          .onboarding-container {
-            max-width: 860px;
-            max-height: 560px;
-          }
-          
-          /* Step 1 horizontal cards layout */
-          .role-cards-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-          }
-          
-          .role-card {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 20px 16px;
-            height: 200px;
-            justify-content: space-between;
-          }
+         @media (min-width: 992px) {
+           .onboarding-container {
+             max-width: 860px;
+             max-height: 560px;
+           }
+           
+           /* Step 1 horizontal cards layout */
+           .role-cards-container {
+             display: grid;
+             grid-template-columns: 1fr 1fr;
+             gap: 16px;
+           }
           
           /* Step 2 side-by-side layout */
           .login-step2-layout {
