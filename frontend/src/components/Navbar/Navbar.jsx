@@ -213,53 +213,27 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "14px", flex: "0 0 auto", justifyContent: "flex-end" }}>
+        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px", flex: "0 0 auto", justifyContent: "flex-end" }}>
           {!isAuthPage && (
             <>
               <button 
                 onClick={() => navigate('/login')}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: C.text,
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  transition: "background 0.2s"
-                }}
+                className="nav-auth-btn nav-login-btn"
+                style={{ color: C.text }}
                 onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                title={t('nav.signIn', 'Login')}
               >
-                <FaSignInAlt style={{ fontSize: "14px" }} />
-                <span>{t('nav.signIn', 'Login')}</span>
+                <FaSignInAlt className="nav-btn-icon" />
+                <span className="nav-btn-text">{t('nav.signIn', 'Login')}</span>
               </button>
               <button 
                 onClick={() => navigate('/register')}
-                style={{
-                  background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
-                  border: "none",
-                  color: "#FFFFFF",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 16px",
-                  borderRadius: "10px",
-                  boxShadow: "0 4px 10px rgba(13, 110, 253, 0.15)",
-                  transition: "transform 0.2s, opacity 0.2s"
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = 0.9; e.currentTarget.style.transform = "scale(1.02)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = 1; e.currentTarget.style.transform = "scale(1)"; }}
+                className="nav-auth-btn nav-register-btn"
+                title={t('nav.signUp', 'Register')}
               >
-                <FaUserPlus style={{ fontSize: "14px" }} />
-                <span>{t('nav.signUp', 'Register')}</span>
+                <FaUserPlus className="nav-btn-icon" />
+                <span className="nav-btn-text">{t('nav.signUp', 'Register')}</span>
               </button>
             </>
           )}

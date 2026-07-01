@@ -204,6 +204,42 @@ body.no-scroll {
   overflow: hidden;
 }
 
+/* Premium Auth Buttons in Navbar */
+.nav-auth-btn {
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.nav-login-btn {
+  background: transparent;
+  padding: 8px 12px;
+}
+
+.nav-register-btn {
+  background: linear-gradient(135deg, #0D6EFD, #2E90FA);
+  color: #FFFFFF;
+  padding: 8px 16px;
+  box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
+}
+
+.nav-register-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.nav-btn-icon {
+  font-size: 14px;
+}
+
 @media (max-width: 768px) {
   .navbar {
     padding: 6px 12px;
@@ -223,8 +259,27 @@ body.no-scroll {
     display: flex;
   }
 
-  .navbar-right button:not(.theme-toggle-btn) {
-    display: none;
+  /* Hide auth text on mobile, keep only icons visible */
+  .nav-btn-text {
+    display: none !important;
+  }
+  
+  .nav-auth-btn {
+    padding: 8px !important;
+    gap: 0 !important;
+    border-radius: 50% !important;
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .nav-login-btn {
+    background: transparent !important;
+  }
+
+  .nav-register-btn {
+    background: linear-gradient(135deg, #0D6EFD, #2E90FA) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15) !important;
   }
 
   .desktop-widgets {
