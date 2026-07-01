@@ -605,15 +605,20 @@ export default function PartnerLogin() {
             {/* Right side login form */}
             <div className="login-step2-right">
               {/* Top back & logo */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexShrink: 0 }} className="login-step2-header">
-                <button 
-                  id="btn-login-back"
-                  onClick={() => { setLoginStep(1); setErr(""); }} 
-                  style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <Icons.arrowLeft size={16} />
-                </button>
-                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexShrink: 0, width: "100%" }} className="login-step2-header">
+                <div style={{ width: "40px", textAlign: "left" }}>
+                  <button 
+                    id="btn-login-back"
+                    onClick={() => { setLoginStep(1); setErr(""); }} 
+                    style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center" }}
+                  >
+                    <Icons.arrowLeft size={16} />
+                  </button>
+                </div>
+                <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+                  <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
+                </div>
+                <div style={{ width: "40px" }} /> {/* Spacer to perfectly center the logo */}
               </div>
 
               {/* Progress bar in Step 2 */}
