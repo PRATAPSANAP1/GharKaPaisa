@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import './Navbar.css';
 import logo from '../../assets/logos/logo.png';
 import { ThemeToggle, useTheme } from '../../contexts/ThemeContext';
@@ -105,18 +105,21 @@ const Navbar = () => {
           <span></span>
           <span></span>
         </button>
-        <button onClick={() => { navigate('/admin-login'); toggleLink(); }}>
-          {t('nav.admin', 'Admin')}
-        </button>
-        <button
-          onClick={() =>
-            window.location.href = 'https://yohesa-test-three.vercel.app/dashboard'
-          }
-        >
-          {t('nav.employee', 'Employee')}
-        </button>
         {!isAuthPage && (
-          <button onClick={() => { navigate('/login'); toggleLink(); }}>{t('nav.partner', 'Partner')}</button>
+          <>
+            <button 
+              onClick={() => { navigate('/login'); toggleLink(); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
+            >
+              <FaSignInAlt /> {t('nav.signIn', 'Sign In')}
+            </button>
+            <button 
+              onClick={() => { navigate('/register'); toggleLink(); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
+            >
+              <FaUserPlus /> {t('nav.signUp', 'Sign Up')}
+            </button>
+          </>
         )}
         <div className="mobile-widgets" style={{ marginTop: "24px", borderTop: `1px solid ${C.border}`, paddingTop: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -210,26 +213,54 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "10px", flex: "0 0 auto", justifyContent: "flex-end" }}>
-          <button 
-            onClick={() => navigate('/admin-login')}
-            style={{ color: C.text, '--underline-color': C.teal }}
-          >
-            {t('nav.admin', 'Admin')}
-          </button>
-          <button
-            onClick={() => window.location.href = 'https://yohesa-test-three.vercel.app/dashboard'}
-            style={{ color: C.text, '--underline-color': C.teal }}
-          >
-            {t('nav.employee', 'Employee')}
-          </button>
+        <div className="navbar-right" style={{ display: "flex", alignItems: "center", gap: "14px", flex: "0 0 auto", justifyContent: "flex-end" }}>
           {!isAuthPage && (
-            <button 
-              onClick={() => navigate('/login')}
-              style={{ color: C.text, '--underline-color': C.teal }}
-            >
-              {t('nav.partner', 'Partner')}
-            </button>
+            <>
+              <button 
+                onClick={() => navigate('/login')}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: C.text,
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px",
+                  borderRadius: "50%",
+                  transition: "background 0.2s"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                title={t('nav.signIn', 'Sign In')}
+                aria-label="Sign In"
+              >
+                <FaSignInAlt />
+              </button>
+              <button 
+                onClick={() => navigate('/register')}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: C.text,
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "6px",
+                  borderRadius: "50%",
+                  transition: "background 0.2s"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                title={t('nav.signUp', 'Sign Up')}
+                aria-label="Sign Up"
+              >
+                <FaUserPlus />
+              </button>
+            </>
           )}
           <div className="desktop-widgets" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <LanguageSwitcher />
