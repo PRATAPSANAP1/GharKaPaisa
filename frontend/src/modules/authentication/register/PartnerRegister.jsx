@@ -749,40 +749,6 @@ export default function PartnerRegister() {
               />
             </div>
 
-            {/* Grid of 4 Feature Cards (Horizontal row matching mockup circular layout) */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-              width: "100%",
-              margin: "10px 0 14px",
-              flexShrink: 0
-            }}>
-              {[
-                { title: t("onboarding.feature1", "High Commission"), icon: "🛡️", id: "feat-1" },
-                { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒", id: "feat-2" },
-                { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡", id: "feat-3" },
-                { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊", id: "feat-4" }
-              ].map((feat, i) => (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", width: "74px", textAlign: "center" }}>
-                  <div style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    background: "#FFFFFF",
-                    border: `1.5px solid ${C.border}`,
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.04)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px"
-                  }}>
-                    {feat.icon}
-                  </div>
-                  <span id={feat.id} style={{ fontSize: "9px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{feat.title}</span>
-                </div>
-              ))}
-            </div>
 
             {/* Bottom Button */}
             <button
