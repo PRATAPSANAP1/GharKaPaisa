@@ -6,6 +6,9 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
 
+import logoImg from "../../../assets/logos/logo.png";
+import onboardingIllust from "../../../assets/advisor_onboarding.png";
+
 const STEPS = ["Personal", "Business", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
@@ -28,21 +31,38 @@ const INDIA_BANKS = [
   'Yes Bank', 'West Bengal State Co-operative Bank', 'North East Small Finance Bank', 'Small Industries Development Bank of India'
 ].sort();
 
+const LANGUAGES = [
+  { code: 'en', flag: '🇬🇧', label: 'English' },
+  { code: 'hi', flag: '🇮🇳', label: 'हिंदी' },
+  { code: 'mr', flag: '🇮🇳', label: 'मराठी' },
+  { code: 'gu', flag: '🇮🇳', label: 'ગુજરાતી' },
+  { code: 'kn', flag: '🇮🇳', label: 'ಕನ್ನಡ' },
+  { code: 'ta', flag: '🇮🇳', label: 'தமிழ்' }
+];
+
 export default function PartnerRegister() {
   const navigate = useNavigate();
   const onBack = () => navigate('/login');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   
-  const { C } = useTheme();
+  const { C, isDark, toggle } = useTheme();
   const S = makeS(C);
 
-  const [step, setStep] = useState(0);
+  // Onboarding Screen Steps: 1 = Welcome, 2 = Preferences, 3 = Register Forms
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [selectedLang, setSelectedLang] = useState(i18n.language || "en");
+
+  const [step, setStep] = useState(0); // Forms nested in step 3
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null); // { Partner_code }
 
   const [aadhaarBackendError, setAadhaarBackendError] = useState("");
+  const [fullName, setFullName] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Flat form state for all steps
   const [form, setForm] = useState({
@@ -64,9 +84,29 @@ export default function PartnerRegister() {
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
     pan: "",
+    termsAgreed: false,
   });
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+
+  const handleFullNameChange = (e) => {
+    const value = e.target.value;
+    setFullName(value);
+    const parts = value.trim().split(/\s+/);
+    const first = parts[0] || "";
+    const last = parts.slice(1).join(" ") || "";
+    setForm(f => ({ ...f, firstName: first, lastName: last }));
+  };
+
+  const handleLangSelect = (code) => {
+    setSelectedLang(code);
+    i18n.changeLanguage(code);
+  };
+
+  const handleThemeSelect = (mode) => {
+    if (mode === "dark" && !isDark) toggle();
+    if (mode === "light" && isDark) toggle();
+  };
 
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailOtpTimer, setEmailOtpTimer] = useState(0);
@@ -153,12 +193,10 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  // ── MSG91 Captcha (singleton hook — only active on step 0) ───────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: step === 0 });
+  // ── MSG91 Captcha (singleton hook — only active on step 3.1 where captchaId is mounted) ───────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 0 });
 
-  
-
-  const focusBorder = `1.5px solid ${C.teal}`;
+  const focusBorder = `1.5px solid #0D6EFD`;
   const inputProps = (key, extra = {}) => ({
     style: { ...S.input, ...extra },
     value: form[key],
@@ -167,14 +205,12 @@ export default function PartnerRegister() {
     onBlur: e => (e.target.style.border = `1.5px solid ${C.border}`),
   });
 
-
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
     if (step === 0) {
+      if (!fullName.trim()) return "Please enter your full name.";
       if (!form.firstName.trim()) return t("partner.errors.firstNameRequired", "Please enter your first name.");
       if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return t("partner.errors.firstNameLettersOnly", "First name can only contain letters.");
-      if (!form.lastName.trim()) return t("partner.errors.lastNameRequired", "Please enter your last name.");
-      if (!/^[a-zA-Z\s]+$/.test(form.lastName.trim())) return t("partner.errors.lastNameLettersOnly", "Last name can only contain letters.");
       if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
@@ -213,6 +249,7 @@ export default function PartnerRegister() {
     if (step === 3) {
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
+      if (!form.termsAgreed) return "You must agree to the Terms & Conditions and Privacy Policy to proceed.";
     }
     return null;
   };
@@ -499,12 +536,106 @@ export default function PartnerRegister() {
 
   const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0) || !isCaptchaVerified;
 
+  // ── Render Onboarding Top Progress Bar ─────────────────────────────────────
+  const renderOnboardingProgress = () => {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "320px", width: "100%", margin: "0 auto 32px", position: "relative" }}>
+        {/* Connecting Line */}
+        <div style={{
+          position: "absolute",
+          top: "16px",
+          left: "12%",
+          right: "12%",
+          height: "2px",
+          background: isDark ? "#1E3D5A" : "#E2E8F0",
+          zIndex: 1
+        }} />
+        <div style={{
+          position: "absolute",
+          top: "16px",
+          left: "12%",
+          width: onboardingStep === 1 ? "0%" : onboardingStep === 2 ? "38%" : "76%",
+          height: "2px",
+          background: "#0D6EFD",
+          transition: "width 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          zIndex: 1
+        }} />
+        
+        {/* Step 1: Welcome */}
+        <div style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: "pointer" }} onClick={() => setOnboardingStep(1)}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#0F2030" : "#E2E8F0",
+            color: onboardingStep >= 1 ? "#FFFFFF" : isDark ? "#3D6480" : "#64748B",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            margin: "0 auto 8px",
+            boxShadow: onboardingStep === 1 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
+            transition: "all 0.3s"
+          }}>
+            {onboardingStep > 1 ? "✓" : "1"}
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Welcome</span>
+        </div>
+
+        {/* Step 2: Preferences */}
+        <div style={{ zIndex: 2, textAlign: "center", width: "80px", cursor: onboardingStep >= 2 ? "pointer" : "default" }} onClick={() => onboardingStep >= 2 && setOnboardingStep(2)}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#0F2030" : "#E2E8F0",
+            color: onboardingStep >= 2 ? "#FFFFFF" : isDark ? "#3D6480" : "#64748B",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            margin: "0 auto 8px",
+            boxShadow: onboardingStep === 2 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
+            transition: "all 0.3s"
+          }}>
+            {onboardingStep > 2 ? "✓" : "2"}
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Preferences</span>
+        </div>
+
+        {/* Step 3: Register */}
+        <div style={{ zIndex: 2, textAlign: "center", width: "80px" }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#0F2030" : "#E2E8F0",
+            color: onboardingStep >= 3 ? "#FFFFFF" : isDark ? "#3D6480" : "#64748B",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            margin: "0 auto 8px",
+            boxShadow: onboardingStep === 3 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
+            transition: "all 0.3s"
+          }}>
+            3
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Register</span>
+        </div>
+      </div>
+    );
+  };
+
   // ── Success Screen ──────────────────────────────────────────────────────────
   if (success) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px", boxSizing: "border-box" }}>
         <div style={{ maxWidth: "420px", width: "100%", textAlign: "center" }}>
-          <div style={{ ...S.card, padding: "40px 32px" }}>
+          <div style={{ ...S.card, padding: "40px 32px", borderRadius: "24px" }}>
             <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: `${C.green}18`, color: C.green, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
               <Icons.check size={28} />
             </div>
@@ -550,7 +681,7 @@ export default function PartnerRegister() {
               {t('partner.partnerSubmittedDesc', 'Your partner application has been submitted. Our team will review your KYC and activate your account within 24-48 hours.')}
             </div>
 
-            <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%" }}>
+            <button onClick={onBack} style={{ ...S.btn("primary"), width: "100%", borderRadius: "14px" }}>
               {t('partner.goToLogin', 'Go to Login')}
             </button>
           </div>
@@ -560,408 +691,923 @@ export default function PartnerRegister() {
   }
 
   return (
-    <div style={{ minHeight: "calc(100vh - 110px)", background: C.bg, padding: "24px 16px", boxSizing: "border-box", transition: "background 0.3s" }}>
-      <div style={{ maxWidth: "560px", margin: "0 auto", position: "relative" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: C.bg,
+      color: C.text,
+      padding: "24px 16px",
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      position: "relative",
+      overflow: "hidden",
+      fontFamily: "'Inter', sans-serif"
+    }}>
+      {/* Decorative blurred background shapes */}
+      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: isDark ? "rgba(13, 110, 253, 0.05)" : "rgba(13, 110, 253, 0.06)", filter: "blur(80px)", top: "-100px", left: "-100px", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: isDark ? "rgba(46, 144, 250, 0.06)" : "rgba(46, 144, 250, 0.07)", filter: "blur(80px)", bottom: "-50px", right: "-100px", pointerEvents: "none", zIndex: 0 }} />
 
-        {/* Back to Home */}
-        <div style={{ marginBottom: "16px", textAlign: "left" }}>
-          <button 
-            onClick={() => navigate('/')}
-            style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              gap: "6px", 
-              background: "none", 
-              border: "none", 
-              color: C.teal, 
-              cursor: "pointer", 
-              fontSize: "14px", 
-              fontWeight: 600,
-              padding: 0
-            }}
-          >
-            <Icons.arrowLeft size={14} /> {t('partner.backToHome', 'Back to Home')}
-          </button>
-        </div>
+      <div style={{ maxWidth: "440px", width: "100%", position: "relative", zIndex: 1 }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-          <button onClick={onBack} style={{ ...S.btn("ghost"), padding: "6px 8px" }}>
-            <Icons.arrowLeft size={18} />
-          </button>
-          <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>{t('partner.partnerRequest', 'Partner Request')}</div>
-        </div>
-
-        {/* Step Progress Bar */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "24px" }}>
-          {STEPS.map((s, i) => (
-            <div key={s} style={{ flex: 1 }}>
-              <div style={{
-                height: "4px",
-                borderRadius: "99px",
-                background: i < step ? C.green : i === step ? C.teal : C.border,
-                transition: "background 0.3s"
-              }} />
-              <div style={{
-                fontSize: "11px",
-                color: i <= step ? C.text : C.textLight,
-                fontWeight: i <= step ? 700 : 500,
-                marginTop: "6px",
-                textAlign: "center"
-              }}>{t('partner.steps.' + s.toLowerCase(), s)}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={S.card}>
-          <div style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "18px", borderBottom: `1px solid ${C.border}`, paddingBottom: "10px" }}>
-            {t('partner.steps.' + STEPS[step].toLowerCase(), STEPS[step])} {t('partner.information', 'Information')}
-          </div>
-
-          {/* Error */}
-          {err && (
-            <div style={{
-              background: `${C.red}15`, border: `1px solid ${C.red}40`,
-              borderRadius: "10px", padding: "10px 14px",
-              fontSize: "13px", color: C.red,
-              marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
-            }}>
-              <Icons.x size={14} /> {err}
-            </div>
-          )}
-
-          {/* Info Message */}
-          {infoMsg && (
-            <div style={{
-              background: `${C.green}15`, border: `1px solid ${C.green}40`,
-              borderRadius: "10px", padding: "10px 14px",
-              fontSize: "13px", color: C.green,
-              marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
-            }}>
-              <Icons.check size={14} /> {infoMsg}
-            </div>
-          )}
-
-          {/* ── Step 0: Personal ──────────────────────────────────────────────── */}
-          {step === 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div>
-                <label style={S.label}>{t('partner.firstName', 'First Name')}</label>
-                <input {...inputProps("firstName")} />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.lastName', 'Last Name')}</label>
-                <input {...inputProps("lastName")} />
-              </div>
-
-              {/* Aadhaar Number */}
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.aadhaarNumber', 'Aadhaar Number')}</label>
-                <input
-                  type="text"
-                  placeholder={t('partner.aadhaarPlaceholder', 'Enter 12-digit Aadhaar Number')}
-                  maxLength={19}
-                  {...inputProps("aadhaar")}
-                />
-                {aadhaarBackendError && (
-                  <div style={{ color: C.red || '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>
-                    {aadhaarBackendError}
-                  </div>
-                )}
-              </div>
-
-              {/* Mobile */}
-              <div style={{ gridColumn: "1/-1", display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>{t('partner.mobileNumber', 'Mobile Number')}</label>
-                  <input
-                    type="tel"
-                    {...inputProps("mobile")}
-                    placeholder={t('partner.mobilePlaceholder', '10-digit Mobile Number')}
-                    disabled={form.mobilePreVerified}
-                  />
-
-                  {/* Mobile OTP input shown after sending OTP */}
-                  {mobileOtpSent && !form.mobilePreVerified && (
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                      <input
-                        style={{ ...S.input, flex: 1 }}
-                        value={form.mobileOtp}
-                        onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
-                        placeholder={t('partner.enterMobileOtp', 'Enter 6-digit SMS OTP')}
-                        maxLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyMobileOtp}
-                        disabled={mobileVerifyLoading || form.mobileOtp.trim().length < 6}
-                        style={{ ...S.btn('primary'), minWidth: 170, opacity: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? 0.7 : 1 }}
-                      >
-                        {mobileVerifyLoading ? t('partner.verifying', 'Verifying…') : t('partner.verifyMobileNumber', 'Verify Mobile Number')}
-                      </button>
-                    </div>
-                  )}
-                  {mobileOtpSent && !form.mobilePreVerified && (
-                    <div style={{ fontSize: 12, color: C.textLight, marginTop: 6 }}>
-                      {t('partner.mobileOtpHelp', 'Enter the SMS OTP above, then click Verify Mobile Number.')}
-                    </div>
-                  )}
-                  
-                </div>
-
-                <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label style={{ visibility: 'hidden' }}>.</label>
-                  <button
-                    type="button"
-                    onClick={mobileOtpSent ? handleResendMobileOtp : handleSendMobileOtp}
-                    style={{ ...S.btn('primary'), width: '100%', opacity: mobileActionDisabled ? 0.6 : 1, cursor: mobileActionDisabled ? 'not-allowed' : 'pointer' }}
-                    disabled={mobileActionDisabled}
-                    title={mobileOtpSent && mobileOtpTimer > 0 ? t('partner.waitBeforeResend', 'Please wait before requesting another OTP.') : ''}
-                  >
-                    {form.mobilePreVerified 
-                      ? t('partner.verified', 'Verified') 
-                      : mobileOtpSent 
-                        ? (mobileOtpTimer > 0 
-                          ? `${t('partner.resendOtp', 'Resend')} (${mobileOtpTimer}s)` 
-                          : t('partner.resendOtp', 'Resend OTP')) 
-                        : t('partner.sendVerify', 'Send OTP')}
-                  </button>
-                </div>
-              </div>
-              {!isCaptchaVerified && !form.mobilePreVerified && (
-                <div style={{ gridColumn: "1/-1", color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "-8px", marginBottom: "8px", fontWeight: 500 }}>
-                  Please complete the security verification to enable OTP.
-                </div>
-              )}
-
-              {/* reCAPTCHA container */}
-              <div
-                id={captchaId}
+        {/* ── SCREEN 1: Welcome to GharKaPaisa ────────────────────────────────── */}
+        {onboardingStep === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", minHeight: "90vh", justifyContent: "space-between" }}>
+            
+            {/* Top Bar */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "16px" }}>
+              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain" }} />
+              <button 
+                onClick={() => setOnboardingStep(2)}
                 style={{
-                  gridColumn: "1/-1",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  minHeight: "80px",
-                  marginTop: "10px",
-                  marginBottom: "5px",
+                  background: "transparent",
+                  border: "none",
+                  color: C.textLight || "#64748B",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  padding: "4px 8px"
                 }}
-              ></div>
-
-              {/* Email */}
-              <div style={{ gridColumn: "1/-1", display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
-                  <input
-                    type="email"
-                    {...inputProps("email")}
-                    placeholder={t('partner.placeholders.email', 'name@domain.com')}
-                    autoComplete="email"
-                    disabled={form.emailPreVerified}
-                  />
-
-                  {/* Email OTP input shown after sending OTP */}
-                  {emailOtpSent && !form.emailPreVerified && (
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                      <input
-                        style={{ ...S.input, flex: 1 }}
-                        value={form.emailOtp}
-                        onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
-                        placeholder={t('partner.enterEmailOtp', 'Enter 6-digit OTP')}
-                        maxLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyRegistrationOtp}
-                        disabled={emailOtpLoading}
-                        style={{ ...S.btn('sm') }}
-                      >
-                        {emailOtpLoading ? t('partner.verifying', 'Verifying…') : t('partner.verifyOtpButton', 'Verify')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ width: 120, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <label style={{ visibility: 'hidden' }}>.</label>
-                  <button
-                    type="button"
-                    onClick={handleSendRegistrationOtp}
-                    style={{ ...S.btn('primary'), width: '100%', opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 0.6 : 1, cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 'not-allowed' : 'pointer' }}
-                    disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified}
-                  >
-                    {form.emailPreVerified 
-                      ? t('partner.verified', 'Verified') 
-                      : emailOtpSent 
-                        ? (emailOtpTimer > 0 
-                          ? `${t('partner.resendOtp', 'Resend')} (${emailOtpTimer}s)` 
-                          : t('partner.resendOtp', 'Resend OTP')) 
-                        : t('partner.sendVerify', 'Send OTP')}
-                  </button>
-                </div>
-              </div>
-              {!isCaptchaVerified && !form.emailPreVerified && (
-                <div style={{ gridColumn: "1/-1", color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "-8px", marginBottom: "8px", fontWeight: 500 }}>
-                  Please complete the security verification to enable OTP.
-                </div>
-              )}
-
-              {/* Password */}
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.password', 'Password')}</label>
-                <input type="password" style={S.input} {...inputProps("password")} placeholder={t('partner.placeholders.min8chars', 'Min 8 chars')} autoComplete="new-password" />
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.confirmPassword', 'Confirm Password')}</label>
-                <input type="password" style={S.input} {...inputProps("confirmPassword")} placeholder={t('partner.placeholders.repeatPassword', 'Repeat password')} autoComplete="new-password" />
-              </div>
+              >
+                Skip
+              </button>
             </div>
-          )}
 
-          {/* ── Step 1: Business ─────────────────────────────────────────────── */}
-          {step === 1 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div>
-                <label style={S.label}>{t('partner.partnerType', 'Partner Type')}</label>
-                <select style={S.input} value={form.companyType} onChange={set("companyType")}> 
-                  {COMPANY_TYPES.map(tOption => <option key={tOption.value} value={tOption.value}>{t('companyTypes.' + tOption.value, tOption.label)}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.companyName', 'Company Name')}</label>
-                <input {...inputProps("companyName")} placeholder={t('partner.placeholders.companyName', 'Enter company name')} />
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.companyAddress', 'Company Address')}</label>
-                <input {...inputProps("currentAddress")} placeholder={t('partner.placeholders.companyAddress', 'Enter company address')} />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.pincode', 'Pincode')}</label>
-                <input {...inputProps("pincode")} maxLength={6} placeholder={t('partner.placeholders.pincode', '6-digit pincode')} />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.businessLocation', 'City / Region')}</label>
-                <input {...inputProps("businessLocation")} placeholder={t('partner.placeholders.businessLocation', 'e.g. Mumbai')} />
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.gstNumber', 'GST Number (Optional)')}</label>
-                <input {...inputProps("gst")} placeholder={t('partner.placeholders.gst', 'e.g. 27AAPFU0939F1ZV')} style={{ ...S.input, textTransform: "uppercase" }} />
-              </div>
+            {/* Step indicator */}
+            {renderOnboardingProgress()}
+
+            {/* Header Text */}
+            <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              <h1 style={{ fontSize: "28px", fontWeight: 900, margin: 0, color: C.text }}>
+                Welcome to <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>GharKaPaisa</span>
+              </h1>
+              <p style={{ fontSize: "14px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "6px", margin: 0 }}>
+                India's Trusted Financial Partner Platform
+              </p>
             </div>
-          )}
 
-          {/* ── Step 2: Bank ─────────────────────────────────────────────────── */}
-          {step === 2 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.bankName', 'Bank Name')}</label>
-                <div style={{ position: 'relative' }}>
-                  <input list="bank-list" {...inputProps("bankName")} placeholder={t('partner.selectBank', 'Search and select your bank')} />
-                  <datalist id="bank-list">
-                    {INDIA_BANKS.map(b => <option key={b} value={b} />)}
-                  </datalist>
-                </div>
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.accountNumber', 'Account Number')}</label>
-                <input {...inputProps("accountNumber")} />
-              </div>
-              <div>
-                <label style={S.label}>{t('partner.ifscCode', 'IFSC Code')}</label>
-                <input {...inputProps("ifsc")} style={{ ...S.input, textTransform: "uppercase" }} />
-              </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>{t('partner.accountHolderName', 'Account Holder Name')}</label>
-                <input {...inputProps("accountHolderName")} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 3: KYC — Info Screen ─────────────────────────────────── */}
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "14px" }}>
-                <div>
-                  <label style={S.label}>{t('partner.panNumber', 'PAN Number')}</label>
-                  <input {...inputProps("pan")} style={{ ...S.input, textTransform: "uppercase" }} placeholder={t('partner.placeholders.pan', '10-char alphanumeric')} />
-                </div>
-              </div>
-
-              {/* Document Uploads Informational Card */}
+            {/* Illustration Card Container */}
+            <div style={{
+              position: "relative",
+              background: isDark ? "rgba(22, 40, 64, 0.6)" : "rgba(255, 255, 255, 0.7)",
+              backdropFilter: "blur(10px)",
+              border: `1.5px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.5)"}`,
+              borderRadius: "24px",
+              padding: "16px",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: "16px"
+            }}>
+              <img 
+                src={onboardingIllust} 
+                alt="Financial Advisor illustration" 
+                style={{ width: "100%", maxHeight: "200px", objectFit: "contain", borderRadius: "16px" }} 
+              />
+              
+              {/* Floating total earnings card */}
               <div style={{
-                background: C.bgSecondary || '#f8fafc',
-                border: `1.5px solid ${C.border || '#e2e8f0'}`,
-                borderRadius: '16px',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                alignItems: 'center',
-                textAlign: 'center',
-                marginTop: '10px'
+                position: "absolute",
+                bottom: "16px",
+                right: "16px",
+                background: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: "14px",
+                padding: "8px 12px",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+                textAlign: "left",
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px"
               }}>
-                <div style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '50%',
-                  background: `${C.teal || '#0ea5e9'}15`,
-                  color: C.teal || '#0ea5e9',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                }}>
-                  📄
+                <span style={{ fontSize: "9px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>Total Earnings</span>
+                <span style={{ fontSize: "14px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "2px" }}>
+                  ▲ 12.5%
+                </span>
+              </div>
+            </div>
+
+            {/* Platform Description */}
+            <p style={{
+              fontSize: "13px",
+              lineHeight: 1.6,
+              color: C.textMid || "#475569",
+              textAlign: "center",
+              margin: "0 0 16px 0",
+              padding: "0 8px"
+            }}>
+              Start earning attractive commissions by offering Credit Cards, Loans, Insurance and Financial Services to your customers.
+            </p>
+
+            {/* Grid of 4 Feature Cards */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10px",
+              marginBottom: "24px"
+            }}>
+              {[
+                { title: "High Commission", icon: "💎" },
+                { title: "Secure KYC", icon: "🔒" },
+                { title: "Instant Registration", icon: "⚡" },
+                { title: "Real-time Tracking", icon: "📊" }
+              ].map((feat, i) => (
+                <div 
+                  key={i} 
+                  style={{
+                    background: isDark ? "rgba(22, 40, 64, 0.4)" : "rgba(255, 255, 255, 0.6)",
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "16px",
+                    padding: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>{feat.icon}</span>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: C.text }}>{feat.title}</span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: C.text || '#1e293b' }}>
-                    {t('partner.documentUploadsTitle', 'Document Uploads')}
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: C.textMid || '#475569', lineHeight: 1.6 }}>
-                    <p style={{ margin: 0, fontWeight: 700, color: C.text }}>
-                      {t('partner.documentUploadsSubtitle', 'Document uploads are available after activation.')}
-                    </p>
-                    <p style={{ margin: 0 }}>
-                      {t('partner.documentUploadsDesc', 'You can upload your PAN Card and Cancelled Cheque from your Partner Dashboard after our team reviews and activates your partner account. This review typically takes 24–48 hours.')}
-                    </p>
+              ))}
+            </div>
+
+            {/* Bottom Button */}
+            <button
+              onClick={() => setOnboardingStep(2)}
+              style={{
+                background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "16px",
+                padding: "14px 20px",
+                fontSize: "15px",
+                fontWeight: 700,
+                width: "100%",
+                cursor: "pointer",
+                boxShadow: "0 6px 20px rgba(13, 110, 253, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "all 0.25s"
+              }}
+            >
+              Get Started <Icons.arrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* ── SCREEN 2: Personalize Your Experience ───────────────────────────── */}
+        {onboardingStep === 2 && (
+          <div style={{ display: "flex", flexDirection: "column", minHeight: "90vh", justifyContent: "space-between" }}>
+            
+            {/* Top Back bar */}
+            <div style={{ display: "flex", width: "100%", marginBottom: "12px", textAlign: "left" }}>
+              <button 
+                onClick={() => setOnboardingStep(1)}
+                style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <Icons.arrowLeft size={16} />
+              </button>
+            </div>
+
+            {/* Step indicator */}
+            {renderOnboardingProgress()}
+
+            {/* Title & Subtitle */}
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <h2 style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
+                Personalize Your Experience
+              </h2>
+              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                Choose your preferred language and theme to continue
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px", flex: 1, justifyContent: "center" }}>
+              {/* Section 1: Choose Language */}
+              <div>
+                <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0", color: C.text }}>
+                  1. Choose Your Language
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                  {LANGUAGES.map(lang => {
+                    const isSelected = selectedLang === lang.code;
+                    return (
+                      <div
+                        key={lang.code}
+                        onClick={() => handleLangSelect(lang.code)}
+                        style={{
+                          background: isSelected ? "rgba(13, 110, 253, 0.08)" : C.card,
+                          border: isSelected ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
+                          borderRadius: "14px",
+                          padding: "12px 6px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          position: "relative",
+                          boxShadow: isSelected ? "0 4px 12px rgba(13, 110, 253, 0.12)" : "none",
+                          transition: "all 0.25s ease"
+                        }}
+                      >
+                        <div style={{ fontSize: "24px", marginBottom: "6px" }}>{lang.flag}</div>
+                        <div style={{ fontSize: "12px", fontWeight: 800, color: C.text }}>{lang.label}</div>
+                        {isSelected && (
+                          <div style={{
+                            position: "absolute",
+                            top: "6px",
+                            right: "6px",
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "50%",
+                            background: "#0D6EFD",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "8px"
+                          }}>
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 2: Choose Theme */}
+              <div>
+                <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0", color: C.text }}>
+                  2. Choose Theme
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  {/* Light Mode */}
+                  <div
+                    onClick={() => handleThemeSelect("light")}
+                    style={{
+                      background: C.card,
+                      border: !isDark ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
+                      borderRadius: "16px",
+                      padding: "12px",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      boxShadow: !isDark ? "0 4px 12px rgba(13, 110, 253, 0.1)" : "none",
+                      transition: "all 0.25s ease",
+                      position: "relative"
+                    }}
+                  >
+                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>☀️ Light Mode</div>
+                    
+                    {/* Theme mini mockup */}
+                    <div style={{
+                      marginTop: "8px",
+                      height: "40px",
+                      background: "#F8FAFC",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      padding: "4px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "3px"
+                    }}>
+                      <div style={{ height: "4px", width: "40%", background: "#CBD5E1", borderRadius: "2px" }} />
+                      <div style={{ height: "4px", width: "80%", background: "#E2E8F0", borderRadius: "2px" }} />
+                      <div style={{ height: "14px", background: "#0D6EFD", borderRadius: "3px", marginTop: "auto" }} />
+                    </div>
+                    {!isDark && (
+                      <div style={{
+                        position: "absolute",
+                        top: "6px",
+                        right: "6px",
+                        width: "14px",
+                        height: "14px",
+                        borderRadius: "50%",
+                        background: "#0D6EFD",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "8px"
+                      }}>
+                        ✓
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dark Mode */}
+                  <div
+                    onClick={() => handleThemeSelect("dark")}
+                    style={{
+                      background: C.card,
+                      border: isDark ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
+                      borderRadius: "16px",
+                      padding: "12px",
+                      cursor: "pointer",
+                      textAlign: "center",
+                      boxShadow: isDark ? "0 4px 12px rgba(13, 110, 253, 0.1)" : "none",
+                      transition: "all 0.25s ease",
+                      position: "relative"
+                    }}
+                  >
+                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>🌙 Dark Mode</div>
+                    
+                    {/* Theme mini mockup */}
+                    <div style={{
+                      marginTop: "8px",
+                      height: "40px",
+                      background: "#0B1622",
+                      borderRadius: "8px",
+                      border: "1px solid #1E3D5A",
+                      padding: "4px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "3px"
+                    }}>
+                      <div style={{ height: "4px", width: "40%", background: "#3D6480", borderRadius: "2px" }} />
+                      <div style={{ height: "4px", width: "80%", background: "#112035", borderRadius: "2px" }} />
+                      <div style={{ height: "14px", background: "#4BAF7D", borderRadius: "3px", marginTop: "auto" }} />
+                    </div>
+                    {isDark && (
+                      <div style={{
+                        position: "absolute",
+                        top: "6px",
+                        right: "6px",
+                        width: "14px",
+                        height: "14px",
+                        borderRadius: "50%",
+                        background: "#0D6EFD",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "8px"
+                      }}>
+                        ✓
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Footer Buttons */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "24px", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={() => { setErr(""); step > 0 ? setStep(s => s - 1) : onBack(); }}
-              style={{ ...S.btn("outline"), padding: "10px 20px" }}
-            >
-              {step === 0 ? t('partner.cancel', '← Cancel') : t('partner.back', '← Back')}
-            </button>
-            <button
-              type="button"
-              onClick={handleStepSubmit}
-              disabled={loading}
-              style={{ ...S.btn("primary"), padding: "10px 24px", opacity: loading ? 0.8 : 1 }}
-            >
-              {loading ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{
-                    width: "13px", height: "13px", borderRadius: "50%",
-                    border: "2px solid rgba(255,255,255,0.4)",
-                    borderTop: "2px solid #fff",
-                    animation: "spin 0.7s linear infinite",
-                    display: "inline-block",
-                  }} />
-                  {t('partner.submitting', 'Submitting…')}
-                </span>
-              ) : step === STEPS.length - 1 ? t('partner.submitRegistration', 'Submit Registration') : t('partner.next', 'Next Step →')}
-            </button>
+            {/* Bottom Actions Row */}
+            <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+              <button
+                onClick={() => setOnboardingStep(1)}
+                style={{
+                  background: C.card,
+                  color: C.textMid,
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  flex: 1,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <Icons.arrowLeft size={16} /> Back
+              </button>
+              <button
+                onClick={() => { setOnboardingStep(3); setStep(0); }}
+                style={{
+                  background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  flex: 1,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.25)"
+                }}
+              >
+                Continue <Icons.arrowRight size={16} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ── SCREEN 3: Create Your Partner Account ───────────────────────────── */}
+        {onboardingStep === 3 && (
+          <div style={{ display: "flex", flexDirection: "column", minHeight: "95vh" }}>
+            
+            {/* Top Back bar */}
+            <div style={{ display: "flex", width: "100%", marginBottom: "12px", textAlign: "left" }}>
+              <button 
+                onClick={() => {
+                  if (step === 0) {
+                    setOnboardingStep(2);
+                  } else {
+                    setStep(s => s - 1);
+                    setErr("");
+                  }
+                }}
+                style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <Icons.arrowLeft size={16} />
+              </button>
+            </div>
+
+            {/* Step indicator */}
+            {renderOnboardingProgress()}
+
+            {/* Form Title & Subtitle */}
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <h2 style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
+                {step === 0 && "Create Your Partner Account"}
+                {step === 1 && "Business Information"}
+                {step === 2 && "Bank Account Details"}
+                {step === 3 && "Identity & KYC Documents"}
+              </h2>
+              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                {step === 0 && "Complete your details to become a verified GharKaPaisa Partner"}
+                {step === 1 && "Specify your business details and location parameters"}
+                {step === 2 && "Enter your settlement bank account details"}
+                {step === 3 && "Provide document numbers to start registration"}
+              </p>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#0D6EFD", marginTop: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Step {step + 1} of {STEPS.length}
+              </div>
+            </div>
+
+            {/* Glassmorphic White Card Container */}
+            <div style={{
+              background: C.card,
+              border: `1.5px solid ${C.border}`,
+              borderRadius: "24px",
+              padding: "24px",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.06)",
+              marginBottom: "20px"
+            }}>
+              
+              {/* Error Box */}
+              {err && (
+                <div style={{
+                  background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
+                  borderRadius: "12px", padding: "10px 14px",
+                  fontSize: "13px", color: C.red,
+                  marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+                  textAlign: "left"
+                }}>
+                  <Icons.x size={14} /> {err}
+                </div>
+              )}
+
+              {/* Info Message Box */}
+              {infoMsg && (
+                <div style={{
+                  background: `${C.green}12`, border: `1.5px solid ${C.green}30`,
+                  borderRadius: "12px", padding: "10px 14px",
+                  fontSize: "13px", color: C.green,
+                  marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+                  textAlign: "left"
+                }}>
+                  <Icons.check size={14} /> {infoMsg}
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.1: Account Details ── */}
+              {step === 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+                  
+                  {/* Full Name */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Full Name</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.User size={16} /></span>
+                      <input 
+                        type="text" 
+                        value={fullName}
+                        onChange={handleFullNameChange}
+                        placeholder="Enter your full name" 
+                        style={{ ...S.input, paddingLeft: "42px" }}
+                        onFocus={e => (e.target.style.border = focusBorder)}
+                        onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile & OTP */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>{t('partner.mobileNumber', 'Mobile Number')}</label>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <div style={{ position: "relative", flex: 1 }}>
+                        <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.phone size={16} /></span>
+                        <input
+                          type="tel"
+                          {...inputProps("mobile")}
+                          placeholder="10-digit Mobile Number"
+                          style={{ ...S.input, paddingLeft: "42px" }}
+                          disabled={form.mobilePreVerified}
+                        />
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={mobileOtpSent ? handleResendMobileOtp : handleSendMobileOtp}
+                        style={{
+                          background: form.mobilePreVerified ? `${C.green}15` : "rgba(13, 110, 253, 0.08)",
+                          color: form.mobilePreVerified ? C.green : "#0D6EFD",
+                          border: form.mobilePreVerified ? `1px solid ${C.green}40` : `1px solid #0D6EFD`,
+                          borderRadius: "10px",
+                          padding: "0 14px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          cursor: mobileActionDisabled ? "not-allowed" : "pointer",
+                          opacity: mobileActionDisabled ? 0.6 : 1
+                        }}
+                        disabled={mobileActionDisabled}
+                      >
+                        {form.mobilePreVerified ? "✓ Verified" : mobileOtpSent ? "Resend" : "Send OTP"}
+                      </button>
+                    </div>
+
+                    {/* Mobile OTP verify inputs */}
+                    {mobileOtpSent && !form.mobilePreVerified && (
+                      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                        <input
+                          style={{ ...S.input, flex: 1 }}
+                          value={form.mobileOtp}
+                          onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
+                          placeholder="Enter 6-digit SMS OTP"
+                          maxLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyMobileOtp}
+                          disabled={mobileVerifyLoading || form.mobileOtp.trim().length < 6}
+                          style={{
+                            background: "#0D6EFD",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "0 16px",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          {mobileVerifyLoading ? "Verifying..." : "Verify OTP"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Email & OTP */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <div style={{ position: "relative", flex: 1 }}>
+                        <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.mail size={16} /></span>
+                        <input
+                          type="email"
+                          {...inputProps("email")}
+                          placeholder="name@domain.com"
+                          style={{ ...S.input, paddingLeft: "42px" }}
+                          disabled={form.emailPreVerified}
+                          autoComplete="email"
+                        />
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={handleSendRegistrationOtp}
+                        style={{
+                          background: form.emailPreVerified ? `${C.green}15` : "rgba(13, 110, 253, 0.08)",
+                          color: form.emailPreVerified ? C.green : "#0D6EFD",
+                          border: form.emailPreVerified ? `1px solid ${C.green}40` : `1px solid #0D6EFD`,
+                          borderRadius: "10px",
+                          padding: "0 14px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? "not-allowed" : "pointer",
+                          opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 0.6 : 1
+                        }}
+                        disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified}
+                      >
+                        {form.emailPreVerified ? "✓ Verified" : emailOtpSent ? "Resend" : "Send OTP"}
+                      </button>
+                    </div>
+
+                    {/* Email OTP verify inputs */}
+                    {emailOtpSent && !form.emailPreVerified && (
+                      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                        <input
+                          style={{ ...S.input, flex: 1 }}
+                          value={form.emailOtp}
+                          onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
+                          placeholder="Enter 6-digit Email OTP"
+                          maxLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyRegistrationOtp}
+                          disabled={emailOtpLoading || form.emailOtp.trim().length < 6}
+                          style={{
+                            background: "#0D6EFD",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "0 16px",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          {emailOtpLoading ? "Verifying..." : "Verify OTP"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Aadhaar Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Aadhaar Number</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
+                      <input 
+                        type="text" 
+                        placeholder="Enter 12-digit Aadhaar Number" 
+                        maxLength={12}
+                        {...inputProps("aadhaar")}
+                        style={{ ...S.input, paddingLeft: "42px" }}
+                      />
+                    </div>
+                    {aadhaarBackendError && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {aadhaarBackendError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Password */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Password</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={16} /></span>
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="Choose password (min 8 chars)" 
+                        {...inputProps("password")}
+                        style={{ ...S.input, paddingLeft: "42px", paddingRight: "42px" }}
+                        autoComplete="new-password"
+                      />
+                      <span 
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
+                      >
+                        {showPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Confirm Password</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={16} /></span>
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        placeholder="Repeat your password" 
+                        {...inputProps("confirmPassword")}
+                        style={{ ...S.input, paddingLeft: "42px", paddingRight: "42px" }}
+                        autoComplete="new-password"
+                      />
+                      <span 
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
+                      >
+                        {showConfirmPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* MSG91 reCAPTCHA container */}
+                  <div id={captchaId} style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80px", marginTop: "5px", marginBottom: "5px" }} />
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.2: Business Information ── */}
+              {step === 1 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+                  
+                  {/* Partner Type */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Partner Type</label>
+                    <select style={S.input} value={form.companyType} onChange={set("companyType")}>
+                      {COMPANY_TYPES.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Company Name */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Company Name</label>
+                    <input {...inputProps("companyName")} placeholder="Enter company / firm name" />
+                  </div>
+
+                  {/* Company Address */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Company Address</label>
+                    <input {...inputProps("currentAddress")} placeholder="Full business address" />
+                  </div>
+
+                  {/* Pincode */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Pincode</label>
+                    <input {...inputProps("pincode")} maxLength={6} placeholder="6-digit pincode" />
+                  </div>
+
+                  {/* City / Region */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>City / Region</label>
+                    <input {...inputProps("businessLocation")} placeholder="e.g. Mumbai, Maharashtra" />
+                  </div>
+
+                  {/* GST Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>GST Number (Optional)</label>
+                    <input {...inputProps("gst")} placeholder="e.g. 27AAPFU0939F1ZV" style={{ ...S.input, textTransform: "uppercase" }} />
+                  </div>
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.3: Bank Details ── */}
+              {step === 2 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+                  
+                  {/* Bank Name */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Bank Name</label>
+                    <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder="Search and select your bank" />
+                    <datalist id="onboarding-bank-list">
+                      {INDIA_BANKS.map(bank => <option key={bank} value={bank} />)}
+                    </datalist>
+                  </div>
+
+                  {/* Account Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Account Number</label>
+                    <input {...inputProps("accountNumber")} placeholder="Enter settlement account number" />
+                  </div>
+
+                  {/* IFSC Code */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>IFSC Code</label>
+                    <input {...inputProps("ifsc")} placeholder="Enter 11-digit IFSC code" style={{ ...S.input, textTransform: "uppercase" }} />
+                  </div>
+
+                  {/* Account Holder Name */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>Account Holder Name</label>
+                    <input {...inputProps("accountHolderName")} placeholder="Name as per bank records" />
+                  </div>
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.4: Bank & KYC Details ── */}
+              {step === 3 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+                  
+                  {/* PAN Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={S.label}>PAN Number</label>
+                    <input {...inputProps("pan")} placeholder="Enter 10-char PAN" style={{ ...S.input, textTransform: "uppercase" }} maxLength={10} />
+                  </div>
+
+                  {/* Info callout card */}
+                  <div style={{
+                    background: isDark ? "#112035" : "#F8FAFC",
+                    border: `1px solid ${C.border}`,
+                    borderRadius: "14px",
+                    padding: "14px",
+                    fontSize: "12px",
+                    color: C.textMid,
+                    lineHeight: 1.5
+                  }}>
+                    <strong>Note:</strong> Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team performs the initial review and activates your partner account (typically within 24-48 hours).
+                  </div>
+
+                  {/* Terms & Privacy Policy Checkbox */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginTop: "8px" }}>
+                    <input 
+                      type="checkbox" 
+                      id="termsAgreed"
+                      checked={form.termsAgreed}
+                      onChange={e => setForm(f => ({ ...f, termsAgreed: e.target.checked }))}
+                      style={{ marginTop: "3px", width: "16px", height: "16px", cursor: "pointer" }}
+                    />
+                    <label htmlFor="termsAgreed" style={{ fontSize: "12px", color: C.textMid, cursor: "pointer", userSelect: "none" }}>
+                      I agree to the <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Terms & Conditions</span> and <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Privacy Policy</span> of GharKaPaisa.
+                    </label>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Bottom Actions Row */}
+            <div style={{ display: "flex", gap: "10px", marginTop: "auto" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setErr("");
+                  if (step === 0) {
+                    setOnboardingStep(2);
+                  } else {
+                    setStep(s => s - 1);
+                  }
+                }}
+                style={{
+                  background: C.card,
+                  color: C.textMid,
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  flex: 1,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <Icons.arrowLeft size={16} /> {step === 0 ? "Back" : "Previous"}
+              </button>
+              <button
+                type="button"
+                onClick={handleStepSubmit}
+                disabled={loading}
+                style={{
+                  background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  flex: 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.8 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.25)"
+                }}
+              >
+                {loading ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{
+                      width: "12px", height: "12px", borderRadius: "50%",
+                      border: "2px solid rgba(255,255,255,0.4)",
+                      borderTop: "2px solid #fff",
+                      animation: "spin 0.7s linear infinite"
+                    }} />
+                    Submitting...
+                  </span>
+                ) : step === STEPS.length - 1 ? (
+                  <>Create Account <Icons.check size={16} /></>
+                ) : (
+                  <>Continue <Icons.arrowRight size={16} /></>
+                )}
+              </button>
+            </div>
+
+            {/* Bottom Log-in Link */}
+            <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px", color: C.textLight }}>
+              Already have an account?{" "}
+              <span 
+                onClick={onBack} 
+                style={{ color: "#0D6EFD", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Login
+              </span>
+            </div>
+
+          </div>
+        )}
+
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
