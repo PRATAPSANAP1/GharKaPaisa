@@ -12,6 +12,35 @@ let captchaVerified = false;
 let pollIntervalId = null;
 const listeners = new Set();
 
+// Patch document.getElementById & querySelector to return dummy divs for unmounted MSG91 captcha containers
+if (typeof window !== 'undefined' && !window.__msg91_elementPatchApplied) {
+  const originalGetElementById = document.getElementById;
+  document.getElementById = function (id) {
+    const el = originalGetElementById.call(document, id);
+    if (!el && typeof id === 'string' && (id.startsWith('msg91-captcha-') || id.includes('captcha') || id.includes('recaptcha'))) {
+      console.log(`[MSG91 Patch] returning dummy element for unmounted/missing container: ${id}`);
+      return document.createElement('div');
+    }
+    return el;
+  };
+
+  const originalQuerySelector = document.querySelector;
+  document.querySelector = function (selector) {
+    try {
+      const el = originalQuerySelector.call(document, selector);
+      if (!el && typeof selector === 'string' && (selector.includes('msg91-captcha-') || selector.includes('captcha') || selector.includes('recaptcha'))) {
+        console.log(`[MSG91 Patch] querySelector returning dummy element for: ${selector}`);
+        return document.createElement('div');
+      }
+      return el;
+    } catch (err) {
+      return originalQuerySelector.call(document, selector);
+    }
+  };
+
+  window.__msg91_elementPatchApplied = true;
+}
+
 // ── hCaptcha / grecaptcha Monkey-Patches ─────────────────────────────────────
 // Intercepts render() to prevent "already rendered" errors when the MSG91
 // Angular widget re-initializes (e.g. route changes, modal reopen).
