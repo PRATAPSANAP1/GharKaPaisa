@@ -912,41 +912,6 @@ export default function PartnerLogin() {
                   </button>
                 </form>
 
-                {/* Divider OR */}
-                <div style={{ display: "flex", alignItems: "center", margin: "10px 0", flexShrink: 0 }}>
-                  <div style={{ flex: 1, height: "1px", background: C.border }} />
-                  <span id="label-login-or" style={{ fontSize: "10px", fontWeight: 800, color: C.textLight, padding: "0 10px" }}>{t("login.dividerOr", "OR")}</span>
-                  <div style={{ flex: 1, height: "1px", background: C.border }} />
-                </div>
-
-                {/* Google Login Mock button */}
-                <button
-                  id="btn-google-login"
-                  type="button"
-                  onClick={() => setToast({ message: t("login.googleOAuthComingSoon", "Google OAuth is coming soon!"), type: "info" })}
-                  style={{
-                    background: C.card,
-                    color: C.textMid,
-                    border: `1.5px solid ${C.border}`,
-                    borderRadius: "14px",
-                    padding: "10px 16px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    width: "100%",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                    flexShrink: 0
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.478 0-6.3-2.822-6.3-6.3s2.822-6.3 6.3-6.3c1.63 0 3.11.62 4.23 1.63l3.29-3.29C19.24 2.24 15.93 1 12.24 1 6.032 1 12.24s5.032 11.24 11.24 11.24c5.898 0 10.745-4.26 11.24-10.285v-2.91H12.24z"/>
-                  </svg>
-                  <span id="label-google-login">{t("login.googleLoginButton", "Continue with Google")}</span>
-                </button>
-
               </div>
 
               {/* Bottom Action / Footer */}
@@ -960,12 +925,6 @@ export default function PartnerLogin() {
                   >
                     {t("login.becomePartner", "Become a Partner →")}
                   </span>
-                </div>
-
-                {/* SSL Trusted Footer */}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: C.textLight, marginTop: "14px", borderTop: `1px solid ${C.border}`, paddingTop: "8px" }}>
-                  <span id="label-ssl-secure">{t("login.sslSecure", "🔒 256-bit SSL Secure")}</span>
-                  <span id="label-trusted-partners">{t("login.trustedPartners", "Trusted by 10,000+ Partners")}</span>
                 </div>
               </div>
             </div>
