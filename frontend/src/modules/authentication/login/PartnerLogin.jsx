@@ -262,7 +262,7 @@ export default function PartnerLogin() {
               verifyDone = true;
               clearTimeout(verifyTimeout);
               try {
-                const tokenVal = verifyData?.accessToken || verifyData?.['access-token'] || (typeof verifyData === 'string' ? verifyData : verifyData?.data);
+                const tokenVal = verifyData?.message || verifyData?.accessToken || verifyData?.['access-token'] || (typeof verifyData === 'string' ? verifyData : verifyData?.data);
                 if (!tokenVal) {
                   throw new Error("Could not retrieve verification token from MSG91.");
                 }
