@@ -696,153 +696,118 @@ export default function PartnerRegister() {
       <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: isDark ? "rgba(13, 110, 253, 0.04)" : "rgba(13, 110, 253, 0.05)", filter: "blur(80px)", top: "-120px", left: "-120px", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: isDark ? "rgba(46, 144, 250, 0.05)" : "rgba(46, 144, 250, 0.06)", filter: "blur(80px)", bottom: "-80px", right: "-120px", pointerEvents: "none", zIndex: 0 }} />
 
-      <div className="onboarding-container">
+      <div 
+        className="onboarding-container"
+        style={{ maxWidth: onboardingStep === 1 ? "420px" : undefined }}
+      >
 
         {/* ── SCREEN 1: Welcome to GharKaPaisa ────────────────────────────────── */}
         {onboardingStep === 1 && (
-          <div className="welcome-split-layout">
-            <div className="welcome-left">
-              {/* Illustration Card Container */}
-              <div className="illustration-box">
-                <img 
-                  src={welcomeBgImg} 
-                  alt="Welcome Background Graphic" 
-                  style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "16px" }} 
-                />
-                
-                {/* Floating total earnings card */}
-                <div style={{
-                  position: "absolute",
-                  bottom: "10px",
-                  right: "10px",
-                  background: C.card,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: "12px",
-                  padding: "4px 8px",
-                  boxShadow: "0 6px 16px rgba(0, 0, 0, 0.1)",
-                  textAlign: "left",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1px"
-                }}>
-                  <span id="welcome-floating-earnings-label" style={{ fontSize: "8px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>
-                    {t("onboarding.totalEarnings", "Total Earnings")}
-                  </span>
-                  <span id="welcome-floating-earnings-value" style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
-                  <span id="welcome-floating-earnings-trend" style={{ fontSize: "9px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "1px" }}>
-                    ▲ 12.5%
-                  </span>
-                </div>
-              </div>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", width: "100%" }}>
+            
+            {/* Centered Logo */}
+            <div style={{ display: "flex", justifyContent: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
+              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain" }} />
             </div>
 
-            <div className="welcome-right">
-              {/* Top Bar */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
-                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "28px", objectFit: "contain" }} />
-                <button 
-                  id="btn-welcome-skip"
-                  onClick={() => setOnboardingStep(2)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: C.textLight || "#64748B",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    padding: "4px 8px"
-                  }}
-                >
-                  {t("onboarding.skip", "Skip")}
-                </button>
-              </div>
+            {/* Step indicator */}
+            {renderOnboardingProgress()}
 
-              {/* Step indicator */}
-              {renderOnboardingProgress()}
-
-              {/* Header Text */}
-              <div style={{ textAlign: "left", flexShrink: 0, marginBottom: "8px" }}>
-                <h1 id="onboarding-welcome-title" style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
-                  {t("onboarding.welcomeTo", "Welcome to")}{" "}
-                  <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                    GharKaPaisa
-                  </span>
-                </h1>
-                <p id="onboarding-welcome-subtitle" style={{ fontSize: "11px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "2px", margin: 0 }}>
-                  {t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}
-                </p>
-              </div>
-
-              {/* Platform Description */}
-              <p id="onboarding-welcome-desc" style={{
-                fontSize: "12px",
-                lineHeight: 1.4,
-                color: C.textMid || "#475569",
-                textAlign: "left",
-                margin: "0 0 10px 0",
-                flexShrink: 0
-              }}>
-                {t("onboarding.description", "Start earning attractive commissions by helping customers with Credit Cards, Personal Loans, Home Loans, Insurance, and Financial Services.")}
+            {/* Header Text */}
+            <div style={{ textAlign: "center", flexShrink: 0, marginBottom: "8px" }}>
+              <h1 id="onboarding-welcome-title" style={{ fontSize: "20px", fontWeight: 900, margin: "0 0 4px", color: C.text, lineHeight: 1.2 }}>
+                {t("onboarding.welcomeTo", "Welcome to")}{" "}
+                <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  GharKaPaisa
+                </span>
+              </h1>
+              <p id="onboarding-welcome-subtitle" style={{ fontSize: "11px", fontWeight: 700, color: C.textLight || "#64748B", margin: "0 0 6px" }}>
+                {t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}
               </p>
-
-              {/* Grid of 4 Feature Cards */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "6px",
-                marginBottom: "12px",
-                flexShrink: 0
-              }}>
-                {[
-                  { title: t("onboarding.feature1", "High Commission"), icon: "💎", id: "feat-1" },
-                  { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒", id: "feat-2" },
-                  { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡", id: "feat-3" },
-                  { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊", id: "feat-4" }
-                ].map((feat, i) => (
-                  <div 
-                    key={i} 
-                    style={{
-                      background: isDark ? "rgba(22, 40, 64, 0.3)" : "rgba(255, 255, 255, 0.5)",
-                      border: `1px solid ${C.border}`,
-                      borderRadius: "10px",
-                      padding: "6px 8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.01)"
-                    }}
-                  >
-                    <span style={{ fontSize: "12px" }}>{feat.icon}</span>
-                    <span id={feat.id} style={{ fontSize: "10px", fontWeight: 700, color: C.text }}>{feat.title}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bottom Button */}
-              <button
-                id="btn-get-started"
-                onClick={() => setOnboardingStep(2)}
-                style={{
-                  background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "12px",
-                  padding: "10px 16px",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  width: "100%",
-                  cursor: "pointer",
-                  boxShadow: "0 4px 16px rgba(13, 110, 253, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  flexShrink: 0
-                }}
-              >
-                <span id="label-get-started">{t("onboarding.getStarted", "Get Started")}</span> <Icons.arrowRight size={14} />
-              </button>
+              <p id="onboarding-welcome-desc" style={{ fontSize: "11px", lineHeight: 1.4, color: C.textMid || "#475569", margin: 0, padding: "0 8px" }}>
+                {t("onboarding.description", "Start earning by offering Credit Cards, Loans, Insurance and Financial Services to your customers.")}
+              </p>
             </div>
+
+            {/* Illustration Image Container */}
+            <div style={{
+              flex: 1,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              position: "relative",
+              width: "100%",
+              maxHeight: "240px",
+              minHeight: "150px",
+              margin: "6px 0",
+              overflow: "hidden"
+            }}>
+              <img 
+                src={welcomeBgImg} 
+                alt="Welcome Background Graphic" 
+                style={{ width: "100%", height: "100%", objectFit: "contain" }} 
+              />
+            </div>
+
+            {/* Grid of 4 Feature Cards (Horizontal row matching mockup circular layout) */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+              width: "100%",
+              margin: "10px 0 14px",
+              flexShrink: 0
+            }}>
+              {[
+                { title: t("onboarding.feature1", "High Commission"), icon: "🛡️", id: "feat-1" },
+                { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒", id: "feat-2" },
+                { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡", id: "feat-3" },
+                { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊", id: "feat-4" }
+              ].map((feat, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", width: "74px", textAlign: "center" }}>
+                  <div style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "#FFFFFF",
+                    border: `1.5px solid ${C.border}`,
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.04)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px"
+                  }}>
+                    {feat.icon}
+                  </div>
+                  <span id={feat.id} style={{ fontSize: "9px", fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{feat.title}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Button */}
+            <button
+              id="btn-get-started"
+              onClick={() => setOnboardingStep(2)}
+              style={{
+                background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "14px",
+                padding: "12px 18px",
+                fontSize: "13px",
+                fontWeight: 700,
+                width: "100%",
+                cursor: "pointer",
+                boxShadow: "0 6px 16px rgba(13, 110, 253, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                flexShrink: 0
+              }}
+            >
+              <span id="label-get-started">{t("onboarding.getStarted", "Get Started")}</span> <Icons.arrowRight size={14} />
+            </button>
           </div>
         )}
 
