@@ -1645,18 +1645,15 @@ export default function PartnerRegister() {
         }
         
         .welcome-left {
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-          max-height: 180px;
-          min-height: 130px;
-          margin: 12px 0;
+          display: none;
         }
         
         .welcome-right {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          flex: 1;
+          height: 100%;
         }
         
         .illustration-box {
