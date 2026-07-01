@@ -737,15 +737,15 @@ export default function PartnerRegister() {
               alignItems: "center",
               position: "relative",
               width: "calc(100% + 24px)",
-              maxHeight: "260px",
-              minHeight: "160px",
+              maxHeight: "340px",
+              minHeight: "140px",
               margin: "6px -12px",
               overflow: "hidden"
             }}>
               <img 
                 src={welcomeBgImg} 
                 alt="Welcome Background Graphic" 
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                style={{ width: "100%", height: "100%", objectFit: "contain" }} 
               />
             </div>
 
