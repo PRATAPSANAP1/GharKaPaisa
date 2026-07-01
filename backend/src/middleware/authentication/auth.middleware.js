@@ -106,6 +106,8 @@ const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
   const userRole = (req.user.role || '').toUpperCase();
   if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
   if (req.user.id.toString() === targetId) return next();
+  if (req.user.PartnerId && req.user.PartnerId.toString() === targetId) return next();
+  if (req.user.partner_id && req.user.partner_id.toString() === targetId) return next();
   return forbidden(res);
 };
 
