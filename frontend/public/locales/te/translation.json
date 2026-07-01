@@ -8,7 +8,9 @@
     "contact": "మమ్మల్ని సంప్రదించండి",
     "admin": "అడ్మిన్",
     "employee": "ఉద్యోగి",
-    "partner": "భాగస్వామి"
+    "partner": "భాగస్వామి",
+    "signIn": "సైన్ ఇన్",
+    "signUp": "సైన్ అప్"
   },
   "sections": {
     "moneyTransfer": "మనీ ట్రాన్స్ఫర్ & చెల్లింపులు",
@@ -134,7 +136,11 @@
     "flight": "విమానం",
     "train": "రైలు",
     "bus": "బస్సు",
-    "hotels": "హోటళ్ళు"
+    "hotels": "హోటళ్ళు",
+    "flightbooking": "ఫ్లైట్ బుకింగ్",
+    "trainbooking": "ట్రైన్ బుకింగ్",
+    "busbooking": "బస్సు బుకింగ్",
+    "hotelbooking": "హోటల్ బుకింగ్"
   },
   "footer": {
     "desc": "క్రెడిట్ కార్డులు, రుణాలు, భీమా & ఆర్థిక సేవల కోసం భారతదేశపు విశ్వసనీయ వేదిక.",
@@ -383,5 +389,55 @@
         "fee": "వಾರ್షિક రుసుము: ₹500 (₹50k  వార్షિક ఖర్చుపై రద్దు చేయబడుతుంది)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "డాష్‌బోర్డ్",
+    "partners": "భాగస్వాములు",
+    "applications": "దరఖాస్తులు",
+    "leads": "లీడ్స్",
+    "withdrawals": "ఉపసంహరణలు",
+    "logout": "లాగ్ అవుట్",
+    "title": "ఘర్ కా పైసా అడ్మిన్"
+  },
+  "partnerLayout": {
+    "dashboard": "డాష్‌బోర్ડ",
+    "marketplace": "మార్కెట్ ప్లేస్",
+    "creditcenter": "క్రెడిట్ సెంటర్",
+    "leads": "లీడ్ మేనేజ్‌మెంట్",
+    "crm": "కస్టమર CRM",
+    "kyc": "కేవైసీ సెంటర్",
+    "profile": "ప్రొఫైల్ హబ్",
+    "vault": "டாక్యుமெண்ட் வால்ட்",
+    "wallet": "వాలెట్",
+    "referral": "టీమ్ నెట్‌వర్క్",
+    "training": "ట్రైనింగ్ అకాడమీ",
+    "marketing": "మార్కెటింగ్ సెంటర్",
+    "travel": "ట్రావెల్ & యుటిలిటీ",
+    "support": "సపోర్ట్ సెంటర్",
+    "settings": "సెట్టింగులు",
+    "logout": "లాగ్ అవుట్",
+    "title": "భాగస్వామి పోర్టల్"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "వినియోగదారులు & ఖాతాలు",
+    "cat_lead_tracking": "లీడ్ ట్రాకింగ్",
+    "cat_products_partners": "ఉత్పత్తులు & భాగస్వాములు",
+    "cat_modify_website": "వెబ్‌సైట్ సవరించు",
+    "cat_system_utilities": "సిస్టమ్ యుటిలిటీస్",
+    "admins": "అడ్మిన్లు",
+    "partners": "భাগస్వాములు",
+    "leads": "లీడ్స్",
+    "directcardleads": "డైరెక్ట్ కార్డ్ లీడ్స్",
+    "lendingpartners": "రుణ భాగస్వాములు",
+    "products": "ఉற்பత్తులు",
+    "banners": "బ్యానర్లు",
+    "cms": "సీఎంఎస్",
+    "servicesapi": "సర్వీసెస్ API",
+    "commissionmanager": "కమిషన్ మేనేజర్",
+    "auditlogs": "ఆడిట్ లాగ్స్",
+    "reports": "నివేదికలు",
+    "modify": "సవరించు",
+    "logout": "లాగ్ అవుట్",
+    "title": "సూపర్ అడ్మిన్ ప్యానెల్"
   }
 }

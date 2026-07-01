@@ -33,7 +33,7 @@ const Chevron = ({ open, color = "currentColor", size = 16 }) => (
 
 const SuperAdminLayout = () => {
   const { C, isDark } = useTheme();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
@@ -204,6 +204,7 @@ const SuperAdminLayout = () => {
               <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
                 <button
                   type="button"
+                  id="super-admin-modify-group-btn"
                   onClick={() => setModifyOpen(!modifyOpen)}
                   style={{
                     display: 'flex',
@@ -224,7 +225,7 @@ const SuperAdminLayout = () => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Icons.gift size={16} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Modify</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('superAdminLayout.modify', 'Modify')}</span>
                   </div>
                   <Chevron open={modifyOpen} color={isChildActive ? C.teal : C.textSecondary} />
                 </button>
@@ -241,9 +242,11 @@ const SuperAdminLayout = () => {
                   }}>
                     {cat.items.map((item) => {
                       const isActive = location.pathname === item.path;
+                      const cleanLabel = item.label.toLowerCase().replace(/[^a-z0-9]/g, '');
                       return (
                         <NavLink
                           key={item.path}
+                          id={`super-admin-nav-${cleanLabel}`}
                           to={item.path}
                           onClick={onLinkClick}
                           style={{
@@ -261,7 +264,7 @@ const SuperAdminLayout = () => {
                           }}
                         >
                           {item.icon}
-                          {item.label}
+                          <span>{t('superAdminLayout.' + cleanLabel, item.label)}</span>
                         </NavLink>
                       );
                     })}
@@ -271,6 +274,7 @@ const SuperAdminLayout = () => {
             );
           }
 
+          const catKey = 'cat_' + cat.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
           return (
             <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{
@@ -281,13 +285,15 @@ const SuperAdminLayout = () => {
                 padding: '0 16px',
                 marginBottom: '4px',
               }}>
-                {cat.title}
+                {t('superAdminLayout.' + catKey, cat.title)}
               </div>
               {cat.items.map((item) => {
                 const isActive = location.pathname === item.path;
+                const cleanLabel = item.label.toLowerCase().replace(/[^a-z0-9]/g, '');
                 return (
                   <NavLink
                     key={item.path}
+                    id={`super-admin-nav-${cleanLabel}`}
                     to={item.path}
                     onClick={onLinkClick}
                     style={{
@@ -306,7 +312,7 @@ const SuperAdminLayout = () => {
                     }}
                   >
                     <span style={{ color: isActive ? '#fff' : C.textSecondary }}>{item.icon}</span>
-                    {item.label}
+                    <span>{t('superAdminLayout.' + cleanLabel, item.label)}</span>
                   </NavLink>
                 );
               })}
@@ -352,7 +358,7 @@ const SuperAdminLayout = () => {
               justifyContent: "center"
             }}>
               <img src={logo} alt="logo" style={{ height: "30px", width: "auto" }} />
-              <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Super Admin</h2>
+              <h2 id="super-admin-sidebar-title" style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t('superAdminLayout.title', 'Super Admin')}</h2>
             </div>
 
             <nav style={{ flex: 1 }}>
@@ -755,54 +761,61 @@ const SuperAdminLayout = () => {
 
                     {/* Menu links */}
                     <button 
+                      id="super-admin-dropdown-profile"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      👤 Profile
+                      👤 {t('superAdminLayout.profile', 'Profile')}
                     </button>
                     <button 
+                      id="super-admin-dropdown-account"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      💼 My Account
+                      💼 {t('superAdminLayout.myAccount', 'My Account')}
                     </button>
                     <button 
+                      id="super-admin-dropdown-password"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      🔑 Change Password
+                      🔑 {t('superAdminLayout.changePassword', 'Change Password')}
                     </button>
                     <button 
+                      id="super-admin-dropdown-notifications"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      🔔 Notifications
+                      🔔 {t('superAdminLayout.notifications', 'Notifications')}
                     </button>
                     <button 
+                      id="super-admin-dropdown-activity"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/audit-logs"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      📋 Activity Log
+                      📋 {t('superAdminLayout.activityLog', 'Activity Log')}
                     </button>
                     <button 
+                      id="super-admin-dropdown-settings"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/settings"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
-                      ⚙️ Settings
+                      ⚙️ {t('superAdminLayout.settings', 'Settings')}
                     </button>
                     <div style={{ height: "1px", background: C.border, margin: "6px 0" }} />
                     <button 
+                      id="super-admin-logout-button"
                       onClick={() => { setShowProfileDropdown(false); handleLogout(); }}
                       className="profile-dropdown-item"
                       style={{ ...dropdownItemStyle, color: C.red }}
                     >
-                      🚪 Logout
+                      🚪 {t('superAdminLayout.logout', 'Logout')}
                     </button>
                   </div>
                 )}

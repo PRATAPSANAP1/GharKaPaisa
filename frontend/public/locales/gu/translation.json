@@ -8,7 +8,9 @@
     "contact": "સંપર્ક કરો",
     "admin": "Admin",
     "employee": "Employee",
-    "partner": "Partner"
+    "partner": "Partner",
+    "signIn": "સાઇન ઇન",
+    "signUp": "સાઇન અપ"
   },
   "sections": {
     "moneyTransfer": "મની ટ્રાન્સફર અને ચૂકવણીઓ",
@@ -134,7 +136,11 @@
     "flight": "ફ્લાઇટ",
     "train": "ટ્રેન",
     "bus": "બસ્",
-    "hotels": "હોટેલ્સ"
+    "hotels": "હોટેલ્સ",
+    "flightbooking": "ફ્લાઇટ બુકિંગ",
+    "trainbooking": "ટ્રેન બુકિંગ",
+    "busbooking": "બસ બુકિંગ",
+    "hotelbooking": "હોટેલ બુકિંગ"
   },
   "footer": {
     "desc": "ક્રેડિટ કાર્ડ, લોન, વીમો અને નાણાકીય સેવાઓ માટે ભારતનું વિશ્વસનીય પ્લેટફોર્મ.",
@@ -383,5 +389,55 @@
         "fee": "વાર્ષિક ફી: ₹૫૦૦ (₹૫૦ હજારના વાર્ષિક ખર્ચ પર માફ)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "ડેશબોર્ડ",
+    "partners": "ભાગીદારો",
+    "applications": "અરજીઓ",
+    "leads": "લીડ્સ",
+    "withdrawals": "ઉપાડ",
+    "logout": "લોગ આઉટ",
+    "title": "ઘરકાપૈસા એડમિન"
+  },
+  "partnerLayout": {
+    "dashboard": "ડેશબોર્ડ",
+    "marketplace": "માર્કેટપ્લેસ",
+    "creditcenter": "ક્રેડિટ સેન્ટર",
+    "leads": "લીડ મેનેજમેન્ટ",
+    "crm": "ગ્રાહક CRM",
+    "kyc": "કેવાયસી સેન્ટર",
+    "profile": "પ્રોફાઇલ હબ",
+    "vault": "દસ્તાવેજ તિજોરી",
+    "wallet": "વોલેટ",
+    "referral": "ટીમ નેટવર્ક",
+    "training": "તાલીમ એકેડેમી",
+    "marketing": "માર્કેટિંગ સેન્ટર",
+    "travel": "મુસાફરી અને ઉપયોગિતા",
+    "support": "સપોર્ટ સેન્ટર",
+    "settings": "સેટિંગ્સ",
+    "logout": "લોગ આઉટ",
+    "title": "ભાગીદાર પોર્ટલ"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "વપરાશકર્તાઓ અને ખાતાઓ",
+    "cat_lead_tracking": "લીડ ટ્રેકિંગ",
+    "cat_products_partners": "ઉત્પાદનો અને ભાગીદારો",
+    "cat_modify_website": "વેબસાઇટ સુધારો",
+    "cat_system_utilities": "સિસ્ટમ ઉપયોગિતાઓ",
+    "admins": "એડમિન",
+    "partners": "ભાગીદારો",
+    "leads": "લીડ્સ",
+    "directcardleads": "સીધી કાર્ડ લીડ્સ",
+    "lendingpartners": "ધિરાણ ભાગીદારો",
+    "products": "ઉત્પાદનો",
+    "banners": "બેનરો",
+    "cms": "સીએમએસ",
+    "servicesapi": "સેવાઓ API",
+    "commissionmanager": "કમિશન મેનેજર",
+    "auditlogs": "ઓડિટ લોગ્સ",
+    "reports": "અહેવાલો",
+    "modify": "સુધારો",
+    "logout": "લોગ આઉટ",
+    "title": "સુપર એડમિન પેનલ"
   }
 }

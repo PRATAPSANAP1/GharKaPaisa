@@ -8,7 +8,9 @@
     "contact": "যোগাযোগ করুন",
     "admin": "অ্যাডমিন",
     "employee": "কর্মচারী",
-    "partner": "পার্টনার"
+    "partner": "পার্টনার",
+    "signIn": "লগইন",
+    "signUp": "নিবন্ধন"
   },
   "sections": {
     "moneyTransfer": "মানি ট্রান্সফার এবং পেমেন্ট",
@@ -134,7 +136,11 @@
     "flight": "বিমান",
     "train": "ট্রেন",
     "bus": "বাস",
-    "hotels": "হোটেল"
+    "hotels": "হোটেল",
+    "flightbooking": "ফ্লাইট বুকিং",
+    "trainbooking": "ট্রেন বুকিং",
+    "busbooking": "বাস বুকিং",
+    "hotelbooking": "হোটেল বুকিং"
   },
   "footer": {
     "desc": "ক্রেডিট কার্ড, লোন, বিমা এবং আর্থিক পরিষেবার জন্য ভারতের বিশ্বস্ত প্ল্যাটফর্ম।",
@@ -383,5 +389,55 @@
         "fee": "বার্ষিক ফি: ₹৫০০ (₹৫০ হাজার বার্ষিক খরচে মকুব)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "ড্যাশবোর্ড",
+    "partners": "অংশীদার",
+    "applications": "আবেদনসমূহ",
+    "leads": "লিডস",
+    "withdrawals": "উত্তোলন",
+    "logout": "লগ আউট",
+    "title": "ঘরকাপয়সা এডমিন"
+  },
+  "partnerLayout": {
+    "dashboard": "ড্যাশবোর্ড",
+    "marketplace": "মার্কেটপ্লেস",
+    "creditcenter": "ক্রেডিট সেন্টার",
+    "leads": "লিড ম্যানেজমেন্ট",
+    "crm": "কাস্টমার CRM",
+    "kyc": "কেওয়াইসি সেন্টার",
+    "profile": "প্রোফাইল হাব",
+    "vault": "ডকুমেন্ট ভল্ট",
+    "wallet": "ওয়ালেট",
+    "referral": "টিম নেটওয়ার্ক",
+    "training": "ট্রেনিং একাডেমি",
+    "marketing": "মার্কেটিং সেন্টার",
+    "travel": "ভ্রমণ ও উপযোগিতা",
+    "support": "সহায়তা কেন্দ্র",
+    "settings": "সেটিংস",
+    "logout": "লগ আউট",
+    "title": "পার্টনার পোর্টাল"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "ব্যবহারকারী ও অ্যাকাউন্ট",
+    "cat_lead_tracking": "লিড ট্র্যাকিং",
+    "cat_products_partners": "পণ্য ও অংশীদার",
+    "cat_modify_website": "ওয়েবসাইট সংশোধন",
+    "cat_system_utilities": "সিস্টেম ইউটিলিটি",
+    "admins": "এডমিনগণ",
+    "partners": "অংশীদার",
+    "leads": "লিডস",
+    "directcardleads": "সরাসরি কার্ড লিড",
+    "lendingpartners": "ঋণদানকারী অংশীদার",
+    "products": "পণ্য",
+    "banners": "ব্যানার",
+    "cms": "সিএমএস",
+    "servicesapi": "সার্ভিসেস API",
+    "commissionmanager": "কমিশন ম্যানেজার",
+    "auditlogs": "অডিট লগ",
+    "reports": "প্রতিবেদন",
+    "modify": "সংশোধন",
+    "logout": "লগ আউট",
+    "title": "সুপার এডমিন প্যানেল"
   }
 }

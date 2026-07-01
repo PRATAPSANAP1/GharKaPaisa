@@ -8,7 +8,9 @@
     "contact": "સંપર્ક કરો",
     "admin": "एडमिन",
     "employee": "कर्मचारी",
-    "partner": "पार्टनर"
+    "partner": "पार्टनर",
+    "signIn": "साइन इन",
+    "signUp": "साइन अप"
   },
   "sections": {
     "moneyTransfer": "मनी ट्रांसफर और भुगतान",
@@ -140,7 +142,11 @@
     "flight": "उड़ान",
     "train": "ट्रेन",
     "bus": "बस",
-    "hotels": "होटल"
+    "hotels": "होटल",
+    "flightbooking": "फ्लाइट बुकिंग",
+    "trainbooking": "ट्रेन बुकिंग",
+    "busbooking": "बस बुकिंग",
+    "hotelbooking": "होटल बुकिंग"
   },
   "footer": {
     "desc": "क्रेडिट कार्ड, लोन, बीमा और वित्तीय सेवाओं के लिए भारत का विश्वसनीय मंच।",
@@ -459,5 +465,55 @@
         "fee": "वार्षिक शुल्क: शून्य"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "डैशबोर्ड",
+    "partners": "साझेदार",
+    "applications": "आवेदन",
+    "leads": "लीड्स",
+    "withdrawals": "निकासी",
+    "logout": "लॉग आउट",
+    "title": "घरकापैसा एडमिन"
+  },
+  "partnerLayout": {
+    "dashboard": "डैशबोर्ड",
+    "marketplace": "मार्केटप्लेस",
+    "creditcenter": "क्रेडिट सेंटर",
+    "leads": "लीड प्रबंधन",
+    "crm": "ग्राहक संबंध प्रबंधन (CRM)",
+    "kyc": "केवाईसी सेंटर",
+    "profile": "प्रोफाइल हब",
+    "vault": "दस्तावेज़ तिजोरी",
+    "wallet": "वॉलेट",
+    "referral": "टीम नेटवर्क",
+    "training": "प्रशिक्षण अकादमी",
+    "marketing": "विपणन केंद्र",
+    "travel": "यात्रा और उपयोगिता",
+    "support": "सहायता केंद्र",
+    "settings": "सेटिंग्स",
+    "logout": "लॉग आउट",
+    "title": "साझेदार पोर्टल"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "उपयोगकर्ता और खाते",
+    "cat_lead_tracking": "लीડ ટ્રેકિંગ",
+    "cat_products_partners": "उत्पाद और साझेदार",
+    "cat_modify_website": "वेबसाइट संशोधित करें",
+    "cat_system_utilities": "सिस्टम उपयोगिताएँ",
+    "admins": "एडमिन",
+    "partners": "साझेदार",
+    "leads": "लीड्स",
+    "directcardleads": "सीधे कार्ड लीड्स",
+    "lendingpartners": "ऋणदाता साझेदार",
+    "products": "उत्पाद",
+    "banners": "बैनर",
+    "cms": "सीएमएस",
+    "servicesapi": "सेवाएं एपीआई",
+    "commissionmanager": "आयोग प्रबंधक",
+    "auditlogs": "ऑडिट लॉग्स",
+    "reports": "रिपोर्ट",
+    "modify": "संशोधित करें",
+    "logout": "लॉग आउट",
+    "title": "सुपर एडमिन पैनल"
   }
 }

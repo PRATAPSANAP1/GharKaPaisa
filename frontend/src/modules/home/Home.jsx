@@ -2506,6 +2506,7 @@ export default function Home({ onNavigate }) {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(5, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
               {getSectionItems("money_transfer", moneyTransfer).map((item, idx) => (
                 <div key={idx}
+                  id={`money-transfer-card-${item.label.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                   onClick={() => {
                     const id = item.id;
                     if (id === "recharge" || id === "tomobile") navigate("/recharge");
@@ -2568,9 +2569,11 @@ export default function Home({ onNavigate }) {
           <Section title={t('sections.travelTransit')} C={C}>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(4, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? "6px" : "16px", marginTop: "12px" }}>
               {getSectionItems("travel", travelTransitData).map((item, idx) => {
+                const cleanLabel = item.label.toLowerCase().replace(/[^a-z0-9]/g, '');
                 return (
                   <div key={idx} 
-                    onClick={() => navigate("/travel-transit/flight-booking")}
+                    id={`travel-card-${cleanLabel}`}
+                    onClick={() => navigate(item.path || "/travel-transit/flight-booking")}
                     style={{ 
                       display: "flex", 
                       flexDirection: isMobile ? "column" : "row", 

@@ -108,12 +108,14 @@ const Navbar = () => {
         {!isAuthPage && (
           <>
             <button 
+              id="drawer-login-button"
               onClick={() => { navigate('/login'); toggleLink(); }}
               style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
             >
               <FaSignInAlt /> {t('nav.signIn', 'Sign In')}
             </button>
             <button 
+              id="drawer-register-button"
               onClick={() => { navigate('/register'); toggleLink(); }}
               style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
             >
@@ -217,6 +219,7 @@ const Navbar = () => {
           {!isAuthPage && (
             <>
               <button 
+                id="nav-login-button"
                 onClick={() => navigate('/login')}
                 className="nav-auth-btn nav-login-btn"
                 style={{ color: C.text }}
@@ -228,6 +231,7 @@ const Navbar = () => {
                 <span className="nav-btn-text">{t('nav.signIn', 'Login')}</span>
               </button>
               <button 
+                id="nav-register-button"
                 onClick={() => navigate('/register')}
                 className="nav-auth-btn nav-register-btn"
                 title={t('nav.signUp', 'Register')}

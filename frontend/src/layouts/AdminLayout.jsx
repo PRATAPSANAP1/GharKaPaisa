@@ -37,12 +37,13 @@ const AdminLayout = () => {
         flexShrink: 0,
       }} className="hidden md:flex">
         <div style={{ padding: '24px 20px', borderBottom: `1px solid ${C.border}20` }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.5px', margin: 0 }}>GharKaPaisa Admin</h2>
+          <h2 id="admin-sidebar-title" style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.5px', margin: 0 }}>{t('adminLayout.title', 'GharKaPaisa Admin')}</h2>
         </div>
         <nav style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
           {navItems.map((item) => (
             <NavLink
               key={item.path}
+              id={`admin-nav-${item.label.toLowerCase()}`}
               to={item.path}
               style={({ isActive }) => ({
                 display: 'flex',
@@ -60,7 +61,7 @@ const AdminLayout = () => {
               })}
             >
               {item.icon}
-              {item.label}
+              <span>{t('adminLayout.' + item.label.toLowerCase(), item.label)}</span>
             </NavLink>
           ))}
         </nav>
@@ -79,11 +80,11 @@ const AdminLayout = () => {
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
         }}>
           {/* Logo / Header Title for Mobile */}
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.text }} className="md:hidden">
-            GKP Admin
+          <h2 id="admin-header-title-mobile" style={{ fontSize: '16px', fontWeight: 800, color: C.text }} className="md:hidden">
+            {t('adminLayout.titleMobile', 'GKP Admin')}
           </h2>
           <div className="hidden md:block"></div> {/* Spacer */}
-
+ 
           {/* User Status / Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <select 
@@ -112,6 +113,7 @@ const AdminLayout = () => {
               <option value="or">ଓଡ଼ିଆ (Odia)</option>
             </select>
             <button
+              id="admin-logout-button"
               onClick={handleLogout}
               style={{
                 display: 'flex',
@@ -128,7 +130,7 @@ const AdminLayout = () => {
                 transition: 'background 0.2s',
               }}
             >
-              <Icons.logout size={14} /> Log Out
+              <Icons.logout size={14} /> {t('adminLayout.logout', 'Log Out')}
             </button>
           </div>
         </header>
@@ -150,6 +152,7 @@ const AdminLayout = () => {
           {navItems.map((item) => (
             <NavLink
               key={item.path}
+              id={`admin-mobile-nav-${item.label.toLowerCase()}`}
               to={item.path}
               style={({ isActive }) => ({
                 display: 'flex',
@@ -163,7 +166,7 @@ const AdminLayout = () => {
               })}
             >
               {item.icon}
-              {item.label}
+              <span>{t('adminLayout.' + item.label.toLowerCase(), item.label)}</span>
             </NavLink>
           ))}
         </nav>

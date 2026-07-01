@@ -8,7 +8,9 @@
     "contact": "संपर्क साधा",
     "admin": "ॲडमीन",
     "employee": "कर्मचारी",
-    "partner": "पार्टनर"
+    "partner": "पार्टनर",
+    "signIn": "साइन इन",
+    "signUp": "साइन अप"
   },
   "sections": {
     "moneyTransfer": "मनी ट्रान्सफर आणि पेमेंट",
@@ -134,7 +136,11 @@
     "flight": "उड्डाण",
     "train": "ट्रेन",
     "bus": "बस",
-    "hotels": "हॉटेल्स"
+    "hotels": "हॉटेल्स",
+    "flightbooking": "फ्लाइट बुकिंग",
+    "trainbooking": "ट्रेन बुकिंग",
+    "busbooking": "बस बुकिंग",
+    "hotelbooking": "हॉटेल बुकिंग"
   },
   "footer": {
     "desc": "क्रेडिट कार्ड, कर्ज, विमा आणि वित्तीय सेवांसाठी भारताचे विश्वसनीय व्यासपीठ.",
@@ -383,5 +389,55 @@
         "fee": "वार्षिक शुल्क: ₹५०० (₹५० हजार वार्षिक खर्चावर माफ)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "डॅशबोर्ड",
+    "partners": "भागीदार",
+    "applications": "अर्ज",
+    "leads": "लीड्स",
+    "withdrawals": "पैसे काढणे",
+    "logout": "लॉग आउट",
+    "title": "घरकापैसा ॲडमिन"
+  },
+  "partnerLayout": {
+    "dashboard": "डॅशबोर्ड",
+    "marketplace": "मार्केटप्लेस",
+    "creditcenter": "क्रेडिट सेंटर",
+    "leads": "लीड व्यवस्थापन",
+    "crm": "ग्राहक संबंध व्यवस्थापन (CRM)",
+    "kyc": "केवायसी सेंटर",
+    "profile": "प्रोफाइल हब",
+    "vault": "दस्तऐवज तिजोरी",
+    "wallet": "वॉलेट",
+    "referral": "टीम नेटवर्क",
+    "training": "प्रशिक्षण अकादमी",
+    "marketing": "मार्केटिंग सेंटर",
+    "travel": "प्रवास आणि उपयुक्तता",
+    "support": "सहायता केंद्र",
+    "settings": "सेटिंग्ज",
+    "logout": "लॉग आउट",
+    "title": "भागीदार पोर्टल"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "वापरकर्ते आणि खाती",
+    "cat_lead_tracking": "लीड ट्रॅकिंग",
+    "cat_products_partners": "उत्पादने आणि भागीदार",
+    "cat_modify_website": "वेबसाइट सुधारित करा",
+    "cat_system_utilities": "सिस्टम युटिलिटीज",
+    "admins": "ॲडमिन",
+    "partners": "भागीदार",
+    "leads": "लीड्स",
+    "directcardleads": "थेट कार्ड लीड्स",
+    "lendingpartners": "कर्जदार भागीदार",
+    "products": "उत्पादने",
+    "banners": "बॅनर",
+    "cms": "सीएमएस",
+    "servicesapi": "सेवा API",
+    "commissionmanager": "कमिशन व्यवस्थापक",
+    "auditlogs": "ऑडिट लॉग",
+    "reports": "अहवाल",
+    "modify": "सुधारित करा",
+    "logout": "लॉग आउट",
+    "title": "सुपर ॲडमिन पॅनेल"
   }
 }

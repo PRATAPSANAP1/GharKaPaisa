@@ -34,15 +34,15 @@ const NAV_ITEMS = [
 
 // Mobile Bottom Nav items (Core)
 const MOBILE_BOTTOM_NAV = [
-  { path: '/partner/dashboard', label: 'Home', icon: MdDashboard },
-  { path: '/partner/marketplace', label: 'Products', icon: MdStorefront },
-  { path: '/partner/leads', label: 'Leads', icon: MdLeaderboard },
-  { path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
+  { id: 'dashboard', path: '/partner/dashboard', label: 'Home', icon: MdDashboard },
+  { id: 'marketplace', path: '/partner/marketplace', label: 'Products', icon: MdStorefront },
+  { id: 'leads', path: '/partner/leads', label: 'Leads', icon: MdLeaderboard },
+  { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
 ];
 
 export default function PartnerLayout() {
   const { C, isDark } = useTheme();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
@@ -145,7 +145,7 @@ export default function PartnerLayout() {
                     marginBottom: '4px',
                   }}>
                     <Icon size={20} />
-                    {item.label}
+                    {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                   </div>
                 );
               }
@@ -153,6 +153,7 @@ export default function PartnerLayout() {
               return (
                 <NavLink
                   key={item.id}
+                  id={`partner-nav-${item.id}`}
                   to={item.path}
                   style={{
                     display: 'flex',
@@ -171,7 +172,7 @@ export default function PartnerLayout() {
                   }}
                 >
                   <Icon size={20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
-                  {item.label}
+                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                 </NavLink>
               );
             })}
@@ -244,6 +245,7 @@ export default function PartnerLayout() {
 
             {/* Logout */}
             <button
+              id="partner-logout-button"
               onClick={handleLogout}
               style={{
                 display: 'flex',
@@ -261,7 +263,7 @@ export default function PartnerLayout() {
               }}
             >
               <MdLogout size={18} />
-              Logout
+              {t('partnerLayout.logout', 'Logout')}
             </button>
           </div>
         </aside>
@@ -349,6 +351,7 @@ export default function PartnerLayout() {
               return (
                 <NavLink
                   key={item.id}
+                  id={`partner-mobile-nav-${item.id}`}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
@@ -367,7 +370,7 @@ export default function PartnerLayout() {
                   }}
                 >
                   <Icon size={22} style={{ color: isActive ? '#fff' : BRAND }} />
-                  {item.label}
+                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                 </NavLink>
               );
             })}
@@ -444,6 +447,7 @@ export default function PartnerLayout() {
 
               {/* Logout */}
               <button
+                id="partner-mobile-logout-button"
                 onClick={handleLogout}
                 style={{
                   display: 'flex',
@@ -462,7 +466,7 @@ export default function PartnerLayout() {
                 }}
               >
                 <MdLogout size={22} />
-                Sign Out
+                {t('partnerLayout.logout', 'Sign Out')}
               </button>
             </div>
           </div>
@@ -619,6 +623,7 @@ export default function PartnerLayout() {
               return (
                 <NavLink
                   key={nav.path}
+                  id={`partner-bottom-nav-${nav.id}`}
                   to={nav.path}
                   style={{
                     display: 'flex',
@@ -637,7 +642,7 @@ export default function PartnerLayout() {
                     fontWeight: 700,
                     color: isActive ? BRAND : '#94A3B8',
                   }}>
-                    {nav.label}
+                    {t('partnerLayout.' + nav.id, nav.label)}
                   </span>
                 </NavLink>
               );

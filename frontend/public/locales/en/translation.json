@@ -8,7 +8,9 @@
     "contact": "Contact Us",
     "admin": "Admin",
     "employee": "Employee",
-    "partner": "Partner"
+    "partner": "Partner",
+    "signIn": "Sign In",
+    "signUp": "Sign Up"
   },
   "sections": {
     "moneyTransfer": "Money Transfer & Payments",
@@ -140,7 +142,11 @@
     "flight": "Flight",
     "train": "Train",
     "bus": "Bus",
-    "hotels": "Hotels"
+    "hotels": "Hotels",
+    "flightbooking": "Flight Booking",
+    "trainbooking": "Train Booking",
+    "busbooking": "Bus Booking",
+    "hotelbooking": "Hotel Booking"
   },
   "footer": {
     "desc": "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.",
@@ -459,5 +465,55 @@
         "fee": "Annual Fee: Nil (Zero annual fee)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "Dashboard",
+    "partners": "Partners",
+    "applications": "Applications",
+    "leads": "Leads",
+    "withdrawals": "Withdrawals",
+    "logout": "Log Out",
+    "title": "GharKaPaisa Admin"
+  },
+  "partnerLayout": {
+    "dashboard": "Dashboard",
+    "marketplace": "Marketplace",
+    "creditcenter": "Credit Center",
+    "leads": "Lead Management",
+    "crm": "Customer CRM",
+    "kyc": "KYC Center",
+    "profile": "Profile Hub",
+    "vault": "Document Vault",
+    "wallet": "Wallet",
+    "referral": "Team Network",
+    "training": "Training Academy",
+    "marketing": "Marketing Center",
+    "travel": "Travel & Utility",
+    "support": "Support Center",
+    "settings": "Settings",
+    "logout": "Log Out",
+    "title": "Partner Portal"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "Users & Accounts",
+    "cat_lead_tracking": "Lead Tracking",
+    "cat_products_partners": "Products & Partners",
+    "cat_modify_website": "Modify Website",
+    "cat_system_utilities": "System Utilities",
+    "admins": "Admins",
+    "partners": "Partners",
+    "leads": "Leads",
+    "directcardleads": "Direct Card Leads",
+    "lendingpartners": "Lending Partners",
+    "products": "Products",
+    "banners": "Banners",
+    "cms": "CMS",
+    "servicesapi": "Services API",
+    "commissionmanager": "Commission Manager",
+    "auditlogs": "Audit Logs",
+    "reports": "Reports",
+    "modify": "Modify",
+    "logout": "Log Out",
+    "title": "Super Admin Panel"
   }
 }

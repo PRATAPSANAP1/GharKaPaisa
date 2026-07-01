@@ -8,7 +8,9 @@
     "contact": "ଯୋଗାଯୋଗ କରନ୍ତୁ",
     "admin": "ଆଡମିନ୍",
     "employee": "କର୍ମଚାରୀ",
-    "partner": "ଭାગୀଦାର"
+    "partner": "ଭାગୀଦାର",
+    "signIn": "ସାଇନ୍ ଇନ୍",
+    "signUp": "ସାଇନ୍ ଅପ୍"
   },
   "sections": {
     "moneyTransfer": "ଅର୍ଥ ସ୍ଥାନାନ୍ତର ଏବଂ ଦେୟ",
@@ -134,7 +136,11 @@
     "flight": "ଉଡ଼ାଣ",
     "train": "ଟ୍ରେନ୍",
     "bus": "ବସ୍",
-    "hotels": "ହୋଟେଲ"
+    "hotels": "ହୋଟେଲ",
+    "flightbooking": "ଫ୍ଲାଇଟ୍ ବୁକିଂ",
+    "trainbooking": "ଟ୍ରେନ୍ ବୁକିଂ",
+    "busbooking": "ବସ୍ ବୁକିଂ",
+    "hotelbooking": "ହୋଟେଲ ବୁକିଂ"
   },
   "footer": {
     "desc": "କ୍ରେଡିଟ୍ କାର୍ଡ, ଋଣ, ବୀମା ଏବં ଆର୍ଥିକ ସେବା ପାଇଁ ଭାରତର ବିଶ୍ୱସ୍ତ ପ୍ଲାଟଫର୍ମ।",
@@ -383,5 +389,55 @@
         "fee": "ବାର୍ଷିକ ଶୁଳ୍କ: ₹୫୦୦ (₹୫୦ ହଜାର ବାର୍ଷିକ ଖର୍ଚ୍ଚ ଉପରେ ଛାଡ)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "ଡ୍ୟାସବୋର୍ଡ",
+    "partners": "ଅଂଶୀଦାର",
+    "applications": "ଆବେଦନ",
+    "leads": "ଲିଡ୍ସ",
+    "withdrawals": "ପ୍ରତ୍ୟାହାର",
+    "logout": "ଲଗ୍ ଆଉଟ୍",
+    "title": "ଘରକାପଇସા ଆଡମିନ୍"
+  },
+  "partnerLayout": {
+    "dashboard": "ଡ୍ୟାସବୋର୍ଡ",
+    "marketplace": "ମାର୍କେଟପ୍ଲେସ",
+    "creditcenter": "କ୍ରେଡିଟ୍ ସେଣ୍ଟର",
+    "leads": "ଲିଡ୍ ପରିଚାଳନା",
+    "crm": "ଗ୍ରାହକ CRM",
+    "kyc": "କେୱାଇସି ସେଣ୍տର",
+    "profile": "ପ୍ରୋଫାଇଲ୍ ହବ୍",
+    "vault": "ଦଲିଲ୍ ଭଲ୍ଟ",
+    "wallet": "ୱାଲେଟ୍",
+    "referral": "ଟିମ୍ ନେଟୱର୍କ",
+    "training": "ଯାତ୍ରା ଓ ଉପଯୋଗୀ",
+    "marketing": "ମାର୍କେଟିଂ ସେଣ୍ଟର",
+    "travel": "ଯାତ୍ରା ଓ ଉପଯୋଗୀ",
+    "support": "ସହାୟତା କେନ୍ଦ୍ର",
+    "settings": "ସେଟିଂସେ",
+    "logout": "ଲଗ୍ ଆଉଟ୍",
+    "title": "ଅଂଶୀଦାର ପୋର୍ଟାଲ"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "ଉପଭୋକ୍ତା ଓ ଆକାଉଣ୍ଟ",
+    "cat_lead_tracking": "ଲିଡ୍ ଟ୍ରାକିଂ",
+    "cat_products_partners": "ଉତ୍ପାଦ ଓ ଅଂଶୀଦାର",
+    "cat_modify_website": "ୱେବସାଇଟ୍ ସଂଶୋଧନ",
+    "cat_system_utilities": "ସିଷ୍ଟମ୍ ଉପଯୋଗୀ",
+    "admins": "ଆଡମିନ୍",
+    "partners": "ଅଂଶୀଦାର",
+    "leads": "ଲିଡ୍ସ",
+    "directcardleads": "ସିଧାସଳଖ କାର୍ଡ ଲିଡ୍",
+    "lendingpartners": "ଋଣ ପ୍ରଦାନକାରୀ ଅଂଶୀଦାର",
+    "products": "ଉତ୍ପାદ",
+    "banners": "ବ୍ୟାନର୍",
+    "cms": "ସିଏମଏସ",
+    "servicesapi": "ସେବା API",
+    "commissionmanager": "କମିଶନ ମ୍ୟାନେଜର",
+    "auditlogs": "ଅଡିଟ୍ ଲଗ୍",
+    "reports": "ରିପୋର୍ଟ",
+    "modify": "ସଂଶୋધନ",
+    "logout": "ଲଗ୍ ଆଉଟ୍",
+    "title": "ସୁପର ଆଡମିନ୍ ପ୍ୟାନେଲ"
   }
 }

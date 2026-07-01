@@ -8,7 +8,9 @@
     "contact": "ನಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸಿ",
     "admin": "ಅಡ್ಮಿನ್",
     "employee": "ನೌಕರ",
-    "partner": "ಪಾಲುದಾರ"
+    "partner": "ಪಾಲುದಾರ",
+    "signIn": "ಸೈನ್ ಇನ್",
+    "signUp": "ಸೈನ್ ಅಪ್"
   },
   "sections": {
     "moneyTransfer": "ಹಣ ವರ್ಗಾವಣೆ ಮತ್ತು ಪಾವತಿಗಳು",
@@ -134,7 +136,11 @@
     "flight": "ವಿಮಾನ",
     "train": "ರೈಲು",
     "bus": "ಬಸ್",
-    "hotels": "ಹೋಟೆಲ್‌ಗಳು"
+    "hotels": "ಹೋಟೆಲ್‌ಗಳು",
+    "flightbooking": "ಫ್ಲೈಟ್ ಬುಕಿಂಗ್",
+    "trainbooking": "ರೈಲು ಬುಕಿಂಗ್",
+    "busbooking": "ಬಸ್ ಬುಕಿಂಗ್",
+    "hotelbooking": "ಹೋಟೆಲ್ ಬುಕಿಂಗ್"
   },
   "footer": {
     "desc": "ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್‌ಗಳು, ಸಾಲಗಳು, ವಿಮೆ ಮತ್ತು ಹಣಕಾಸು ಸೇವೆಗಳಿಗಾಗಿ ಭಾರತದ ವಿಶ್ವಾಸಾರ್ಹ ವೇದಿಕೆ.",
@@ -383,5 +389,55 @@
         "fee": "ವಾರ್ಷಿಕ ಶುಲ್ಕ: ₹500 (₹50k ವಾರ್ಷಿಕ ಖರ್ಚಿನ ಮೇಲೆ ಮನ್ನา)"
       }
     }
+  },
+  "adminLayout": {
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "partners": "ಪಾಲುದಾರರು",
+    "applications": "ಅರ್ಜಿಗಳು",
+    "leads": "ಲೀಡ್ಸ್",
+    "withdrawals": "ಹಿಂಪಡೆಯುವಿಕೆಗಳು",
+    "logout": "ಲಾಗ್ ಔಟ್",
+    "title": "ಘರ್ ಕಾ ಪೈಸಾ ಅಡ್ಮಿನ್"
+  },
+  "partnerLayout": {
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "marketplace": "ಮಾರ್ಕೆಟ್‌ಪ್ಲೇಸ್",
+    "creditcenter": "ಕ್ರೆಡಿಟ್ ಸೆಂಟರ್",
+    "leads": "ಲೀಡ್ ಮ್ಯಾನೇಜ್ಮೆಂಟ್",
+    "crm": "ಗ್ರಾಹಕ CRM",
+    "kyc": "ಕೆವೈಸಿ ಸೆಂಟರ್",
+    "profile": "ಪ್ರೊಫೈಲ್ ಹಬ್",
+    "vault": "ಡಾಕ್ಯುಮೆಂಟ್ ವಾಲ್ಟ್",
+    "wallet": "ವ್ಯಾಲೆಟ್",
+    "referral": "ಟೀಮ್ ನೆಟ್‌ವರ್ಕ್",
+    "training": "ತರಬೇತಿ ಅಕಾಡೆಮಿ",
+    "marketing": "ಮಾರ್ಕೆಟಿಂಗ್ ಸೆಂಟರ್",
+    "travel": "ಪ್ರಯಾಣ ಮತ್ತು ಉಪಯುಕ್ತತೆ",
+    "support": "ಬೆಂಬಲ ಕೇಂದ್ರ",
+    "settings": "ಸೆಟ್ಟಿಂಗ್ಸ್",
+    "logout": "ಲಾಗ್ ಔಟ್",
+    "title": "ಪಾಲುದಾರ ಪೋರ್ಟಲ್"
+  },
+  "superAdminLayout": {
+    "cat_users_accounts": "ಬಳಕೆದಾರರು ಮತ್ತು ಖಾತೆಗಳು",
+    "cat_lead_tracking": "ಲೀಡ್ ಟ್ರ್ಯಾಕಿಂಗ್",
+    "cat_products_partners": "ಉತ್ಪನ್ನಗಳು ಮತ್ತು ಪಾಲುದಾರರು",
+    "cat_modify_website": "ವೆಬ್‌ಸೈಟ್ ಮಾರ್ಪಡಿಸಿ",
+    "cat_system_utilities": "ಸistem ಯುಟಿಲಿಟಿಸ್",
+    "admins": "ಅಡ್ಮಿನ್ಗಳು",
+    "partners": "ಪಾಲುದಾರರು",
+    "leads": "ಲೀಡ್ಸ್",
+    "directcardleads": "ಡೈರೆಕ್ಟ್ ಕಾರ್ಡ್ ಲೀಡ್ಸ್",
+    "lendingpartners": "ಸಾಲ ಪಾಲುದಾರರು",
+    "products": "ಉತ್ಪನ್ನಗಳು",
+    "banners": "ಬ್ಯಾನರ್‌ಗಳು",
+    "cms": "ಸಿಎಂಎಸ್",
+    "servicesapi": "ಸೇವೆಗಳ API",
+    "commissionmanager": "ಕಮಿಷನ್ ಮ್ಯಾನೇಜರ್",
+    "auditlogs": "ಆಡಿಟ್ ದಾಖಲೆಗಳು",
+    "reports": "ವರದಿಗಳು",
+    "modify": "ಮಾರ್ಪಡಿಸಿ",
+    "logout": "ಲಾಗ್ ಔಟ್",
+    "title": "ಸೂಪರ್ ಅಡ್ಮಿನ್ ಪ್ಯಾನಲ್"
   }
 }
