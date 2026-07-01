@@ -515,5 +515,27 @@
     "modify": "Modify",
     "logout": "Log Out",
     "title": "Super Admin Panel"
+  },
+  "login": {
+    "rolePanelTitle": "Welcome to GharKaPaisa",
+    "rolePanelDesc": "Select the role that fits your workflow to continue securely. Partner accounts can submit financial leads and track earnings, while administrative accounts oversee operations.",
+    "welcomeTitle": "Welcome Back!",
+    "welcomeSubtitle": "Login securely to continue your journey",
+    "rolePartner": "Partner",
+    "rolePartnerDesc": "Earn by helping customers with financial products.",
+    "roleEmployee": "Employee",
+    "roleEmployeeDesc": "Update lead status and perform operations.",
+    "roleAdmin": "Admin",
+    "roleAdminDesc": "Manage operations and oversee team activities.",
+    "roleSuperAdmin": "Super Admin",
+    "roleSuperAdminDesc": "Full access to platform administration.",
+    "dataSecure": "Your data is 100% secure with us",
+    "step1Text": "Step 1",
+    "step2Text": "Step 2",
+    "secureGatewayTitle": "Secure Gateway",
+    "secureGatewayDesc": "Please enter your registered credentials or verify via OTP to access your secure dashboard.",
+    "logoAlt": "GharKaPaisa Logo",
+    "illustrationAlt": "Welcome Illustration",
+    "continue": "Continue"
   }
 }

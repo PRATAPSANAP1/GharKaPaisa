@@ -447,7 +447,7 @@ export default function PartnerLogin() {
                 overflow: "hidden"
               }}>
                 <div style={{ flexShrink: 0 }}>
-                  <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain", marginBottom: "12px" }} />
+                  <img id="img-login-role-logo" src={logoImg} alt={t("login.logoAlt", "GharKaPaisa Logo")} style={{ height: "32px", objectFit: "contain", marginBottom: "12px" }} />
                   <h2 id="label-role-panel-title" style={{ fontSize: "18px", fontWeight: 900, margin: "0 0 6px 0", color: C.text }}>{t("login.rolePanelTitle", "Welcome to GharKaPaisa")}</h2>
                   <p id="label-role-panel-desc" style={{ fontSize: "11.5px", color: C.textMid, lineHeight: 1.4, margin: 0 }}>
                     {t("login.rolePanelDesc", "Select the role that fits your workflow to continue securely. Partner accounts can submit financial leads and track earnings, while administrative accounts oversee operations.")}
@@ -466,8 +466,9 @@ export default function PartnerLogin() {
                   borderRadius: "16px"
                 }}>
                   <img 
+                    id="img-login-role-illustration"
                     src={welcomeBgImg} 
-                    alt="Welcome Illustration" 
+                    alt={t("login.illustrationAlt", "Welcome Illustration")} 
                     style={{ width: "100%", height: "100%", objectFit: "contain" }} 
                   />
                 </div>
@@ -488,7 +489,7 @@ export default function PartnerLogin() {
                   </button>
                 </div>
                 <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-                  <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
+                  <img id="img-login-header-logo" src={logoImg} alt={t("login.logoAlt", "GharKaPaisa Logo")} style={{ height: "30px", objectFit: "contain" }} />
                 </div>
                 <div style={{ width: "40px" }} /> {/* Spacer to perfectly center the logo */}
               </div>
