@@ -7,9 +7,9 @@ import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
 
 import logoImg from "../../../assets/logos/logo.png";
-import onboardingIllust from "../../../assets/advisor_onboarding.png";
+import welcomeBgImg from "./welcome pg-bg.png";
 
-const STEPS = ["Personal", "Business", "Bank", "KYC"];
+const STEPS = ["Account", "Credentials", "Identity", "Company 1", "Company 2", "Bank", "KYC"];
 
 const COMPANY_TYPES = [
   { label: "Individual", value: "individual" },
@@ -35,9 +35,12 @@ const LANGUAGES = [
   { code: 'en', flag: '🇬🇧', label: 'English' },
   { code: 'hi', flag: '🇮🇳', label: 'हिंदी' },
   { code: 'mr', flag: '🇮🇳', label: 'मराठी' },
-  { code: 'gu', flag: '🇮🇳', label: 'ગુજરાતી' },
+  { code: 'te', flag: '🇮🇳', label: 'తెలుగు' },
   { code: 'kn', flag: '🇮🇳', label: 'ಕನ್ನಡ' },
-  { code: 'ta', flag: '🇮🇳', label: 'தமிழ்' }
+  { code: 'ta', flag: '🇮🇳', label: 'தமிழ்' },
+  { code: 'gu', flag: '🇮🇳', label: 'ગુજરાતી' },
+  { code: 'bn', flag: '🇮🇳', label: 'বাংলা' },
+  { code: 'or', flag: '🇮🇳', label: 'ଓଡ଼ିଆ' }
 ];
 
 export default function PartnerRegister() {
@@ -193,8 +196,8 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  // ── MSG91 Captcha (singleton hook — only active on step 3.1 where captchaId is mounted) ───────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 0 });
+  // ── MSG91 Captcha (only active on step 3.3 which is step === 2) ───────────────
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 2 });
 
   const focusBorder = `1.5px solid #0D6EFD`;
   const inputProps = (key, extra = {}) => ({
@@ -207,18 +210,18 @@ export default function PartnerRegister() {
 
   // ── Step Validation ─────────────────────────────────────────────────────────
   const validateStep = () => {
-    if (step === 0) {
+    if (step === 0) { // Sub-step 1: Account (Full Name + Mobile verification)
       if (!fullName.trim()) return "Please enter your full name.";
       if (!form.firstName.trim()) return t("partner.errors.firstNameRequired", "Please enter your first name.");
       if (!/^[a-zA-Z\s]+$/.test(form.firstName.trim())) return t("partner.errors.firstNameLettersOnly", "First name can only contain letters.");
       if (!form.mobile.trim()) return t("partner.errors.mobileRequired", "Please enter your mobile number.");
       if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return t("partner.errors.mobileInvalid", "Please enter a valid 10-digit mobile number.");
+      if (!form.mobilePreVerified) return "Please verify your mobile number with OTP before continuing.";
+    }
+    if (step === 1) { // Sub-step 2: Credentials (Email verification + Password)
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
-      
-      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
-      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
-      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
+      if (!form.emailPreVerified) return "Please verify your email address with OTP before continuing.";
 
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
@@ -226,9 +229,17 @@ export default function PartnerRegister() {
         return t("partner.errors.passwordStrength", "Password must contain uppercase, lowercase and a number.");
       if (form.password !== form.confirmPassword) return t("partner.errors.passwordsMismatch", "Passwords do not match.");
     }
-    if (step === 1) {
+    if (step === 2) { // Sub-step 3: Identity & Captcha (Aadhaar + reCAPTCHA check)
+      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
+      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
+      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
+      if (!isCaptchaVerified) return "Please solve the reCAPTCHA security verification to continue.";
+    }
+    if (step === 3) { // Sub-step 4: Business details 1 (Company Type + Name + Address)
       if (!form.companyName.trim()) return t("partner.errors.companyNameRequired", "Company name is required.");
       if (!form.currentAddress.trim()) return t("partner.errors.companyAddressRequired", "Company address is required.");
+    }
+    if (step === 4) { // Sub-step 5: Business details 2 (Pincode + City + GST)
       if (!form.pincode.trim()) return t("partner.errors.pincodeRequired", "Pincode is required.");
       if (!/^\d{6}$/.test(form.pincode.trim())) return t("partner.errors.pincodeInvalid", "Please enter a valid 6-digit Pincode.");
       if (!form.businessLocation.trim()) return t("partner.errors.businessLocationRequired", "City / Region is required.");
@@ -236,7 +247,7 @@ export default function PartnerRegister() {
         return t("partner.errors.gstInvalid", "Please enter a valid 15-character GSTIN (e.g. 27AAPFU0939F1ZV).");
       }
     }
-    if (step === 2) {
+    if (step === 5) { // Sub-step 6: Bank Account details
       if (!form.bankName.trim()) return t("partner.errors.bankNameRequired", "Please enter your bank name.");
       if (!form.accountNumber.trim()) return t("partner.errors.accountNumberRequired", "Please enter your account number.");
       if (!/^\d{9,18}$/.test(form.accountNumber.trim())) return t("partner.errors.accountNumberInvalid", "Please enter a valid 9 to 18-digit account number.");
@@ -246,7 +257,7 @@ export default function PartnerRegister() {
       }
       if (!form.accountHolderName.trim()) return t("partner.errors.accountHolderRequired", "Please enter account holder name.");
     }
-    if (step === 3) {
+    if (step === 6) { // Sub-step 7: KYC (PAN + Terms checkbox)
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
       if (!form.termsAgreed) return "You must agree to the Terms & Conditions and Privacy Policy to proceed.";
@@ -257,10 +268,6 @@ export default function PartnerRegister() {
   const handleSendMobileOtp = () => {
     console.log('[MSG91] Send Mobile OTP button clicked (PartnerRegister)');
     setErr('');
-    if (!isCaptchaVerified) {
-      console.warn('[MSG91] Send Mobile OTP blocked: Captcha not verified');
-      return setErr("Please complete the captcha verification first.");
-    }
     if (!form.mobile.trim()) return setErr(t('partner.errors.mobileRequired', 'Please enter your mobile number.'));
     if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) return setErr(t('partner.errors.mobileInvalid', 'Please enter a valid 10-digit mobile number.'));
 
@@ -278,6 +285,8 @@ export default function PartnerRegister() {
     if (!sdkReady) {
       clearTimeout(timeoutId);
       setMobileOtpLoading(false);
+      // Fallback: If verification SDK hasn't loaded (e.g. adblocker), try to proceed with direct verification via MSG91
+      // but let's notify user
       return setErr(t('partner.errors.msg91NotLoaded', 'OTP provider is loading. Please try again in a moment.'));
     }
 
@@ -292,9 +301,6 @@ export default function PartnerRegister() {
           console.log('[MSG91] Mobile Success response:', data);
           const requestId = getMsg91RequestId(data);
           setMobileOtpRequestId(requestId);
-          if (!requestId) {
-            console.warn('MSG91 sendOtp did not return a request id.', data);
-          }
           setMobileOtpSent(true);
           setMobileOtpTimer(120);
           setForm(f => ({ ...f, mobileOtp: '' }));
@@ -332,7 +338,7 @@ export default function PartnerRegister() {
     }, 30000);
 
     const retryArgs = [
-      '11', // SMS channel for custom MSG91 configuration
+      '11',
       (data) => {
         clearTimeout(timeoutId);
         const requestId = getMsg91RequestId(data);
@@ -396,27 +402,20 @@ export default function PartnerRegister() {
   };
 
   const handleSendRegistrationOtp = async () => {
-    console.log('[MSG91] Send Email OTP button clicked (PartnerRegister)');
+    console.log('[Email OTP] Send Email OTP button clicked');
     setErr('');
-    if (!isCaptchaVerified) {
-      console.warn('[MSG91] Send Email OTP blocked: Captcha not verified');
-      return setErr("Please complete the captcha verification first.");
-    }
     if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setErr(t('partner.errors.emailInvalid', 'Please enter a valid email address.'));
 
     setErr('');
     setInfoMsg('');
     setEmailOtpLoading(true);
-    console.log(`[Email OTP] Sending email registration OTP to: ${form.email.trim()}`);
     try {
       const res = await sendRegistrationOtp(form.email.trim());
-      console.log('[Email OTP] Success response:', res);
       setEmailOtpSent(true);
       setEmailOtpTimer(120);
       setInfoMsg(t('partner.emailOtpSent', 'OTP sent to your email address.'));
     } catch (err) {
-      console.error('[Email OTP] Failure response:', err);
       setErr(err.message || t('partner.errors.sendOtpFailed', 'Failed to send OTP. Please try again.'));
     } finally {
       setEmailOtpLoading(false);
@@ -449,28 +448,29 @@ export default function PartnerRegister() {
     const validationErr = validateStep();
     if (validationErr) return setErr(validationErr);
 
-    // Step 0 — check duplicate email / mobile and verify email OTP
+    // Sub-step 1: Check duplicate mobile on submit
     if (step === 0) {
-      if (!form.emailPreVerified) {
-        return setErr(t('partner.errors.verifyEmailBeforeContinue', 'Please verify your email with OTP before continuing.'));
-      }
-      if (!form.mobilePreVerified) {
-        return setErr(t('partner.errors.verifyMobileBeforeContinue', 'Please verify your mobile number with OTP before continuing.'));
-      }
-
       setLoading(true);
       try {
         const mobileExists = await lookupUser(form.mobile.trim());
         if (mobileExists?.exists) {
           return setErr(t("partner.errors.mobileExists", "This mobile number is already registered."));
         }
+      } catch (e) {
+      } finally {
+        setLoading(false);
+      }
+    }
 
+    // Sub-step 2: Check duplicate email on submit
+    if (step === 1) {
+      setLoading(true);
+      try {
         const emailExists = await lookupUser(form.email.trim());
         if (emailExists?.exists) {
           return setErr(t("partner.errors.emailExists", "This email address is already registered."));
         }
       } catch (e) {
-        // ignore lookup failure and continue with validation
       } finally {
         setLoading(false);
       }
@@ -511,7 +511,7 @@ export default function PartnerRegister() {
         if (res.errors && Array.isArray(res.errors)) {
           const aadhaarErr = res.errors.find(e => e.field === 'aadhaar');
           if (aadhaarErr) {
-            setStep(0);
+            setStep(2); // Redirect back to Identity step
             setAadhaarBackendError(aadhaarErr.message);
             return;
           }
@@ -523,7 +523,7 @@ export default function PartnerRegister() {
       if (resData && resData.errors && Array.isArray(resData.errors)) {
         const aadhaarErr = resData.errors.find(errObj => errObj.field === 'aadhaar');
         if (aadhaarErr) {
-          setStep(0);
+          setStep(2); // Redirect back to Identity step
           setAadhaarBackendError(aadhaarErr.message);
           return;
         }
@@ -534,12 +534,12 @@ export default function PartnerRegister() {
     }
   };
 
-  const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0) || !isCaptchaVerified;
+  const mobileActionDisabled = form.mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0);
 
   // ── Render Onboarding Top Progress Bar ─────────────────────────────────────
   const renderOnboardingProgress = () => {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "320px", width: "100%", margin: "0 auto 32px", position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "320px", width: "100%", margin: "0 auto 16px", position: "relative", flexShrink: 0 }}>
         {/* Connecting Line */}
         <div style={{
           position: "absolute",
@@ -574,13 +574,15 @@ export default function PartnerRegister() {
             justifyContent: "center",
             fontWeight: 700,
             fontSize: "13px",
-            margin: "0 auto 8px",
+            margin: "0 auto 4px",
             boxShadow: onboardingStep === 1 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
             transition: "all 0.3s"
           }}>
             {onboardingStep > 1 ? "✓" : "1"}
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Welcome</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 1 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+            {t("onboarding.welcomeStep", "Welcome")}
+          </span>
         </div>
 
         {/* Step 2: Preferences */}
@@ -596,13 +598,15 @@ export default function PartnerRegister() {
             justifyContent: "center",
             fontWeight: 700,
             fontSize: "13px",
-            margin: "0 auto 8px",
+            margin: "0 auto 4px",
             boxShadow: onboardingStep === 2 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
             transition: "all 0.3s"
           }}>
             {onboardingStep > 2 ? "✓" : "2"}
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Preferences</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 2 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+            {t("onboarding.prefStep", "Preferences")}
+          </span>
         </div>
 
         {/* Step 3: Register */}
@@ -618,13 +622,15 @@ export default function PartnerRegister() {
             justifyContent: "center",
             fontWeight: 700,
             fontSize: "13px",
-            margin: "0 auto 8px",
+            margin: "0 auto 4px",
             boxShadow: onboardingStep === 3 ? "0 0 12px rgba(13, 110, 253, 0.4)" : "none",
             transition: "all 0.3s"
           }}>
             3
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>Register</span>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: onboardingStep >= 3 ? "#0D6EFD" : isDark ? "#3D6480" : "#64748B" }}>
+            {t("onboarding.regStep", "Register")}
+          </span>
         </div>
       </div>
     );
@@ -692,10 +698,11 @@ export default function PartnerRegister() {
 
   return (
     <div style={{
-      minHeight: "100vh",
+      height: "100vh",
+      height: "100dvh",
       background: C.bg,
       color: C.text,
-      padding: "24px 16px",
+      padding: "12px",
       boxSizing: "border-box",
       display: "flex",
       flexDirection: "column",
@@ -706,25 +713,25 @@ export default function PartnerRegister() {
       fontFamily: "'Inter', sans-serif"
     }}>
       {/* Decorative blurred background shapes */}
-      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: isDark ? "rgba(13, 110, 253, 0.05)" : "rgba(13, 110, 253, 0.06)", filter: "blur(80px)", top: "-100px", left: "-100px", pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: isDark ? "rgba(46, 144, 250, 0.06)" : "rgba(46, 144, 250, 0.07)", filter: "blur(80px)", bottom: "-50px", right: "-100px", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: isDark ? "rgba(13, 110, 253, 0.04)" : "rgba(13, 110, 253, 0.05)", filter: "blur(80px)", top: "-120px", left: "-120px", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: isDark ? "rgba(46, 144, 250, 0.05)" : "rgba(46, 144, 250, 0.06)", filter: "blur(80px)", bottom: "-80px", right: "-120px", pointerEvents: "none", zIndex: 0 }} />
 
-      <div style={{ maxWidth: "440px", width: "100%", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: "430px", width: "100%", height: "100%", maxHeight: "680px", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative", zIndex: 1 }}>
 
         {/* ── SCREEN 1: Welcome to GharKaPaisa ────────────────────────────────── */}
         {onboardingStep === 1 && (
-          <div style={{ display: "flex", flexDirection: "column", minHeight: "90vh", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
             
             {/* Top Bar */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "16px" }}>
-              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexShrink: 0 }}>
+              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain" }} />
               <button 
                 onClick={() => setOnboardingStep(2)}
                 style={{
                   background: "transparent",
                   border: "none",
                   color: C.textLight || "#64748B",
-                  fontSize: "14px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   cursor: "pointer",
                   padding: "4px 8px"
@@ -738,53 +745,60 @@ export default function PartnerRegister() {
             {renderOnboardingProgress()}
 
             {/* Header Text */}
-            <div style={{ textAlign: "center", marginBottom: "12px" }}>
-              <h1 style={{ fontSize: "28px", fontWeight: 900, margin: 0, color: C.text }}>
-                Welcome to <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>GharKaPaisa</span>
+            <div style={{ textAlign: "center", flexShrink: 0 }}>
+              <h1 style={{ fontSize: "24px", fontWeight: 900, margin: 0, color: C.text }}>
+                {t("onboarding.welcomeTo", "Welcome to")}{" "}
+                <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  GharKaPaisa
+                </span>
               </h1>
-              <p style={{ fontSize: "14px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "6px", margin: 0 }}>
-                India's Trusted Financial Partner Platform
+              <p style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                {t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}
               </p>
             </div>
 
             {/* Illustration Card Container */}
             <div style={{
               position: "relative",
-              background: isDark ? "rgba(22, 40, 64, 0.6)" : "rgba(255, 255, 255, 0.7)",
+              background: isDark ? "rgba(22, 40, 64, 0.5)" : "rgba(255, 255, 255, 0.6)",
               backdropFilter: "blur(10px)",
-              border: `1.5px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.5)"}`,
+              border: `1.5px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.4)"}`,
               borderRadius: "24px",
-              padding: "16px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.05)",
+              padding: "10px",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.04)",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              marginBottom: "16px"
+              flex: 1,
+              maxHeight: "180px",
+              minHeight: "130px",
+              margin: "12px 0",
+              overflow: "hidden"
             }}>
               <img 
-                src={onboardingIllust} 
-                alt="Financial Advisor illustration" 
-                style={{ width: "100%", maxHeight: "200px", objectFit: "contain", borderRadius: "16px" }} 
+                src={welcomeBgImg} 
+                alt="Welcome Background Graphic" 
+                style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "16px" }} 
               />
               
               {/* Floating total earnings card */}
               <div style={{
                 position: "absolute",
-                bottom: "16px",
-                right: "16px",
+                bottom: "10px",
+                right: "10px",
                 background: C.card,
                 border: `1px solid ${C.border}`,
-                borderRadius: "14px",
-                padding: "8px 12px",
-                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+                borderRadius: "12px",
+                padding: "4px 8px",
+                boxShadow: "0 6px 16px rgba(0, 0, 0, 0.1)",
                 textAlign: "left",
                 display: "flex",
                 flexDirection: "column",
-                gap: "2px"
+                gap: "1px"
               }}>
-                <span style={{ fontSize: "9px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>Total Earnings</span>
-                <span style={{ fontSize: "14px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
-                <span style={{ fontSize: "10px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "2px" }}>
+                <span style={{ fontSize: "8px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: "0.2px" }}>Total Earnings</span>
+                <span style={{ fontSize: "12px", fontWeight: 900, color: C.text }}>₹ 48,750</span>
+                <span style={{ fontSize: "9px", fontWeight: 700, color: "#22C55E", display: "flex", alignItems: "center", gap: "1px" }}>
                   ▲ 12.5%
                 </span>
               </div>
@@ -792,43 +806,45 @@ export default function PartnerRegister() {
 
             {/* Platform Description */}
             <p style={{
-              fontSize: "13px",
-              lineHeight: 1.6,
+              fontSize: "12px",
+              lineHeight: 1.5,
               color: C.textMid || "#475569",
               textAlign: "center",
-              margin: "0 0 16px 0",
-              padding: "0 8px"
+              margin: "0 0 12px 0",
+              padding: "0 8px",
+              flexShrink: 0
             }}>
-              Start earning attractive commissions by offering Credit Cards, Loans, Insurance and Financial Services to your customers.
+              {t("onboarding.description", "Start earning attractive commissions by helping customers with Credit Cards, Personal Loans, Home Loans, Insurance, and Financial Services.")}
             </p>
 
             {/* Grid of 4 Feature Cards */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "10px",
-              marginBottom: "24px"
+              gap: "8px",
+              marginBottom: "16px",
+              flexShrink: 0
             }}>
               {[
-                { title: "High Commission", icon: "💎" },
-                { title: "Secure KYC", icon: "🔒" },
-                { title: "Instant Registration", icon: "⚡" },
-                { title: "Real-time Tracking", icon: "📊" }
+                { title: t("onboarding.feature1", "High Commission"), icon: "💎" },
+                { title: t("onboarding.feature2", "Secure KYC"), icon: "🔒" },
+                { title: t("onboarding.feature3", "Instant Registration"), icon: "⚡" },
+                { title: t("onboarding.feature4", "Real-time Tracking"), icon: "📊" }
               ].map((feat, i) => (
                 <div 
                   key={i} 
                   style={{
-                    background: isDark ? "rgba(22, 40, 64, 0.4)" : "rgba(255, 255, 255, 0.6)",
+                    background: isDark ? "rgba(22, 40, 64, 0.3)" : "rgba(255, 255, 255, 0.5)",
                     border: `1px solid ${C.border}`,
-                    borderRadius: "16px",
-                    padding: "12px",
+                    borderRadius: "12px",
+                    padding: "8px 10px",
                     display: "flex",
                     alignItems: "center",
-                    gap: "10px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                    gap: "8px",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.01)"
                   }}
                 >
-                  <span style={{ fontSize: "18px" }}>{feat.icon}</span>
+                  <span style={{ fontSize: "14px" }}>{feat.icon}</span>
                   <span style={{ fontSize: "11px", fontWeight: 700, color: C.text }}>{feat.title}</span>
                 </div>
               ))}
@@ -841,31 +857,31 @@ export default function PartnerRegister() {
                 background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
                 color: "#FFFFFF",
                 border: "none",
-                borderRadius: "16px",
-                padding: "14px 20px",
-                fontSize: "15px",
+                borderRadius: "14px",
+                padding: "12px 18px",
+                fontSize: "14px",
                 fontWeight: 700,
                 width: "100%",
                 cursor: "pointer",
-                boxShadow: "0 6px 20px rgba(13, 110, 253, 0.3)",
+                boxShadow: "0 4px 16px rgba(13, 110, 253, 0.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
-                transition: "all 0.25s"
+                flexShrink: 0
               }}
             >
-              Get Started <Icons.arrowRight size={16} />
+              {t("onboarding.getStarted", "Get Started")} <Icons.arrowRight size={14} />
             </button>
           </div>
         )}
 
         {/* ── SCREEN 2: Personalize Your Experience ───────────────────────────── */}
         {onboardingStep === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", minHeight: "90vh", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
             
             {/* Top Back bar */}
-            <div style={{ display: "flex", width: "100%", marginBottom: "12px", textAlign: "left" }}>
+            <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
               <button 
                 onClick={() => setOnboardingStep(1)}
                 style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
@@ -878,22 +894,22 @@ export default function PartnerRegister() {
             {renderOnboardingProgress()}
 
             {/* Title & Subtitle */}
-            <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
-                Personalize Your Experience
+            <div style={{ textAlign: "center", marginBottom: "14px", flexShrink: 0 }}>
+              <h2 style={{ fontSize: "20px", fontWeight: 900, margin: 0, color: C.text }}>
+                {t("onboarding.personalizeTitle", "Personalize Your Experience")}
               </h2>
-              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
-                Choose your preferred language and theme to continue
+              <p style={{ fontSize: "12px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                {t("onboarding.personalizeSubtitle", "Choose your preferred language and theme to continue")}
               </p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px", flex: 1, justifyContent: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", flex: 1, justifyContent: "center" }}>
               {/* Section 1: Choose Language */}
               <div>
-                <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0", color: C.text }}>
-                  1. Choose Your Language
+                <h3 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
+                  {t("onboarding.chooseLanguage", "Choose Your Language")}
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
                   {LANGUAGES.map(lang => {
                     const isSelected = selectedLang === lang.code;
                     return (
@@ -902,25 +918,25 @@ export default function PartnerRegister() {
                         onClick={() => handleLangSelect(lang.code)}
                         style={{
                           background: isSelected ? "rgba(13, 110, 253, 0.08)" : C.card,
-                          border: isSelected ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
-                          borderRadius: "14px",
-                          padding: "12px 6px",
+                          border: isSelected ? "2px solid #0D6EFD" : `1px solid ${C.border}`,
+                          borderRadius: "12px",
+                          padding: "8px 4px",
                           textAlign: "center",
                           cursor: "pointer",
                           position: "relative",
-                          boxShadow: isSelected ? "0 4px 12px rgba(13, 110, 253, 0.12)" : "none",
-                          transition: "all 0.25s ease"
+                          boxShadow: isSelected ? "0 2px 8px rgba(13, 110, 253, 0.08)" : "none",
+                          transition: "all 0.2s ease"
                         }}
                       >
-                        <div style={{ fontSize: "24px", marginBottom: "6px" }}>{lang.flag}</div>
-                        <div style={{ fontSize: "12px", fontWeight: 800, color: C.text }}>{lang.label}</div>
+                        <div style={{ fontSize: "18px", marginBottom: "4px" }}>{lang.flag}</div>
+                        <div style={{ fontSize: "11px", fontWeight: 800, color: C.text }}>{lang.label}</div>
                         {isSelected && (
                           <div style={{
                             position: "absolute",
-                            top: "6px",
-                            right: "6px",
-                            width: "14px",
-                            height: "14px",
+                            top: "4px",
+                            right: "4px",
+                            width: "12px",
+                            height: "12px",
                             borderRadius: "50%",
                             background: "#0D6EFD",
                             color: "#fff",
@@ -940,50 +956,52 @@ export default function PartnerRegister() {
 
               {/* Section 2: Choose Theme */}
               <div>
-                <h3 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 10px 0", color: C.text }}>
-                  2. Choose Theme
+                <h3 style={{ fontSize: "13px", fontWeight: 800, margin: "0 0 8px 0", color: C.text, textAlign: "left" }}>
+                  {t("onboarding.chooseTheme", "Choose Theme")}
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                   {/* Light Mode */}
                   <div
                     onClick={() => handleThemeSelect("light")}
                     style={{
                       background: C.card,
-                      border: !isDark ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
-                      borderRadius: "16px",
-                      padding: "12px",
+                      border: !isDark ? "2px solid #0D6EFD" : `1px solid ${C.border}`,
+                      borderRadius: "14px",
+                      padding: "10px",
                       cursor: "pointer",
                       textAlign: "center",
-                      boxShadow: !isDark ? "0 4px 12px rgba(13, 110, 253, 0.1)" : "none",
-                      transition: "all 0.25s ease",
+                      boxShadow: !isDark ? "0 2px 8px rgba(13, 110, 253, 0.08)" : "none",
+                      transition: "all 0.2s ease",
                       position: "relative"
                     }}
                   >
-                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>☀️ Light Mode</div>
+                    <div style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
+                      {t("onboarding.lightMode", "Light Mode")}
+                    </div>
                     
                     {/* Theme mini mockup */}
                     <div style={{
-                      marginTop: "8px",
-                      height: "40px",
+                      marginTop: "6px",
+                      height: "32px",
                       background: "#F8FAFC",
-                      borderRadius: "8px",
+                      borderRadius: "6px",
                       border: "1px solid #E2E8F0",
-                      padding: "4px",
+                      padding: "3px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "3px"
+                      gap: "2px"
                     }}>
-                      <div style={{ height: "4px", width: "40%", background: "#CBD5E1", borderRadius: "2px" }} />
-                      <div style={{ height: "4px", width: "80%", background: "#E2E8F0", borderRadius: "2px" }} />
-                      <div style={{ height: "14px", background: "#0D6EFD", borderRadius: "3px", marginTop: "auto" }} />
+                      <div style={{ height: "3px", width: "40%", background: "#CBD5E1", borderRadius: "1.5px" }} />
+                      <div style={{ height: "3px", width: "80%", background: "#E2E8F0", borderRadius: "1.5px" }} />
+                      <div style={{ height: "10px", background: "#0D6EFD", borderRadius: "2px", marginTop: "auto" }} />
                     </div>
                     {!isDark && (
                       <div style={{
                         position: "absolute",
-                        top: "6px",
-                        right: "6px",
-                        width: "14px",
-                        height: "14px",
+                        top: "4px",
+                        right: "4px",
+                        width: "12px",
+                        height: "12px",
                         borderRadius: "50%",
                         background: "#0D6EFD",
                         color: "#fff",
@@ -1002,41 +1020,43 @@ export default function PartnerRegister() {
                     onClick={() => handleThemeSelect("dark")}
                     style={{
                       background: C.card,
-                      border: isDark ? "2px solid #0D6EFD" : `1.5px solid ${C.border}`,
-                      borderRadius: "16px",
-                      padding: "12px",
+                      border: isDark ? "2px solid #0D6EFD" : `1px solid ${C.border}`,
+                      borderRadius: "14px",
+                      padding: "10px",
                       cursor: "pointer",
                       textAlign: "center",
-                      boxShadow: isDark ? "0 4px 12px rgba(13, 110, 253, 0.1)" : "none",
-                      transition: "all 0.25s ease",
+                      boxShadow: isDark ? "0 2px 8px rgba(13, 110, 253, 0.08)" : "none",
+                      transition: "all 0.2s ease",
                       position: "relative"
                     }}
                   >
-                    <div style={{ fontSize: "20px", marginBottom: "4px" }}>🌙 Dark Mode</div>
+                    <div style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
+                      {t("onboarding.darkMode", "Dark Mode")}
+                    </div>
                     
                     {/* Theme mini mockup */}
                     <div style={{
-                      marginTop: "8px",
-                      height: "40px",
+                      marginTop: "6px",
+                      height: "32px",
                       background: "#0B1622",
-                      borderRadius: "8px",
+                      borderRadius: "6px",
                       border: "1px solid #1E3D5A",
-                      padding: "4px",
+                      padding: "3px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "3px"
+                      gap: "2px"
                     }}>
-                      <div style={{ height: "4px", width: "40%", background: "#3D6480", borderRadius: "2px" }} />
-                      <div style={{ height: "4px", width: "80%", background: "#112035", borderRadius: "2px" }} />
-                      <div style={{ height: "14px", background: "#4BAF7D", borderRadius: "3px", marginTop: "auto" }} />
+                      <div style={{ height: "3px", width: "40%", background: "#3D6480", borderRadius: "2px" }} />
+                      <div style={{ height: "3px", width: "80%", background: "#112035", borderRadius: "2px" }} />
+                      <div style={{ height: "10px", background: "#4BAF7D", borderRadius: "2px", marginTop: "auto" }} />
                     </div>
                     {isDark && (
                       <div style={{
                         position: "absolute",
-                        top: "6px",
-                        right: "6px",
-                        width: "14px",
-                        height: "14px",
+                        top: "4px",
+                        right: "4px",
+                        width: "12px",
+                        height: "12px",
                         borderRadius: "50%",
                         background: "#0D6EFD",
                         color: "#fff",
@@ -1054,16 +1074,16 @@ export default function PartnerRegister() {
             </div>
 
             {/* Bottom Actions Row */}
-            <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px", flexShrink: 0 }}>
               <button
                 onClick={() => setOnboardingStep(1)}
                 style={{
                   background: C.card,
                   color: C.textMid,
                   border: `1.5px solid ${C.border}`,
-                  borderRadius: "16px",
-                  padding: "14px 20px",
-                  fontSize: "14px",
+                  borderRadius: "14px",
+                  padding: "12px 18px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   flex: 1,
                   cursor: "pointer",
@@ -1073,7 +1093,7 @@ export default function PartnerRegister() {
                   gap: "6px"
                 }}
               >
-                <Icons.arrowLeft size={16} /> Back
+                <Icons.arrowLeft size={14} /> {t("onboarding.back", "Back")}
               </button>
               <button
                 onClick={() => { setOnboardingStep(3); setStep(0); }}
@@ -1081,9 +1101,9 @@ export default function PartnerRegister() {
                   background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
                   color: "#FFFFFF",
                   border: "none",
-                  borderRadius: "16px",
-                  padding: "14px 20px",
-                  fontSize: "14px",
+                  borderRadius: "14px",
+                  padding: "12px 18px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   flex: 1,
                   cursor: "pointer",
@@ -1091,10 +1111,10 @@ export default function PartnerRegister() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.25)"
+                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.2)"
                 }}
               >
-                Continue <Icons.arrowRight size={16} />
+                {t("onboarding.continue", "Continue")} <Icons.arrowRight size={14} />
               </button>
             </div>
           </div>
@@ -1102,17 +1122,17 @@ export default function PartnerRegister() {
 
         {/* ── SCREEN 3: Create Your Partner Account ───────────────────────────── */}
         {onboardingStep === 3 && (
-          <div style={{ display: "flex", flexDirection: "column", minHeight: "95vh" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
             
             {/* Top Back bar */}
-            <div style={{ display: "flex", width: "100%", marginBottom: "12px", textAlign: "left" }}>
+            <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
               <button 
                 onClick={() => {
+                  setErr("");
                   if (step === 0) {
                     setOnboardingStep(2);
                   } else {
                     setStep(s => s - 1);
-                    setErr("");
                   }
                 }}
                 style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
@@ -1125,44 +1145,55 @@ export default function PartnerRegister() {
             {renderOnboardingProgress()}
 
             {/* Form Title & Subtitle */}
-            <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "22px", fontWeight: 900, margin: 0, color: C.text }}>
-                {step === 0 && "Create Your Partner Account"}
-                {step === 1 && "Business Information"}
-                {step === 2 && "Bank Account Details"}
-                {step === 3 && "Identity & KYC Documents"}
+            <div style={{ textAlign: "center", marginBottom: "12px", flexShrink: 0 }}>
+              <h2 style={{ fontSize: "18px", fontWeight: 900, margin: 0, color: C.text }}>
+                {step === 0 && t("onboarding.createAccountTitle", "Create Your Partner Account")}
+                {step === 1 && "Account Credentials"}
+                {step === 2 && "Aadhaar & Verification"}
+                {step === 3 && "Business Information (1/2)"}
+                {step === 4 && "Business Information (2/2)"}
+                {step === 5 && "Bank Account Details"}
+                {step === 6 && "KYC Details"}
               </h2>
-              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
-                {step === 0 && "Complete your details to become a verified GharKaPaisa Partner"}
-                {step === 1 && "Specify your business details and location parameters"}
-                {step === 2 && "Enter your settlement bank account details"}
-                {step === 3 && "Provide document numbers to start registration"}
+              <p style={{ fontSize: "11px", color: C.textLight || "#64748B", marginTop: "3px", margin: 0 }}>
+                {step === 0 && t("onboarding.createAccountSubtitle", "Complete your details to become a verified GharKaPaisa Partner")}
+                {step === 1 && "Define your access email and password credentials"}
+                {step === 2 && "Enter Aadhaar card number and security check"}
+                {step === 3 && "Specify your company type and firm name"}
+                {step === 4 && "Provide business address and region details"}
+                {step === 5 && "Enter your settlement bank account details"}
+                {step === 6 && "Provide document numbers to start registration"}
               </p>
-              <div style={{ fontSize: "11px", fontWeight: 700, color: "#0D6EFD", marginTop: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <div style={{ fontSize: "10px", fontWeight: 800, color: "#0D6EFD", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Step {step + 1} of {STEPS.length}
               </div>
             </div>
 
-            {/* Glassmorphic White Card Container */}
+            {/* White Card Container */}
             <div style={{
               background: C.card,
               border: `1.5px solid ${C.border}`,
-              borderRadius: "24px",
-              padding: "24px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.06)",
-              marginBottom: "20px"
+              borderRadius: "20px",
+              padding: "16px",
+              boxShadow: "0 6px 20px rgba(0, 0, 0, 0.04)",
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              overflow: "hidden",
+              margin: "6px 0"
             }}>
               
               {/* Error Box */}
               {err && (
                 <div style={{
                   background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
-                  borderRadius: "12px", padding: "10px 14px",
-                  fontSize: "13px", color: C.red,
-                  marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+                  borderRadius: "10px", padding: "8px 12px",
+                  fontSize: "12px", color: C.red,
+                  marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px",
                   textAlign: "left"
                 }}>
-                  <Icons.x size={14} /> {err}
+                  <Icons.x size={12} /> {err}
                 </div>
               )}
 
@@ -1170,30 +1201,30 @@ export default function PartnerRegister() {
               {infoMsg && (
                 <div style={{
                   background: `${C.green}12`, border: `1.5px solid ${C.green}30`,
-                  borderRadius: "12px", padding: "10px 14px",
-                  fontSize: "13px", color: C.green,
-                  marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
+                  borderRadius: "10px", padding: "8px 12px",
+                  fontSize: "12px", color: C.green,
+                  marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px",
                   textAlign: "left"
                 }}>
-                  <Icons.check size={14} /> {infoMsg}
+                  <Icons.check size={12} /> {infoMsg}
                 </div>
               )}
 
               {/* ── SUB-STEP 3.1: Account Details ── */}
               {step === 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
                   
                   {/* Full Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Full Name</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.fullName", "Full Name")}</label>
                     <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.User size={16} /></span>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.User size={14} /></span>
                       <input 
                         type="text" 
                         value={fullName}
                         onChange={handleFullNameChange}
                         placeholder="Enter your full name" 
-                        style={{ ...S.input, paddingLeft: "42px" }}
+                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                         onFocus={e => (e.target.style.border = focusBorder)}
                         onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
                       />
@@ -1201,16 +1232,16 @@ export default function PartnerRegister() {
                   </div>
 
                   {/* Mobile & OTP */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>{t('partner.mobileNumber', 'Mobile Number')}</label>
-                    <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.mobileNumber", "Mobile Number")}</label>
+                    <div style={{ display: "flex", gap: "8px" }}>
                       <div style={{ position: "relative", flex: 1 }}>
-                        <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.phone size={16} /></span>
+                        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.phone size={14} /></span>
                         <input
                           type="tel"
                           {...inputProps("mobile")}
                           placeholder="10-digit Mobile Number"
-                          style={{ ...S.input, paddingLeft: "42px" }}
+                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                           disabled={form.mobilePreVerified}
                         />
                       </div>
@@ -1223,8 +1254,8 @@ export default function PartnerRegister() {
                           color: form.mobilePreVerified ? C.green : "#0D6EFD",
                           border: form.mobilePreVerified ? `1px solid ${C.green}40` : `1px solid #0D6EFD`,
                           borderRadius: "10px",
-                          padding: "0 14px",
-                          fontSize: "13px",
+                          padding: "0 12px",
+                          fontSize: "12px",
                           fontWeight: 700,
                           cursor: mobileActionDisabled ? "not-allowed" : "pointer",
                           opacity: mobileActionDisabled ? 0.6 : 1
@@ -1237,9 +1268,9 @@ export default function PartnerRegister() {
 
                     {/* Mobile OTP verify inputs */}
                     {mobileOtpSent && !form.mobilePreVerified && (
-                      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                         <input
-                          style={{ ...S.input, flex: 1 }}
+                          style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.mobileOtp}
                           onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
                           placeholder="Enter 6-digit SMS OTP"
@@ -1254,8 +1285,8 @@ export default function PartnerRegister() {
                             color: "#fff",
                             border: "none",
                             borderRadius: "10px",
-                            padding: "0 16px",
-                            fontSize: "13px",
+                            padding: "0 12px",
+                            fontSize: "12px",
                             fontWeight: 700,
                             cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
@@ -1265,18 +1296,24 @@ export default function PartnerRegister() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
 
+              {/* ── SUB-STEP 3.2: Account Credentials ── */}
+              {step === 1 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
+                  
                   {/* Email & OTP */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>{t('partner.emailAddress', 'Email Address')}</label>
-                    <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.emailAddress", "Email Address")}</label>
+                    <div style={{ display: "flex", gap: "8px" }}>
                       <div style={{ position: "relative", flex: 1 }}>
-                        <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.mail size={16} /></span>
+                        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.mail size={14} /></span>
                         <input
                           type="email"
                           {...inputProps("email")}
                           placeholder="name@domain.com"
-                          style={{ ...S.input, paddingLeft: "42px" }}
+                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                           disabled={form.emailPreVerified}
                           autoComplete="email"
                         />
@@ -1290,13 +1327,13 @@ export default function PartnerRegister() {
                           color: form.emailPreVerified ? C.green : "#0D6EFD",
                           border: form.emailPreVerified ? `1px solid ${C.green}40` : `1px solid #0D6EFD`,
                           borderRadius: "10px",
-                          padding: "0 14px",
-                          fontSize: "13px",
+                          padding: "0 12px",
+                          fontSize: "12px",
                           fontWeight: 700,
-                          cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? "not-allowed" : "pointer",
-                          opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified) ? 0.6 : 1
+                          cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? "not-allowed" : "pointer",
+                          opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 0.6 : 1
                         }}
-                        disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0) || !isCaptchaVerified}
+                        disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
                       >
                         {form.emailPreVerified ? "✓ Verified" : emailOtpSent ? "Resend" : "Send OTP"}
                       </button>
@@ -1304,9 +1341,9 @@ export default function PartnerRegister() {
 
                     {/* Email OTP verify inputs */}
                     {emailOtpSent && !form.emailPreVerified && (
-                      <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
                         <input
-                          style={{ ...S.input, flex: 1 }}
+                          style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.emailOtp}
                           onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
                           placeholder="Enter 6-digit Email OTP"
@@ -1321,8 +1358,8 @@ export default function PartnerRegister() {
                             color: "#fff",
                             border: "none",
                             borderRadius: "10px",
-                            padding: "0 16px",
-                            fontSize: "13px",
+                            padding: "0 12px",
+                            fontSize: "12px",
                             fontWeight: 700,
                             cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
@@ -1333,17 +1370,64 @@ export default function PartnerRegister() {
                     )}
                   </div>
 
-                  {/* Aadhaar Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Aadhaar Number</label>
+                  {/* Password */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.password", "Password")}</label>
                     <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="Choose password (min 8 chars)" 
+                        {...inputProps("password")}
+                        style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
+                        autoComplete="new-password"
+                      />
+                      <span 
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
+                      >
+                        {showPassword ? <Icons.eyeOff size={14} /> : <Icons.eye size={14} />}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.confirmPassword", "Confirm Password")}</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        placeholder="Repeat your password" 
+                        {...inputProps("confirmPassword")}
+                        style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
+                        autoComplete="new-password"
+                      />
+                      <span 
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
+                      >
+                        {showConfirmPassword ? <Icons.eyeOff size={14} /> : <Icons.eye size={14} />}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.3: Aadhaar & Captcha Verification ── */}
+              {step === 2 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
+                  {/* Aadhaar Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
                       <input 
                         type="text" 
                         placeholder="Enter 12-digit Aadhaar Number" 
                         maxLength={12}
                         {...inputProps("aadhaar")}
-                        style={{ ...S.input, paddingLeft: "42px" }}
+                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                       />
                     </div>
                     {aadhaarBackendError && (
@@ -1353,61 +1437,22 @@ export default function PartnerRegister() {
                     )}
                   </div>
 
-                  {/* Password */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Password</label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={16} /></span>
-                      <input 
-                        type={showPassword ? "text" : "password"} 
-                        placeholder="Choose password (min 8 chars)" 
-                        {...inputProps("password")}
-                        style={{ ...S.input, paddingLeft: "42px", paddingRight: "42px" }}
-                        autoComplete="new-password"
-                      />
-                      <span 
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
-                      >
-                        {showPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
-                      </span>
-                    </div>
+                  {/* reCAPTCHA check container */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
+                    <label style={S.label}>Security Verification</label>
+                    <div id={captchaId} style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80px" }} />
                   </div>
-
-                  {/* Confirm Password */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Confirm Password</label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={16} /></span>
-                      <input 
-                        type={showConfirmPassword ? "text" : "password"} 
-                        placeholder="Repeat your password" 
-                        {...inputProps("confirmPassword")}
-                        style={{ ...S.input, paddingLeft: "42px", paddingRight: "42px" }}
-                        autoComplete="new-password"
-                      />
-                      <span 
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
-                      >
-                        {showConfirmPassword ? <Icons.eyeOff size={16} /> : <Icons.eye size={16} />}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* MSG91 reCAPTCHA container */}
-                  <div id={captchaId} style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80px", marginTop: "5px", marginBottom: "5px" }} />
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.2: Business Information ── */}
-              {step === 1 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+              {/* ── SUB-STEP 3.4: Business details 1 ── */}
+              {step === 3 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
                   
                   {/* Partner Type */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>Partner Type</label>
-                    <select style={S.input} value={form.companyType} onChange={set("companyType")}>
+                    <select style={{ ...S.input, paddingVertical: "10px" }} value={form.companyType} onChange={set("companyType")}>
                       {COMPANY_TYPES.map(c => (
                         <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
@@ -1415,104 +1460,110 @@ export default function PartnerRegister() {
                   </div>
 
                   {/* Company Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>Company Name</label>
-                    <input {...inputProps("companyName")} placeholder="Enter company / firm name" />
+                    <input {...inputProps("companyName")} placeholder="Enter company / firm name" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* Company Address */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label style={S.label}>Company Address</label>
-                    <input {...inputProps("currentAddress")} placeholder="Full business address" />
-                  </div>
-
-                  {/* Pincode */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Pincode</label>
-                    <input {...inputProps("pincode")} maxLength={6} placeholder="6-digit pincode" />
-                  </div>
-
-                  {/* City / Region */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>City / Region</label>
-                    <input {...inputProps("businessLocation")} placeholder="e.g. Mumbai, Maharashtra" />
-                  </div>
-
-                  {/* GST Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>GST Number (Optional)</label>
-                    <input {...inputProps("gst")} placeholder="e.g. 27AAPFU0939F1ZV" style={{ ...S.input, textTransform: "uppercase" }} />
+                    <input {...inputProps("currentAddress")} placeholder="Full business address" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.3: Bank Details ── */}
-              {step === 2 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+              {/* ── SUB-STEP 3.5: Business details 2 ── */}
+              {step === 4 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
+                  
+                  {/* Pincode */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>Pincode</label>
+                    <input {...inputProps("pincode")} maxLength={6} placeholder="6-digit pincode" style={{ ...S.input, paddingVertical: "10px" }} />
+                  </div>
+
+                  {/* City / Region */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>City / Region</label>
+                    <input {...inputProps("businessLocation")} placeholder="e.g. Mumbai, Maharashtra" style={{ ...S.input, paddingVertical: "10px" }} />
+                  </div>
+
+                  {/* GST Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.gstNumber", "GST Number (Optional)")}</label>
+                    <input {...inputProps("gst")} placeholder="e.g. 27AAPFU0939F1ZV" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
+                  </div>
+                </div>
+              )}
+
+              {/* ── SUB-STEP 3.6: Bank Details ── */}
+              {step === 5 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left" }}>
                   
                   {/* Bank Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Bank Name</label>
-                    <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder="Search and select your bank" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <label style={S.label}>{t("onboarding.bankName", "Bank Name")}</label>
+                    <input list="onboarding-bank-list" {...inputProps("bankName")} placeholder="Search and select your bank" style={{ ...S.input, paddingVertical: "10px" }} />
                     <datalist id="onboarding-bank-list">
                       {INDIA_BANKS.map(bank => <option key={bank} value={bank} />)}
                     </datalist>
                   </div>
 
                   {/* Account Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Account Number</label>
-                    <input {...inputProps("accountNumber")} placeholder="Enter settlement account number" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <label style={S.label}>{t("onboarding.accountNumber", "Account Number")}</label>
+                    <input {...inputProps("accountNumber")} placeholder="Enter settlement account number" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
 
                   {/* IFSC Code */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>IFSC Code</label>
-                    <input {...inputProps("ifsc")} placeholder="Enter 11-digit IFSC code" style={{ ...S.input, textTransform: "uppercase" }} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <label style={S.label}>{t("onboarding.ifscCode", "IFSC Code")}</label>
+                    <input {...inputProps("ifsc")} placeholder="Enter 11-digit IFSC code" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
                   </div>
 
                   {/* Account Holder Name */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>Account Holder Name</label>
-                    <input {...inputProps("accountHolderName")} placeholder="Name as per bank records" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <label style={S.label}>{t("onboarding.accountHolderName", "Account Holder Name")}</label>
+                    <input {...inputProps("accountHolderName")} placeholder="Name as per bank records" style={{ ...S.input, paddingVertical: "10px" }} />
                   </div>
                 </div>
               )}
 
-              {/* ── SUB-STEP 3.4: Bank & KYC Details ── */}
-              {step === 3 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "left" }}>
+              {/* ── SUB-STEP 3.7: KYC Details ── */}
+              {step === 6 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left" }}>
                   
                   {/* PAN Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label style={S.label}>PAN Number</label>
-                    <input {...inputProps("pan")} placeholder="Enter 10-char PAN" style={{ ...S.input, textTransform: "uppercase" }} maxLength={10} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
+                    <input {...inputProps("pan")} placeholder="Enter 10-char PAN" style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
                   </div>
 
                   {/* Info callout card */}
                   <div style={{
                     background: isDark ? "#112035" : "#F8FAFC",
                     border: `1px solid ${C.border}`,
-                    borderRadius: "14px",
-                    padding: "14px",
-                    fontSize: "12px",
+                    borderRadius: "12px",
+                    padding: "10px",
+                    fontSize: "11px",
                     color: C.textMid,
-                    lineHeight: 1.5
+                    lineHeight: 1.4
                   }}>
-                    <strong>Note:</strong> Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team performs the initial review and activates your partner account (typically within 24-48 hours).
+                    <strong>Note:</strong> Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).
                   </div>
 
-                  {/* Terms & Privacy Policy Checkbox */}
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginTop: "8px" }}>
+                  {/* Terms Checkbox */}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "6px", marginTop: "4px" }}>
                     <input 
                       type="checkbox" 
                       id="termsAgreed"
                       checked={form.termsAgreed}
                       onChange={e => setForm(f => ({ ...f, termsAgreed: e.target.checked }))}
-                      style={{ marginTop: "3px", width: "16px", height: "16px", cursor: "pointer" }}
+                      style={{ marginTop: "2px", width: "14px", height: "14px", cursor: "pointer" }}
                     />
-                    <label htmlFor="termsAgreed" style={{ fontSize: "12px", color: C.textMid, cursor: "pointer", userSelect: "none" }}>
-                      I agree to the <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Terms & Conditions</span> and <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Privacy Policy</span> of GharKaPaisa.
+                    <label htmlFor="termsAgreed" style={{ fontSize: "11px", color: C.textMid, cursor: "pointer", userSelect: "none" }}>
+                      I agree to the <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Terms & Conditions</span> and <span style={{ color: "#0D6EFD", fontWeight: 700 }}>Privacy Policy</span>.
                     </label>
                   </div>
                 </div>
@@ -1521,7 +1572,7 @@ export default function PartnerRegister() {
             </div>
 
             {/* Bottom Actions Row */}
-            <div style={{ display: "flex", gap: "10px", marginTop: "auto" }}>
+            <div style={{ display: "flex", gap: "10px", marginTop: "auto", flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => {
@@ -1536,9 +1587,9 @@ export default function PartnerRegister() {
                   background: C.card,
                   color: C.textMid,
                   border: `1.5px solid ${C.border}`,
-                  borderRadius: "16px",
-                  padding: "14px 20px",
-                  fontSize: "14px",
+                  borderRadius: "14px",
+                  padding: "12px 18px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   flex: 1,
                   cursor: "pointer",
@@ -1548,7 +1599,7 @@ export default function PartnerRegister() {
                   gap: "6px"
                 }}
               >
-                <Icons.arrowLeft size={16} /> {step === 0 ? "Back" : "Previous"}
+                <Icons.arrowLeft size={14} /> {step === 0 ? t("onboarding.back", "Back") : "Previous"}
               </button>
               <button
                 type="button"
@@ -1558,9 +1609,9 @@ export default function PartnerRegister() {
                   background: "linear-gradient(135deg, #0D6EFD, #2E90FA)",
                   color: "#FFFFFF",
                   border: "none",
-                  borderRadius: "16px",
-                  padding: "14px 20px",
-                  fontSize: "14px",
+                  borderRadius: "14px",
+                  padding: "12px 18px",
+                  fontSize: "13px",
                   fontWeight: 700,
                   flex: 1,
                   cursor: loading ? "not-allowed" : "pointer",
@@ -1569,7 +1620,7 @@ export default function PartnerRegister() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.25)"
+                  boxShadow: "0 4px 14px rgba(13, 110, 253, 0.2)"
                 }}
               >
                 {loading ? (
@@ -1583,15 +1634,15 @@ export default function PartnerRegister() {
                     Submitting...
                   </span>
                 ) : step === STEPS.length - 1 ? (
-                  <>Create Account <Icons.check size={16} /></>
+                  <>Create Account <Icons.check size={14} /></>
                 ) : (
-                  <>Continue <Icons.arrowRight size={16} /></>
+                  <>{t("onboarding.continue", "Continue")} <Icons.arrowRight size={14} /></>
                 )}
               </button>
             </div>
 
             {/* Bottom Log-in Link */}
-            <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px", color: C.textLight }}>
+            <div style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: C.textLight, flexShrink: 0 }}>
               Already have an account?{" "}
               <span 
                 onClick={onBack} 
