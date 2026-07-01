@@ -104,6 +104,7 @@ export default function PartnerRegister() {
   const handleLangSelect = (code) => {
     setSelectedLang(code);
     i18n.changeLanguage(code);
+    localStorage.setItem("i18nextLng", code);
   };
 
   const handleThemeSelect = (mode) => {
