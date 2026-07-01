@@ -6,7 +6,7 @@ import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
-import { FaHandshake, FaUserCog, FaCrown, FaBriefcase } from 'react-icons/fa';
+import { FaHandshake, FaUserCog, FaCrown, FaBriefcase, FaArrowLeft } from 'react-icons/fa';
 
 import logoImg from "../../../assets/logos/logo.png";
 import welcomeBgImg from "../register/welcome pg-bg.png";
@@ -476,12 +476,23 @@ export default function PartnerLogin() {
 
             {/* Right side role selection form */}
             <div className="login-step1-right">
-              {/* Top Logo & Title */}
-              <div style={{ textAlign: "center", flexShrink: 0 }}>
-                {/* Logo centered */}
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
+              {/* Top Back & Logo */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexShrink: 0, width: "100%" }}>
+                <div style={{ width: "40px", textAlign: "left" }}>
+                  <button 
+                    id="btn-login-step1-back"
+                    onClick={() => navigate("/")}
+                    style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center" }}
+                  >
+                    <Icons.arrowLeft size={16} />
+                  </button>
+                </div>
+                <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
                   <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
                 </div>
+                <div style={{ width: "40px" }} /> {/* Spacer to perfectly center the logo */}
+              </div>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
                 
                 {renderLoginProgress()}
 
@@ -615,6 +626,30 @@ export default function PartnerLogin() {
                   }}
                 >
                   <span id="label-role-continue">{t("login.continue", "Continue")}</span> <Icons.arrowRight size={14} />
+                </button>
+
+                {/* Back to Home Button */}
+                <button
+                  id="btn-back-to-home"
+                  onClick={() => navigate("/")}
+                  style={{
+                    background: "transparent",
+                    color: C.textMid,
+                    border: `1.5px solid ${C.border}`,
+                    borderRadius: "14px",
+                    padding: "10px 16px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    width: "100%",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <FaArrowLeft size={12} /> <span id="label-back-to-home">{t("login.backToHome", "Back to Home")}</span>
                 </button>
               </div>
             </div>

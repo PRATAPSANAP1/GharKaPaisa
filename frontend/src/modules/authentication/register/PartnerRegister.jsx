@@ -1141,6 +1141,11 @@ export default function PartnerRegister() {
                     </div>
                   </div>
 
+                  {/* Captcha */}
+                  <div className="form-full-width" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60px", marginTop: "4px" }}>
+                    <div id={captchaId} />
+                  </div>
+
                   {/* Mobile & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-mobile" style={S.label}>{t("onboarding.mobileNumber", "Mobile Number")}</label>
@@ -1340,10 +1345,7 @@ export default function PartnerRegister() {
                     </div>
                   </div>
 
-                  {/* Captcha */}
-                  <div className="form-full-width" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60px", marginTop: "4px" }}>
-                    <div id={captchaId} />
-                  </div>
+
                 </div>
               )}
 
