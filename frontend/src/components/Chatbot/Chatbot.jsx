@@ -398,10 +398,6 @@ export default function Chatbot() {
       {/* Floating launcher bubble */}
       {!isOpen && (
         <div className="gkp-chatbot-launcher-wrapper">
-          <div className="robot-speech-bubble" style={{ background: C.card, color: C.text, border: `1px solid ${C.border}` }}>
-            <span>Hey! Need help? Chat with me!</span>
-            <div className="speech-arrow" style={{ borderTopColor: C.border }} />
-          </div>
           <button 
             className="gkp-chatbot-launcher robot-launcher" 
             onClick={toggleChat}
