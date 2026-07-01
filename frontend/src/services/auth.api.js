@@ -46,9 +46,9 @@ export const syncSession = async () => {
 // ── OTP — SEND (via email) ─────────────────────────────────────────────
 // Sends OTP to the user's registered email address.
 // Accepts identity = email or mobile number.
-export async function sendOtp(identity) {
+export async function sendOtp(identity, role) {
   try {
-    const res = await api.post('/auth/send-otp', { identity });
+    const res = await api.post('/auth/send-otp', { identity, role });
     return res.data;
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Failed to send OTP. Please try again.');
@@ -70,39 +70,39 @@ export async function verifyOtpLogin(identity, otp) {
 }
 
 // ── OTP LOGIN (the only login method) ───────────────────────────────────
-export async function loginWithOtp(identity, otp) {
+export async function loginWithOtp(identity, otp, role) {
   try {
-    const res = await api.post('/auth/login', { identity, otp });
+    const res = await api.post('/auth/login', { identity, otp, role });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
     }
-    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken, redirect: res.data.redirect };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid OTP or credentials.');
   }
 }
 
 // ── MSG91 Mobile Login ──────────────────────────────────────────────────
-export async function loginWithMsg91(mobile, accessToken) {
+export async function loginWithMsg91(mobile, accessToken, role) {
   try {
-    const res = await api.post('/auth/login-msg91', { mobile, accessToken });
+    const res = await api.post('/auth/login-msg91', { mobile, accessToken, role });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
     }
-    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken, redirect: res.data.redirect };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid SMS verification token.');
   }
 }
 
 // ── Password Login ───────────────────────────────────────────────────────
-export async function loginWithPassword(identity, password) {
+export async function loginWithPassword(identity, password, role) {
   try {
-    const res = await api.post('/auth/login-password', { identity, password });
+    const res = await api.post('/auth/login-password', { identity, password, role });
     if (res.data && res.data.token) {
       setAccessToken(res.data.token);
     }
-    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken };
+    return { success: true, idToken: res.data.token, refreshToken: res.data.refreshToken, redirect: res.data.redirect };
   } catch (err) {
     throw new Error(err.response?.data?.message || 'Invalid credentials.');
   }
@@ -138,9 +138,9 @@ export async function registerPartner(formData) {
 }
 
 // ── LOOKUP USER ────────────────────────────────────────────────────────
-export async function lookupUser(identity) {
+export async function lookupUser(identity, role) {
   try {
-    const res = await api.post('/auth/lookup', { identity });
+    const res = await api.post('/auth/lookup', { identity, role });
     return res.data;
   } catch (err) {
     throw new Error(err.response?.data?.message || 'User lookup failed.');

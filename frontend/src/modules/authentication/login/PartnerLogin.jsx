@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../../app/store/authStore";
@@ -7,85 +7,78 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 
-// ── Toast Notification Component ─────────────────────────────────────────────
+import logoImg from "../../../assets/logos/logo.png";
+
+// Toast Notification
 function Toast({ message, type = "success", onClose }) {
   const isSuccess = type === "success";
-
   useEffect(() => {
-    const timer = setTimeout(onClose, 5000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
   }, [onClose]);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 20,
-        right: 20,
-        zIndex: 9999,
-        minWidth: 280,
-        maxWidth: 400,
-        padding: "14px 20px",
-        borderRadius: "12px",
-        background: isSuccess ? "#059669" : "#DC2626",
-        color: "#fff",
-        fontSize: "13px",
-        fontWeight: 600,
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        boxShadow: isSuccess
-          ? "0 8px 24px rgba(5,150,105,0.35)"
-          : "0 8px 24px rgba(220,38,38,0.35)",
-        animation: "toastSlideIn 0.35s ease-out",
-      }}
-    >
-      <span style={{ fontSize: "18px", flexShrink: 0 }}>
-        {isSuccess ? "✅" : "❌"}
-      </span>
-      <span style={{ flex: 1, lineHeight: 1.5 }}>{message}</span>
-      <span
-        onClick={onClose}
-        style={{ cursor: "pointer", opacity: 0.7, fontSize: "16px", flexShrink: 0 }}
-      >
-        ✕
-      </span>
+    <div style={{
+      position: "fixed",
+      top: "24px",
+      right: "24px",
+      zIndex: 1000,
+      background: isSuccess ? "#10B981" : "#EF4444",
+      color: "#FFFFFF",
+      padding: "12px 18px",
+      borderRadius: "12px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      fontSize: "14px",
+      fontWeight: 600,
+      animation: "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+    }}>
+      <span>{isSuccess ? "✅" : "❌"}</span>
+      <span>{message}</span>
+      <span onClick={onClose} style={{ marginLeft: "8px", cursor: "pointer", opacity: 0.8 }}>✕</span>
     </div>
   );
 }
 
 export default function PartnerLogin() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const login = useAuthStore((state) => state.login);
-  
-  const [form, setForm] = useState({ identity: "", otp: "", password: "" });
-  const [method, setMethod] = useState('otp'); // 'otp' or 'password'
+  const loginStore = useAuthStore((state) => state.login);
 
-  // ── MSG91 Captcha (singleton hook — no duplicate polling/init) ──────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha();
+  // 1 = Role Selection, 2 = Login Credentials Form
+  const [loginStep, setLoginStep] = useState(1);
+  const [selectedRole, setSelectedRole] = useState(() => localStorage.getItem("gkp_last_role") || "PARTNER");
+
+  const [form, setForm] = useState({ identity: "", otp: "", password: "" });
+  const [method, setMethod] = useState("otp"); // "otp" or "password"
+
+  // MSG91 Captcha (active on Step 2 only)
+  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: loginStep === 2 });
 
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState({ otp: false, login: false });
   const [err, setErr] = useState("");
-  const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
-  const [resolvedCredentials, setResolvedCredentials] = useState(null);
+  const [toast, setToast] = useState(null);
   const [otpSentTime, setOtpSentTime] = useState(null);
-  const [otpAttempts, setOtpAttempts] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
-
- 
   
+  // Refs for 6 OTP input boxes
+  const otpInputs = useRef([]);
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
 
-  // Reset OTP state on identifier change
+  // Reset OTP state when username/identity changes
   useEffect(() => {
     setOtpSent(false);
     setTimer(0);
     setOtpSentTime(null);
+    setOtpDigits(["", "", "", "", "", ""]);
+    setForm(f => ({ ...f, otp: "" }));
   }, [form.identity]);
 
   useEffect(() => {
@@ -93,6 +86,42 @@ export default function PartnerLogin() {
     if (timer > 0) t = setTimeout(() => setTimer(timer - 1), 1000);
     return () => clearTimeout(t);
   }, [timer]);
+
+  // Synchronize otp digits array with flat form OTP string
+  useEffect(() => {
+    setForm(f => ({ ...f, otp: otpDigits.join("") }));
+  }, [otpDigits]);
+
+  const handleRoleSelect = (roleName) => {
+    setSelectedRole(roleName);
+    localStorage.setItem("gkp_last_role", roleName);
+  };
+
+  const handleOtpDigitChange = (value, index) => {
+    const cleanVal = value.replace(/\D/g, "").slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = cleanVal;
+    setOtpDigits(newDigits);
+
+    if (cleanVal && index < 5) {
+      otpInputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e, index) => {
+    if (e.key === "Backspace") {
+      if (!otpDigits[index] && index > 0) {
+        const newDigits = [...otpDigits];
+        newDigits[index - 1] = "";
+        setOtpDigits(newDigits);
+        otpInputs.current[index - 1]?.focus();
+      } else {
+        const newDigits = [...otpDigits];
+        newDigits[index] = "";
+        setOtpDigits(newDigits);
+      }
+    }
+  };
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
   const handleSendOtp = async () => {
@@ -108,19 +137,17 @@ export default function PartnerLogin() {
     const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
     if (!isEmail && !isMobile) return setErr(t('partner.errors.validEmailMobile', 'Please enter a valid email or 10-digit mobile number.'));
 
-    if (otpAttempts >= 3) return setErr(t('partner.errors.maxOtpAttempts', 'Maximum OTP attempts reached for this session. Please try again later.'));
-
     setErr("");
     setToast(null);
     setLoading(l => ({ ...l, otp: true }));
 
-    // ── Mobile OTP flow via MSG91 SendOTP Web SDK ──────────────────────────────────
+    // ── Mobile OTP flow via MSG91 Web SDK ──
     if (isMobile) {
       try {
         // 1. Verify user exists in database first
-        const lookupRes = await lookupUser(form.identity.trim());
+        const lookupRes = await lookupUser(form.identity.trim(), selectedRole);
         if (!lookupRes || !lookupRes.success || !lookupRes.data?.exists) {
-          throw new Error(t('partner.errors.userNotFound', 'User not found. Please register first.'));
+          throw new Error(t('partner.errors.userNotFound', 'User not found for the selected role.'));
         }
 
         // 2. Verify MSG91 sendOtp helper is ready
@@ -128,7 +155,6 @@ export default function PartnerLogin() {
           throw new Error("OTP service is loading. Please wait a moment and try again.");
         }
 
-        // 3. Safety timeout — if MSG91 never calls back, unblock the UI
         let callbackFired = false;
         const timeoutId = setTimeout(() => {
           if (!callbackFired) {
@@ -141,7 +167,6 @@ export default function PartnerLogin() {
 
         const formattedMobile = '91' + form.identity.trim();
         console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
-        console.time('MSG91_SendOTP');
 
         window.sendOtp(
           formattedMobile,
@@ -149,11 +174,8 @@ export default function PartnerLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
-            console.timeEnd('MSG91_SendOTP');
-            console.log('[MSG91] Success response:', data);
             setOtpSent(true);
             setOtpSentTime(Date.now());
-            setOtpAttempts(a => a + 1);
             setTimer(120);
             setToast({ message: t('partner.errors.otpSentSuccessMobile', 'Verification code sent to your mobile phone via SMS.'), type: "success" });
             setLoading(l => ({ ...l, otp: false }));
@@ -162,8 +184,6 @@ export default function PartnerLogin() {
             if (callbackFired) return;
             callbackFired = true;
             clearTimeout(timeoutId);
-            console.timeEnd('MSG91_SendOTP');
-            console.error('[MSG91] Failure response:', errResponse);
             setToast({ message: errResponse?.message || t('partner.errors.otpSendFailed', 'Failed to send OTP. Please try again.'), type: "error" });
             setLoading(l => ({ ...l, otp: false }));
           }
@@ -176,15 +196,12 @@ export default function PartnerLogin() {
       return;
     }
 
-    // ── Email OTP fallback via AWS SES ───────────────────────────────────────────
+    // ── Email OTP fallback via AWS SES ──
     try {
       console.log(`[Email OTP] Sending email OTP to: ${form.identity.trim()}`);
-      const otpRes = await sendOtp(form.identity.trim());
-      console.log('[Email OTP] Success response:', otpRes);
-      setResolvedCredentials({ maskedEmail: otpRes.email || '****@****.com' });
+      const otpRes = await sendOtp(form.identity.trim(), selectedRole);
       setOtpSent(true);
       setOtpSentTime(Date.now());
-      setOtpAttempts(a => a + 1);
       setTimer(30);
       setToast({ message: t('partner.errors.otpSentSuccess', 'OTP sent to your registered email') + ` (${otpRes.email || '****@****.com'})`, type: "success" });
     } catch (e) {
@@ -195,15 +212,16 @@ export default function PartnerLogin() {
     }
   };
 
-  // ── Submit Login Form ────────────────────────────────────────────────────────
+  // ── Submit Login ─────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setErr("");
     setToast(null);
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
 
     setLoading(l => ({ ...l, login: true }));
     try {
+      let loginRes;
       if (method === 'otp') {
         if (!otpSent) {
           setLoading(l => ({ ...l, login: false }));
@@ -220,13 +238,12 @@ export default function PartnerLogin() {
 
         const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
 
-        // ── Mobile OTP verification flow via MSG91 ─────────────────────────────────
+        // ── Mobile MSG91 verify flow ──
         if (isMobile) {
           if (typeof window.verifyOtp !== 'function') {
             throw new Error("MSG91 service is temporarily unavailable. Please refresh the page.");
           }
 
-          // Safety timeout — if MSG91 never calls back, unblock the UI
           let verifyDone = false;
           const verifyTimeout = setTimeout(() => {
             if (!verifyDone) {
@@ -248,13 +265,18 @@ export default function PartnerLogin() {
                   throw new Error("Could not retrieve verification token from MSG91.");
                 }
 
-                const loginRes = await loginWithMsg91(form.identity.trim(), tokenVal);
+                loginRes = await loginWithMsg91(form.identity.trim(), tokenVal, selectedRole);
                 const profile = await getMe(true);
-                login(profile, loginRes.idToken);
-                const role = profile.role?.toUpperCase();
-                if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-                else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
-                else navigate(location.state?.from?.pathname || '/partner/dashboard');
+                loginStore(profile, loginRes.idToken);
+                
+                if (loginRes.redirect) {
+                  navigate(location.state?.from?.pathname || loginRes.redirect);
+                } else {
+                  const role = profile.role?.toUpperCase();
+                  if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+                  else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+                  else navigate(location.state?.from?.pathname || '/partner/dashboard');
+                }
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
                 setLoading(l => ({ ...l, login: false }));
@@ -271,26 +293,26 @@ export default function PartnerLogin() {
           return;
         }
 
-        // ── Email OTP verification flow via AWS SES ───────────────────────────────
-        const loginRes = await loginWithOtp(form.identity.trim(), form.otp);
-        const profile = await getMe(true);
-        login(profile, loginRes.idToken);
-        const role = profile.role?.toUpperCase();
-        if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-        else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
-        else navigate(location.state?.from?.pathname || '/partner/dashboard');
+        // ── Email AWS SES verification flow ──
+        loginRes = await loginWithOtp(form.identity.trim(), form.otp, selectedRole);
       } else {
         // Password login
-        if (!form.password || form.password.length < 8) {
+        if (!form.password) {
           setLoading(l => ({ ...l, login: false }));
           return setErr('Please enter your password.');
         }
-        const loginRes = await loginWithPassword(form.identity.trim(), form.password);
-        const profile = await getMe(true);
-        login(profile, loginRes.idToken);
+        loginRes = await loginWithPassword(form.identity.trim(), form.password, selectedRole);
+      }
+
+      const profile = await getMe(true);
+      loginStore(profile, loginRes.idToken);
+      
+      if (loginRes.redirect) {
+        navigate(location.state?.from?.pathname || loginRes.redirect);
+      } else {
         const role = profile.role?.toUpperCase();
-        if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-        else if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+        else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       }
     } catch (e) {
@@ -299,254 +321,729 @@ export default function PartnerLogin() {
     }
   };
 
-  const inputStyle = { ...S.input };
-  const focusBorder = `1.5px solid ${C.teal}`;
+  const getRoleDisplayName = (r) => {
+    if (r === "PARTNER") return "Partner";
+    if (r === "ADMIN") return "Admin";
+    if (r === "SUPER_ADMIN") return "Super Admin";
+    return r;
+  };
+
+  const renderLoginProgress = () => {
+    const isStep1 = loginStep === 1;
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: "240px", width: "100%", margin: "0 auto 20px", position: "relative" }}>
+        {/* Connection Line */}
+        <div style={{
+          position: "absolute",
+          top: "16px",
+          left: "15%",
+          right: "15%",
+          height: "2px",
+          background: isStep1 ? "#E2E8F0" : "#2563EB",
+          zIndex: 1,
+          transition: "background 0.3s"
+        }} />
+        
+        {/* Step 1 Circle */}
+        <div style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "#2563EB",
+            color: "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            margin: "0 auto 4px",
+            boxShadow: isStep1 ? "0 0 10px rgba(37, 99, 235, 0.4)" : "none"
+          }}>
+            {isStep1 ? "1" : "✓"}
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "#2563EB" }}>Step 1</span>
+        </div>
+
+        {/* Step 2 Circle */}
+        <div style={{ zIndex: 2, textAlign: "center", width: "60px" }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: isStep1 ? "#FFFFFF" : "#2563EB",
+            border: isStep1 ? "2.5px solid #CBD5E1" : "none",
+            color: isStep1 ? "#64748B" : "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            fontSize: "13px",
+            margin: "0 auto 4px",
+            boxShadow: !isStep1 ? "0 0 10px rgba(37, 99, 235, 0.4)" : "none"
+          }}>
+            2
+          </div>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: isStep1 ? "#64748B" : "#2563EB" }}>Step 2</span>
+        </div>
+      </div>
+    );
+  };
+
+  const focusBorder = `1.5px solid #2563EB`;
 
   return (
     <div style={{
-      minHeight: "calc(100vh - 110px)",
+      height: "100vh",
+      height: "100dvh",
       background: C.bg,
+      color: C.text,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "20px",
+      position: "relative",
+      overflow: "hidden",
+      padding: "16px",
       boxSizing: "border-box",
-      transition: "background 0.3s",
+      fontFamily: "'Inter', sans-serif"
     }}>
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div style={{ width: "100%", maxWidth: "400px" }}>
-        {/* Back to Home */}
-        <div style={{ marginBottom: "16px", textAlign: "left" }}>
-          <button 
-            onClick={() => navigate('/')}
-            style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              gap: "6px", 
-              background: "none", 
-              border: "none", 
-              color: C.teal, 
-              cursor: "pointer", 
-              fontSize: "14px", 
-              fontWeight: 600,
-              padding: 0
-            }}
-          >
-            <Icons.arrowLeft size={14} /> {t('partner.backToHome', 'Back to Home')}
-          </button>
-        </div>
+      {/* Ambient background shapes */}
+      <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: "rgba(37, 99, 235, 0.04)", filter: "blur(80px)", top: "-120px", left: "-120px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "rgba(46, 144, 250, 0.05)", filter: "blur(80px)", bottom: "-80px", right: "-120px", pointerEvents: "none" }} />
 
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <div style={{ fontSize: "24px", fontWeight: 900, color: C.text, letterSpacing: "-0.5px" }}>{t('partner.partnerLogin', 'Partner Login')}</div>
-          <div style={{ fontSize: "14px", color: C.textLight, marginTop: "8px" }}>{t('partner.loginMethodDescription', 'Choose Login with OTP or Login with Password')}</div>
-        </div>
+      <div className="onboarding-container">
 
-        {/* Form Card */}
-        <div style={{ ...S.card, padding: "28px" }}>
-          {err && (
-            <div style={{
-              background: `${C.red}15`, border: `1px solid ${C.red}40`,
-              borderRadius: "10px", padding: "10px 14px", fontSize: "13px",
-              color: C.red, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px",
-            }}>
-              <Icons.x size={14} /> {err}
+        {/* ── STEP 1: Select Your Role ────────────────────────────────────────── */}
+        {loginStep === 1 && (
+          <div className="login-step1-layout">
+            
+            {/* Top Logo & Title */}
+            <div style={{ textAlign: "center", flexShrink: 0 }}>
+              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "40px", objectFit: "contain", marginBottom: "16px" }} />
+              
+              {renderLoginProgress()}
+
+              <h1 style={{ fontSize: "26px", fontWeight: 900, margin: 0, color: C.text }}>Welcome Back!</h1>
+              <p style={{ fontSize: "13px", color: C.textLight || "#64748B", marginTop: "4px", margin: 0 }}>
+                Login securely to continue your journey
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Login Method Tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button type="button" onClick={() => setMethod('otp')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'otp' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'otp' ? C.inputBg : 'transparent' }}>{t('partner.loginWithOtp', 'Login with OTP')}</button>
-              <button type="button" onClick={() => setMethod('password')} style={{ flex: 1, padding: 8, borderRadius: 8, border: method === 'password' ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`, background: method === 'password' ? C.inputBg : 'transparent' }}>{t('partner.loginWithPassword', 'Login with Password')}</button>
+            {/* Role cards container */}
+            <div className="role-cards-container">
+              {[
+                {
+                  id: "PARTNER",
+                  title: "Partner",
+                  desc: "Earn by helping customers with financial products.",
+                  icon: "👨💼",
+                  color: "#EFF6FF",
+                  iconColor: "#2563EB"
+                },
+                {
+                  id: "ADMIN",
+                  title: "Admin",
+                  desc: "Manage operations and oversee team activities.",
+                  icon: "👨💻",
+                  color: "#ECFDF5",
+                  iconColor: "#10B981"
+                },
+                {
+                  id: "SUPER_ADMIN",
+                  title: "Super Admin",
+                  desc: "Full access to platform administration.",
+                  icon: "👑",
+                  color: "#F5F3FF",
+                  iconColor: "#8B5CF6"
+                }
+              ].map((roleItem) => {
+                const isSelected = selectedRole === roleItem.id;
+                return (
+                  <div
+                    key={roleItem.id}
+                    onClick={() => handleRoleSelect(roleItem.id)}
+                    className="role-card"
+                    style={{
+                      border: isSelected ? "2.5px solid #2563EB" : `1.5px solid ${C.border}`,
+                      boxShadow: isSelected ? "0 8px 24px rgba(37, 99, 235, 0.15)" : "none",
+                      transform: isSelected ? "translateY(-2px)" : "translateY(0)"
+                    }}
+                  >
+                    {/* Role Icon Circle */}
+                    <div style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      background: roleItem.color,
+                      fontSize: "22px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0
+                    }}>
+                      {roleItem.icon}
+                    </div>
+
+                    {/* Text Details */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: C.text }}>{roleItem.title}</div>
+                      <div style={{ fontSize: "11.5px", color: C.textMid || "#64748B", marginTop: "3px", lineHeight: 1.4 }}>{roleItem.desc}</div>
+                    </div>
+
+                    {/* Custom Checked Radio input */}
+                    <div style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      border: isSelected ? "5px solid #2563EB" : `2px solid ${C.border}`,
+                      background: isSelected ? "#FFFFFF" : "transparent",
+                      boxSizing: "border-box",
+                      transition: "all 0.2s ease",
+                      flexShrink: 0,
+                      marginTop: "auto"
+                    }} />
+                  </div>
+                );
+              })}
             </div>
-            {/* Email or Mobile */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={S.label}>{t('partner.emailOrMobile', 'Email or Mobile Number')}</label>
-              <div style={{ position: "relative" }}>
-                <div style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textSecondary }}>
-                  <Icons.User size={18} />
+
+            {/* Bottom Section */}
+            <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px", marginTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12px", color: C.textLight }}>
+                <span>🛡️</span>
+                <span>Your data is 100% secure with us</span>
+              </div>
+              <button
+                onClick={() => setLoginStep(2)}
+                style={{
+                  background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "16px",
+                  padding: "14px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  width: "100%",
+                  cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(37, 99, 235, 0.35)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                Continue <Icons.arrowRight size={16} />
+              </button>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── STEP 2: Login Credentials Form ──────────────────────────────────── */}
+        {loginStep === 2 && (
+          <div className="login-step2-layout">
+            
+            {/* Left side panel (hidden on mobile, beautiful secure info on desktop) */}
+            <div className="login-step2-left">
+              <div style={{
+                background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(46, 144, 250, 0.08))",
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "24px",
+                padding: "32px 24px",
+                height: "100%",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                textAlign: "left"
+              }}>
+                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start" }} />
+                
+                <div>
+                  <div style={{ fontSize: "56px", marginBottom: "16px" }}>🔒</div>
+                  <h2 style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>Secure Gateway</h2>
+                  <p style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
+                    Please enter your registered credentials or verify via OTP to access your secure dashboard.
+                  </p>
                 </div>
-                <input
-                  style={{ ...inputStyle, paddingLeft: "42px" }}
-                  placeholder={t('partner.enterEmailOrMobile', 'Enter email or mobile number')}
-                  value={form.identity}
-                  onChange={e => setForm({ ...form, identity: e.target.value })}
-                  onFocus={e => e.target.style.border = focusBorder}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
+
+                <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
+                  256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT
+                </div>
               </div>
             </div>
 
-              {/* Password Input */}
-              {method === 'password' && (
-                <div style={{ marginBottom: "14px" }}>
-                  <label style={S.label}>{t('partner.password', 'Password')}</label>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      style={{ ...inputStyle, paddingRight: "44px" }}
-                      placeholder={t('partner.enterPassword', 'Enter your password')}
-                      type={showPassword ? "text" : "password"}
-                      value={form.password}
-                      onChange={e => setForm({ ...form, password: e.target.value })}
-                      onFocus={e => e.target.style.border = focusBorder}
-                      onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      title={showPassword ? "Encrypt (Hide)" : "Decrypt (Show)"}
-                      style={{
-                        position: "absolute",
-                        right: "12px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        background: "none",
-                        border: "none",
-                        padding: "4px",
-                        cursor: "pointer",
-                        color: C.textSecondary,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {showPassword ? <Icons.eyeOff size={18} /> : <Icons.eye size={18} />}
-                    </button>
-                  </div>
-                  <div style={{ textAlign: 'right', marginTop: 8 }}>
-                    <button type="button" onClick={async () => {
-                      const email = form.identity.trim() || window.prompt('Please enter your registered email to receive reset link:');
-                      if (!email) return;
-                      try {
-                        await forgotPassword(email);
-                        setToast({ message: 'If an account exists, a reset link has been sent to the email.', type: 'success' });
-                      } catch (err) {
-                        setToast({ message: err.message || 'Failed to request password reset', type: 'error' });
-                      }
-                    }} style={{ background: 'none', border: 'none', color: C.teal, cursor: 'pointer' }}>{t('partner.forgotPassword', 'Forgot Password?')}</button>
-                  </div>
-                </div>
-              )}
+            {/* Right side login form */}
+            <div className="login-step2-right">
+              {/* Top back & logo */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexShrink: 0 }} className="login-step2-header">
+                <button 
+                  onClick={() => { setLoginStep(1); setErr(""); }} 
+                  style={{ background: "transparent", border: "none", color: C.textMid, cursor: "pointer", padding: "4px 0", display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Icons.arrowLeft size={16} />
+                </button>
+                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
+              </div>
 
-            {/* OTP Verification Input (only for OTP method) */}
-            {method === 'otp' && (
-            <div style={{ marginBottom: "20px" }}>
-              <label style={S.label}>{t('partner.enterOtp', 'Enter 6-Digit OTP')}</label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                  <input
-                  style={{
-                    ...inputStyle,
-                    flex: 1,
-                    textAlign: "center",
-                    letterSpacing: "4px",
-                    fontWeight: 700,
-                    background: otpSent ? C.inputBg : C.bg,
-                    color: otpSent ? C.text : C.textLight,
-                    cursor: otpSent ? "text" : "not-allowed",
-                    opacity: otpSent ? 1 : 0.55,
-                    border: `1.5px solid ${C.border}`,
-                  }}
-                  placeholder="••••••"
-                  maxLength={6}
-                  disabled={!otpSent}
-                  value={form.otp}
-                  onChange={e => setForm({ ...form, otp: e.target.value.replace(/\D/g, "") })}
-                  onFocus={e => { if (otpSent) e.target.style.border = focusBorder; }}
-                  onBlur={e => e.target.style.border = `1.5px solid ${C.border}`}
-                />
+              {/* Progress bar in Step 2 */}
+              <div className="login-step2-progress-wrapper" style={{ flexShrink: 0 }}>
+                {renderLoginProgress()}
+              </div>
+
+              {/* Role badge */}
+              <div style={{ display: "flex", justifyContent: "center", margin: "4px 0 8px", flexShrink: 0 }}>
+                <div style={{
+                  background: isDark ? "rgba(37, 99, 235, 0.12)" : "#EFF6FF",
+                  border: `1.5px solid ${isDark ? "#2563EB" : "#DBEAFE"}`,
+                  borderRadius: "12px",
+                  padding: "6px 14px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "12.5px",
+                  fontWeight: 700,
+                  color: "#2563EB"
+                }}>
+                  <span>👤 Logging in as <strong>{getRoleDisplayName(selectedRole)}</strong></span>
+                  <span 
+                    onClick={() => { setLoginStep(1); setErr(""); }}
+                    style={{ color: "#E02424", cursor: "pointer", textDecoration: "underline", fontSize: "11px", fontWeight: 800 }}
+                  >
+                    Change
+                  </span>
+                </div>
+              </div>
+
+              {/* Main credentials card container */}
+              <div style={{
+                background: C.card,
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "24px",
+                padding: "20px",
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04)",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                overflow: "hidden",
+                margin: "4px 0"
+              }}>
+                
+                <h2 style={{ fontSize: "18px", fontWeight: 900, margin: "0 0 3px 0", color: C.text, textAlign: "center" }}>Login to Your Account</h2>
+                <p style={{ fontSize: "11px", color: C.textLight || "#64748B", margin: "0 0 12px 0", textAlign: "center" }}>
+                  Choose your preferred login method
+                </p>
+
+                {/* Segmented Login method toggle */}
+                <div style={{
+                  background: isDark ? "rgba(255,255,255,0.03)" : "#F1F5F9",
+                  borderRadius: "12px",
+                  padding: "4px",
+                  display: "flex",
+                  gap: "4px",
+                  marginBottom: "12px",
+                  flexShrink: 0
+                }}>
+                  <button
+                    onClick={() => { setMethod("otp"); setErr(""); }}
+                    style={{
+                      flex: 1,
+                      background: method === "otp" ? "linear-gradient(135deg, #2563EB, #1D4ED8)" : "transparent",
+                      color: method === "otp" ? "#FFFFFF" : C.textMid,
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    Login with OTP
+                  </button>
+                  <button
+                    onClick={() => { setMethod("password"); setErr(""); }}
+                    style={{
+                      flex: 1,
+                      background: method === "password" ? "linear-gradient(135deg, #2563EB, #1D4ED8)" : "transparent",
+                      color: method === "password" ? "#FFFFFF" : C.textMid,
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    Login with Password
+                  </button>
+                </div>
+
+                {/* Error messages box */}
+                {err && (
+                  <div style={{
+                    background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
+                    borderRadius: "10px", padding: "8px 12px",
+                    fontSize: "12px", color: C.red,
+                    marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px",
+                    textAlign: "left"
+                  }}>
+                    <Icons.x size={12} /> {err}
+                  </div>
+                )}
+
+                {/* Inputs Form */}
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
+                  
+                  {/* Username Input */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>Email or Mobile Number</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>
+                        {/^[6-9]\d{9}$/.test(form.identity.trim()) ? <Icons.phone size={14} /> : <Icons.mail size={14} />}
+                      </span>
+                      <input
+                        type="text"
+                        value={form.identity}
+                        onChange={e => setForm(f => ({ ...f, identity: e.target.value }))}
+                        placeholder="Enter email or mobile number"
+                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
+                        onFocus={e => (e.target.style.border = focusBorder)}
+                        onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                        disabled={otpSent}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ── OTP Fields Render ── */}
+                  {method === "otp" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={S.label}>Enter 6-Digit OTP</label>
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        
+                        {/* 6 OTP Inputs */}
+                        <div style={{ display: "flex", gap: "4px", flex: 1 }}>
+                          {otpDigits.map((digit, i) => (
+                            <input
+                              key={i}
+                              ref={el => otpInputs.current[i] = el}
+                              type="text"
+                              maxLength={1}
+                              value={digit}
+                              onChange={e => handleOtpDigitChange(e.target.value, i)}
+                              onKeyDown={e => handleOtpKeyDown(e, i)}
+                              style={{
+                                width: "100%",
+                                height: "36px",
+                                borderRadius: "8px",
+                                border: `1.5px solid ${otpDigits[i] ? "#2563EB" : C.border}`,
+                                background: C.inputBg,
+                                color: C.text,
+                                fontSize: "15px",
+                                fontWeight: 800,
+                                textAlign: "center",
+                                outline: "none"
+                              }}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Send OTP button */}
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={loading.otp || (otpSent && timer > 0)}
+                          style={{
+                            background: otpSent ? "rgba(37, 99, 235, 0.08)" : "#2563EB",
+                            color: otpSent ? "#2563EB" : "#FFFFFF",
+                            border: otpSent ? "1px solid #2563EB" : "none",
+                            borderRadius: "10px",
+                            padding: "0 12px",
+                            height: "36px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: (loading.otp || (otpSent && timer > 0)) ? "not-allowed" : "pointer",
+                            opacity: (loading.otp || (otpSent && timer > 0)) ? 0.7 : 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          {loading.otp ? "Sending..." : otpSent ? (timer > 0 ? `Resend (${timer}s)` : "Resend") : "Send OTP"}
+                        </button>
+                      </div>
+
+                      <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
+                        We'll send a secure verification code to your registered mobile/email.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Password Field Render ── */}
+                  {method === "password" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      <label style={S.label}>Password</label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.Lock size={14} /></span>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={form.password}
+                          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                          placeholder="Enter password"
+                          style={{ ...S.input, paddingLeft: "36px", paddingRight: "36px", paddingVertical: "10px" }}
+                          onFocus={e => (e.target.style.border = focusBorder)}
+                          onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                        />
+                        <span
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, cursor: "pointer", display: "flex" }}
+                        >
+                          {showPassword ? <Icons.eyeOff size={14} /> : <Icons.eye size={14} />}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remember & Links Row */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <input type="checkbox" id="rememberMe" style={{ cursor: "pointer" }} />
+                      <label htmlFor="rememberMe" style={{ color: C.textMid, cursor: "pointer" }}>Remember me</label>
+                    </div>
+                    {method === "otp" ? (
+                      <span style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}>Forgot Mobile Number?</span>
+                    ) : (
+                      <span 
+                        onClick={() => navigate("/reset-password")}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Forgot Password?
+                      </span>
+                    )}
+                  </div>
+
+                  {/* MSG91 reCAPTCHA mount container */}
+                  {method === "otp" && <div id={captchaId} style={{ display: "flex", justifyContent: "center", minHeight: "40px", marginTop: "4px" }} />}
+
+                  {/* Primary Secure Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading.login}
+                    style={{
+                      background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "14px",
+                      padding: "12px 16px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      width: "100%",
+                      cursor: loading.login ? "not-allowed" : "pointer",
+                      opacity: loading.login ? 0.8 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      marginTop: "8px",
+                      boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
+                    }}
+                  >
+                    {loading.login ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{
+                          width: "12px", height: "12px", borderRadius: "50%",
+                          border: "2px solid rgba(255,255,255,0.4)",
+                          borderTop: "2px solid #fff",
+                          animation: "spin 0.7s linear infinite"
+                        }} />
+                        Verifying...
+                      </span>
+                    ) : (
+                      <>
+                        <span>🔒</span>
+                        <span>Secure Login</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Divider OR */}
+                <div style={{ display: "flex", alignItems: "center", margin: "10px 0", flexShrink: 0 }}>
+                  <div style={{ flex: 1, height: "1px", background: C.border }} />
+                  <span style={{ fontSize: "10px", fontWeight: 800, color: C.textLight, padding: "0 10px" }}>OR</span>
+                  <div style={{ flex: 1, height: "1px", background: C.border }} />
+                </div>
+
+                {/* Google Login Mock button */}
                 <button
                   type="button"
-                  onClick={handleSendOtp}
-                  disabled={timer > 0 || loading.otp || !isCaptchaVerified}
+                  onClick={() => setToast({ message: "Google OAuth is coming soon!", type: "info" })}
                   style={{
-                    ...S.btn("sm"),
-                    whiteSpace: "nowrap",
-                    width: "110px",
-                    padding: "0 10px",
-                    opacity: (timer > 0 || loading.otp || !isCaptchaVerified) ? 0.6 : 1,
-                    cursor: (timer > 0 || loading.otp || !isCaptchaVerified) ? "not-allowed" : "pointer",
+                    background: C.card,
+                    color: C.textMid,
+                    border: `1.5px solid ${C.border}`,
+                    borderRadius: "14px",
+                    padding: "10px 16px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    width: "100%",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    flexShrink: 0
                   }}
                 >
-                  {loading.otp ? t('partner.sending', 'Sending…') : timer > 0 ? `${timer}s` : t('partner.sendOtp', 'Send OTP')}
+                  <svg width="16" height="16" viewBox="0 0 24 24">
+                    <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.478 0-6.3-2.822-6.3-6.3s2.822-6.3 6.3-6.3c1.63 0 3.11.62 4.23 1.63l3.29-3.29C19.24 2.24 15.93 1 12.24 1 6.032 1 12.24s5.032 11.24 11.24 11.24c5.898 0 10.745-4.26 11.24-10.285v-2.91H12.24z"/>
+                  </svg>
+                  <span>Continue with Google</span>
                 </button>
+
               </div>
-              {!isCaptchaVerified && (
-                <div style={{ color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "6px", fontWeight: 500 }}>
-                  Please complete the security verification to enable OTP.
+
+              {/* Bottom Action / Footer */}
+              <div style={{ flexShrink: 0, marginTop: "8px" }}>
+                <div style={{ textAlign: "center", fontSize: "12.5px", color: C.textLight }}>
+                  Don't have an account?{" "}
+                  <span 
+                    onClick={() => navigate("/register")} 
+                    style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    Become a Partner →
+                  </span>
                 </div>
-              )}
+
+                {/* SSL Trusted Footer */}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: C.textLight, marginTop: "14px", borderTop: `1px solid ${C.border}`, paddingTop: "8px" }}>
+                  <span>🔒 256-bit SSL Secure</span>
+                  <span>Trusted by 10,000+ Partners</span>
+                </div>
+              </div>
             </div>
-            )}
 
-        
-            {/* reCAPTCHA container */}
-            <div
-              id={captchaId}
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "80px",
-                marginTop: "15px",
-                marginBottom: "5px",
-              }}
-            ></div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading.login}
-              style={{
-                ...S.btn("primary"),
-                width: "100%",
-                padding: "13px 0",
-                fontSize: "14px",
-                borderRadius: "10px",
-                marginTop: "4px",
-                opacity: loading.login ? 0.8 : 1,
-              }}
-            >
-              {loading.login ? (
-                <span style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center" }}>
-                  <span style={{
-                    width: "14px", height: "14px", borderRadius: "50%",
-                    border: "2px solid rgba(255,255,255,0.4)",
-                    borderTop: "2px solid #fff",
-                    animation: "spin 0.7s linear infinite",
-                    display: "inline-block",
-                  }} />
-                  {t('partner.verifying', 'Verifying…')}
-                </span>
-              ) : t('partner.secureLogIn', 'Secure Log In')}
-            </button>
-          </form>
-
-          <div style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.textLight }}>
-            {t('partner.newPartner', 'New GharKaPaisa Partner?')}{" "}
-            <span
-              onClick={() => navigate('/register')}
-              style={{ color: C.tealDim, cursor: "pointer", fontWeight: 700 }}
-            >
-              {t('partner.register', 'Register')}
-            </span>
           </div>
+        )}
 
-        </div>
       </div>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes toastSlideIn {
-          from { opacity: 0; transform: translateX(100px); }
-          to   { opacity: 1; transform: translateX(0); }
+        @keyframes slideIn {
+          from { transform: translateY(-20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .onboarding-container {
+          max-width: 420px;
+          width: 100%;
+          height: 100%;
+          max-height: 660px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          position: relative;
+          z-index: 1;
+          transition: all 0.3s ease;
+        }
+        
+        .login-step1-layout {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          justify-content: space-between;
+        }
+        
+        .role-cards-container {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          flex: 1;
+          justify-content: center;
+        }
+        
+        .role-card {
+          background: ${C.card};
+          border: 1.5px solid ${C.border};
+          border-radius: 20px;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .login-step2-layout {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          justify-content: space-between;
+        }
+        
+        .login-step2-left {
+          display: none;
+        }
+        
+        .login-step2-right {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          height: 100%;
+        }
+        
+        @media (min-width: 992px) {
+          .onboarding-container {
+            max-width: 860px;
+            max-height: 560px;
+          }
+          
+          /* Step 1 horizontal cards layout */
+          .role-cards-container {
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
+          }
+          
+          .role-card {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 24px 16px;
+            height: 220px;
+            justify-content: space-between;
+          }
+          
+          /* Step 2 side-by-side layout */
+          .login-step2-layout {
+            flex-direction: row;
+            gap: 32px;
+            align-items: center;
+            height: 100%;
+          }
+          
+          .login-step2-left {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+          }
+          
+          .login-step2-right {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+          }
         }
       `}</style>
     </div>

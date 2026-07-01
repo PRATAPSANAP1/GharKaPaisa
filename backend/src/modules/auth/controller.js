@@ -98,10 +98,17 @@ const lookupUser = async (req, res, next) => {
     const identity = normalizeIdentity(req.body.identity);
     if (!identity) return error(res, 'Identity required', 400);
 
-    const { rows: [user] } = await query(
-      `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
-      [identity, identity]
-    );
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
+    let userQuery = `SELECT id FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
+    let queryParams = [identity, identity];
+    if (reqRole) {
+      userQuery += ` AND role = $3`;
+      queryParams.push(reqRole);
+    }
+
+    const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) {
       return res.json({ success: true, exists: false, data: { exists: false } });
@@ -134,11 +141,17 @@ const sendOtp = async (req, res, next) => {
     const identity = normalizeIdentity(req.body.identity);
     if (!identity) return error(res, 'Email or mobile number required', 400);
 
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
     // Look up the user to get their email address
-    const { rows: [user] } = await query(
-      `SELECT email, mobile, email_verified FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
-      [identity, identity]
-    );
+    let userQuery = `SELECT email, mobile, email_verified FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
+    let queryParams = [identity, identity];
+    if (reqRole) {
+      userQuery += ` AND role = $3`;
+      queryParams.push(reqRole);
+    }
+    const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user || !user.email) {
       return error(res, 'No account found with this email or mobile number', 404);
@@ -293,10 +306,16 @@ const login = async (req, res, next) => {
     if (!identity) return error(res, 'Identity is required', 400);
     if (!otp) return error(res, 'OTP is required. Please request an OTP first.', 400);
 
-    const { rows: [user] } = await query(
-      `SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
-      [identity, identity]
-    );
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
+    let userQuery = `SELECT * FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
+    let queryParams = [identity, identity];
+    if (reqRole) {
+      userQuery += ` AND role = $3`;
+      queryParams.push(reqRole);
+    }
+    const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) return error(res, 'No account found with this email or mobile', 401);
 
@@ -343,8 +362,12 @@ const login = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+                        user.role === 'ADMIN' ? '/admin/dashboard' :
+                        '/partner/dashboard';
+
     setRefreshTokenCookie(res, refreshToken);
-    return res.json({ success: true, token, refreshToken });
+    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -360,10 +383,16 @@ const loginWithMsg91 = async (req, res, next) => {
     if (!mobile) return error(res, 'A valid 10-digit Indian mobile number is required', 400);
     if (!accessToken) return error(res, 'MSG91 verification token is required', 400);
 
-    const { rows: [user] } = await query(
-      `SELECT * FROM users WHERE mobile = $1`,
-      [mobile]
-    );
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
+    let userQuery = `SELECT * FROM users WHERE mobile = $1`;
+    let queryParams = [mobile];
+    if (reqRole) {
+      userQuery += ` AND role = $2`;
+      queryParams.push(reqRole);
+    }
+    const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) return error(res, 'No account found with this mobile number', 401);
     if (user.status !== 'active') {
@@ -402,9 +431,13 @@ const loginWithMsg91 = async (req, res, next) => {
     );
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+                        user.role === 'ADMIN' ? '/admin/dashboard' :
+                        '/partner/dashboard';
+
     setRefreshTokenCookie(res, refreshToken);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
-    return res.json({ success: true, token, refreshToken });
+    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -603,10 +636,16 @@ const loginPassword = async (req, res, next) => {
     const { identity, password } = req.body;
     if (!identity || !password) return error(res, 'Identity and password required', 400);
 
-    const { rows: [user] } = await query(
-      `SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
-      [identity, identity]
-    );
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
+    let userQuery = `SELECT * FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
+    let queryParams = [identity, identity];
+    if (reqRole) {
+      userQuery += ` AND role = $3`;
+      queryParams.push(reqRole);
+    }
+    const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) return error(res, 'No account found with this email or mobile', 401);
 
@@ -641,8 +680,12 @@ const loginPassword = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+                        user.role === 'ADMIN' ? '/admin/dashboard' :
+                        '/partner/dashboard';
+
     setRefreshTokenCookie(res, refreshToken);
-    return res.json({ success: true, token, refreshToken });
+    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
