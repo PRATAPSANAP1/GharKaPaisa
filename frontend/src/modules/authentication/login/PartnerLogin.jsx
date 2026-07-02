@@ -270,19 +270,13 @@ export default function PartnerLogin() {
                 loginRes = await loginWithMsg91(form.identity.trim(), tokenVal, selectedRole);
                 const profile = await getMe(true);
                 loginStore(profile, loginRes.idToken);
-                
-                if (loginRes.redirect) {
-                  if (loginRes.redirect.startsWith('http')) {
-                    window.location.href = loginRes.redirect;
-                  } else {
-                    navigate(location.state?.from?.pathname || loginRes.redirect);
-                  }
-                } else {
-                  const role = profile.role?.toUpperCase();
-                  if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
-                  else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-                  else navigate(location.state?.from?.pathname || '/partner/dashboard');
-                }
+
+                const from = location.state?.from?.pathname;
+                const role = profile.role?.toUpperCase();
+                const dest = from || loginRes.redirect ||
+                  (role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+                   role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
+                window.location.href = dest;
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
                 setLoading(l => ({ ...l, login: false }));
