@@ -1182,7 +1182,21 @@ export default function PartnerRegister() {
                         <input
                           style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.mobileOtp}
-                          onChange={e => setForm(f => ({ ...f, mobileOtp: e.target.value.replace(/\D/g, '') }))}
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          pattern="[0-9]*"
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setForm(f => ({ ...f, mobileOtp: val }));
+                            if (val.length === 6) setTimeout(() => handleVerifyMobileOtp(), 0);
+                          }}
+                          onPaste={e => {
+                            e.preventDefault();
+                            const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                            if (!pasted) return;
+                            setForm(f => ({ ...f, mobileOtp: pasted }));
+                            if (pasted.length === 6) setTimeout(() => handleVerifyMobileOtp(), 0);
+                          }}
                           placeholder={t("onboarding.enterSmsOtp", "Enter 6-digit SMS OTP")}
                           maxLength={6}
                         />
@@ -1251,7 +1265,21 @@ export default function PartnerRegister() {
                         <input
                           style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
                           value={form.emailOtp}
-                          onChange={e => setForm(f => ({ ...f, emailOtp: e.target.value.replace(/\D/g, '') }))}
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          pattern="[0-9]*"
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setForm(f => ({ ...f, emailOtp: val }));
+                            if (val.length === 6) setTimeout(() => handleVerifyRegistrationOtp(), 0);
+                          }}
+                          onPaste={e => {
+                            e.preventDefault();
+                            const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                            if (!pasted) return;
+                            setForm(f => ({ ...f, emailOtp: pasted }));
+                            if (pasted.length === 6) setTimeout(() => handleVerifyRegistrationOtp(), 0);
+                          }}
                           placeholder={t("onboarding.enterEmailOtp", "Enter 6-digit Email OTP")}
                           maxLength={6}
                         />

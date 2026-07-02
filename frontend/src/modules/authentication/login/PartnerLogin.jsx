@@ -73,6 +73,7 @@ export default function PartnerLogin() {
   // Refs for 6 OTP input boxes
   const otpInputs = useRef([]);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const verifyingRef = useRef(false);
 
   // Reset OTP state when username/identity changes
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function PartnerLogin() {
     setOtpSentTime(null);
     setOtpDigits(["", "", "", "", "", ""]);
     setForm(f => ({ ...f, otp: "" }));
+    verifyingRef.current = false;
   }, [form.identity]);
 
   useEffect(() => {
@@ -94,6 +96,30 @@ export default function PartnerLogin() {
     setForm(f => ({ ...f, otp: otpDigits.join("") }));
   }, [otpDigits]);
 
+  // Auto-submit when all 6 digits are filled
+  useEffect(() => {
+    const code = otpDigits.join("");
+    if (code.length === 6 && otpSent && method === "otp" && !loading.login) {
+      handleSubmit();
+    }
+  }, [otpDigits]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Web OTP API — auto-fill from SMS on Android Chrome
+  useEffect(() => {
+    if (!otpSent || !('OTPCredential' in window)) return;
+    const ac = new AbortController();
+    navigator.credentials.get({ otp: { transport: ['sms'] }, signal: ac.signal })
+      .then(credential => {
+        if (credential?.code) {
+          const digits = credential.code.replace(/\D/g, '').slice(0, 6).split('');
+          const filled = [...digits, ...Array(6 - digits.length).fill('')];
+          setOtpDigits(filled);
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [otpSent]);
+
   const handleRoleSelect = (roleName) => {
     setSelectedRole(roleName);
     localStorage.setItem("gkp_last_role", roleName);
@@ -104,10 +130,7 @@ export default function PartnerLogin() {
     const newDigits = [...otpDigits];
     newDigits[index] = cleanVal;
     setOtpDigits(newDigits);
-
-    if (cleanVal && index < 5) {
-      otpInputs.current[index + 1]?.focus();
-    }
+    if (cleanVal && index < 5) otpInputs.current[index + 1]?.focus();
   };
 
   const handleOtpKeyDown = (e, index) => {
@@ -123,6 +146,16 @@ export default function PartnerLogin() {
         setOtpDigits(newDigits);
       }
     }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const newDigits = ["", "", "", "", "", ""];
+    pasted.split("").forEach((d, i) => { newDigits[i] = d; });
+    setOtpDigits(newDigits);
+    otpInputs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
@@ -217,9 +250,14 @@ export default function PartnerLogin() {
   // ── Submit Login ─────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setErr("");
     setToast(null);
-    if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
+    if (!form.identity.trim()) {
+      verifyingRef.current = false;
+      return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
+    }
 
     setLoading(l => ({ ...l, login: true }));
     try {
@@ -320,8 +358,13 @@ export default function PartnerLogin() {
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       }
     } catch (e) {
+      // On failure: clear OTP boxes and refocus first input
+      setOtpDigits(["", "", "", "", "", ""]);
+      setTimeout(() => otpInputs.current[0]?.focus(), 50);
       setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
       setLoading(l => ({ ...l, login: false }));
+    } finally {
+      verifyingRef.current = false;
     }
   };
 
@@ -853,15 +896,19 @@ export default function PartnerLogin() {
                               key={i}
                               ref={el => otpInputs.current[i] = el}
                               type="text"
+                              inputMode="numeric"
+                              autoComplete={i === 0 ? "one-time-code" : "off"}
+                              pattern="[0-9]*"
                               maxLength={1}
                               value={digit}
                               onChange={e => handleOtpDigitChange(e.target.value, i)}
                               onKeyDown={e => handleOtpKeyDown(e, i)}
+                              onPaste={i === 0 ? handleOtpPaste : undefined}
                               style={{
                                 width: "100%",
                                 height: "36px",
                                 borderRadius: "8px",
-                                border: `1.5px solid ${otpDigits[i] ? "#2563EB" : C.border}`,
+                                border: `1.5px solid ${digit ? "#2563EB" : C.border}`,
                                 background: C.inputBg,
                                 color: C.text,
                                 fontSize: "15px",
