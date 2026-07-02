@@ -544,7 +544,7 @@ const register = async (req, res, next) => {
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, 'pending', $7, $5, $6) RETURNING id`,
+         VALUES ($1, $2, $3, $4, CASE WHEN $7 THEN 'active' ELSE 'pending' END, $7, $5, $6) RETURNING id`,
         [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
 
