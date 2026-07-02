@@ -1,14 +1,21 @@
 
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { query, getClient } = require('../../config/database');
 const { generatePartnerCode } = require('../../utils/helpers/helpers');
 const { success, created, error } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../../services/email/email.service.js');
-const { encrypt } = require('../../utils/helpers/crypto');
+const { encrypt, decrypt } = require('../../utils/helpers/crypto');
 const { JWT_SECRET, OTP_PEPPER } = require('../../config/jwt.js');
 const { normalizeIndianMobile, verifyAccessToken, sendSmsOtp } = require('../../services/otp/msg91.service.js');
+
+const maskEmail = (email) => {
+  const at = email.indexOf('@');
+  if (at <= 1) return email;
+  return email[0] + '*'.repeat(Math.min(at - 1, 6)) + email.slice(at);
+};
 
 const normalizeIdentity = (value) => {
   const identity = String(value || '').trim();
@@ -74,7 +81,6 @@ const getMe = async (req, res, next) => {
     if (!user) return error(res, 'User not found', 404);
 
     if (user.account_number) {
-      const { decrypt } = require('../../utils/helpers/crypto');
       const decrypted = decrypt(user.account_number);
       user.account_number_last4 = decrypted.slice(-4);
       user.account_number = 'XXXX' + decrypted.slice(-4);
@@ -196,14 +202,14 @@ const sendOtp = async (req, res, next) => {
       } else {
         await sendOtpEmail(emailIdentity, otp);
         logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
-        targetMasked = emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+        targetMasked = maskEmail(emailIdentity);
       }
     } catch (sendErr) {
       logger.error(`[OTP] Failed to send OTP to ${identity}: ${sendErr.message}`);
       // In development, log the OTP so developers can still test and return success
       if (process.env.NODE_ENV !== 'production') {
         logger.info(`[OTP-DEV] OTP for ${identity}: ${otp}`);
-        targetMasked = isMobileInput ? '******' + (user.mobile || '').slice(-4) : emailIdentity.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+        targetMasked = isMobileInput ? '******' + (user.mobile || '').slice(-4) : maskEmail(emailIdentity);
         return res.json({
           success: true,
           message: `[DEV ONLY] OTP logged. OTP sent to ${targetMasked}`,
@@ -260,14 +266,14 @@ const sendRegistrationOtp = async (req, res, next) => {
       logger.error(`[Registration-OTP] Failed to send OTP to ${email}: ${err.message}`);
       if (process.env.NODE_ENV !== 'production') {
         logger.info(`[Registration-OTP-DEV] OTP for ${email}: ${otp}`);
-        const masked = email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+        const masked = maskEmail(email);
         return res.json({ success: true, message: `[DEV ONLY] OTP logged. OTP sent to ${masked}`, email: masked });
       }
       await query(`DELETE FROM otp_verifications WHERE identity = $1`, [email]);
       return error(res, 'Failed to send OTP. Please try again later.', 500);
     }
 
-    const masked = email.replace(/^(.{1})(.*)(@.*)$/, (_, first, middle, domain) => first + '*'.repeat(Math.min(middle.length, 6)) + domain);
+    const masked = maskEmail(email);
     return res.json({ success: true, message: `OTP sent to ${masked}`, email: masked });
   } catch (err) {
     next(err);
@@ -524,7 +530,6 @@ const register = async (req, res, next) => {
       // Hash password if provided (for backward compat); otherwise set null
       let passwordHash = null;
       if (password) {
-        const bcrypt = require('bcrypt');
         const salt = await bcrypt.genSalt(10);
         passwordHash = await bcrypt.hash(password, salt);
       }
@@ -651,7 +656,6 @@ const loginPassword = async (req, res, next) => {
 
     if (!user) return error(res, 'No account found with this email or mobile', 401);
 
-    const bcrypt = require('bcryptjs');
     if (!user.password_hash) return error(res, 'Password login not enabled for this account', 401);
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -740,7 +744,6 @@ const resetPassword = async (req, res, next) => {
       return error(res, 'Reset token has expired', 400);
     }
 
-    const bcrypt = require('bcryptjs');
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
@@ -797,7 +800,7 @@ const verifyEmail = async (req, res, next) => {
 const resendVerificationEmail = async (req, res, next) => {
   try {
     const email = normalizeIdentity(req.body.email);
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email || email.indexOf('@') < 1 || email.lastIndexOf('.') <= email.indexOf('@')) {
       return error(res, 'A valid email address is required', 400);
     }
 
@@ -902,8 +905,6 @@ const updatePasswordWithOtp = async (req, res, next) => {
     const identity = req.user.email; // Default to email, but can fallback to mobile if needed
 
     // Validate OTP
-    const crypto = require('crypto');
-    const { OTP_PEPPER } = require('../../config/jwt.js');
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     
     const { rows: [record] } = await query(`
@@ -917,7 +918,6 @@ const updatePasswordWithOtp = async (req, res, next) => {
     await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
 
     // Hash new password
-    const bcrypt = require('bcryptjs');
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 

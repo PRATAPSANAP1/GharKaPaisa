@@ -396,42 +396,30 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
       alignItems: "center",
       justifyContent: "center"
     }}>
-      {/* Decorative credit cards floating inside the banner image space */}
-      <div style={{
-        width: "180px",
-        height: "110px",
-        background: "linear-gradient(135deg, #b88746 0%, #7d5a2b 100%)",
-        borderRadius: "8px",
-        padding: "10px",
-        color: "#fff",
-        boxShadow: "0 10px 20px rgba(0,0,0,0.3)",
-        transform: "rotate(-10deg) translate(-20px, 10px)",
-        position: "absolute",
-        zIndex: 1,
-        border: "1px solid rgba(255,255,255,0.1)"
-      }}>
-        <div style={{ fontSize: "6px", fontWeight: 700, opacity: 0.9 }}>HDFC BANK</div>
-        <div style={{ fontSize: "8px", fontWeight: 700, margin: "20px 0 10px 0" }}>•••• •••• •••• 9999</div>
-        <div style={{ fontSize: "6px", opacity: 0.7 }}>REGALIA GOLD</div>
-      </div>
-
-      <div style={{
-        width: "180px",
-        height: "110px",
-        background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)",
-        borderRadius: "8px",
-        padding: "10px",
-        color: "#fff",
-        boxShadow: "0 12px 25px rgba(0,0,0,0.4)",
-        transform: "rotate(5deg) translate(20px, -10px)",
-        position: "absolute",
-        zIndex: 2,
-        border: "1px solid rgba(255,255,255,0.1)"
-      }}>
-        <div style={{ fontSize: "6px", fontWeight: 700, opacity: 0.9 }}>HDFC BANK</div>
-        <div style={{ fontSize: "8px", fontWeight: 700, margin: "20px 0 10px 0" }}>•••• •••• •••• 8888</div>
-        <div style={{ fontSize: "6px", opacity: 0.7 }}>MILLENNIA</div>
-      </div>
+      <img
+        src="/src/modules/home/components/CreditCards/image/HDFC/reqalia gold.png"
+        alt="HDFC Regalia Gold"
+        style={{
+          width: isMobile ? "130px" : "180px",
+          objectFit: "contain",
+          transform: "rotate(-10deg) translate(-20px, 10px)",
+          position: "absolute",
+          zIndex: 1,
+          filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))"
+        }}
+      />
+      <img
+        src="/src/modules/home/components/CreditCards/image/HDFC/millennia.png"
+        alt="HDFC Millennia"
+        style={{
+          width: isMobile ? "130px" : "180px",
+          objectFit: "contain",
+          transform: "rotate(5deg) translate(20px, -10px)",
+          position: "absolute",
+          zIndex: 2,
+          filter: "drop-shadow(0 12px 25px rgba(0,0,0,0.5))"
+        }}
+      />
     </div>
   );
 
