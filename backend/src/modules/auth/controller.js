@@ -330,7 +330,6 @@ const login = async (req, res, next) => {
     }
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
     if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     // Validate OTP
@@ -398,7 +397,6 @@ const loginWithMsg91 = async (req, res, next) => {
     if (!user) return error(res, 'No account found with this mobile number', 401);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
     if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     try {
@@ -654,7 +652,6 @@ const loginPassword = async (req, res, next) => {
     }
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
     if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     // Generate JWT (15-minute access token)

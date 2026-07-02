@@ -50,7 +50,7 @@ const syncUser = async (req, res, next) => {
     }
 
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
-    if (user.status === 'rejected')  return forbidden(res, 'Account rejected. Contact support.');
+    if (user.status === 'blocked') return forbidden(res, 'Account blocked. Contact support.');
 
     req.dbUser = { ...user };
     
