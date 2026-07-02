@@ -7,34 +7,40 @@ const express = require('express');
 const router  = express.Router();
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const roleCheck = require('../../middleware/authorization/role.middleware.js');
-const { authLimiter, emailActionLimiter } = require('../../middleware/rate-limit/rateLimit.middleware.js');
+const {
+  loginLimiter,
+  sendOtpLimiter,
+  verifyOtpLimiter,
+  registerLimiter,
+  forgotPasswordLimiter
+} = require('../../middleware/rate-limit/rateLimit.middleware.js');
 const ctrl = require('./controller.js');
 const { validate, registerRules } = require('../../middleware/validation/validation.middleware.js');
 
 // ── Public Auth Routes ──────────────────────────────────────────────────────────
-router.post('/login', authLimiter, ctrl.login);
-router.post('/login-msg91', authLimiter, ctrl.loginWithMsg91);
-router.post('/login-password', authLimiter, ctrl.loginPassword);
-router.post('/send-otp', emailActionLimiter, ctrl.sendOtp);
-router.post('/send-registration-otp', emailActionLimiter, ctrl.sendRegistrationOtp);
-router.post('/verify-otp', authLimiter, ctrl.login);
-router.post('/verify-registration-otp', authLimiter, ctrl.verifyRegistrationOtp);
-router.post('/lookup', authLimiter, ctrl.lookupUser);
-router.post('/register', authLimiter, registerRules, validate, ctrl.register);
-router.post('/forgot-password', authLimiter, ctrl.forgotPassword);
-router.post('/reset-password', authLimiter, ctrl.resetPassword);
-router.post('/verify-email', authLimiter, ctrl.verifyEmail);
-router.post('/resend-verification', emailActionLimiter, ctrl.resendVerificationEmail);
-router.post('/refresh', authLimiter, ctrl.refresh);
+router.post('/login',                    loginLimiter,          ctrl.login);
+router.post('/login-msg91',              loginLimiter,          ctrl.loginWithMsg91);
+router.post('/login-password',           loginLimiter,          ctrl.loginPassword);
+router.post('/send-otp',                 sendOtpLimiter,        ctrl.sendOtp);
+router.post('/send-registration-otp',    sendOtpLimiter,        ctrl.sendRegistrationOtp);
+router.post('/verify-otp',               verifyOtpLimiter,      ctrl.login);
+router.post('/verify-registration-otp',  verifyOtpLimiter,      ctrl.verifyRegistrationOtp);
+router.post('/lookup',                   loginLimiter,          ctrl.lookupUser);
+router.post('/register',                 registerLimiter,       registerRules, validate, ctrl.register);
+router.post('/forgot-password',          forgotPasswordLimiter, ctrl.forgotPassword);
+router.post('/reset-password',           forgotPasswordLimiter, ctrl.resetPassword);
+router.post('/verify-email',             verifyOtpLimiter,      ctrl.verifyEmail);
+router.post('/resend-verification',      sendOtpLimiter,        ctrl.resendVerificationEmail);
+router.post('/refresh',                  loginLimiter,          ctrl.refresh);
 
 // ── Protected Auth Routes ───────────────────────────────────────────────────────
 router.get('/me', jwtAuth, ctrl.getMe);
 router.post('/logout', jwtAuth, ctrl.logout);
 
 // Admin-only route to set role
-router.put('/admin/set-role', authLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.setRole);
+router.put('/admin/set-role', loginLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.setRole);
 
 // Password update with OTP (Requires JWT Auth)
-router.post('/update-password-with-otp', authLimiter, jwtAuth, ctrl.updatePasswordWithOtp);
+router.post('/update-password-with-otp', verifyOtpLimiter, jwtAuth, ctrl.updatePasswordWithOtp);
 
 module.exports = router;

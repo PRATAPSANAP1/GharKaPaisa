@@ -1,38 +1,84 @@
 const rateLimit = require('express-rate-limit');
 
-// Global API rate limiter (protecting standard endpoints)
+// Key by identity (email/mobile) when present, fallback to IP.
+// Prevents shared-IP environments (offices, colleges) from blocking each other.
+const userOrIpKey = (req) =>
+  req.body?.email || req.body?.mobile || req.body?.identity || req.ip;
+
+// Global API rate limiter
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests. Please slow down.' }
 });
 
-// Authentication rate limiter (protecting login / register / OTP endpoints)
-const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // Max 50 attempts per hour
+// Login — 20 attempts per 15 min, failed attempts only
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests to authentication endpoints. Please try again after an hour.' }
+  keyGenerator: userOrIpKey,
+  message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' }
 });
 
-// Email-triggering endpoints need a tighter limit because browser-side
-// counters can be bypassed and each successful request consumes provider quota.
-const emailActionLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+// Send OTP — 10 per 10 min per user
+const sendOtpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  message: { success: false, message: 'Too many OTP requests. Please wait 10 minutes and try again.' }
+});
+
+// Verify OTP — 30 per 10 min, failed only
+const verifyOtpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  message: { success: false, message: 'Too many OTP verification attempts. Please wait 10 minutes.' }
+});
+
+// Register — 5 per 30 min per IP (no identity yet at registration time)
+const registerLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000,
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many email requests. Please wait 15 minutes and try again.'
-  }
+  message: { success: false, message: 'Too many registration attempts. Please wait 30 minutes.' }
 });
+
+// Forgot/reset password — 5 per 30 min
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  message: { success: false, message: 'Too many password reset requests. Please wait 30 minutes.' }
+});
+
+// Legacy alias — kept so any existing imports don't break
+const authLimiter = loginLimiter;
+const emailActionLimiter = sendOtpLimiter;
 
 module.exports = {
   globalLimiter,
+  loginLimiter,
+  sendOtpLimiter,
+  verifyOtpLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+  // legacy aliases
   authLimiter,
   emailActionLimiter
 };
