@@ -178,7 +178,7 @@ export default function PartnerLogin() {
             clearTimeout(timeoutId);
             setOtpSent(true);
             setOtpSentTime(Date.now());
-            setTimer(120);
+            setTimer(60);
             setToast({ message: t('partner.errors.otpSentSuccessMobile', 'Verification code sent to your mobile phone via SMS.'), type: "success" });
             setLoading(l => ({ ...l, otp: false }));
           },

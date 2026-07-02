@@ -294,12 +294,7 @@ export default function PartnerRegister() {
           const requestId = getMsg91RequestId(data);
           setMobileOtpRequestId(requestId);
           setMobileOtpSent(true);
-          setMobileOtpTimer(120);
-          setForm(f => ({ ...f, mobileOtp: '' }));
-          setInfoMsg(t('partner.mobileOtpSent', 'SMS OTP sent successfully.'));
-          setMobileOtpLoading(false);
-        },
-        (error) => {
+          setMobileOtpTimer(60);
           clearTimeout(timeoutId);
           console.error('[MSG91] Mobile Failure response:', error);
           const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));
@@ -333,9 +328,7 @@ export default function PartnerRegister() {
         clearTimeout(timeoutId);
         const requestId = getMsg91RequestId(data);
         if (requestId) setMobileOtpRequestId(requestId);
-        setMobileOtpTimer(120);
-        setForm(f => ({ ...f, mobileOtp: '' }));
-        setInfoMsg(t('partner.mobileOtpResent', 'SMS OTP resent successfully.'));
+        setMobileOtpTimer(60);
         setMobileOtpLoading(false);
       },
       (error) => {
@@ -402,7 +395,7 @@ export default function PartnerRegister() {
     try {
       await sendRegistrationOtp(form.email.trim());
       setEmailOtpSent(true);
-      setEmailOtpTimer(120);
+      setEmailOtpTimer(60);
       setInfoMsg(t('partner.emailOtpSent', 'OTP sent to your email address.'));
     } catch (err) {
       setErr(err.message || t('partner.errors.sendOtpFailed', 'Failed to send OTP. Please try again.'));
@@ -707,7 +700,7 @@ export default function PartnerRegister() {
             
             {/* Centered Logo */}
             <div style={{ display: "flex", justifyContent: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
-              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain" }} />
+              <img id="img-onboarding-welcome-logo" src={logoImg} alt={t("login.logoAlt", "GharKaPaisa Logo")} style={{ height: "32px", objectFit: "contain" }} />
             </div>
 
             {/* Step indicator */}
@@ -743,8 +736,9 @@ export default function PartnerRegister() {
               overflow: "hidden"
             }}>
               <img 
+                id="img-onboarding-welcome-illustration"
                 src={welcomeBgImg} 
-                alt="Welcome Background Graphic" 
+                alt={t("onboarding.welcomeBgAlt", "Welcome Background Graphic")} 
                 style={{ width: "100%", height: "100%", objectFit: "contain" }} 
               />
             </div>
