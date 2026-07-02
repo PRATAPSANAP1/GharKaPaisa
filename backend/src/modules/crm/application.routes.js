@@ -12,7 +12,7 @@ router.use(authenticate, syncUser);
 
 router.get('/', appCtrl.listApplications);
 router.get('/:id', appCtrl.getApplication);
-router.post('/', authorize('PARTNER'), requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
+router.post('/', authorize('PARTNER'), applicationRules, validate, appCtrl.submitApplication);
 router.patch('/:id/status', authorize('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCtrl.updateStatus);
 router.post('/:id/documents', authorize('PARTNER', 'ADMIN', 'SUPER_ADMIN'), upload.single('document'), appCtrl.uploadApplicationDoc);
 

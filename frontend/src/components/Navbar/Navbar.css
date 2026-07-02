@@ -225,15 +225,13 @@ body.no-scroll {
 }
 
 .nav-register-btn {
-  background: linear-gradient(135deg, #0D6EFD, #2E90FA);
-  color: #FFFFFF;
+  background: transparent;
+  color: #0D6EFD;
   padding: 8px 16px;
-  box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
 }
 
 .nav-register-btn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
+  background: rgba(13, 110, 253, 0.1);
 }
 
 .nav-btn-icon {
@@ -277,9 +275,8 @@ body.no-scroll {
   }
 
   .nav-register-btn {
-    background: linear-gradient(135deg, #0D6EFD, #2E90FA) !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15) !important;
+    background: transparent !important;
+    color: #0D6EFD !important;
   }
 
   .desktop-widgets {

@@ -14,12 +14,12 @@ router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.pr
 router.get('/', walletCtrl.getWallet);
 router.get('/balance', walletCtrl.getWallet);
 router.get('/transactions', walletCtrl.getTransactions);
-router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+router.post('/withdraw', withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 // Partner self or admin (with ID)
 router.get('/:PartnerId', selfOrAdmin('PartnerId'), walletCtrl.getWallet);
 router.get('/:PartnerId/transactions', selfOrAdmin('PartnerId'), walletCtrl.getTransactions);
 router.get('/:PartnerId/case-summary', selfOrAdmin('PartnerId'), walletCtrl.getCaseSummary);
-router.post('/:PartnerId/withdraw', selfOrAdmin('PartnerId'), requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+router.post('/:PartnerId/withdraw', selfOrAdmin('PartnerId'), withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 module.exports = router;

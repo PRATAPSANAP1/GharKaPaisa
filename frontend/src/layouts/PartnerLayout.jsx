@@ -59,17 +59,10 @@ export default function PartnerLayout() {
   const kycStatus = user?.kyc_status || 'pending';
   const isKycApproved = kycStatus === 'approved';
 
-  // Force user to the KYC page if not approved, unless they are already there or on profile
+  // Allow access to all pages regardless of KYC status
   const isKycPage = location.pathname.includes('/partner/kyc');
   const isProfilePage = location.pathname.includes('/partner/profile');
   const isSettingsPage = location.pathname.includes('/partner/settings');
-  const isBlocked = !isKycApproved && !isKycPage && !isProfilePage && !isSettingsPage;
-
-  useEffect(() => {
-    if (!isKycApproved && !isKycPage && !isProfilePage && !isSettingsPage) {
-      navigate('/partner/kyc');
-    }
-  }, [isKycApproved, isKycPage, isProfilePage, isSettingsPage, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -128,27 +121,6 @@ export default function PartnerLayout() {
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.path);
-              const isDisabled = !isKycApproved && item.id !== 'kyc' && item.id !== 'profile' && item.id !== 'settings';
-
-              if (isDisabled) {
-                return (
-                  <div key={item.id} title="Complete KYC to unlock" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 16px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: isDark ? '#555' : '#cbd5e1',
-                    cursor: 'not-allowed',
-                    marginBottom: '4px',
-                  }}>
-                    <Icon size={20} />
-                    {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
-                  </div>
-                );
-              }
 
               return (
                 <NavLink
@@ -484,55 +456,6 @@ export default function PartnerLayout() {
         background: MAIN_BG,
         position: 'relative',
       }}>
-        {/* KYC Mandatory Banner */}
-        {!isKycApproved && (
-          <div style={{
-            background: '#F59E0B',
-            color: '#fff',
-            padding: '12px 16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            display: 'flex',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: '12px',
-            flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdVerifiedUser size={24} />
-              <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                <strong>KYC Action Required:</strong> Your KYC status is currently{' '}
-                <span style={{
-                  textTransform: 'uppercase',
-                  fontWeight: 800,
-                  color: '#78350F',
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}>{kycStatus}</span>. You must complete verification to access all features.
-              </div>
-            </div>
-            {!isKycPage && (
-              <button
-                onClick={() => navigate('/partner/kyc')}
-                style={{
-                  background: '#fff',
-                  color: '#D97706',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 800,
-                  border: 'none',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                }}
-              >
-                Verify Now
-              </button>
-            )}
-          </div>
-        )}
 
         <div style={{
           flex: 1,
@@ -543,58 +466,7 @@ export default function PartnerLayout() {
           position: 'relative',
           boxSizing: 'border-box',
         }}>
-          {isBlocked ? (
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 10,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isDark ? 'rgba(30,30,40,0.92)' : 'rgba(248,250,252,0.92)',
-              backdropFilter: 'blur(4px)',
-              padding: '24px',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                width: '80px',
-                height: '80px',
-                background: '#FEF3C7',
-                color: '#F59E0B',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '24px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              }}>
-                <MdVerifiedUser size={40} />
-              </div>
-              <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginBottom: '12px' }}>Complete Your KYC First</h2>
-              <p style={{ color: C.textLight || SIDEBAR_TEXT, maxWidth: '400px', marginBottom: '24px', lineHeight: 1.6 }}>
-                As per regulatory guidelines, you must complete your KYC verification before accessing the partner marketplace, lead management, and wallet features.
-              </p>
-              <button
-                onClick={() => navigate('/partner/kyc')}
-                style={{
-                  background: BRAND,
-                  color: '#fff',
-                  padding: '12px 32px',
-                  borderRadius: '12px',
-                  fontWeight: 800,
-                  border: 'none',
-                  boxShadow: `0 4px 12px ${BRAND}40`,
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                }}
-              >
-                Proceed to KYC Center
-              </button>
-            </div>
-          ) : (
-            <Outlet />
-          )}
+          <Outlet />
         </div>
       </main>
 

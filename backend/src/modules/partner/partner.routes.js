@@ -34,7 +34,7 @@ router.post('/:PartnerId/kyc',
   },
   ctrl.uploadKYCDocuments
 );
-router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.getDashboardStats);
+router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), ctrl.getDashboardStats);
 
 // Admin only — partner management
 router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
