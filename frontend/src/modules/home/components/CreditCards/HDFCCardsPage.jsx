@@ -381,48 +381,6 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
     }))
     .filter(sec => sec.cards.length > 0);
 
-  // Custom UI Fallback Component for HDFC card layout in the banner
-  const BannerImageFallback = () => (
-    <div style={{
-      width: "100%",
-      height: isMobile ? "160px" : "220px",
-      background: "linear-gradient(135deg, #0f1c3f 0%, #004b8f 50%, #00296b 100%)",
-      borderRadius: "20px",
-      position: "relative",
-      overflow: "hidden",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }}>
-      <img
-        src="/src/modules/home/components/CreditCards/image/HDFC/reqalia gold.png"
-        alt="HDFC Regalia Gold"
-        style={{
-          width: isMobile ? "130px" : "180px",
-          objectFit: "contain",
-          transform: "rotate(-10deg) translate(-20px, 10px)",
-          position: "absolute",
-          zIndex: 1,
-          filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))"
-        }}
-      />
-      <img
-        src="/src/modules/home/components/CreditCards/image/HDFC/millennia.png"
-        alt="HDFC Millennia"
-        style={{
-          width: isMobile ? "130px" : "180px",
-          objectFit: "contain",
-          transform: "rotate(5deg) translate(20px, -10px)",
-          position: "absolute",
-          zIndex: 2,
-          filter: "drop-shadow(0 12px 25px rgba(0,0,0,0.5))"
-        }}
-      />
-    </div>
-  );
-
   // Card component with custom styling & failback icon loader
   function CardItem({ id, name, icon, fallbackIcon }) {
     const [imgFailed, setImgFailed] = useState(false);
