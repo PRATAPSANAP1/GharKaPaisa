@@ -328,16 +328,10 @@ const login = async (req, res, next) => {
     if (!user.email_verified) {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
-    if (user.status !== 'active') {
-      if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-      if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-      if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
-      if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending') {
-        return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
-      }
-      return error(res, 'Your account is currently not active. Please contact support.', 403);
-    }
+    if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
+    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
+    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     // Validate OTP
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
@@ -402,16 +396,10 @@ const loginWithMsg91 = async (req, res, next) => {
     const { rows: [user] } = await query(userQuery, queryParams);
 
     if (!user) return error(res, 'No account found with this mobile number', 401);
-    if (user.status !== 'active') {
-      if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-      if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-      if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
-      if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending') {
-        return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
-      }
-      return error(res, 'Your account is currently not active. Please contact support.', 403);
-    }
+    if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
+    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
+    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     try {
       await verifyAccessToken({ accessToken, expectedMobile: mobile });
@@ -664,17 +652,10 @@ const loginPassword = async (req, res, next) => {
     if (!user.email_verified) {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
-
-    if (user.status !== 'active') {
-      if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-      if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-      if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
-      if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
-      if (user.status === 'pending') {
-        return error(res, 'Your account is pending verification. Please await administrator approval.', 403);
-      }
-      return error(res, 'Your account is currently not active. Please contact support.', 403);
-    }
+    if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
+    if (user.status === 'rejected') return error(res, 'Your account application has been rejected.', 403);
+    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
 
     // Generate JWT (15-minute access token)
     const token = jwt.sign(
