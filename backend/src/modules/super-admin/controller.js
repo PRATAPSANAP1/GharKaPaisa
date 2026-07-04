@@ -338,7 +338,49 @@ const updatePartnerStatus = async (req, res, next) => {
   }
 };
 
+
+/**
+ * Commission Rules CRUD
+ */
+const createCommissionRule = async (req, res, next) => {
+  try {
+    const { productId, partnerPercentage, parentPercentage, campaignBonus, status } = req.body;
+    
+    if (!productId) {
+      return error(res, 'Product ID is required', 400);
+    }
+
+    const { rows: [rule] } = await query(`
+      INSERT INTO commission_rules (product_id, partner_percentage, parent_percentage, campaign_bonus, status)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [productId, partnerPercentage || 90, parentPercentage || 10, campaignBonus || 0, status || 'active']);
+
+    await logAction(req, 'CREATE_COMMISSION_RULE', rule.id, { productId, partnerPercentage });
+
+    return created(res, rule, 'Commission rule created successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getCommissionRules = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT cr.*, p.name as product_name
+      FROM commission_rules cr
+      LEFT JOIN products p ON p.id = cr.product_id
+      ORDER BY cr.created_at DESC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
+  createCommissionRule,
+  getCommissionRules,
   createAdmin,
   listAdmins,
   blockUser,

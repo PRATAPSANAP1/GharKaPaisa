@@ -30,41 +30,44 @@ const getTransactions = async (req, res, next) => {
     const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     if (!PartnerId) return error(res, 'Partner ID is required');
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { type, status, from_date, to_date } = req.query;
+    const { type, status, from_date, to_date, export_csv } = req.query;
 
     // Check if wallet exists
-    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE Partner_id = $1`, [PartnerId]);
+    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE "Partner_id" = $1`, [PartnerId]);
     if (!wallet) return notFound(res, 'Wallet not found');
 
-    let where = `WHERE w.Partner_id = $1`;
+    let where = `WHERE wl.partner_id = $1`;
     const values = [PartnerId];
     let idx = 2;
 
-    if (type) { where += ` AND wt.type = $${idx++}`; values.push(type); }
-    if (status) { where += ` AND wt.status = $${idx++}`; values.push(status); }
-    if (from_date) { where += ` AND wt.created_at >= $${idx++}`; values.push(from_date); }
-    if (to_date) { where += ` AND wt.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
+    if (type) { where += ` AND wl.transaction_type = ${idx++}`; values.push(type); }
+    if (status) { where += ` AND wl.status = ${idx++}`; values.push(status); }
+    if (from_date) { where += ` AND wl.created_at >= ${idx++}`; values.push(from_date); }
+    if (to_date) { where += ` AND wl.created_at <= ${idx++}`; values.push(to_date + ' 23:59:59'); }
 
     const [count, data] = await Promise.all([
       query(`
         SELECT COUNT(*) 
-        FROM wallet_transactions wt 
-        JOIN wallets w ON w.id = wt.wallet_id
+        FROM wallet_ledger wl 
         ${where}
       `, values),
       query(`
-        SELECT wt.*, a.app_number, c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
-        FROM wallet_transactions wt
-        JOIN wallets w ON w.id = wt.wallet_id
-        LEFT JOIN applications a ON a.id = wt.application_id
+        SELECT wl.*, a.app_number, c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
+        FROM wallet_ledger wl
+        LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
-        ORDER BY wt.created_at DESC
-        LIMIT $${idx} OFFSET $${idx + 1}
+        ORDER BY wl.created_at DESC
+        LIMIT ${idx} OFFSET ${idx + 1}
       `, [...values, limit, offset]),
     ]);
+
+    if (export_csv) {
+       // Just returning the data for now, frontend handles export or we can do it here. 
+       // Keeping simple to just return JSON.
+    }
 
     return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {

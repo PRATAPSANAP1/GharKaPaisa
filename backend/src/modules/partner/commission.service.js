@@ -3,28 +3,56 @@ const { logAction } = require('../admin/audit.service.js');
 const { creditHold, releaseHold } = require('../wallet/service.js');
 
 const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
-  // First check if there is a custom commission structure for this partner + product
-  let { rows: [structure] } = await query(`
-    SELECT commission_type, commission_value 
-    FROM commission_structures 
-    WHERE product_id = $1 AND Partner_id = $2 AND effective_to IS NULL
-  `, [productId, partnerId]);
+  // Check if there is a global commission rule for this product
+  let { rows: [rule] } = await query(`
+    SELECT id, partner_percentage, parent_percentage
+    FROM commission_rules
+    WHERE product_id = $1 AND status = 'active'
+    AND (effective_to IS NULL OR effective_to >= NOW())
+    ORDER BY created_at DESC LIMIT 1
+  `, [productId]);
 
-  // Fallback to global product commission
-  if (!structure) {
-    const { rows: [product] } = await query(`
-      SELECT commission_type, commission_value FROM products WHERE id = $1
-    `, [productId]);
-    structure = product;
+  // Fallback to legacy structure if no rule found
+  if (!rule) {
+    let { rows: [structure] } = await query(`
+      SELECT commission_type, commission_value 
+      FROM commission_structures 
+      WHERE product_id = $1 AND "Partner_id" = $2 AND effective_to IS NULL
+    `, [productId, partnerId]);
+
+    if (!structure) {
+      const { rows: [product] } = await query(`
+        SELECT commission_type, commission_value FROM products WHERE id = $1
+      `, [productId]);
+      structure = product;
+    }
+
+    if (!structure) return 0;
+
+    const value = parseFloat(structure.commission_value);
+    if (structure.commission_type === 'percentage') {
+      return parseFloat(((loanAmount * value) / 100).toFixed(2));
+    }
+    return value; // flat
   }
 
-  if (!structure) return 0;
+  // If using commission_rules, we calculate the TOTAL commission pool based on the product's base commission structure.
+  // Wait, the user didn't specify base commission in commission_rules, just the split!
+  // So we still need the product's base commission value!
+  const { rows: [product] } = await query(`
+    SELECT commission_type, commission_value FROM products WHERE id = $1
+  `, [productId]);
+  
+  if (!product) return 0;
 
-  const value = parseFloat(structure.commission_value);
-  if (structure.commission_type === 'percentage') {
-    return parseFloat(((loanAmount * value) / 100).toFixed(2));
+  const value = parseFloat(product.commission_value);
+  let totalPool = value;
+  if (product.commission_type === 'percentage') {
+    totalPool = parseFloat(((loanAmount * value) / 100).toFixed(2));
   }
-  return value; // flat
+
+  // The actual split is done during creditCommission, so calculatePartnerCommission returns the totalPool.
+  return totalPool;
 };
 
 const releaseCommission = async (applicationId, adminUserId) => {
@@ -79,65 +107,51 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
       throw new Error('No commission to reverse');
     }
 
-    const amount = parseFloat(app.commission_amount);
     const partnerId = app.Partner_id;
-    const priorStatus = app.commission_status;
 
     const { rows: [wallet] } = await client.query(`
-      SELECT id, hold_balance, available_balance, total_earned
-      FROM wallets WHERE Partner_id = $1 FOR UPDATE
+      SELECT id FROM wallets WHERE "Partner_id" = $1 FOR UPDATE
     `, [partnerId]);
     if (!wallet) throw new Error('Wallet not found');
 
-    if (priorStatus === 'pending') {
-      if (parseFloat(wallet.hold_balance) < amount) {
-        throw new Error(`Insufficient hold balance for reversal. Hold: ₹${wallet.hold_balance}`);
+    // Reject pending transactions, or insert REVERSAL for completed ones.
+    const { rows: txns } = await client.query(`
+      SELECT id, status, credit, transaction_type, partner_id 
+      FROM wallet_ledger 
+      WHERE application_id = $1 AND transaction_type IN ('PERSONAL_COMMISSION', 'TEAM_COMMISSION')
+    `, [applicationId]);
+
+    for (const txn of txns) {
+      if (txn.status === 'pending') {
+        await client.query(`
+          UPDATE wallet_ledger SET
+            status = 'rejected',
+            created_by = $1,
+            description = COALESCE(description, '') || ' [Reversed]'
+          WHERE id = $2
+        `, [adminUserId, txn.id]);
+      } else if (txn.status === 'completed') {
+        // Insert REVERSAL
+        await client.query(`
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, application_id, transaction_type, credit, debit, description, status, created_by
+          ) VALUES ($1, $2, $3, 'REVERSAL', 0, $4, $5, 'completed', $6)
+        `, [
+          wallet.id, txn.partner_id, applicationId, txn.credit, 
+          `Commission reversed for App ${app.app_number}${reason ? `: ${reason}` : ''}`,
+          adminUserId
+        ]);
       }
+    }
 
-      await client.query(`
-        UPDATE wallets SET
-          hold_balance = hold_balance - $1,
-          last_updated = NOW()
-        WHERE Partner_id = $2
-      `, [amount, partnerId]);
+    // Sync balance for main partner
+    const { syncWalletBalance } = require('../wallet/service.js');
+    await syncWalletBalance(partnerId, client);
 
-      await client.query(`
-        UPDATE wallet_transactions SET
-          status = 'rejected',
-          processed_at = NOW(),
-          processed_by = $1,
-          description = COALESCE(description, '') || ' [Reversed]'
-        WHERE application_id = $2 AND type = 'credit' AND status IN ('pending', 'approved')
-      `, [adminUserId, applicationId]);
-    } else if (priorStatus === 'approved' || priorStatus === 'processed') {
-      if (parseFloat(wallet.available_balance) < amount) {
-        throw new Error(`Insufficient available balance for reversal. Available: ₹${wallet.available_balance}`);
-      }
-
-      await client.query(`
-        UPDATE wallets SET
-          available_balance = available_balance - $1,
-          total_earned = GREATEST(0, total_earned - $1),
-          last_updated = NOW()
-        WHERE Partner_id = $2
-      `, [amount, partnerId]);
-
-      await client.query(`
-        INSERT INTO wallet_transactions (
-          wallet_id, partner_id, application_id, type, amount, status, description,
-          reference_type, reference_id, processed_by, processed_at
-        ) VALUES ($1, $2, $3, 'debit', $4, 'approved', $5, 'commission_reversal', $6, $7, NOW())
-      `, [
-        wallet.id,
-        partnerId,
-        applicationId,
-        amount,
-        `Commission reversed for App ${app.app_number}${reason ? `: ${reason}` : ''}`,
-        applicationId,
-        adminUserId,
-      ]);
-    } else {
-      throw new Error(`Cannot reverse commission in status: ${priorStatus}`);
+    // Sync balance for parent partner if they got team commission
+    const parentTxn = txns.find(t => t.transaction_type === 'TEAM_COMMISSION');
+    if (parentTxn) {
+      await syncWalletBalance(parentTxn.partner_id, client);
     }
 
     await client.query(`
@@ -150,8 +164,8 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
 
     await logAction(adminUserId, 'REVERSE_COMMISSION', applicationId, {
       reason,
-      amount,
-      prior_status: priorStatus,
+      amount: app.commission_amount,
+      prior_status: app.commission_status,
     });
 
     await client.query('COMMIT');

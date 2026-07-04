@@ -187,7 +187,7 @@ const SuperAdminLayout = () => {
       title: "SYSTEM UTILITIES",
       items: [
         { path: '/superadmin/services', label: 'Services API', icon: <Icons.clock size={16} /> },
-        { path: '/superadmin/commissions', label: 'Commission Manager', icon: <Icons.gift size={16} /> },
+        { path: '/superadmin/commission-rules', label: 'Commission Rules', icon: <Icons.gift size={16} /> },
         { path: '/superadmin/audit-logs', label: 'Audit Logs', icon: <Icons.clock size={16} /> },
         { path: '/superadmin/reports', label: 'Reports', icon: <Icons.trending size={16} /> }
       ]

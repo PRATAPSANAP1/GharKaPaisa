@@ -52,15 +52,16 @@ const PartnerWallet = () => {
       return alert("No transactions available to export.");
     }
 
-    const headers = ['Date', 'Reference', 'Customer', 'Product', 'Bank', 'Type', 'Amount', 'Status'];
+    const headers = ['Date', 'Reference', 'Customer', 'Product', 'Bank', 'Type', 'Credit', 'Debit', 'Status'];
     const rows = transactions.map(t => [
       new Date(t.created_at).toLocaleDateString(),
-      `"${t.app_number || t.reference_id || 'N/A'}"`,
+      `"${t.app_number || t.reference_number || 'N/A'}"`,
       `"${t.customer_name || 'N/A'}"`,
       `"${t.product_name || 'N/A'}"`,
       `"${t.bank_code || 'N/A'}"`,
-      t.type,
-      t.amount,
+      t.transaction_type || t.type,
+      t.credit || 0,
+      t.debit || 0,
       t.status
     ]);
 
@@ -82,9 +83,9 @@ const PartnerWallet = () => {
 
   // Stat card helper
   const statCards = [
-    { label: 'Pending Commission', value: wallet?.hold_balance, color: C.gold, hint: 'Awaiting bank confirmation / disbursal' },
-    { label: 'Withdrawable Wallet', value: wallet?.available_balance, color: C.green, hint: 'Ready to be transferred to your bank' },
-    { label: 'Total Earned', value: wallet?.total_earned, color: C.primary, hint: 'Lifetime earnings on GharKaPaisa' },
+    { label: 'Pending Commission', value: wallet?.hold_balance, color: '#fff', bg: 'linear-gradient(135deg, #f59e0b, #d97706)', hint: 'Awaiting bank confirmation / disbursal' },
+    { label: 'Withdrawable Wallet', value: wallet?.available_balance, color: '#fff', bg: 'linear-gradient(135deg, #10b981, #059669)', hint: 'Ready to be transferred to your bank' },
+    { label: 'Total Earned', value: wallet?.total_earned, color: '#fff', bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', hint: 'Lifetime earnings on GharKaPaisa' },
   ];
 
   const thStyle = {
@@ -111,15 +112,16 @@ const PartnerWallet = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {statCards.map((stat, i) => (
           <div key={i} style={{
-            ...S.card, padding: '24px', borderRadius: '16px', position: 'relative', overflow: 'hidden'
+            ...S.card, padding: '24px', borderRadius: '16px', position: 'relative', overflow: 'hidden',
+            background: stat.bg, color: stat.color, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
           }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>
               {stat.label}
             </h3>
-            <p style={{ fontSize: '28px', fontWeight: 800, color: stat.color, margin: '0 0 8px' }}>
+            <p style={{ fontSize: '28px', fontWeight: 800, color: '#fff', margin: '0 0 8px' }}>
               ₹{parseFloat(stat.value || 0).toLocaleString('en-IN')}
             </p>
-            <p style={{ fontSize: '12px', color: C.textLight, margin: 0 }}>{stat.hint}</p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.9)', margin: 0 }}>{stat.hint}</p>
           </div>
         ))}
       </div>
@@ -215,7 +217,7 @@ const PartnerWallet = () => {
                   <tr key={idx}>
                     <td style={tdStyle}>{new Date(t.created_at).toLocaleDateString()}</td>
                     <td style={{ ...tdStyle, fontWeight: 600 }}>
-                      {t.app_number || t.reference_id || 'N/A'}
+                      {t.app_number || t.reference_number || t.reference_id || 'N/A'}
                     </td>
                     <td style={tdStyle}>{t.customer_name || '—'}</td>
                     <td style={tdStyle}>
@@ -229,12 +231,12 @@ const PartnerWallet = () => {
                       )}
                     </td>
                     <td style={tdStyle}>
-                      <span style={S.tag(t.type === 'credit' ? C.green : C.red)}>
-                        {t.type}
+                      <span style={S.tag(parseFloat(t.credit || 0) > 0 ? C.green : C.red)}>
+                        {t.transaction_type?.replace(/_/g, ' ') || t.type}
                       </span>
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: 700, color: t.type === 'credit' ? C.green : C.red }}>
-                      {t.type === 'credit' ? '+' : '-'}₹{parseFloat(t.amount).toLocaleString('en-IN')}
+                    <td style={{ ...tdStyle, fontWeight: 700, color: parseFloat(t.credit || 0) > 0 ? C.green : C.red }}>
+                      {parseFloat(t.credit || 0) > 0 ? '+' : '-'}₹{parseFloat(t.credit > 0 ? t.credit : (t.debit || t.amount || 0)).toLocaleString('en-IN')}
                     </td>
                     <td style={tdStyle}>
                       <span style={S.tag(

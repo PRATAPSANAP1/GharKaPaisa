@@ -15,4 +15,9 @@ router.post('/block-user', ctrl.blockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
 
+
+router.post('/commission-rules', ctrl.createCommissionRule);
+router.get('/commission-rules', ctrl.getCommissionRules);
+
 module.exports = router;
+

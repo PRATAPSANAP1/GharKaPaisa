@@ -6,14 +6,21 @@ const appSettingsService = require('../products/application-settings.service');
 const getOverview = async (req, res, next) => {
   try {
     const { from_date, to_date } = req.query;
+    const isPartner = req.user.role === 'PARTNER';
+    const partnerId = isPartner ? req.partner.id : null;
+    const partnerScopeApps = isPartner ? ` AND "Partner_id" = '${partnerId}'` : '';
+    const partnerScopeLeads = isPartner ? ` AND "partner_id" = '${partnerId}'` : '';
+    const partnerScopeWallet = isPartner ? ` WHERE "Partner_id" = '${partnerId}'` : '';
+
     let sql = `
       SELECT
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
         COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
         COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending,
+        COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_apps,
         COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as total_commission
-      FROM applications WHERE 1=1
+      FROM applications WHERE 1=1 ${partnerScopeApps}
     `;
     const values = [];
     if (from_date && to_date) {
@@ -23,7 +30,7 @@ const getOverview = async (req, res, next) => {
 
     const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners] = await Promise.all([
       query(sql, values),
-      query(`
+      isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE u.status = 'active') as active,
@@ -37,6 +44,7 @@ const getOverview = async (req, res, next) => {
           COALESCE(SUM(hold_balance), 0) as total_pending,
           COALESCE(SUM(available_balance), 0) as total_available
         FROM wallets
+        ${partnerScopeWallet}
       `),
       query(`
         SELECT
@@ -45,9 +53,9 @@ const getOverview = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status = 'rejected') as rejected_leads,
           COUNT(*) FILTER (WHERE status = 'pending') as pending_leads,
           COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_leads
-        FROM leads
+        FROM leads WHERE 1=1 ${partnerScopeLeads}
       `),
-      query(`
+      isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
           COUNT(*) FILTER (WHERE status = 'pending') as pending_withdrawals,
           COALESCE(SUM(amount) FILTER (WHERE status = 'processed'), 0) as total_commission_paid
@@ -55,7 +63,7 @@ const getOverview = async (req, res, next) => {
       `),
       query(`SELECT COUNT(*) as total_banks FROM banks`),
       query(`SELECT COUNT(*) as total_products FROM products`),
-      query(`
+      isPartner ? Promise.resolve({rows:[]}) : query(`
         SELECT p.id, p.first_name, p.last_name, p.Partner_code, p.created_at, u.email, u.mobile, u.status
         FROM Partner_profiles p
         JOIN users u ON u.id = p.user_id
@@ -64,8 +72,12 @@ const getOverview = async (req, res, next) => {
       `),
     ]);
 
+    // calculate conversion rate
+    const appsData = apps.rows[0];
+    const conversion_rate = appsData.total > 0 ? ((appsData.approved / appsData.total) * 100).toFixed(2) : 0;
+
     return success(res, {
-      applications: apps.rows[0],
+      applications: { ...appsData, conversion_rate },
       Partners: Partners.rows[0],
       wallet: wallet.rows[0],
       leads: leads.rows[0],
@@ -124,6 +136,10 @@ const topPartners = async (req, res, next) => {
 // GET /reports/monthly-trend — last 12 months
 const monthlyTrend = async (req, res, next) => {
   try {
+    const isPartner = req.user.role === 'PARTNER';
+    const partnerId = isPartner ? req.partner.id : null;
+    const partnerScopeApps = isPartner ? ` AND "Partner_id" = '${partnerId}'` : '';
+
     const { rows } = await query(`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YYYY') as month,
@@ -132,7 +148,7 @@ const monthlyTrend = async (req, res, next) => {
         COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
         COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as commission
       FROM applications
-      WHERE created_at >= NOW() - INTERVAL '12 months'
+      WHERE created_at >= NOW() - INTERVAL '12 months' ${partnerScopeApps}
       GROUP BY DATE_TRUNC('month', created_at)
       ORDER BY month_date ASC
     `);
@@ -266,7 +282,92 @@ const getApplicationClickReport = async (req, res, next) => {
   }
 };
 
+
+const getApplicationsReport = async (req, res, next) => {
+  try {
+    const isPartner = req.user.role === 'PARTNER';
+    const partnerId = isPartner ? req.partner.id : null;
+    const { from_date, to_date, search } = req.query;
+
+    let sql = `
+      SELECT 
+        a.id, a.app_number, a.status, a.created_at as application_date,
+        a.approved_amount, a.commission_amount,
+        c.full_name as customer_name,
+        p.name as product_name,
+        b.name as bank_name
+      FROM applications a
+      JOIN customers c ON c.id = a.customer_id
+      JOIN products p ON p.id = a.product_id
+      JOIN banks b ON b.id = p.bank_id
+      WHERE 1=1
+    `;
+    const values = [];
+    let idx = 1;
+
+    if (isPartner) {
+      sql += ` AND a."Partner_id" = $1`;
+      values.push(partnerId);
+      idx++;
+    }
+
+    if (from_date && to_date) {
+      sql += ` AND a.created_at BETWEEN ${idx} AND ${idx+1}`;
+      values.push(from_date, to_date + ' 23:59:59');
+      idx += 2;
+    }
+
+    if (search) {
+      sql += ` AND (a.app_number ILIKE ${idx} OR c.full_name ILIKE ${idx})`;
+      values.push(`%${search}%`);
+      idx++;
+    }
+
+    sql += ' ORDER BY a.created_at DESC';
+
+    const { rows } = await query(sql, values);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getCustomersReport = async (req, res, next) => {
+  try {
+    const isPartner = req.user.role === 'PARTNER';
+    const partnerId = isPartner ? req.partner.id : null;
+    
+    let sql = `
+      SELECT 
+        c.id, c.full_name as customer_name, c.mobile, c.email,
+        COUNT(a.id) as total_applications,
+        COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_cards,
+        COUNT(a.id) FILTER (WHERE a.status = 'rejected') as rejected_cards,
+        COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved','disbursed')), 0) as total_commission
+      FROM customers c
+      LEFT JOIN applications a ON a.customer_id = c.id
+      WHERE 1=1
+    `;
+    const values = [];
+
+    if (isPartner) {
+      // For partners, only show customers they have generated leads/applications for
+      sql += ` AND c.id IN (SELECT customer_id FROM applications WHERE "Partner_id" = $1)`;
+      values.push(partnerId);
+    }
+
+    sql += ` GROUP BY c.id, c.full_name, c.mobile, c.email ORDER BY total_commission DESC, total_applications DESC`;
+
+    const { rows } = await query(sql, values);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
+  getApplicationsReport,
+  getCustomersReport, 
   getOverview, 
   applicationsByProduct, 
   topPartners, 
