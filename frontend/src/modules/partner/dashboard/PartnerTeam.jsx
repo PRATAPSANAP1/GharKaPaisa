@@ -3,13 +3,14 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdAdd, MdPerson, MdEmail, MdPhone, MdCheckCircle, 
   MdPendingActions, MdClose, MdContentCopy,
-  MdOutlineQrCode2, MdOutlineWhatsapp
+  MdOutlineQrCode2, MdOutlineWhatsapp, MdMonetizationOn, 
+  MdTrendingUp, MdDeviceHub, MdList, MdHistory, MdShare
 } from 'react-icons/md';
 import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
 
 export default function PartnerTeam() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const user = useAuthStore((state) => state.user);
@@ -17,31 +18,87 @@ export default function PartnerTeam() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [activeTab, setActiveTab] = useState('tree'); // 'tree' | 'list'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'tree' | 'list' | 'earnings'
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', email: '', mobile: '', password: ''
   });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
 
+  const [referralInfo, setReferralInfo] = useState(null);
+  const [teamTree, setTeamTree] = useState([]);
+  const [teamDashboard, setTeamDashboard] = useState(null);
+  const [teamEarnings, setTeamEarnings] = useState([]);
+
   const fetchTeam = async () => {
     try {
-      setLoading(true);
       const res = await api.get(`/partner/${user.PartnerId}/team`);
       setTeam(res.data.data || []);
     } catch (err) {
-      setError('Failed to load team members');
+      setError('Failed to load direct team members');
+    }
+  };
+
+  const loadReferralInfo = async () => {
+    try {
+      const res = await api.get('/partner/referral');
+      setReferralInfo(res.data.data);
+    } catch (err) {
+      console.error('Failed to load referral details:', err);
+    }
+  };
+
+  const loadTeamTree = async () => {
+    try {
+      const res = await api.get('/partner/team-tree');
+      setTeamTree(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load team tree:', err);
+    }
+  };
+
+  const loadTeamDashboard = async () => {
+    try {
+      const res = await api.get('/partner/team-dashboard');
+      setTeamDashboard(res.data.data);
+    } catch (err) {
+      console.error('Failed to load team dashboard:', err);
+    }
+  };
+
+  const loadTeamEarnings = async () => {
+    try {
+      const res = await api.get('/partner/team-earnings');
+      setTeamEarnings(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load team earnings:', err);
+    }
+  };
+
+  const loadAllData = async () => {
+    if (!user?.PartnerId) return;
+    setLoading(true);
+    setError('');
+    try {
+      await Promise.all([
+        fetchTeam(),
+        loadReferralInfo(),
+        loadTeamTree(),
+        loadTeamDashboard(),
+        loadTeamEarnings()
+      ]);
+    } catch (err) {
+      setError('Failed to load team information');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user?.PartnerId) {
-      fetchTeam();
-    }
+    loadAllData();
   }, [user]);
 
   const handleAddSubmit = async (e) => {
@@ -49,11 +106,10 @@ export default function PartnerTeam() {
     setAddLoading(true);
     setAddError('');
     try {
-      const res = await api.post(`/partner/${user.PartnerId}/team`, formData);
-      setTeam([res.data.data, ...team]); 
+      await api.post(`/partner/${user.PartnerId}/team`, formData);
       setIsAddModalOpen(false);
       setFormData({ first_name: '', last_name: '', email: '', mobile: '', password: '' });
-      fetchTeam();
+      loadAllData();
     } catch (err) {
       setAddError(err.response?.data?.message || 'Failed to add team member');
     } finally {
@@ -62,22 +118,16 @@ export default function PartnerTeam() {
   };
 
   const copyReferralLink = () => {
-    const link = `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
     navigator.clipboard.writeText(link);
     alert('Referral link copied to clipboard!');
   };
 
-  // Mocking Level 2 for demonstration of the Tree UI
-  const buildTree = () => {
-    return team.map(member => ({
-      ...member,
-      children: Math.random() > 0.5 ? [
-        { id: `mock-${member.id}-1`, first_name: 'Sub', last_name: 'Partner', Partner_code: 'GKP-SUB1', kyc_status: 'pending' }
-      ] : []
-    }));
+  const shareOnWhatsapp = () => {
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
+    const text = `Join my GharKaPaisa partner network using my invite link and start earning: ${link}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
-
-  const treeData = buildTree();
 
   const thStyle = {
     padding: '12px 18px', fontSize: '11px', fontWeight: 700,
@@ -90,14 +140,71 @@ export default function PartnerTeam() {
     borderBottom: `1px solid ${C.border}`
   };
 
+  // Collapsible Tree Node Component
+  const TreeMemberNode = ({ member }) => {
+    const [collapsed, setCollapsed] = useState(true);
+    const hasChildren = member.children && member.children.length > 0;
+
+    return (
+      <div style={{ marginLeft: member.level > 1 ? '24px' : '0px', borderLeft: member.level > 1 ? `1px dashed ${C.border}` : 'none', paddingLeft: member.level > 1 ? '16px' : '0px', marginBottom: '8px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', background: C.card, border: `1px solid ${C.border}`,
+          borderRadius: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: `${C.primary}12`, color: C.primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
+            }}>
+              {member.first_name?.[0] || 'P'}
+            </div>
+            <div>
+              <p style={{ fontWeight: 700, margin: 0, color: C.text }}>
+                {member.first_name} {member.last_name}
+              </p>
+              <span style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>
+                {member.Partner_code} • Level {member.level}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={S.tag(member.kyc_status === 'approved' ? C.green : member.kyc_status === 'rejected' ? C.red : C.gold)}>
+              {member.kyc_status}
+            </span>
+            {hasChildren && (
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                style={{
+                  background: `${C.primary}12`, color: C.primary, border: 'none',
+                  borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer'
+                }}
+              >
+                {collapsed ? `Show Team (${member.children.length})` : 'Hide'}
+              </button>
+            )}
+          </div>
+        </div>
+        {!collapsed && hasChildren && (
+          <div style={{ marginTop: '8px' }}>
+            {member.children.map(child => (
+              <TreeMemberNode key={child.id} member={child} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Referral Network</h2>
-          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Grow your team and earn passive income on their sales.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Team Network</h2>
+          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Manage your DSA partners, monitor structure hierarchy, and view override commissions.</p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -109,6 +216,51 @@ export default function PartnerTeam() {
           <MdAdd size={20} /> Add Direct Partner
         </button>
       </div>
+
+      {/* Overview Cards (DSA Dashboard Stats) */}
+      {teamDashboard && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ ...S.card, padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ padding: '12px', background: `${C.primary}12`, color: C.primary, borderRadius: '12px' }}>
+              <MdPerson size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 600 }}>Total Team Size</p>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 0', color: C.text }}>{teamDashboard.total_members}</h3>
+            </div>
+          </div>
+
+          <div style={{ ...S.card, padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ padding: '12px', background: `${C.green}12`, color: C.green, borderRadius: '12px' }}>
+              <MdTrendingUp size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 600 }}>Today's Joins</p>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 0', color: C.text }}>{teamDashboard.joined_today}</h3>
+            </div>
+          </div>
+
+          <div style={{ ...S.card, padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ padding: '12px', background: `${C.gold}12`, color: C.gold, borderRadius: '12px' }}>
+              <MdPendingActions size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 600 }}>Pending KYC</p>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 0', color: C.text }}>{teamDashboard.pending_kyc}</h3>
+            </div>
+          </div>
+
+          <div style={{ ...S.card, padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ padding: '12px', background: `${C.primary}12`, color: C.primary, borderRadius: '12px' }}>
+              <MdMonetizationOn size={24} />
+            </div>
+            <div>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 600 }}>Monthly Team Earn</p>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '4px 0 0', color: C.text }}>₹{teamDashboard.monthly_team_earnings.toFixed(2)}</h3>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Referral Tools Banner */}
       <div style={{
@@ -131,9 +283,9 @@ export default function PartnerTeam() {
         }} />
         
         <div style={{ flex: 1, minWidth: '280px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>Invite Partners & Earn 10% Lifetime</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>Invite Partners & Earn Override Commissions</h3>
           <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, maxWidth: '440px' }}>
-            Share your unique partner link. Anyone who registers and sells products will generate override commissions for you.
+            Invite other partners. Share your link, track total registrations, and earn configurable team share overrides.
           </p>
         </div>
 
@@ -149,20 +301,26 @@ export default function PartnerTeam() {
           >
             <MdContentCopy size={16} /> Copy Link
           </button>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '10px 18px', background: '#25D366', color: '#fff',
-            borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '13px',
-            cursor: 'pointer'
-          }}>
+          <button 
+            onClick={shareOnWhatsapp}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px', background: '#25D366', color: '#fff',
+              borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
             <MdOutlineWhatsapp size={16} /> WhatsApp
           </button>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '10px 18px', background: 'rgba(255,255,255,0.1)', color: '#fff',
-            borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 700, fontSize: '13px',
-            cursor: 'pointer'
-          }}>
+          <button 
+            onClick={() => setIsQrOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '10px 18px', background: 'rgba(255,255,255,0.1)', color: '#fff',
+              borderRadius: '10px', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 700, fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
             <MdOutlineQrCode2 size={16} /> QR Code
           </button>
         </div>
@@ -174,20 +332,27 @@ export default function PartnerTeam() {
           display: 'flex', borderBottom: `1px solid ${C.border}`,
           padding: '6px', gap: '6px', background: C.bgSecondary
         }}>
-          {['tree', 'list'].map(tab => (
+          {[
+            { id: 'dashboard', label: 'Dashboard', icon: MdPerson },
+            { id: 'tree', label: 'Graphical Tree', icon: MdDeviceHub },
+            { id: 'list', label: 'Directory List', icon: MdList },
+            { id: 'earnings', label: 'Commission Logs', icon: MdHistory }
+          ].map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '10px 24px', borderRadius: '10px', fontSize: '13px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '10px 20px', borderRadius: '10px', fontSize: '13px',
                 fontWeight: 700, border: 'none', cursor: 'pointer',
-                background: activeTab === tab ? C.card : 'transparent',
-                color: activeTab === tab ? C.primary : C.textMid,
-                boxShadow: activeTab === tab ? '0 2px 6px rgba(0,0,0,0.04)' : 'none',
+                background: activeTab === tab.id ? C.card : 'transparent',
+                color: activeTab === tab.id ? C.primary : C.textMid,
+                boxShadow: activeTab === tab.id ? '0 2px 6px rgba(0,0,0,0.04)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
-              {tab === 'tree' ? 'Graphical Tree' : 'List View'}
+              <tab.icon size={16} />
+              {tab.label}
             </button>
           ))}
         </div>
@@ -206,162 +371,162 @@ export default function PartnerTeam() {
                 animation: 'spin .8s linear infinite', display: 'inline-block'
               }} />
             </div>
-          ) : team.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
-              <MdPerson size={44} style={{ color: C.border, marginBottom: '12px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>Your Network is Empty</h3>
-              <p style={{ fontSize: '13px', color: C.textMid, maxWidth: '340px', margin: '0 auto' }}>
-                Use the referral link above to invite sub-partners and start building your downline.
-              </p>
-            </div>
-          ) : activeTab === 'list' ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', whitespace: 'nowrap' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary }}>
-                    <th style={thStyle}>Partner Info</th>
-                    <th style={thStyle}>Contact</th>
-                    <th style={thStyle}>Code / Level</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={thStyle}>Joined</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {team.map((member) => (
-                    <tr key={member.id}>
-                      <td style={tdStyle}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: 36, height: 36, borderRadius: '50%',
-                            background: `${C.primary}12`, color: C.primary,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 700, fontSize: '14px', border: `1px solid ${C.primary}20`
-                          }}>
-                            {member.first_name?.[0] || 'T'}
-                          </div>
-                          <div>
-                            <p style={{ fontWeight: 700, color: C.text, margin: 0 }}>{member.first_name} {member.last_name}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={tdStyle}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MdEmail style={{ color: C.textLight }} /> {member.email}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}><MdPhone style={{ color: C.textLight }} /> {member.mobile}</div>
-                        </div>
-                      </td>
-                      <td style={tdStyle}>
-                        <span style={{
-                          fontFamily: 'monospace', color: C.primary, background: `${C.primary}12`,
-                          padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.primary}20`,
-                          fontWeight: 700, fontSize: '11px', display: 'inline-block', marginBottom: '4px'
-                        }}>
-                          {member.Partner_code}
-                        </span>
-                        <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 600 }}>Level 1 (Direct)</div>
-                      </td>
-                      <td style={tdStyle}>
-                        <span style={S.tag(member.kyc_status === 'approved' ? C.green : member.kyc_status === 'rejected' ? C.red : C.gold)}>
-                          {member.kyc_status || 'PENDING'}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, fontWeight: 500 }}>
-                        {new Date(member.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* GRAPHICAL TREE VIEW */
-            <div style={{ padding: '16px 0', overflowX: 'auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '600px' }}>
-                
-                {/* Root Node (You) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                  <div style={{
-                    background: C.bgSecondary, border: `1px solid ${C.border}`,
-                    padding: '16px', borderRadius: '14px', width: '220px', textCenter: 'center',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center'
-                  }}>
-                    <div style={{
-                      width: 40, height: 40, background: C.card, borderRadius: '50%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: C.primary, border: `1px solid ${C.border}`, marginBottom: '8px'
-                    }}>
-                      <MdPerson size={20} />
-                    </div>
-                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>You</h4>
-                    <p style={{ fontSize: '11px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0 0' }}>{user?.PartnerCode || 'GKP-ROOT'}</p>
+          ) : activeTab === 'dashboard' ? (
+            /* REFERRAL SUMMARY STATS */
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px', color: C.text }}>Link Activity</h4>
+                <div style={{ ...S.card, background: C.bgSecondary, padding: '20px', border: `1px dashed ${C.border}` }}>
+                  <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 700 }}>Total Invite Clicks</p>
+                  <h2 style={{ fontSize: '32px', fontWeight: 800, margin: '8px 0', color: C.primary }}>{referralInfo?.total_invites || 0}</h2>
+                  <p style={{ fontSize: '12px', color: C.textLight, margin: 0 }}>Registered Accounts: <span style={{ fontWeight: 700, color: C.text }}>{referralInfo?.total_registered || 0}</span></p>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 12px', color: C.text }}>Network Overview</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: C.bgSecondary, borderRadius: '12px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13px' }}>KYC Approved Partners</span>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: C.green }}>{teamDashboard?.approved_partners || 0}</span>
                   </div>
-                  
-                  {/* Stem down from root */}
-                  <div style={{ width: 1, height: 32, background: C.border }} />
-                  
-                  {/* Horizontal Line Connector */}
-                  {treeData.length > 1 && (
-                    <div style={{
-                      width: `${(treeData.length - 1) * 260}px`,
-                      height: 1, background: C.border
-                    }} />
-                  )}
-
-                  {/* Level 1 Nodes */}
-                  <div style={{ display: 'flex', gap: '20px', paddingTop: '32px', position: 'relative', justifyContent: 'center' }}>
-                    {treeData.map((member) => (
-                      <div key={member.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '240px', position: 'relative' }}>
-                        {/* Line up from node */}
-                        <div style={{ position: 'absolute', top: '-32px', width: 1, height: 32, background: C.border }} />
-                        
-                        {/* Node Card */}
-                        <div style={{
-                          background: C.card, border: `2px solid ${C.primary}`,
-                          padding: '14px', borderRadius: '12px', width: '200px',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)', textAlign: 'center'
-                        }}>
-                          <h4 style={{ fontSize: '13px', fontWeight: 700, color: C.text, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {member.first_name} {member.last_name}
-                          </h4>
-                          <p style={{ fontSize: '11px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0' }}>{member.Partner_code}</p>
-                          <span style={S.tag(member.kyc_status === 'approved' ? C.green : C.gold)}>
-                            L1 • {member.kyc_status}
-                          </span>
-                        </div>
-
-                        {/* Level 2 Sub-children Mock */}
-                        {member.children && member.children.length > 0 && (
-                          <>
-                            <div style={{ width: 1, height: 24, background: C.border }} />
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                              {member.children.map(child => (
-                                <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                  <div style={{
-                                    background: C.bgSecondary, border: `1px solid ${C.border}`,
-                                    padding: '10px', borderRadius: '10px', width: '160px', textAlign: 'center'
-                                  }}>
-                                    <h4 style={{ fontSize: '12px', fontWeight: 700, color: C.text, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                      {child.first_name} {child.last_name}
-                                    </h4>
-                                    <p style={{ fontSize: '10px', fontFamily: 'monospace', color: C.textLight, margin: '3px 0' }}>{child.Partner_code}</p>
-                                    <span style={{
-                                      fontSize: '9px', fontWeight: 700, color: C.textLight, background: C.card,
-                                      padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase'
-                                    }}>
-                                      L2 • {child.kyc_status}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: C.bgSecondary, borderRadius: '12px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13px' }}>KYC Rejected / Pending</span>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: C.gold }}>{(teamDashboard?.pending_kyc || 0) + (teamDashboard?.rejected_partners || 0)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: C.bgSecondary, borderRadius: '12px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13px' }}>Blocked / Suspended Accounts</span>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: C.red }}>{(teamDashboard?.suspended_partners || 0) + (teamDashboard?.blocked_partners || 0)}</span>
                   </div>
                 </div>
-
               </div>
+            </div>
+          ) : activeTab === 'tree' ? (
+            /* COLLAPSIBLE GRAPHICAL TREE VIEW */
+            <div style={{ padding: '10px 0' }}>
+              {teamTree.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: C.textLight }}>
+                  No members found in the hierarchy.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {teamTree.map(member => (
+                    <TreeMemberNode key={member.id} member={member} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'list' ? (
+            /* DIRECTORY TABLE LIST */
+            <div style={{ overflowX: 'auto' }}>
+              {team.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: C.textLight }}>
+                  No team members to show in the list.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary }}>
+                      <th style={thStyle}>Partner Info</th>
+                      <th style={thStyle}>Contact</th>
+                      <th style={thStyle}>Code</th>
+                      <th style={thStyle}>KYC Status</th>
+                      <th style={thStyle}>Date Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.map((member) => (
+                      <tr key={member.id}>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              background: `${C.primary}12`, color: C.primary,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontWeight: 700, fontSize: '14px', border: `1px solid ${C.primary}20`
+                            }}>
+                              {member.first_name?.[0] || 'P'}
+                            </div>
+                            <div>
+                              <p style={{ fontWeight: 700, color: C.text, margin: 0 }}>{member.first_name} {member.last_name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ fontSize: '13px' }}>{member.email}</div>
+                            <div style={{ fontSize: '13px' }}>{member.mobile}</div>
+                          </div>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{
+                            fontFamily: 'monospace', color: C.primary, background: `${C.primary}12`,
+                            padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.primary}20`,
+                            fontWeight: 700, fontSize: '11px', display: 'inline-block'
+                          }}>
+                            {member.Partner_code}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={S.tag(member.kyc_status === 'approved' ? C.green : member.kyc_status === 'rejected' ? C.red : C.gold)}>
+                            {member.kyc_status || 'PENDING'}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, fontWeight: 500 }}>
+                          {new Date(member.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ) : (
+            /* COMMISSION LOGS */
+            <div style={{ overflowX: 'auto' }}>
+              {teamEarnings.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: C.textLight }}>
+                  No override commissions have been logged yet.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary }}>
+                      <th style={thStyle}>Date</th>
+                      <th style={thStyle}>Amount</th>
+                      <th style={thStyle}>Product / Bank</th>
+                      <th style={thStyle}>Status</th>
+                      <th style={thStyle}>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamEarnings.map((txn) => (
+                      <tr key={txn.id}>
+                        <td style={tdStyle}>
+                          {new Date(txn.created_at).toLocaleDateString()}
+                        </td>
+                        <td style={{ ...tdStyle, fontWeight: 700, color: C.green }}>
+                          ₹{parseFloat(txn.amount).toFixed(2)}
+                        </td>
+                        <td style={tdStyle}>
+                          <div>
+                            <p style={{ fontWeight: 700, margin: 0, color: C.text }}>{txn.product_name || 'N/A'}</p>
+                            <span style={{ fontSize: '11px', color: C.textLight }}>{txn.bank_name || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={S.tag(txn.status === 'approved' ? C.green : txn.status === 'pending' ? C.gold : C.red)}>
+                            {txn.status}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, fontSize: '12px', color: C.textLight }}>
+                          {txn.description}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
         </div>
@@ -375,7 +540,7 @@ export default function PartnerTeam() {
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, borderRadius: '20px', w: '100%', maxWidth: '440px',
+            background: C.card, borderRadius: '20px', width: '100%', maxWidth: '440px',
             overflow: 'hidden', border: `1px solid ${C.border}`,
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column'
           }}>
@@ -463,6 +628,48 @@ export default function PartnerTeam() {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      {isQrOpen && referralInfo && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, borderRadius: '20px', width: '100%', maxWidth: '320px',
+            border: `1px solid ${C.border}`, padding: '24px', display: 'flex',
+            flexDirection: 'column', alignItems: 'center', gap: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: C.text }}>Referral QR Code</h3>
+              <button 
+                onClick={() => setIsQrOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}
+              >
+                <MdClose size={20} />
+              </button>
+            </div>
+            
+            <div style={{
+              background: '#fff', padding: '12px', borderRadius: '12px',
+              border: `1px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+            }}>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralInfo.referral_link)}`} 
+                alt="Referral QR Code" 
+                style={{ width: '180px', height: '180px', display: 'block' }}
+              />
+            </div>
+
+            <p style={{ fontSize: '11px', color: C.textLight, textAlign: 'center', margin: 0 }}>
+              Scan this code to load the partner registration form with referral code <span style={{ fontWeight: 700, color: C.primary }}>{referralInfo.referral_code}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

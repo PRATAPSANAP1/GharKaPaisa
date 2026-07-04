@@ -329,8 +329,7 @@ const login = async (req, res, next) => {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator.', 403);
 
     // Validate OTP
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
@@ -396,8 +395,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     if (!user) return error(res, 'No account found with this mobile number', 401);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator.', 403);
 
     try {
       await verifyAccessToken({ accessToken, expectedMobile: mobile });
@@ -487,7 +485,7 @@ const register = async (req, res, next) => {
     const {
       password, first_name, last_name,
       current_address, business_location, company_name, company_type, gst_number, pincode,
-      bank_name, account_number, ifsc_code, account_holder_name
+      bank_name, account_number, ifsc_code, account_holder_name, referral_code
     } = req.body;
     const email = normalizeIdentity(req.body.email);
     const mobile = normalizeIdentity(req.body.mobile);
@@ -539,6 +537,23 @@ const register = async (req, res, next) => {
         await client.query(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
       }
 
+      let parentPartnerId = null;
+      let parentTeamLevel = 0;
+
+      if (referral_code && role === 'PARTNER') {
+        const { rows: [parentPartner] } = await client.query(`
+          SELECT id, team_level, allow_team_creation, team_status FROM "Partner_profiles" WHERE Partner_code = $1
+        `, [referral_code]);
+        if (parentPartner) {
+          if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
+            await client.query('ROLLBACK');
+            return error(res, 'The referring partner is currently not accepting new team members.', 403);
+          }
+          parentPartnerId = parentPartner.id;
+          parentTeamLevel = parseInt(parentPartner.team_level || 1);
+        }
+      }
+
       let PartnerCode = null;
 
       if (role === 'PARTNER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
@@ -548,15 +563,54 @@ const register = async (req, res, next) => {
 
         // Create Partner profile
         const { rows: [Partner] } = await client.query(`
-          INSERT INTO Partner_profiles (
+          INSERT INTO "Partner_profiles" (
             user_id, Partner_code, first_name, last_name, current_address,
-            business_location, company_name, company_type, gst_number, pincode
+            business_location, company_name, company_type, gst_number, pincode,
+            parent_partner_id, team_level, team_joined_at
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CASE WHEN $11 IS NOT NULL THEN NOW() ELSE NULL END) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
-          business_location || '', company_name, company_type, gst_number || null, pincode || null
+          business_location || '', company_name, company_type, gst_number || null, pincode || null,
+          parentPartnerId, parentTeamLevel + 1
         ]);
+
+        // Create team relationships recursively
+        if (parentPartnerId) {
+          let currentParentId = parentPartnerId;
+          let currentLevel = 1;
+          while (currentParentId) {
+            await client.query(`
+              INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
+              VALUES ($1, $2, $3)
+            `, [currentParentId, Partner.id, currentLevel]);
+
+            // Update parent's children count
+            if (currentLevel === 1) {
+              await client.query(`
+                UPDATE "Partner_profiles" SET children_count = children_count + 1 WHERE id = $1
+              `, [currentParentId]);
+              
+              // Increment total_registered on partner_referrals for parent
+              await client.query(`
+                UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
+              `, [currentParentId]);
+            }
+
+            const { rows: [nextParent] } = await client.query(`
+              SELECT parent_partner_id FROM "Partner_profiles" WHERE id = $1
+            `, [currentParentId]);
+            currentParentId = nextParent?.parent_partner_id || null;
+            currentLevel++;
+          }
+        }
+
+        // Create referrals record
+        const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${PartnerCode}`;
+        await client.query(`
+          INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
+          VALUES ($1, $2, $3)
+        `, [Partner.id, PartnerCode, referralLink]);
 
         // Create bank details
         const encryptedAccountNumber = encrypt(account_number);
@@ -651,8 +705,7 @@ const loginPassword = async (req, res, next) => {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
-    if (user.status === 'blocked') return error(res, 'Your account has been blocked. Please contact support.', 403);
-    if (user.status === 'inactive') return error(res, 'Your account is currently inactive. Please contact support.', 403);
+    if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator.', 403);
 
     // Generate JWT (15-minute access token)
     const token = jwt.sign(

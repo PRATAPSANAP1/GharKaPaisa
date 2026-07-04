@@ -468,9 +468,17 @@ const addTeamMember = async (req, res, next) => {
       return error(res, 'First name, email, mobile, and password are required', 400);
     }
 
-    // Check if parent exists
-    const { rows: [parentPartner] } = await client.query(`SELECT id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
+    // Check if parent exists and allows team creation
+    const { rows: [parentPartner] } = await client.query(`
+      SELECT id, allow_team_creation, team_status FROM "Partner_profiles" WHERE id = $1
+    `, [PartnerId]);
     if (!parentPartner) return error(res, 'Parent partner not found', 404);
+    if (parentPartner.allow_team_creation === false) {
+      return error(res, 'Your profile does not allow team creation. Please contact support.', 403);
+    }
+    if (parentPartner.team_status === 'INACTIVE') {
+      return error(res, 'Your team status is currently inactive. You cannot add team members.', 403);
+    }
 
     await client.query('BEGIN');
 
@@ -610,6 +618,367 @@ const getTeamMembers = async (req, res, next) => {
   }
 };
 
+const invitePartnerClick = async (req, res, next) => {
+  try {
+    const { ref } = req.query;
+    if (!ref) return error(res, 'Referral code is required', 400);
+
+    await query(`
+      UPDATE partner_referrals 
+      SET total_invites = total_invites + 1 
+      WHERE referral_code = $1
+    `, [ref]);
+
+    return success(res, {}, 'Invite recorded');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getTeamTree = async (req, res, next) => {
+  try {
+    const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows } = await query(`
+      SELECT 
+        ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id,
+        u.email, u.mobile, u.status as account_status, u.created_at, r.level
+      FROM partner_team_relationships r
+      JOIN "Partner_profiles" ap ON ap.id = r.child_partner_id
+      JOIN users u ON u.id = ap.user_id
+      WHERE r.parent_partner_id = $1
+      ORDER BY r.level ASC, u.created_at DESC
+    `, [partnerId]);
+
+    const nodeMap = {
+      [partnerId]: {
+        id: partnerId,
+        label: 'Me',
+        children: []
+      }
+    };
+
+    rows.forEach(r => {
+      nodeMap[r.id] = {
+        id: r.id,
+        Partner_code: r.Partner_code,
+        first_name: r.first_name,
+        last_name: r.last_name,
+        kyc_status: r.kyc_status,
+        parent_partner_id: r.parent_partner_id,
+        email: r.email,
+        mobile: r.mobile,
+        account_status: r.account_status,
+        created_at: r.created_at,
+        level: r.level,
+        children: []
+      };
+    });
+
+    rows.forEach(r => {
+      const parentId = r.parent_partner_id;
+      if (nodeMap[parentId]) {
+        nodeMap[parentId].children.push(nodeMap[r.id]);
+      } else {
+        nodeMap[partnerId].children.push(nodeMap[r.id]);
+      }
+    });
+
+    return success(res, nodeMap[partnerId].children);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getTeamDashboard = async (req, res, next) => {
+  try {
+    const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: summary } = await query(`
+      SELECT 
+        COUNT(*)::int as total_members,
+        COUNT(CASE WHEN ap.team_joined_at >= CURRENT_DATE THEN 1 END)::int as joined_today,
+        COUNT(CASE WHEN ap.kyc_status = 'pending' THEN 1 END)::int as pending_kyc,
+        COUNT(CASE WHEN ap.kyc_status = 'approved' THEN 1 END)::int as approved_partners,
+        COUNT(CASE WHEN ap.kyc_status = 'rejected' THEN 1 END)::int as rejected_partners,
+        COUNT(CASE WHEN u.status = 'suspended' THEN 1 END)::int as suspended_partners,
+        COUNT(CASE WHEN u.status = 'blocked' THEN 1 END)::int as blocked_partners
+      FROM partner_team_relationships r
+      JOIN "Partner_profiles" ap ON ap.id = r.child_partner_id
+      JOIN users u ON u.id = ap.user_id
+      WHERE r.parent_partner_id = $1
+    `, [partnerId]);
+
+    const { rows: [commissions] } = await query(`
+      SELECT
+        COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0)::float as monthly_earnings,
+        COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0)::float as today_earnings
+      FROM wallets w
+      JOIN wallet_transactions wt ON wt.wallet_id = w.id
+      WHERE w.Partner_id = $1 AND wt.reference_type = 'team_commission'
+    `, [partnerId]);
+
+    const dashboard = {
+      ...(summary[0] || {
+        total_members: 0,
+        joined_today: 0,
+        pending_kyc: 0,
+        approved_partners: 0,
+        rejected_partners: 0,
+        suspended_partners: 0,
+        blocked_partners: 0
+      }),
+      monthly_team_earnings: commissions?.monthly_earnings || 0,
+      today_team_commission: commissions?.today_earnings || 0
+    };
+
+    return success(res, dashboard);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getTeamEarnings = async (req, res, next) => {
+  try {
+    const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: earnings } = await query(`
+      SELECT wt.*, p.name as product_name
+      FROM wallets w
+      JOIN wallet_transactions wt ON wt.wallet_id = w.id
+      LEFT JOIN applications a ON a.id = wt.reference_id::uuid
+      LEFT JOIN products p ON p.id = a.product_id
+      WHERE w.Partner_id = $1 AND wt.reference_type = 'team_commission'
+      ORDER BY wt.created_at DESC
+    `, [partnerId]);
+
+    return success(res, earnings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getReferralInfo = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    let { rows: [referral] } = await query(`
+      SELECT * FROM partner_referrals WHERE partner_id = $1
+    `, [partnerId]);
+
+    if (!referral) {
+      const { rows: [partner] } = await query(`
+        SELECT Partner_code FROM "Partner_profiles" WHERE id = $1
+      `, [partnerId]);
+      
+      const code = partner?.Partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
+      const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${code}`;
+      
+      const { rows: [newRef] } = await query(`
+        INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (partner_id) DO UPDATE SET referral_code = EXCLUDED.referral_code RETURNING *
+      `, [partnerId, code, referralLink]);
+      referral = newRef;
+    }
+
+    return success(res, referral);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const changeParentPartner = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { PartnerId } = req.params;
+    const { new_parent_id } = req.body;
+
+    await client.query('BEGIN');
+
+    const { rows: [partner] } = await client.query(`
+      SELECT id, parent_partner_id, team_level FROM "Partner_profiles" WHERE id = $1 FOR UPDATE
+    `, [PartnerId]);
+
+    if (!partner) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Partner not found');
+    }
+
+    if (new_parent_id && new_parent_id === PartnerId) {
+      await client.query('ROLLBACK');
+      return error(res, 'Cannot set a partner as their own parent', 400);
+    }
+
+    if (new_parent_id) {
+      const { rows: [cycleCheck] } = await client.query(`
+        SELECT 1 FROM partner_team_relationships 
+        WHERE parent_partner_id = $1 AND child_partner_id = $2
+      `, [PartnerId, new_parent_id]);
+      if (cycleCheck) {
+        await client.query('ROLLBACK');
+        return error(res, 'Cycle detected: new parent is a child/descendant of this partner', 400);
+      }
+    }
+
+    const { rows: descendants } = await client.query(`
+      SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1
+      UNION
+      SELECT $1::uuid as child_partner_id
+    `, [PartnerId]);
+
+    const descendantIds = descendants.map(d => d.child_partner_id);
+
+    await client.query(`
+      DELETE FROM partner_team_relationships
+      WHERE child_partner_id = ANY($1)
+        AND NOT (parent_partner_id = ANY($1))
+    `, [descendantIds]);
+
+    if (partner.parent_partner_id) {
+      await client.query(`
+        UPDATE "Partner_profiles" 
+        SET children_count = GREATEST(0, children_count - 1) 
+        WHERE id = $1
+      `, [partner.parent_partner_id]);
+
+      await client.query(`
+        UPDATE partner_referrals
+        SET total_registered = GREATEST(0, total_registered - 1)
+        WHERE partner_id = $1
+      `, [partner.parent_partner_id]);
+    }
+
+    let newTeamLevel = 1;
+    if (new_parent_id) {
+      const { rows: [newParent] } = await client.query(`
+        SELECT team_level FROM "Partner_profiles" WHERE id = $1
+      `, [new_parent_id]);
+      newTeamLevel = parseInt(newParent?.team_level || 1) + 1;
+    }
+
+    await client.query(`
+      UPDATE "Partner_profiles"
+      SET parent_partner_id = $1, team_level = $2, team_joined_at = CASE WHEN $1 IS NOT NULL THEN NOW() ELSE NULL END
+      WHERE id = $3
+    `, [new_parent_id, newTeamLevel, PartnerId]);
+
+    if (new_parent_id) {
+      const { rows: ancestors } = await client.query(`
+        SELECT parent_partner_id, level FROM partner_team_relationships
+        WHERE child_partner_id = $1
+        UNION
+        SELECT $1::uuid as parent_partner_id, 0 as level
+      `, [new_parent_id]);
+
+      ancestors.sort((a, b) => a.level - b.level);
+
+      for (const descId of descendantIds) {
+        let relLevel = 0;
+        if (descId !== PartnerId) {
+          const { rows: [rel] } = await client.query(`
+            SELECT level FROM partner_team_relationships WHERE parent_partner_id = $1 AND child_partner_id = $2
+          `, [PartnerId, descId]);
+          relLevel = rel ? rel.level : 1;
+        }
+
+        for (const anc of ancestors) {
+          const newRelLevel = anc.level + 1 + relLevel;
+          await client.query(`
+            INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (parent_partner_id, child_partner_id) DO NOTHING
+          `, [anc.parent_partner_id, descId, newRelLevel]);
+        }
+      }
+
+      await client.query(`
+        UPDATE "Partner_profiles" SET children_count = children_count + 1 WHERE id = $1
+      `, [new_parent_id]);
+      await client.query(`
+        UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
+      `, [new_parent_id]);
+    }
+
+    const updateDescendantLevels = async (parentId, parentLevel) => {
+      const { rows: children } = await client.query(`
+        SELECT id FROM "Partner_profiles" WHERE parent_partner_id = $1
+      `, [parentId]);
+      for (const child of children) {
+        const nextLevel = parentLevel + 1;
+        await client.query(`
+          UPDATE "Partner_profiles" SET team_level = $1 WHERE id = $2
+        `, [nextLevel, child.id]);
+        await updateDescendantLevels(child.id, nextLevel);
+      }
+    };
+    await updateDescendantLevels(PartnerId, newTeamLevel);
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Parent partner changed successfully. Team hierarchy rebuilt.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const deactivateTeam = async (req, res, next) => {
+  try {
+    const { PartnerId } = req.params;
+    const { team_status, allow_team_creation } = req.body;
+
+    const updates = [];
+    const params = [];
+    let idx = 1;
+
+    if (team_status) {
+      updates.push(`team_status = $${idx++}`);
+      params.push(team_status);
+    }
+    if (allow_team_creation !== undefined) {
+      updates.push(`allow_team_creation = $${idx++}`);
+      params.push(allow_team_creation);
+    }
+
+    if (updates.length === 0) return error(res, 'No update parameters provided', 400);
+
+    params.push(PartnerId);
+    await query(`
+      UPDATE "Partner_profiles"
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = $${idx}
+    `, params);
+
+    return success(res, {}, 'Team status updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getWholeNetwork = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id, ap.team_level, ap.team_status, ap.children_count,
+        u.email, u.mobile, u.status as account_status,
+        pap.Partner_code as parent_code, pap.first_name as parent_first_name, pap.last_name as parent_last_name
+      FROM "Partner_profiles" ap
+      JOIN users u ON u.id = ap.user_id
+      LEFT JOIN "Partner_profiles" pap ON pap.id = ap.parent_partner_id
+      ORDER BY ap.team_level ASC, ap.created_at DESC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -624,4 +993,12 @@ module.exports = {
   getTeamMembers,
   listPartnerCustomers,
   getTrainingModules,
+  invitePartnerClick,
+  getTeamTree,
+  getTeamDashboard,
+  getTeamEarnings,
+  getReferralInfo,
+  changeParentPartner,
+  deactivateTeam,
+  getWholeNetwork
 };

@@ -21,5 +21,9 @@ router.post('/upload-docs', kycUpload, partnerCtrl.uploadSelfKYC);
 router.get('/profile', partnerCtrl.getSelfProfile);
 router.get('/customers', partnerCtrl.listPartnerCustomers);
 router.get('/training', partnerCtrl.getTrainingModules);
+router.get('/referral', partnerCtrl.getReferralInfo);
+router.get('/team-tree', partnerCtrl.getTeamTree);
+router.get('/team-dashboard', partnerCtrl.getTeamDashboard);
+router.get('/team-earnings', partnerCtrl.getTeamEarnings);
 
 module.exports = router;

@@ -57,12 +57,20 @@ export default function PartnerLayout() {
   }, []);
 
   const kycStatus = user?.kyc_status || 'pending';
+  const accountStatus = user?.status || 'pending';
   const isKycApproved = kycStatus === 'approved';
 
   // Allow access to all pages regardless of KYC status
   const isKycPage = location.pathname.includes('/partner/kyc');
   const isProfilePage = location.pathname.includes('/partner/profile');
   const isSettingsPage = location.pathname.includes('/partner/settings');
+
+  // Redirect to KYC page if KYC is rejected
+  useEffect(() => {
+    if (kycStatus === 'rejected' && !isKycPage && !isProfilePage && !isSettingsPage) {
+      navigate('/partner/kyc');
+    }
+  }, [kycStatus, isKycPage, isProfilePage, isSettingsPage, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -456,6 +464,69 @@ export default function PartnerLayout() {
         background: MAIN_BG,
         position: 'relative',
       }}>
+        {/* Status Banners */}
+        {accountStatus === 'inactive' && (
+          <div style={{
+            background: '#64748B',
+            color: '#fff',
+            padding: '12px 16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '12px',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MdVerifiedUser size={24} />
+              <div style={{ fontWeight: 500, fontSize: '14px' }}>
+                <strong>Account Inactive:</strong> Your account is currently inactive. Some features may be limited.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {kycStatus === 'pending' && (
+          <div style={{
+            background: '#F59E0B',
+            color: '#fff',
+            padding: '12px 16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '12px',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MdVerifiedUser size={24} />
+              <div style={{ fontWeight: 500, fontSize: '14px' }}>
+                <strong>KYC Verification Pending:</strong> Your KYC verification is pending. Some features will remain disabled until verification is completed.
+              </div>
+            </div>
+            {!isKycPage && (
+              <button
+                onClick={() => navigate('/partner/kyc')}
+                style={{
+                  background: '#fff',
+                  color: '#D97706',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  border: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+              >
+                Verify Now
+              </button>
+            )}
+          </div>
+        )}
 
         <div style={{
           flex: 1,

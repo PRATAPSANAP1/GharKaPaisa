@@ -3,6 +3,21 @@ import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import partnerService from "../../../services/partner.api.js";
 import walletService from "../../../services/wallet.api.js";
+import { useNavigate } from "react-router-dom";
+import {
+  HeroBannerCarousel,
+  CreditCardsSection,
+  LoansSection,
+  InsuranceSection,
+  TravelServicesSection,
+  UtilityServicesSection,
+  BankLogosSection,
+  WhyChooseUsSection,
+  PartnerReferralBanner,
+  TestimonialsSection,
+  FAQSection,
+  LatestOffersSection
+} from "../../home/components/HomePageSections";
 
 // Reusable Components matching the HTML design
 function BrandItem({ text, C }) {
@@ -75,6 +90,7 @@ function StatusBadge({ status, C, S }) {
 export default function PartnerDashboard({ partner, onTabChange }) {
   const { C } = useTheme();
   const S = makeS(C);
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -356,6 +372,20 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
         </div>
       </div>
+
+      {/* Public Home Page Sections Integrated */}
+      <HeroBannerCarousel C={C} navigate={navigate} />
+      <CreditCardsSection C={C} navigate={navigate} />
+      <LoansSection C={C} navigate={navigate} />
+      <InsuranceSection C={C} navigate={navigate} />
+      <TravelServicesSection C={C} navigate={navigate} />
+      <UtilityServicesSection C={C} navigate={navigate} />
+      <BankLogosSection C={C} />
+      <WhyChooseUsSection C={C} />
+      <PartnerReferralBanner C={C} navigate={navigate} />
+      <TestimonialsSection C={C} />
+      <FAQSection C={C} />
+      <LatestOffersSection C={C} navigate={navigate} />
 
       {/* Recent Applications Listing - Maintained for Dashboard Utility */}
       <div style={{ background: C.card, borderRadius: "24px", padding: "24px", border: `1px solid ${C.border}` }}>

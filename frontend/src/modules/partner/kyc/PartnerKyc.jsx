@@ -11,9 +11,29 @@ import {
   MdArrowForward, MdClose, MdLock
 } from 'react-icons/md';
 
+// Responsive Hook
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  const [isTablet, setIsTablet] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 768 && window.innerWidth < 1024 : false
+  );
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  return { isMobile, isTablet };
+}
+
 export default function PartnerKyc() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
+  const { isMobile, isTablet } = useIsMobile();
 
   const user = useAuthStore((state) => state.user);
   const profile = usePartnerStore((state) => state.profile);
@@ -202,22 +222,23 @@ export default function PartnerKyc() {
     <div style={{
       background: themeBg,
       minHeight: '100%',
-      padding: '24px 32px 48px 32px',
+      padding: isMobile ? '16px' : isTablet ? '20px 24px' : '24px 32px 48px 32px',
       overflowY: 'auto',
+      overflowX: 'hidden',
       boxSizing: 'border-box'
     }}>
       {/* ──── HEADER SECTION ──── */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
         flexWrap: 'wrap',
         gap: '16px',
-        marginBottom: '32px'
+        marginBottom: isMobile ? '24px' : '32px'
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, color: textPrimary, margin: 0, letterSpacing: '-0.5px' }}>KYC Center</h1>
-          <p style={{ fontSize: '14px', color: textSecondary, margin: 0 }}>Complete your identity verification to unlock all partner features.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: isMobile ? 'auto' : '200px' }}>
+          <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, color: textPrimary, margin: 0, letterSpacing: '-0.5px' }}>KYC Center</h1>
+          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: 0, lineHeight: 1.4 }}>Complete your identity verification to unlock all partner features.</p>
         </div>
 
         {/* Need Help Card */}
@@ -259,8 +280,8 @@ export default function PartnerKyc() {
       {/* ──── MAIN GRID LAYOUT ──── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '7fr 4fr',
-        gap: '32px',
+        gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr' : '7fr 4fr',
+        gap: isMobile ? '24px' : '32px',
         alignItems: 'start'
       }}>
         {/* LEFT COLUMN: Stepper + Status + Form/Documents */}
@@ -270,36 +291,37 @@ export default function PartnerKyc() {
           <div style={{
             background: bannerBg,
             border: `1px solid ${bannerBorder}`,
-            borderRadius: '20px',
-            padding: '24px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '16px' : '24px',
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isMobile ? 'flex-start' : 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '20px',
+            gap: isMobile ? '12px' : '20px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.01)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+            <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '12px' : '18px', flex: 1, minWidth: isMobile ? 'auto' : '200px' }}>
               <div style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '14px',
+                width: isMobile ? '44px' : '52px',
+                height: isMobile ? '44px' : '52px',
+                borderRadius: isMobile ? '12px' : '14px',
                 background: '#FFFFFF',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: isApproved ? successColor : isUnderReview ? secondaryColor : isRejected ? errorColor : primaryColor
+                color: isApproved ? successColor : isUnderReview ? secondaryColor : isRejected ? errorColor : primaryColor,
+                flexShrink: 0
               }}>
-                {isApproved ? <MdCheckCircle size={28} /> : 
-                 isRejected ? <MdError size={28} /> : 
-                 <MdPendingActions size={28} />}
+                {isApproved ? <MdCheckCircle size={isMobile ? 24 : 28} /> : 
+                 isRejected ? <MdError size={isMobile ? 24 : 28} /> : 
+                 <MdPendingActions size={isMobile ? 24 : 28} />}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: bannerColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <h3 style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 800, margin: 0, color: bannerColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Current Status: {kycStatus.replace('_', ' ')}
                 </h3>
-                <p style={{ fontSize: '13.5px', margin: 0, color: textSecondary, fontWeight: 500 }}>
+                <p style={{ fontSize: isMobile ? '12px' : '13.5px', margin: 0, color: textSecondary, fontWeight: 500, lineHeight: 1.4 }}>
                   {isApproved && 'Your KYC is verified successfully. All platform features are now unlocked.'}
                   {isUnderReview && 'Your documents are currently being verified by our compliance team.'}
                   {isRejected && `Your documents were rejected. Reason: ${profile?.rejection_reason || 'Invalid details'}. Please re-submit.`}
@@ -314,10 +336,12 @@ export default function PartnerKyc() {
               border: `1px solid ${bannerBorder}30`,
               color: bannerColor,
               borderRadius: '8px',
-              padding: '6px 12px',
-              fontSize: '12px',
+              padding: isMobile ? '4px 10px' : '6px 12px',
+              fontSize: isMobile ? '11px' : '12px',
               fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}>
               {isApproved ? 'Verified Partner' :
                isUnderReview ? (getMostRecentUploadDate() ? `Submitted on: ${getMostRecentUploadDate()}` : 'Under Review') :
@@ -330,15 +354,17 @@ export default function PartnerKyc() {
           <div style={{
             background: cardBg,
             border: `1px solid ${cardBorder}`,
-            borderRadius: '20px',
-            padding: '24px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '16px' : '24px',
             boxShadow: cardShadow
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              position: 'relative'
+              position: 'relative',
+              flexWrap: isMobile ? 'wrap' : 'nowrap',
+              gap: isMobile ? '8px' : '0'
             }}>
               {[
                 { step: 1, label: 'Pending', sub: 'Completed' },
@@ -357,11 +383,13 @@ export default function PartnerKyc() {
                       flexDirection: 'column',
                       alignItems: 'center',
                       zIndex: 2,
-                      width: '120px'
+                      width: isMobile ? 'auto' : '120px',
+                      flex: isMobile ? '1' : 'auto',
+                      minWidth: isMobile ? '60px' : 'auto'
                     }}>
                       <div style={{
-                        width: '32px',
-                        height: '32px',
+                        width: isMobile ? '28px' : '32px',
+                        height: isMobile ? '28px' : '32px',
                         borderRadius: '50%',
                         background: state === 'completed' ? `${successColor}10` : state === 'current' ? `${secondaryColor}15` : state === 'failed' ? `${errorColor}10` : isDark ? '#334155' : '#F1F5F9',
                         border: `2px solid ${stepColor}`,
@@ -370,20 +398,20 @@ export default function PartnerKyc() {
                         justifyContent: 'center',
                         color: stepColor,
                         fontWeight: 700,
-                        fontSize: '13px',
+                        fontSize: isMobile ? '11px' : '13px',
                         transition: 'all 0.3s',
-                        marginBottom: '8px'
+                        marginBottom: isMobile ? '6px' : '8px'
                       }}>
                         {state === 'completed' ? '✓' : state === 'failed' ? '✗' : s.step}
                       </div>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: textPrimary, textAlign: 'center', display: 'block' }}>
-                        {s.label}
+                      <span style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: 700, color: textPrimary, textAlign: 'center', display: 'block', wordWrap: 'break-word' }}>
+                        {isMobile ? s.step === 1 ? 'Pending' : s.step === 2 ? 'Upload' : s.step === 3 ? 'Review' : s.step === 4 ? (isRejected ? 'Rejected' : 'Approved') : s.label : s.label}
                       </span>
-                      <span style={{ fontSize: '10px', color: stepColor, textAlign: 'center', marginTop: '2px' }}>{s.sub}</span>
+                      {!isMobile && <span style={{ fontSize: '10px', color: stepColor, textAlign: 'center', marginTop: '2px' }}>{s.sub}</span>}
                     </div>
 
                     {/* Line between circles */}
-                    {idx < 3 && (
+                    {idx < 3 && !isMobile && (
                       <div style={{
                         flex: 1,
                         height: '2px',
@@ -404,13 +432,13 @@ export default function PartnerKyc() {
             <div style={{
               background: cardBg,
               border: `1px solid ${cardBorder}`,
-              borderRadius: '20px',
-              padding: '28px',
+              borderRadius: isMobile ? '16px' : '20px',
+              padding: isMobile ? '20px' : '28px',
               boxShadow: cardShadow
             }}>
-              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: '16px', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>Submitted Documents</h3>
-                <p style={{ fontSize: '13px', color: textSecondary, margin: '4px 0 0 0' }}>
+              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: isMobile ? '12px' : '16px', marginBottom: isMobile ? '16px' : '20px' }}>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>Submitted Documents</h3>
+                <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '4px 0 0 0', lineHeight: 1.4 }}>
                   {isApproved ? 'Your uploaded documents are verified.' : isRejected ? 'Your previously uploaded documents were rejected. Please upload correct documents below.' : 'Your documents have been uploaded successfully. Verification is currently active.'}
                 </p>
               </div>
@@ -424,35 +452,38 @@ export default function PartnerKyc() {
                   return (
                     <div key={docItem.key} style={{
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: isMobile ? 'flex-start' : 'center',
                       justifyContent: 'space-between',
                       background: isDark ? '#1E293B' : '#F8FAFC',
                       border: `1px solid ${cardBorder}`,
-                      borderRadius: '16px',
-                      padding: '16px 20px',
-                      transition: 'transform 0.15s ease'
+                      borderRadius: isMobile ? '12px' : '16px',
+                      padding: isMobile ? '12px 16px' : '16px 20px',
+                      transition: 'transform 0.15s ease',
+                      flexWrap: isMobile ? 'wrap' : 'nowrap',
+                      gap: isMobile ? '12px' : '0'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', flex: 1, minWidth: isMobile ? 'auto' : '200px' }}>
                         <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '10px',
+                          width: isMobile ? '36px' : '40px',
+                          height: isMobile ? '36px' : '40px',
+                          borderRadius: isMobile ? '8px' : '10px',
                           background: `${primaryColor}10`,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          flexShrink: 0
                         }}>
                           {docItem.icon}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '13.5px', fontWeight: 700, color: textPrimary }}>{docItem.label}</span>
-                          <span style={{ fontSize: '11px', color: textSecondary }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                          <span style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 700, color: textPrimary, wordWrap: 'break-word' }}>{docItem.label}</span>
+                          <span style={{ fontSize: isMobile ? '10px' : '11px', color: textSecondary }}>
                             {dbDoc ? `Uploaded on ${uploadTime}` : 'Not Uploaded'}
                           </span>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
                          {dbDoc && (
                           <span style={{
                             background: dbDoc.verified 
@@ -467,10 +498,11 @@ export default function PartnerKyc() {
                               : isRejected 
                               ? errorColor 
                               : secondaryColor,
-                            padding: '4px 10px',
+                            padding: isMobile ? '3px 8px' : '4px 10px',
                             borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: 700
+                            fontSize: isMobile ? '10px' : '11px',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap'
                           }}>
                             {dbDoc.verified 
                               ? 'Verified' 
@@ -489,11 +521,11 @@ export default function PartnerKyc() {
                               alignItems: 'center',
                               gap: '6px',
                               textDecoration: 'none',
-                              fontSize: '13px',
+                              fontSize: isMobile ? '12px' : '13px',
                               fontWeight: 700,
                               color: primaryColor,
                               border: `1px solid ${primaryColor}20`,
-                              padding: '6px 12px',
+                              padding: isMobile ? '5px 10px' : '6px 12px',
                               borderRadius: '8px',
                               background: '#FFFFFF',
                               boxShadow: '0 2px 4px rgba(37,99,235,0.03)',
@@ -501,7 +533,7 @@ export default function PartnerKyc() {
                               cursor: 'pointer'
                             }}
                           >
-                            <MdVisibility size={15} /> View
+                            <MdVisibility size={isMobile ? 14 : 15} /> View
                           </button>
                         )}
                       </div>
@@ -512,11 +544,11 @@ export default function PartnerKyc() {
 
               {/* View All Documents link to Vault */}
               <div style={{
-                marginTop: '24px',
+                marginTop: isMobile ? '16px' : '24px',
                 display: 'flex',
                 justifyContent: 'center',
                 borderTop: `1px solid ${cardBorder}`,
-                paddingTop: '20px'
+                paddingTop: isMobile ? '16px' : '20px'
               }}>
                 <Link
                   to="/partner/vault"
@@ -525,16 +557,16 @@ export default function PartnerKyc() {
                     alignItems: 'center',
                     gap: '6px',
                     textDecoration: 'none',
-                    fontSize: '14px',
+                    fontSize: isMobile ? '13px' : '14px',
                     fontWeight: 700,
                     color: primaryColor,
                     background: `${primaryColor}10`,
-                    padding: '10px 24px',
+                    padding: isMobile ? '8px 20px' : '10px 24px',
                     borderRadius: '10px',
                     transition: 'all 0.2s'
                   }}
                 >
-                  <MdUploadFile size={16} /> View All Documents
+                  <MdUploadFile size={isMobile ? 14 : 16} /> View All Documents
                 </Link>
               </div>
             </div>
@@ -545,18 +577,18 @@ export default function PartnerKyc() {
             <form onSubmit={handleSubmit} style={{
               background: cardBg,
               border: `1px solid ${cardBorder}`,
-              borderRadius: '20px',
-              padding: '32px',
+              borderRadius: isMobile ? '16px' : '20px',
+              padding: isMobile ? '20px' : '32px',
               boxShadow: cardShadow,
               display: 'flex',
               flexDirection: 'column',
-              gap: '24px'
+              gap: isMobile ? '16px' : '24px'
             }}>
-              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: '16px', marginBottom: '8px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>
+              <div style={{ borderBottom: `1px solid ${cardBorder}`, paddingBottom: isMobile ? '12px' : '16px', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: textPrimary, margin: 0 }}>
                   {isRejected ? 'Re-upload Identity Documents' : 'Identity Document Upload'}
                 </h3>
-                <p style={{ fontSize: '13px', color: textSecondary, margin: '4px 0 0 0' }}>Provide your government credentials. All uploads must be clearly readable original documents.</p>
+                <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '4px 0 0 0', lineHeight: 1.4 }}>Provide your government credentials. All uploads must be clearly readable original documents.</p>
               </div>
 
               {errorMsg && (
@@ -609,8 +641,8 @@ export default function PartnerKyc() {
               {/* Upload Grid */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '20px'
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: isMobile ? '16px' : '20px'
               }}>
                 {[
                   { id: 'pan', label: 'PAN Card Photo *' },
@@ -623,8 +655,8 @@ export default function PartnerKyc() {
                       onMouseLeave={() => setHov(upField.id, false)}
                       style={{
                         border: `2px dashed ${hovStates[upField.id] ? primaryColor : isDark ? '#334155' : '#cbd5e1'}`,
-                        borderRadius: '16px',
-                        padding: '24px 16px',
+                        borderRadius: isMobile ? '12px' : '16px',
+                        padding: isMobile ? '20px 16px' : '24px 16px',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -633,7 +665,8 @@ export default function PartnerKyc() {
                         position: 'relative',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        minHeight: '120px'
+                        minHeight: isMobile ? '100px' : '120px',
+                        width: '100%'
                       }}
                     >
                       <input
@@ -651,11 +684,11 @@ export default function PartnerKyc() {
                           zIndex: 5
                         }}
                       />
-                      <MdUploadFile size={32} style={{ color: hovStates[upField.id] ? primaryColor : textLight, marginBottom: '8px' }} />
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: textPrimary, textAlign: 'center', padding: '0 8px', wordBreak: 'break-all' }}>
+                      <MdUploadFile size={isMobile ? 28 : 32} style={{ color: hovStates[upField.id] ? primaryColor : textLight, marginBottom: '8px' }} />
+                      <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 600, color: textPrimary, textAlign: 'center', padding: '0 8px', wordBreak: 'break-word' }}>
                         {files[upField.id] ? files[upField.id].name : 'Click to upload file'}
                       </span>
-                      <span style={{ fontSize: '11px', color: textSecondary, marginTop: '4px' }}>Max 5MB • JPG, PNG, PDF</span>
+                      <span style={{ fontSize: isMobile ? '10px' : '11px', color: textSecondary, marginTop: '4px' }}>Max 5MB • JPG, PNG, PDF</span>
                     </div>
                   </div>
                 ))}
@@ -673,10 +706,10 @@ export default function PartnerKyc() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
-                  padding: '14px',
+                  padding: isMobile ? '12px' : '14px',
                   border: 'none',
                   borderRadius: '12px',
-                  fontSize: '15px',
+                  fontSize: isMobile ? '14px' : '15px',
                   fontWeight: 700,
                   boxShadow: `0 4px 14px ${primaryColor}30`,
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -704,16 +737,17 @@ export default function PartnerKyc() {
           <div style={{
             background: cardBg,
             border: `1px solid ${cardBorder}`,
-            borderRadius: '20px',
-            padding: '20px 24px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '16px' : '20px 24px',
             boxShadow: cardShadow,
             display: 'flex',
-            alignItems: 'center',
-            gap: '16px'
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: isMobile ? '12px' : '16px',
+            flexWrap: isMobile ? 'wrap' : 'nowrap'
           }}>
             <div style={{
-              width: '40px',
-              height: '40px',
+              width: isMobile ? '36px' : '40px',
+              height: isMobile ? '36px' : '40px',
               borderRadius: '50%',
               background: `${successColor}10`,
               display: 'flex',
@@ -722,13 +756,13 @@ export default function PartnerKyc() {
               color: successColor,
               flexShrink: 0
             }}>
-              <MdSecurity size={22} />
+              <MdSecurity size={isMobile ? 18 : 22} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-              <span style={{ fontSize: '13.5px', fontWeight: 700, color: textPrimary }}>Your Data is Safe</span>
-              <span style={{ fontSize: '12.5px', color: textSecondary }}>Your KYC documents are protected with bank-level encryption and stored securely.</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: isMobile ? 'auto' : '200px' }}>
+              <span style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 700, color: textPrimary }}>Your Data is Safe</span>
+              <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: textSecondary, lineHeight: 1.4 }}>Your KYC documents are protected with bank-level encryption and stored securely.</span>
             </div>
-            <Link to="/partner/settings" style={{ fontSize: '13px', fontWeight: 700, color: primaryColor, textDecoration: 'none' }}>
+            <Link to="/partner/settings" style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, color: primaryColor, textDecoration: 'none', whiteSpace: 'nowrap' }}>
               Learn More
             </Link>
           </div>
@@ -741,8 +775,8 @@ export default function PartnerKyc() {
           {/* What Happens Next Card */}
           <div style={{
             background: `linear-gradient(135deg, ${primaryColor} 0%, #1D4ED8 100%)`,
-            borderRadius: '20px',
-            padding: '28px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '20px' : '28px',
             color: '#FFFFFF',
             boxShadow: '0 10px 30px rgba(37,99,235,0.15)',
             position: 'relative',
@@ -759,8 +793,8 @@ export default function PartnerKyc() {
               right: '-30px'
             }} />
 
-            <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdTimeline size={22} /> What Happens Next?
+            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MdTimeline size={isMobile ? 18 : 22} /> What Happens Next?
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
@@ -779,25 +813,25 @@ export default function PartnerKyc() {
                 { text: 'You receive SMS & Email updates', desc: 'Real-time alerts sent instantly when validation status changes.' },
                 { text: 'Once approved, all partner features unlock', desc: 'Unlock payouts, lead generator links, and product catalogs.' }
               ].map((step, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '14px', alignItems: 'start', position: 'relative', zIndex: 5 }}>
+                <div key={idx} style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'start', position: 'relative', zIndex: 5 }}>
                   <div style={{
-                    width: '24px',
-                    height: '24px',
+                    width: isMobile ? '20px' : '24px',
+                    height: isMobile ? '20px' : '24px',
                     borderRadius: '50%',
                     background: '#FFFFFF',
                     color: primaryColor,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '11px',
+                    fontSize: isMobile ? '10px' : '11px',
                     fontWeight: 800,
                     flexShrink: 0
                   }}>
                     {idx + 1}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700 }}>{step.text}</span>
-                    <span style={{ fontSize: '11.5px', opacity: 0.8 }}>{step.desc}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                    <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, lineHeight: 1.4 }}>{step.text}</span>
+                    <span style={{ fontSize: isMobile ? '10px' : '11.5px', opacity: 0.8, lineHeight: 1.4 }}>{step.desc}</span>
                   </div>
                 </div>
               ))}
@@ -807,15 +841,15 @@ export default function PartnerKyc() {
             <div style={{
               background: 'rgba(255,255,255,0.1)',
               borderRadius: '12px',
-              padding: '12px 16px',
+              padding: isMobile ? '10px 14px' : '12px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              marginTop: '24px',
+              gap: isMobile ? '8px' : '10px',
+              marginTop: isMobile ? '16px' : '24px',
               backdropFilter: 'blur(4px)'
             }}>
-              <MdPendingActions size={18} />
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>Review Time: 24–48 Hours</span>
+              <MdPendingActions size={isMobile ? 16 : 18} />
+              <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700 }}>Review Time: 24–48 Hours</span>
             </div>
           </div>
 
@@ -823,12 +857,12 @@ export default function PartnerKyc() {
           <div style={{
             background: isDark ? '#1E293B' : '#ECFDF5',
             border: `1px solid ${isDark ? cardBorder : '#D1FAE5'}`,
-            borderRadius: '20px',
-            padding: '28px',
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '20px' : '28px',
             boxShadow: cardShadow
           }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: isDark ? textPrimary : '#065F46', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdAssignment size={20} color={successColor} /> Tips for Faster Approval
+            <h3 style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 800, color: isDark ? textPrimary : '#065F46', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MdAssignment size={isMobile ? 16 : 20} color={successColor} /> Tips for Faster Approval
             </h3>
 
             <ul style={{
@@ -845,11 +879,11 @@ export default function PartnerKyc() {
                 { title: 'Ensure names match', desc: 'Aadhaar, PAN, and Bank details must match your profile.' },
                 { title: 'File size below 5 MB', desc: 'Compress files if they exceed the size limits.' }
               ].map((tip, idx) => (
-                <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'start' }}>
-                  <span style={{ color: successColor, fontSize: '14px', fontWeight: 900, lineHeight: 1.2 }}>✓</span>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: isDark ? textPrimary : '#065F46' }}>{tip.title}</span>
-                    <span style={{ fontSize: '11px', color: isDark ? textSecondary : '#047857' }}>{tip.desc}</span>
+                <li key={idx} style={{ display: 'flex', gap: isMobile ? '8px' : '10px', alignItems: 'start' }}>
+                  <span style={{ color: successColor, fontSize: isMobile ? '12px' : '14px', fontWeight: 900, lineHeight: 1.2 }}>✓</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, color: isDark ? textPrimary : '#065F46', lineHeight: 1.4 }}>{tip.title}</span>
+                    <span style={{ fontSize: isMobile ? '10px' : '11px', color: isDark ? textSecondary : '#047857', lineHeight: 1.4 }}>{tip.desc}</span>
                   </div>
                 </li>
               ))}

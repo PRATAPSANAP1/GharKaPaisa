@@ -14,8 +14,13 @@ export default function ManageCommissions() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   
-  // Tab control: 'base' or 'overrides'
+  // Tab control: 'base', 'overrides', or 'team-splits'
   const [activeTab, setActiveTab] = useState("overrides");
+  
+  // Splits Config State
+  const [childPct, setChildPct] = useState(90);
+  const [parentPct, setParentPct] = useState(10);
+  const [savingSplits, setSavingSplits] = useState(false);
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -34,20 +39,53 @@ export default function ManageCommissions() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const [prodRes, partnerRes, rulesRes] = await Promise.all([
+      const [prodRes, partnerRes, rulesRes, settingsRes] = await Promise.all([
         api.get("/products", { params: { is_active: "all", limit: 200 } }),
         api.get("/admin/partners", { params: { limit: 1000 } }),
-        api.get("/admin/commission-rules")
+        api.get("/admin/commission-rules"),
+        api.get("/settings")
       ]);
       
       if (prodRes.data?.success) setProducts(prodRes.data.data);
       if (partnerRes.data?.success) setPartners(partnerRes.data.data);
       if (rulesRes.data?.success) setRules(rulesRes.data.data);
+      
+      if (settingsRes.data?.success) {
+        const settings = settingsRes.data.data;
+        if (settings.team_commission_child_pct) {
+          setChildPct(parseFloat(settings.team_commission_child_pct));
+        }
+        if (settings.team_commission_parent_pct) {
+          setParentPct(parseFloat(settings.team_commission_parent_pct));
+        }
+      }
     } catch (e) {
       console.error("[ManageCommissions] Fetch Error:", e);
       setErrorMsg(e.response?.data?.message || "Failed to load commission configuration data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveSplits = async (e) => {
+    e.preventDefault();
+    if (childPct + parentPct !== 100) {
+      alert("Child % and Parent % must add up to exactly 100%");
+      return;
+    }
+    setSavingSplits(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      await Promise.all([
+        api.post("/settings", { key: "team_commission_child_pct", value: childPct.toString() }),
+        api.post("/settings", { key: "team_commission_parent_pct", value: parentPct.toString() })
+      ]);
+      setSuccessMsg("DSA Team commission splits updated successfully.");
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Failed to update team commission splits");
+    } finally {
+      setSavingSplits(false);
     }
   };
 
@@ -217,6 +255,22 @@ export default function ManageCommissions() {
         >
           Default Base Rates ({products.length})
         </button>
+        <button
+          onClick={() => setActiveTab("team-splits")}
+          style={{
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "team-splits" ? `3px solid ${C.teal}` : "3px solid transparent",
+            color: activeTab === "team-splits" ? C.text : C.textMid,
+            fontSize: "15px",
+            fontWeight: 700,
+            padding: "10px 16px",
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          DSA Team Splits
+        </button>
       </div>
 
       {loading ? (
@@ -230,6 +284,94 @@ export default function ManageCommissions() {
             animation: "spin 1s linear infinite"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : activeTab === "team-splits" ? (
+        /* TAB: TEAM SPLITS */
+        <div style={S.card}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 12px", color: C.text }}>DSA Team Commission Splitting</h3>
+          <p style={{ fontSize: "13px", color: C.textMid, marginBottom: "24px" }}>
+            Configure the default commission share split percentage between a Child partner (who sells the product) and their Parent partner (DSA referral override). The shares must total exactly 100%.
+          </p>
+          
+          <form onSubmit={handleSaveSplits} style={{ maxWidth: "420px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div>
+              <label style={S.label}>Child Partner Share (%)</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={childPct}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || 0;
+                    setChildPct(val);
+                    setParentPct(100 - val);
+                  }}
+                  style={{ flex: 1, accentColor: C.teal }}
+                />
+                <input 
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={childPct}
+                  onChange={e => {
+                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    setChildPct(val);
+                    setParentPct(100 - val);
+                  }}
+                  style={{ ...S.input, width: "70px", textAlign: "center" }}
+                />
+                <span style={{ fontWeight: 700 }}>%</span>
+              </div>
+            </div>
+
+            <div>
+              <label style={S.label}>Parent Partner Override Share (%)</label>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={parentPct}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || 0;
+                    setParentPct(val);
+                    setChildPct(100 - val);
+                  }}
+                  style={{ flex: 1, accentColor: C.teal }}
+                />
+                <input 
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={parentPct}
+                  onChange={e => {
+                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                    setParentPct(val);
+                    setChildPct(100 - val);
+                  }}
+                  style={{ ...S.input, width: "70px", textAlign: "center" }}
+                />
+                <span style={{ fontWeight: 700 }}>%</span>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={savingSplits}
+              style={{
+                ...S.btn("primary"),
+                border: "none",
+                borderRadius: "10px",
+                padding: "12px 20px",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: savingSplits ? "not-allowed" : "pointer"
+              }}
+            >
+              {savingSplits ? "Saving..." : "Save Split Configurations"}
+            </button>
+          </form>
         </div>
       ) : activeTab === "overrides" ? (
         /* TAB: OVERRIDES */

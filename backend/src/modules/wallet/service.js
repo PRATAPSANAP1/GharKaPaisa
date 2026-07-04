@@ -31,13 +31,23 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
       wallet = result.rows[0];
     }
 
-    // Add to hold_balance
-    await client.query(`
-      UPDATE wallets SET
-        hold_balance = hold_balance + $1,
-        last_updated = NOW()
-      WHERE Partner_id = $2
-    `, [amount, partnerId]);
+    const isTeam = meta.reference_type === 'team_commission';
+    if (isTeam) {
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = hold_balance + $1,
+          pending_team_commission = pending_team_commission + $1,
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+    } else {
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = hold_balance + $1,
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+    }
 
     // Log txn with release_at timestamp
     const holdHours = parseInt(process.env.COMMISSION_CREDIT_HOLD_HOURS || 48);
@@ -83,15 +93,42 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     );
     if (!wallet) throw new Error('Wallet not found');
 
-    // Deduct hold_balance, add to available_balance and total_earned
-    await client.query(`
-      UPDATE wallets SET
-        hold_balance = GREATEST(0, hold_balance - $1),
-        available_balance = available_balance + $1,
-        total_earned = total_earned + $1,
-        last_updated = NOW()
-      WHERE Partner_id = $2
-    `, [amount, partnerId]);
+    const isTeam = meta.reference_type === 'team_commission';
+    const isReferral = meta.reference_type === 'referral_bonus';
+
+    if (isTeam) {
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = GREATEST(0, hold_balance - $1),
+          available_balance = available_balance + $1,
+          total_earned = total_earned + $1,
+          team_earnings = team_earnings + $1,
+          released_team_commission = released_team_commission + $1,
+          pending_team_commission = GREATEST(0, pending_team_commission - $1),
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+    } else if (isReferral) {
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = GREATEST(0, hold_balance - $1),
+          available_balance = available_balance + $1,
+          total_earned = total_earned + $1,
+          referral_bonus = referral_bonus + $1,
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+    } else {
+      await client.query(`
+        UPDATE wallets SET
+          hold_balance = GREATEST(0, hold_balance - $1),
+          available_balance = available_balance + $1,
+          total_earned = total_earned + $1,
+          personal_earnings = personal_earnings + $1,
+          last_updated = NOW()
+        WHERE Partner_id = $2
+      `, [amount, partnerId]);
+    }
 
     // Update existing transaction status to approved or insert new log
     if (meta.txn_id) {
@@ -200,6 +237,10 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     WHERE a.id = $1
   `, [applicationId]);
 
+  const { rows: [partner] } = await query(`
+    SELECT parent_partner_id, first_name, last_name, Partner_code FROM "Partner_profiles" WHERE id = $1
+  `, [partnerId]);
+
   const meta = {
     application_id: applicationId,
     reference_type: 'commission',
@@ -209,7 +250,54 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     description: description,
     processed_by: userId
   };
-  return creditHold(partnerId, amount, meta);
+
+  if (partner && partner.parent_partner_id) {
+    const { rows: settingsRows } = await query(`
+      SELECT key, value FROM system_settings WHERE key IN ('team_commission_child_pct', 'team_commission_parent_pct')
+    `);
+    let childPct = 90;
+    let parentPct = 10;
+    settingsRows.forEach(row => {
+      if (row.key === 'team_commission_child_pct') childPct = parseFloat(row.value);
+      if (row.key === 'team_commission_parent_pct') parentPct = parseFloat(row.value);
+    });
+
+    const childAmount = parseFloat((amount * (childPct / 100)).toFixed(2));
+    const parentAmount = parseFloat((amount * (parentPct / 100)).toFixed(2));
+
+    const childMeta = {
+      ...meta,
+      description: `${description} (Child ${childPct}%)`
+    };
+    const childTxn = await creditHold(partnerId, childAmount, childMeta);
+
+    const parentMeta = {
+      ...meta,
+      reference_type: 'team_commission',
+      description: `Team Commission from ${partner.first_name} ${partner.last_name || ''} (${partner.Partner_code}) - Parent ${parentPct}%`
+    };
+    await creditHold(partner.parent_partner_id, parentAmount, parentMeta);
+
+    // Notify Parent
+    try {
+      const { rows: [parentUser] } = await query(`SELECT user_id FROM "Partner_profiles" WHERE id = $1`, [partner.parent_partner_id]);
+      if (parentUser) {
+        const { createNotification } = require('../notifications/service.js');
+        await createNotification(
+          parentUser.user_id,
+          'Team Member Earned Commission',
+          `Your team member ${partner.first_name} earned commission. Your team split of ₹${parentAmount} has been credited (on hold).`,
+          'success'
+        );
+      }
+    } catch (notifyErr) {
+      logger.error('Failed to notify parent of team commission split:', notifyErr.message);
+    }
+
+    return childTxn;
+  } else {
+    return creditHold(partnerId, amount, meta);
+  }
 };
 
 // Release commission helper wrapper for matured releases scheduler

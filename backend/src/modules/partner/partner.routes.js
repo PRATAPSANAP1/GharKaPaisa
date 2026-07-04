@@ -11,6 +11,9 @@ const kycUpload = upload.fields([
   { name: 'cancelled_cheque', maxCount: 1 },
 ]);
 
+// Public route for tracking referral clicks
+router.post('/referral-click', ctrl.invitePartnerClick);
+
 // All routes require auth
 router.use(authenticate, syncUser);
 
@@ -39,6 +42,11 @@ router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), ctrl.getDashboardS
 // Admin only — partner management
 router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
 router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.approvePartner);
+
+// Super Admin / Admin team network routes
+router.get('/network/all', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.getWholeNetwork);
+router.patch('/:PartnerId/change-parent', authorize('SUPER_ADMIN'), ctrl.changeParentPartner);
+router.patch('/:PartnerId/deactivate-team', authorize('SUPER_ADMIN'), ctrl.deactivateTeam);
 
 // Team management
 router.post('/:PartnerId/team', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.addTeamMember);

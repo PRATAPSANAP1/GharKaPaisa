@@ -33,6 +33,13 @@ export default function ManagePartners() {
   const [showWalletForm, setShowWalletForm] = useState(false);
   const [walletForm, setWalletForm] = useState({ amount: "", txn_type: "credit", description: "" });
 
+  // Super Admin DSA Management State
+  const [allPartnersList, setAllPartnersList] = useState([]);
+  const [selectedParentId, setSelectedParentId] = useState("");
+  const [teamStatus, setTeamStatus] = useState("ACTIVE");
+  const [allowTeamCreation, setAllowTeamCreation] = useState(true);
+  const [updatingTeam, setUpdatingTeam] = useState(false);
+
   const fetchPartners = async () => {
     setLoading(true);
     setErr("");
@@ -62,6 +69,16 @@ export default function ManagePartners() {
     fetchPartners();
   }, [page, kycStatus, accountStatus]);
 
+  useEffect(() => {
+    if (user?.role === "SUPER_ADMIN") {
+      api.get("/admin/partners", { params: { limit: 1000 } })
+        .then((res) => {
+          if (res.data?.success) setAllPartnersList(res.data.data);
+        })
+        .catch(console.error);
+    }
+  }, [user]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
@@ -77,13 +94,52 @@ export default function ManagePartners() {
     try {
       const res = await api.get(`/Partners/${partner.id}/profile`);
       if (res.data?.success) {
-        setProfile(res.data.data);
+        const p = res.data.data;
+        setProfile(p);
+        setSelectedParentId(p.parent_partner_id || "");
+        setTeamStatus(p.team_status || "ACTIVE");
+        setAllowTeamCreation(p.allow_team_creation !== false);
       }
     } catch (e) {
       console.error(e);
       alert("Failed to load partner profile details.");
     } finally {
       setLoadingProfile(false);
+    }
+  };
+
+  const handleUpdateParent = async (e) => {
+    e.preventDefault();
+    if (!window.confirm("Are you sure you want to change this partner's parent? This will rebuild the entire hierarchy recursively.")) return;
+    setUpdatingTeam(true);
+    try {
+      await api.patch(`/partner/${selectedPartner.id}/change-parent`, {
+        new_parent_id: selectedParentId || null
+      });
+      alert("Parent partner changed successfully!");
+      handleViewDetails(selectedPartner);
+      fetchPartners();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to change parent partner.");
+    } finally {
+      setUpdatingTeam(false);
+    }
+  };
+
+  const handleUpdateTeamControls = async (e) => {
+    e.preventDefault();
+    setUpdatingTeam(true);
+    try {
+      await api.patch(`/partner/${selectedPartner.id}/deactivate-team`, {
+        team_status: teamStatus,
+        allow_team_creation: allowTeamCreation
+      });
+      alert("Team controls updated successfully!");
+      handleViewDetails(selectedPartner);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update team controls.");
+    } finally {
+      setUpdatingTeam(false);
     }
   };
 
@@ -421,6 +477,84 @@ export default function ManagePartners() {
                     <p style={{ fontSize: "13px", color: C.textLight, margin: 0 }}>No documents uploaded yet.</p>
                   )}
                 </div>
+
+                {/* DSA Team Network controls (Super Admin only) */}
+                {user?.role === "SUPER_ADMIN" && (
+                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "12px" }}>DSA Team Management</h4>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                      {/* Change Parent */}
+                      <form onSubmit={handleUpdateParent} style={{ background: C.bgSecondary, padding: "12px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight }}>Parent Partner (DSA Uplink)</label>
+                        <select 
+                          value={selectedParentId}
+                          onChange={e => setSelectedParentId(e.target.value)}
+                          style={S.input}
+                        >
+                          <option value="">None (Direct Root Partner)</option>
+                          {allPartnersList
+                            .filter(p => p.id !== selectedPartner.id)
+                            .map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.first_name} {p.last_name} ({p.Partner_code})
+                              </option>
+                            ))
+                          }
+                        </select>
+                        <button 
+                          type="submit" 
+                          disabled={updatingTeam}
+                          style={{
+                            ...S.btn("outline"),
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            cursor: updatingTeam ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          Update Parent Relation
+                        </button>
+                      </form>
+
+                      {/* Team status and creation controls */}
+                      <form onSubmit={handleUpdateTeamControls} style={{ background: C.bgSecondary, padding: "12px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight }}>Team Status & Access</label>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <select 
+                            value={teamStatus}
+                            onChange={e => setTeamStatus(e.target.value)}
+                            style={S.input}
+                          >
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE (Frozen)</option>
+                          </select>
+                          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", cursor: "pointer", marginTop: "4px" }}>
+                            <input 
+                              type="checkbox"
+                              checked={allowTeamCreation}
+                              onChange={e => setAllowTeamCreation(e.target.checked)}
+                              style={{ accentColor: C.teal }}
+                            />
+                            Allow creating child partners
+                          </label>
+                        </div>
+                        <button 
+                          type="submit" 
+                          disabled={updatingTeam}
+                          style={{
+                            ...S.btn("outline"),
+                            padding: "6px 12px",
+                            fontSize: "12px",
+                            cursor: updatingTeam ? "not-allowed" : "pointer",
+                            marginTop: "auto"
+                          }}
+                        >
+                          Update Team Controls
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions Panel */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>

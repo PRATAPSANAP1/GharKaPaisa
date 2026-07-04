@@ -5,6 +5,7 @@ import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
+import api from "../../../services/api";
 
 import logoImg from "../../../assets/logos/logo.png";
 import welcomeBgImg from "./welcome pg-bg.png";
@@ -123,6 +124,20 @@ export default function PartnerRegister() {
   const [mobileOtpRequestId, setMobileOtpRequestId] = useState("");
   const mobileVerifyPendingRef = useRef(false);
   const mobileVerifyTimeoutRef = useRef(null);
+  
+  const [referralCode, setReferralCode] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setReferralCode(ref);
+      // Track referral click (non-blocking)
+      api.post(`/partner/referral-click?ref=${encodeURIComponent(ref)}`).catch(err => {
+        console.error("Failed to track referral click:", err);
+      });
+    }
+  }, []);
 
   const getMsg91RequestId = (data) => {
     const candidates = [
@@ -478,6 +493,7 @@ export default function PartnerRegister() {
         account_holder_name: form.accountHolderName.trim(),
         aadhaar: form.aadhaar.replace(/[\s-]/g, ""),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
+        referral_code: referralCode,
         role: "PARTNER",
       };
       const res = await registerPartner(payload);
