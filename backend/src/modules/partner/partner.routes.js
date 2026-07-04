@@ -40,7 +40,7 @@ router.post('/:PartnerId/kyc',
 router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), ctrl.getDashboardStats);
 
 // Admin only — partner management
-router.get('/', authorize('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), ctrl.listPartners);
+router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
 router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.approvePartner);
 
 // Super Admin / Admin team network routes

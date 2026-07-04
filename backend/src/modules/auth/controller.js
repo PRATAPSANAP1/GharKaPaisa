@@ -362,7 +362,7 @@ const login = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? '/employee/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
@@ -424,7 +424,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? '/employee/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
@@ -686,10 +686,10 @@ const loginPassword = async (req, res, next) => {
     let reqRole = String(req.body.role || '').toUpperCase().trim();
     if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
 
-    let userQuery = `SELECT * FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2 OR LOWER(employee_id) = LOWER($3))`;
-    let queryParams = [identity, identity, identity];
+    let userQuery = `SELECT * FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
+    let queryParams = [identity, identity];
     if (reqRole) {
-      userQuery += ` AND role = $4`;
+      userQuery += ` AND role = $3`;
       queryParams.push(reqRole);
     }
     const { rows: [user] } = await query(userQuery, queryParams);
@@ -719,7 +719,7 @@ const loginPassword = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? '/employee/dashboard' :
+                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);

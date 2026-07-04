@@ -15,7 +15,7 @@ const { validate, commissionRules } = require('../../middleware/validation/valid
 router.use(jwtAuth);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
-router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), partnerCtrl.listPartners);
+router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.listPartners);
 
 // ── POST /admin/approve-kyc ──────────────────────────────────────────────────
 router.post('/approve-kyc', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.approvePartnerKYC);
