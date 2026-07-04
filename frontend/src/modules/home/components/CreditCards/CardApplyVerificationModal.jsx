@@ -31,7 +31,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     return () => clearTimeout(t);
   }, [otpTimer]);
 
-  const handleApply = async () => {
+  const handleSendOtp = async () => {
     setErrorMsg("");
 
     if (!customerName.trim()) {
@@ -44,44 +44,33 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setLoading(true);
 
     try {
-      const payload = {
-        customerName: customerName.trim(),
-        mobile: mobile.trim(),
-        bankName: card.bankName || "Unknown Bank",
-        cardName: card.cardName || "Credit Card"
-      };
+      if (!sdkReady) {
+        throw new Error("OTP provider is loading. Please wait a moment and try again.");
+      }
 
-      const response = await fetch(`${getApiV1Url()}/card-applications`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      if (typeof window.sendOtp !== 'function') {
+        throw new Error("OTP provider is not loaded.");
+      }
+
+      const formattedMobile = '91' + mobile.trim();
+      console.log(`[MSG91] Calling window.sendOtp for CardApplyVerificationModal: ${formattedMobile}`);
+
+      window.sendOtp(
+        formattedMobile,
+        (data) => {
+          setOtpSent(true);
+          setOtpTimer(120);
+          setStep(2);
+          setLoading(false);
         },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        // Successfully saved lead. Now redirect visitor to bank application page
-        const applyLink = getBankApplyLink(card.cardName, card.bankId);
-        if (applyLink) {
-          window.location.href = applyLink;
-        } else {
-          console.warn("No specific bank link resolved for", card.cardName);
+        (errResponse) => {
+          setErrorMsg(errResponse?.message || "Failed to send OTP. Please try again.");
+          setLoading(false);
         }
-        onClose();
-      } else {
-        setErrorMsg(result.message || "Failed to record your application details.");
-      }
-    } catch (apiErr) {
-      console.error(apiErr);
-      setErrorMsg("Connection error while submitting application. Redirecting anyway...");
-      // Fallback redirect even if backend saving fails temporarily
-      const applyLink = getBankApplyLink(card.cardName, card.bankId);
-      if (applyLink) {
-        window.location.href = applyLink;
-      }
-      onClose();
-    } finally {
+      );
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || "Failed to send OTP.");
       setLoading(false);
     }
   };
