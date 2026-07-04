@@ -3,19 +3,19 @@ import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/
 
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../../config/api";
-import { useMsg91Captcha } from "../../../../hooks/useMsg91Captcha";
+import { useMsg91OTP } from "../../../../hooks/useMsg91OTP";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
-  const [captchaToken, setCaptchaToken] = useState(null);
+
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  // ── MSG91 Captcha (singleton hook — no duplicate polling/init) ──────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha();
+  // ── MSG91 OTP SDK readiness ────────────────────────────────────────────────
+  const { sdkReady } = useMsg91OTP();
   
   // 6-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -34,10 +34,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
   const handleSendOtp = () => {
     console.log('[MSG91] Send OTP button clicked (CardApplyVerificationModal)');
     setErrorMsg("");
-    if (!isCaptchaVerified) {
-      console.warn('[MSG91] Send OTP blocked: Captcha not verified');
-      return setErrorMsg("Please complete the captcha verification first.");
-    }
+
 
     if (!sdkReady) {
       console.error('[MSG91] window.sendOtp is not ready or failed to load');
@@ -356,18 +353,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           </div>
         )}
 
-          {/* reCAPTCHA container */}
-          <div
-            id={captchaId}
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              minHeight: "80px",
-              marginTop: "10px",
-              marginBottom: "5px",
-            }}
-          ></div>
+
 
         {/* STEP 1: Enter Name and Mobile */}
         {step === 1 && (
@@ -427,7 +413,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             <button
               type="button"
               onClick={handleSendOtp}
-              disabled={loading || !isCaptchaVerified}
+              disabled={loading}
               style={{
                 width: "100%",
                 background: C.teal || '#0ea5e9',
@@ -437,8 +423,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 padding: "14px",
                 fontSize: "14px",
                 fontWeight: 700,
-                cursor: (loading || !isCaptchaVerified) ? "not-allowed" : "pointer",
-                opacity: (loading || !isCaptchaVerified) ? 0.6 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
                 transition: "opacity 0.2s",
                 display: "flex",
                 alignItems: "center",
@@ -451,11 +437,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
               ) : "Send SMS Verification OTP"}
             </button>
-            {!isCaptchaVerified && (
-              <div style={{ color: C.textLight || "#64748b", fontSize: "11.5px", marginTop: "8px", textAlign: "center", fontWeight: 500 }}>
-                Please complete the security verification to enable OTP.
-              </div>
-            )}
+
           </div>
         )}
 

@@ -1,197 +1,23 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // MSG91 OTP SDK — Singleton Manager
 // Loads the SDK once, manages widget lifecycle, and provides an event-driven
-// captcha verification API consumed by the useMsg91Captcha hook.
+// SDK-readiness API consumed by the useMsg91OTP hook.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── Module-level singleton state ─────────────────────────────────────────────
 let scriptLoaded = false;
 let scriptLoading = false;
 let widgetInitialized = false;
-let captchaVerified = false;
-let pollIntervalId = null;
 const listeners = new Set();
-
-// Patch document.getElementById & querySelector to return dummy divs for unmounted MSG91 captcha containers
-if (typeof window !== 'undefined' && !window.__msg91_elementPatchApplied) {
-  const originalGetElementById = document.getElementById;
-  document.getElementById = function (id) {
-    const el = originalGetElementById.call(document, id);
-    if (!el && typeof id === 'string' && (id.startsWith('msg91-captcha-') || id.includes('captcha') || id.includes('recaptcha'))) {
-      console.log(`[MSG91 Patch] returning dummy element for unmounted/missing container: ${id}`);
-      return document.createElement('div');
-    }
-    return el;
-  };
-
-  const originalQuerySelector = document.querySelector;
-  document.querySelector = function (selector) {
-    try {
-      const el = originalQuerySelector.call(document, selector);
-      if (!el && typeof selector === 'string' && (selector.includes('msg91-captcha-') || selector.includes('captcha') || selector.includes('recaptcha'))) {
-        console.log(`[MSG91 Patch] querySelector returning dummy element for: ${selector}`);
-        return document.createElement('div');
-      }
-      return el;
-    } catch (err) {
-      return originalQuerySelector.call(document, selector);
-    }
-  };
-
-  window.__msg91_elementPatchApplied = true;
-}
-
-// ── hCaptcha / grecaptcha Monkey-Patches ─────────────────────────────────────
-// Intercepts render() to prevent "already rendered" errors when the MSG91
-// Angular widget re-initializes (e.g. route changes, modal reopen).
-function setupCaptchaPatches() {
-  // --- hCaptcha ---
-  if (!window.__msg91_hcaptchaPatched) {
-    let _hcaptcha = window.hcaptcha;
-
-    const patchRender = (obj) => {
-      if (obj && typeof obj.render === 'function' && !obj.render.__patched) {
-        const orig = obj.render;
-        obj.render = function (container, config) {
-          try {
-            const el = typeof container === 'string' ? document.getElementById(container) : container;
-            if (el && el.innerHTML.trim() !== '') {
-              console.log('[hCaptcha] Container already populated, skipping duplicate render.');
-              return null;
-            }
-            return orig.call(this, container, config);
-          } catch (e) {
-            if (e.message && e.message.includes('already')) {
-              console.log('[hCaptcha] Caught duplicate render error gracefully.');
-              return null;
-            }
-            throw e;
-          }
-        };
-        obj.render.__patched = true;
-      }
-    };
-
-    if (_hcaptcha) patchRender(_hcaptcha);
-    try {
-      Object.defineProperty(window, 'hcaptcha', {
-        get() { return _hcaptcha; },
-        set(val) { _hcaptcha = val; patchRender(val); },
-        configurable: true,
-      });
-      window.__msg91_hcaptchaPatched = true;
-    } catch (err) {
-      console.error('[MSG91] Failed to patch hcaptcha:', err);
-    }
-  }
-
-  // --- grecaptcha ---
-  if (!window.__msg91_grecaptchaPatched) {
-    let _grecaptcha = window.grecaptcha;
-
-    const patchRender = (obj) => {
-      if (obj && typeof obj.render === 'function' && !obj.render.__patched) {
-        const orig = obj.render;
-        obj.render = function (container, config) {
-          try {
-            const el = typeof container === 'string' ? document.getElementById(container) : container;
-            if (el && el.innerHTML.trim() !== '') {
-              console.log('[grecaptcha] Container already populated, skipping duplicate render.');
-              return null;
-            }
-            return orig.call(this, container, config);
-          } catch (e) {
-            if (e.message && e.message.includes('already')) {
-              console.log('[grecaptcha] Caught duplicate render error gracefully.');
-              return null;
-            }
-            throw e;
-          }
-        };
-        obj.render.__patched = true;
-      }
-    };
-
-    if (_grecaptcha) patchRender(_grecaptcha);
-    try {
-      Object.defineProperty(window, 'grecaptcha', {
-        get() { return _grecaptcha; },
-        set(val) { _grecaptcha = val; patchRender(val); },
-        configurable: true,
-      });
-      window.__msg91_grecaptchaPatched = true;
-    } catch (err) {
-      console.error('[MSG91] Failed to patch grecaptcha:', err);
-    }
-  }
-}
 
 // ── Notify all subscribers ───────────────────────────────────────────────────
 function notifyListeners() {
   const state = {
-    verified: captchaVerified,
     sdkReady: scriptLoaded && typeof window.sendOtp === 'function',
   };
   listeners.forEach((cb) => {
     try { cb(state); } catch (_) { /* swallow */ }
   });
-}
-
-// ── Global Captcha Poll (single timer for whole app) ─────────────────────────
-function startCaptchaPoll() {
-  if (pollIntervalId) return;
-
-  let wasVerified = false;
-  pollIntervalId = setInterval(() => {
-    let token = '';
-
-    // 1. Try hcaptcha API
-    try {
-      if (window.hcaptcha && typeof window.hcaptcha.getResponse === 'function') {
-        token = window.hcaptcha.getResponse() || '';
-      }
-    } catch (_) { /* ignore */ }
-
-    // 2. Try grecaptcha API
-    if (!token) {
-      try {
-        if (window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
-          token = window.grecaptcha.getResponse() || '';
-        }
-      } catch (_) { /* ignore */ }
-    }
-
-    // 3. Fallback: scan hidden form fields (Safari compatibility)
-    if (!token) {
-      const els = document.querySelectorAll('textarea, input');
-      for (const el of els) {
-        const name = el.getAttribute('name') || '';
-        if ((name.includes('recaptcha-response') || name.includes('captcha-response')) && el.value.trim()) {
-          token = el.value.trim();
-          break;
-        }
-      }
-    }
-
-    const verified = !!token;
-    if (verified !== captchaVerified) {
-      captchaVerified = verified;
-      if (verified && !wasVerified) {
-        console.timeEnd('MSG91_Captcha_Verify');
-        console.log('[MSG91] TCaptcha verified');
-      } else if (!verified && wasVerified) {
-        console.log('[MSG91] TCaptcha verification cleared/expired');
-        console.time('MSG91_Captcha_Verify');
-      }
-      wasVerified = verified;
-      notifyListeners();
-    }
-
-    // Also notify if sdkReady status changed
-    if (scriptLoaded && typeof window.sendOtp === 'function') {
-      notifyListeners();
-    }
-  }, 500);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -200,18 +26,15 @@ function startCaptchaPoll() {
 
 /**
  * Preload the MSG91 SDK script. Call once from main.jsx at app startup.
- * Does NOT need a captcha container — just loads the <script> tag.
  */
 export function preloadMsg91SDK() {
-  setupCaptchaPatches();
-
   if (scriptLoaded || scriptLoading) return;
 
   const existing = document.getElementById('msg91-otp-provider-script');
   if (existing) {
     scriptLoaded = true;
     console.log('[MSG91] SDK already in DOM');
-    startCaptchaPoll();
+    notifyListeners();
     return;
   }
 
@@ -233,47 +56,30 @@ export function preloadMsg91SDK() {
     console.error('[MSG91] Failed to load SDK script');
   };
   document.head.appendChild(script);
-
-  startCaptchaPoll();
 }
 
 /**
- * Initialize (or re-initialize) the MSG91 widget into a DOM container.
- * Called by the useMsg91Captcha hook when the component's container div mounts.
+ * Initialize (or re-initialize) the MSG91 OTP widget.
+ * Called once to set up window.configuration and invoke initSendOTP.
  */
-export function initMsg91Widget(containerId) {
-  if (!containerId) return;
-
+export function initMsg91Widget() {
   window.configuration = {
     widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
     tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
     exposeMethods: true,
-    captchaRenderId: containerId,
     success: (data) => console.log('[MSG91] Widget ready', data),
     failure: (err) => console.error('[MSG91] Widget failed', err),
   };
 
-  const container = document.getElementById(containerId);
-  if (!container) {
-    console.log(`[MSG91] Container ${containerId} not found in DOM, deferring.`);
-    return;
-  }
-
-  container.innerHTML = '';
-
   const doInit = () => {
     if (typeof window.initSendOTP !== 'function') return false;
-    console.time('MSG91_Captcha_Init');
     try {
       window.initSendOTP(window.configuration);
       widgetInitialized = true;
-      console.log('[MSG91] Widget initialized in container:', containerId);
+      console.log('[MSG91] Widget initialized (captcha-free)');
     } catch (e) {
       console.error('[MSG91] Widget init error:', e);
     }
-    console.timeEnd('MSG91_Captcha_Init');
-    // Start verify timer (ends when user solves captcha)
-    console.time('MSG91_Captcha_Verify');
     return true;
   };
 
@@ -291,29 +97,23 @@ export function initMsg91Widget(containerId) {
 }
 
 /**
- * Subscribe to captcha/SDK state changes.
- * Callback receives { verified: boolean, sdkReady: boolean }.
+ * Subscribe to SDK state changes.
+ * Callback receives { sdkReady: boolean }.
  * Called immediately with current state upon subscription.
  */
-export function onCaptchaChange(callback) {
+export function onSdkChange(callback) {
   listeners.add(callback);
   callback({
-    verified: captchaVerified,
     sdkReady: scriptLoaded && typeof window.sendOtp === 'function',
   });
 }
 
-/** Unsubscribe from captcha state changes. */
-export function offCaptchaChange(callback) {
+/** Unsubscribe from SDK state changes. */
+export function offSdkChange(callback) {
   listeners.delete(callback);
 }
 
 /** Synchronous check: is window.sendOtp available? */
 export function isSdkReady() {
   return scriptLoaded && typeof window.sendOtp === 'function';
-}
-
-/** Synchronous check: has the user completed captcha? */
-export function getCaptchaVerified() {
-  return captchaVerified;
 }

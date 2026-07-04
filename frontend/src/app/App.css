@@ -4,11 +4,6 @@ body {
   background-color: #f5f5f5;
 }
 
-/* Hide Firebase reCAPTCHA badge */
-.grecaptcha-badge {
-  visibility: hidden !important;
-}
-
 /* Responsive utility classes */
 .hidden {
   display: none !important;

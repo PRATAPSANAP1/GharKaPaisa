@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../../app/store/authStore";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
+import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 import { FaHandshake, FaUserCog, FaCrown, FaBriefcase, FaArrowLeft } from 'react-icons/fa';
 
@@ -59,8 +59,8 @@ export default function PartnerLogin() {
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("otp"); // "otp" or "password"
 
-  // MSG91 Captcha (active on Step 2 only)
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: loginStep === 2 });
+  // MSG91 OTP SDK readiness
+  const { sdkReady } = useMsg91OTP();
 
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -162,10 +162,7 @@ export default function PartnerLogin() {
   const handleSendOtp = async () => {
     console.log('[MSG91] Send OTP button clicked (PartnerLogin)');
     setErr("");
-    if (!isCaptchaVerified) {
-      console.warn('[MSG91] Send OTP blocked: Captcha not verified');
-      return setErr(t("partner.errors.completeCaptcha", "Please complete the captcha verification first."));
-    }
+
     if (!form.identity.trim()) return setErr(t('partner.errors.enterEmailOrMobile', 'Please enter your email or mobile number.'));
     
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identity.trim());
@@ -991,8 +988,7 @@ export default function PartnerLogin() {
                   </div>
 
 
-                  {/* MSG91 reCAPTCHA mount container */}
-                  {method === "otp" && <div id={captchaId} style={{ display: "flex", justifyContent: "center", minHeight: "40px", marginTop: "4px" }} />}
+
 
                   {/* Primary Secure Submit Button */}
                   <button

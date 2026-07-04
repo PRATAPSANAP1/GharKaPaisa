@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { useMsg91Captcha } from "../../../hooks/useMsg91Captcha";
+import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
 
 import logoImg from "../../../assets/logos/logo.png";
@@ -197,8 +197,8 @@ export default function PartnerRegister() {
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
 
-  // ── MSG91 Captcha ───────────────
-  const { isCaptchaVerified, sdkReady, containerId: captchaId } = useMsg91Captcha({ enabled: onboardingStep === 3 && step === 0 });
+  // ── MSG91 OTP SDK readiness ─────────
+  const { sdkReady } = useMsg91OTP();
 
   const focusBorder = `1.5px solid #0D6EFD`;
   const inputProps = (key, extra = {}) => ({
@@ -226,7 +226,7 @@ export default function PartnerRegister() {
       const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
       if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
       if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
-      if (!isCaptchaVerified) return t("partner.errors.captchaVerify", "Please solve the reCAPTCHA security verification to continue.");
+
 
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
@@ -1135,10 +1135,7 @@ export default function PartnerRegister() {
                     </div>
                   </div>
 
-                  {/* Captcha */}
-                  <div className="form-full-width" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60px", marginTop: "4px" }}>
-                    <div id={captchaId} />
-                  </div>
+
 
                   {/* Mobile & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
