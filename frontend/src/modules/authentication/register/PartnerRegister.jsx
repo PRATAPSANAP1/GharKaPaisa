@@ -292,9 +292,12 @@ export default function PartnerRegister() {
         (data) => {
           clearTimeout(timeoutId);
           const requestId = getMsg91RequestId(data);
-          setMobileOtpRequestId(requestId);
+          if (requestId) setMobileOtpRequestId(requestId);
           setMobileOtpSent(true);
           setMobileOtpTimer(60);
+          setMobileOtpLoading(false);
+        },
+        (error) => {
           clearTimeout(timeoutId);
           console.error('[MSG91] Mobile Failure response:', error);
           const errorMsg = typeof error === 'string' ? error : (error?.message || t('partner.errors.sendMobileOtpFailed', 'Failed to send SMS OTP. Please try again.'));

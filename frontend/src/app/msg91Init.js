@@ -63,6 +63,13 @@ export function preloadMsg91SDK() {
  * Called once to set up window.configuration and invoke initSendOTP.
  */
 export function initMsg91Widget() {
+  if (widgetInitialized) {
+    if (typeof window.sendOtp === 'function') {
+      notifyListeners();
+    }
+    return;
+  }
+
   window.configuration = {
     widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
     tokenAuth: import.meta.env.VITE_MSG91_TOKEN_AUTH,
@@ -77,6 +84,20 @@ export function initMsg91Widget() {
       window.initSendOTP(window.configuration);
       widgetInitialized = true;
       console.log('[MSG91] Widget initialized (captcha-free)');
+
+      // Poll until window.sendOtp becomes available
+      let pollElapsed = 0;
+      const poll = setInterval(() => {
+        pollElapsed += 100;
+        if (typeof window.sendOtp === 'function') {
+          console.log('[MSG91] sendOtp method found on window after ' + pollElapsed + 'ms');
+          notifyListeners();
+          clearInterval(poll);
+        } else if (pollElapsed >= 10000) {
+          console.warn('[MSG91] sendOtp method was not found on window after 10 seconds');
+          clearInterval(poll);
+        }
+      }, 100);
     } catch (e) {
       console.error('[MSG91] Widget init error:', e);
     }

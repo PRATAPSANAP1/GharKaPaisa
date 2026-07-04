@@ -25,9 +25,27 @@ const migrate = async () => {
       CREATE TYPE user_status AS ENUM ('pending','active','suspended','rejected');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  try { await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'inactive'`); } catch (err) {}
-  try { await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'pending_verification'`); } catch (err) {}
-  try { await query(`ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'blocked'`); } catch (err) {}
+  try {
+    await query(`ALTER TYPE user_status ADD VALUE 'inactive'`);
+  } catch (err) {
+    if (!err.message.includes('already exists')) {
+      logger.error('Failed to add inactive status:', err);
+    }
+  }
+  try {
+    await query(`ALTER TYPE user_status ADD VALUE 'pending_verification'`);
+  } catch (err) {
+    if (!err.message.includes('already exists')) {
+      logger.error('Failed to add pending_verification status:', err);
+    }
+  }
+  try {
+    await query(`ALTER TYPE user_status ADD VALUE 'blocked'`);
+  } catch (err) {
+    if (!err.message.includes('already exists')) {
+      logger.error('Failed to add blocked status:', err);
+    }
+  }
   await query(`
     DO $$ BEGIN
       CREATE TYPE kyc_status AS ENUM ('pending','under_review','approved','rejected');
@@ -52,11 +70,13 @@ const migrate = async () => {
         'life_insurance','general_insurance','fd_card','co_branded_card','investment','card_on_loan');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  await query(`
-    DO $$ BEGIN
-      ALTER TYPE product_category ADD VALUE IF NOT EXISTS 'card_on_loan';
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$
-  `);
+  try {
+    await query(`ALTER TYPE product_category ADD VALUE 'card_on_loan'`);
+  } catch (err) {
+    if (!err.message.includes('already exists')) {
+      logger.error('Failed to add card_on_loan to product_category:', err);
+    }
+  }
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_type AS ENUM ('credit','debit');
@@ -1021,6 +1041,65 @@ const migrate = async () => {
   } catch (appSettingsErr) {
     logger.error('Failed to run product application settings and click logs migration:', appSettingsErr);
     throw appSettingsErr;
+  }
+
+  // ── Partner Team Management Migration ─────────────────────────────────────
+  try {
+    await query(`
+      ALTER TABLE "Partner_profiles" 
+      ADD COLUMN IF NOT EXISTS team_level INTEGER DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS team_status VARCHAR(50) DEFAULT 'ACTIVE',
+      ADD COLUMN IF NOT EXISTS allow_team_creation BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS team_joined_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS children_count INTEGER DEFAULT 0
+    `);
+
+    await query(`
+      ALTER TABLE wallets 
+      ADD COLUMN IF NOT EXISTS personal_earnings DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS team_earnings DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS referral_bonus DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS pending_team_commission DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS released_team_commission DECIMAL(15,2) DEFAULT 0
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_team_relationships (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        parent_partner_id UUID NOT NULL REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
+        child_partner_id  UUID NOT NULL UNIQUE REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
+        level             INTEGER NOT NULL,
+        created_at        TIMESTAMPTZ DEFAULT NOW(),
+        status            VARCHAR(20) DEFAULT 'ACTIVE'
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_team_rels_parent ON partner_team_relationships(parent_partner_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_team_rels_child ON partner_team_relationships(child_partner_id)`);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_referrals (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id        UUID UNIQUE NOT NULL REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
+        referral_code     VARCHAR(50) UNIQUE NOT NULL,
+        referral_link     VARCHAR(1000) NOT NULL,
+        total_invites     INTEGER DEFAULT 0,
+        total_registered  INTEGER DEFAULT 0,
+        created_at        TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_referrals_partner ON partner_referrals(partner_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_referrals_code ON partner_referrals(referral_code)`);
+
+    await query(`
+      INSERT INTO system_settings (key, value)
+      VALUES ('team_commission_child_pct', '90'), ('team_commission_parent_pct', '10')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    logger.info('Partner Team Management migration completed successfully');
+  } catch (teamMigrateErr) {
+    logger.error('Failed to run Partner Team Management migration:', teamMigrateErr);
+    throw teamMigrateErr;
   }
 
   logger.info('✅ All migrations completed successfully');
