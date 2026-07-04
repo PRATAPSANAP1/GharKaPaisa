@@ -35,6 +35,7 @@ export function preloadMsg91SDK() {
     scriptLoaded = true;
     console.log('[MSG91] SDK already in DOM');
     notifyListeners();
+    initMsg91Widget();
     return;
   }
 
@@ -50,6 +51,9 @@ export function preloadMsg91SDK() {
     scriptLoading = false;
     console.timeEnd('MSG91_SDK_Load');
     notifyListeners();
+    // Eagerly initialize widget right after script loads
+    // so getWidgetProcess completes before user clicks Send OTP
+    initMsg91Widget();
   };
   script.onerror = () => {
     scriptLoading = false;

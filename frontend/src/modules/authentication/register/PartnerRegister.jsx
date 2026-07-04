@@ -787,6 +787,32 @@ export default function PartnerRegister() {
             >
               <span id="label-get-started">{t("onboarding.getStarted", "Get Started")}</span> <Icons.arrowRight size={14} />
             </button>
+
+            {/* Back to Home Button */}
+            <button
+              id="btn-back-to-home"
+              onClick={() => navigate("/")}
+              style={{
+                background: "transparent",
+                color: C.textMid,
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "14px",
+                padding: "10px 16px",
+                fontSize: "13px",
+                fontWeight: 700,
+                width: "100%",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+                marginTop: "8px"
+              }}
+            >
+              <Icons.arrowLeft size={12} /> <span id="label-back-to-home">{t("login.backToHome", "Back to Home")}</span>
+            </button>
           </div>
         )}
 
