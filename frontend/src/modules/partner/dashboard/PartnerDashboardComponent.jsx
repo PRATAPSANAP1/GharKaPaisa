@@ -134,6 +134,27 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
+      {/* ──── STATUS / KYC PENDING BANNER ──── */}
+      {(accountStatus === 'pending' || accountStatus === 'inactive') && (
+        <div style={{
+          background: accountStatus === 'pending' ? "rgba(245, 158, 11, 0.1)" : "rgba(239, 68, 68, 0.1)",
+          border: `1.5px solid ${accountStatus === 'pending' ? "#F59E0B" : "#EF4444"}`,
+          borderRadius: "16px",
+          padding: "16px 24px",
+          color: C.text,
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+        }}>
+          <FaInfoCircle size={20} style={{ color: accountStatus === 'pending' ? "#F59E0B" : "#EF4444", flexShrink: 0 }} />
+          <div style={{ fontSize: "14px", fontWeight: 600, lineHeight: 1.5 }}>
+            {accountStatus === 'pending' 
+              ? "Your KYC verification is pending. Please upload the required documents to unlock all Partner features."
+              : "Your account is currently inactive. Please complete your KYC verification."}
+          </div>
+        </div>
+      )}
       {/* ──── DYNAMIC CMS BANNER / CAMPAIGNS ──── */}
       {banners.length > 0 ? (
         <div style={{

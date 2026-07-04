@@ -55,8 +55,6 @@ export default function PartnerLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const kycStatus = user?.kyc_status || 'pending';
   const accountStatus = user?.status || 'pending';
 
   // Redirect and route protection logic
@@ -66,18 +64,21 @@ export default function PartnerLayout() {
     // Redirect blocked or suspended partners immediately
     if (accountStatus === 'blocked' || accountStatus === 'suspended') {
       logout();
-      navigate('/login/partner');
+      navigate('/login');
       return;
     }
     
-    // If pending, allow only specific subpaths:
-    if (kycStatus === 'pending') {
+    // If pending or inactive, allow only specific subpaths:
+    if (accountStatus === 'pending' || accountStatus === 'inactive') {
       const allowedPaths = [
+        '/partner',
+        '/partner/',
         '/partner/dashboard',
         '/partner/kyc-centre',
         '/partner/profile',
         '/partner/training',
-        '/partner/notifications'
+        '/partner/notifications',
+        '/partner/settings'
       ];
       const isAllowed = allowedPaths.some(p => currentPath === p);
       if (!isAllowed) {
@@ -85,40 +86,35 @@ export default function PartnerLayout() {
       }
     }
     
-    // If rejected, allow only specific subpaths:
-    if (kycStatus === 'rejected') {
-      const allowedPaths = [
-        '/partner/dashboard',
+    // If rejected, allow only specific subpaths and redirect to kyc-centre:
+    if (accountStatus === 'rejected') {
+      const allowedPathsRejected = [
         '/partner/kyc-centre',
-        '/partner/notifications'
+        '/partner/profile',
+        '/partner/settings',
+        '/partner/notifications',
+        '/partner/training'
       ];
-      const isAllowed = allowedPaths.some(p => currentPath === p);
+      const isAllowed = allowedPathsRejected.some(p => currentPath === p);
       if (!isAllowed) {
         navigate('/partner/kyc-centre');
       }
     }
-  }, [kycStatus, accountStatus, location.pathname, navigate, logout]);
+  }, [accountStatus, location.pathname, navigate, logout]);
 
   const filteredNavItems = NAV_ITEMS.filter((item) => {
-    if (kycStatus === 'pending') {
-      return ['dashboard', 'kyc-centre', 'profile', 'training', 'notifications'].includes(item.id);
+    if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
+      return ['dashboard', 'kyc-centre', 'training', 'notifications', 'profile', 'settings'].includes(item.id);
     }
-    if (kycStatus === 'rejected') {
-      return ['dashboard', 'kyc-centre', 'notifications'].includes(item.id);
-    }
-    return true; // Approved gets all items
+    return true; // Approved / Active gets all items
   });
 
   const filteredMobileBottomNav = MOBILE_BOTTOM_NAV.filter((nav) => {
-    if (kycStatus === 'pending') {
-      return ['dashboard'].includes(nav.id);
-    }
-    if (kycStatus === 'rejected') {
+    if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard'].includes(nav.id);
     }
     return true;
   });
-
   const handleLogout = () => {
     logout();
     navigate('/');

@@ -321,6 +321,7 @@ const approvePartner = async (req, res, next) => {
       await client.query(`
         UPDATE Partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
+      await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
       await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);

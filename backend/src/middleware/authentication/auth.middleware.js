@@ -101,6 +101,12 @@ const requireApprovedPartner = (req, res, next) => {
   next();
 };
 
+const requireApprovedPartnerOrAdmin = (req, res, next) => {
+  const role = (req.user.role || '').toUpperCase();
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+  return requireApprovedPartner(req, res, next);
+};
+
 const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
   const targetId = req.params[paramName];
   const userRole = (req.user.role || '').toUpperCase();
@@ -152,6 +158,7 @@ module.exports = {
   syncUser,
   authorize,
   requireApprovedPartner,
+  requireApprovedPartnerOrAdmin,
   selfOrAdmin,
   optionalAuth
 };
