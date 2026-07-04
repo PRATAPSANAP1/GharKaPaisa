@@ -31,15 +31,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     return () => clearTimeout(t);
   }, [otpTimer]);
 
-  const handleSendOtp = () => {
-    console.log('[MSG91] Send OTP button clicked (CardApplyVerificationModal)');
+  const handleApply = async () => {
     setErrorMsg("");
-
-
-    if (!sdkReady) {
-      console.error('[MSG91] window.sendOtp is not ready or failed to load');
-      return setErrorMsg("OTP provider is not fully initialized. Please wait a moment and try again.");
-    }
 
     if (!customerName.trim()) {
       return setErrorMsg("Please enter your name.");
@@ -49,52 +42,46 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     }
 
     setLoading(true);
-    const formattedMobile = '91' + mobile.trim();
-    console.log(`[MSG91] Calling window.sendOtp for: ${formattedMobile}`);
-    console.time('MSG91_SendOTP');
-
-    let callbackFired = false;
-    const timeoutId = setTimeout(() => {
-      if (!callbackFired) {
-        callbackFired = true;
-        console.error('[MSG91] Send OTP callback timeout');
-        setErrorMsg("OTP service did not respond. Please refresh the page and try again.");
-        setLoading(false);
-      }
-    }, 30000);
 
     try {
-      window.sendOtp(
-        formattedMobile,
-        (data) => {
-          if (callbackFired) return;
-          callbackFired = true;
-          clearTimeout(timeoutId);
-          console.timeEnd('MSG91_SendOTP');
-          console.log('[MSG91] Success response:', data);
-          setOtpSent(true);
-          setOtpTimer(120);
-          setStep(2);
-          setLoading(false);
+      const payload = {
+        customerName: customerName.trim(),
+        mobile: mobile.trim(),
+        bankName: card.bankName || "Unknown Bank",
+        cardName: card.cardName || "Credit Card"
+      };
+
+      const response = await fetch(`${getApiV1Url()}/card-applications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
-        (error) => {
-          if (callbackFired) return;
-          callbackFired = true;
-          clearTimeout(timeoutId);
-          console.timeEnd('MSG91_SendOTP');
-          console.error('[MSG91] Failure response:', error);
-          const errMsg = typeof error === 'string' ? error : (error?.message || "Failed to send OTP. Please try again.");
-          setErrorMsg(errMsg);
-          setLoading(false);
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Successfully saved lead. Now redirect visitor to bank application page
+        const applyLink = getBankApplyLink(card.cardName, card.bankId);
+        if (applyLink) {
+          window.location.href = applyLink;
+        } else {
+          console.warn("No specific bank link resolved for", card.cardName);
         }
-      );
-    } catch (err) {
-      if (!callbackFired) {
-        callbackFired = true;
-        clearTimeout(timeoutId);
+        onClose();
+      } else {
+        setErrorMsg(result.message || "Failed to record your application details.");
       }
-      console.error('[MSG91] Exception caught calling sendOtp:', err);
-      setErrorMsg("An unexpected error occurred. Please try again.");
+    } catch (apiErr) {
+      console.error(apiErr);
+      setErrorMsg("Connection error while submitting application. Redirecting anyway...");
+      // Fallback redirect even if backend saving fails temporarily
+      const applyLink = getBankApplyLink(card.cardName, card.bankId);
+      if (applyLink) {
+        window.location.href = applyLink;
+      }
+      onClose();
+    } finally {
       setLoading(false);
     }
   };
@@ -304,10 +291,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           }}>
             <FaLock />
           </div>
-          <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800 }}>Apply Verification</h3>
-          <p style={{ margin: "6px 0 0 0", fontSize: "13px", color: C.textLight || "#64748b", lineHeight: 1.4 }}>
-            Verify your mobile number to instantly connect to bank's secure page.
-          </p>
+          <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800 }}>Apply Now</h3>
         </div>
 
         {/* Selected Card Badge */}
@@ -435,7 +419,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             >
               {loading ? (
                 <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-              ) : "Send SMS Verification OTP"}
+              ) : "Apply"}
             </button>
 
           </div>
