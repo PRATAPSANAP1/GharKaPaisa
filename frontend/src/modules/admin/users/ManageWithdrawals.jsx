@@ -153,7 +153,7 @@ export default function ManageWithdrawals() {
                   <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
                     <td style={{ padding: "14px 16px" }}>
                       <div style={{ fontWeight: 600 }}>{req.first_name} {req.last_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight, fontMono: true }}>Code: {req.Partner_code}</div>
+                      <div style={{ fontSize: "11px", color: C.textLight, fontMono: true }}>Code: {req.Partner_code || req.partner_code}</div>
                     </td>
                     <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text }}>
                       ₹{parseFloat(req.amount).toLocaleString("en-IN")}

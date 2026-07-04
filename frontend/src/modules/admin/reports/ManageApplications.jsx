@@ -197,7 +197,7 @@ export default function ManageApplications() {
                     </td>
                     <td style={{ padding: "14px 16px" }}>
                       <div>{app.Partner_first_name} {app.Partner_last_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code}</div>
+                      <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code}</div>
                     </td>
                     <td style={{ padding: "14px 16px" }}>
                       <div style={{ fontWeight: 500 }}>{app.product_name}</div>

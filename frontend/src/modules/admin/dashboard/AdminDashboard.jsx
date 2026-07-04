@@ -167,7 +167,7 @@ export default function AdminDashboard() {
                   {topPartners.map((p, idx) => (
                     <tr key={idx} style={{ borderBottom: `1px solid ${C.border}50` }}>
                       <td style={{ padding: "10px 8px", fontWeight: 600 }}>{p.first_name} {p.last_name}</td>
-                      <td style={{ padding: "10px 8px", fontMono: true }}>{p.Partner_code}</td>
+                      <td style={{ padding: "10px 8px", fontMono: true }}>{p.Partner_code || p.partner_code}</td>
                       <td style={{ padding: "10px 8px", textAlign: "right" }}>{p.total_apps} ({p.approved} approved)</td>
                       <td style={{ padding: "10px 8px", textAlign: "right", color: C.green, fontWeight: 700 }}>₹{parseFloat(p.commission_earned).toLocaleString("en-IN")}</td>
                     </tr>
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
                 {stats.recent_partners.map((p, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px solid ${C.border}50` }}>
                     <td style={{ padding: "10px 8px", fontWeight: 600 }}>{p.first_name} {p.last_name}</td>
-                    <td style={{ padding: "10px 8px", fontMono: true }}>{p.Partner_code || '—'}</td>
+                    <td style={{ padding: "10px 8px", fontMono: true }}>{p.Partner_code || p.partner_code || '—'}</td>
                     <td style={{ padding: "10px 8px" }}>
                       <div>{p.email}</div>
                       <div style={{ fontSize: "11px", color: C.textLight }}>{p.mobile}</div>

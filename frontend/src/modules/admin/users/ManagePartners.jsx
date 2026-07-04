@@ -314,7 +314,7 @@ export default function ManagePartners() {
                       {partner.company_name && <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 500 }}>{partner.company_name}</div>}
                     </td>
                     <td style={{ padding: "14px 16px", fontMono: true }}>
-                      <div>{partner.Partner_code}</div>
+                      <div>{partner.Partner_code || partner.partner_code}</div>
                       {partner.parent_code && (
                         <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>
                           <span style={{ background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", border: `1px solid ${C.border}` }}>
@@ -397,7 +397,7 @@ export default function ManagePartners() {
             <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, marginBottom: "4px" }}>
               Partner Details: {selectedPartner.first_name} {selectedPartner.last_name}
             </h3>
-            <p style={{ fontSize: "12px", color: C.textLight, marginBottom: "20px" }}>Code: {selectedPartner.Partner_code}</p>
+            <p style={{ fontSize: "12px", color: C.textLight, marginBottom: "20px" }}>Code: {selectedPartner.Partner_code || selectedPartner.partner_code}</p>
 
             {loadingProfile ? (
               <div style={{ textAlign: "center", padding: "32px", color: C.textLight }}>Loading partner data...</div>
@@ -497,7 +497,7 @@ export default function ManagePartners() {
                             .filter(p => p.id !== selectedPartner.id)
                             .map(p => (
                               <option key={p.id} value={p.id}>
-                                {p.first_name} {p.last_name} ({p.Partner_code})
+                                {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code})
                               </option>
                             ))
                           }
