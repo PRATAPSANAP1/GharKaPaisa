@@ -1178,11 +1178,17 @@ const migrate = async () => {
     throw walletMigrateErr;
   }
 
-  logger.info('✅ All migrations completed successfully');
-  process.exit(0);
-};
+   logger.info('✅ All migrations completed successfully');
+   if (require.main === module) {
+     process.exit(0);
+   }
+ };
 
-migrate().catch(err => {
-  logger.error('Migration failed', err);
-  process.exit(1);
-});
+ if (require.main === module) {
+   migrate().catch(err => {
+     logger.error('Migration failed', err);
+     process.exit(1);
+   });
+ }
+
+ module.exports = { migrate };

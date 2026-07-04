@@ -191,6 +191,10 @@ const startServer = async () => {
     await db.query('SELECT 1');
     logger.info('Database connection verified successfully.');
 
+    // Run database migrations automatically
+    const { migrate } = require('./database/migrations/migrate.js');
+    await migrate();
+
     // Start matured commission releases check
     const { releaseMaturedCommissions } = require('./modules/wallet/service.js');
     releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
