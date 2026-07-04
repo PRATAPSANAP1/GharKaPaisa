@@ -12,5 +12,6 @@ router.get('/top-Partners', reportCtrl.topPartners);
 router.get('/monthly-trend', reportCtrl.monthlyTrend);
 router.get('/payouts-export', reportCtrl.exportPayoutsReport);
 router.get('/partners-export', reportCtrl.exportPartnersReport);
+router.get('/application-clicks', reportCtrl.getApplicationClickReport);
 
 module.exports = router;

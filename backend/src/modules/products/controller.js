@@ -1,8 +1,10 @@
 const { query } = require('../../config/database');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
-const { success, created, error, notFound, paginate } = require('../../utils/response/response');
+const { success, created, error, notFound, paginate, forbidden } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js');
+const appSettingsService = require('./application-settings.service');
+const logger = require('../../config/logger');
 
 // GET /products — list with filters
 const listProducts = async (req, res, next) => {
@@ -446,6 +448,128 @@ const deleteCommissionRule = async (req, res, next) => {
   }
 };
 
+const getApplicationSettings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
+    if (!product) {
+      return notFound(res, 'Product not found');
+    }
+    const settings = await appSettingsService.getSettings(id);
+    return success(res, settings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const upsertApplicationSettings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
+    if (!product) {
+      return notFound(res, 'Product not found');
+    }
+    const oldSettings = await appSettingsService.getSettings(id);
+    const newSettings = await appSettingsService.upsertSettings(id, req.body, req.user.id);
+    await logAction(req, 'UPDATE_APPLICATION_SETTINGS', id, { before: oldSettings, after: newSettings });
+    return success(res, newSettings, 'Application settings updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteApplicationSettings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
+    if (!product) {
+      return notFound(res, 'Product not found');
+    }
+    const deleted = await appSettingsService.deleteSettings(id);
+    await logAction(req, 'DELETE_APPLICATION_SETTINGS', id);
+    return success(res, {}, 'Application settings deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resolveApplication = async (req, res, next) => {
+  try {
+    const idOrSlug = req.params.id;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+
+    let product;
+    if (isUUID) {
+      const { rows } = await query(`SELECT * FROM products WHERE id = $1`, [idOrSlug]);
+      product = rows[0];
+    } else {
+      const cleanSlug = idOrSlug.replace(/-/g, ' ').trim();
+      const { rows } = await query(`SELECT * FROM products WHERE name ILIKE $1`, [cleanSlug]);
+      product = rows[0];
+    }
+
+    if (!product) {
+      return success(res, {
+        application_type: 'internal_form',
+        application_url: null,
+        provider_name: null,
+        open_type: 'same_tab'
+      });
+    }
+
+    const settings = await appSettingsService.getSettings(product.id);
+
+    if (settings.status === 'inactive') {
+      return forbidden(res, 'This product application method is currently inactive');
+    }
+
+    const isPartner = req.user && req.user.role && req.user.role.toUpperCase() === 'PARTNER';
+    if (isPartner) {
+      if (!settings.partner_enabled) {
+        return forbidden(res, 'This application method is not available to partners for this product');
+      }
+    } else {
+      if (!settings.customer_enabled) {
+        return forbidden(res, 'This application method is not available to customers for this product');
+      }
+    }
+
+    if (settings.track_clicks) {
+      let finalIp = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.socket?.remoteAddress;
+      if (finalIp && finalIp.includes('::ffff:')) {
+        finalIp = finalIp.split('::ffff:')[1];
+      }
+      appSettingsService.logClick({
+        productId: product.id,
+        partnerId: req.partner?.id || null,
+        customerId: req.user?.id || null,
+        applicationType: settings.application_type,
+        ipAddress: finalIp,
+        userAgent: req.headers['user-agent']
+      }).catch(err => logger.error('resolveApplication logClick failed:', err.message));
+    }
+
+    return success(res, {
+      application_type: settings.application_type,
+      application_url: settings.application_url,
+      provider_name: settings.provider_name,
+      open_type: settings.open_type
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getClickAnalytics = async (req, res, next) => {
+  try {
+    const { product_id } = req.query;
+    const analytics = await appSettingsService.getClickAnalytics(product_id);
+    return success(res, analytics);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -459,5 +583,10 @@ module.exports = {
   getInsurance,
   deleteProduct,
   listCommissionRules,
-  deleteCommissionRule
+  deleteCommissionRule,
+  getApplicationSettings,
+  upsertApplicationSettings,
+  deleteApplicationSettings,
+  resolveApplication,
+  getClickAnalytics
 };

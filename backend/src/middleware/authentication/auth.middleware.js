@@ -111,10 +111,47 @@ const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
   return forbidden(res);
 };
 
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return next();
+
+    const decodedToken = jwt.verify(token, JWT_SECRET);
+    req.user = {
+      id: decodedToken.id,
+      email: decodedToken.email,
+      phone: decodedToken.phone,
+      role: decodedToken.role
+    };
+
+    const { rows: [user] } = await query(`SELECT * FROM users WHERE id = $1`, [decodedToken.id]);
+    if (user) {
+      const { password_hash, verification_token, ...safeUser } = user;
+      req.user = safeUser;
+      if ((user.role || '').toUpperCase() === 'PARTNER') {
+        const { rows: [partner] } = await query(
+          `SELECT id, kyc_status, first_name, last_name, Partner_code
+           FROM Partner_profiles WHERE user_id = $1`,
+          [user.id]
+        );
+        req.partner = partner || null;
+        if (partner) {
+          req.user.PartnerId = partner.id;
+          req.user.partner_id = partner.id;
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore and proceed
+  }
+  next();
+};
+
 module.exports = {
   authenticate,
   syncUser,
   authorize,
   requireApprovedPartner,
-  selfOrAdmin
+  selfOrAdmin,
+  optionalAuth
 };

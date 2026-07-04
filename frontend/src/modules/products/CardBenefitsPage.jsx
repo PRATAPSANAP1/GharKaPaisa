@@ -11,6 +11,8 @@ import {
   FaRupeeSign, FaBolt, FaStar
 } from 'react-icons/fa';
 import './CardBenefitsPage.css';
+import { resolveAndApply } from '../../services/applicationResolver';
+
 
 export default function CardBenefitsPage() {
   const { id } = useParams();
@@ -121,7 +123,7 @@ export default function CardBenefitsPage() {
   };
 
   const handleApply = () => {
-    setIsApplyModalOpen(true);
+    resolveAndApply(id, { onInternalForm: () => setIsApplyModalOpen(true) });
   };
 
   if (loading) {

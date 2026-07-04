@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const { success } = require('../../utils/response/response');
+const appSettingsService = require('../products/application-settings.service');
 
 // GET /reports/overview — top-level numbers
 const getOverview = async (req, res, next) => {
@@ -237,4 +238,40 @@ const exportPartnersReport = async (req, res, next) => {
   }
 };
 
-module.exports = { getOverview, applicationsByProduct, topPartners, monthlyTrend, exportPayoutsReport, exportPartnersReport };
+const getApplicationClickReport = async (req, res, next) => {
+  try {
+    const { product_id } = req.query;
+    const clicks = await appSettingsService.getClickAnalytics(product_id);
+    
+    const { rows: [overall] } = await query(`
+      SELECT 
+        COUNT(*)::int as total_clicks,
+        COUNT(*) FILTER (WHERE clicked_at >= NOW() - INTERVAL '30 days')::int as last_30_days,
+        COUNT(CASE WHEN partner_id IS NOT NULL THEN 1 END)::int as partner_clicks,
+        COUNT(CASE WHEN partner_id IS NULL THEN 1 END)::int as customer_clicks
+      FROM application_click_logs
+    `);
+
+    return success(res, {
+      clicks,
+      summary: {
+        total_clicks: overall?.total_clicks || 0,
+        last_30_days: overall?.last_30_days || 0,
+        partner_clicks: overall?.partner_clicks || 0,
+        customer_clicks: overall?.customer_clicks || 0
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { 
+  getOverview, 
+  applicationsByProduct, 
+  topPartners, 
+  monthlyTrend, 
+  exportPayoutsReport, 
+  exportPartnersReport,
+  getApplicationClickReport
+};

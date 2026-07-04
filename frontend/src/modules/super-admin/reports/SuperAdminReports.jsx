@@ -198,6 +198,7 @@ export default function SuperAdminReports() {
   const [trends, setTrends] = useState([]);
   const [topPartners, setTopPartners] = useState([]);
   const [productsData, setProductsData] = useState([]);
+  const [clickAnalytics, setClickAnalytics] = useState(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [analyticsErr, setAnalyticsErr] = useState("");
 
@@ -218,17 +219,19 @@ export default function SuperAdminReports() {
     setLoadingAnalytics(true);
     setAnalyticsErr("");
     try {
-      const [resOverview, resTrend, resPartners, resProducts] = await Promise.all([
+      const [resOverview, resTrend, resPartners, resProducts, resClicks] = await Promise.all([
         api.get("/reports/overview"),
         api.get("/reports/monthly-trend"),
         api.get("/reports/top-partners?limit=10"),
         api.get("/reports/applications-by-product"),
+        api.get("/reports/application-clicks")
       ]);
 
       if (resOverview.data?.success) setStats(resOverview.data.data);
       if (resTrend.data?.success) setTrends(resTrend.data.data);
       if (resPartners.data?.success) setTopPartners(resPartners.data.data);
       if (resProducts.data?.success) setProductsData(resProducts.data.data);
+      if (resClicks.data?.success) setClickAnalytics(resClicks.data.data);
     } catch (e) {
       console.error(e);
       setAnalyticsErr(e.response?.data?.message || "Failed to load reports overview");
@@ -523,6 +526,17 @@ export default function SuperAdminReports() {
                   <div style={{ fontSize: "24px", fontWeight: 800, color: C.text }}>₹{parseFloat(walletStats.total_available).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
                   <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>Liquid funds ready for payouts</div>
                 </div>
+
+                <div style={{ ...S.card }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Application Clicks</span>
+                    <Icons.trending size={18} color={C.teal} />
+                  </div>
+                  <div style={{ fontSize: "28px", fontWeight: 800, color: C.text }}>{clickAnalytics?.summary?.total_clicks || 0}</div>
+                  <div style={{ fontSize: "12px", color: C.textLight, marginTop: "4px" }}>
+                    <span style={{ color: C.green, fontWeight: 700 }}>{clickAnalytics?.summary?.last_30_days || 0}</span> Clicks in last 30 days
+                  </div>
+                </div>
               </div>
 
               {/* Monthly trend */}
@@ -593,6 +607,40 @@ export default function SuperAdminReports() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Clicks analytics table */}
+              <div style={{ ...S.card }}>
+                <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, margin: "0 0 12px 0" }}>Application Clicks by Product</h4>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "11px", textAlign: "left" }}>
+                      <th style={{ padding: "8px" }}>Product Name</th>
+                      <th style={{ padding: "8px" }}>Type</th>
+                      <th style={{ padding: "8px", textAlign: "right" }}>Partner Clicks</th>
+                      <th style={{ padding: "8px", textAlign: "right" }}>Customer Clicks</th>
+                      <th style={{ padding: "8px", textAlign: "right" }}>Total Clicks</th>
+                    </tr>
+                  </thead>
+                  <tbody style={{ fontSize: "12.5px", color: C.text }}>
+                    {clickAnalytics && clickAnalytics.clicks && clickAnalytics.clicks.map((c, idx) => (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${C.border}40` }}>
+                        <td style={{ padding: "8px", fontWeight: 600 }}>
+                          {c.product_name} <span style={{ fontSize: "9px", color: C.textLight, background: C.bgSecondary, padding: "2px 4px", borderRadius: "3px" }}>{c.category?.replace(/_/g, " ")}</span>
+                        </td>
+                        <td style={{ padding: "8px", textTransform: "capitalize" }}>{c.application_type?.replace(/_/g, " ")}</td>
+                        <td style={{ padding: "8px", textAlign: "right", color: C.teal, fontWeight: 700 }}>{c.partner_clicks}</td>
+                        <td style={{ padding: "8px", textAlign: "right", color: C.textLight, fontWeight: 600 }}>{c.customer_clicks}</td>
+                        <td style={{ padding: "8px", textAlign: "right", color: C.green, fontWeight: 700 }}>{c.total_clicks}</td>
+                      </tr>
+                    ))}
+                    {(!clickAnalytics || !clickAnalytics.clicks || clickAnalytics.clicks.length === 0) && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: "24px", textAlign: "center", color: C.textLight }}>No click tracking data available yet.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

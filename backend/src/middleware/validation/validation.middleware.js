@@ -78,10 +78,50 @@ const commissionRules = [
     }),
 ];
 
+// ── Product Application Settings validators ────────────────────────────────
+const applicationSettingsRules = [
+  body('application_type')
+    .isIn(['internal_form', 'external_url', 'affiliate_url', 'api_integration'])
+    .withMessage('Invalid application type'),
+  body('application_url')
+    .custom((value, { req }) => {
+      if (req.body.application_type !== 'internal_form') {
+        if (!value) {
+          throw new Error('Application URL is required for this application type');
+        }
+        if (!/^https?:\/\//i.test(value)) {
+          throw new Error('Application URL must start with http:// or https://');
+        }
+      }
+      return true;
+    }),
+  body('open_type')
+    .optional()
+    .isIn(['same_tab', 'new_tab'])
+    .withMessage('Invalid open type'),
+  body('partner_enabled')
+    .optional()
+    .isBoolean()
+    .withMessage('partner_enabled must be a boolean'),
+  body('customer_enabled')
+    .optional()
+    .isBoolean()
+    .withMessage('customer_enabled must be a boolean'),
+  body('track_clicks')
+    .optional()
+    .isBoolean()
+    .withMessage('track_clicks must be a boolean'),
+  body('status')
+    .optional()
+    .isIn(['active', 'inactive'])
+    .withMessage('Invalid status'),
+];
+
 module.exports = {
   validate,
   registerRules,
   applicationRules,
   withdrawalRules,
   commissionRules,
+  applicationSettingsRules,
 };

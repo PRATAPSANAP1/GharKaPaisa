@@ -21,6 +21,20 @@ export default function ManageProducts() {
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   
+  const [appSettingsModalOpen, setAppSettingsModalOpen] = useState(false);
+  const [selectedProductForSettings, setSelectedProductForSettings] = useState(null);
+  const [appSettingsForm, setAppSettingsForm] = useState({
+    application_type: 'internal_form',
+    application_url: '',
+    provider_name: '',
+    open_type: 'same_tab',
+    partner_enabled: true,
+    customer_enabled: true,
+    track_clicks: true,
+    status: 'active'
+  });
+
+  
   const [form, setForm] = useState({
     name: "",
     category: "credit_card",
@@ -213,6 +227,55 @@ export default function ManageProducts() {
     }
   };
 
+  const openAppSettingsModal = async (product) => {
+    setSelectedProductForSettings(product);
+    try {
+      const res = await api.get(`/products/${product.id}/application-settings`);
+      if (res.data?.success && res.data.data) {
+        setAppSettingsForm({
+          application_type: res.data.data.application_type || 'internal_form',
+          application_url: res.data.data.application_url || '',
+          provider_name: res.data.data.provider_name || '',
+          open_type: res.data.data.open_type || 'same_tab',
+          partner_enabled: res.data.data.partner_enabled ?? true,
+          customer_enabled: res.data.data.customer_enabled ?? true,
+          track_clicks: res.data.data.track_clicks ?? true,
+          status: res.data.data.status || 'active'
+        });
+      }
+    } catch (err) {
+      setAppSettingsForm({
+        application_type: 'internal_form',
+        application_url: '',
+        provider_name: '',
+        open_type: 'same_tab',
+        partner_enabled: true,
+        customer_enabled: true,
+        track_clicks: true,
+        status: 'active'
+      });
+    }
+    setAppSettingsModalOpen(true);
+  };
+
+  const handleSaveAppSettings = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload = { ...appSettingsForm };
+      if (payload.application_type === 'internal_form') {
+        payload.application_url = '';
+      }
+      await api.put(`/products/${selectedProductForSettings.id}/application-settings`, payload);
+      alert('Application settings saved successfully');
+      setAppSettingsModalOpen(false);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save application settings');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -284,8 +347,11 @@ export default function ManageProducts() {
                         <button onClick={() => toggleProductActivation(p)} disabled={updatingId === p.id} style={{ background: p.is_active ? `${C.green}15` : `${C.red}15`, color: p.is_active ? C.green : C.red, border: "none", padding: "6px 10px", borderRadius: "8px", fontWeight: 700, fontSize: "12px", cursor: "pointer" }}>
                           {updatingId === p.id ? "..." : p.is_active ? "Active" : "Inactive"}
                         </button>
-                        <button onClick={() => openEditModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                         <button onClick={() => openEditModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
                           Edit
+                        </button>
+                        <button onClick={() => openAppSettingsModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                          Settings ⚙️
                         </button>
                         <button onClick={() => handleDeleteProduct(p.id)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red, padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
                           Delete
@@ -414,6 +480,128 @@ export default function ManageProducts() {
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
                 <button type="button" onClick={() => setModalOpen(false)} style={S.btn("outline")}>Cancel</button>
                 <button type="submit" disabled={submitting} style={S.btn("primary")}>{submitting ? "Saving..." : "Save Product"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Product Application Settings Modal */}
+      {appSettingsModalOpen && selectedProductForSettings && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: C.card, width: "100%", maxWidth: "500px", borderRadius: "24px", padding: "24px", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.3)", color: C.text, maxHeight: "90vh", overflowY: "auto" }}>
+            <span onClick={() => setAppSettingsModalOpen(false)} style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight, background: C.bgSecondary, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
+              ✕
+            </span>
+            <h2 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "4px" }}>Application Settings</h2>
+            <p style={{ fontSize: "12px", color: C.textLight, marginBottom: "16px" }}>{selectedProductForSettings.name}</p>
+
+            <form onSubmit={handleSaveAppSettings} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={S.label}>Application Type</label>
+                <select
+                  value={appSettingsForm.application_type}
+                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, application_type: e.target.value })}
+                  style={S.input}
+                >
+                  <option value="internal_form">Internal Lead Form</option>
+                  <option value="external_url">External Web URL</option>
+                  <option value="affiliate_url">Affiliate Network Link</option>
+                  <option value="api_integration">Direct API Integration</option>
+                </select>
+              </div>
+
+              {appSettingsForm.application_type !== 'internal_form' && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={S.label}>Application URL</label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://example.com/apply"
+                    value={appSettingsForm.application_url}
+                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, application_url: e.target.value })}
+                    style={S.input}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={S.label}>Provider Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. HDFC Affiliate Network"
+                  value={appSettingsForm.provider_name}
+                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, provider_name: e.target.value })}
+                  style={S.input}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={S.label}>Open Link In</label>
+                <select
+                  value={appSettingsForm.open_type}
+                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, open_type: e.target.value })}
+                  style={S.input}
+                >
+                  <option value="same_tab">Same Tab</option>
+                  <option value="new_tab">New Tab</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "8px" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={appSettingsForm.partner_enabled}
+                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, partner_enabled: e.target.checked })}
+                  />
+                  Partner Enabled
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={appSettingsForm.customer_enabled}
+                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, customer_enabled: e.target.checked })}
+                  />
+                  Customer Enabled
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={appSettingsForm.track_clicks}
+                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, track_clicks: e.target.checked })}
+                  />
+                  Track Clicks
+                </label>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
+                <label style={S.label}>Status</label>
+                <select
+                  value={appSettingsForm.status}
+                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, status: e.target.value })}
+                  style={S.input}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setAppSettingsModalOpen(false)}
+                  style={{ ...S.btn("outline"), padding: "10px 16px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{ ...S.btn("primary"), padding: "10px 20px" }}
+                >
+                  {submitting ? 'Saving...' : 'Save Settings'}
+                </button>
               </div>
             </form>
           </div>

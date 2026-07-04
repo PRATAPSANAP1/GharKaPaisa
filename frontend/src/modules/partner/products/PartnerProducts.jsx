@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { resolveAndApply } from '../../../services/applicationResolver';
+
 import { MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, MdAccessTime, MdInfoOutline } from 'react-icons/md';
 
 const CATEGORIES = [
@@ -53,10 +55,14 @@ export default function PartnerProducts() {
   }, []);
 
   const handleApply = (product) => {
-    setSelectedProduct(product);
-    setCustomerName("");
-    setMobile("");
-    setCity("");
+    resolveAndApply(product.id, {
+      onInternalForm: () => {
+        setSelectedProduct(product);
+        setCustomerName("");
+        setMobile("");
+        setCity("");
+      }
+    });
   };
 
   const handleSubmitLead = async (e) => {

@@ -22,6 +22,8 @@ import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
 import { getCardSpecificImage } from "./components/CreditCards/cardImageHelper";
 import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
 import { loansData } from "./components/Loans/index";
+import { resolveAndApply } from "../../services/applicationResolver";
+
 import { insuranceData } from "./components/Insurance/index";
 import { servicesData } from "./components/Services/index";
 import { banksList, trustBanks } from "./components/banks/banksData";
@@ -2255,10 +2257,14 @@ export default function Home({ onNavigate }) {
 
   const handleItemClick = (item) => {
     if (item.isApplyAction) {
-      setVerifyCard({
-        cardName: item.label,
-        bankName: item.bankName || "Partner Bank",
-        bankId: item.bankId || "unknown"
+      resolveAndApply(item.productId || item.label || item.id, {
+        onInternalForm: () => {
+          setVerifyCard({
+            cardName: item.label,
+            bankName: item.bankName || "Partner Bank",
+            bankId: item.bankId || "unknown"
+          });
+        }
       });
       return;
     }
@@ -2301,10 +2307,14 @@ export default function Home({ onNavigate }) {
           bankName = "Yes Bank";
         }
 
-        setVerifyCard({
-          cardName: matchedLtf.name,
-          bankName,
-          bankId
+        resolveAndApply(matchedLtf.name, {
+          onInternalForm: () => {
+            setVerifyCard({
+              cardName: matchedLtf.name,
+              bankName,
+              bankId
+            });
+          }
         });
       }
       return;
@@ -2344,10 +2354,14 @@ export default function Home({ onNavigate }) {
 
   const handleAttractiveCategoryClick = (cat) => {
     if (cat.id === "personal-loan") {
-      setVerifyCard({
-        cardName: cat.title || "Personal Loan",
-        bankName: "Partner Bank",
-        bankId: "personal-loan"
+      resolveAndApply("personal-loan", {
+        onInternalForm: () => {
+          setVerifyCard({
+            cardName: cat.title || "Personal Loan",
+            bankName: "Partner Bank",
+            bankId: "personal-loan"
+          });
+        }
       });
       return;
     }
@@ -2783,7 +2797,11 @@ export default function Home({ onNavigate }) {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setVerifyCard({ cardName: card.name, bankName: card.bank, bankId: card.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                        resolveAndApply(card.name, {
+                          onInternalForm: () => {
+                            setVerifyCard({ cardName: card.name, bankName: card.bank, bankId: card.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                          }
+                        });
                       }}
                       style={{
                         width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
@@ -3055,7 +3073,11 @@ export default function Home({ onNavigate }) {
             </p>
             <button 
               onClick={() => {
-                setVerifyCard({ cardName: selectedPopularCard.name, bankName: selectedPopularCard.bank, bankId: selectedPopularCard.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                resolveAndApply(selectedPopularCard.name, {
+                  onInternalForm: () => {
+                    setVerifyCard({ cardName: selectedPopularCard.name, bankName: selectedPopularCard.bank, bankId: selectedPopularCard.bank.toLowerCase().replace(/[^a-z]/g, '') });
+                  }
+                });
                 setSelectedPopularCard(null);
               }} 
               style={{ width: "100%", background: C.teal, color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 800, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", boxShadow: `0 8px 16px ${C.teal}30` }}

@@ -962,6 +962,67 @@ const migrate = async () => {
     logger.warn('Failed to add banner redirect columns:', bannerErr.message);
   }
 
+  // ── Product Application Settings & Click Logs Migration ───────────────────
+  try {
+    // 1. Create Enums
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'application_type_enum') THEN
+          CREATE TYPE application_type_enum AS ENUM ('internal_form', 'external_url', 'affiliate_url', 'api_integration');
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'open_type_enum') THEN
+          CREATE TYPE open_type_enum AS ENUM ('same_tab', 'new_tab');
+        END IF;
+      END$$;
+    `);
+
+    // 2. Create product_application_settings table
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_application_settings (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id        UUID NOT NULL UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+        application_type  application_type_enum NOT NULL DEFAULT 'internal_form',
+        application_url   VARCHAR(1000),
+        provider_name     VARCHAR(255),
+        open_type         open_type_enum NOT NULL DEFAULT 'same_tab',
+        partner_enabled   BOOLEAN NOT NULL DEFAULT TRUE,
+        customer_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
+        track_clicks      BOOLEAN NOT NULL DEFAULT TRUE,
+        status            VARCHAR(20) NOT NULL DEFAULT 'active',
+        created_by        UUID REFERENCES users(id),
+        updated_by        UUID REFERENCES users(id),
+        created_at        TIMESTAMPTZ DEFAULT NOW(),
+        updated_at        TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_app_settings_product ON product_application_settings(product_id)`);
+
+    // 3. Create application_click_logs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_click_logs (
+        id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id        UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        partner_id        UUID REFERENCES "Partner_profiles"(id) ON DELETE SET NULL,
+        customer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+        application_type  application_type_enum,
+        ip_address        VARCHAR(64),
+        user_agent        TEXT,
+        device_type       VARCHAR(20),
+        browser           VARCHAR(50),
+        clicked_at        TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_logs_product ON application_click_logs(product_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_logs_partner ON application_click_logs(partner_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_logs_clicked_at ON application_click_logs(clicked_at)`);
+
+    logger.info('Product application settings and click logs migration completed successfully');
+  } catch (appSettingsErr) {
+    logger.error('Failed to run product application settings and click logs migration:', appSettingsErr);
+    throw appSettingsErr;
+  }
+
   logger.info('✅ All migrations completed successfully');
   process.exit(0);
 };
