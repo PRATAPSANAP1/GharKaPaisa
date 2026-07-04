@@ -53,6 +53,7 @@ import ManageSections from '../modules/super-admin/cms/ManageSections';
 import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
+import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
 
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
@@ -69,6 +70,8 @@ import PartnerSupport from '../modules/partner/dashboard/PartnerSupport';
 import PartnerVault from '../modules/partner/profile/PartnerVault';
 import PartnerMarketing from '../modules/partner/dashboard/PartnerMarketing';
 import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
+import PartnerReports from '../modules/partner/dashboard/PartnerReports';
+import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
 
 const AppRoutes = () => {
   const { isInitializing, initializeAuth } = useAuthStore();
@@ -89,35 +92,17 @@ const AppRoutes = () => {
         color: '#0f172a',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
-        <img 
-          src={logo} 
-          alt="GharKaPaisa Logo" 
-          style={{
-            width: '80px',
-            height: '80px',
-            objectFit: 'contain',
-            animation: 'horizontalSpin 2s linear infinite',
-            marginBottom: '24px'
-          }} 
-        />
         <div style={{
-          fontSize: '15px',
-          fontWeight: 600,
-          color: '#334155',
-          letterSpacing: '0.5px'
-        }}>
-          Welcome to GharKaPaisa...!
-        </div>
-        <style>{`
-          @keyframes horizontalSpin {
-            0% {
-              transform: rotateY(0deg);
-            }
-            100% {
-              transform: rotateY(-360deg);
-            }
-          }
-        `}</style>
+          width: '40px',
+          height: '40px',
+          border: '4px solid #f1f5f9',
+          borderTopColor: '#3b82f6',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          marginBottom: '16px'
+        }} />
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>Loading GharKaPaisa...</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -180,24 +165,29 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PartnerDashboard />} />
-        <Route path="marketplace" element={<PartnerProducts />} />
-        <Route path="credit-center" element={<PartnerProducts />} />
-        <Route path="leads" element={<PartnerApplications />} />
-        <Route path="crm" element={<PartnerCrm />} />
-        <Route path="kyc" element={<PartnerKyc />} />
-        <Route path="profile" element={<PartnerProfile />} />
-        <Route path="vault" element={<PartnerVault />} />
+        <Route path="products" element={<PartnerProducts />} />
+        <Route path="applications" element={<PartnerApplications />} />
+        <Route path="customers" element={<PartnerCrm />} />
         <Route path="wallet" element={<PartnerWallet />} />
-        <Route path="referral" element={<PartnerTeam />} />
-        <Route path="training" element={<PartnerTraining />} />
+        <Route path="team-network" element={<PartnerTeam />} />
+        <Route path="reports" element={<PartnerReports />} />
         <Route path="marketing" element={<PartnerMarketing />} />
+        <Route path="training" element={<PartnerTraining />} />
+        <Route path="notifications" element={<PartnerNotifications />} />
         <Route path="support" element={<PartnerSupport />} />
-        <Route path="travel" element={<TravelUtilitiesPage />} />
+        <Route path="kyc-centre" element={<PartnerKyc />} />
+        <Route path="profile" element={<PartnerProfile />} />
         <Route path="settings" element={<SettingsPage />} />
-        
-        {/* Legacy Support */}
-        <Route path="products" element={<Navigate to="../marketplace" replace />} />
-        <Route path="applications" element={<Navigate to="../leads" replace />} />
+        <Route path="travel" element={<TravelUtilitiesPage />} />
+        <Route path="vault" element={<PartnerVault />} />
+
+        {/* Legacy Support & Aliases */}
+        <Route path="marketplace" element={<Navigate to="../products" replace />} />
+        <Route path="credit-center" element={<Navigate to="../products" replace />} />
+        <Route path="leads" element={<Navigate to="../applications" replace />} />
+        <Route path="crm" element={<Navigate to="../customers" replace />} />
+        <Route path="referral" element={<Navigate to="../team-network" replace />} />
+        <Route path="kyc" element={<Navigate to="../kyc-centre" replace />} />
       </Route>
 
       {/* Admin Routes */}
@@ -243,6 +233,7 @@ const AppRoutes = () => {
         <Route path="sections" element={<ManageSections />} />
         <Route path="services" element={<ManageServices />} />
         <Route path="commissions" element={<ManageCommissions />} />
+        <Route path="commission-rules" element={<ManageCommissionRules />} />
       </Route>
 
       {/* Fallback */}
