@@ -409,7 +409,7 @@ const handleRedirect = async (req, res, next) => {
     }
 
     // 5. Append UTM parameters
-    const utmSource = req.query.utm_source || product.utm_source || (partner ? `partner_${partner.partner_code || partner.Partner_code}` : null);
+    const utmSource = req.query.utm_source || product.utm_source || (partner ? `partner_${partner.partner_code || partner.partner_code}` : null);
     const utmMedium = req.query.utm_medium || product.utm_medium || 'affiliate';
     const utmCampaign = req.query.utm_campaign || product.utm_campaign || null;
 
@@ -418,7 +418,7 @@ const handleRedirect = async (req, res, next) => {
       if (utmSource) parsedUrl.searchParams.set('utm_source', utmSource);
       if (utmMedium) parsedUrl.searchParams.set('utm_medium', utmMedium);
       if (utmCampaign) parsedUrl.searchParams.set('utm_campaign', utmCampaign);
-      if (partner) parsedUrl.searchParams.set('partner_code', partner.partner_code || partner.Partner_code);
+      if (partner) parsedUrl.searchParams.set('partner_code', partner.partner_code || partner.partner_code);
       targetUrl = parsedUrl.toString();
     } catch (e) {
       // url formatting failed

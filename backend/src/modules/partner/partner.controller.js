@@ -14,9 +14,9 @@ const getProfile = async (req, res, next) => {
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
         abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
-      FROM Partner_profiles ap
+      FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.Partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
       WHERE ap.id = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
@@ -44,7 +44,7 @@ const getProfile = async (req, res, next) => {
 
     if (shouldMask) {
       Partner.first_name = 'Partner';
-      Partner.last_name = Partner.Partner_code;
+      Partner.last_name = Partner.partner_code;
       Partner.email = 'masked@gharkapaisa.in';
       Partner.mobile = '**********';
       Partner.current_address = 'HIDDEN';
@@ -59,7 +59,7 @@ const getProfile = async (req, res, next) => {
     }
 
     const { rows: kyc } = await query(
-      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, verification_status, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
+      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, verification_status, uploaded_at FROM kyc_documents WHERE partner_id = $1`, [PartnerId]
     );
 
     const { rows: [video] } = await query(
@@ -81,7 +81,7 @@ const updateProfile = async (req, res, next) => {
     const { PartnerId } = req.params;
     const { first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode } = req.body;
     await query(`
-      UPDATE Partner_profiles SET
+      UPDATE partner_profiles SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
         current_address = COALESCE($3, current_address),
@@ -142,9 +142,9 @@ const uploadKYCDocuments = async (req, res, next) => {
         const file = files[field][0];
         const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${PartnerId}`);
         await query(`
-          INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key)
+          INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key)
           VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+          ON CONFLICT (partner_id, doc_type) DO UPDATE SET
             doc_number = EXCLUDED.doc_number,
             file_url = EXCLUDED.file_url,
             s3_key = EXCLUDED.s3_key,
@@ -156,7 +156,7 @@ const uploadKYCDocuments = async (req, res, next) => {
     }
 
     // Update KYC status to under_review
-    await query(`UPDATE Partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
+    await query(`UPDATE partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
 
     return success(res, { uploaded }, `${uploaded.length} document(s) uploaded. KYC under review.`);
   } catch (err) {
@@ -175,9 +175,9 @@ const getDashboardStats = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status = 'approved' OR status = 'disbursed') as approved,
           COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
-        FROM applications WHERE Partner_id = $1
+        FROM applications WHERE partner_id = $1
       `, [PartnerId]),
-      query(`SELECT * FROM wallets WHERE Partner_id = $1`, [PartnerId]),
+      query(`SELECT * FROM wallets WHERE partner_id = $1`, [PartnerId]),
       query(`
         SELECT a.app_number, a.status, a.commission_amount, a.created_at,
           c.full_name as customer_name,
@@ -186,7 +186,7 @@ const getDashboardStats = async (req, res, next) => {
         JOIN customers c ON c.id = a.customer_id
         JOIN products p ON p.id = a.product_id
         JOIN banks b ON b.id = p.bank_id
-        WHERE a.Partner_id = $1
+        WHERE a.partner_id = $1
         ORDER BY a.created_at DESC LIMIT 5
       `, [PartnerId]),
       query(`
@@ -243,32 +243,32 @@ const listPartners = async (req, res, next) => {
     if (kyc_status) { where += ` AND ap.kyc_status = $${idx++}`; values.push(kyc_status); }
     if (search) {
       if (shouldMask) {
-        where += ` AND ap.Partner_code ILIKE $${idx}`;
+        where += ` AND ap.partner_code ILIKE $${idx}`;
       } else {
-        where += ` AND (ap.first_name ILIKE $${idx} OR ap.last_name ILIKE $${idx} OR u.mobile ILIKE $${idx} OR ap.Partner_code ILIKE $${idx})`;
+        where += ` AND (ap.first_name ILIKE $${idx} OR ap.last_name ILIKE $${idx} OR u.mobile ILIKE $${idx} OR ap.partner_code ILIKE $${idx})`;
       }
       values.push(`%${search}%`); idx++;
     }
 
     let hasParentCol = true;
     try {
-      await query(`SELECT parent_partner_id FROM Partner_profiles LIMIT 1`);
+      await query(`SELECT parent_partner_id FROM partner_profiles LIMIT 1`);
     } catch(e) {
       hasParentCol = false;
     }
 
-    const countQuery = `SELECT COUNT(*) FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id ${where}`;
+    const countQuery = `SELECT COUNT(*) FROM partner_profiles ap JOIN users u ON u.id = ap.user_id ${where}`;
     
-    let selectFields = `ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.company_name, u.email, u.mobile, u.status, u.created_at`;
+    let selectFields = `ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.company_name, u.email, u.mobile, u.status, u.created_at`;
     let joinClause = ``;
     if (hasParentCol) {
-      selectFields += `, ap.parent_partner_id, pap.Partner_code as parent_code`;
-      joinClause = `LEFT JOIN Partner_profiles pap ON pap.id = ap.parent_partner_id`;
+      selectFields += `, ap.parent_partner_id, pap.partner_code as parent_code`;
+      joinClause = `LEFT JOIN partner_profiles pap ON pap.id = ap.parent_partner_id`;
     }
 
     const dataQuery = `
       SELECT ${selectFields}
-      FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id
+      FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
       ${joinClause}
       ${where} ORDER BY u.created_at DESC LIMIT $${idx} OFFSET $${idx + 1}
     `;
@@ -283,7 +283,7 @@ const listPartners = async (req, res, next) => {
         return {
           ...row,
           first_name: 'Partner',
-          last_name: row.Partner_code,
+          last_name: row.partner_code,
           company_name: 'HIDDEN',
           email: 'masked@gharkapaisa.in',
           mobile: '**********'
@@ -305,26 +305,26 @@ const approvePartner = async (req, res, next) => {
     const { PartnerId } = req.params;
     const { approved, rejection_reason } = req.body;
 
-    const { rows: [Partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [PartnerId]);
+    const { rows: [Partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [PartnerId]);
     if (!Partner) return notFound(res, 'Partner not found');
 
     await client.query('BEGIN');
 
     if (approved) {
       await client.query(`
-        UPDATE Partner_profiles SET kyc_status = 'approved', approved_by = $1, approved_at = NOW() WHERE id = $2
+        UPDATE partner_profiles SET kyc_status = 'approved', approved_by = $1, approved_at = NOW() WHERE id = $2
       `, [req.user.id, PartnerId]);
       await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [Partner.user_id]);
       await client.query(`
-        INSERT INTO wallets (Partner_id) VALUES ($1)
-        ON CONFLICT (Partner_id) DO NOTHING
+        INSERT INTO wallets (partner_id) VALUES ($1)
+        ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
       await client.query('COMMIT');
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
     } else {
       await client.query(`
-        UPDATE Partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
+        UPDATE partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
       await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
@@ -349,9 +349,9 @@ const getSelfProfile = async (req, res, next) => {
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
         abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
-      FROM Partner_profiles ap
+      FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.Partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
       WHERE ap.user_id = $1
     `, [userId]);
     if (!Partner) return notFound(res, 'Partner profile not found');
@@ -369,7 +369,7 @@ const getSelfProfile = async (req, res, next) => {
     }
 
     const { rows: kyc } = await query(
-      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [Partner.id]
+      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at FROM kyc_documents WHERE partner_id = $1`, [Partner.id]
     );
 
     return success(res, { ...Partner, kyc_documents: kyc });
@@ -424,9 +424,9 @@ const uploadSelfKYC = async (req, res, next) => {
         const file = files[field][0];
         const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${PartnerId}`);
         await query(`
-          INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key)
+          INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key)
           VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+          ON CONFLICT (partner_id, doc_type) DO UPDATE SET
             doc_number = EXCLUDED.doc_number,
             file_url = EXCLUDED.file_url,
             s3_key = EXCLUDED.s3_key,
@@ -438,7 +438,7 @@ const uploadSelfKYC = async (req, res, next) => {
     }
 
     // Update KYC status to under_review
-    await query(`UPDATE Partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
+    await query(`UPDATE partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
 
     // Log the KYC upload to audit logs
     await logAction(req, 'UPLOAD_KYC', PartnerId, { uploaded });
@@ -476,7 +476,7 @@ const addTeamMember = async (req, res, next) => {
 
     // Check if parent exists and allows team creation
     const { rows: [parentPartner] } = await client.query(`
-      SELECT id, allow_team_creation, team_status FROM Partner_profiles WHERE id = $1
+      SELECT id, allow_team_creation, team_status FROM partner_profiles WHERE id = $1
     `, [PartnerId]);
     if (!parentPartner) return error(res, 'Parent partner not found', 404);
     if (parentPartner.allow_team_creation === false) {
@@ -517,14 +517,14 @@ const addTeamMember = async (req, res, next) => {
 
     // Create child partner profile
     const { rows: [childPartner] } = await client.query(`
-      INSERT INTO Partner_profiles (
-        user_id, Partner_code, first_name, last_name, parent_partner_id, kyc_status
+      INSERT INTO partner_profiles (
+        user_id, partner_code, first_name, last_name, parent_partner_id, kyc_status
       )
       VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id
     `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
 
     // Create wallet
-    await client.query(`INSERT INTO wallets (Partner_id) VALUES ($1)`, [childPartner.id]);
+    await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
 
     await client.query('COMMIT');
     return created(res, { partner_code: partnerCode }, 'Team member created successfully. They can now log in using their email and password.');
@@ -571,7 +571,7 @@ const listPartnerCustomers = async (req, res, next) => {
       JOIN applications a ON a.customer_id = c.id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      WHERE a.Partner_id = $1
+      WHERE a.partner_id = $1
       GROUP BY c.id
       ORDER BY MAX(a.created_at) DESC
     `, [partnerId]);
@@ -600,7 +600,7 @@ const getTeamMembers = async (req, res, next) => {
     // Check if parent_partner_id column exists safely (in case migration is pending)
     let hasParentCol = true;
     try {
-      await query(`SELECT parent_partner_id FROM Partner_profiles LIMIT 1`);
+      await query(`SELECT parent_partner_id FROM partner_profiles LIMIT 1`);
     } catch(e) {
       hasParentCol = false;
     }
@@ -610,9 +610,9 @@ const getTeamMembers = async (req, res, next) => {
     }
 
     const { rows: team } = await query(`
-      SELECT ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status,
+      SELECT ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status,
              u.email, u.mobile, u.status, u.created_at
-      FROM Partner_profiles ap
+      FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1
       ORDER BY u.created_at DESC
@@ -648,10 +648,10 @@ const getTeamTree = async (req, res, next) => {
 
     const { rows } = await query(`
       SELECT 
-        ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id,
+        ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id,
         u.email, u.mobile, u.status as account_status, u.created_at, r.level
       FROM partner_team_relationships r
-      JOIN Partner_profiles ap ON ap.id = r.child_partner_id
+      JOIN partner_profiles ap ON ap.id = r.child_partner_id
       JOIN users u ON u.id = ap.user_id
       WHERE r.parent_partner_id = $1
       ORDER BY r.level ASC, u.created_at DESC
@@ -668,7 +668,7 @@ const getTeamTree = async (req, res, next) => {
     rows.forEach(r => {
       nodeMap[r.id] = {
         id: r.id,
-        Partner_code: r.Partner_code,
+        partner_code: r.partner_code,
         first_name: r.first_name,
         last_name: r.last_name,
         kyc_status: r.kyc_status,
@@ -712,7 +712,7 @@ const getTeamDashboard = async (req, res, next) => {
         COUNT(CASE WHEN u.status = 'suspended' THEN 1 END)::int as suspended_partners,
         COUNT(CASE WHEN u.status = 'blocked' THEN 1 END)::int as blocked_partners
       FROM partner_team_relationships r
-      JOIN Partner_profiles ap ON ap.id = r.child_partner_id
+      JOIN partner_profiles ap ON ap.id = r.child_partner_id
       JOIN users u ON u.id = ap.user_id
       WHERE r.parent_partner_id = $1
     `, [partnerId]);
@@ -723,7 +723,7 @@ const getTeamDashboard = async (req, res, next) => {
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0)::float as today_earnings
       FROM wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
-      WHERE w.Partner_id = $1 AND wt.reference_type = 'team_commission'
+      WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
     `, [partnerId]);
 
     const dashboard = {
@@ -757,7 +757,7 @@ const getTeamEarnings = async (req, res, next) => {
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       LEFT JOIN applications a ON a.id = wt.reference_id::uuid
       LEFT JOIN products p ON p.id = a.product_id
-      WHERE w.Partner_id = $1 AND wt.reference_type = 'team_commission'
+      WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
       ORDER BY wt.created_at DESC
     `, [partnerId]);
 
@@ -781,7 +781,7 @@ const getReferralInfo = async (req, res, next) => {
         SELECT partner_code FROM partner_profiles WHERE id = $1
       `, [partnerId]);
       
-      const code = partner?.partner_code || partner?.Partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
+      const code = partner?.partner_code || partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
       const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${code}`;
       
       const { rows: [newRef] } = await query(`
@@ -807,7 +807,7 @@ const changeParentPartner = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { rows: [partner] } = await client.query(`
-      SELECT id, parent_partner_id, team_level FROM Partner_profiles WHERE id = $1 FOR UPDATE
+      SELECT id, parent_partner_id, team_level FROM partner_profiles WHERE id = $1 FOR UPDATE
     `, [PartnerId]);
 
     if (!partner) {
@@ -847,7 +847,7 @@ const changeParentPartner = async (req, res, next) => {
 
     if (partner.parent_partner_id) {
       await client.query(`
-        UPDATE Partner_profiles 
+        UPDATE partner_profiles 
         SET children_count = GREATEST(0, children_count - 1) 
         WHERE id = $1
       `, [partner.parent_partner_id]);
@@ -862,13 +862,13 @@ const changeParentPartner = async (req, res, next) => {
     let newTeamLevel = 1;
     if (new_parent_id) {
       const { rows: [newParent] } = await client.query(`
-        SELECT team_level FROM Partner_profiles WHERE id = $1
+        SELECT team_level FROM partner_profiles WHERE id = $1
       `, [new_parent_id]);
       newTeamLevel = parseInt(newParent?.team_level || 1) + 1;
     }
 
     await client.query(`
-      UPDATE Partner_profiles
+      UPDATE partner_profiles
       SET parent_partner_id = $1, team_level = $2, team_joined_at = CASE WHEN $1 IS NOT NULL THEN NOW() ELSE NULL END
       WHERE id = $3
     `, [new_parent_id, newTeamLevel, PartnerId]);
@@ -903,7 +903,7 @@ const changeParentPartner = async (req, res, next) => {
       }
 
       await client.query(`
-        UPDATE Partner_profiles SET children_count = children_count + 1 WHERE id = $1
+        UPDATE partner_profiles SET children_count = children_count + 1 WHERE id = $1
       `, [new_parent_id]);
       await client.query(`
         UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
@@ -912,12 +912,12 @@ const changeParentPartner = async (req, res, next) => {
 
     const updateDescendantLevels = async (parentId, parentLevel) => {
       const { rows: children } = await client.query(`
-        SELECT id FROM Partner_profiles WHERE parent_partner_id = $1
+        SELECT id FROM partner_profiles WHERE parent_partner_id = $1
       `, [parentId]);
       for (const child of children) {
         const nextLevel = parentLevel + 1;
         await client.query(`
-          UPDATE Partner_profiles SET team_level = $1 WHERE id = $2
+          UPDATE partner_profiles SET team_level = $1 WHERE id = $2
         `, [nextLevel, child.id]);
         await updateDescendantLevels(child.id, nextLevel);
       }
@@ -956,7 +956,7 @@ const deactivateTeam = async (req, res, next) => {
 
     params.push(PartnerId);
     await query(`
-      UPDATE Partner_profiles
+      UPDATE partner_profiles
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE id = $${idx}
     `, params);
@@ -971,12 +971,12 @@ const getWholeNetwork = async (req, res, next) => {
   try {
     const { rows } = await query(`
       SELECT 
-        ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id, ap.team_level, ap.team_status, ap.children_count,
+        ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id, ap.team_level, ap.team_status, ap.children_count,
         u.email, u.mobile, u.status as account_status,
-        pap.Partner_code as parent_code, pap.first_name as parent_first_name, pap.last_name as parent_last_name
-      FROM Partner_profiles ap
+        pap.partner_code as parent_code, pap.first_name as parent_first_name, pap.last_name as parent_last_name
+      FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN Partner_profiles pap ON pap.id = ap.parent_partner_id
+      LEFT JOIN partner_profiles pap ON pap.id = ap.parent_partner_id
       ORDER BY ap.team_level ASC, ap.created_at DESC
     `);
     return success(res, rows);
@@ -995,9 +995,9 @@ const uploadPan = async (req, res, next) => {
     const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
 
     const { rows: [doc] } = await query(`
-      INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
+      INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
       VALUES ($1, 'pan', $2, $3, $4, 'pending', false)
-      ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
         doc_number = COALESCE(EXCLUDED.doc_number, kyc_documents.doc_number),
         file_url = EXCLUDED.file_url,
         s3_key = EXCLUDED.s3_key,
@@ -1022,9 +1022,9 @@ const uploadCheque = async (req, res, next) => {
     const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
 
     const { rows: [doc] } = await query(`
-      INSERT INTO kyc_documents (Partner_id, doc_type, file_url, s3_key, verification_status, verified)
+      INSERT INTO kyc_documents (partner_id, doc_type, file_url, s3_key, verification_status, verified)
       VALUES ($1, 'cancelled_cheque', $2, $3, 'pending', false)
-      ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
         file_url = EXCLUDED.file_url,
         s3_key = EXCLUDED.s3_key,
         verification_status = 'pending',
@@ -1073,12 +1073,12 @@ const submitKyc = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [pan] } = await query(
-      `SELECT 1 FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'pan'`,
+      `SELECT 1 FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`,
       [partnerId]
     );
 
     const { rows: [cheque] } = await query(
-      `SELECT 1 FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'cancelled_cheque'`,
+      `SELECT 1 FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'cancelled_cheque'`,
       [partnerId]
     );
 
@@ -1092,7 +1092,7 @@ const submitKyc = async (req, res, next) => {
     }
 
     await query(`
-      UPDATE Partner_profiles 
+      UPDATE partner_profiles 
       SET kyc_status = 'pending', 
           kyc_submitted_at = NOW(), 
           rejection_reason = NULL,
@@ -1123,11 +1123,11 @@ const getKycStatus = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [partner] } = await query(`
-      SELECT kyc_status, kyc_rejection_reason, rejection_reason FROM Partner_profiles WHERE id = $1
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason FROM partner_profiles WHERE id = $1
     `, [partnerId]);
 
-    const { rows: [pan] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'pan'`, [partnerId]);
-    const { rows: [cheque] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'cancelled_cheque'`, [partnerId]);
+    const { rows: [pan] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`, [partnerId]);
+    const { rows: [cheque] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'cancelled_cheque'`, [partnerId]);
     const { rows: [video] } = await query(`SELECT id, verification_status FROM partner_videos WHERE partner_id = $1`, [partnerId]);
 
     let progress = 0;
@@ -1157,13 +1157,13 @@ const getKycDetails = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [partner] } = await query(`
-      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at FROM Partner_profiles WHERE id = $1
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at FROM partner_profiles WHERE id = $1
     `, [partnerId]);
 
     const { rows: documents } = await query(`
       SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at 
       FROM kyc_documents 
-      WHERE Partner_id = $1
+      WHERE partner_id = $1
     `, [partnerId]);
 
     const { rows: [video] } = await query(`

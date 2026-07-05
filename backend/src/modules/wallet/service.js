@@ -5,8 +5,8 @@ const logger = require('../../config/logger');
 // Ensure wallet exists for partner (called on partner approval)
 const ensureWallet = async (partnerId) => {
   await query(`
-    INSERT INTO wallets (Partner_id) VALUES ($1)
-    ON CONFLICT (Partner_id) DO NOTHING
+    INSERT INTO wallets (partner_id) VALUES ($1)
+    ON CONFLICT (partner_id) DO NOTHING
   `, [partnerId]);
 };
 
@@ -388,7 +388,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     const parentMeta = {
       ...meta,
       reference_type: 'team_commission',
-      description: `Team Commission from ${partner.first_name} ${partner.last_name || ''} (${partner.Partner_code}) - Parent ${parentPct}%`
+      description: `Team Commission from ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}) - Parent ${parentPct}%`
     };
     await creditHold(partner.parent_partner_id, parentAmount, parentMeta);
 
@@ -536,8 +536,8 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
 // Get full wallet summary for a Partner
 const getWalletSummary = async (partnerId) => {
   const { rows: [wallet] } = await query(`
-    SELECT id, Partner_id, total_earned, total_withdrawn, hold_balance, available_balance, pending_balance, withdrawn_balance, override_balance, last_updated
-    FROM wallets WHERE Partner_id = $1
+    SELECT id, partner_id, total_earned, total_withdrawn, hold_balance, available_balance, pending_balance, withdrawn_balance, override_balance, last_updated
+    FROM wallets WHERE partner_id = $1
   `, [partnerId]);
   return wallet;
 };

@@ -164,7 +164,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS partner_profiles (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id           UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      Partner_code        VARCHAR(20) UNIQUE NOT NULL,
+      partner_code        VARCHAR(20) UNIQUE NOT NULL,
       first_name        VARCHAR(100) NOT NULL,
       last_name         VARCHAR(100) NOT NULL,
       profile_photo_url VARCHAR(500),
@@ -195,7 +195,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS partner_bank_details (
       id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id            UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+      partner_id            UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       bank_name           VARCHAR(100) NOT NULL,
       account_number      VARCHAR(255) NOT NULL,
       ifsc_code           VARCHAR(15) NOT NULL,
@@ -214,7 +214,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_profiles') THEN
-        INSERT INTO partner_profiles (id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
+        INSERT INTO partner_profiles (id, user_id, partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
         SELECT id, user_id, agent_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
         FROM agent_profiles
         ON CONFLICT (id) DO NOTHING;
@@ -228,7 +228,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_bank_details') THEN
-        INSERT INTO partner_bank_details (id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
+        INSERT INTO partner_bank_details (id, partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
         SELECT id, agent_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
         FROM agent_bank_details
         ON CONFLICT (id) DO NOTHING;
@@ -242,7 +242,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='applications' AND column_name='agent_id') THEN
-        ALTER TABLE applications RENAME COLUMN agent_id TO Partner_id;
+        ALTER TABLE applications RENAME COLUMN agent_id TO partner_id;
       END IF;
     END $$;
   `);
@@ -251,7 +251,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='agent_id') THEN
-        ALTER TABLE withdrawal_requests RENAME COLUMN agent_id TO Partner_id;
+        ALTER TABLE withdrawal_requests RENAME COLUMN agent_id TO partner_id;
       END IF;
     END $$;
   `);
@@ -260,7 +260,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='agent_id') THEN
-        ALTER TABLE wallets RENAME COLUMN agent_id TO Partner_id;
+        ALTER TABLE wallets RENAME COLUMN agent_id TO partner_id;
       END IF;
     END $$;
   `);
@@ -269,7 +269,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='commission_structures' AND column_name='agent_id') THEN
-        ALTER TABLE commission_structures RENAME COLUMN agent_id TO Partner_id;
+        ALTER TABLE commission_structures RENAME COLUMN agent_id TO partner_id;
       END IF;
     END $$;
   `);
@@ -278,7 +278,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='kyc_documents' AND column_name='agent_id') THEN
-        ALTER TABLE kyc_documents RENAME COLUMN agent_id TO Partner_id;
+        ALTER TABLE kyc_documents RENAME COLUMN agent_id TO partner_id;
       END IF;
     END $$;
   `);
@@ -287,7 +287,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS kyc_documents (
       id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id      UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+      partner_id      UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       doc_type      VARCHAR(50) NOT NULL,  -- aadhaar, pan, gst_cert, cancelled_cheque
       doc_number    VARCHAR(50),
       file_url      VARCHAR(500) NOT NULL,
@@ -296,7 +296,7 @@ const migrate = async () => {
       verified_by   UUID REFERENCES users(id),
       verified_at   TIMESTAMPTZ,
       uploaded_at   TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(Partner_id, doc_type)
+      UNIQUE(partner_id, doc_type)
     )
   `);
 
@@ -349,7 +349,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS commission_structures (
       id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       product_id       UUID NOT NULL REFERENCES products(id),
-      Partner_id         UUID REFERENCES partner_profiles(id),  -- NULL = global default
+      partner_id         UUID REFERENCES partner_profiles(id),  -- NULL = global default
       commission_type  VARCHAR(20) DEFAULT 'fixed',
       commission_value DECIMAL(12,2) NOT NULL,
       effective_from   DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -388,7 +388,7 @@ const migrate = async () => {
       app_number         VARCHAR(20) UNIQUE NOT NULL,
       customer_id        UUID NOT NULL REFERENCES customers(id),
       product_id         UUID NOT NULL REFERENCES products(id),
-      Partner_id           UUID NOT NULL REFERENCES partner_profiles(id),
+      partner_id           UUID NOT NULL REFERENCES partner_profiles(id),
       submitted_by       UUID NOT NULL REFERENCES users(id),
       status             application_status DEFAULT 'submitted',
       bank_ref_number    VARCHAR(100),
@@ -416,7 +416,7 @@ const migrate = async () => {
     EXCEPTION WHEN OTHERS THEN NULL; END $$
   `);
 
-  await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(Partner_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_customer ON applications(customer_id)`);
@@ -435,7 +435,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS wallets (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id          UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+      partner_id          UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       total_earned      DECIMAL(15,2) DEFAULT 0,
       total_withdrawn   DECIMAL(15,2) DEFAULT 0,
       hold_balance      DECIMAL(15,2) DEFAULT 0,
@@ -501,7 +501,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS withdrawal_requests (
       id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id       UUID NOT NULL REFERENCES wallets(id),
-      Partner_id        UUID NOT NULL REFERENCES partner_profiles(id),
+      partner_id        UUID NOT NULL REFERENCES partner_profiles(id),
       amount          DECIMAL(12,2) NOT NULL,
       status          VARCHAR(20) DEFAULT 'pending',
       bank_name       VARCHAR(100),
@@ -570,9 +570,9 @@ const migrate = async () => {
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_bank_name ON products(bank_id, name)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_status ON wallet_transactions(status) WHERE status = 'pending'`);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_release ON wallet_transactions(release_at) WHERE status = 'pending'`);
-  await query(`CREATE INDEX IF NOT EXISTS idx_withdrawal_partner ON withdrawal_requests(Partner_id, status)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_withdrawal_partner ON withdrawal_requests(partner_id, status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id, revoked)`);
-  await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON partner_profiles(Partner_code)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON partner_profiles(partner_code)`);
 
   // ── Audit Logs ────────────────────────────────────────────────
   await query(`

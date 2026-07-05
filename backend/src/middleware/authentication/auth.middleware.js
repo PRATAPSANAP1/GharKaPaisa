@@ -61,7 +61,7 @@ const syncUser = async (req, res, next) => {
     // Attach partner profile for Partner role
     if ((user.role || '').toUpperCase() === 'PARTNER') {
       const { rows: [partner] } = await query(
-        `SELECT id, kyc_status, first_name, last_name, Partner_code
+        `SELECT id, kyc_status, first_name, last_name, partner_code
          FROM partner_profiles WHERE user_id = $1`,
         [user.id]
       );
@@ -142,7 +142,7 @@ const optionalAuth = async (req, res, next) => {
       req.user = safeUser;
       if ((user.role || '').toUpperCase() === 'PARTNER') {
         const { rows: [partner] } = await query(
-          `SELECT id, kyc_status, first_name, last_name, Partner_code
+          `SELECT id, kyc_status, first_name, last_name, partner_code
            FROM partner_profiles WHERE user_id = $1`,
           [user.id]
         );

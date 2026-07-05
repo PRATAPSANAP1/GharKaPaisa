@@ -412,7 +412,7 @@ const approveKYC = async (req, res, next) => {
           verification_status = 'approved',
           verified_by = $1,
           verified_at = NOW()
-      WHERE Partner_id = $2
+      WHERE partner_id = $2
     `, [req.user.id, partnerId]);
 
     // 4. Mark video as approved
@@ -483,7 +483,7 @@ const rejectKYC = async (req, res, next) => {
     await client.query(`
       UPDATE kyc_documents 
       SET verification_status = 'rejected'
-      WHERE Partner_id = $1 AND verified = false
+      WHERE partner_id = $1 AND verified = false
     `, [partnerId]);
 
     // 4. Mark video as rejected
@@ -562,7 +562,7 @@ const requestChangesKYC = async (req, res, next) => {
           UPDATE kyc_documents 
           SET verification_status = 'rejected',
               verified = false
-          WHERE Partner_id = $1 AND doc_type = $2
+          WHERE partner_id = $1 AND doc_type = $2
         `, [partnerId, docType]);
       }
     }
@@ -574,7 +574,7 @@ const requestChangesKYC = async (req, res, next) => {
           verified = true,
           verified_by = $1,
           verified_at = NOW()
-      WHERE Partner_id = $2 AND NOT (doc_type = ANY($3))
+      WHERE partner_id = $2 AND NOT (doc_type = ANY($3))
     `, [req.user.id, partnerId, rejected_documents]);
 
     if (!rejected_documents.includes('video')) {

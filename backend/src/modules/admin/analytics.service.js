@@ -27,7 +27,7 @@ const getAdminDashboard = async (adminId) => {
   `);
 
   const { rows: recentPartners } = await query(`
-    SELECT p.id, p.first_name, p.last_name, p.Partner_code, p.created_at, u.email, u.mobile, u.status
+    SELECT p.id, p.first_name, p.last_name, p.partner_code, p.created_at, u.email, u.mobile, u.status
     FROM partner_profiles p
     JOIN users u ON u.id = p.user_id
     ORDER BY p.created_at DESC
@@ -42,7 +42,7 @@ const getAdminDashboard = async (adminId) => {
 
 const getPartnerDashboard = async (partnerId) => {
   const { rows: [wallet] } = await query(`
-    SELECT available_balance, hold_balance, total_earned FROM wallets WHERE Partner_id = $1
+    SELECT available_balance, hold_balance, total_earned FROM wallets WHERE partner_id = $1
   `, [partnerId]);
 
   const { rows: [leadStats] } = await query(`

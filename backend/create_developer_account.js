@@ -36,15 +36,15 @@ async function createDeveloperAccount() {
     }
 
     // 2. Create partner profile if missing
-    const { rows: existingProfile } = await pool.query('SELECT id FROM Partner_profiles WHERE user_id = $1', [userId]);
+    const { rows: existingProfile } = await pool.query('SELECT id FROM partner_profiles WHERE user_id = $1', [userId]);
     let partnerId;
     if (existingProfile.length > 0) {
       console.log('Partner profile already exists.');
       partnerId = existingProfile[0].id;
     } else {
-      console.log('Inserting into Partner_profiles...');
+      console.log('Inserting into partner_profiles...');
       const { rows: [newProfile] } = await pool.query(
-        `INSERT INTO Partner_profiles (user_id, Partner_code, first_name, last_name, kyc_status)
+        `INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, kyc_status)
          VALUES ($1, $2, $3, $4, 'approved') RETURNING id`,
         [userId, 'GKP-DEV', 'Developer', 'Account']
       );
@@ -52,10 +52,10 @@ async function createDeveloperAccount() {
     }
 
     // 3. Create wallet if missing
-    const { rows: existingWallet } = await pool.query('SELECT id FROM wallets WHERE "Partner_id" = $1', [partnerId]);
+    const { rows: existingWallet } = await pool.query('SELECT id FROM wallets WHERE "partner_id" = $1', [partnerId]);
     if (existingWallet.length === 0) {
       console.log('Creating wallet...');
-      await pool.query(`INSERT INTO wallets ("Partner_id") VALUES ($1)`, [partnerId]);
+      await pool.query(`INSERT INTO wallets ("partner_id") VALUES ($1)`, [partnerId]);
     } else {
       console.log('Wallet already exists.');
     }

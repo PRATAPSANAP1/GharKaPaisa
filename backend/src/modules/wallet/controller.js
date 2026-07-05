@@ -164,7 +164,7 @@ const getBankDetails = async (req, res, next) => {
     const { rows: [bank] } = await query(`
       SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified 
       FROM partner_bank_details 
-      WHERE Partner_id = $1
+      WHERE partner_id = $1
     `, [PartnerId]);
 
     if (!bank) {
@@ -210,7 +210,7 @@ const saveBankDetails = async (req, res, next) => {
 
     // Check existing
     const { rows: [existing] } = await query(`
-      SELECT id FROM partner_bank_details WHERE Partner_id = $1
+      SELECT id FROM partner_bank_details WHERE partner_id = $1
     `, [PartnerId]);
 
     if (existing) {
@@ -226,7 +226,7 @@ const saveBankDetails = async (req, res, next) => {
       `, [bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id, existing.id]);
     } else {
       await query(`
-        INSERT INTO partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id)
+        INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [PartnerId, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id]);
     }
@@ -277,7 +277,7 @@ const requestWithdrawal = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM wallets WHERE Partner_id = $1 FOR UPDATE`, [PartnerId]
+      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`, [PartnerId]
     );
     if (!wallet) {
       await client.query('ROLLBACK');
@@ -290,7 +290,7 @@ const requestWithdrawal = async (req, res, next) => {
     }
 
     const { rows: pending } = await client.query(
-      `SELECT id FROM withdrawal_requests WHERE Partner_id = $1 AND status = 'pending'`, [PartnerId]
+      `SELECT id FROM withdrawal_requests WHERE partner_id = $1 AND status = 'pending'`, [PartnerId]
     );
     if (pending.length) {
       await client.query('ROLLBACK');
@@ -299,12 +299,12 @@ const requestWithdrawal = async (req, res, next) => {
 
     // Get bank/upi details
     const { rows: [bank] } = await client.query(
-      `SELECT bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE Partner_id = $1`, [PartnerId]
+      `SELECT bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1`, [PartnerId]
     );
 
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
-      INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code, status)
+      INSERT INTO withdrawal_requests (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status)
       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id
     `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null]);
 
@@ -334,11 +334,11 @@ const listWithdrawals = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM withdrawal_requests WHERE status = $1`, [status]),
       query(`
-        SELECT wr.*, ap.Partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
         FROM withdrawal_requests wr
-        JOIN partner_profiles ap ON ap.id = wr.Partner_id
+        JOIN partner_profiles ap ON ap.id = wr.partner_id
         JOIN users u ON u.id = ap.user_id
-        LEFT JOIN partner_bank_details pbd ON pbd.Partner_id = ap.id
+        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         WHERE wr.status = $1
         ORDER BY wr.created_at ASC
         LIMIT $2 OFFSET $3
@@ -354,7 +354,7 @@ const listWithdrawals = async (req, res, next) => {
         return {
           ...row,
           first_name: 'Partner',
-          last_name: row.Partner_code,
+          last_name: row.partner_code,
           mobile: '**********',
           account_number: 'HIDDEN',
           ifsc_code: 'HIDDEN',

@@ -3,7 +3,7 @@ const { logAction } = require('../admin/audit.service.js');
 
 const getPartnerKyc = async (partnerId) => {
   const { rows: documents } = await query(`
-    SELECT * FROM kyc_documents WHERE Partner_id = $1 ORDER BY uploaded_at DESC
+    SELECT * FROM kyc_documents WHERE partner_id = $1 ORDER BY uploaded_at DESC
   `, [partnerId]);
   
   const { rows: [profile] } = await query(`
@@ -15,9 +15,9 @@ const getPartnerKyc = async (partnerId) => {
 
 const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) => {
   const { rows: [doc] } = await query(`
-    INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key)
+    INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key)
     VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+    ON CONFLICT (partner_id, doc_type) DO UPDATE SET
       doc_number = EXCLUDED.doc_number,
       file_url = EXCLUDED.file_url,
       s3_key = EXCLUDED.s3_key,
@@ -40,7 +40,7 @@ const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
       verified = $1,
       verified_by = $2,
       verified_at = NOW()
-    WHERE id = $3 AND Partner_id = $4
+    WHERE id = $3 AND partner_id = $4
     RETURNING *
   `, [isVerified, adminUserId, docId, partnerId]);
   

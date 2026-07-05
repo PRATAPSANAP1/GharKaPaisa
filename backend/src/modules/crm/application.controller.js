@@ -356,7 +356,7 @@ const updateStatus = async (req, res, next) => {
     await client.query('COMMIT');
 
     // Notifications
-    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [app.Partner_id]);
+    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [app.partner_id]);
     if (partner) {
       if (status === 'approved') await notify.applicationApproved(partner.user_id, app.app_number, app.commission_amount);
       if (status === 'rejected') await notify.applicationRejected(partner.user_id, app.app_number, remarks);
@@ -401,13 +401,13 @@ const updateCommission = async (req, res, next) => {
     // Handle Ledger Splits & Wallet Credits on Approval
     if (status === 'approved') {
       const commValue = amount || app.commission_amount || 0;
-      await creditCommission(app.Partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id);
+      await creditCommission(app.partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id);
 
       // Create Entry in commission_ledger
       await client.query(`
         INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
         VALUES ($1, $2, $3, $4, $5, 'approved')
-      `, [id, app.Partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+      `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
     }
 
     await logTimeline(client, id, app.status, `Commission ${status.toUpperCase()}`, `Updated commission state to ${status}.`, req.user.id);
@@ -484,12 +484,12 @@ const approveApplication = async (req, res, next) => {
 
     // Split payout trigger
     const commValue = app.commission_amount || 0;
-    await creditCommission(app.Partner_id, id, commValue, `Admin approved commission app ${app.app_number}`, req.user.id);
+    await creditCommission(app.partner_id, id, commValue, `Admin approved commission app ${app.app_number}`, req.user.id);
 
     await client.query(`
       INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
       VALUES ($1, $2, $3, $4, $5, 'approved')
-    `, [id, app.Partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+    `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
 
     await logTimeline(client, id, 'approved', 'Application Approved', 'Approved by Super Admin override.', req.user.id);
     await logAction(req, 'SUPER_ADMIN_APPROVE_APPLICATION', id, { approved_amount });
@@ -572,7 +572,7 @@ const manualCommission = async (req, res, next) => {
       UPDATE applications SET commission_amount=$1, commission_status='approved', updated_at=NOW() WHERE id=$2
     `, [amount, id]);
 
-    await creditCommission(app.Partner_id, id, amount, remarks || 'Manual commission assignment', req.user.id);
+    await creditCommission(app.partner_id, id, amount, remarks || 'Manual commission assignment', req.user.id);
     await logTimeline(client, id, app.status, 'Manual Commission Credited', remarks || 'Manual commission override applied.', req.user.id);
     await logAction(req, 'MANUAL_COMMISSION_ASSIGN', id, { amount, remarks });
 
@@ -590,8 +590,8 @@ const manualCommission = async (req, res, next) => {
 const listApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, Partner_id, partner_id: q_partner_id, product_id, from_date, to_date, search, commission_status, bank_id, category } = req.query;
-    const targetPartnerId = q_partner_id || Partner_id;
+    const { status, partner_id, partner_id: q_partner_id, product_id, from_date, to_date, search, commission_status, bank_id, category } = req.query;
+    const targetPartnerId = q_partner_id || partner_id;
 
     let where = 'WHERE 1=1';
     const values = [];

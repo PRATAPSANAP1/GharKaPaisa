@@ -66,15 +66,15 @@ const getMe = async (req, res, next) => {
   try {
       const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
-          ap.id as Partner_id, ap.Partner_code, ap.first_name, ap.last_name,
+          ap.id as partner_id, ap.partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
           ap.business_location, ap.gst_number, ap.company_type, ap.pincode,
           pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
           w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
         FROM users u
         LEFT JOIN partner_profiles ap ON ap.user_id = u.id
-        LEFT JOIN partner_bank_details pbd ON pbd.Partner_id = ap.id
-        LEFT JOIN wallets w ON w.Partner_id = ap.id
+        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        LEFT JOIN wallets w ON w.partner_id = ap.id
         WHERE u.id = $1
       `, [req.user.id]);
 
@@ -542,7 +542,7 @@ const register = async (req, res, next) => {
 
       if (referral_code && role === 'PARTNER') {
         const { rows: [parentPartner] } = await client.query(`
-          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles WHERE Partner_code = $1
+          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles WHERE partner_code = $1
         `, [referral_code]);
         if (parentPartner) {
           if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
@@ -564,7 +564,7 @@ const register = async (req, res, next) => {
         // Create Partner profile
         const { rows: [Partner] } = await client.query(`
           INSERT INTO partner_profiles (
-            user_id, Partner_code, first_name, last_name, current_address,
+            user_id, partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
             parent_partner_id, team_level, team_joined_at
           )
@@ -615,13 +615,13 @@ const register = async (req, res, next) => {
         // Create bank details
         const encryptedAccountNumber = encrypt(account_number);
         await client.query(`
-          INSERT INTO partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+          INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name)
           VALUES ($1, $2, $3, $4, $5)
         `, [Partner.id, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name]);
 
         // Create wallet
         await client.query(`
-          INSERT INTO wallets (Partner_id) VALUES ($1)
+          INSERT INTO wallets (partner_id) VALUES ($1)
         `, [Partner.id]);
       }
 

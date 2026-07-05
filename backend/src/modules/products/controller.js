@@ -339,13 +339,13 @@ const getProductsByCategory = async (req, res, next) => {
 // POST /products/:id/commission (Super Admin — set commission)
 const setCommission = async (req, res, next) => {
   try {
-    const { product_id, partner_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+    const { product_id, partner_id, partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
 
     if (effective_to && new Date(effective_from) > new Date(effective_to)) {
       return error(res, 'effective_from cannot be greater than effective_to', 400);
     }
 
-    const finalPartnerId = partner_id || Partner_id || null;
+    const finalPartnerId = partner_id || partner_id || null;
 
     await query(`
       INSERT INTO commission_structures (product_id, partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
@@ -495,7 +495,7 @@ const deleteCommissionRule = async (req, res, next) => {
 
     await query(`DELETE FROM commission_structures WHERE id = $1`, [id]);
 
-    await logAction(req, 'DELETE_COMMISSION_RULE', rule.product_id, { partner_id: rule.partner_id || rule.Partner_id });
+    await logAction(req, 'DELETE_COMMISSION_RULE', rule.product_id, { partner_id: rule.partner_id || rule.partner_id });
 
     return success(res, {}, 'Commission rule deleted successfully');
   } catch (err) {
@@ -580,7 +580,7 @@ const resolveApplication = async (req, res, next) => {
 
       if (isPartner) {
         // Authenticated partner flow
-        const partnerCode = req.partner?.partner_code || req.partner?.Partner_code || '';
+        const partnerCode = req.partner?.partner_code || req.partner?.partner_code || '';
         const host = req.get('host');
         const trackingUrl = `${req.protocol}://${host}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
         

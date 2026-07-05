@@ -69,7 +69,7 @@ const releaseCommission = async (applicationId, adminUserId) => {
     if (!app.commission_amount || app.commission_amount <= 0) throw new Error('No commission to release');
     
     // Release the hold from the wallet
-    await releaseHold(app.Partner_id, app.commission_amount, {
+    await releaseHold(app.partner_id, app.commission_amount, {
       reference_type: 'commission',
       reference_id: app.id,
       description: `Commission released for App ${app.app_number}`
@@ -107,7 +107,7 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
       throw new Error('No commission to reverse');
     }
 
-    const partnerId = app.Partner_id;
+    const partnerId = app.partner_id;
 
     const { rows: [wallet] } = await client.query(`
       SELECT id FROM wallets WHERE partner_id = $1 FOR UPDATE

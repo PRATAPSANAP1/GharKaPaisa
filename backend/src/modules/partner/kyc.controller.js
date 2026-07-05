@@ -99,7 +99,7 @@ const viewDocument = async (req, res, next) => {
     let doc;
     if (isUuid) {
       const { rows: [result] } = await query(
-        `SELECT s3_key, Partner_id FROM kyc_documents WHERE id = $1`,
+        `SELECT s3_key, partner_id FROM kyc_documents WHERE id = $1`,
         [docId]
       );
       doc = result;
@@ -111,7 +111,7 @@ const viewDocument = async (req, res, next) => {
       );
       if (partner) {
         const { rows: [result] } = await query(
-          `SELECT s3_key, Partner_id FROM kyc_documents WHERE Partner_id = $1 AND doc_type = $2`,
+          `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
           [partner.id, docId]
         );
         doc = result;

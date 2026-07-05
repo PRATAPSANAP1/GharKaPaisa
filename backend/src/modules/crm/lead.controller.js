@@ -86,7 +86,7 @@ const listLeads = async (req, res, next) => {
     const dataQuery = `
       SELECT l.*, 
         p.name as product_name, p.commission_value as product_commission,
-        ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.Partner_code
+        ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.partner_code
       FROM leads l
       JOIN products p ON p.id = l.product_id
       JOIN partner_profiles ap ON ap.id = l.partner_id
@@ -158,7 +158,7 @@ const updateLeadStatus = async (req, res, next) => {
           b.name as bank_name
         FROM products p
         JOIN banks b ON b.id = p.bank_id
-        LEFT JOIN commission_structures cs ON cs.product_id = p.id AND cs.Partner_id = $1
+        LEFT JOIN commission_structures cs ON cs.product_id = p.id AND cs.partner_id = $1
         WHERE p.id = $2
       `, [lead.partner_id, lead.product_id]);
 
