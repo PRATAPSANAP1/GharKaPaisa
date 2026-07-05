@@ -13,6 +13,7 @@ import {
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
+import api from '../services/api';
 import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 
