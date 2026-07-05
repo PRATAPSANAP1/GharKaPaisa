@@ -330,24 +330,46 @@ export default function PartnerKyc() {
               </div>
             </div>
 
-            {/* Estimated Review Time badge */}
-            <div style={{
-              background: '#FFFFFF',
-              border: `1px solid ${bannerBorder}30`,
-              color: bannerColor,
-              borderRadius: '8px',
-              padding: isMobile ? '4px 10px' : '6px 12px',
-              fontSize: isMobile ? '11px' : '12px',
-              fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
-            }}>
-              {isApproved ? 'Verified Partner' :
-               isUnderReview ? (getMostRecentUploadDate() ? `Submitted on: ${getMostRecentUploadDate()}` : 'Under Review') :
-               isRejected ? 'Action Required' :
-               'Awaiting Upload'}
-            </div>
+            {isRejected ? (
+              <button
+                onClick={() => {
+                  document.getElementById('kyc-upload-form')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  background: errorColor,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: isMobile ? '8px 12px' : '10px 16px',
+                  fontSize: isMobile ? '11px' : '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(239,68,68,0.2)',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                Re-upload Documents
+              </button>
+            ) : (
+              <div style={{
+                background: '#FFFFFF',
+                border: `1px solid ${bannerBorder}30`,
+                color: bannerColor,
+                borderRadius: '8px',
+                padding: isMobile ? '4px 10px' : '6px 12px',
+                fontSize: isMobile ? '11px' : '12px',
+                fontWeight: 700,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}>
+                {isApproved ? 'Verified Partner' :
+                 isUnderReview ? (getMostRecentUploadDate() ? `Submitted on: ${getMostRecentUploadDate()}` : 'Under Review') :
+                 'Awaiting Upload'}
+              </div>
+            )}
           </div>
 
           {/* Progress Stepper */}
@@ -574,7 +596,7 @@ export default function PartnerKyc() {
 
           {/* Upload Documents Form */}
           {(!isApproved && !isUnderReview) && (
-            <form onSubmit={handleSubmit} style={{
+            <form id="kyc-upload-form" onSubmit={handleSubmit} style={{
               background: cardBg,
               border: `1px solid ${cardBorder}`,
               borderRadius: isMobile ? '16px' : '20px',
@@ -733,39 +755,7 @@ export default function PartnerKyc() {
             </form>
           )}
 
-          {/* Security Banner */}
-          <div style={{
-            background: cardBg,
-            border: `1px solid ${cardBorder}`,
-            borderRadius: isMobile ? '16px' : '20px',
-            padding: isMobile ? '16px' : '20px 24px',
-            boxShadow: cardShadow,
-            display: 'flex',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            gap: isMobile ? '12px' : '16px',
-            flexWrap: isMobile ? 'wrap' : 'nowrap'
-          }}>
-            <div style={{
-              width: isMobile ? '36px' : '40px',
-              height: isMobile ? '36px' : '40px',
-              borderRadius: '50%',
-              background: `${successColor}10`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: successColor,
-              flexShrink: 0
-            }}>
-              <MdSecurity size={isMobile ? 18 : 22} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: isMobile ? 'auto' : '200px' }}>
-              <span style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 700, color: textPrimary }}>Your Data is Safe</span>
-              <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: textSecondary, lineHeight: 1.4 }}>Your KYC documents are protected with bank-level encryption and stored securely.</span>
-            </div>
-            <Link to="/partner/settings" style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 700, color: primaryColor, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              Learn More
-            </Link>
-          </div>
+
 
         </div>
 
