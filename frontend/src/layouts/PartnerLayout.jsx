@@ -13,7 +13,7 @@ import {
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
-import api from '../services/api';
+import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 
 const NAV_ITEMS = [
@@ -58,6 +58,19 @@ export default function PartnerLayout() {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch latest profile on layout mount to sync with backend status changes
+  useEffect(() => {
+    const refreshProfile = async () => {
+      try {
+        const freshUser = await getMe(true);
+        useAuthStore.getState().updateUser(freshUser);
+      } catch (err) {
+        console.error('Failed to auto-refresh user profile on layout mount:', err);
+      }
+    };
+    refreshProfile();
   }, []);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';

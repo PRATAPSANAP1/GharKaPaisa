@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAuthStore } from '../../../app/store/authStore';
+import { getMe } from '../../../services/auth.api';
 import StyledDashboard from './PartnerDashboardComponent';
 
 export default function PartnerDashboard() {
@@ -14,8 +16,13 @@ export default function PartnerDashboard() {
   useEffect(() => {
     const init = async () => {
       try {
-        if (!profile) {
-          await fetchProfile();
+        const freshPartner = await fetchProfile();
+        // Sync the fresh KYC status with the auth store user profile
+        try {
+          const freshUser = await getMe(true);
+          useAuthStore.getState().updateUser(freshUser);
+        } catch (authErr) {
+          console.warn("Failed to sync auth store on dashboard load:", authErr);
         }
       } catch (err) {
         console.error("Failed to load profile", err);
@@ -24,7 +31,7 @@ export default function PartnerDashboard() {
       }
     };
     init();
-  }, [fetchProfile, profile]);
+  }, [fetchProfile]);
 
   const handleTabChange = (tab) => {
     if (tab === 'wallet') {

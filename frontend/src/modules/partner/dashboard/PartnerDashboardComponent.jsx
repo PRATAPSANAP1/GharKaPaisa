@@ -135,11 +135,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
-      {/* ──── STATUS / KYC PENDING BANNER ──── */}
-      {(accountStatus === 'pending' || accountStatus === 'inactive') && (
+      {/* ──── STATUS / KYC WARNING BANNERS ──── */}
+      {kycStatus !== 'approved' && (
         <div style={{
-          background: accountStatus === 'pending' ? "rgba(245, 158, 11, 0.08)" : "rgba(239, 68, 68, 0.08)",
-          border: `1.5px solid ${accountStatus === 'pending' ? "#F59E0B" : "#EF4444"}`,
+          background: kycStatus === 'rejected' ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)",
+          border: `1.5px solid ${kycStatus === 'rejected' ? "#EF4444" : "#F59E0B"}`,
           borderRadius: "16px",
           padding: "20px 24px",
           color: C.text,
@@ -151,35 +151,64 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "280px" }}>
-            <span style={{ fontSize: "28px" }}>{accountStatus === 'pending' ? "🟡" : "🟠"}</span>
+            <span style={{ fontSize: "28px" }}>{kycStatus === 'rejected' ? "🔴" : "🟡"}</span>
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: accountStatus === 'pending' ? "#D97706" : "#DC2626" }}>
-                {accountStatus === 'pending' ? "KYC Pending" : "Account Inactive"}
+              <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: kycStatus === 'rejected' ? "#DC2626" : "#D97706" }}>
+                {kycStatus === 'rejected' ? "KYC Rejected" : kycStatus === 'under_review' ? "KYC Under Verification" : "KYC Pending"}
               </h4>
               <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
-                {accountStatus === 'pending'
-                  ? "Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications."
-                  : "Your account is inactive. Complete KYC verification."}
+                {kycStatus === 'rejected'
+                  ? "Your documents require correction. Please upload the corrected documents."
+                  : kycStatus === 'under_review'
+                  ? "Your KYC documents have been submitted and are under verification by the Super Admin."
+                  : "Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications."}
               </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/partner/kyc-centre")}
-            style={{
-              padding: "10px 20px",
-              background: accountStatus === 'pending' ? "#F59E0B" : "#EF4444",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "10px",
-              fontWeight: 800,
-              fontSize: "13px",
-              cursor: "pointer",
-              boxShadow: accountStatus === 'pending' ? "0 4px 12px rgba(245,158,11,0.3)" : "0 4px 12px rgba(239,68,68,0.3)",
-              transition: "all 0.2s"
-            }}
-          >
-            {accountStatus === 'pending' ? "Complete KYC" : "Go to KYC"}
-          </button>
+          {kycStatus !== 'under_review' && (
+            <button
+              onClick={() => navigate("/partner/kyc-centre")}
+              style={{
+                padding: "10px 20px",
+                background: kycStatus === 'rejected' ? "#EF4444" : "#F59E0B",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                fontWeight: 800,
+                fontSize: "13px",
+                cursor: "pointer",
+                boxShadow: kycStatus === 'rejected' ? "0 4px 12px rgba(239,68,68,0.3)" : "0 4px 12px rgba(245,158,11,0.3)",
+                transition: "all 0.2s"
+              }}
+            >
+              {kycStatus === 'rejected' ? "Re-upload Documents" : "Complete KYC"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Account Inactive Banner (only shown if KYC is approved but account status is inactive) */}
+      {kycStatus === 'approved' && accountStatus === 'inactive' && (
+        <div style={{
+          background: "rgba(239, 68, 68, 0.08)",
+          border: "1.5px solid #EF4444",
+          borderRadius: "16px",
+          padding: "20px 24px",
+          color: C.text,
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
+        }}>
+          <span style={{ fontSize: "28px" }}>🟠</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: "#DC2626" }}>
+              Account Inactive
+            </h4>
+            <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+              Your account is inactive. Please contact support.
+            </p>
+          </div>
         </div>
       )}
       {/* ──── DYNAMIC CMS BANNER / CAMPAIGNS ──── */}
