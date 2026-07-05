@@ -100,7 +100,7 @@ export default function PartnerLogin() {
   useEffect(() => {
     const code = otpDigits.join("");
     if (code.length === 6 && otpSent && method === "otp" && !loading.login) {
-      handleSubmit();
+      handleSubmit(null, code);
     }
   }, [otpDigits]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -245,7 +245,7 @@ export default function PartnerLogin() {
   };
 
   // ── Submit Login ─────────────────────────────────────────────────────────────
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, codeOverride) => {
     if (e) e.preventDefault();
     if (verifyingRef.current) return;
     verifyingRef.current = true;
@@ -262,14 +262,18 @@ export default function PartnerLogin() {
       if (method === 'otp') {
         if (!otpSent) {
           setLoading(l => ({ ...l, login: false }));
+          verifyingRef.current = false;
           return setErr(t('partner.errors.clickSendOtp', "Please click 'Send OTP' first."));
         }
-        if (!form.otp || form.otp.length < 6) {
+        const finalOtp = codeOverride || form.otp || otpDigits.join("");
+        if (!finalOtp || finalOtp.length < 6) {
           setLoading(l => ({ ...l, login: false }));
+          verifyingRef.current = false;
           return setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
         }
         if (!otpSentTime || Date.now() - otpSentTime > 300000) {
           setLoading(l => ({ ...l, login: false }));
+          verifyingRef.current = false;
           return setErr(t('partner.errors.otpExpired', 'OTP expired. Please send a new one.'));
         }
 
@@ -291,7 +295,7 @@ export default function PartnerLogin() {
           }, 15000);
 
           window.verifyOtp(
-            form.otp,
+            finalOtp,
             async (verifyData) => {
               if (verifyDone) return;
               verifyDone = true;
@@ -329,7 +333,7 @@ export default function PartnerLogin() {
         }
 
         // ── Email AWS SES verification flow ──
-        loginRes = await loginWithOtp(form.identity.trim(), form.otp, selectedRole);
+        loginRes = await loginWithOtp(form.identity.trim(), finalOtp, selectedRole);
       } else {
         // Password login
         if (!form.password) {
