@@ -40,6 +40,10 @@ const MOBILE_BOTTOM_NAV = [
   { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
 ];
 
+const BRAND = '#0D5CAB';
+const BRAND_DARK = '#083E7A';
+const SIDEBAR_TEXT = '#64748B';
+
 export default function PartnerLayout() {
   const { C, isDark } = useTheme();
   const { t, i18n } = useTranslation();
@@ -123,9 +127,6 @@ export default function PartnerLayout() {
   };
 
   // ── Color Constants ─────────────────────────────────
-  const BRAND = '#0D5CAB';
-  const BRAND_DARK = '#083E7A';
-  const SIDEBAR_TEXT = '#64748B';
   const SIDEBAR_BG = C.card;
   const MAIN_BG = C.bg;
 
@@ -511,7 +512,6 @@ export default function PartnerLayout() {
         {!isMobile && (
           <DesktopHeader
             C={C}
-            SIDEBAR_TEXT={SIDEBAR_TEXT}
             user={user}
             navigate={navigate}
             t={t}
@@ -681,7 +681,7 @@ export default function PartnerLayout() {
 }
 
 // ── DESKTOP HEADER COMPONENT ─────────────────────────────────
-function DesktopHeader({ C, SIDEBAR_TEXT, user, navigate, t, i18n }) {
+function DesktopHeader({ C, user, navigate, t, i18n }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
