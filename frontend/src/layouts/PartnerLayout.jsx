@@ -56,6 +56,8 @@ export default function PartnerLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   const accountStatus = user?.status || 'pending';
+  const kycStatus = user?.kyc_status || 'pending';
+  const isKycPage = location.pathname === '/partner/kyc-centre';
 
   // Redirect and route protection logic
   useEffect(() => {
