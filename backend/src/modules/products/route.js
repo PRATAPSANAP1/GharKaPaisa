@@ -4,12 +4,17 @@ const productCtrl = require('./controller.js');
 const { authenticate, syncUser, authorize, optionalAuth } = require('../../middleware/authentication/auth.middleware.js');
 const { commissionRules, validate, applicationSettingsRules } = require('../../middleware/validation/validation.middleware.js');
 
+const linkCtrl = require('./link-management.controller.js');
+
 // Public Routes for Homepage Lead Generation
 router.get('/categories', productCtrl.getProductsByCategory);
 router.get('/banks', productCtrl.listBanks);
 router.get('/cards', productCtrl.getCards);
 router.get('/loans', productCtrl.getLoans);
 router.get('/insurance', productCtrl.getInsurance);
+router.post('/click', optionalAuth, linkCtrl.logClick);
+router.get('/links', optionalAuth, linkCtrl.listProductLinks);
+router.get('/link/:id', optionalAuth, linkCtrl.getProductLink);
 router.get('/', productCtrl.listProducts);
 router.get('/:id/apply', optionalAuth, productCtrl.resolveApplication);
 router.get('/:id', productCtrl.getProduct);

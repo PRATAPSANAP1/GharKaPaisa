@@ -119,6 +119,7 @@ const SuperAdminLayout = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modifyOpen, setModifyOpen] = useState(false);
+  const [cmsOpen, setCmsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -130,8 +131,11 @@ const SuperAdminLayout = () => {
 
   // Auto-expand "Modify" if active path is inside it
   useEffect(() => {
-    if (location.pathname.startsWith('/superadmin/banners') || location.pathname.startsWith('/superadmin/sections')) {
+    if (location.pathname.startsWith('/superadmin/banners')) {
       setModifyOpen(true);
+    }
+    if (location.pathname.startsWith('/superadmin/product-links') || location.pathname.startsWith('/superadmin/sections')) {
+      setCmsOpen(true);
     }
   }, [location.pathname]);
 
@@ -176,11 +180,18 @@ const SuperAdminLayout = () => {
       ]
     },
     {
+      title: "CMS",
+      isCmsGroup: true,
+      items: [
+        { path: '/superadmin/product-links', label: 'Product Link Management', icon: <Icons.trending size={16} /> },
+        { path: '/superadmin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
+      ]
+    },
+    {
       title: "MODIFY WEBSITE",
       isModifyGroup: true,
       items: [
         { path: '/superadmin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
-        { path: '/superadmin/sections', label: 'CMS', icon: <Icons.profile size={16} /> },
       ]
     },
     {
@@ -198,8 +209,84 @@ const SuperAdminLayout = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {categories.map((cat, idx) => {
+          if (cat.isCmsGroup) {
+            const isChildActive = location.pathname.startsWith('/superadmin/product-links') || location.pathname.startsWith('/superadmin/sections');
+            return (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
+                <button
+                  type="button"
+                  id="super-admin-cms-group-btn"
+                  onClick={() => setCmsOpen(!cmsOpen)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    background: isChildActive ? `${C.teal}15` : 'transparent',
+                    border: 'none',
+                    color: isChildActive ? C.teal : C.text,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Icons.profile size={16} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('superAdminLayout.cms', 'CMS')}</span>
+                  </div>
+                  <Chevron open={cmsOpen} color={isChildActive ? C.teal : C.textSecondary} />
+                </button>
+
+                {cmsOpen && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    paddingLeft: '24px',
+                    marginTop: '6px',
+                    borderLeft: `1.5px solid ${C.border}`,
+                    marginLeft: '24px',
+                  }}>
+                    {cat.items.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      const cleanLabel = item.label.toLowerCase().replace(/[^a-z0-9]/g, '');
+                      return (
+                        <NavLink
+                          key={item.path}
+                          id={`super-admin-nav-${cleanLabel}`}
+                          to={item.path}
+                          onClick={onLinkClick}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: isActive ? C.teal : C.textMid,
+                            background: isActive ? `${C.teal}10` : 'transparent',
+                            textDecoration: 'none',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {item.icon}
+                          <span>{t('superAdminLayout.' + cleanLabel, item.label)}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           if (cat.isModifyGroup) {
-            const isChildActive = location.pathname.startsWith('/superadmin/banners') || location.pathname.startsWith('/superadmin/sections');
+            const isChildActive = location.pathname.startsWith('/superadmin/banners');
             return (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
                 <button

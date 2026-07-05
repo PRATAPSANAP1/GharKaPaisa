@@ -500,11 +500,11 @@ const resolveApplication = async (req, res, next) => {
 
     let product;
     if (isUUID) {
-      const { rows } = await query(`SELECT * FROM products WHERE id = $1`, [idOrSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON p.bank_id = b.id WHERE p.id = $1`, [idOrSlug]);
       product = rows[0];
     } else {
       const cleanSlug = idOrSlug.replace(/-/g, ' ').trim();
-      const { rows } = await query(`SELECT * FROM products WHERE name ILIKE $1`, [cleanSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON p.bank_id = b.id WHERE p.name ILIKE $1 OR p.category::text = $1`, [cleanSlug]);
       product = rows[0];
     }
 
@@ -515,6 +515,37 @@ const resolveApplication = async (req, res, next) => {
         provider_name: null,
         open_type: 'same_tab'
       });
+    }
+
+    // Prioritize dynamic links from product link management system
+    if (product.public_url || product.partner_url) {
+      const isPartner = req.user && req.user.role && req.user.role.toUpperCase() === 'PARTNER';
+      const buttonText = product.button_text || 'Apply Now';
+      const openType = product.redirect_type === 'same_tab' ? 'same_tab' : 'new_tab';
+
+      if (isPartner) {
+        // Authenticated partner flow
+        const partnerCode = req.partner?.Partner_code || '';
+        const host = req.get('host');
+        const trackingUrl = `${req.protocol}://${host}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
+        
+        return success(res, {
+          application_type: 'external_url',
+          application_url: trackingUrl,
+          provider_name: product.bank_name || 'GKP Partner Link',
+          open_type: openType,
+          button_text: buttonText
+        });
+      } else {
+        // Public user flow (hide partner info, no commission)
+        return success(res, {
+          application_type: 'external_url',
+          application_url: product.public_url || product.partner_url,
+          provider_name: product.bank_name || 'GKP Public Link',
+          open_type: openType,
+          button_text: buttonText
+        });
+      }
     }
 
     const settings = await appSettingsService.getSettings(product.id);

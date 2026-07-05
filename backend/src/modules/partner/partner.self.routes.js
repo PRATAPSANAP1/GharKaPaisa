@@ -3,7 +3,7 @@ const router = express.Router();
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const partnerCtrl = require('./partner.controller.js');
 const authCtrl = require('../auth/controller.js');
-const { upload } = require('../../services/aws/s3.service.js');
+const { upload, uploadVideo } = require('../../services/aws/s3.service.js');
 const { validate, registerRules } = require('../../middleware/validation/validation.middleware.js');
 
 const kycUpload = upload.fields([
@@ -20,6 +20,14 @@ router.use(jwtAuth);
 
 router.post('/register', registerRules, validate, authCtrl.register);
 router.post('/upload-docs', requirePartner, kycUpload, partnerCtrl.uploadSelfKYC);
+
+// Video KYC endpoints
+router.post('/kyc/upload-pan', requirePartner, upload.single('document'), partnerCtrl.uploadPan);
+router.post('/kyc/upload-cheque', requirePartner, upload.single('document'), partnerCtrl.uploadCheque);
+router.post('/kyc/upload-video', requirePartner, uploadVideo.single('video'), partnerCtrl.uploadVideo);
+router.post('/kyc/submit', requirePartner, partnerCtrl.submitKyc);
+router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
+router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);

@@ -378,6 +378,238 @@ const getCommissionRules = async (req, res, next) => {
   }
 };
 
+const approveKYC = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { partnerId } = req.body;
+    if (!partnerId) return error(res, 'partnerId is required', 400);
+
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    if (!partner) return notFound(res, 'Partner profile not found');
+
+    const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
+
+    await client.query('BEGIN');
+
+    // 1. Update partner profile
+    await client.query(`
+      UPDATE Partner_profiles 
+      SET kyc_status = 'approved', 
+          kyc_reviewed_at = NOW(), 
+          kyc_reviewed_by = $1,
+          rejection_reason = NULL,
+          kyc_rejection_reason = NULL
+      WHERE id = $2
+    `, [req.user.id, partnerId]);
+
+    // 2. Update user status to active
+    await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [partner.user_id]);
+
+    // 3. Mark all documents as approved
+    await client.query(`
+      UPDATE kyc_documents 
+      SET verified = true, 
+          verification_status = 'approved',
+          verified_by = $1,
+          verified_at = NOW()
+      WHERE Partner_id = $2
+    `, [req.user.id, partnerId]);
+
+    // 4. Mark video as approved
+    await client.query(`
+      UPDATE partner_videos 
+      SET verification_status = 'approved'
+      WHERE partner_id = $1
+    `, [partnerId]);
+
+    // 5. Ensure wallet exists
+    const { ensureWallet } = require('../wallet/service.js');
+    await ensureWallet(partnerId, client);
+
+    await client.query('COMMIT');
+
+    // Send notifications
+    try {
+      const { notify } = require('../notifications/service.js');
+      const { sendKycApprovedEmail } = require('../../services/email/email.service.js');
+      await notify.kycApproved(partner.user_id);
+      if (user?.email) {
+        await sendKycApprovedEmail(user.email);
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send KYC approval notifications:', notifErr.message);
+    }
+
+    await logAction(req, 'APPROVE_KYC', partnerId, { userId: partner.user_id });
+
+    return success(res, {}, 'Partner KYC approved and profile activated successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const rejectKYC = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { partnerId, rejection_reason } = req.body;
+    if (!partnerId) return error(res, 'partnerId is required', 400);
+    if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
+
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    if (!partner) return notFound(res, 'Partner profile not found');
+
+    const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
+
+    await client.query('BEGIN');
+
+    // 1. Update partner profile
+    await client.query(`
+      UPDATE Partner_profiles 
+      SET kyc_status = 'rejected', 
+          kyc_reviewed_at = NOW(), 
+          kyc_reviewed_by = $1,
+          rejection_reason = $2,
+          kyc_rejection_reason = $2
+      WHERE id = $3
+    `, [req.user.id, rejection_reason, partnerId]);
+
+    // 2. Update user status to rejected
+    await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+
+    // 3. Mark all unverified documents as rejected
+    await client.query(`
+      UPDATE kyc_documents 
+      SET verification_status = 'rejected'
+      WHERE Partner_id = $1 AND verified = false
+    `, [partnerId]);
+
+    // 4. Mark video as rejected
+    await client.query(`
+      UPDATE partner_videos 
+      SET verification_status = 'rejected'
+      WHERE partner_id = $1
+    `, [partnerId]);
+
+    await client.query('COMMIT');
+
+    // Send notifications
+    try {
+      const { notify } = require('../notifications/service.js');
+      const { sendKycRejectedEmail } = require('../../services/email/email.service.js');
+      await notify.kycRejected(partner.user_id, rejection_reason);
+      if (user?.email) {
+        await sendKycRejectedEmail(user.email, rejection_reason);
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send KYC rejection notifications:', notifErr.message);
+    }
+
+    await logAction(req, 'REJECT_KYC', partnerId, { userId: partner.user_id, rejection_reason });
+
+    return success(res, {}, 'Partner KYC rejected successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const requestChangesKYC = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { partnerId, rejection_reason, rejected_documents } = req.body;
+    if (!partnerId) return error(res, 'partnerId is required', 400);
+    if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
+    if (!Array.isArray(rejected_documents) || rejected_documents.length === 0) {
+      return error(res, 'rejected_documents list is required and must contain document types', 400);
+    }
+
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    if (!partner) return notFound(res, 'Partner profile not found');
+
+    const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
+
+    await client.query('BEGIN');
+
+    // 1. Update partner profile status to rejected
+    await client.query(`
+      UPDATE Partner_profiles 
+      SET kyc_status = 'rejected', 
+          kyc_reviewed_at = NOW(), 
+          kyc_reviewed_by = $1,
+          rejection_reason = $2,
+          kyc_rejection_reason = $2
+      WHERE id = $3
+    `, [req.user.id, rejection_reason, partnerId]);
+
+    // 2. Set user status to rejected so they correct documents
+    await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+
+    // 3. Mark selected documents as rejected
+    for (const docType of rejected_documents) {
+      if (docType === 'video') {
+        await client.query(`
+          UPDATE partner_videos 
+          SET verification_status = 'rejected'
+          WHERE partner_id = $1
+        `, [partnerId]);
+      } else {
+        await client.query(`
+          UPDATE kyc_documents 
+          SET verification_status = 'rejected',
+              verified = false
+          WHERE Partner_id = $1 AND doc_type = $2
+        `, [partnerId, docType]);
+      }
+    }
+
+    // 4. Mark non-rejected documents as approved/verified
+    await client.query(`
+      UPDATE kyc_documents
+      SET verification_status = 'approved',
+          verified = true,
+          verified_by = $1,
+          verified_at = NOW()
+      WHERE Partner_id = $2 AND NOT (doc_type = ANY($3))
+    `, [req.user.id, partnerId, rejected_documents]);
+
+    if (!rejected_documents.includes('video')) {
+      await client.query(`
+        UPDATE partner_videos 
+        SET verification_status = 'approved'
+        WHERE partner_id = $1
+      `, [partnerId]);
+    }
+
+    await client.query('COMMIT');
+
+    // Send notifications
+    try {
+      const { notify } = require('../notifications/service.js');
+      const { sendKycRejectedEmail } = require('../../services/email/email.service.js');
+      await notify.kycRejected(partner.user_id, rejection_reason);
+      if (user?.email) {
+        await sendKycRejectedEmail(user.email, rejection_reason);
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send KYC request-changes notifications:', notifErr.message);
+    }
+
+    await logAction(req, 'REQUEST_KYC_CHANGES', partnerId, { userId: partner.user_id, rejected_documents, rejection_reason });
+
+    return success(res, {}, 'KYC correction requested successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createCommissionRule,
   getCommissionRules,
@@ -387,4 +619,7 @@ module.exports = {
   getAuditLogs,
   deleteAdmin,
   updatePartnerStatus,
+  approveKYC,
+  rejectKYC,
+  requestChangesKYC
 };

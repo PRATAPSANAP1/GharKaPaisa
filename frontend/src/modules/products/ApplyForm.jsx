@@ -44,6 +44,11 @@ export default function ApplyForm() {
         partner_code: form.partner_code
       });
       setSuccess(true);
+      if (product?.public_url) {
+        setTimeout(() => {
+          window.location.href = product.public_url;
+        }, 1500);
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit application');
     } finally {
@@ -57,10 +62,14 @@ export default function ApplyForm() {
         <div style={{ ...S.card, padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
           <div style={{ color: C.green, fontSize: "64px" }}>{Icons.CheckCircle || "✅"}</div>
           <h2 style={{ color: C.text, margin: 0 }}>Application Submitted!</h2>
-          <p style={{ color: C.textLight }}>Thank you! Your application for {product?.name} has been received. Our team will contact you shortly.</p>
-          <button onClick={() => navigate('/')} style={{ ...S.btn("primary"), marginTop: "20px" }}>
-            Return to Homepage
-          </button>
+          <p style={{ color: C.textLight }}>Thank you! Your application for {product?.name} has been received.</p>
+          {product?.public_url ? (
+            <p style={{ color: C.primary, fontWeight: 'bold' }}>Redirecting you to the lending partner page...</p>
+          ) : (
+            <button onClick={() => navigate('/')} style={{ ...S.btn("primary"), marginTop: "20px" }}>
+              Return to Homepage
+            </button>
+          )}
         </div>
       </div>
     );

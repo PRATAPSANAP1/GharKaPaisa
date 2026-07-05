@@ -1178,6 +1178,102 @@ const migrate = async () => {
     throw walletMigrateErr;
   }
 
+  // ── Video KYC & Document Status Migrations ──────────────────────
+  try {
+    logger.info('Running Video KYC Migrations...');
+    
+    // Add new columns to Partner_profiles
+    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_submitted_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_by UUID REFERENCES users(id)`);
+    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_rejection_reason TEXT`);
+
+    // Add verification_status to kyc_documents
+    await query(`ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'`);
+
+    // Create partner_videos table
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_videos (
+        id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id          UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+        video_url           VARCHAR(500) NOT NULL,
+        video_duration      INTEGER,
+        video_size          INTEGER,
+        storage_key         VARCHAR(500) NOT NULL,
+        uploaded_at         TIMESTAMPTZ DEFAULT NOW(),
+        verification_status VARCHAR(50) DEFAULT 'pending'
+      )
+    `);
+
+    logger.info('Video KYC Migrations completed successfully');
+  } catch (videoMigrateErr) {
+    logger.error('Failed to run Video KYC Migrations:', videoMigrateErr);
+    throw videoMigrateErr;
+  }
+
+  // ── Product Links & Click Tracking Migrations ──────────────────────
+  try {
+    logger.info('Running Product Links & Click Tracking Migrations...');
+
+    // Add new columns to products table
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS public_url VARCHAR(1000)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS partner_url VARCHAR(1000)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS tracking_enabled BOOLEAN DEFAULT TRUE`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS button_text VARCHAR(100) DEFAULT 'Apply Now'`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS redirect_type VARCHAR(20) DEFAULT 'new_tab'`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS utm_source VARCHAR(100)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(100)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(100)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS last_updated_by UUID REFERENCES users(id)`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS last_updated_at TIMESTAMPTZ DEFAULT NOW()`);
+
+    // Create click_tracking table
+    await query(`
+      CREATE TABLE IF NOT EXISTS click_tracking (
+        click_id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id        UUID REFERENCES Partner_profiles(id) ON DELETE SET NULL,
+        product_id        UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        bank_id           UUID REFERENCES banks(id) ON DELETE SET NULL,
+        customer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
+        customer_mobile   VARCHAR(15),
+        tracking_url      VARCHAR(1000),
+        original_url      VARCHAR(1000),
+        ip_address        VARCHAR(45),
+        browser           VARCHAR(100),
+        device            VARCHAR(50),
+        operating_system  VARCHAR(50),
+        campaign          VARCHAR(100),
+        referral_source   VARCHAR(255),
+        location          VARCHAR(255),
+        clicked_at        TIMESTAMPTZ DEFAULT NOW(),
+        conversion_status VARCHAR(20) DEFAULT 'pending'
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_tracking_product ON click_tracking(product_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_tracking_partner ON click_tracking(partner_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_click_tracking_clicked_at ON click_tracking(clicked_at)`);
+
+    // Create product_link_audits table
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_link_audits (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        old_url       VARCHAR(1000),
+        new_url       VARCHAR(1000),
+        updated_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+        updated_at    TIMESTAMPTZ DEFAULT NOW(),
+        reason        TEXT,
+        ip_address    VARCHAR(45)
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_link_audits_product ON product_link_audits(product_id)`);
+
+    logger.info('Product Links & Click Tracking Migrations completed successfully');
+  } catch (linkMigrateErr) {
+    logger.error('Failed to run Product Links & Click Tracking Migrations:', linkMigrateErr);
+    throw linkMigrateErr;
+  }
+
    logger.info('✅ All migrations completed successfully');
    if (require.main === module) {
      process.exit(0);

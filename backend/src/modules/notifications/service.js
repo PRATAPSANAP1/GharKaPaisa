@@ -56,6 +56,12 @@ const notify = {
 
   kycRejected: (userId, reason) =>
     createNotification(userId, 'KYC Rejected', `Your KYC was rejected. Reason: ${reason}. Please re-upload correct documents.`, 'warning'),
+
+  kycSubmitted: (userId) =>
+    createNotification(userId, '📥 KYC Submitted', 'Your KYC documents have been submitted and are awaiting review.', 'info'),
+
+  kycUnderReview: (userId) =>
+    createNotification(userId, '🔍 KYC Under Review', 'Your KYC documents are now being reviewed by our compliance team.', 'info'),
 };
 
 module.exports = { createNotification, bulkNotify, notify };

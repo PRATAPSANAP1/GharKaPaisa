@@ -28,6 +28,7 @@ export default function ManagePartners() {
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [docCorrections, setDocCorrections] = useState({ pan: false, cancelled_cheque: false, video: false });
 
   // Wallet adjustment State
   const [showWalletForm, setShowWalletForm] = useState(false);
@@ -147,13 +148,11 @@ export default function ManagePartners() {
     if (!window.confirm("Are you sure you want to approve this partner's KYC? This will activate their profile and create a wallet if not present.")) return;
     setActionLoading(true);
     try {
-      const res = await api.post("/admin/approve-kyc", {
+      const res = await api.post("/superadmin/kyc/approve", {
         partnerId: selectedPartner.id,
-        approved: true,
       });
       if (res.data?.success) {
         alert("Partner KYC approved successfully!");
-        // Refresh detail view
         handleViewDetails(selectedPartner);
         fetchPartners();
       }
@@ -168,21 +167,34 @@ export default function ManagePartners() {
     e.preventDefault();
     if (!rejectionReason.trim()) return alert("Rejection reason is required.");
     setActionLoading(true);
+
+    const rejectedDocs = Object.keys(docCorrections).filter(k => docCorrections[k]);
+
     try {
-      const res = await api.post("/admin/approve-kyc", {
-        partnerId: selectedPartner.id,
-        approved: false,
-        rejection_reason: rejectionReason.trim(),
-      });
+      let res;
+      if (rejectedDocs.length > 0) {
+        res = await api.post("/superadmin/kyc/request-changes", {
+          partnerId: selectedPartner.id,
+          rejection_reason: rejectionReason.trim(),
+          rejected_documents: rejectedDocs
+        });
+      } else {
+        res = await api.post("/superadmin/kyc/reject", {
+          partnerId: selectedPartner.id,
+          rejection_reason: rejectionReason.trim(),
+        });
+      }
+
       if (res.data?.success) {
-        alert("Partner KYC rejected.");
+        alert(rejectedDocs.length > 0 ? "KYC correction requested." : "Partner KYC rejected.");
         setShowRejectForm(false);
         setRejectionReason("");
+        setDocCorrections({ pan: false, cancelled_cheque: false, video: false });
         handleViewDetails(selectedPartner);
         fetchPartners();
       }
     } catch (e) {
-      alert(e.response?.data?.message || "KYC rejection failed.");
+      alert(e.response?.data?.message || "KYC action failed.");
     } finally {
       setActionLoading(false);
     }
@@ -461,7 +473,9 @@ export default function ManagePartners() {
                         <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "10px 14px", borderRadius: "10px", width: "100%" }}>
                           <div>
                             <div style={{ fontSize: "12px", fontWeight: 700, textTransform: "capitalize", color: C.text }}>{doc.doc_type.replace("_", " ")}</div>
-                            <div style={{ fontSize: "10px", color: C.textLight }}>No: {doc.doc_number || "N/A"} • Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</div>
+                            <div style={{ fontSize: "10px", color: C.textLight }}>
+                              No: {doc.doc_number || "N/A"} • Status: <span style={{ fontWeight: 700, color: doc.verification_status === 'approved' ? C.green : doc.verification_status === 'rejected' ? C.red : C.gold }}>{doc.verification_status || 'pending'}</span>
+                            </div>
                           </div>
                           <button
                             onClick={() => handleViewDocument(doc.id)}
@@ -476,6 +490,34 @@ export default function ManagePartners() {
                   ) : (
                     <p style={{ fontSize: "13px", color: C.textLight, margin: 0 }}>No documents uploaded yet.</p>
                   )}
+                </div>
+
+                {/* KYC Verification Video */}
+                {profile.partner_video && (
+                  <div style={{ marginTop: "16px" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>KYC Verification Video</h4>
+                    <div style={{ borderRadius: "10px", overflow: "hidden", border: `1px solid ${C.border}`, background: "#000", height: "200px" }}>
+                      <video 
+                        src={profile.partner_video.video_url} 
+                        controls 
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    </div>
+                    <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>
+                      Duration: {profile.partner_video.video_duration}s • Status: <span style={{ fontWeight: 700, color: profile.partner_video.verification_status === 'approved' ? C.green : profile.partner_video.verification_status === 'rejected' ? C.red : C.gold }}>{profile.partner_video.verification_status || 'pending'}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* KYC Timeline */}
+                <div style={{ marginTop: "16px" }}>
+                  <h4 style={{ fontSize: "13px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>KYC Timeline</h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px", color: C.textLight }}>
+                    <div>📥 Submitted At: {profile.kyc_submitted_at ? new Date(profile.kyc_submitted_at).toLocaleString() : 'N/A'}</div>
+                    {profile.kyc_reviewed_at && (
+                      <div>🔍 Reviewed At: {new Date(profile.kyc_reviewed_at).toLocaleString()}</div>
+                    )}
+                  </div>
                 </div>
 
                 {/* DSA Team Network controls (Super Admin only) */}
@@ -629,18 +671,49 @@ export default function ManagePartners() {
 
                 {/* Rejection Form */}
                 {showRejectForm && (
-                  <form onSubmit={handleRejectKYC} style={{ background: `${C.red}05`, border: `1px solid ${C.red}20`, padding: "16px", borderRadius: "12px" }}>
-                    <h5 style={{ fontSize: "13px", fontWeight: 700, color: C.red, margin: "0 0 10px 0" }}>Specify Rejection Reason</h5>
+                  <form onSubmit={handleRejectKYC} style={{ background: `${C.red}05`, border: `1px solid ${C.red}20`, padding: "16px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <h5 style={{ fontSize: "13px", fontWeight: 700, color: C.red, margin: 0 }}>Specify Rejection Reason / Request Corrections</h5>
                     <textarea
-                      style={{ ...S.input, minHeight: "60px", marginBottom: "10px", background: C.card }}
+                      style={{ ...S.input, minHeight: "60px", margin: 0, background: C.card }}
                       placeholder="Explain what was wrong (e.g. Blurred PAN Card upload)"
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
                       required
                     />
+                    
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Select documents requiring correction (Check if requesting changes):</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={docCorrections.pan}
+                            onChange={(e) => setDocCorrections({ ...docCorrections, pan: e.target.checked })}
+                          />
+                          PAN Card Document
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={docCorrections.cancelled_cheque}
+                            onChange={(e) => setDocCorrections({ ...docCorrections, cancelled_cheque: e.target.checked })}
+                          />
+                          Bank Account Proof (Cheque)
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={docCorrections.video}
+                            onChange={(e) => setDocCorrections({ ...docCorrections, video: e.target.checked })}
+                          />
+                          Verification Video
+                        </label>
+                      </div>
+                    </div>
+
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button type="submit" disabled={actionLoading} style={{ ...S.btn("primary"), background: C.red, padding: "8px 14px", fontSize: "12px" }}>
-                        Submit Rejection
+                        {Object.values(docCorrections).some(Boolean) ? 'Request Selected Changes' : 'Reject KYC Entirely'}
                       </button>
                       <button type="button" onClick={() => setShowRejectForm(false)} style={{ ...S.btn("outline"), padding: "8px 14px", fontSize: "12px", border: "none", color: C.textLight }}>
                         Cancel

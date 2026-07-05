@@ -13,6 +13,8 @@ const notificationRoute                     = require('../modules/notifications/
 const reportRoute                           = require('../modules/reports/route.js');
 const bankRoute                             = require('../modules/banks/route.js');
 const { cmsRouter, serviceRouter, serviceCatalogRouter } = require('../modules/cms/route.js');
+const redirectCtrl = require('../modules/products/link-management.controller.js');
+const analyticsRoute = require('../modules/analytics/route.js');
 
 router.use('/auth',             authRoute);
 router.use('/Partners',         partnerRouter);
@@ -33,5 +35,10 @@ router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/leads',            leadRouter);
 router.use('/card-applications',cardApplicationRouter);
+
+// Dynamic Product Redirect & Analytics Routes
+router.get('/redirect/:productId', redirectCtrl.handleRedirect);
+router.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
+router.use('/analytics', analyticsRoute);
 
 module.exports = router;

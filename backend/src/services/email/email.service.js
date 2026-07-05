@@ -201,4 +201,81 @@ const sendVerificationEmail = async (email, verificationLink) => {
   });
 };
 
-module.exports = { sendEmail, sendOtpEmail, sendVerificationEmail };
+const sendKycStatusEmail = async (email, title, message) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f4f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background:#ffffff; border-radius:16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow:hidden;">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #0d9488, #0f766e); padding: 32px 40px; text-align: center;">
+                  <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:800; letter-spacing:-0.5px;">GharKaPaisa</h1>
+                  <p style="margin:6px 0 0 0; color:rgba(255,255,255,0.85); font-size:13px; font-weight:500;">KYC Compliance Update</p>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding: 36px 40px 20px;">
+                  <h2 style="margin:0 0 8px 0; color:#1a202c; font-size:20px; font-weight:700;">${title}</h2>
+                  <p style="margin:0 0 28px 0; color:#718096; font-size:14px; line-height:1.6;">
+                    ${message}
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
+                  <p style="margin:0; color:#a0aec0; font-size:11px;">
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
+                    <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `GharKaPaisa — ${title}`,
+    html,
+    text: message,
+  });
+};
+
+const sendKycSubmittedEmail = (email) => 
+  sendKycStatusEmail(email, 'KYC Documents Submitted', 'We have received your KYC submission and will start verification shortly.');
+
+const sendKycUnderReviewEmail = (email) => 
+  sendKycStatusEmail(email, 'KYC Under Review', 'Your KYC documents are now being reviewed by our verification team.');
+
+const sendKycApprovedEmail = (email) => 
+  sendKycStatusEmail(email, '✅ KYC Approved', 'Congratulations! Your KYC documents are approved. Your partner profile has been fully activated.');
+
+const sendKycRejectedEmail = (email, reason) => 
+  sendKycStatusEmail(email, '❌ KYC Correction Required', `Your KYC could not be approved due to issues in verification. Reason: ${reason}. Please upload corrected documents.`);
+
+module.exports = {
+  sendEmail,
+  sendOtpEmail,
+  sendVerificationEmail,
+  sendKycSubmittedEmail,
+  sendKycUnderReviewEmail,
+  sendKycApprovedEmail,
+  sendKycRejectedEmail
+};

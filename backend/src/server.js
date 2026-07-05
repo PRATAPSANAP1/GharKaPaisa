@@ -168,6 +168,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ── Top-level Redirect Routes ──────────────────────────────────
+const redirectCtrl = require('./modules/products/link-management.controller.js');
+app.get('/redirect/:productId', redirectCtrl.handleRedirect);
+app.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
+
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
 app.use('/api/v1', apiRouter);

@@ -35,6 +35,7 @@ import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
 
 // Admin Pages
+// AppRoutes Configuration
 import AdminDashboard from '../modules/admin/dashboard/AdminDashboard';
 import AdminLogin from '../modules/authentication/login/AdminLogin';
 import ManageApplications from '../modules/admin/reports/ManageApplications';
@@ -48,6 +49,7 @@ import SuperAdminReports from '../modules/super-admin/reports/SuperAdminReports'
 import AuditLogs from '../modules/super-admin/audit/AuditLogs';
 import ManageBanners from '../modules/super-admin/banners/ManageBanners';
 import ManageProducts from '../modules/super-admin/cms/ManageProducts';
+import ManageProductLinks from '../modules/super-admin/cms/ManageProductLinks';
 import ManageBanks from '../modules/super-admin/cms/ManageBanks';
 import ManageSections from '../modules/super-admin/cms/ManageSections';
 import ManageServices from '../modules/super-admin/system/ManageServices';
@@ -229,6 +231,7 @@ const AppRoutes = () => {
         <Route path="direct-leads" element={<ManageDirectLeads />} />
         <Route path="banners" element={<ManageBanners />} />
         <Route path="products" element={<ManageProducts />} />
+        <Route path="product-links" element={<ManageProductLinks />} />
         <Route path="banks" element={<ManageBanks />} />
         <Route path="sections" element={<ManageSections />} />
         <Route path="services" element={<ManageServices />} />

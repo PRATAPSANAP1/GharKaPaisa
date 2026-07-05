@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
+import { useAuthStore } from '../../../app/store/authStore';
 
 import { MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, MdAccessTime, MdInfoOutline } from 'react-icons/md';
 
@@ -20,6 +21,19 @@ const BANKS = ['All Banks', 'HDFC', 'SBI', 'Axis', 'ICICI', 'BOB', 'IndusInd', '
 export default function PartnerProducts() {
   const { C } = useTheme();
   const S = makeS(C);
+  
+  const { user } = useAuthStore();
+  const partnerCode = user?.Partner_code || '';
+
+  const handleCopyLink = (product) => {
+    if (!partnerCode) {
+      alert("Partner profile code not found. Make sure you are fully onboarded.");
+      return;
+    }
+    const trackingLink = `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
+    navigator.clipboard.writeText(trackingLink);
+    alert("Partner tracking link copied to clipboard!");
+  };
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -327,6 +341,18 @@ export default function PartnerProducts() {
                     <span style={{ fontSize: '20px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value).toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    {(product.public_url || product.partner_url) && (
+                      <button
+                        onClick={() => handleCopyLink(product)}
+                        type="button"
+                        style={{
+                          ...S.btn('outline'), padding: '8px 12px', fontSize: '12px', borderRadius: '10px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Copy Link
+                      </button>
+                    )}
                     <button style={{
                       ...S.btn('outline'), padding: '8px 16px', fontSize: '13px', borderRadius: '10px'
                     }}>

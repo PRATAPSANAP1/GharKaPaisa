@@ -31,6 +31,9 @@ const MIME_MAP = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.pdf': 'application/pdf',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
 };
 
 // Multer memory storage (file goes to memory, then we push to S3)
@@ -56,6 +59,26 @@ const upload = multer({
   storage,
   fileFilter,
   limits: { fileSize: MAX_SIZE },
+});
+
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/mov'];
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+
+const videoFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExts = ['.mp4', '.webm', '.mov', '.mkv'];
+
+  if (allowedExts.includes(ext) || ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only MP4, WebM, and MOV video formats are allowed'), false);
+  }
+};
+
+const uploadVideo = multer({
+  storage,
+  fileFilter: videoFileFilter,
+  limits: { fileSize: MAX_VIDEO_SIZE },
 });
 
 // Upload a buffer to S3
@@ -92,4 +115,4 @@ const deleteFromS3 = async (key) => {
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
+module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, deleteFromS3 };

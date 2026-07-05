@@ -59,12 +59,17 @@ const getProfile = async (req, res, next) => {
     }
 
     const { rows: kyc } = await query(
-      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
+      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, verification_status, uploaded_at FROM kyc_documents WHERE Partner_id = $1`, [PartnerId]
+    );
+
+    const { rows: [video] } = await query(
+      `SELECT id, video_url, video_duration, video_size, storage_key, uploaded_at, verification_status FROM partner_videos WHERE partner_id = $1`, [PartnerId]
     );
 
     const processedKyc = shouldMask ? [] : kyc;
+    const processedVideo = shouldMask ? null : video;
 
-    return success(res, { ...Partner, kyc_documents: processedKyc });
+    return success(res, { ...Partner, kyc_documents: processedKyc, partner_video: processedVideo });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message, stack: err.stack });
   }
@@ -980,6 +985,206 @@ const getWholeNetwork = async (req, res, next) => {
   }
 };
 
+const uploadPan = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'File is required', 400);
+
+    const { pan_number } = req.body;
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [doc] } = await query(`
+      INSERT INTO kyc_documents (Partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
+      VALUES ($1, 'pan', $2, $3, $4, 'pending', false)
+      ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+        doc_number = COALESCE(EXCLUDED.doc_number, kyc_documents.doc_number),
+        file_url = EXCLUDED.file_url,
+        s3_key = EXCLUDED.s3_key,
+        verification_status = 'pending',
+        verified = false,
+        uploaded_at = NOW()
+      RETURNING *
+    `, [partnerId, pan_number || null, url, key]);
+
+    return success(res, doc, 'PAN document uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const uploadCheque = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'File is required', 400);
+
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [doc] } = await query(`
+      INSERT INTO kyc_documents (Partner_id, doc_type, file_url, s3_key, verification_status, verified)
+      VALUES ($1, 'cancelled_cheque', $2, $3, 'pending', false)
+      ON CONFLICT (Partner_id, doc_type) DO UPDATE SET
+        file_url = EXCLUDED.file_url,
+        s3_key = EXCLUDED.s3_key,
+        verification_status = 'pending',
+        verified = false,
+        uploaded_at = NOW()
+      RETURNING *
+    `, [partnerId, url, key]);
+
+    return success(res, doc, 'Cancelled cheque uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const uploadVideo = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Video file is required', 400);
+
+    const { duration } = req.body;
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [video] } = await query(`
+      INSERT INTO partner_videos (partner_id, video_url, video_duration, video_size, storage_key, verification_status)
+      VALUES ($1, $2, $3, $4, $5, 'pending')
+      ON CONFLICT (partner_id) DO UPDATE SET
+        video_url = EXCLUDED.video_url,
+        video_duration = EXCLUDED.video_duration,
+        video_size = EXCLUDED.video_size,
+        storage_key = EXCLUDED.storage_key,
+        verification_status = 'pending',
+        uploaded_at = NOW()
+      RETURNING *
+    `, [partnerId, url, parseInt(duration || 0), req.file.size, key]);
+
+    return success(res, video, 'Verification video uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const submitKyc = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: [pan] } = await query(
+      `SELECT 1 FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'pan'`,
+      [partnerId]
+    );
+
+    const { rows: [cheque] } = await query(
+      `SELECT 1 FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'cancelled_cheque'`,
+      [partnerId]
+    );
+
+    const { rows: [video] } = await query(
+      `SELECT 1 FROM partner_videos WHERE partner_id = $1`,
+      [partnerId]
+    );
+
+    if (!pan || !cheque || !video) {
+      return error(res, 'Cannot submit KYC. Please upload all required documents: PAN Card, Cancelled Cheque, and Verification Video.', 400);
+    }
+
+    await query(`
+      UPDATE Partner_profiles 
+      SET kyc_status = 'pending', 
+          kyc_submitted_at = NOW(), 
+          rejection_reason = NULL,
+          kyc_rejection_reason = NULL
+      WHERE id = $1
+    `, [partnerId]);
+
+    try {
+      const { notify } = require('../notifications/service.js');
+      const { sendKycSubmittedEmail } = require('../../services/email/email.service.js');
+      await notify.kycSubmitted(req.user.id);
+      if (req.user.email) {
+        await sendKycSubmittedEmail(req.user.email);
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send KYC submission notifications:', notifErr.message);
+    }
+
+    return success(res, {}, 'KYC documents submitted successfully. Status is now pending review.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getKycStatus = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: [partner] } = await query(`
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason FROM Partner_profiles WHERE id = $1
+    `, [partnerId]);
+
+    const { rows: [pan] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'pan'`, [partnerId]);
+    const { rows: [cheque] } = await query(`SELECT id, verification_status, verified FROM kyc_documents WHERE Partner_id = $1 AND doc_type = 'cancelled_cheque'`, [partnerId]);
+    const { rows: [video] } = await query(`SELECT id, verification_status FROM partner_videos WHERE partner_id = $1`, [partnerId]);
+
+    let progress = 0;
+    if (pan) progress += 33;
+    if (cheque) progress += 33;
+    if (video) progress += 34;
+
+    return success(res, {
+      kyc_status: partner?.kyc_status || 'draft',
+      rejection_reason: partner?.kyc_rejection_reason || partner?.rejection_reason || null,
+      progress,
+      kyc_completed: partner?.kyc_status === 'approved',
+      documents: {
+        pan: pan ? { status: pan.verification_status } : null,
+        cancelled_cheque: cheque ? { status: cheque.verification_status } : null,
+        verification_video: video ? { status: video.verification_status } : null
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getKycDetails = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: [partner] } = await query(`
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at FROM Partner_profiles WHERE id = $1
+    `, [partnerId]);
+
+    const { rows: documents } = await query(`
+      SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at 
+      FROM kyc_documents 
+      WHERE Partner_id = $1
+    `, [partnerId]);
+
+    const { rows: [video] } = await query(`
+      SELECT id, video_url, video_duration, video_size, storage_key, uploaded_at, verification_status 
+      FROM partner_videos 
+      WHERE partner_id = $1
+    `, [partnerId]);
+
+    return success(res, {
+      kyc_status: partner?.kyc_status || 'draft',
+      rejection_reason: partner?.kyc_rejection_reason || partner?.rejection_reason || null,
+      kyc_submitted_at: partner?.kyc_submitted_at,
+      kyc_reviewed_at: partner?.kyc_reviewed_at,
+      documents,
+      video
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -1001,5 +1206,11 @@ module.exports = {
   getReferralInfo,
   changeParentPartner,
   deactivateTeam,
-  getWholeNetwork
+  getWholeNetwork,
+  uploadPan,
+  uploadCheque,
+  uploadVideo,
+  submitKyc,
+  getKycStatus,
+  getKycDetails
 };
