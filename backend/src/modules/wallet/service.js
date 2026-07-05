@@ -163,7 +163,7 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     logger.info(`releaseHold: Released ₹${amount} to available for partner ${partnerId}`);
 
     // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM "Partner_profiles" WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
     if (partner) {
       try {
         await notify.commissionCredited(partner.user_id, amount);
@@ -239,7 +239,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
   `, [applicationId]);
 
   const { rows: [partner] } = await query(`
-    SELECT parent_partner_id, first_name, last_name, "Partner_code" FROM "Partner_profiles" WHERE id = $1
+    SELECT parent_partner_id, first_name, last_name, "Partner_code" FROM Partner_profiles WHERE id = $1
   `, [partnerId]);
 
   const meta = {
@@ -297,7 +297,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
 
     // Notify Parent
     try {
-      const { rows: [parentUser] } = await query(`SELECT user_id FROM "Partner_profiles" WHERE id = $1`, [partner.parent_partner_id]);
+      const { rows: [parentUser] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partner.parent_partner_id]);
       if (parentUser) {
         const { createNotification } = require('../notifications/service.js');
         await createNotification(
@@ -398,7 +398,7 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
     await client.query('COMMIT');
 
     // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM "Partner_profiles" WHERE id = $1`, [wr.partner_id]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [wr.partner_id]);
     if (partner) {
       try {
         approved

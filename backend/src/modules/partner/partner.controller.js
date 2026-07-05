@@ -471,7 +471,7 @@ const addTeamMember = async (req, res, next) => {
 
     // Check if parent exists and allows team creation
     const { rows: [parentPartner] } = await client.query(`
-      SELECT id, allow_team_creation, team_status FROM "Partner_profiles" WHERE id = $1
+      SELECT id, allow_team_creation, team_status FROM Partner_profiles WHERE id = $1
     `, [PartnerId]);
     if (!parentPartner) return error(res, 'Parent partner not found', 404);
     if (parentPartner.allow_team_creation === false) {
@@ -646,7 +646,7 @@ const getTeamTree = async (req, res, next) => {
         ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id,
         u.email, u.mobile, u.status as account_status, u.created_at, r.level
       FROM partner_team_relationships r
-      JOIN "Partner_profiles" ap ON ap.id = r.child_partner_id
+      JOIN Partner_profiles ap ON ap.id = r.child_partner_id
       JOIN users u ON u.id = ap.user_id
       WHERE r.parent_partner_id = $1
       ORDER BY r.level ASC, u.created_at DESC
@@ -707,7 +707,7 @@ const getTeamDashboard = async (req, res, next) => {
         COUNT(CASE WHEN u.status = 'suspended' THEN 1 END)::int as suspended_partners,
         COUNT(CASE WHEN u.status = 'blocked' THEN 1 END)::int as blocked_partners
       FROM partner_team_relationships r
-      JOIN "Partner_profiles" ap ON ap.id = r.child_partner_id
+      JOIN Partner_profiles ap ON ap.id = r.child_partner_id
       JOIN users u ON u.id = ap.user_id
       WHERE r.parent_partner_id = $1
     `, [partnerId]);
@@ -773,7 +773,7 @@ const getReferralInfo = async (req, res, next) => {
 
     if (!referral) {
       const { rows: [partner] } = await query(`
-        SELECT Partner_code FROM "Partner_profiles" WHERE id = $1
+        SELECT Partner_code FROM Partner_profiles WHERE id = $1
       `, [partnerId]);
       
       const code = partner?.Partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
@@ -802,7 +802,7 @@ const changeParentPartner = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { rows: [partner] } = await client.query(`
-      SELECT id, parent_partner_id, team_level FROM "Partner_profiles" WHERE id = $1 FOR UPDATE
+      SELECT id, parent_partner_id, team_level FROM Partner_profiles WHERE id = $1 FOR UPDATE
     `, [PartnerId]);
 
     if (!partner) {
@@ -842,7 +842,7 @@ const changeParentPartner = async (req, res, next) => {
 
     if (partner.parent_partner_id) {
       await client.query(`
-        UPDATE "Partner_profiles" 
+        UPDATE Partner_profiles 
         SET children_count = GREATEST(0, children_count - 1) 
         WHERE id = $1
       `, [partner.parent_partner_id]);
@@ -857,13 +857,13 @@ const changeParentPartner = async (req, res, next) => {
     let newTeamLevel = 1;
     if (new_parent_id) {
       const { rows: [newParent] } = await client.query(`
-        SELECT team_level FROM "Partner_profiles" WHERE id = $1
+        SELECT team_level FROM Partner_profiles WHERE id = $1
       `, [new_parent_id]);
       newTeamLevel = parseInt(newParent?.team_level || 1) + 1;
     }
 
     await client.query(`
-      UPDATE "Partner_profiles"
+      UPDATE Partner_profiles
       SET parent_partner_id = $1, team_level = $2, team_joined_at = CASE WHEN $1 IS NOT NULL THEN NOW() ELSE NULL END
       WHERE id = $3
     `, [new_parent_id, newTeamLevel, PartnerId]);
@@ -898,7 +898,7 @@ const changeParentPartner = async (req, res, next) => {
       }
 
       await client.query(`
-        UPDATE "Partner_profiles" SET children_count = children_count + 1 WHERE id = $1
+        UPDATE Partner_profiles SET children_count = children_count + 1 WHERE id = $1
       `, [new_parent_id]);
       await client.query(`
         UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
@@ -907,12 +907,12 @@ const changeParentPartner = async (req, res, next) => {
 
     const updateDescendantLevels = async (parentId, parentLevel) => {
       const { rows: children } = await client.query(`
-        SELECT id FROM "Partner_profiles" WHERE parent_partner_id = $1
+        SELECT id FROM Partner_profiles WHERE parent_partner_id = $1
       `, [parentId]);
       for (const child of children) {
         const nextLevel = parentLevel + 1;
         await client.query(`
-          UPDATE "Partner_profiles" SET team_level = $1 WHERE id = $2
+          UPDATE Partner_profiles SET team_level = $1 WHERE id = $2
         `, [nextLevel, child.id]);
         await updateDescendantLevels(child.id, nextLevel);
       }
@@ -951,7 +951,7 @@ const deactivateTeam = async (req, res, next) => {
 
     params.push(PartnerId);
     await query(`
-      UPDATE "Partner_profiles"
+      UPDATE Partner_profiles
       SET ${updates.join(', ')}, updated_at = NOW()
       WHERE id = $${idx}
     `, params);
@@ -969,9 +969,9 @@ const getWholeNetwork = async (req, res, next) => {
         ap.id, ap.Partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id, ap.team_level, ap.team_status, ap.children_count,
         u.email, u.mobile, u.status as account_status,
         pap.Partner_code as parent_code, pap.first_name as parent_first_name, pap.last_name as parent_last_name
-      FROM "Partner_profiles" ap
+      FROM Partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN "Partner_profiles" pap ON pap.id = ap.parent_partner_id
+      LEFT JOIN Partner_profiles pap ON pap.id = ap.parent_partner_id
       ORDER BY ap.team_level ASC, ap.created_at DESC
     `);
     return success(res, rows);
