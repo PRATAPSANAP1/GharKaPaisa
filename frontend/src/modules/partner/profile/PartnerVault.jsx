@@ -67,7 +67,6 @@ export default function PartnerVault() {
       try {
         const response = await api.get('/kyc/me');
         const docs = response.data?.data?.documents || [];
-        console.log('[Vault Load] Raw documents fetched from backend:', docs);
         setDocuments(docs.map((doc) => ({
           id: doc.id || doc.doc_type,
           title: DOC_LABELS[doc.doc_type] || doc.doc_type,

@@ -64,8 +64,6 @@ export default function PartnerKyc() {
   }, [fetchProfile]);
 
   const handleViewFile = async (docId) => {
-    console.log('[KYC] handleViewFile called with docId:', docId);
-    console.log('[KYC] current profile:', profile);
     if (!docId || docId === 'undefined') {
       alert('Secure document ID is missing. Please refresh the page or try re-logging.');
       return;
@@ -468,7 +466,6 @@ export default function PartnerKyc() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {documentsToRender.map((docItem) => {
                   const dbDoc = getDoc(docItem.key);
-                  console.log(`[KYC Render] type: ${docItem.key}, dbDoc:`, dbDoc);
                   const uploadTime = getUploadTime(dbDoc);
 
                   return (
