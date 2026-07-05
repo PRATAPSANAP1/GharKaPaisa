@@ -319,12 +319,12 @@ export default function PartnerKyc() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                 <h3 style={{ fontSize: isMobile ? '14px' : '16px', fontWeight: 800, margin: 0, color: bannerColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Current Status: {kycStatus.replace('_', ' ')}
+                  {isRejected ? '🔴 KYC Rejected' : `Current Status: ${kycStatus.replace('_', ' ')}`}
                 </h3>
                 <p style={{ fontSize: isMobile ? '12px' : '13.5px', margin: 0, color: textSecondary, fontWeight: 500, lineHeight: 1.4 }}>
                   {isApproved && 'Your KYC is verified successfully. All platform features are now unlocked.'}
                   {isUnderReview && 'Your documents are currently being verified by our compliance team.'}
-                  {isRejected && `Your documents were rejected. Reason: ${profile?.rejection_reason || 'Invalid details'}. Please re-submit.`}
+                  {isRejected && `Reason: ${profile?.rejection_reason || 'Invalid details'}. Please upload again.`}
                   {kycStatus === 'pending' && 'Please upload the required documents below to begin your account verification.'}
                 </p>
               </div>

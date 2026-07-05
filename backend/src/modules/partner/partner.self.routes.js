@@ -13,16 +13,16 @@ const kycUpload = upload.fields([
   { name: 'cancelled_cheque', maxCount: 1 },
 ]);
 
-const { requireApprovedPartner } = require('../../middleware/authentication/auth.middleware.js');
+const { requirePartner, requireApprovedPartner } = require('../../middleware/authentication/auth.middleware.js');
 
 // All routes require authenticated Firebase token
 router.use(jwtAuth);
 
 router.post('/register', registerRules, validate, authCtrl.register);
-router.post('/upload-docs', kycUpload, partnerCtrl.uploadSelfKYC);
-router.get('/profile', partnerCtrl.getSelfProfile);
+router.post('/upload-docs', requirePartner, kycUpload, partnerCtrl.uploadSelfKYC);
+router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
-router.get('/training', partnerCtrl.getTrainingModules);
+router.get('/training', requirePartner, partnerCtrl.getTrainingModules);
 router.get('/referral', requireApprovedPartner, partnerCtrl.getReferralInfo);
 router.get('/team-tree', requireApprovedPartner, partnerCtrl.getTeamTree);
 router.get('/team-dashboard', requireApprovedPartner, partnerCtrl.getTeamDashboard);

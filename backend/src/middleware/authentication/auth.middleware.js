@@ -94,6 +94,12 @@ const authorize = (...roles) => {
   };
 };
 
+const requirePartner = (req, res, next) => {
+  if ((req.user.role || '').toUpperCase() !== 'PARTNER') return forbidden(res, 'Partners only');
+  if (!req.partner) return forbidden(res, 'No partner profile found');
+  next();
+};
+
 const requireApprovedPartner = (req, res, next) => {
   if ((req.user.role || '').toUpperCase() !== 'PARTNER') return forbidden(res, 'Partners only');
   if (!req.partner) return forbidden(res, 'No partner profile found');
@@ -157,6 +163,7 @@ module.exports = {
   authenticate,
   syncUser,
   authorize,
+  requirePartner,
   requireApprovedPartner,
   requireApprovedPartnerOrAdmin,
   selfOrAdmin,

@@ -137,22 +137,48 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       {/* ──── STATUS / KYC PENDING BANNER ──── */}
       {(accountStatus === 'pending' || accountStatus === 'inactive') && (
         <div style={{
-          background: accountStatus === 'pending' ? "rgba(245, 158, 11, 0.1)" : "rgba(239, 68, 68, 0.1)",
+          background: accountStatus === 'pending' ? "rgba(245, 158, 11, 0.08)" : "rgba(239, 68, 68, 0.08)",
           border: `1.5px solid ${accountStatus === 'pending' ? "#F59E0B" : "#EF4444"}`,
           borderRadius: "16px",
-          padding: "16px 24px",
+          padding: "20px 24px",
           color: C.text,
           display: "flex",
           alignItems: "center",
-          gap: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
         }}>
-          <FaInfoCircle size={20} style={{ color: accountStatus === 'pending' ? "#F59E0B" : "#EF4444", flexShrink: 0 }} />
-          <div style={{ fontSize: "14px", fontWeight: 600, lineHeight: 1.5 }}>
-            {accountStatus === 'pending' 
-              ? "Your KYC verification is pending. Please upload the required documents to unlock all Partner features."
-              : "Your account is currently inactive. Please complete your KYC verification."}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "280px" }}>
+            <span style={{ fontSize: "28px" }}>{accountStatus === 'pending' ? "🟡" : "🟠"}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: accountStatus === 'pending' ? "#D97706" : "#DC2626" }}>
+                {accountStatus === 'pending' ? "KYC Pending" : "Account Inactive"}
+              </h4>
+              <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+                {accountStatus === 'pending'
+                  ? "Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications."
+                  : "Your account is inactive. Complete KYC verification."}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => navigate("/partner/kyc-centre")}
+            style={{
+              padding: "10px 20px",
+              background: accountStatus === 'pending' ? "#F59E0B" : "#EF4444",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "10px",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: accountStatus === 'pending' ? "0 4px 12px rgba(245,158,11,0.3)" : "0 4px 12px rgba(239,68,68,0.3)",
+              transition: "all 0.2s"
+            }}
+          >
+            {accountStatus === 'pending' ? "Complete KYC" : "Go to KYC"}
+          </button>
         </div>
       )}
       {/* ──── DYNAMIC CMS BANNER / CAMPAIGNS ──── */}

@@ -87,14 +87,12 @@ export function initMsg91Widget() {
     try {
       window.initSendOTP(window.configuration);
       widgetInitialized = true;
-      console.log('[MSG91] Widget initialized (captcha-free)');
 
       // Poll until window.sendOtp becomes available
       let pollElapsed = 0;
       const poll = setInterval(() => {
         pollElapsed += 100;
         if (typeof window.sendOtp === 'function') {
-          console.log('[MSG91] sendOtp method found on window after ' + pollElapsed + 'ms');
           notifyListeners();
           clearInterval(poll);
         } else if (pollElapsed >= 10000) {
