@@ -8,7 +8,8 @@ import {
   MdNotifications, MdSupportAgent, MdVerifiedUser, MdSettings,
   MdCheckCircle, MdCancel, MdPending, MdChevronLeft, MdChevronRight,
   MdSearch, MdFilterList, MdShare, MdDownload, MdLock, MdPlayCircleOutline,
-  MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp
+  MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp,
+  MdFlight
 } from "react-icons/md";
 import { FaLock, FaWhatsapp, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
