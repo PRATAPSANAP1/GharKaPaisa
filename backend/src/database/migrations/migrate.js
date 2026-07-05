@@ -1023,7 +1023,7 @@ const migrate = async () => {
       CREATE TABLE IF NOT EXISTS application_click_logs (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         product_id        UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-        partner_id        UUID REFERENCES "Partner_profiles"(id) ON DELETE SET NULL,
+        partner_id        UUID REFERENCES Partner_profiles(id) ON DELETE SET NULL,
         customer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
         application_type  application_type_enum,
         ip_address        VARCHAR(64),
@@ -1046,7 +1046,7 @@ const migrate = async () => {
   // ── Partner Team Management Migration ─────────────────────────────────────
   try {
     await query(`
-      ALTER TABLE "Partner_profiles" 
+      ALTER TABLE Partner_profiles 
       ADD COLUMN IF NOT EXISTS team_level INTEGER DEFAULT 1,
       ADD COLUMN IF NOT EXISTS team_status VARCHAR(50) DEFAULT 'ACTIVE',
       ADD COLUMN IF NOT EXISTS allow_team_creation BOOLEAN DEFAULT TRUE,
@@ -1066,8 +1066,8 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS partner_team_relationships (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        parent_partner_id UUID NOT NULL REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
-        child_partner_id  UUID NOT NULL UNIQUE REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
+        parent_partner_id UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id  UUID NOT NULL UNIQUE REFERENCES Partner_profiles(id) ON DELETE CASCADE,
         level             INTEGER NOT NULL,
         created_at        TIMESTAMPTZ DEFAULT NOW(),
         status            VARCHAR(20) DEFAULT 'ACTIVE'
@@ -1079,7 +1079,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS partner_referrals (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id        UUID UNIQUE NOT NULL REFERENCES "Partner_profiles"(id) ON DELETE CASCADE,
+        partner_id        UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
         referral_code     VARCHAR(50) UNIQUE NOT NULL,
         referral_link     VARCHAR(1000) NOT NULL,
         total_invites     INTEGER DEFAULT 0,
@@ -1129,7 +1129,7 @@ const migrate = async () => {
       CREATE TABLE IF NOT EXISTS wallet_ledger (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         wallet_id UUID NOT NULL REFERENCES wallets(id),
-        partner_id UUID NOT NULL REFERENCES "Partner_profiles"(id),
+        partner_id UUID NOT NULL REFERENCES Partner_profiles(id),
         application_id UUID REFERENCES applications(id),
         transaction_type ledger_transaction_type NOT NULL,
         credit DECIMAL(15,2) DEFAULT 0,
@@ -1160,7 +1160,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_withdrawals (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id UUID REFERENCES "Partner_profiles"(id),
+        partner_id UUID REFERENCES Partner_profiles(id),
         amount DECIMAL(15,2) NOT NULL,
         bank_account VARCHAR(100),
         ifsc VARCHAR(20),
