@@ -416,7 +416,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", background: C.bgSecondary, border: `1.5px solid ${C.border}`, borderRadius: "8px", padding: "0 10px" }}>
-              <MdSearch size={18} style={{ color: SIDEBAR_TEXT }} />
+              <MdSearch size={18} style={{ color: C.textLight }} />
               <input
                 type="text"
                 placeholder="Search case..."

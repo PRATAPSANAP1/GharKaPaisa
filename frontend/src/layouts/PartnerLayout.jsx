@@ -562,7 +562,7 @@ export default function PartnerLayout() {
             </div>
             {!isKycPage && (
               <button
-                onClick={() => navigate('/partner/kyc')}
+                onClick={() => navigate('/partner/kyc-centre')}
                 style={{
                   background: '#fff',
                   color: '#D97706',
