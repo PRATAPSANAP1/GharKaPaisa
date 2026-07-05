@@ -7,7 +7,7 @@ const getPartnerKyc = async (partnerId) => {
   `, [partnerId]);
   
   const { rows: [profile] } = await query(`
-    SELECT kyc_status, rejection_reason FROM Partner_profiles WHERE id = $1
+    SELECT kyc_status, rejection_reason FROM partner_profiles WHERE id = $1
   `, [partnerId]);
   
   return { status: profile?.kyc_status, documents, rejection_reason: profile?.rejection_reason };
@@ -29,7 +29,7 @@ const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) 
   `, [partnerId, docType, docNumber, fileUrl, s3Key]);
   
   // Also update overall status to pending if they upload new documents
-  await query(`UPDATE Partner_profiles SET kyc_status = 'pending' WHERE id = $1`, [partnerId]);
+  await query(`UPDATE partner_profiles SET kyc_status = 'pending' WHERE id = $1`, [partnerId]);
   
   return doc;
 };
@@ -53,7 +53,7 @@ const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
 
 const updateOverallKycStatus = async (partnerId, status, rejectionReason, adminUserId) => {
   const { rows: [profile] } = await query(`
-    UPDATE Partner_profiles SET
+    UPDATE partner_profiles SET
       kyc_status = $1,
       approved_by = CASE WHEN $1 = 'approved' THEN $4 ELSE NULL END,
       approved_at = CASE WHEN $1 = 'approved' THEN NOW() ELSE NULL END,

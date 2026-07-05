@@ -1,156 +1,290 @@
 import React, { useState, useEffect } from "react";
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { Icons } from "../../../components/Icon/PartnerIcons";
+import { 
+  MdSearch, MdFilterList, MdAdd, MdModeEdit, MdDelete, MdContentCopy,
+  MdStar, MdVisibility, MdAttachMoney, MdSettings, MdCheck, MdClose,
+  MdDragIndicator, MdBusiness, MdCategory, MdInfo, MdLabel
+} from "react-icons/md";
+
+const PRODUCT_CATEGORIES = [
+  { id: "credit_card", label: "Credit Cards" },
+  { id: "personal_loan", label: "Personal Loans" },
+  { id: "business_loan", label: "Business Loans" },
+  { id: "home_loan", label: "Home Loans" },
+  { id: "car_loan", label: "Car Loans" },
+  { id: "bike_loan", label: "Bike Loans" },
+  { id: "gold_loan", label: "Gold Loans" },
+  { id: "education_loan", label: "Education Loans" },
+  { id: "insurance", label: "Insurance" },
+  { id: "health_insurance", label: "Health Insurance" },
+  { id: "life_insurance", label: "Life Insurance" },
+  { id: "motor_insurance", label: "Motor Insurance" },
+  { id: "travel_services", label: "Travel Services" },
+  { id: "hotel_booking", label: "Hotel Booking" },
+  { id: "flight_booking", label: "Flight Booking" },
+  { id: "bus_booking", label: "Bus Booking" },
+  { id: "train_booking", label: "Train Booking" },
+  { id: "recharge", label: "Recharge" },
+  { id: "electricity_bill", label: "Electricity Bill" },
+  { id: "gas_bill", label: "Gas Bill" },
+  { id: "broadband", label: "Broadband" },
+  { id: "water_bill", label: "Water Bill" },
+  { id: "fastag", label: "FASTag" },
+  { id: "mutual_funds", label: "Mutual Funds" },
+  { id: "demat_account", label: "Demat Account" },
+  { id: "savings_account", label: "Savings Account" },
+  { id: "fixed_deposit", label: "Fixed Deposit" },
+  { id: "recurring_deposit", label: "Recurring Deposit" }
+];
 
 export default function ManageProducts() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [activeTab, setActiveTab] = useState("all-products"); // all-products, featured, categories, banks
+
   const [products, setProducts] = useState([]);
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Search & Filters state
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [updatingId, setUpdatingId] = useState(null);
+  const [bankFilter, setBankFilter] = useState("");
+  const [commissionFilter, setCommissionFilter] = useState("");
+  const [featuredFilter, setFeaturedFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Modal State
+  // Edit / Create Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [modalTab, setModalTab] = useState("core"); // core, eligibility, commission, redirect, seo
   const [submitting, setSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  
-  const [appSettingsModalOpen, setAppSettingsModalOpen] = useState(false);
-  const [selectedProductForSettings, setSelectedProductForSettings] = useState(null);
-  const [appSettingsForm, setAppSettingsForm] = useState({
-    application_type: 'internal_form',
-    application_url: '',
-    provider_name: '',
-    open_type: 'same_tab',
-    partner_enabled: true,
-    customer_enabled: true,
-    track_clicks: true,
-    status: 'active'
-  });
 
-  
+  // Form State
   const [form, setForm] = useState({
     name: "",
+    short_description: "",
+    description: "",
+    logo: "",
+    banner: "",
+    image: "",
     category: "credit_card",
     bank_id: "",
-    description: "",
-    commission_type: "fixed",
-    commission_value: 0,
+    is_active: true,
+    status: "Active", // Active, Hidden, Coming Soon, Inactive
+    public_visible: true,
+    partner_visible: true,
+
+    // Eligibility
     min_age: 18,
     max_age: 60,
     min_income: 0,
-    features: "[]", // stringified array
-    is_active: true,
+    features: "[]",
+    benefits: "",
+    eligibility_criteria: "",
+    documents_required: "",
+    fees_charges: "",
     annual_fee: "",
-    time_period: "",
-    image_url: ""
+    interest_rate: "",
+    processing_fee: "",
+
+    // Commission
+    commission_enabled: true,
+    commission_type: "fixed", // fixed, percentage
+    commission_value: 0,
+    commission_amount: 0,
+    override_percentage: 0, // Parent override %
+    min_commission: 0,
+    max_commission: 0,
+    commission_release_rule: "standard",
+
+    // Redirect & App Settings
+    application_url: "",
+    partner_url: "",
+    redirect_type: "new_tab", // same_tab, new_tab
+    tracking_enabled: true,
+    apply_button_text: "Apply Now",
+    priority: 0,
+    featured: false,
+
+    // SEO
+    seo_title: "",
+    seo_description: "",
+    seo_keywords: ""
   });
 
-  const fetchData = async () => {
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewProduct, setViewProduct] = useState(null);
+
+  const fetchProducts = async () => {
     setLoading(true);
-    setErrorMsg("");
     try {
-      const [prodRes, bankRes] = await Promise.all([
-        api.get("/products", {
-          params: {
-            is_active: "all",
-            limit: 100,
-            search: search.trim() || undefined,
-            category: categoryFilter || undefined,
-          },
-        }),
-        api.get("/banks")
-      ]);
-      if (prodRes.data?.success) setProducts(prodRes.data.data);
-      if (bankRes.data?.success) setBanks(bankRes.data.data);
+      const res = await api.get("/products", {
+        params: {
+          page,
+          limit: 10,
+          search: search.trim() || undefined,
+          category: categoryFilter || undefined,
+          bank_id: bankFilter || undefined,
+          commission_enabled: commissionFilter || undefined,
+          featured: featuredFilter || undefined,
+          status: statusFilter || undefined,
+          is_active: "all"
+        }
+      });
+      if (res.data?.success) {
+        setProducts(res.data.data);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+      }
     } catch (e) {
-      console.error("[ManageProducts] Fetch Error:", e);
-      setErrorMsg(e.response?.data?.message || "Failed to load products or banks catalog");
+      console.error(e);
+      setErrorMsg("Failed to load products registry.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [categoryFilter]);
-
-  const toggleProductActivation = async (product) => {
-    setUpdatingId(product.id);
-    const newStatus = !product.is_active;
+  const fetchBanks = async () => {
     try {
-      const res = await api.put(`/products/${product.id}`, { is_active: newStatus });
-      if (res.data?.success) {
-        setProducts(products.map((p) => (p.id === product.id ? { ...p, is_active: newStatus } : p)));
-      }
+      const res = await api.get("/banks");
+      if (res.data?.success) setBanks(res.data.data);
     } catch (e) {
-      alert(e.response?.data?.message || "Failed to update product status.");
-    } finally {
-      setUpdatingId(null);
+      console.error(e);
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product? This will also remove any associated leads and commission structures.")) {
-      return;
-    }
-    try {
-      const res = await api.delete(`/products/${id}`);
-      if (res.data?.success) {
-        alert("Product deleted successfully.");
-        fetchData();
-      }
-    } catch (e) {
-      alert(e.response?.data?.message || "Failed to delete product.");
-    }
+  useEffect(() => {
+    fetchProducts();
+  }, [page, categoryFilter, bankFilter, commissionFilter, featuredFilter, statusFilter]);
+
+  useEffect(() => {
+    fetchBanks();
+  }, []);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setCategoryFilter("");
+    setBankFilter("");
+    setCommissionFilter("");
+    setFeaturedFilter("");
+    setStatusFilter("");
+    setPage(1);
   };
 
   const openAddModal = () => {
     setEditItem(null);
-    setImageFile(null);
+    setModalTab("core");
     setForm({
       name: "",
+      short_description: "",
+      description: "",
+      logo: "",
+      banner: "",
+      image: "",
       category: "credit_card",
       bank_id: banks[0]?.id || "",
-      description: "",
-      commission_type: "fixed",
-      commission_value: 0,
+      is_active: true,
+      status: "Active",
+      public_visible: true,
+      partner_visible: true,
       min_age: 18,
       max_age: 60,
       min_income: 0,
-      features: "[\"Benefit 1\", \"Benefit 2\"]",
-      is_active: true,
+      features: "[]",
+      benefits: "",
+      eligibility_criteria: "",
+      documents_required: "",
+      fees_charges: "",
       annual_fee: "",
-      time_period: "",
-      image_url: ""
+      interest_rate: "",
+      processing_fee: "",
+      commission_enabled: true,
+      commission_type: "fixed",
+      commission_value: 0,
+      commission_amount: 0,
+      override_percentage: 0,
+      min_commission: 0,
+      max_commission: 0,
+      commission_release_rule: "standard",
+      application_url: "",
+      partner_url: "",
+      redirect_type: "new_tab",
+      tracking_enabled: true,
+      apply_button_text: "Apply Now",
+      priority: 0,
+      featured: false,
+      seo_title: "",
+      seo_description: "",
+      seo_keywords: ""
     });
     setModalOpen(true);
   };
 
   const openEditModal = (item) => {
     setEditItem(item);
-    setImageFile(null);
+    setModalTab("core");
     setForm({
-      name: item.name,
-      category: item.category,
-      bank_id: item.bank_id,
+      name: item.name || "",
+      short_description: item.short_description || "",
       description: item.description || "",
+      logo: item.logo || "",
+      banner: item.banner || "",
+      image: item.image || item.image_url || "",
+      category: item.category || "credit_card",
+      bank_id: item.bank_id || "",
+      is_active: item.is_active ?? true,
+      status: item.status || "Active",
+      public_visible: item.public_visible ?? true,
+      partner_visible: item.partner_visible ?? true,
+      min_age: item.min_age ?? 18,
+      max_age: item.max_age ?? 60,
+      min_income: item.min_income ?? 0,
+      features: JSON.stringify(item.features || []),
+      benefits: item.benefits || "",
+      eligibility_criteria: item.eligibility_criteria || "",
+      documents_required: item.documents_required || "",
+      fees_charges: item.fees_charges || "",
+      annual_fee: item.annual_fee || "",
+      interest_rate: item.interest_rate || "",
+      processing_fee: item.processing_fee || "",
+      commission_enabled: item.commission_enabled ?? true,
       commission_type: item.commission_type || "fixed",
       commission_value: item.commission_value || 0,
-      min_age: item.eligibility?.min_age || item.min_age || 18,
-      max_age: item.eligibility?.max_age || item.max_age || 60,
-      min_income: item.eligibility?.min_income || item.min_income || 0,
+      commission_amount: item.commission_amount || 0,
+      override_percentage: item.override_percentage || 0,
+      min_commission: item.min_commission || 0,
+      max_commission: item.max_commission || 0,
+      commission_release_rule: item.commission_release_rule || "standard",
+      application_url: item.application_url || item.public_url || "",
+      partner_url: item.partner_url || "",
+      redirect_type: item.redirect_type || "new_tab",
+      tracking_enabled: item.tracking_enabled ?? true,
+      apply_button_text: item.apply_button_text || "Apply Now",
+      priority: item.priority || 0,
+      featured: item.featured ?? false,
+      seo_title: item.seo_title || "",
+      seo_description: item.seo_description || "",
+      seo_keywords: item.seo_keywords || ""
+    });
+    setModalOpen(true);
+  };
+
+  const handleDuplicate = (item) => {
+    setEditItem(null); // Save as new
+    setModalTab("core");
+    setForm({
+      ...item,
+      name: `${item.name} (Copy)`,
       features: JSON.stringify(item.features || []),
-      is_active: item.is_active,
-      annual_fee: item.annual_fee || "",
-      time_period: item.time_period || "",
-      image_url: item.image_url || ""
+      application_url: item.application_url || item.public_url || "",
+      logo: item.logo || "",
+      banner: item.banner || "",
+      image: item.image || item.image_url || ""
     });
     setModalOpen(true);
   };
@@ -160,453 +294,752 @@ export default function ManageProducts() {
     setSubmitting(true);
     try {
       let parsedFeatures = [];
-      try { parsedFeatures = JSON.parse(form.features); } catch (err) { parsedFeatures = []; }
-      
-      let res;
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("name", form.name.trim());
-        formData.append("category", form.category);
-        formData.append("bank_id", form.bank_id);
-        formData.append("description", form.description.trim());
-        formData.append("commission_type", form.commission_type);
-        formData.append("commission_value", form.commission_value.toString());
-        formData.append("min_age", form.min_age.toString());
-        formData.append("max_age", form.max_age.toString());
-        formData.append("min_income", form.min_income.toString());
-        formData.append("features", JSON.stringify(parsedFeatures));
-        formData.append("eligibility", JSON.stringify({ min_age: Number(form.min_age), max_age: Number(form.max_age), min_income: Number(form.min_income) }));
-        formData.append("is_active", form.is_active.toString());
-        formData.append("annual_fee", form.annual_fee.trim());
-        formData.append("time_period", form.time_period.trim());
-        formData.append("image", imageFile);
+      try {
+        parsedFeatures = JSON.parse(form.features);
+      } catch (err) {
+        parsedFeatures = [];
+      }
 
-        if (editItem) {
-          res = await api.put(`/products/${editItem.id}`, formData, {
-            headers: { "Content-Type": "multipart/form-data" }
-          });
-        } else {
-          res = await api.post("/products", formData, {
-            headers: { "Content-Type": "multipart/form-data" }
-          });
-        }
-      } else {
-        const payload = {
-          name: form.name.trim(),
-          category: form.category,
-          bank_id: form.bank_id,
-          description: form.description.trim(),
-          commission_type: form.commission_type,
-          commission_value: Number(form.commission_value),
+      const payload = {
+        ...form,
+        features: parsedFeatures,
+        eligibility: {
           min_age: Number(form.min_age),
           max_age: Number(form.max_age),
-          min_income: Number(form.min_income),
-          features: parsedFeatures,
-          eligibility: { min_age: Number(form.min_age), max_age: Number(form.max_age), min_income: Number(form.min_income) },
-          is_active: form.is_active,
-          annual_fee: form.annual_fee.trim(),
-          time_period: form.time_period.trim(),
-          image_url: form.image_url.trim() || null
-        };
-        if (editItem) {
-          res = await api.put(`/products/${editItem.id}`, payload);
-        } else {
-          res = await api.post("/products", payload);
+          min_income: Number(form.min_income)
         }
+      };
+
+      let res;
+      if (editItem) {
+        res = await api.put(`/superadmin/products/${editItem.id}`, payload);
+      } else {
+        res = await api.post("/superadmin/products", payload);
       }
 
       if (res.data?.success) {
         alert(editItem ? "Product updated successfully!" : "Product created successfully!");
         setModalOpen(false);
-        fetchData();
+        fetchProducts();
       }
-    } catch (e) {
-      alert(e.response?.data?.message || "Failed to save product configuration.");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to save product.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const openAppSettingsModal = async (product) => {
-    setSelectedProductForSettings(product);
+  const handleToggleStatus = async (product) => {
+    const newActive = !product.is_active;
     try {
-      const res = await api.get(`/products/${product.id}/application-settings`);
-      if (res.data?.success && res.data.data) {
-        setAppSettingsForm({
-          application_type: res.data.data.application_type || 'internal_form',
-          application_url: res.data.data.application_url || '',
-          provider_name: res.data.data.provider_name || '',
-          open_type: res.data.data.open_type || 'same_tab',
-          partner_enabled: res.data.data.partner_enabled ?? true,
-          customer_enabled: res.data.data.customer_enabled ?? true,
-          track_clicks: res.data.data.track_clicks ?? true,
-          status: res.data.data.status || 'active'
-        });
-      }
+      await api.put(`/superadmin/products/${product.id}`, { is_active: newActive });
+      setProducts(products.map(p => p.id === product.id ? { ...p, is_active: newActive } : p));
     } catch (err) {
-      setAppSettingsForm({
-        application_type: 'internal_form',
-        application_url: '',
-        provider_name: '',
-        open_type: 'same_tab',
-        partner_enabled: true,
-        customer_enabled: true,
-        track_clicks: true,
-        status: 'active'
-      });
+      alert("Failed to toggle status");
     }
-    setAppSettingsModalOpen(true);
   };
 
-  const handleSaveAppSettings = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const handleToggleFeatured = async (product) => {
+    const newFeatured = !product.featured;
     try {
-      const payload = { ...appSettingsForm };
-      if (payload.application_type === 'internal_form') {
-        payload.application_url = '';
-      }
-      await api.put(`/products/${selectedProductForSettings.id}/application-settings`, payload);
-      alert('Application settings saved successfully');
-      setAppSettingsModalOpen(false);
+      await api.put(`/superadmin/products/featured`, { id: product.id, featured: newFeatured });
+      setProducts(products.map(p => p.id === product.id ? { ...p, featured: newFeatured } : p));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save application settings');
-    } finally {
-      setSubmitting(false);
+      alert("Failed to update featured settings");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this product permanently?")) return;
+    try {
+      const res = await api.delete(`/superadmin/products/${id}`);
+      if (res.data?.success) {
+        alert("Product deleted.");
+        fetchProducts();
+      }
+    } catch (err) {
+      alert("Failed to delete product.");
     }
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "60px" }}>
+      
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Product & Commission Master</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage Products, Eligibility, and Payout Structures</p>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Product & Partner Catalog Master</h2>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage financial products, payout margins, redirects, and SEO parameters</p>
         </div>
-        <button onClick={openAddModal} style={{ ...S.btn("primary"), display: "flex", alignItems: "center", gap: "8px" }}>
-          <Icons.check size={16} /> Add Product
+        <button onClick={openAddModal} style={{ ...S.btn("primary"), display: "flex", alignItems: "center", gap: "6px" }}>
+          <MdAdd size={20} /> Create Product
         </button>
       </div>
 
-      <div style={{ ...S.card, padding: "16px", marginBottom: "24px" }}>
-        <form onSubmit={(e) => { e.preventDefault(); fetchData(); }} style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Search Products</label>
-            <input style={S.input} placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div style={{ width: "220px" }}>
-            <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Category</label>
-            <select style={S.input} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="">All Categories</option>
-              <option value="credit_card">Credit Cards</option>
-              <option value="personal_loan">Personal Loans</option>
-              <option value="health_insurance">Health Insurance</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button type="submit" style={S.btn("primary")}>Search</button>
-            <button type="button" onClick={() => { setSearch(""); setCategoryFilter(""); setTimeout(fetchData, 0); }} style={S.btn("outline")}>Reset</button>
-          </div>
-        </form>
+      {/* Tabs */}
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, gap: "24px" }}>
+        {[
+          { id: "all-products", label: "All Products Master", icon: <MdSettings size={18} /> },
+          { id: "featured", label: "Featured & Display Order", icon: <MdStar size={18} /> },
+          { id: "categories", label: "Product Categories", icon: <MdCategory size={18} /> },
+          { id: "banks", label: "Active Banks & Issuers", icon: <MdBusiness size={18} /> }
+        ].map(tab => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); handleResetFilters(); }}
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: "12px 4px", fontSize: "14.5px", fontWeight: active ? 800 : 600,
+                color: active ? C.primary : C.textLight,
+                borderBottom: active ? `2px solid ${C.primary}` : "2px solid transparent",
+                transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px"
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {errorMsg && <div style={{ padding: "16px", background: `${C.red}10`, color: C.red, marginBottom: "16px" }}>{errorMsg}</div>}
+      {/* TAB 1: ALL PRODUCTS MASTER */}
+      {activeTab === "all-products" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          
+          {/* Search & Filters */}
+          <div style={{ ...S.card, padding: "16px", display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <label style={S.label}>Search products or banks...</label>
+              <div style={{ position: "relative" }}>
+                <input 
+                  style={{ ...S.input, paddingLeft: "32px" }} 
+                  placeholder="Type product or issuer name..." 
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                <MdSearch style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: C.textLight }} />
+              </div>
+            </div>
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "48px" }}>Loading products...</div>
-      ) : products.length === 0 ? (
-        <div style={{ ...S.card, textAlign: "center", padding: "48px" }}>No products found.</div>
-      ) : (
-        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: "12px", textTransform: "uppercase" }}>
-                  <th style={{ padding: "14px 16px" }}>Product Name</th>
-                  <th style={{ padding: "14px 16px" }}>Bank & Category</th>
-                  <th style={{ padding: "14px 16px" }}>Base Commission</th>
-                  <th style={{ padding: "14px 16px", textAlign: "center" }}>Status & Actions</th>
-                </tr>
-              </thead>
-              <tbody style={{ fontSize: "13.5px", color: C.text }}>
-                {products.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 800 }}>{p.name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{p.description?.substring(0,50)}...</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 600 }}>{p.bank_name} ({p.bank_code})</div>
-                      <div style={{ fontSize: "11px", textTransform: "capitalize", color: C.textLight }}>{p.category.replace(/_/g, " ")}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px", fontWeight: 700, color: C.green }}>
-                      {p.commission_type === "fixed" ? `₹${p.commission_value}` : `${p.commission_value}%`}
-                    </td>
-                    <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button onClick={() => toggleProductActivation(p)} disabled={updatingId === p.id} style={{ background: p.is_active ? `${C.green}15` : `${C.red}15`, color: p.is_active ? C.green : C.red, border: "none", padding: "6px 10px", borderRadius: "8px", fontWeight: 700, fontSize: "12px", cursor: "pointer" }}>
-                          {updatingId === p.id ? "..." : p.is_active ? "Active" : "Inactive"}
-                        </button>
-                         <button onClick={() => openEditModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
-                          Edit
-                        </button>
-                        <button onClick={() => openAppSettingsModal(p)} style={{ border: `1px solid ${C.border}`, background: 'none', padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
-                          Settings ⚙️
-                        </button>
-                        <button onClick={() => handleDeleteProduct(p.id)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red, padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ width: "150px" }}>
+              <label style={S.label}>Category</label>
+              <select style={S.input} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                <option value="">All Categories</option>
+                {PRODUCT_CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+              </select>
+            </div>
+
+            <div style={{ width: "150px" }}>
+              <label style={S.label}>Bank Partner</label>
+              <select style={S.input} value={bankFilter} onChange={e => setBankFilter(e.target.value)}>
+                <option value="">All Banks</option>
+                {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+
+            <div style={{ width: "120px" }}>
+              <label style={S.label}>Featured</label>
+              <select style={S.input} value={featuredFilter} onChange={e => setFeaturedFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="true">Featured Only</option>
+                <option value="false">Non-Featured</option>
+              </select>
+            </div>
+
+            <div style={{ width: "120px" }}>
+              <label style={S.label}>Commission</label>
+              <select style={S.input} value={commissionFilter} onChange={e => setCommissionFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="true">Enabled</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={fetchProducts} style={S.btn("primary")}>Filter</button>
+              <button onClick={handleResetFilters} style={S.btn("outline")}>Reset</button>
+            </div>
           </div>
+
+          {/* Grid list */}
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "48px" }}>Loading products catalog...</div>
+          ) : products.length === 0 ? (
+            <div style={{ ...S.card, padding: "48px", textAlign: "center", color: C.textLight }}>No products match filter settings.</div>
+          ) : (
+            <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: "11.5px", textTransform: "uppercase" }}>
+                      <th style={{ padding: "14px 16px" }}>Product Name / Bank</th>
+                      <th style={{ padding: "14px 16px" }}>Category</th>
+                      <th style={{ padding: "14px 16px" }}>Status</th>
+                      <th style={{ padding: "14px 16px" }}>Commission</th>
+                      <th style={{ padding: "14px 16px" }}>Visibility</th>
+                      <th style={{ padding: "14px 16px" }}>Featured</th>
+                      <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody style={{ fontSize: "13px", color: C.text }}>
+                    {products.map(p => (
+                      <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            {p.logo && <img src={p.logo} alt="logo" style={{ width: "24px", height: "24px", borderRadius: "4px", objectFit: "contain" }} />}
+                            <div>
+                              <div style={{ fontWeight: 800 }}>{p.name}</div>
+                              <div style={{ fontSize: "10px", color: C.textLight }}>{p.bank_name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px", textTransform: "capitalize" }}>
+                          {p.category?.replace(/_/g, " ")}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            fontSize: "10px", fontWeight: 800, padding: "2px 8px", borderRadius: "4px",
+                            background: p.status === "Active" ? `${C.green}12` : `${C.border}`,
+                            color: p.status === "Active" ? C.green : C.textLight
+                          }}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 16px", fontWeight: 700 }}>
+                          {p.commission_enabled ? (
+                            <span style={{ color: C.green }}>
+                              {p.commission_type === "fixed" ? `₹${p.commission_value}` : `${p.commission_value}%`}
+                            </span>
+                          ) : (
+                            <span style={{ color: C.textLight }}>Disabled</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "10.5px" }}>
+                            <span>Public: {p.public_visible ? "👁️" : "❌"}</span>
+                            <span>Partner: {p.partner_visible ? "👁️" : "❌"}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <button 
+                            onClick={() => handleToggleFeatured(p)}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: p.featured ? C.amber : C.textLight }}
+                          >
+                            <MdStar size={20} />
+                          </button>
+                        </td>
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                            <button onClick={() => { setViewProduct(p); setViewModalOpen(true); }} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="View Details"><MdVisibility size={16} /></button>
+                            <button onClick={() => openEditModal(p)} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="Edit"><MdModeEdit size={16} /></button>
+                            <button onClick={() => handleDuplicate(p)} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="Duplicate"><MdContentCopy size={16} /></button>
+                            <button onClick={() => handleDelete(p.id)} style={{ padding: "6px", border: `1px solid ${C.red}40`, background: `${C.red}10`, cursor: "pointer", borderRadius: "6px", color: C.red }} title="Delete"><MdDelete size={16} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={S.btn("outline")}>Previous</button>
+              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={S.btn("outline")}>Next</button>
+            </div>
+          )}
+
         </div>
       )}
 
-      {/* ADD/EDIT MODAL */}
-      {modalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
-          <div style={{ ...S.card, width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto", padding: "24px" }}>
-            <h3 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "16px" }}>{editItem ? "Edit Product" : "Create Product Master"}</h3>
-            
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "flex", gap: "12px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Product Name *</label>
-                  <input required style={S.input} value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Bank Partner *</label>
-                  <select required style={S.input} value={form.bank_id} onChange={e => setForm({...form, bank_id: e.target.value})}>
-                    <option value="">Select Bank...</option>
-                    {banks.map(b => <option key={b.id} value={b.id}>{b.name} ({b.short_code})</option>)}
-                  </select>
-                </div>
-              </div>
+      {/* TAB 2: FEATURED PRODUCTS & PRIORITY DISPLAY ORDER */}
+      {activeTab === "featured" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ ...S.card, padding: "20px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>Pin & Feature Display Priority</h3>
+            <p style={{ fontSize: "12.5px", color: C.textLight, margin: "0 0 20px" }}>Manage pinned priority indicators to control showcase grids order on homepage or partner hub.</p>
 
-              <div>
-                <label style={S.label}>Category *</label>
-                <select required style={S.input} value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="personal_loan">Personal Loan</option>
-                  <option value="home_loan">Home Loan</option>
-                  <option value="business_loan">Business Loan</option>
-                  <option value="health_insurance">Health Insurance</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", background: `${C.green}10`, padding: "12px", borderRadius: "8px", border: `1px solid ${C.green}30` }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{...S.label, color: C.green}}>Base Commission Type</label>
-                  <select style={S.input} value={form.commission_type} onChange={e => setForm({...form, commission_type: e.target.value})}>
-                    <option value="fixed">Fixed Flat Payout (₹)</option>
-                    <option value="percentage">Percentage (%)</option>
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{...S.label, color: C.green}}>Commission Value *</label>
-                  <input required type="number" step="0.01" style={S.input} value={form.commission_value} onChange={e => setForm({...form, commission_value: e.target.value})} />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Min Age</label>
-                  <input type="number" style={S.input} value={form.min_age} onChange={e => setForm({...form, min_age: e.target.value})} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Min Income (₹)</label>
-                  <input type="number" style={S.input} value={form.min_income} onChange={e => setForm({...form, min_income: e.target.value})} />
-                </div>
-              </div>
-
-              <div>
-                <label style={S.label}>Features (JSON Array) *</label>
-                <textarea required rows="2" style={{...S.input, fontFamily: "monospace"}} value={form.features} onChange={e => setForm({...form, features: e.target.value})} />
-              </div>
-
-              <div style={{ display: "flex", gap: "12px" }}>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Annual Fee</label>
-                  <input placeholder="e.g. Zero or 500" style={S.input} value={form.annual_fee} onChange={e => setForm({...form, annual_fee: e.target.value})} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={S.label}>Time Period (Special Offer)</label>
-                  <input placeholder="e.g. Offer till 30 June" style={S.input} value={form.time_period} onChange={e => setForm({...form, time_period: e.target.value})} />
-                </div>
-              </div>
-
-              <div>
-                <label style={S.label}>Description</label>
-                <textarea rows="2" style={S.input} value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-              </div>
-
-              <div>
-                <label style={S.label}>Product Image</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ ...S.input, padding: "8px 12px" }}
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setImageFile(file);
-                        setForm({ ...form, image_url: "" }); // Reset URL when file is chosen
-                      }
-                    }}
-                  />
-                  {imageFile && (
-                    <div style={{ fontSize: "12px", color: C.green, fontWeight: 700 }}>
-                      Selected File: {imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)
+            {loading ? (
+              <div>Loading...</div>
+            ) : products.filter(p => p.featured).length === 0 ? (
+              <div style={{ color: C.textLight, textAlign: "center", padding: "20px" }}>No products marked as featured. Go to "All Products" to feature items.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {products.filter(p => p.featured).map((p, idx) => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "12px", background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "12px 16px", borderRadius: "10px" }}>
+                    <MdDragIndicator size={20} style={{ color: C.textLight }} />
+                    <div style={{ width: "32px", height: "32px", background: "#fff", padding: "4px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <img src={p.logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     </div>
-                  )}
-                  <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textAlign: "center", margin: "4px 0" }}>— OR —</div>
-                  <input
-                    style={S.input}
-                    placeholder="Enter manual product image URL"
-                    value={form.image_url}
-                    onChange={(e) => {
-                      setForm({ ...form, image_url: e.target.value });
-                      setImageFile(null); // Reset file if manual URL is entered
-                    }}
-                  />
-                </div>
-              </div>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>{p.name}</span>
+                      <span style={{ fontSize: "11px", color: C.textLight, marginLeft: "10px" }}>Category: {p.category?.replace(/_/g, " ")}</span>
+                    </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
-                <button type="button" onClick={() => setModalOpen(false)} style={S.btn("outline")}>Cancel</button>
-                <button type="submit" disabled={submitting} style={S.btn("primary")}>{submitting ? "Saving..." : "Save Product"}</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                      <div>
+                        <label style={{ fontSize: "10px", color: C.textLight, display: "block" }}>Display Order Priority</label>
+                        <input 
+                          type="number" 
+                          style={{ ...S.input, width: "80px", padding: "4px 8px", height: "30px", marginTop: "2px" }}
+                          value={p.priority}
+                          onChange={async (e) => {
+                            const val = Number(e.target.value);
+                            try {
+                              await api.put(`/superadmin/products/featured`, { id: p.id, priority: val });
+                              setProducts(products.map(x => x.id === p.id ? { ...x, priority: val } : x));
+                            } catch (e) { console.error(e); }
+                          }}
+                        />
+                      </div>
+
+                      <button 
+                        onClick={() => handleToggleFeatured(p)}
+                        style={{ ...S.btn("outline"), padding: "6px 12px", fontSize: "12px", color: C.red, border: `1px solid ${C.red}30` }}
+                      >
+                        Unfeature
+                      </button>
+                    </div>
+
+                  </div>
+                ))}
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
 
-      {/* Product Application Settings Modal */}
-      {appSettingsModalOpen && selectedProductForSettings && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", backdropFilter: "blur(4px)" }}>
-          <div style={{ background: C.card, width: "100%", maxWidth: "500px", borderRadius: "24px", padding: "24px", position: "relative", boxShadow: "0 20px 40px rgba(0,0,0,0.3)", color: C.text, maxHeight: "90vh", overflowY: "auto" }}>
-            <span onClick={() => setAppSettingsModalOpen(false)} style={{ position: "absolute", right: "20px", top: "20px", cursor: "pointer", color: C.textLight, background: C.bgSecondary, width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
-              ✕
-            </span>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, marginBottom: "4px" }}>Application Settings</h2>
-            <p style={{ fontSize: "12px", color: C.textLight, marginBottom: "16px" }}>{selectedProductForSettings.name}</p>
-
-            <form onSubmit={handleSaveAppSettings} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={S.label}>Application Type</label>
-                <select
-                  value={appSettingsForm.application_type}
-                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, application_type: e.target.value })}
-                  style={S.input}
-                >
-                  <option value="internal_form">Internal Lead Form</option>
-                  <option value="external_url">External Web URL</option>
-                  <option value="affiliate_url">Affiliate Network Link</option>
-                  <option value="api_integration">Direct API Integration</option>
-                </select>
+      {/* TAB 3: CATEGORIES LIST */}
+      {activeTab === "categories" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
+          {PRODUCT_CATEGORIES.map(cat => {
+            const count = products.filter(p => p.category === cat.id).length;
+            return (
+              <div key={cat.id} style={{ ...S.card, padding: "20px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <span style={{ fontSize: "24px" }}>📁</span>
+                <div>
+                  <h4 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: 0 }}>{cat.label}</h4>
+                  <p style={{ fontSize: "12.5px", color: C.textLight, margin: "4px 0 0" }}>Total Products: {count}</p>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {appSettingsForm.application_type !== 'internal_form' && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={S.label}>Application URL</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://example.com/apply"
-                    value={appSettingsForm.application_url}
-                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, application_url: e.target.value })}
-                    style={S.input}
-                  />
+      {/* TAB 4: BANKS LIST */}
+      {activeTab === "banks" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+          {banks.map(bank => {
+            const count = products.filter(p => p.bank_id === bank.id).length;
+            return (
+              <div key={bank.id} style={{ ...S.card, padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  {bank.logo_url && (
+                    <img src={bank.logo_url} alt="bank" style={{ width: "36px", height: "36px", objectFit: "contain", borderRadius: "6px" }} />
+                  )}
+                  <div>
+                    <h4 style={{ fontSize: "14.5px", fontWeight: 800, color: C.text, margin: 0 }}>{bank.name}</h4>
+                    <span style={{ fontSize: "11px", color: C.textLight }}>Short code: {bank.short_code} | Products: {count}</span>
+                  </div>
+                </div>
+
+                <span style={{
+                  fontSize: "9px", fontWeight: 900, background: bank.status === "Active" ? `${C.green}15` : `${C.border}`,
+                  color: bank.status === "Active" ? C.green : C.textLight, padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase"
+                }}>
+                  {bank.status || "Active"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ADD/EDIT DETAILS TABBED DRAWER MODAL */}
+      {modalOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ ...S.card, width: "100%", maxWidth: "700px", padding: "24px", maxHeight: "90vh", overflowY: "auto", position: "relative" }}>
+            
+            <button 
+              onClick={() => setModalOpen(false)}
+              style={{ position: "absolute", top: "16px", right: "16px", background: C.bgSecondary, border: "none", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: C.textLight }}
+            >
+              <MdClose size={20} />
+            </button>
+
+            <h3 style={{ fontSize: "18px", fontWeight: 850, color: C.text, margin: "0 0 16px" }}>
+              {editItem ? `Edit product parameters: ${form.name}` : "Create Financial Product Master"}
+            </h3>
+
+            {/* Modal Internal Tabs */}
+            <div style={{ display: "flex", borderBottom: `1px solid ${C.border}70`, gap: "16px", marginBottom: "20px", overflowX: "auto" }}>
+              {[
+                { id: "core", label: "Core Details" },
+                { id: "eligibility", label: "Eligibility & Details" },
+                { id: "commission", label: "Commission split" },
+                { id: "redirect", label: "Redirect / Settings" },
+                { id: "seo", label: "SEO Config" }
+              ].map(tab => (
+                <button
+                  type="button"
+                  key={tab.id}
+                  onClick={() => setModalTab(tab.id)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: "8px 2px", fontSize: "13px", fontWeight: modalTab === tab.id ? 800 : 600,
+                    color: modalTab === tab.id ? C.primary : C.textLight,
+                    borderBottom: modalTab === tab.id ? `2px solid ${C.primary}` : "2px solid transparent"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              
+              {/* CORE DETAILS TAB */}
+              {modalTab === "core" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Product Name *</label>
+                      <input required style={S.input} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Issuer Bank Partner *</label>
+                      <select required style={S.input} value={form.bank_id} onChange={e => setForm({ ...form, bank_id: e.target.value })}>
+                        <option value="">Select Bank...</option>
+                        {banks.map(b => <option key={b.id} value={b.id}>{b.name} ({b.short_code})</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Category Catalog *</label>
+                      <select required style={S.input} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                        {PRODUCT_CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={S.label}>Status Visibility</label>
+                      <select style={S.input} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                        <option value="Active">Active</option>
+                        <option value="Coming Soon">Coming Soon</option>
+                        <option value="Hidden">Hidden</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Short Description *</label>
+                    <input required style={S.input} placeholder="Provide one-liner overview..." value={form.short_description} onChange={e => setForm({ ...form, short_description: e.target.value })} />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Full Description</label>
+                    <textarea rows={3} style={S.input} placeholder="Write detail product instructions..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                    <div>
+                      <label style={S.label}>Logo URL</label>
+                      <input style={S.input} placeholder="https://..." value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Banner Image URL</label>
+                      <input style={S.input} placeholder="https://..." value={form.banner} onChange={e => setForm({ ...form, banner: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Product Image URL</label>
+                      <input style={S.input} placeholder="https://..." value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", userSelect: "none" }}>
+                      <input type="checkbox" checked={form.public_visible} onChange={e => setForm({ ...form, public_visible: e.target.checked })} />
+                      Visible on Public Website
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", userSelect: "none" }}>
+                      <input type="checkbox" checked={form.partner_visible} onChange={e => setForm({ ...form, partner_visible: e.target.checked })} />
+                      Visible on Partner Portal
+                    </label>
+                  </div>
                 </div>
               )}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={S.label}>Provider Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. HDFC Affiliate Network"
-                  value={appSettingsForm.provider_name}
-                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, provider_name: e.target.value })}
-                  style={S.input}
-                />
-              </div>
+              {/* ELIGIBILITY & TERMS DETAILS TAB */}
+              {modalTab === "eligibility" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Min Age Limit</label>
+                      <input type="number" style={S.input} value={form.min_age} onChange={e => setForm({ ...form, min_age: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Max Age Limit</label>
+                      <input type="number" style={S.input} value={form.max_age} onChange={e => setForm({ ...form, max_age: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Min Income (Monthly ₹)</label>
+                      <input type="number" style={S.input} value={form.min_income} onChange={e => setForm({ ...form, min_income: e.target.value })} />
+                    </div>
+                  </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                <label style={S.label}>Open Link In</label>
-                <select
-                  value={appSettingsForm.open_type}
-                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, open_type: e.target.value })}
-                  style={S.input}
-                >
-                  <option value="same_tab">Same Tab</option>
-                  <option value="new_tab">New Tab</option>
-                </select>
-              </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Annual Fee / Cost Description</label>
+                      <input placeholder="e.g. Free or ₹499" style={S.input} value={form.annual_fee} onChange={e => setForm({ ...form, annual_fee: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Interest Rate (%)</label>
+                      <input placeholder="e.g. 11.5% or 36%" style={S.input} value={form.interest_rate} onChange={e => setForm({ ...form, interest_rate: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Processing Fee Description</label>
+                      <input placeholder="e.g. 1% of loan value" style={S.input} value={form.processing_fee} onChange={e => setForm({ ...form, processing_fee: e.target.value })} />
+                    </div>
+                  </div>
 
-              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "8px" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={appSettingsForm.partner_enabled}
-                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, partner_enabled: e.target.checked })}
-                  />
-                  Partner Enabled
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={appSettingsForm.customer_enabled}
-                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, customer_enabled: e.target.checked })}
-                  />
-                  Customer Enabled
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={appSettingsForm.track_clicks}
-                    onChange={(e) => setAppSettingsForm({ ...appSettingsForm, track_clicks: e.target.checked })}
-                  />
-                  Track Clicks
-                </label>
-              </div>
+                  <div>
+                    <label style={S.label}>Features List (JSON array)</label>
+                    <textarea rows={2} style={{ ...S.input, fontFamily: "monospace" }} value={form.features} onChange={e => setForm({ ...form, features: e.target.value })} />
+                  </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px" }}>
-                <label style={S.label}>Status</label>
-                <select
-                  value={appSettingsForm.status}
-                  onChange={(e) => setAppSettingsForm({ ...appSettingsForm, status: e.target.value })}
-                  style={S.input}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Eligibility Criteria description</label>
+                      <textarea rows={2} style={S.input} placeholder="Write eligibility criteria..." value={form.eligibility_criteria} onChange={e => setForm({ ...form, eligibility_criteria: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Documents Required</label>
+                      <textarea rows={2} style={S.input} placeholder="Aadhaar, PAN, ITR statements..." value={form.documents_required} onChange={e => setForm({ ...form, documents_required: e.target.value })} />
+                    </div>
+                  </div>
 
-              <div style={{ display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  onClick={() => setAppSettingsModalOpen(false)}
-                  style={{ ...S.btn("outline"), padding: "10px 16px" }}
-                >
-                  Cancel
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Benefits description</label>
+                      <textarea rows={2} style={S.input} placeholder="Describe product benefits..." value={form.benefits} onChange={e => setForm({ ...form, benefits: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Fees & Charges description</label>
+                      <textarea rows={2} style={S.input} placeholder="Other terms or charges details..." value={form.fees_charges} onChange={e => setForm({ ...form, fees_charges: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* COMMISSION SETTINGS TAB */}
+              {modalTab === "commission" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 800, cursor: "pointer", userSelect: "none" }}>
+                    <input type="checkbox" checked={form.commission_enabled} onChange={e => setForm({ ...form, commission_enabled: e.target.checked })} />
+                    Commission Enabled for this Product
+                  </label>
+
+                  {form.commission_enabled && (
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "16px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                          <label style={S.label}>Commission Type</label>
+                          <select style={S.input} value={form.commission_type} onChange={e => setForm({ ...form, commission_type: e.target.value })}>
+                            <option value="fixed">Flat Fixed Amount (₹)</option>
+                            <option value="percentage">Percentage Margin (%)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={S.label}>Commission Value *</label>
+                          <input type="number" step="0.01" style={S.input} value={form.commission_value} onChange={e => setForm({ ...form, commission_value: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                        <div>
+                          <label style={S.label}>Min Commission Cap</label>
+                          <input type="number" style={S.input} value={form.min_commission} onChange={e => setForm({ ...form, min_commission: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={S.label}>Max Commission Cap</label>
+                          <input type="number" style={S.input} value={form.max_commission} onChange={e => setForm({ ...form, max_commission: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={S.label}>Parent Network Override (%)</label>
+                          <input type="number" step="0.01" style={S.input} value={form.override_percentage} onChange={e => setForm({ ...form, override_percentage: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Payout Release Validation Rule</label>
+                        <select style={S.input} value={form.commission_release_rule} onChange={e => setForm({ ...form, commission_release_rule: e.target.value })}>
+                          <option value="standard">Standard (48 hours digest hold)</option>
+                          <option value="instant">Instant Verification Release</option>
+                          <option value="disbursement">Disbursement dependent</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* REDIRECT & APP SETTINGS TAB */}
+              {modalTab === "redirect" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Public Application Redirect Link *</label>
+                      <input type="url" required placeholder="https://..." style={S.input} value={form.application_url} onChange={e => setForm({ ...form, application_url: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Partner Custom Referral URL</label>
+                      <input type="url" placeholder="https://..." style={S.input} value={form.partner_url} onChange={e => setForm({ ...form, partner_url: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Apply Button Label</label>
+                      <input style={S.input} placeholder="e.g. Apply Now or Get Card" value={form.apply_button_text} onChange={e => setForm({ ...form, apply_button_text: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Redirect Target Frame</label>
+                      <select style={S.input} value={form.redirect_type} onChange={e => setForm({ ...form, redirect_type: e.target.value })}>
+                        <option value="new_tab">Open in New Tab</option>
+                        <option value="same_tab">Same Tab Redirect</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={S.label}>Display priority order</label>
+                      <input type="number" style={S.input} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} />
+                    </div>
+                    <div style={{ display: "flex", gap: "16px", alignItems: "center", height: "100%" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", userSelect: "none" }}>
+                        <input type="checkbox" checked={form.tracking_enabled} onChange={e => setForm({ ...form, tracking_enabled: e.target.checked })} />
+                        Clicks Tracking Enabled
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SEO CONFIG TAB */}
+              {modalTab === "seo" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div>
+                    <label style={S.label}>SEO Title Tag</label>
+                    <input style={S.input} placeholder="Write page header title tag..." value={form.seo_title} onChange={e => setForm({ ...form, seo_title: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>SEO Meta Description</label>
+                    <textarea rows={3} style={S.input} placeholder="Compelling meta description summary..." value={form.seo_description} onChange={e => setForm({ ...form, seo_description: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>SEO Search Keywords</label>
+                    <input style={S.input} placeholder="credit cards, apply online, lowest rate..." value={form.seo_keywords} onChange={e => setForm({ ...form, seo_keywords: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ borderTop: `1px solid ${C.border}70`, paddingTop: "16px", marginTop: "10px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button type="button" onClick={() => setModalOpen(false)} style={S.btn("outline")}>Cancel</button>
+                <button type="submit" disabled={submitting} style={S.btn("primary")}>
+                  {submitting ? "Saving..." : "Save Configuration"}
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{ ...S.btn("primary"), padding: "10px 20px" }}
-                >
-                  {submitting ? 'Saving...' : 'Save Settings'}
-                </button>
               </div>
+
             </form>
           </div>
         </div>
       )}
+
+      {/* VIEW PRODUCT SPECIFICATIONS MODAL */}
+      {viewModalOpen && viewProduct && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+          <div style={{ ...S.card, width: "100%", maxWidth: "580px", padding: "24px", maxHeight: "80vh", overflowY: "auto", position: "relative" }}>
+            <button 
+              onClick={() => setViewModalOpen(false)}
+              style={{ position: "absolute", top: "16px", right: "16px", background: C.bgSecondary, border: "none", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: C.textLight }}
+            >
+              <MdClose size={20} />
+            </button>
+
+            <div style={{ display: "flex", gap: "16px", alignItems: "center", borderBottom: `1px solid ${C.border}`, paddingBottom: "16px", marginBottom: "16px" }}>
+              {viewProduct.logo && <img src={viewProduct.logo} alt="bank" style={{ width: "48px", height: "48px", objectFit: "contain" }} />}
+              <div>
+                <h3 style={{ fontSize: "17px", fontWeight: 800, color: C.text, margin: 0 }}>{viewProduct.name}</h3>
+                <span style={{ fontSize: "12px", color: C.textLight }}>Issuer: {viewProduct.bank_name} | Category: {viewProduct.category?.replace(/_/g, " ")}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px", color: C.text }}>
+              <div>
+                <span style={{ fontWeight: 800, color: C.textLight, display: "block" }}>Overview</span>
+                <p style={{ margin: "4px 0 0 0", color: C.textMid }}>{viewProduct.short_description || viewProduct.description}</p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: C.bgSecondary, padding: "12px", borderRadius: "10px" }}>
+                <div>
+                  <strong>Status Visibility:</strong> {viewProduct.status}
+                </div>
+                <div>
+                  <strong>Annual Fee:</strong> {viewProduct.annual_fee || "N/A"}
+                </div>
+                <div>
+                  <strong>Commission Rate:</strong> {viewProduct.commission_enabled ? `${viewProduct.commission_type === "fixed" ? "₹" : ""}${viewProduct.commission_value}${viewProduct.commission_type === "percentage" ? "%" : ""}` : "Disabled"}
+                </div>
+                <div>
+                  <strong>Parent Split Override:</strong> {viewProduct.override_percentage}%
+                </div>
+              </div>
+
+              {viewProduct.eligibility_criteria && (
+                <div>
+                  <span style={{ fontWeight: 800, color: C.textLight, display: "block" }}>Eligibility Criteria</span>
+                  <p style={{ margin: "4px 0 0 0", color: C.textMid }}>{viewProduct.eligibility_criteria}</p>
+                </div>
+              )}
+
+              {viewProduct.documents_required && (
+                <div>
+                  <span style={{ fontWeight: 800, color: C.textLight, display: "block" }}>Documents Required</span>
+                  <p style={{ margin: "4px 0 0 0", color: C.textMid }}>{viewProduct.documents_required}</p>
+                </div>
+              )}
+
+              {viewProduct.benefits && (
+                <div>
+                  <span style={{ fontWeight: 800, color: C.textLight, display: "block" }}>Benefits & Rewards</span>
+                  <p style={{ margin: "4px 0 0 0", color: C.textMid }}>{viewProduct.benefits}</p>
+                </div>
+              )}
+
+              {viewProduct.fees_charges && (
+                <div>
+                  <span style={{ fontWeight: 800, color: C.textLight, display: "block" }}>Fees & Tariffs</span>
+                  <p style={{ margin: "4px 0 0 0", color: C.textMid }}>{viewProduct.fees_charges}</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px", borderTop: `1px solid ${C.border}60`, paddingTop: "14px" }}>
+              <button onClick={() => setViewModalOpen(false)} style={S.btn("primary")}>Close Specs</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

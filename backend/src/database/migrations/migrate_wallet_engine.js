@@ -30,7 +30,7 @@ const runWalletEngineMigrations = async () => {
       CREATE TABLE IF NOT EXISTS wallet_ledger (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         wallet_id UUID NOT NULL REFERENCES wallets(id),
-        partner_id UUID NOT NULL REFERENCES Partner_profiles(id),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id),
         application_id UUID REFERENCES applications(id),
         transaction_type ledger_transaction_type NOT NULL,
         credit DECIMAL(15,2) DEFAULT 0,
@@ -63,7 +63,7 @@ const runWalletEngineMigrations = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_withdrawals (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id UUID REFERENCES Partner_profiles(id),
+        partner_id UUID REFERENCES partner_profiles(id),
         amount DECIMAL(15,2) NOT NULL,
         bank_account VARCHAR(100),
         ifsc VARCHAR(20),

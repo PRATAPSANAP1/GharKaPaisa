@@ -3,6 +3,7 @@ const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet }
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, error, notFound, paginate } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
+const { encrypt, decrypt } = require('../../utils/helpers/crypto');
 
 // GET /wallet / GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
@@ -13,7 +14,6 @@ const getWallet = async (req, res, next) => {
     const wallet = await getWalletSummary(PartnerId);
     if (!wallet) return notFound(res, 'Wallet not found');
 
-    // Map hold_balance to pending_amount for backward compatibility
     const mappedWallet = {
       ...wallet,
       pending_amount: wallet.hold_balance
@@ -30,27 +30,39 @@ const getTransactions = async (req, res, next) => {
     const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     if (!PartnerId) return error(res, 'Partner ID is required');
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { type, status, from_date, to_date, export_csv } = req.query;
+    const { type, status, from_date, to_date, search } = req.query;
 
-    // Check if wallet exists
-    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE "Partner_id" = $1`, [PartnerId]);
+    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE partner_id = $1`, [PartnerId]);
     if (!wallet) return notFound(res, 'Wallet not found');
 
     let where = `WHERE wl.partner_id = $1`;
     const values = [PartnerId];
     let idx = 2;
 
-    if (type) { where += ` AND wl.transaction_type = ${idx++}`; values.push(type); }
-    if (status) { where += ` AND wl.status = ${idx++}`; values.push(status); }
-    if (from_date) { where += ` AND wl.created_at >= ${idx++}`; values.push(from_date); }
-    if (to_date) { where += ` AND wl.created_at <= ${idx++}`; values.push(to_date + ' 23:59:59'); }
+    if (type) { 
+      where += ` AND wl.transaction_type = $${idx++}`; 
+      values.push(type); 
+    }
+    if (status) { 
+      where += ` AND wl.status = $${idx++}`; 
+      values.push(status); 
+    }
+    if (from_date) { 
+      where += ` AND wl.created_at >= $${idx++}`; 
+      values.push(from_date); 
+    }
+    if (to_date) { 
+      where += ` AND wl.created_at <= $${idx++}`; 
+      values.push(to_date + ' 23:59:59'); 
+    }
+    if (search) {
+      where += ` AND (wl.description ILIKE $${idx} OR wl.reference_number ILIKE $${idx})`;
+      idx++;
+      values.push(`%${search}%`);
+    }
 
     const [count, data] = await Promise.all([
-      query(`
-        SELECT COUNT(*) 
-        FROM wallet_ledger wl 
-        ${where}
-      `, values),
+      query(`SELECT COUNT(*) FROM wallet_ledger wl ${where}`, values),
       query(`
         SELECT wl.*, a.app_number, c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
         FROM wallet_ledger wl
@@ -60,16 +72,190 @@ const getTransactions = async (req, res, next) => {
         LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
         ORDER BY wl.created_at DESC
-        LIMIT ${idx} OFFSET ${idx + 1}
+        LIMIT $${idx++} OFFSET $${idx++}
       `, [...values, limit, offset]),
     ]);
 
-    if (export_csv) {
-       // Just returning the data for now, frontend handles export or we can do it here. 
-       // Keeping simple to just return JSON.
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/dashboard (Partner Wallet Analytics Summary)
+const getWalletDashboard = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const wallet = await getWalletSummary(partnerId);
+    if (!wallet) return notFound(res, 'Wallet not found');
+
+    // Past 6 months chart data aggregation from completed credits
+    const { rows: history } = await query(`
+      SELECT 
+        TO_CHAR(created_at, 'Mon YYYY') as month_label,
+        TO_CHAR(created_at, 'YYYY-MM') as month_val,
+        SUM(credit) as total_credited
+      FROM wallet_ledger
+      WHERE partner_id = $1 AND status = 'completed' AND credit > 0
+        AND created_at >= NOW() - INTERVAL '6 months'
+      GROUP BY TO_CHAR(created_at, 'Mon YYYY'), TO_CHAR(created_at, 'YYYY-MM')
+      ORDER BY month_val ASC
+    `, [partnerId]);
+
+    // Top Product commission categories
+    const { rows: categories } = await query(`
+      SELECT 
+        p.category,
+        COALESCE(SUM(wl.credit), 0) as total_earned
+      FROM wallet_ledger wl
+      JOIN applications a ON a.id = wl.application_id
+      JOIN products p ON p.id = a.product_id
+      WHERE wl.partner_id = $1 AND wl.status = 'completed' AND wl.credit > 0
+      GROUP BY p.category
+      ORDER BY total_earned DESC
+    `, [partnerId]);
+
+    return success(res, {
+      wallet,
+      history,
+      categories
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/commission-summary (Partner Case Commission aggregation)
+const getCommissionSummary = async (req, res, next) => {
+  try {
+    const PartnerId = req.partner?.id;
+    if (!PartnerId) return error(res, 'Partner profile not found');
+
+    const { rows } = await query(`
+      SELECT
+        p.name as product_name, b.short_code as bank_code,
+        COUNT(a.id) as total_cases,
+        COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_cases,
+        COUNT(a.id) FILTER (WHERE a.status = 'rejected') as rejected_cases,
+        COALESCE(SUM(wl.credit) FILTER (WHERE wl.status = 'completed'), 0) as commission_earned
+      FROM wallet_ledger wl
+      JOIN applications a ON a.id = wl.application_id
+      JOIN products p ON p.id = a.product_id
+      JOIN banks b ON b.id = p.bank_id
+      WHERE wl.partner_id = $1
+      GROUP BY p.id, p.name, b.short_code
+      ORDER BY commission_earned DESC
+    `, [PartnerId]);
+
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/bank-details (Secure bank details retriever)
+const getBankDetails = async (req, res, next) => {
+  try {
+    const PartnerId = req.partner?.id;
+    if (!PartnerId) return error(res, 'Partner profile not found');
+
+    const { rows: [bank] } = await query(`
+      SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified 
+      FROM partner_bank_details 
+      WHERE Partner_id = $1
+    `, [PartnerId]);
+
+    if (!bank) {
+      return success(res, null, 'No bank details registered yet');
     }
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    // Decrypt if encrypted
+    if (bank.account_number && bank.account_number.includes(':')) {
+      try {
+        bank.account_number = decrypt(bank.account_number);
+      } catch (decErr) {
+        logger.warn('Failed to decrypt account number:', decErr.message);
+      }
+    }
+
+    return success(res, bank);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /wallet/bank-details (Register bank details for approved KYC partners)
+const saveBankDetails = async (req, res, next) => {
+  try {
+    const PartnerId = req.partner?.id;
+    if (!PartnerId) return error(res, 'Partner profile not found');
+
+    const { bank_name, account_number, ifsc_code, account_holder_name, upi_id } = req.body;
+    if (!bank_name && !upi_id) {
+      return error(res, 'Bank Name or UPI ID is required');
+    }
+
+    // Verify KYC status
+    const { rows: [partner] } = await query(`
+      SELECT kyc_status FROM partner_profiles WHERE id = $1
+    `, [PartnerId]);
+
+    if (!partner || partner.kyc_status !== 'approved') {
+      return error(res, 'Bank details can only be registered for partners with fully approved KYC status', 403);
+    }
+
+    const encryptedAccountNumber = account_number ? encrypt(account_number) : null;
+
+    // Check existing
+    const { rows: [existing] } = await query(`
+      SELECT id FROM partner_bank_details WHERE Partner_id = $1
+    `, [PartnerId]);
+
+    if (existing) {
+      await query(`
+        UPDATE partner_bank_details SET
+          bank_name = COALESCE($1, bank_name),
+          account_number = COALESCE($2, account_number),
+          ifsc_code = COALESCE($3, ifsc_code),
+          account_holder_name = COALESCE($4, account_holder_name),
+          upi_id = COALESCE($5, upi_id),
+          updated_at = NOW()
+        WHERE id = $6
+      `, [bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id, existing.id]);
+    } else {
+      await query(`
+        INSERT INTO partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+      `, [PartnerId, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id]);
+    }
+
+    await logAction(req, 'UPDATE_BANK_DETAILS', PartnerId, { bank_name, upi_id });
+    return success(res, {}, 'Bank details successfully updated.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/reports (Get daily/weekly/monthly ledger statistics)
+const getWalletReports = async (req, res, next) => {
+  try {
+    const PartnerId = req.partner?.id;
+    if (!PartnerId) return error(res, 'Partner profile not found');
+
+    const { rows: daily } = await query(`
+      SELECT 
+        DATE(created_at) as day,
+        SUM(credit) as earned,
+        SUM(debit) as debited
+      FROM wallet_ledger
+      WHERE partner_id = $1 AND status = 'completed'
+      GROUP BY DATE(created_at)
+      ORDER BY day DESC LIMIT 30
+    `, [PartnerId]);
+
+    return success(res, { daily });
   } catch (err) {
     next(err);
   }
@@ -90,7 +276,6 @@ const requestWithdrawal = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    // Get wallet summary and lock the wallet row inside transaction
     const { rows: [wallet] } = await client.query(
       `SELECT id, available_balance FROM wallets WHERE Partner_id = $1 FOR UPDATE`, [PartnerId]
     );
@@ -104,7 +289,6 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, `Insufficient balance. Available: ₹${wallet.available_balance}`);
     }
 
-    // Check no pending withdrawal
     const { rows: pending } = await client.query(
       `SELECT id FROM withdrawal_requests WHERE Partner_id = $1 AND status = 'pending'`, [PartnerId]
     );
@@ -113,28 +297,25 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, 'A withdrawal request is already pending');
     }
 
-    // Get bank details
+    // Get bank/upi details
     const { rows: [bank] } = await client.query(
-      `SELECT bank_name, account_number, ifsc_code FROM Partner_bank_details WHERE Partner_id = $1`, [PartnerId]
+      `SELECT bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE Partner_id = $1`, [PartnerId]
     );
 
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
       INSERT INTO withdrawal_requests (wallet_id, Partner_id, amount, bank_name, account_number, ifsc_code, status)
       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id
-    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name, bank?.account_number, bank?.ifsc_code]);
+    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null]);
 
-    // Deduct available balance and record pending debit transaction using debitAvailable service
-    // PASS THE CLIENT explicitly so it runs in the same transaction
     await debitAvailable(PartnerId, parsedAmount, {
       reference_type: 'withdrawal',
       reference_id: wr.id,
-      bank_name: bank?.bank_name,
+      bank_name: bank?.bank_name || 'UPI Settlement',
       description: `Withdrawal request for ₹${parsedAmount}`
     }, client);
 
     await client.query('COMMIT');
-
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -153,10 +334,11 @@ const listWithdrawals = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM withdrawal_requests WHERE status = $1`, [status]),
       query(`
-        SELECT wr.*, ap.Partner_code, ap.first_name, ap.last_name, u.mobile
+        SELECT wr.*, ap.Partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
         FROM withdrawal_requests wr
-        JOIN Partner_profiles ap ON ap.id = wr.Partner_id
+        JOIN partner_profiles ap ON ap.id = wr.Partner_id
         JOIN users u ON u.id = ap.user_id
+        LEFT JOIN partner_bank_details pbd ON pbd.Partner_id = ap.id
         WHERE wr.status = $1
         ORDER BY wr.created_at ASC
         LIMIT $2 OFFSET $3
@@ -175,12 +357,14 @@ const listWithdrawals = async (req, res, next) => {
           last_name: row.Partner_code,
           mobile: '**********',
           account_number: 'HIDDEN',
-          ifsc_code: 'HIDDEN'
+          ifsc_code: 'HIDDEN',
+          upi_id: 'HIDDEN'
         };
       }
-      if (row.account_number) {
-        const { decrypt } = require('../../utils/helpers/crypto');
-        row.account_number = decrypt(row.account_number);
+      if (row.account_number && row.account_number.includes(':')) {
+        try {
+          row.account_number = decrypt(row.account_number);
+        } catch (_) {}
       }
       return row;
     });
@@ -198,7 +382,6 @@ const processWithdrawalRequest = async (req, res, next) => {
     const { approved, utr_number, rejection_reason, admin_note } = req.body;
     await processWithdrawal(id, approved, req.user.id, utr_number, rejection_reason, admin_note);
 
-    // Log the withdrawal processing action
     const actionName = approved ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL';
     await logAction(req, actionName, id, { utr_number, rejection_reason, admin_note });
 
@@ -213,21 +396,7 @@ const getCaseSummary = async (req, res, next) => {
   try {
     const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     if (!PartnerId) return error(res, 'Partner ID is required');
-    const { rows } = await query(`
-      SELECT
-        p.name as product_name, b.short_code as bank_code,
-        COUNT(*) as total_cases,
-        COUNT(*) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_cases,
-        COUNT(*) FILTER (WHERE a.status = 'rejected') as rejected_cases,
-        COALESCE(SUM(a.commission_amount) FILTER (WHERE a.commission_status IN ('approved','processed')), 0) as commission_earned
-      FROM applications a
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
-      WHERE a.Partner_id = $1
-      GROUP BY p.id, p.name, b.short_code
-      ORDER BY commission_earned DESC
-    `, [PartnerId]);
-    return success(res, rows);
+    return getCommissionSummary(req, res, next);
   } catch (err) {
     next(err);
   }
@@ -250,8 +419,6 @@ const adminAdjustWalletController = async (req, res, next) => {
     }
 
     const txn = await adminAdjustWallet(partner_id, parsedAmount, txn_type, description || 'Manual admin adjustment', req.user.id);
-    
-    // Log manual adjustment to audit logs
     await logAction(req, 'MANUAL_WALLET_ADJUSTMENT', partner_id, { amount: parsedAmount, txn_type, description });
 
     return success(res, { transaction_id: txn.id }, `Wallet successfully adjusted by ₹${parsedAmount} (${txn_type})`);
@@ -292,7 +459,97 @@ const rejectWithdrawalController = async (req, res, next) => {
   }
 };
 
-// Deprecated self-access wrappers (now main controllers handle parameterless requests natively)
+// Super Admin wallet overview (wallets summary of all partners)
+const getWalletOverview = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const { search } = req.query;
+
+    let where = '';
+    const values = [];
+    if (search) {
+      where = 'WHERE ap.first_name ILIKE $1 OR ap.last_name ILIKE $1 OR ap.partner_code ILIKE $1';
+      values.push(`%${search}%`);
+    }
+
+    const [count, data] = await Promise.all([
+      query(`
+        SELECT COUNT(*) 
+        FROM wallets w
+        JOIN partner_profiles ap ON ap.id = w.partner_id
+        ${where}
+      `, values),
+      query(`
+        SELECT w.*, ap.partner_code, ap.first_name, ap.last_name, u.email
+        FROM wallets w
+        JOIN partner_profiles ap ON ap.id = w.partner_id
+        JOIN users u ON u.id = ap.user_id
+        ${where}
+        ORDER BY w.available_balance DESC
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
+      `, [...values, limit, offset])
+    ]);
+
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Super Admin comprehensive Ledger (all ledger lines)
+const getWalletLedger = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const { partner_id, transaction_type, status, search } = req.query;
+
+    let where = 'WHERE 1=1';
+    const values = [];
+    let idx = 1;
+
+    if (partner_id) {
+      where += ` AND wl.partner_id = $${idx++}`;
+      values.push(partner_id);
+    }
+    if (transaction_type) {
+      where += ` AND wl.transaction_type = $${idx++}`;
+      values.push(transaction_type);
+    }
+    if (status) {
+      where += ` AND wl.status = $${idx++}`;
+      values.push(status);
+    }
+    if (search) {
+      where += ` AND (wl.description ILIKE $${idx} OR ap.partner_code ILIKE $${idx} OR ap.first_name ILIKE $${idx})`;
+      idx++;
+      values.push(`%${search}%`);
+    }
+
+    const [count, data] = await Promise.all([
+      query(`
+        SELECT COUNT(*) 
+        FROM wallet_ledger wl
+        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        ${where}
+      `, values),
+      query(`
+        SELECT wl.*, ap.partner_code, ap.first_name, ap.last_name,
+               a.app_number, p.name as product_name
+        FROM wallet_ledger wl
+        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        LEFT JOIN applications a ON a.id = wl.application_id
+        LEFT JOIN products p ON p.id = a.product_id
+        ${where}
+        ORDER BY wl.created_at DESC
+        LIMIT $${idx++} OFFSET $${idx++}
+      `, [...values, limit, offset])
+    ]);
+
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
@@ -309,5 +566,12 @@ module.exports = {
   requestSelfWithdrawal,
   adminAdjustWalletController,
   approveWithdrawalController,
-  rejectWithdrawalController
+  rejectWithdrawalController,
+  getWalletDashboard,
+  getCommissionSummary,
+  getBankDetails,
+  saveBankDetails,
+  getWalletReports,
+  getWalletOverview,
+  getWalletLedger
 };

@@ -8,9 +8,9 @@ const getOverview = async (req, res, next) => {
     const { from_date, to_date } = req.query;
     const isPartner = req.user.role === 'PARTNER';
     const partnerId = isPartner ? req.partner.id : null;
-    const partnerScopeApps = isPartner ? ` AND "Partner_id" = '${partnerId}'` : '';
-    const partnerScopeLeads = isPartner ? ` AND "partner_id" = '${partnerId}'` : '';
-    const partnerScopeWallet = isPartner ? ` WHERE "Partner_id" = '${partnerId}'` : '';
+    const partnerScopeApps = isPartner ? ` AND partner_id = '${partnerId}'` : '';
+    const partnerScopeLeads = isPartner ? ` AND partner_id = '${partnerId}'` : '';
+    const partnerScopeWallet = isPartner ? ` WHERE partner_id = '${partnerId}'` : '';
 
     let sql = `
       SELECT
@@ -35,7 +35,7 @@ const getOverview = async (req, res, next) => {
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE u.status = 'active') as active,
           COUNT(*) FILTER (WHERE ap.kyc_status = 'pending' OR ap.kyc_status = 'under_review') as pending_kyc
-        FROM Partner_profiles ap JOIN users u ON u.id = ap.user_id
+        FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
       `),
       query(`
         SELECT
@@ -64,8 +64,8 @@ const getOverview = async (req, res, next) => {
       query(`SELECT COUNT(*) as total_banks FROM banks`),
       query(`SELECT COUNT(*) as total_products FROM products`),
       isPartner ? Promise.resolve({rows:[]}) : query(`
-        SELECT p.id, p.first_name, p.last_name, p.Partner_code, p.created_at, u.email, u.mobile, u.status
-        FROM Partner_profiles p
+        SELECT p.id, p.first_name, p.last_name, p.partner_code, p.created_at, u.email, u.mobile, u.status
+        FROM partner_profiles p
         JOIN users u ON u.id = p.user_id
         ORDER BY p.created_at DESC
         LIMIT 5
@@ -116,14 +116,14 @@ const topPartners = async (req, res, next) => {
   try {
     const { limit = 10 } = req.query;
     const { rows } = await query(`
-      SELECT ap.Partner_code, ap.first_name, ap.last_name,
+      SELECT ap.partner_code, ap.first_name, ap.last_name,
         COUNT(a.id) as total_apps,
         COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved,
         COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved','disbursed')), 0) as commission_earned
-      FROM Partner_profiles ap
-      LEFT JOIN applications a ON a.Partner_id = ap.id
+      FROM partner_profiles ap
+      LEFT JOIN applications a ON a.partner_id = ap.id
       WHERE ap.kyc_status = 'approved'
-      GROUP BY ap.id, ap.Partner_code, ap.first_name, ap.last_name
+      GROUP BY ap.id, ap.partner_code, ap.first_name, ap.last_name
       ORDER BY commission_earned DESC
       LIMIT $1
     `, [parseInt(limit)]);
@@ -138,7 +138,7 @@ const monthlyTrend = async (req, res, next) => {
   try {
     const isPartner = req.user.role === 'PARTNER';
     const partnerId = isPartner ? req.partner.id : null;
-    const partnerScopeApps = isPartner ? ` AND "Partner_id" = '${partnerId}'` : '';
+    const partnerScopeApps = isPartner ? ` AND partner_id = '${partnerId}'` : '';
 
     const { rows } = await query(`
       SELECT
@@ -173,13 +173,13 @@ const exportPayoutsReport = async (req, res, next) => {
         c.full_name as customer_name,
         p.name as product_name,
         b.name as bank_name,
-        ap.Partner_code,
+        ap.partner_code,
         ap.first_name || ' ' || ap.last_name as partner_name
       FROM applications a
       JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      JOIN Partner_profiles ap ON ap.id = a.Partner_id
+      JOIN partner_profiles ap ON ap.id = a.partner_id
       WHERE 1=1
     `;
     const values = [];
@@ -214,7 +214,7 @@ const exportPartnersReport = async (req, res, next) => {
   try {
     const { rows: partners } = await query(`
       SELECT 
-        ap.Partner_code,
+        ap.partner_code,
         ap.first_name,
         ap.last_name,
         ap.kyc_status,
@@ -227,9 +227,9 @@ const exportPartnersReport = async (req, res, next) => {
         COALESCE(w.hold_balance, 0) as hold_balance,
         COALESCE(w.total_earned, 0) as total_earned,
         COALESCE(w.total_withdrawn, 0) as total_withdrawn
-      FROM Partner_profiles ap
+      FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN wallets w ON w.Partner_id = ap.id
+      LEFT JOIN wallets w ON w.partner_id = ap.id
       ORDER BY u.created_at DESC
     `);
 
@@ -306,7 +306,7 @@ const getApplicationsReport = async (req, res, next) => {
     let idx = 1;
 
     if (isPartner) {
-      sql += ` AND a."Partner_id" = $1`;
+      sql += ` AND a.partner_id = $1`;
       values.push(partnerId);
       idx++;
     }
@@ -352,7 +352,7 @@ const getCustomersReport = async (req, res, next) => {
 
     if (isPartner) {
       // For partners, only show customers they have generated leads/applications for
-      sql += ` AND c.id IN (SELECT customer_id FROM applications WHERE "Partner_id" = $1)`;
+      sql += ` AND c.id IN (SELECT customer_id FROM applications WHERE partner_id = $1)`;
       values.push(partnerId);
     }
 

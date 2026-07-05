@@ -8,6 +8,7 @@ import { Icons } from '../components/Icon/PartnerIcons';
 import api from '../services/api';
 import logo from '../assets/logos/logo.png';
 import '../components/Navbar/Navbar.css';
+import { MdNotifications } from 'react-icons/md';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -42,6 +43,51 @@ const SuperAdminLayout = () => {
   // Profile Dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Notifications states
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get("/notifications", { params: { limit: 5 } });
+      if (res.data?.success) {
+        setNotifications(res.data.data.notifications || []);
+        setUnreadCount(res.data.data.unread_count || 0);
+      }
+    } catch (e) {
+      console.error("Failed to load header notifications", e);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+
+    const eventSource = new EventSource('/api/v1/notifications/stream');
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'notification') {
+          setNotifications(prev => [message.data, ...prev.slice(0, 4)]);
+          setUnreadCount(message.unread_count);
+        } else if (message.type === 'announcement') {
+          alert(`📢 Announcement: ${message.data.title}\n\n${message.data.description}`);
+        }
+      } catch (err) {
+        console.error('SSE Message parsing failed', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [user]);
 
   // Privacy Mode settings state
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -170,6 +216,7 @@ const SuperAdminLayout = () => {
       items: [
         { path: '/superadmin/leads', label: 'Leads', icon: <Icons.trending size={16} /> },
         { path: '/superadmin/direct-leads', label: 'Direct Card Leads', icon: <Icons.creditCard size={16} /> },
+        { path: '/superadmin/applications', label: 'Applications Tracking', icon: <Icons.trending size={16} /> }
       ]
     },
     {
@@ -197,6 +244,8 @@ const SuperAdminLayout = () => {
     {
       title: "SYSTEM UTILITIES",
       items: [
+        { path: '/superadmin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
+        { path: '/superadmin/announcements', label: 'Announcements Manager', icon: <Icons.gift size={16} /> },
         { path: '/superadmin/services', label: 'Services API', icon: <Icons.clock size={16} /> },
         { path: '/superadmin/commission-rules', label: 'Commission Rules', icon: <Icons.gift size={16} /> },
         { path: '/superadmin/audit-logs', label: 'Audit Logs', icon: <Icons.clock size={16} /> },
@@ -777,6 +826,89 @@ const SuperAdminLayout = () => {
 
             {/* Actions: Language, Theme, User Profile */}
             <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              {/* Notification Bell */}
+              <div style={{ position: 'relative' }}>
+                <button 
+                  onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                  style={{
+                    background: C.bgSecondary,
+                    border: `1.5px solid ${C.border}`,
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    outline: 'none'
+                  }}
+                >
+                  <MdNotifications size={20} style={{ color: C.text }} />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: C.red,
+                      color: '#fff',
+                      fontSize: '9px',
+                      fontWeight: 900,
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(239,68,68,0.4)'
+                    }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotificationDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '48px',
+                    right: 0,
+                    width: '320px',
+                    background: C.card,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                    zIndex: 100,
+                    padding: '12px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `1px solid ${C.border}50`, paddingBottom: '6px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>Notifications</span>
+                      {unreadCount > 0 && (
+                        <button onClick={async () => {
+                          try {
+                            await api.put("/notifications/read-all");
+                            setUnreadCount(0);
+                            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                          } catch (e) { console.error(e); }
+                        }} style={{ background: 'none', border: 'none', fontSize: '11px', color: C.primary, fontWeight: 700, cursor: 'pointer' }}>Mark all read</button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', marginBottom: '10px' }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '12px', color: C.textLight }}>No notifications yet.</div>
+                      ) : (
+                        notifications.map(n => (
+                          <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: n.is_read ? 'transparent' : `${C.primary}08`, padding: '6px 8px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.text }}>{n.title}</div>
+                            <div style={{ fontSize: '11px', color: C.textLight }}>{n.message}</div>
+                            <span style={{ fontSize: '9px', color: C.textLight, marginTop: '2px' }}>{new Date(n.created_at).toLocaleString()}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <select 
                 value={i18n.language} 
                 onChange={(e) => i18n.changeLanguage(e.target.value)}

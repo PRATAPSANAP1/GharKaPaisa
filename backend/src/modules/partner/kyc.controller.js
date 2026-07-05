@@ -106,7 +106,7 @@ const viewDocument = async (req, res, next) => {
     } else {
       // Fallback: fetch using partner's profile ID and doc_type
       const { rows: [partner] } = await query(
-        `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+        `SELECT id FROM partner_profiles WHERE user_id = $1`,
         [user.id]
       );
       if (partner) {
@@ -129,7 +129,7 @@ const viewDocument = async (req, res, next) => {
     let isOwner = false;
     if (userRole === 'PARTNER') {
       const { rows: [partner] } = await query(
-        `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+        `SELECT id FROM partner_profiles WHERE user_id = $1`,
         [user.id]
       );
       if (partner && partner.id === doc.partner_id) {

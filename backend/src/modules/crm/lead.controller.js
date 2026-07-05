@@ -14,7 +14,7 @@ const createLead = async (req, res, next) => {
 
     // Fetch partner profile from logged-in user id
     const { rows: [partner] } = await query(
-      `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+      `SELECT id FROM partner_profiles WHERE user_id = $1`,
       [req.user.id]
     );
 
@@ -56,7 +56,7 @@ const listLeads = async (req, res, next) => {
     if (req.user.role === 'PARTNER') {
       // Find partner ID
       const { rows: [partner] } = await query(
-        `SELECT id FROM Partner_profiles WHERE user_id = $1`,
+        `SELECT id FROM partner_profiles WHERE user_id = $1`,
         [req.user.id]
       );
       if (!partner) {
@@ -89,7 +89,7 @@ const listLeads = async (req, res, next) => {
         ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.Partner_code
       FROM leads l
       JOIN products p ON p.id = l.product_id
-      JOIN Partner_profiles ap ON ap.id = l.partner_id
+      JOIN partner_profiles ap ON ap.id = l.partner_id
       ${whereClause}
       ORDER BY l.created_at DESC
       LIMIT $${idx} OFFSET $${idx + 1}

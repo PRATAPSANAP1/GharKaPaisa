@@ -297,7 +297,7 @@ const updatePartnerStatus = async (req, res, next) => {
       const { rows: [userByPartnerId] } = await query(`
         SELECT u.id, u.email, u.role, u.status 
         FROM users u 
-        JOIN Partner_profiles ap ON ap.user_id = u.id 
+        JOIN partner_profiles ap ON ap.user_id = u.id 
         WHERE ap.id::text = $1
       `, [userId]);
       if (userByPartnerId) {
@@ -384,7 +384,7 @@ const approveKYC = async (req, res, next) => {
     const { partnerId } = req.body;
     if (!partnerId) return error(res, 'partnerId is required', 400);
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -393,7 +393,7 @@ const approveKYC = async (req, res, next) => {
 
     // 1. Update partner profile
     await client.query(`
-      UPDATE Partner_profiles 
+      UPDATE partner_profiles 
       SET kyc_status = 'approved', 
           kyc_reviewed_at = NOW(), 
           kyc_reviewed_by = $1,
@@ -458,7 +458,7 @@ const rejectKYC = async (req, res, next) => {
     if (!partnerId) return error(res, 'partnerId is required', 400);
     if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -467,7 +467,7 @@ const rejectKYC = async (req, res, next) => {
 
     // 1. Update partner profile
     await client.query(`
-      UPDATE Partner_profiles 
+      UPDATE partner_profiles 
       SET kyc_status = 'rejected', 
           kyc_reviewed_at = NOW(), 
           kyc_reviewed_by = $1,
@@ -528,7 +528,7 @@ const requestChangesKYC = async (req, res, next) => {
       return error(res, 'rejected_documents list is required and must contain document types', 400);
     }
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -537,7 +537,7 @@ const requestChangesKYC = async (req, res, next) => {
 
     // 1. Update partner profile status to rejected
     await client.query(`
-      UPDATE Partner_profiles 
+      UPDATE partner_profiles 
       SET kyc_status = 'rejected', 
           kyc_reviewed_at = NOW(), 
           kyc_reviewed_by = $1,

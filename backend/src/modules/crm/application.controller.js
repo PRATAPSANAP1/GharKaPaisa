@@ -1,5 +1,5 @@
 const { query, getClient } = require('../../config/database');
-const { generateAppNumber, calculateCommission, getPaginationParams } = require('../../utils/helpers/helpers');
+const { generateAppNumber, getPaginationParams } = require('../../utils/helpers/helpers');
 const { creditCommission, releaseHold } = require('../wallet/service.js');
 const { calculatePartnerCommission } = require('../partner/commission.service.js');
 const { notify } = require('../notifications/service.js');
@@ -8,6 +8,14 @@ const { success, created, error, notFound, forbidden, paginate } = require('../.
 const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 
+// Helper to log timeline actions
+const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
+  await client.query(`
+    INSERT INTO application_timeline (application_id, status, activity, remarks, performed_by)
+    VALUES ($1, $2, $3, $4, $5)
+  `, [applicationId, status, activity, remarks, performedBy]);
+};
+
 // POST /applications — Partner submits application
 const submitApplication = async (req, res, next) => {
   const client = await getClient();
@@ -15,7 +23,8 @@ const submitApplication = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { product_id, customer, loan_amount, notes } = req.body;
-    const PartnerId = req.Partner.id;
+    const PartnerId = req.partner?.id || req.body.partner_id;
+    if (!PartnerId) return error(res, 'Partner ID is required', 400);
 
     // Validate product
     const { rows: [product] } = await client.query(
@@ -24,6 +33,12 @@ const submitApplication = async (req, res, next) => {
     );
     if (!product) return error(res, 'Product not found or inactive', 404);
 
+    // Fetch Partner Parent ID
+    const { rows: [partnerProfile] } = await client.query(`
+      SELECT parent_partner_id FROM partner_profiles WHERE id = $1
+    `, [PartnerId]);
+    const parentPartnerId = partnerProfile ? partnerProfile.parent_partner_id : null;
+
     // Upsert customer
     let customerId;
     const { rows: [existingCust] } = await client.query(
@@ -31,7 +46,6 @@ const submitApplication = async (req, res, next) => {
     );
     if (existingCust) {
       customerId = existingCust.id;
-      // Update customer info
       await client.query(`
         UPDATE customers SET full_name=$1, email=$2, pan_number=$3, monthly_income=$4,
           employment_type=$5, city=$6, updated_at=NOW() WHERE id=$7
@@ -43,14 +57,14 @@ const submitApplication = async (req, res, next) => {
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
       `, [customer.full_name, customer.mobile, customer.email, customer.dob,
       customer.pan_number, customer.monthly_income, customer.employment_type,
-      customer.city, customer.state, customer.pincode, customer.employer, req.user.id]);
+      customer.city, customer.state || null, customer.pincode || null, customer.employer || null, req.user.id]);
       customerId = newCust.id;
     }
 
-    // Calculate commission
+    // Calculate expected commission
     const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
     
-    // Generate unique collision-safe application number
+    // Generate unique app number
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -59,16 +73,20 @@ const submitApplication = async (req, res, next) => {
     // Create application
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, Partner_id, submitted_by, loan_amount, commission_amount, notes,
+        (app_number, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, submitted_at,
          status_history)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$9::text)))
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'submitted',NOW(),
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$11::text)))
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, PartnerId, req.user.id, loan_amount, commission, notes, req.user.id.toString()]);
+    `, [appNumber, customerId, product_id, PartnerId, parentPartnerId, product.bank_id, req.user.id, loan_amount, commission, notes, req.user.id.toString()]);
+
+    // Initial timeline log
+    await logTimeline(client, app.id, 'submitted', 'Application Created', 'Application created inside portal.', req.user.id);
+    await logTimeline(client, app.id, 'submitted', 'Redirected to Bank', `Initiated bank integration lead flow.`, req.user.id);
 
     await client.query('COMMIT');
 
-    // Notify
+    // Notify partner
     await notify.applicationSubmitted(req.user.id, appNumber);
 
     logger.info(`Application ${appNumber} submitted by Partner ${PartnerId}`);
@@ -87,7 +105,7 @@ const submitPublicApplication = async (req, res, next) => {
   try {
     await client.query('BEGIN');
 
-    const { product_id, customer, loan_amount, notes, partner_code } = req.body;
+    const { product_id, customer, loan_amount, notes, partner_code, tracking_id } = req.body;
 
     // Validate product
     const { rows: [product] } = await client.query(
@@ -96,23 +114,28 @@ const submitPublicApplication = async (req, res, next) => {
     );
     if (!product) return error(res, 'Product not found or inactive', 404);
 
-    // Get Partner ID (either from partner_code or default first partner for direct leads)
     let partnerId;
     if (partner_code) {
-      const { rows: [partner] } = await client.query(`SELECT id FROM Partner_profiles WHERE Partner_code = $1`, [partner_code]);
+      const { rows: [partner] } = await client.query(`SELECT id FROM partner_profiles WHERE partner_code = $1`, [partner_code]);
       if (partner) partnerId = partner.id;
     }
     if (!partnerId) {
-      const { rows: [defaultPartner] } = await client.query(`SELECT id FROM Partner_profiles LIMIT 1`);
+      const { rows: [defaultPartner] } = await client.query(`SELECT id FROM partner_profiles LIMIT 1`);
       if (!defaultPartner) {
-        return error(res, 'System cannot accept public leads yet as no Partner profiles exist to route to.', 500);
+        return error(res, 'System cannot route lead as no active Partner profiles exist.', 500);
       }
       partnerId = defaultPartner.id;
     }
 
-    // System Admin User ID for created_by
+    const { rows: [partnerProfile] } = await client.query(`
+      SELECT parent_partner_id, user_id FROM partner_profiles WHERE id = $1
+    `, [partnerId]);
+    const parentPartnerId = partnerProfile ? partnerProfile.parent_partner_id : null;
+    const partnerUserId = partnerProfile ? partnerProfile.user_id : null;
+
+    // System Admin User ID for fallback
     const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='SUPER_ADMIN' LIMIT 1`);
-    const sysUserId = sysUser.id;
+    const sysUserId = sysUser?.id || partnerUserId;
 
     // Upsert customer
     let customerId;
@@ -122,7 +145,6 @@ const submitPublicApplication = async (req, res, next) => {
     
     if (existingCust) {
       customerId = existingCust.id;
-      // Update customer info
       await client.query(`
         UPDATE customers SET full_name=$1, email=$2, city=$3, updated_at=NOW() WHERE id=$4
       `, [customer.full_name, customer.email, customer.city, customerId]);
@@ -134,24 +156,24 @@ const submitPublicApplication = async (req, res, next) => {
       customerId = newCust.id;
     }
 
-    // Calculate commission
     const commission = await calculatePartnerCommission(product_id, partnerId, loan_amount);
     
-    // Generate unique collision-safe application number
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    // Create application
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, Partner_id, submitted_by, loan_amount, commission_amount, notes,
+        (app_number, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
          status_history)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$9::text)))
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'submitted',$11,NOW(),
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$12::text)))
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, partnerId, sysUserId, loan_amount, commission, notes, sysUserId.toString()]);
+    `, [appNumber, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, loan_amount, commission, notes, tracking_id || null, sysUserId.toString()]);
+
+    await logTimeline(client, app.id, 'submitted', 'Application Created', 'Public direct landing application logged.', sysUserId);
+    await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
 
     await client.query('COMMIT');
     
@@ -165,80 +187,397 @@ const submitPublicApplication = async (req, res, next) => {
   }
 };
 
-// PATCH /applications/:id/status (Admin/Employee updates status)
+// GET /applications/dashboard (Application metrics overview)
+const getApplicationsDashboard = async (req, res, next) => {
+  try {
+    let partnerId = null;
+    if (req.user.role === 'PARTNER') {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner) return error(res, 'Partner profile not found', 404);
+      partnerId = partner.id;
+    }
+
+    let filter = '';
+    const params = [];
+    if (partnerId) {
+      filter = 'WHERE partner_id = $1';
+      params.push(partnerId);
+    }
+
+    const { rows: [stats] } = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as today,
+        COUNT(*) FILTER (WHERE status = 'submitted') as pending,
+        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed')) as approved,
+        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
+        COUNT(*) FILTER (WHERE status = 'under_review') as under_review,
+        COUNT(*) FILTER (WHERE commission_status = 'pending') as comm_pending,
+        COUNT(*) FILTER (WHERE commission_status = 'approved') as comm_approved,
+        COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
+        COALESCE(SUM(commission_amount) FILTER (WHERE commission_status = 'processed'), 0) as total_earnings
+      FROM applications
+      ${filter}
+    `, params);
+
+    const totalCount = parseInt(stats?.total || 0);
+    const approvedCount = parseInt(stats?.approved || 0);
+    const conversionRate = totalCount > 0 ? parseFloat(((approvedCount / totalCount) * 100).toFixed(2)) : 0;
+
+    // Recent 5 applications
+    const { rows: recent } = await query(`
+      SELECT a.id, a.app_number, a.status, a.commission_amount, a.commission_status, a.created_at,
+             c.full_name as customer_name, p.name as product_name
+      FROM applications a
+      JOIN customers c ON c.id = a.customer_id
+      JOIN products p ON p.id = a.product_id
+      ${filter}
+      ORDER BY a.created_at DESC LIMIT 5
+    `, params);
+
+    return success(res, {
+      stats: {
+        total: parseInt(stats?.total || 0),
+        today: parseInt(stats?.today || 0),
+        pending: parseInt(stats?.pending || 0),
+        approved: approvedCount,
+        rejected: parseInt(stats?.rejected || 0),
+        under_review: parseInt(stats?.under_review || 0),
+        comm_pending: parseInt(stats?.comm_pending || 0),
+        comm_approved: parseInt(stats?.comm_approved || 0),
+        comm_paid: parseInt(stats?.comm_paid || 0),
+        total_earnings: parseFloat(stats?.total_earnings || 0),
+        conversion_rate: conversionRate
+      },
+      recent
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /applications/:id/timeline
+const getTimeline = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`
+      SELECT at.*, u.first_name || ' ' || COALESCE(u.last_name, '') as performed_by_name
+      FROM application_timeline at
+      LEFT JOIN users u ON u.id = at.performed_by
+      WHERE at.application_id = $1
+      ORDER BY at.performed_at ASC
+    `, [id]);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /applications/:id/documents
+const getDocuments = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`
+      SELECT * FROM application_documents WHERE application_id = $1 ORDER BY uploaded_at DESC
+    `, [id]);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /applications/:id/notes (visibility filtering)
+const addNote = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { note, visibility = 'public' } = req.body;
+    if (!note) return error(res, 'Note content is required', 400);
+
+    await query(`
+      INSERT INTO application_notes (application_id, user_id, note, visibility)
+      VALUES ($1, $2, $3, $4)
+    `, [id, req.user.id, note, visibility]);
+
+    return success(res, {}, 'Note added successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /applications/:id/notes (Internal helper to fetch filtered notes)
+const getFilteredNotes = async (applicationId, userRole) => {
+  let visibilityClause = "AND visibility = 'public'";
+  if (userRole === 'ADMIN') {
+    visibilityClause = "AND visibility IN ('public', 'internal')";
+  } else if (userRole === 'SUPER_ADMIN') {
+    visibilityClause = ""; // Super admin sees all notes
+  }
+
+  const { rows } = await query(`
+    SELECT n.*, u.first_name || ' ' || COALESCE(u.last_name, '') as writer_name, u.role as writer_role
+    FROM application_notes n
+    JOIN users u ON u.id = n.user_id
+    WHERE n.application_id = $1 ${visibilityClause}
+    ORDER BY n.created_at DESC
+  `, [applicationId]);
+
+  return rows;
+};
+
+// PUT /applications/:id/status (transition logic)
 const updateStatus = async (req, res, next) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
-
     const { id } = req.params;
-    const { status, bank_ref_number, approved_amount, rejection_reason, notes } = req.body;
+    const { status, remarks = 'Status updated by administrative panel' } = req.body;
 
     const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
     if (!app) return notFound(res, 'Application not found');
 
-    // Append to status history
-    const historyEntry = JSON.stringify({ status, at: new Date(), by: req.user.id, notes });
+    let approvedAt = app.approved_at;
+    if (status === 'approved' && !app.approved_at) {
+      approvedAt = new Date();
+    }
+
+    const historyEntry = JSON.stringify({ status, at: new Date(), by: req.user.id, remarks });
     await client.query(`
       UPDATE applications SET
         status = $1,
-        bank_ref_number = COALESCE($2, bank_ref_number),
-        approved_amount = COALESCE($3, approved_amount),
-        rejection_reason = COALESCE($4, rejection_reason),
-        status_history = status_history || $5::jsonb,
+        approved_at = $2,
+        status_history = status_history || $3::jsonb,
         updated_at = NOW()
-      WHERE id = $6
-    `, [status, bank_ref_number, approved_amount, rejection_reason, historyEntry, id]);
+      WHERE id = $4
+    `, [status, approvedAt, historyEntry, id]);
+
+    await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
+    await logAction(req, 'UPDATE_APPLICATION_STATUS', id, { status, remarks });
 
     await client.query('COMMIT');
 
-    // Log application status update to audit logs
-    await logAction(req, 'UPDATE_APPLICATION_STATUS', id, { status, bank_ref_number, approved_amount });
-
-    // Credit commission on approval or disbursal, but only once
-    if (status === 'approved' || status === 'disbursed') {
-      const { rows: [existingTx] } = await query(
-        `SELECT id FROM wallet_transactions WHERE application_id = $1 AND type = 'credit'`, [app.id]
-      );
-      if (!existingTx) {
-        const commission = app.commission_amount || 0;
-        if (commission > 0) {
-          await creditCommission(app.Partner_id, app.id, commission, `Commission for ${app.app_number}`, req.user.id);
-        }
-        // Get Partner user_id for notification
-        const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
-        if (Partner) await notify.applicationApproved(Partner.user_id, app.app_number, commission);
-      }
+    // Notifications
+    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [app.Partner_id]);
+    if (partner) {
+      if (status === 'approved') await notify.applicationApproved(partner.user_id, app.app_number, app.commission_amount);
+      if (status === 'rejected') await notify.applicationRejected(partner.user_id, app.app_number, remarks);
     }
 
-    // Release commission on confirmed status, converting pending earnings to withdrawable balance
-    if (status === 'confirmed') {
-      const { rows: [pendingTx] } = await query(
-        `SELECT id, amount FROM wallet_transactions WHERE application_id = $1 AND type = 'credit' AND status = 'pending'`, [app.id]
-      );
-      if (pendingTx) {
-        await releaseHold(app.Partner_id, pendingTx.amount, {
-          txn_id: pendingTx.id,
-          processed_by: req.user.id,
-          reference_type: 'commission',
-          reference_id: app.id,
-          description: `Commission released for App ${app.app_number}`
-        });
-        // Update applications commission_status to approved
-        await query(`UPDATE applications SET commission_status = 'approved', updated_at = NOW() WHERE id = $1`, [app.id]);
-        
-        // Notify Partner
-        const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
-        if (Partner) await notify.commissionCredited(Partner.user_id, pendingTx.amount);
-      }
+    return success(res, {}, 'Application status successfully updated');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// PUT /applications/:id/commission (Lifecycle workflow)
+const updateCommission = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const { status, amount } = req.body;
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
+    if (!app) return notFound(res);
+
+    let receivedAt = app.commission_received_at;
+    let paidAt = app.commission_paid_at;
+
+    if (status === 'received' && !app.commission_received_at) receivedAt = new Date();
+    if (status === 'approved' && !app.commission_paid_at) paidAt = new Date();
+
+    await client.query(`
+      UPDATE applications SET
+        commission_status = $1,
+        commission_amount = COALESCE($2, commission_amount),
+        commission_received_at = $3,
+        commission_paid_at = $4,
+        updated_at = NOW()
+      WHERE id = $5
+    `, [status, amount, receivedAt, paidAt, id]);
+
+    // Handle Ledger Splits & Wallet Credits on Approval
+    if (status === 'approved') {
+      const commValue = amount || app.commission_amount || 0;
+      await creditCommission(app.Partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id);
+
+      // Create Entry in commission_ledger
+      await client.query(`
+        INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
+        VALUES ($1, $2, $3, $4, $5, 'approved')
+      `, [id, app.Partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
     }
 
-    if (status === 'rejected') {
-      const { rows: [Partner] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [app.Partner_id]);
-      if (Partner) await notify.applicationRejected(Partner.user_id, app.app_number, rejection_reason);
-    }
+    await logTimeline(client, id, app.status, `Commission ${status.toUpperCase()}`, `Updated commission state to ${status}.`, req.user.id);
+    await client.query('COMMIT');
 
-    return success(res, {}, 'Application status updated');
+    return success(res, {}, 'Commission details updated');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// GET /applications/analytics (Group data for chart engines)
+const getAnalytics = async (req, res, next) => {
+  try {
+    const { rows: daily } = await query(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as total_apps,
+        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed')) as approved_apps,
+        COUNT(*) FILTER (WHERE status = 'rejected') as rejected_apps
+      FROM applications
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC LIMIT 30
+    `);
+
+    const { rows: products } = await query(`
+      SELECT p.name as product_name, COUNT(*) as apps_count
+      FROM applications a
+      JOIN products p ON p.id = a.product_id
+      GROUP BY p.name
+      ORDER BY apps_count DESC LIMIT 5
+    `);
+
+    const { rows: banks } = await query(`
+      SELECT b.name as bank_name, COUNT(*) as apps_count
+      FROM applications a
+      JOIN products p ON p.id = a.product_id
+      JOIN banks b ON b.id = p.bank_id
+      GROUP BY b.name
+      ORDER BY apps_count DESC LIMIT 5
+    `);
+
+    return success(res, { daily, products, banks });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Super Admin custom methods
+const approveApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id, approved_amount } = req.body;
+    if (!id) return error(res, 'ID is required', 400);
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
+    if (!app) return notFound(res);
+
+    await client.query(`
+      UPDATE applications SET 
+        status='approved', 
+        approved_amount=COALESCE($1, approved_amount, loan_amount), 
+        approved_at=NOW(), 
+        commission_status='approved',
+        commission_received_at=NOW(),
+        commission_paid_at=NOW(),
+        updated_at=NOW()
+      WHERE id=$2
+    `, [approved_amount, id]);
+
+    // Split payout trigger
+    const commValue = app.commission_amount || 0;
+    await creditCommission(app.Partner_id, id, commValue, `Admin approved commission app ${app.app_number}`, req.user.id);
+
+    await client.query(`
+      INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
+      VALUES ($1, $2, $3, $4, $5, 'approved')
+    `, [id, app.Partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+
+    await logTimeline(client, id, 'approved', 'Application Approved', 'Approved by Super Admin override.', req.user.id);
+    await logAction(req, 'SUPER_ADMIN_APPROVE_APPLICATION', id, { approved_amount });
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Application approved and commission split processed successfully.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const rejectApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id, reason } = req.body;
+    if (!id) return error(res, 'ID is required', 400);
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
+    if (!app) return notFound(res);
+
+    await client.query(`
+      UPDATE applications SET status='rejected', commission_status='cancelled', rejection_reason=$1, updated_at=NOW() WHERE id=$2
+    `, [reason || 'Rejected by super admin', id]);
+
+    await logTimeline(client, id, 'rejected', 'Application Rejected', reason || 'Rejected by super admin', req.user.id);
+    await logAction(req, 'SUPER_ADMIN_REJECT_APPLICATION', id, { reason });
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Application rejected and commission cancelled.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const reassignApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id, partner_id } = req.body;
+    if (!id || !partner_id) return error(res, 'ID and Partner ID are required', 400);
+
+    const { rows: [partner] } = await client.query(`SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id=$1`, [partner_id]);
+    if (!partner) return error(res, 'Target Partner not found', 404);
+
+    await client.query(`
+      UPDATE applications SET partner_id=$1, updated_at=NOW() WHERE id=$2
+    `, [partner_id, id]);
+
+    await logTimeline(client, id, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
+    await logAction(req, 'REASSIGN_APPLICATION', id, { target_partner: partner_id });
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Application successfully reassigned.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const manualCommission = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id, amount, remarks } = req.body;
+    if (!id || !amount) return error(res, 'ID and amount are required', 400);
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
+    if (!app) return notFound(res);
+
+    await client.query(`
+      UPDATE applications SET commission_amount=$1, commission_status='approved', updated_at=NOW() WHERE id=$2
+    `, [amount, id]);
+
+    await creditCommission(app.Partner_id, id, amount, remarks || 'Manual commission assignment', req.user.id);
+    await logTimeline(client, id, app.status, 'Manual Commission Credited', remarks || 'Manual commission override applied.', req.user.id);
+    await logAction(req, 'MANUAL_COMMISSION_ASSIGN', id, { amount, remarks });
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Manual commission credited to partner.');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -251,25 +590,28 @@ const updateStatus = async (req, res, next) => {
 const listApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, Partner_id, product_id, from_date, to_date, search } = req.query;
+    const { status, Partner_id, partner_id: q_partner_id, product_id, from_date, to_date, search, commission_status, bank_id, category } = req.query;
+    const targetPartnerId = q_partner_id || Partner_id;
 
     let where = 'WHERE 1=1';
     const values = [];
     let idx = 1;
 
-    // Partners can only see their own applications
     if (req.user.role === 'PARTNER') {
-      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!Partner) return error(res, 'Partner profile not found', 404);
-      where += ` AND a.Partner_id = $${idx++}`;
-      values.push(Partner.id);
-    } else if (Partner_id) {
-      where += ` AND a.Partner_id = $${idx++}`;
-      values.push(Partner_id);
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner) return error(res, 'Partner profile not found', 404);
+      where += ` AND a.partner_id = $${idx++}`;
+      values.push(partner.id);
+    } else if (targetPartnerId) {
+      where += ` AND a.partner_id = $${idx++}`;
+      values.push(targetPartnerId);
     }
 
     if (status) { where += ` AND a.status = $${idx++}`; values.push(status); }
+    if (commission_status) { where += ` AND a.commission_status = $${idx++}`; values.push(commission_status); }
     if (product_id) { where += ` AND a.product_id = $${idx++}`; values.push(product_id); }
+    if (bank_id) { where += ` AND a.bank_id = $${idx++}`; values.push(bank_id); }
+    if (category) { where += ` AND p.category = $${idx++}`; values.push(category); }
     if (from_date) { where += ` AND a.created_at >= $${idx++}`; values.push(from_date); }
     if (to_date) { where += ` AND a.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
     if (search) {
@@ -282,7 +624,7 @@ const listApplications = async (req, res, next) => {
       JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      JOIN Partner_profiles ap ON ap.id = a.Partner_id
+      JOIN partner_profiles ap ON ap.id = a.partner_id
       ${where}
     `;
 
@@ -290,32 +632,18 @@ const listApplications = async (req, res, next) => {
       query(`SELECT COUNT(*) ${baseQuery}`, values),
       query(`
         SELECT a.id, a.app_number, a.status, a.loan_amount, a.approved_amount, a.commission_amount,
-          a.commission_status, a.created_at, a.updated_at, a.bank_ref_number,
+          a.commission_status, a.created_at, a.updated_at, a.bank_ref_number, a.submitted_at, a.approved_at, a.commission_received_at, a.commission_paid_at,
           c.full_name as customer_name, c.mobile as customer_mobile,
           p.name as product_name, p.category,
           b.name as bank_name, b.short_code as bank_code,
-          ap.Partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
+          ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
         ${baseQuery}
         ORDER BY a.created_at DESC
-        LIMIT $${idx} OFFSET $${idx + 1}
+        LIMIT $${idx++} OFFSET $${idx++}
       `, [...values, limit, offset]),
     ]);
 
-    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
-    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
-
-    const processedRows = data.rows.map(row => {
-      if (shouldMask) {
-        return {
-          ...row,
-          Partner_first_name: 'Partner',
-          Partner_last_name: row.Partner_code
-        };
-      }
-      return row;
-    });
-
+    const processedRows = data.rows;
     return paginate(res, processedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
@@ -332,32 +660,25 @@ const getApplication = async (req, res, next) => {
         c.pan_number, c.monthly_income, c.employment_type, c.city, c.state,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
-        ap.Partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
+        ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
       FROM applications a
       JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      JOIN Partner_profiles ap ON ap.id = a.Partner_id
+      JOIN partner_profiles ap ON ap.id = a.partner_id
       WHERE a.id = $1
     `, [id]);
     if (!app) return notFound(res);
 
-    // Ownership check: Partner can only view their own applications
     if (req.user.role === 'PARTNER') {
-      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!Partner || app.Partner_id !== Partner.id) {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner || app.partner_id !== partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
       }
     }
 
-    const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
-    const isPrivacyOn = privacySetting && privacySetting.value === 'on';
-    const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
-
-    if (shouldMask) {
-      app.Partner_first_name = 'Partner';
-      app.Partner_last_name = app.Partner_code;
-    }
+    const notes = await getFilteredNotes(id, req.user.role);
+    app.notes_list = notes;
 
     return success(res, app);
   } catch (err) {
@@ -365,7 +686,7 @@ const getApplication = async (req, res, next) => {
   }
 };
 
-// POST /applications/:id/documents — Upload application docs
+// POST /applications/:id/documents — Upload docs
 const uploadApplicationDoc = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -373,34 +694,51 @@ const uploadApplicationDoc = async (req, res, next) => {
     const file = req.file;
     if (!file) return error(res, 'No file uploaded');
 
-    // S3 configuration check
     const isS3Configured = !!process.env.AWS_S3_BUCKET;
     if (!isS3Configured) {
       return error(res, 'S3 bucket is not configured.', 503);
     }
 
-    const { rows: [app] } = await query(`SELECT documents, Partner_id FROM applications WHERE id = $1`, [id]);
+    const { rows: [app] } = await query(`SELECT partner_id FROM applications WHERE id = $1`, [id]);
     if (!app) return notFound(res);
 
-    // Ownership check: Partner can only upload docs for their own applications
     if (req.user.role === 'PARTNER') {
-      const { rows: [Partner] } = await query(`SELECT id FROM Partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!Partner || app.Partner_id !== Partner.id) {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!partner || app.partner_id !== partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
       }
     }
 
-    const { url, key } = await uploadToS3(file.buffer, file.originalname, `applications/${id}`);
+    const { url } = await uploadToS3(file.buffer, file.originalname, `applications/${id}`);
 
-    const docs = app.documents || [];
-    docs.push({ doc_type, url, key, uploaded_at: new Date(), uploaded_by: req.user.id });
+    // Insert into application_documents
+    await query(`
+      INSERT INTO application_documents (application_id, document_type, file_url, status)
+      VALUES ($1, $2, $3, 'pending')
+    `, [id, doc_type, url]);
 
-    await query(`UPDATE applications SET documents = $1 WHERE id = $2`, [JSON.stringify(docs), id]);
+    await logTimeline(query, id, 'submitted', 'Document Uploaded', `Uploaded ${doc_type} copy.`, req.user.id);
 
-    return success(res, { url }, 'Document uploaded');
+    return success(res, { url }, 'Document uploaded successfully');
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { submitApplication, submitPublicApplication, updateStatus, listApplications, getApplication, uploadApplicationDoc };
+module.exports = { 
+  submitApplication, 
+  submitPublicApplication, 
+  updateStatus, 
+  listApplications, 
+  getApplication, 
+  uploadApplicationDoc,
+  getApplicationsDashboard,
+  getTimeline,
+  getDocuments,
+  addNote,
+  getAnalytics,
+  approveApplication,
+  rejectApplication,
+  reassignApplication,
+  manualCommission
+};

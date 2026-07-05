@@ -62,7 +62,7 @@ const syncUser = async (req, res, next) => {
     if ((user.role || '').toUpperCase() === 'PARTNER') {
       const { rows: [partner] } = await query(
         `SELECT id, kyc_status, first_name, last_name, Partner_code
-         FROM Partner_profiles WHERE user_id = $1`,
+         FROM partner_profiles WHERE user_id = $1`,
         [user.id]
       );
       req.partner = partner || null;
@@ -143,7 +143,7 @@ const optionalAuth = async (req, res, next) => {
       if ((user.role || '').toUpperCase() === 'PARTNER') {
         const { rows: [partner] } = await query(
           `SELECT id, kyc_status, first_name, last_name, Partner_code
-           FROM Partner_profiles WHERE user_id = $1`,
+           FROM partner_profiles WHERE user_id = $1`,
           [user.id]
         );
         req.partner = partner || null;

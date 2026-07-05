@@ -40,10 +40,10 @@ const getProductLinkAnalytics = async (req, res, next) => {
 
     // 5. Top Partners by Click
     const { rows: topPartners } = await query(`
-      SELECT pp."Partner_code" as partner_code, pp.first_name, pp.last_name, COUNT(c.click_id) as click_count
+      SELECT pp.partner_code as partner_code, pp.first_name, pp.last_name, COUNT(c.click_id) as click_count
       FROM click_tracking c
-      JOIN Partner_profiles pp ON c.partner_id = pp.id
-      GROUP BY pp."Partner_code", pp.first_name, pp.last_name
+      JOIN partner_profiles pp ON c.partner_id = pp.id
+      GROUP BY pp.partner_code, pp.first_name, pp.last_name
       ORDER BY click_count DESC
       LIMIT 5
     `);
@@ -101,18 +101,18 @@ const listClicks = async (req, res, next) => {
 
     let sql = `
       SELECT c.*, p.name as product_name, p.category as product_category,
-             b.name as bank_name, pp."Partner_code" as partner_code, pp.first_name as partner_first_name, pp.last_name as partner_last_name
+             b.name as bank_name, pp.partner_code as partner_code, pp.first_name as partner_first_name, pp.last_name as partner_last_name
       FROM click_tracking c
       JOIN products p ON c.product_id = p.id
       LEFT JOIN banks b ON c.bank_id = b.id
-      LEFT JOIN Partner_profiles pp ON c.partner_id = pp.id
+      LEFT JOIN partner_profiles pp ON c.partner_id = pp.id
       WHERE 1=1
     `;
     const params = [];
     let paramIndex = 1;
 
     if (search) {
-      sql += ` AND (c.ip_address ILIKE $${paramIndex} OR c.campaign ILIKE $${paramIndex} OR pp."Partner_code" ILIKE $${paramIndex})`;
+      sql += ` AND (c.ip_address ILIKE $${paramIndex} OR c.campaign ILIKE $${paramIndex} OR pp.partner_code ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -168,11 +168,11 @@ const listConversions = async (req, res, next) => {
 
     const { rows: details } = await query(`
       SELECT a.id as application_id, a.app_number, a.status as application_status, a.commission_amount,
-             p.name as product_name, pp."Partner_code" as partner_code, c.clicked_at, c.click_id
+             p.name as product_name, pp.partner_code as partner_code, c.clicked_at, c.click_id
       FROM applications a
       JOIN products p ON a.product_id = p.id
-      JOIN Partner_profiles pp ON a.Partner_id = pp.id
-      LEFT JOIN click_tracking c ON c.product_id = a.product_id AND c.partner_id = a.Partner_id
+      JOIN partner_profiles pp ON a.partner_id = pp.id
+      LEFT JOIN click_tracking c ON c.product_id = a.product_id AND c.partner_id = a.partner_id
       ORDER BY a.created_at DESC
       LIMIT 50
     `);

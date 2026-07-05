@@ -17,7 +17,7 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
     let { rows: [structure] } = await query(`
       SELECT commission_type, commission_value 
       FROM commission_structures 
-      WHERE product_id = $1 AND "Partner_id" = $2 AND effective_to IS NULL
+      WHERE product_id = $1 AND partner_id = $2 AND effective_to IS NULL
     `, [productId, partnerId]);
 
     if (!structure) {
@@ -110,7 +110,7 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
     const partnerId = app.Partner_id;
 
     const { rows: [wallet] } = await client.query(`
-      SELECT id FROM wallets WHERE "Partner_id" = $1 FOR UPDATE
+      SELECT id FROM wallets WHERE partner_id = $1 FOR UPDATE
     `, [partnerId]);
     if (!wallet) throw new Error('Wallet not found');
 

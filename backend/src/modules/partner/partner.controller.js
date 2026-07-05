@@ -16,7 +16,7 @@ const getProfile = async (req, res, next) => {
         abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
       FROM Partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN Partner_bank_details abd ON abd.Partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.Partner_id = ap.id
       WHERE ap.id = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
@@ -351,7 +351,7 @@ const getSelfProfile = async (req, res, next) => {
         abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
       FROM Partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN Partner_bank_details abd ON abd.Partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.Partner_id = ap.id
       WHERE ap.user_id = $1
     `, [userId]);
     if (!Partner) return notFound(res, 'Partner profile not found');
@@ -778,10 +778,10 @@ const getReferralInfo = async (req, res, next) => {
 
     if (!referral) {
       const { rows: [partner] } = await query(`
-        SELECT Partner_code FROM Partner_profiles WHERE id = $1
+        SELECT partner_code FROM partner_profiles WHERE id = $1
       `, [partnerId]);
       
-      const code = partner?.Partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
+      const code = partner?.partner_code || partner?.Partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
       const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${code}`;
       
       const { rows: [newRef] } = await query(`

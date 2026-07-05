@@ -10,12 +10,61 @@ const ensureWallet = async (partnerId) => {
   `, [partnerId]);
 };
 
-// Credit money to Hold Balance (e.g. commission credit pending verification)
-// ── NEW HELPER: Sync Balance from Ledger ──
-const syncWalletBalance = async (partnerId, client) => {
-  // Calculates wallet balance dynamically from wallet_ledger
-  // And updates the wallets table cache.
+// Sync transactions table helper to ensure wallet_transactions replicates wallet_ledger
+const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, applicationId, type, amount, balanceBefore, balanceAfter, status, description, referenceType, referenceId, processedBy, meta = {}) => {
+  const { rows } = await client.query(`SELECT id FROM wallet_transactions WHERE id = $1`, [ledgerTxnId]);
   
+  let tds = parseFloat(meta.tds || 0);
+  let gst = parseFloat(meta.gst || 0);
+  let netAmount = parseFloat(meta.net_amount || amount);
+
+  if (['PERSONAL_COMMISSION', 'TEAM_COMMISSION', 'OVERRIDE_COMMISSION'].includes(type) && !meta.net_amount) {
+    tds = parseFloat((amount * 0.05).toFixed(2)); // default 5% TDS
+    netAmount = parseFloat((amount - tds).toFixed(2));
+  }
+
+  if (rows.length > 0) {
+    await client.query(`
+      UPDATE wallet_transactions SET
+        status = $1,
+        processed_by = $2,
+        processed_at = NOW(),
+        description = COALESCE($3, description),
+        remarks = COALESCE($4, remarks)
+      WHERE id = $5
+    `, [status, processedBy, description, meta.remarks || null, ledgerTxnId]);
+  } else {
+    await client.query(`
+      INSERT INTO wallet_transactions (
+        id, wallet_id, partner_id, application_id, type, amount, balance_before, balance_after, status, description, reference_type, reference_id, processed_by, processed_at, created_at,
+        product_id, commission_type, gst, tds, net_amount, remarks
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), $14, $15, $16, $17, $18, $19)
+    `, [
+      ledgerTxnId,
+      walletId,
+      partnerId,
+      applicationId || null,
+      type,
+      amount,
+      balanceBefore || 0,
+      balanceAfter || 0,
+      status,
+      description || '',
+      referenceType || null,
+      referenceId || null,
+      processedBy || null,
+      meta.product_id || null,
+      meta.commission_type || null,
+      gst,
+      tds,
+      netAmount,
+      meta.remarks || null
+    ]);
+  }
+};
+
+// Sync Wallet Balance Cache in wallets table
+const syncWalletBalance = async (partnerId, client) => {
   // 1. Available Balance = Completed Credits - Completed Debits
   const availableQuery = await client.query(`
     SELECT 
@@ -23,6 +72,7 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_earn,
       COALESCE(SUM(CASE WHEN transaction_type = 'PERSONAL_COMMISSION' THEN credit ELSE 0 END), 0) as personal_earn,
       COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
+      COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn,
       COALESCE(SUM(CASE WHEN transaction_type = 'WITHDRAWAL' THEN debit ELSE 0 END), 0) as withdrawn
     FROM wallet_ledger 
     WHERE partner_id = $1 AND status = 'completed'
@@ -42,8 +92,8 @@ const syncWalletBalance = async (partnerId, client) => {
 
   const availableBalance = parseFloat(av.available_bal);
   const holdBalance = parseFloat(hd.hold_bal);
-  const totalEarned = parseFloat(av.team_earn) + parseFloat(av.personal_earn) + parseFloat(av.ref_bonus);
-  
+  const totalEarned = parseFloat(av.team_earn) + parseFloat(av.personal_earn) + parseFloat(av.ref_bonus) + parseFloat(av.override_earn || 0);
+
   await client.query(`
     UPDATE wallets SET
       available_balance = $1,
@@ -54,8 +104,11 @@ const syncWalletBalance = async (partnerId, client) => {
       team_earnings = $6,
       referral_bonus = $7,
       pending_team_commission = $8,
+      pending_balance = $9,
+      withdrawn_balance = $10,
+      override_balance = $11,
       last_updated = NOW()
-    WHERE "Partner_id" = $9
+    WHERE partner_id = $12
   `, [
     availableBalance, 
     holdBalance, 
@@ -64,13 +117,17 @@ const syncWalletBalance = async (partnerId, client) => {
     parseFloat(av.personal_earn), 
     parseFloat(av.team_earn), 
     parseFloat(av.ref_bonus), 
-    parseFloat(hd.team_pending), 
+    parseFloat(hd.team_pending),
+    holdBalance, 
+    parseFloat(av.withdrawn), 
+    parseFloat(av.override_earn || 0), 
     partnerId
   ]);
 
   return { availableBalance, holdBalance, totalEarned };
 };
 
+// Credit money to Hold Balance (e.g. commission credit pending verification)
 const creditHold = async (partnerId, amount, meta = {}, existingClient = null) => {
   const client = existingClient || await getClient();
   const isInternalTxn = !existingClient;
@@ -79,12 +136,12 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
 
     // Get/ensure wallet
     let { rows: [wallet] } = await client.query(
-      `SELECT id FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`,
+      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`,
       [partnerId]
     );
     if (!wallet) {
-      await client.query(`INSERT INTO wallets ("Partner_id") VALUES ($1) ON CONFLICT ("Partner_id") DO NOTHING`, [partnerId]);
-      const result = await client.query(`SELECT id FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`, [partnerId]);
+      await client.query(`INSERT INTO wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [partnerId]);
+      const result = await client.query(`SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`, [partnerId]);
       wallet = result.rows[0];
     }
 
@@ -92,6 +149,7 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     let txnType = 'PERSONAL_COMMISSION';
     if (meta.reference_type === 'team_commission') txnType = 'TEAM_COMMISSION';
     if (meta.reference_type === 'referral_bonus') txnType = 'REFERRAL_BONUS';
+    if (meta.reference_type === 'override_commission') txnType = 'OVERRIDE_COMMISSION';
 
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
@@ -104,6 +162,21 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
       meta.reference_id || meta.application_id || null,
       meta.processed_by || null
     ]);
+
+    // Also sync to wallet_transactions
+    let commissionType = 'personal';
+    if (meta.reference_type === 'team_commission') commissionType = 'team';
+    if (meta.reference_type === 'referral_bonus') commissionType = 'referral';
+    if (meta.reference_type === 'override_commission') commissionType = 'override';
+
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = balanceBefore;
+
+    await syncTransactionTable(client, txn.id, wallet.id, partnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, 'pending', meta.description || 'Commission credit on hold', meta.reference_type, meta.reference_id || meta.application_id || null, meta.processed_by || null, {
+      product_id: meta.product_id || null,
+      commission_type: commissionType,
+      remarks: meta.remarks || null
+    });
 
     await syncWalletBalance(partnerId, client);
 
@@ -128,7 +201,7 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     // Get wallet
     const { rows: [wallet] } = await client.query(
-      `SELECT id FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`,
+      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`,
       [partnerId]
     );
     if (!wallet) throw new Error('Wallet not found');
@@ -139,22 +212,40 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
         UPDATE wallet_ledger SET status = 'completed', description = COALESCE(description, '') || ' [Released]'
         WHERE id = $1
       `, [meta.txn_id]);
+      
+      await syncTransactionTable(client, meta.txn_id, wallet.id, partnerId, null, null, amount, null, null, 'completed', meta.description || 'Hold released', null, null, meta.processed_by || null);
     } else {
       // New direct release
       let txnType = 'PERSONAL_COMMISSION';
       if (meta.reference_type === 'team_commission') txnType = 'TEAM_COMMISSION';
       if (meta.reference_type === 'referral_bonus') txnType = 'REFERRAL_BONUS';
+      if (meta.reference_type === 'override_commission') txnType = 'OVERRIDE_COMMISSION';
 
-      await client.query(`
+      const { rows: [txn] } = await client.query(`
         INSERT INTO wallet_ledger (
           wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by
         ) VALUES ($1, $2, null, $3, $4, 0, $5, $6, 'completed', $7)
+        RETURNING id
       `, [
         wallet.id, partnerId, txnType, amount, 
         meta.description || 'Hold released', 
         meta.reference_id || null,
         meta.processed_by || null
       ]);
+
+      const balanceBefore = parseFloat(wallet.available_balance || 0);
+      const balanceAfter = balanceBefore + amount;
+
+      let commissionType = 'personal';
+      if (meta.reference_type === 'team_commission') commissionType = 'team';
+      if (meta.reference_type === 'referral_bonus') commissionType = 'referral';
+      if (meta.reference_type === 'override_commission') commissionType = 'override';
+
+      await syncTransactionTable(client, txn.id, wallet.id, partnerId, null, txnType, amount, balanceBefore, balanceAfter, 'completed', meta.description || 'Hold released', meta.reference_type, meta.reference_id || null, meta.processed_by || null, {
+        product_id: meta.product_id || null,
+        commission_type: commissionType,
+        remarks: meta.remarks || null
+      });
     }
 
     await syncWalletBalance(partnerId, client);
@@ -163,7 +254,7 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     logger.info(`releaseHold: Released ₹${amount} to available for partner ${partnerId}`);
 
     // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (partner) {
       try {
         await notify.commissionCredited(partner.user_id, amount);
@@ -189,7 +280,7 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
 
     // Get wallet
     const { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`,
+      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`,
       [partnerId]
     );
     if (!wallet) throw new Error('Wallet not found');
@@ -202,6 +293,9 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
 
     // Log txn as pending or completed debit
     const status = meta.status || 'pending';
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = balanceBefore - amount;
+
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
@@ -213,6 +307,10 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
       meta.reference_id || null, status,
       meta.processed_by || null
     ]);
+
+    await syncTransactionTable(client, txn.id, wallet.id, partnerId, null, txnType, amount, balanceBefore, balanceAfter, status, meta.description || 'Withdrawal request debit', meta.reference_type, meta.reference_id || null, meta.processed_by || null, {
+      remarks: meta.remarks || null
+    });
 
     await syncWalletBalance(partnerId, client);
 
@@ -239,11 +337,12 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
   `, [applicationId]);
 
   const { rows: [partner] } = await query(`
-    SELECT parent_partner_id, first_name, last_name, "Partner_code" FROM Partner_profiles WHERE id = $1
+    SELECT parent_partner_id, first_name, last_name, partner_code FROM partner_profiles WHERE id = $1
   `, [partnerId]);
 
   const meta = {
     application_id: applicationId,
+    product_id: app ? app.product_id : null,
     reference_type: 'commission',
     reference_id: applicationId,
     bank_name: app ? app.bank_name : null,
@@ -253,7 +352,6 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
   };
 
   if (partner && partner.parent_partner_id && app) {
-    // 1. Fetch commission rule for this product to determine the split
     const { rows: [rule] } = await query(`
       SELECT partner_percentage, parent_percentage
       FROM commission_rules
@@ -269,7 +367,6 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
       childPct = parseFloat(rule.partner_percentage);
       parentPct = parseFloat(rule.parent_percentage);
     } else {
-      // Fallback to system settings
       const { rows: settingsRows } = await query(`
         SELECT key, value FROM system_settings WHERE key IN ('team_commission_child_pct', 'team_commission_parent_pct')
       `);
@@ -295,9 +392,8 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     };
     await creditHold(partner.parent_partner_id, parentAmount, parentMeta);
 
-    // Notify Parent
     try {
-      const { rows: [parentUser] } = await query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [partner.parent_partner_id]);
+      const { rows: [parentUser] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partner.parent_partner_id]);
       if (parentUser) {
         const { createNotification } = require('../notifications/service.js');
         await createNotification(
@@ -327,7 +423,6 @@ const releaseCommission = async (partnerId, walletId, txnId, amount) => {
 
   await releaseHold(partnerId, amount, meta);
 
-  // Update application commission_status to approved
   await query(`
     UPDATE applications SET commission_status = 'approved' 
     WHERE id = (SELECT application_id FROM wallet_ledger WHERE id = $1)
@@ -340,20 +435,15 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
   try {
     await client.query('BEGIN');
 
-    // NOTE: Withdrawal logic supports both old withdrawal_requests and new wallet_withdrawals
-    // but the system is using withdrawal_requests currently. Let's use wallet_withdrawals if it exists, or stick to withdrawal_requests to not break APIs.
-    // Actually, the new plan states we use wallet_withdrawals but to avoid breaking APIs we will stick to withdrawal_requests.
-    // Let's check withdrawal_requests for the ID.
     const { rows: [wr] } = await client.query(
       `SELECT wr.*, w.id as wallet_id FROM withdrawal_requests wr
-       JOIN wallets w ON w."Partner_id" = wr.partner_id WHERE wr.id = $1 FOR UPDATE`,
+       JOIN wallets w ON w.partner_id = wr.partner_id WHERE wr.id = $1 FOR UPDATE`,
       [withdrawalId]
     );
     if (!wr) throw new Error('Withdrawal request not found');
     if (wr.status !== 'pending') throw new Error('Withdrawal already processed');
 
     if (approved) {
-      // Update matching debit transaction to processed (completed)
       await client.query(`
         UPDATE wallet_ledger SET
           status = 'completed',
@@ -361,6 +451,15 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
           reference_number = COALESCE($2, reference_number)
         WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $3 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $4
       `, [processedBy, utrNumber, withdrawalId.toString(), wr.partner_id]);
+
+      const { rows: ledgerRows } = await client.query(
+        `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
+         WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
+        [withdrawalId.toString(), wr.partner_id]
+      );
+      for (const row of ledgerRows) {
+        await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal approved - UTR: ${utrNumber}`, null, null, processedBy);
+      }
 
       await client.query(`
         UPDATE withdrawal_requests SET
@@ -372,8 +471,14 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
           updated_at = NOW()
         WHERE id = $4
       `, [utrNumber, processedBy, adminNote, withdrawalId]);
+
+      // Record in partner settlements
+      await client.query(`
+        INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
+        VALUES ($1, $2, 'Bank Transfer', $3, NOW(), 'completed')
+      `, [withdrawalId, wr.partner_id, utrNumber]);
+
     } else {
-      // Rejection: refund to available_balance (by marking the pending debit as rejected, which syncWalletBalance ignores)
       await client.query(`
         UPDATE wallet_ledger SET
           status = 'rejected',
@@ -381,6 +486,15 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
           description = COALESCE(description, '') || ' [Rejected]'
         WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $3
       `, [processedBy, withdrawalId.toString(), wr.partner_id]);
+
+      const { rows: ledgerRows } = await client.query(
+        `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
+         WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
+        [withdrawalId.toString(), wr.partner_id]
+      );
+      for (const row of ledgerRows) {
+        await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'rejected', `Withdrawal rejected - Reason: ${rejectionReason}`, null, null, processedBy);
+      }
 
       await client.query(`
         UPDATE withdrawal_requests SET
@@ -397,8 +511,7 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
     await syncWalletBalance(wr.partner_id, client);
     await client.query('COMMIT');
 
-    // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM Partner_profiles WHERE id = $1`, [wr.partner_id]);
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
     if (partner) {
       try {
         approved
@@ -423,7 +536,7 @@ const processWithdrawal = async (withdrawalId, approved, processedBy, utrNumber 
 // Get full wallet summary for a Partner
 const getWalletSummary = async (partnerId) => {
   const { rows: [wallet] } = await query(`
-    SELECT id, Partner_id, total_earned, total_withdrawn, hold_balance, available_balance, last_updated
+    SELECT id, Partner_id, total_earned, total_withdrawn, hold_balance, available_balance, pending_balance, withdrawn_balance, override_balance, last_updated
     FROM wallets WHERE Partner_id = $1
   `, [partnerId]);
   return wallet;
@@ -457,13 +570,13 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
 
     // Get/ensure wallet
     let { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`,
+      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`,
       [partnerId]
     );
     if (!wallet) {
-      await client.query(`INSERT INTO wallets ("Partner_id") VALUES ($1) ON CONFLICT ("Partner_id") DO NOTHING`, [partnerId]);
+      await client.query(`INSERT INTO wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [partnerId]);
       const result = await client.query(
-        `SELECT id, available_balance FROM wallets WHERE "Partner_id" = $1 FOR UPDATE`,
+        `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`,
         [partnerId]
       );
       wallet = result.rows[0];
@@ -477,7 +590,7 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
       throw new Error(`Invalid transaction type: ${txnType}`);
     }
 
-    // Log transaction
+    // Log transaction in wallet_ledger
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, status, created_by
@@ -490,6 +603,13 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
       description || 'Manual Adjustment', 
       processedBy
     ]);
+
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = txnType === 'credit' ? (balanceBefore + amount) : (balanceBefore - amount);
+
+    await syncTransactionTable(client, txn.id, wallet.id, partnerId, null, 'ADJUSTMENT', amount, balanceBefore, balanceAfter, 'completed', description || 'Manual Adjustment', 'adjustment', null, processedBy, {
+      remarks: description
+    });
 
     await syncWalletBalance(partnerId, client);
 

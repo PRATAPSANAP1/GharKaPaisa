@@ -56,6 +56,10 @@ import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
 import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
+import ManageWallet from '../modules/super-admin/wallet/ManageWallet';
+import SuperAdminManageApplications from '../modules/super-admin/crm/ManageApplications';
+import NotificationCenter from '../modules/notifications/NotificationCenter';
+import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
 
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
@@ -175,7 +179,7 @@ const AppRoutes = () => {
         <Route path="reports" element={<PartnerReports />} />
         <Route path="marketing" element={<PartnerMarketing />} />
         <Route path="training" element={<PartnerTraining />} />
-        <Route path="notifications" element={<PartnerNotifications />} />
+        <Route path="notifications" element={<NotificationCenter />} />
         <Route path="support" element={<PartnerSupport />} />
         <Route path="kyc-centre" element={<PartnerKyc />} />
         <Route path="profile" element={<PartnerProfile />} />
@@ -237,6 +241,10 @@ const AppRoutes = () => {
         <Route path="services" element={<ManageServices />} />
         <Route path="commissions" element={<ManageCommissions />} />
         <Route path="commission-rules" element={<ManageCommissionRules />} />
+        <Route path="wallet" element={<ManageWallet />} />
+        <Route path="applications" element={<SuperAdminManageApplications />} />
+        <Route path="notifications" element={<NotificationCenter />} />
+        <Route path="announcements" element={<ManageAnnouncements />} />
       </Route>
 
       {/* Fallback */}

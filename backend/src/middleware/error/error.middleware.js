@@ -29,7 +29,7 @@ const errorHandler = (err, req, res, next) => {
     const uniqueFieldMap = {
       'users_email_key': 'Email already registered',
       'users_mobile_key': 'Mobile already registered',
-      'Partner_profiles_gst_number_key': 'GST number already registered',
+      'partner_profiles_gst_number_key': 'GST number already registered',
       'partner_profiles_gst_number_key': 'GST number already registered',
     };
     const safeMsg = uniqueFieldMap[err.constraint] || 'Record already exists';

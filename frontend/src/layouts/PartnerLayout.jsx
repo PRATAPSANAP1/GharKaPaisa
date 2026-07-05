@@ -733,11 +733,33 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
     fetchWallet();
     fetchNotifications();
 
-    const int = setInterval(() => {
-      fetchWallet();
-      fetchNotifications();
-    }, 60000);
-    return () => clearInterval(int);
+    const eventSource = new EventSource('/api/v1/notifications/stream');
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'notification') {
+          setNotifications(prev => [message.data, ...prev.slice(0, 4)]);
+          setUnreadCount(message.unread_count);
+          if (message.data.category === 'wallet' || message.data.category === 'applications') {
+            fetchWallet();
+          }
+        } else if (message.type === 'announcement') {
+          alert(`📢 Announcement: ${message.data.title}\n\n${message.data.description}`);
+        }
+      } catch (err) {
+        console.error('SSE Message parsing failed', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.warn('SSE stream error, closing', err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, [user]);
 
   useEffect(() => {

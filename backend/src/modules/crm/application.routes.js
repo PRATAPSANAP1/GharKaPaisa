@@ -10,10 +10,27 @@ router.post('/public', applicationRules, validate, appCtrl.submitPublicApplicati
 
 router.use(authenticate, syncUser);
 
+// Dashboards and Analytics
+router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsDashboard);
+router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
+
+// Basic CRUD
 router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
 router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
 router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
-router.patch('/:id/status', authorize('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCtrl.updateStatus);
+
+// Lifecycle states
+router.put('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);
+router.put('/:id/commission', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateCommission);
+
+// Timeline & logs
+router.get('/:id/timeline', requireApprovedPartnerOrAdmin, appCtrl.getTimeline);
+
+// Notes & Comments
+router.post('/:id/notes', requireApprovedPartnerOrAdmin, appCtrl.addNote);
+
+// Documents Verification
+router.get('/:id/documents', requireApprovedPartnerOrAdmin, appCtrl.getDocuments);
 router.post('/:id/documents', requireApprovedPartnerOrAdmin, upload.single('document'), appCtrl.uploadApplicationDoc);
 
 module.exports = router;

@@ -3,9 +3,9 @@ const { query } = require('../../config/database');
 const getSuperAdminDashboard = async () => {
   const { rows: [stats] } = await query(`
     SELECT
-      (SELECT COUNT(*) FROM Partner_profiles) as total_partners,
-      (SELECT COUNT(*) FROM users u JOIN Partner_profiles p ON p.user_id = u.id WHERE u.status = 'active') as active_partners,
-      (SELECT COUNT(*) FROM Partner_profiles WHERE kyc_status = 'pending') as pending_kyc,
+      (SELECT COUNT(*) FROM partner_profiles) as total_partners,
+      (SELECT COUNT(*) FROM users u JOIN partner_profiles p ON p.user_id = u.id WHERE u.status = 'active') as active_partners,
+      (SELECT COUNT(*) FROM partner_profiles WHERE kyc_status = 'pending') as pending_kyc,
       (SELECT COUNT(*) FROM leads) as total_leads,
       (SELECT COUNT(*) FROM leads WHERE status = 'approved') as approved_leads,
       (SELECT COUNT(*) FROM leads WHERE status = 'rejected') as rejected_leads,
@@ -22,13 +22,13 @@ const getAdminDashboard = async (adminId) => {
     SELECT
       (SELECT COUNT(*) FROM leads WHERE status = 'pending') as pending_leads,
       (SELECT COUNT(*) FROM leads WHERE created_at::date = CURRENT_DATE) as todays_leads,
-      (SELECT COUNT(*) FROM Partner_profiles WHERE kyc_status = 'pending') as pending_kyc,
+      (SELECT COUNT(*) FROM partner_profiles WHERE kyc_status = 'pending') as pending_kyc,
       (SELECT COUNT(*) FROM withdrawal_requests WHERE status = 'pending') as pending_withdrawals
   `);
 
   const { rows: recentPartners } = await query(`
     SELECT p.id, p.first_name, p.last_name, p.Partner_code, p.created_at, u.email, u.mobile, u.status
-    FROM Partner_profiles p
+    FROM partner_profiles p
     JOIN users u ON u.id = p.user_id
     ORDER BY p.created_at DESC
     LIMIT 5

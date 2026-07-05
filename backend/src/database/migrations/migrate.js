@@ -161,7 +161,7 @@ const migrate = async () => {
 
   // ── Partner Profiles ────────────────────────────────────────────
   await query(`
-    CREATE TABLE IF NOT EXISTS Partner_profiles (
+    CREATE TABLE IF NOT EXISTS partner_profiles (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id           UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       Partner_code        VARCHAR(20) UNIQUE NOT NULL,
@@ -187,15 +187,15 @@ const migrate = async () => {
     )
   `);
 
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
-  await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES Partner_profiles(id)`);
+  await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+  await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
 
 
   // ── Partner Bank Details ────────────────────────────────────────
   await query(`
-    CREATE TABLE IF NOT EXISTS Partner_bank_details (
+    CREATE TABLE IF NOT EXISTS partner_bank_details (
       id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id            UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+      Partner_id            UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       bank_name           VARCHAR(100) NOT NULL,
       account_number      VARCHAR(255) NOT NULL,
       ifsc_code           VARCHAR(15) NOT NULL,
@@ -207,14 +207,14 @@ const migrate = async () => {
     )
   `);
 
-  await query(`ALTER TABLE Partner_bank_details ALTER COLUMN account_number TYPE VARCHAR(255)`);
+  await query(`ALTER TABLE partner_bank_details ALTER COLUMN account_number TYPE VARCHAR(255)`);
 
   // ── Database Schema Alignment (Migrate agent tables/columns to partner) ──
   await query(`
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_profiles') THEN
-        INSERT INTO Partner_profiles (id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
+        INSERT INTO partner_profiles (id, user_id, Partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
         SELECT id, user_id, agent_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
         FROM agent_profiles
         ON CONFLICT (id) DO NOTHING;
@@ -228,7 +228,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_bank_details') THEN
-        INSERT INTO Partner_bank_details (id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
+        INSERT INTO partner_bank_details (id, Partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
         SELECT id, agent_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
         FROM agent_bank_details
         ON CONFLICT (id) DO NOTHING;
@@ -287,7 +287,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS kyc_documents (
       id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id      UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+      Partner_id      UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       doc_type      VARCHAR(50) NOT NULL,  -- aadhaar, pan, gst_cert, cancelled_cheque
       doc_number    VARCHAR(50),
       file_url      VARCHAR(500) NOT NULL,
@@ -349,7 +349,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS commission_structures (
       id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       product_id       UUID NOT NULL REFERENCES products(id),
-      Partner_id         UUID REFERENCES Partner_profiles(id),  -- NULL = global default
+      Partner_id         UUID REFERENCES partner_profiles(id),  -- NULL = global default
       commission_type  VARCHAR(20) DEFAULT 'fixed',
       commission_value DECIMAL(12,2) NOT NULL,
       effective_from   DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -388,7 +388,7 @@ const migrate = async () => {
       app_number         VARCHAR(20) UNIQUE NOT NULL,
       customer_id        UUID NOT NULL REFERENCES customers(id),
       product_id         UUID NOT NULL REFERENCES products(id),
-      Partner_id           UUID NOT NULL REFERENCES Partner_profiles(id),
+      Partner_id           UUID NOT NULL REFERENCES partner_profiles(id),
       submitted_by       UUID NOT NULL REFERENCES users(id),
       status             application_status DEFAULT 'submitted',
       bank_ref_number    VARCHAR(100),
@@ -435,7 +435,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS wallets (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      Partner_id          UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+      Partner_id          UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       total_earned      DECIMAL(15,2) DEFAULT 0,
       total_withdrawn   DECIMAL(15,2) DEFAULT 0,
       hold_balance      DECIMAL(15,2) DEFAULT 0,
@@ -458,7 +458,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS wallet_transactions (
       id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id      UUID NOT NULL REFERENCES wallets(id),
-      partner_id     UUID REFERENCES Partner_profiles(id),
+      partner_id     UUID REFERENCES partner_profiles(id),
       application_id UUID REFERENCES applications(id),
       type           VARCHAR(20) NOT NULL,
       amount         DECIMAL(12,2) NOT NULL,
@@ -476,7 +476,7 @@ const migrate = async () => {
     )
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_wallet ON wallet_transactions(wallet_id)`);
-  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES Partner_profiles(id)`);
+  await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`
     DO $$
     BEGIN
@@ -501,7 +501,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS withdrawal_requests (
       id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       wallet_id       UUID NOT NULL REFERENCES wallets(id),
-      Partner_id        UUID NOT NULL REFERENCES Partner_profiles(id),
+      Partner_id        UUID NOT NULL REFERENCES partner_profiles(id),
       amount          DECIMAL(12,2) NOT NULL,
       status          VARCHAR(20) DEFAULT 'pending',
       bank_name       VARCHAR(100),
@@ -550,7 +550,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS leads (
       id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      partner_id    UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+      partner_id    UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       product_id    UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       customer_name VARCHAR(255) NOT NULL,
       mobile        VARCHAR(15) NOT NULL,
@@ -572,7 +572,7 @@ const migrate = async () => {
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_release ON wallet_transactions(release_at) WHERE status = 'pending'`);
   await query(`CREATE INDEX IF NOT EXISTS idx_withdrawal_partner ON withdrawal_requests(Partner_id, status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id, revoked)`);
-  await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON Partner_profiles(Partner_code)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON partner_profiles(Partner_code)`);
 
   // ── Audit Logs ────────────────────────────────────────────────
   await query(`
@@ -652,7 +652,7 @@ const migrate = async () => {
     BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
     $$ LANGUAGE plpgsql
   `);
-  const triggerTables = ['users', 'Partner_profiles', 'Partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests', 'leads'];
+  const triggerTables = ['users', 'partner_profiles', 'partner_bank_details', 'products', 'customers', 'applications', 'withdrawal_requests', 'leads'];
   for (const t of triggerTables) {
     await query(`DROP TRIGGER IF EXISTS set_updated_at ON ${t}`);
     await query(`
@@ -961,11 +961,11 @@ const migrate = async () => {
   // Encrypt existing bank account numbers if not already encrypted
   try {
     const { encrypt } = require('../../utils/helpers/crypto');
-    const { rows: bankDetails } = await query(`SELECT id, account_number FROM Partner_bank_details`);
+    const { rows: bankDetails } = await query(`SELECT id, account_number FROM partner_bank_details`);
     for (const row of bankDetails) {
       if (row.account_number && !row.account_number.includes(':')) {
         const encrypted = encrypt(row.account_number);
-        await query(`UPDATE Partner_bank_details SET account_number = $1 WHERE id = $2`, [encrypted, row.id]);
+        await query(`UPDATE partner_bank_details SET account_number = $1 WHERE id = $2`, [encrypted, row.id]);
       }
     }
     logger.info('Partner bank details encryption migration completed successfully');
@@ -1023,7 +1023,7 @@ const migrate = async () => {
       CREATE TABLE IF NOT EXISTS application_click_logs (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         product_id        UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-        partner_id        UUID REFERENCES Partner_profiles(id) ON DELETE SET NULL,
+        partner_id        UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
         customer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
         application_type  application_type_enum,
         ip_address        VARCHAR(64),
@@ -1046,7 +1046,7 @@ const migrate = async () => {
   // ── Partner Team Management Migration ─────────────────────────────────────
   try {
     await query(`
-      ALTER TABLE Partner_profiles 
+      ALTER TABLE partner_profiles 
       ADD COLUMN IF NOT EXISTS team_level INTEGER DEFAULT 1,
       ADD COLUMN IF NOT EXISTS team_status VARCHAR(50) DEFAULT 'ACTIVE',
       ADD COLUMN IF NOT EXISTS allow_team_creation BOOLEAN DEFAULT TRUE,
@@ -1066,8 +1066,8 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS partner_team_relationships (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        parent_partner_id UUID NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
-        child_partner_id  UUID NOT NULL UNIQUE REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+        parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id  UUID NOT NULL UNIQUE REFERENCES partner_profiles(id) ON DELETE CASCADE,
         level             INTEGER NOT NULL,
         created_at        TIMESTAMPTZ DEFAULT NOW(),
         status            VARCHAR(20) DEFAULT 'ACTIVE'
@@ -1079,7 +1079,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS partner_referrals (
         id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id        UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+        partner_id        UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
         referral_code     VARCHAR(50) UNIQUE NOT NULL,
         referral_link     VARCHAR(1000) NOT NULL,
         total_invites     INTEGER DEFAULT 0,
@@ -1129,7 +1129,7 @@ const migrate = async () => {
       CREATE TABLE IF NOT EXISTS wallet_ledger (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         wallet_id UUID NOT NULL REFERENCES wallets(id),
-        partner_id UUID NOT NULL REFERENCES Partner_profiles(id),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id),
         application_id UUID REFERENCES applications(id),
         transaction_type ledger_transaction_type NOT NULL,
         credit DECIMAL(15,2) DEFAULT 0,
@@ -1160,7 +1160,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_withdrawals (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id UUID REFERENCES Partner_profiles(id),
+        partner_id UUID REFERENCES partner_profiles(id),
         amount DECIMAL(15,2) NOT NULL,
         bank_account VARCHAR(100),
         ifsc VARCHAR(20),
@@ -1182,11 +1182,11 @@ const migrate = async () => {
   try {
     logger.info('Running Video KYC Migrations...');
     
-    // Add new columns to Partner_profiles
-    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_submitted_at TIMESTAMPTZ`);
-    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_at TIMESTAMPTZ`);
-    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_by UUID REFERENCES users(id)`);
-    await query(`ALTER TABLE Partner_profiles ADD COLUMN IF NOT EXISTS kyc_rejection_reason TEXT`);
+    // Add new columns to partner_profiles
+    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS kyc_submitted_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_at TIMESTAMPTZ`);
+    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS kyc_reviewed_by UUID REFERENCES users(id)`);
+    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS kyc_rejection_reason TEXT`);
 
     // Add verification_status to kyc_documents
     await query(`ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'`);
@@ -1195,7 +1195,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS partner_videos (
         id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id          UUID UNIQUE NOT NULL REFERENCES Partner_profiles(id) ON DELETE CASCADE,
+        partner_id          UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
         video_url           VARCHAR(500) NOT NULL,
         video_duration      INTEGER,
         video_size          INTEGER,
@@ -1231,7 +1231,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS click_tracking (
         click_id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id        UUID REFERENCES Partner_profiles(id) ON DELETE SET NULL,
+        partner_id        UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
         product_id        UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
         bank_id           UUID REFERENCES banks(id) ON DELETE SET NULL,
         customer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
@@ -1272,6 +1272,248 @@ const migrate = async () => {
   } catch (linkMigrateErr) {
     logger.error('Failed to run Product Links & Click Tracking Migrations:', linkMigrateErr);
     throw linkMigrateErr;
+  }
+
+  // Wallet Schema Updates (Task 8)
+  try {
+    logger.info('Running Wallet Schema Updates (Task 8)...');
+    
+    // 0. Update ledger_transaction_type enum to include OVERRIDE_COMMISSION
+    await query(`
+      DO $$
+      BEGIN
+        ALTER TYPE ledger_transaction_type ADD VALUE 'OVERRIDE_COMMISSION';
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+
+    // 1. Wallets table balance columns
+    await query(`
+      ALTER TABLE wallets 
+      ADD COLUMN IF NOT EXISTS pending_balance DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS withdrawn_balance DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS override_balance DECIMAL(15,2) DEFAULT 0
+    `);
+
+    // 2. Wallet transactions table columns
+    await query(`
+      ALTER TABLE wallet_transactions 
+      ADD COLUMN IF NOT EXISTS product_id UUID REFERENCES products(id),
+      ADD COLUMN IF NOT EXISTS commission_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS gst DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS tds DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS net_amount DECIMAL(15,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS remarks TEXT
+    `);
+
+    // 3. Partner bank details columns
+    await query(`
+      ALTER TABLE partner_bank_details 
+      ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100)
+    `);
+
+    // 4. Partner settlements table
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_settlements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        withdrawal_id UUID REFERENCES withdrawal_requests(id) ON DELETE SET NULL,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        payment_mode VARCHAR(50),
+        payment_gateway VARCHAR(50),
+        utr_number VARCHAR(100),
+        bank_reference VARCHAR(100),
+        settled_at TIMESTAMPTZ DEFAULT NOW(),
+        status VARCHAR(50) DEFAULT 'completed'
+      )
+    `);
+
+    logger.info('Wallet Schema Updates (Task 8) completed successfully');
+  } catch (walletMigrateErr) {
+    logger.error('Failed to run Wallet Schema Updates (Task 8):', walletMigrateErr);
+    throw walletMigrateErr;
+  }
+
+  // Application Lifecycle Schema Updates (Task 9)
+  try {
+    logger.info('Running Application Lifecycle Schema Updates (Task 9)...');
+
+    // 1. Applications table tracking updates
+    await query(`
+      ALTER TABLE applications
+      ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS tracking_id VARCHAR(100) NULL,
+      ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ NULL,
+      ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ NULL,
+      ADD COLUMN IF NOT EXISTS commission_received_at TIMESTAMPTZ NULL,
+      ADD COLUMN IF NOT EXISTS commission_paid_at TIMESTAMPTZ NULL
+    `);
+
+    // 2. Application Timeline table
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_timeline (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        status VARCHAR(50) NOT NULL,
+        activity VARCHAR(255) NOT NULL,
+        remarks TEXT NULL,
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        performed_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_timeline_app ON application_timeline(application_id)`);
+
+    // 3. Application Notes table
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_notes (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        note TEXT NOT NULL,
+        visibility VARCHAR(50) DEFAULT 'public',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_notes_app ON application_notes(application_id)`);
+
+    // 4. Application Documents table
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        document_type VARCHAR(50) NOT NULL,
+        file_url VARCHAR(1000) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        uploaded_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_docs_app ON application_documents(application_id)`);
+
+    // 5. Commission Ledger table
+    await query(`
+      CREATE TABLE IF NOT EXISTS commission_ledger (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        parent_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        commission_amount DECIMAL(15,2) DEFAULT 0,
+        override_amount DECIMAL(15,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_comm_ledger_app ON commission_ledger(application_id)`);
+
+    logger.info('Application Lifecycle Schema Updates (Task 9) completed successfully');
+  } catch (lifecycleMigrateErr) {
+    logger.error('Failed to run Application Lifecycle Schema Updates (Task 9):', lifecycleMigrateErr);
+    throw lifecycleMigrateErr;
+  }
+
+  // Notification System Schema Updates (Task 10)
+  try {
+    logger.info('Running Notification System Schema Updates (Task 10)...');
+
+    // 1. Notifications table updates
+    await query(`
+      ALTER TABLE notifications
+      ADD COLUMN IF NOT EXISTS user_role VARCHAR(50) NULL,
+      ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'system',
+      ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal',
+      ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'sent',
+      ADD COLUMN IF NOT EXISTS channel VARCHAR(50) DEFAULT 'in-app',
+      ADD COLUMN IF NOT EXISTS redirect_url VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS icon VARCHAR(100) NULL,
+      ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL
+    `);
+
+    // 2. Notification Preferences
+    await query(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        email_enabled BOOLEAN DEFAULT TRUE,
+        sms_enabled BOOLEAN DEFAULT TRUE,
+        app_enabled BOOLEAN DEFAULT TRUE,
+        marketing_enabled BOOLEAN DEFAULT TRUE,
+        commission_enabled BOOLEAN DEFAULT TRUE,
+        kyc_enabled BOOLEAN DEFAULT TRUE,
+        application_enabled BOOLEAN DEFAULT TRUE,
+        language VARCHAR(10) DEFAULT 'en',
+        frequency VARCHAR(20) DEFAULT 'instant'
+      )
+    `);
+
+    // 3. Announcements
+    await query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        banner_image VARCHAR(500) NULL,
+        target_role VARCHAR(50) DEFAULT 'all',
+        priority VARCHAR(20) DEFAULT 'normal',
+        start_date DATE NULL,
+        end_date DATE NULL,
+        redirect_url VARCHAR(500) NULL,
+        status VARCHAR(20) DEFAULT 'draft',
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // 4. Templates
+    await query(`
+      CREATE TABLE IF NOT EXISTS notification_templates (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        template_name VARCHAR(100) UNIQUE NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        channel VARCHAR(50) DEFAULT 'in-app',
+        variables JSONB DEFAULT '[]',
+        status VARCHAR(20) DEFAULT 'active'
+      )
+    `);
+
+    logger.info('Notification System Schema Updates (Task 10) completed successfully');
+  } catch (notificationMigrateErr) {
+    logger.error('Failed to run Notification System Schema Updates (Task 10):', notificationMigrateErr);
+    throw notificationMigrateErr;
+  }
+
+  // Product Management System Schema Updates (Task 7)
+  try {
+    logger.info('Running Product Management System Schema Updates (Task 7)...');
+
+    await query(`
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS short_description VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS logo VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS banner VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS image VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS commission_enabled BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS commission_amount DECIMAL(12,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS override_percentage DECIMAL(5,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS public_visible BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS partner_visible BOOLEAN DEFAULT TRUE,
+      ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id),
+      ADD COLUMN IF NOT EXISTS eligibility_criteria TEXT NULL,
+      ADD COLUMN IF NOT EXISTS documents_required TEXT NULL,
+      ADD COLUMN IF NOT EXISTS benefits TEXT NULL,
+      ADD COLUMN IF NOT EXISTS fees_charges TEXT NULL,
+      ADD COLUMN IF NOT EXISTS apply_button_text VARCHAR(100) DEFAULT 'Apply Now',
+      ADD COLUMN IF NOT EXISTS seo_title VARCHAR(255) NULL,
+      ADD COLUMN IF NOT EXISTS seo_description VARCHAR(500) NULL,
+      ADD COLUMN IF NOT EXISTS seo_keywords VARCHAR(500) NULL
+    `);
+
+    logger.info('Product Management System Schema Updates (Task 7) completed successfully');
+  } catch (productMigrateErr) {
+    logger.error('Failed to run Product Management System Schema Updates (Task 7):', productMigrateErr);
+    throw productMigrateErr;
   }
 
    logger.info('✅ All migrations completed successfully');

@@ -72,8 +72,8 @@ const getMe = async (req, res, next) => {
           pbd.bank_name, pbd.account_number, pbd.ifsc_code, pbd.account_holder_name,
           w.available_balance, w.hold_balance as pending_amount, w.total_earned, w.total_withdrawn
         FROM users u
-        LEFT JOIN Partner_profiles ap ON ap.user_id = u.id
-        LEFT JOIN Partner_bank_details pbd ON pbd.Partner_id = ap.id
+        LEFT JOIN partner_profiles ap ON ap.user_id = u.id
+        LEFT JOIN partner_bank_details pbd ON pbd.Partner_id = ap.id
         LEFT JOIN wallets w ON w.Partner_id = ap.id
         WHERE u.id = $1
       `, [req.user.id]);
@@ -542,7 +542,7 @@ const register = async (req, res, next) => {
 
       if (referral_code && role === 'PARTNER') {
         const { rows: [parentPartner] } = await client.query(`
-          SELECT id, team_level, allow_team_creation, team_status FROM Partner_profiles WHERE Partner_code = $1
+          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles WHERE Partner_code = $1
         `, [referral_code]);
         if (parentPartner) {
           if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
@@ -563,7 +563,7 @@ const register = async (req, res, next) => {
 
         // Create Partner profile
         const { rows: [Partner] } = await client.query(`
-          INSERT INTO Partner_profiles (
+          INSERT INTO partner_profiles (
             user_id, Partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
             parent_partner_id, team_level, team_joined_at
@@ -588,7 +588,7 @@ const register = async (req, res, next) => {
             // Update parent's children count
             if (currentLevel === 1) {
               await client.query(`
-                UPDATE Partner_profiles SET children_count = children_count + 1 WHERE id = $1
+                UPDATE partner_profiles SET children_count = children_count + 1 WHERE id = $1
               `, [currentParentId]);
               
               // Increment total_registered on partner_referrals for parent
@@ -598,7 +598,7 @@ const register = async (req, res, next) => {
             }
 
             const { rows: [nextParent] } = await client.query(`
-              SELECT parent_partner_id FROM Partner_profiles WHERE id = $1
+              SELECT parent_partner_id FROM partner_profiles WHERE id = $1
             `, [currentParentId]);
             currentParentId = nextParent?.parent_partner_id || null;
             currentLevel++;
@@ -615,7 +615,7 @@ const register = async (req, res, next) => {
         // Create bank details
         const encryptedAccountNumber = encrypt(account_number);
         await client.query(`
-          INSERT INTO Partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+          INSERT INTO partner_bank_details (Partner_id, bank_name, account_number, ifsc_code, account_holder_name)
           VALUES ($1, $2, $3, $4, $5)
         `, [Partner.id, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name]);
 

@@ -10,22 +10,42 @@ const logger = require('../../config/logger');
 const listProducts = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { category, bank_id, is_active = 'true', search } = req.query;
+    const { category, bank_id, is_active, search, commission_enabled, featured, status } = req.query;
 
-    let where = '';
+    let where = 'WHERE 1=1';
     const values = [];
     let idx = 1;
 
-    if (is_active === 'all') {
-      where = `WHERE 1=1`;
-    } else {
-      where = `WHERE p.is_active = $${idx++} AND b.is_active = true AND b.status = 'Active'`;
-      values.push(is_active === 'true');
+    if (is_active !== undefined && is_active !== 'all') {
+      where += ` AND p.is_active = $${idx++}`;
+      values.push(is_active === 'true' || is_active === true);
     }
 
-    if (category) { where += ` AND p.category = $${idx++}`; values.push(category); }
-    if (bank_id) { where += ` AND p.bank_id = $${idx++}`; values.push(bank_id); }
-    if (search) { where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx})`; values.push(`%${search}%`); idx++; }
+    if (category) { 
+      where += ` AND p.category = $${idx++}`; 
+      values.push(category); 
+    }
+    if (bank_id) { 
+      where += ` AND p.bank_id = $${idx++}`; 
+      values.push(bank_id); 
+    }
+    if (commission_enabled) {
+      where += ` AND p.commission_enabled = $${idx++}`;
+      values.push(commission_enabled === 'true' || commission_enabled === true);
+    }
+    if (featured) {
+      where += ` AND p.featured = $${idx++}`;
+      values.push(featured === 'true' || featured === true);
+    }
+    if (status) {
+      where += ` AND p.status = $${idx++}`;
+      values.push(status);
+    }
+    if (search) { 
+      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx})`; 
+      values.push(`%${search}%`); 
+      idx++; 
+    }
 
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id ${where}`, values),
@@ -79,58 +99,74 @@ const getProduct = async (req, res, next) => {
 // POST /products (Admin/Super Admin)
 const createProduct = async (req, res, next) => {
   try {
-    const { bank_id, name, category, description, commission_type, commission_value, min_age, max_age, min_income, display_order, annual_fee, time_period } = req.body;
+    const { 
+      bank_id, name, category, description, commission_type, commission_value, 
+      min_age, max_age, min_income, display_order, annual_fee, time_period,
+      short_description, logo, banner, image, commission_enabled, commission_amount,
+      override_percentage, featured, public_visible, partner_visible, eligibility_criteria,
+      documents_required, benefits, fees_charges, apply_button_text, seo_title,
+      seo_description, seo_keywords, priority, status, is_active
+    } = req.body;
     let image_url = req.body.image_url;
 
-    // Handle features and eligibility parsing since they might be sent as stringified JSON in FormData
+    // Handle features and eligibility parsing
     let parsedFeatures = req.body.features;
     if (typeof parsedFeatures === 'string') {
-      try {
-        parsedFeatures = JSON.parse(parsedFeatures);
-      } catch (e) {
+      try { parsedFeatures = JSON.parse(parsedFeatures); } catch (e) {
         return error(res, 'Features must be a valid JSON array', 400);
       }
     }
 
     let parsedEligibility = req.body.eligibility;
     if (typeof parsedEligibility === 'string') {
-      try {
-        parsedEligibility = JSON.parse(parsedEligibility);
-      } catch (e) {
+      try { parsedEligibility = JSON.parse(parsedEligibility); } catch (e) {
         return error(res, 'Eligibility must be a valid JSON object', 400);
       }
     }
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (!isS3Configured) {
-        return error(res, 'S3 bucket is not configured.', 503);
+      if (isS3Configured) {
+        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
+        image_url = url;
       }
-      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
-      image_url = url;
     }
 
     // Bank existence check
     const { rows: [bank] } = await query(`SELECT id FROM banks WHERE id = $1`, [bank_id]);
     if (!bank) return error(res, 'Bank not found', 400);
 
+    const isCommEnabled = commission_enabled !== undefined ? (commission_enabled === 'true' || commission_enabled === true) : true;
+    const isFeatured = featured !== undefined ? (featured === 'true' || featured === true) : false;
+    const isPubVisible = public_visible !== undefined ? (public_visible === 'true' || public_visible === true) : true;
+    const isPartVisible = partner_visible !== undefined ? (partner_visible === 'true' || partner_visible === true) : true;
+    const isActive = is_active !== undefined ? (is_active === 'true' || is_active === true) : true;
+
     const { rows: [p] } = await query(`
       INSERT INTO products (
         bank_id, name, category, description, features, eligibility, 
         commission_type, commission_value, min_age, max_age, min_income, 
-        display_order, annual_fee, time_period, image_url
+        display_order, annual_fee, time_period, image_url,
+        short_description, logo, banner, image, commission_enabled, 
+        commission_amount, override_percentage, featured, public_visible, 
+        partner_visible, eligibility_criteria, documents_required, benefits, 
+        fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
+        priority, status, is_active, created_by
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37) RETURNING id
     `, [
       bank_id, name, category, description, JSON.stringify(parsedFeatures || []), 
       JSON.stringify(parsedEligibility || {}), commission_type || 'fixed', 
-      commission_value, min_age, max_age, min_income, display_order || 0, 
-      annual_fee, time_period, image_url || null
+      commission_value || 0, min_age || null, max_age || null, min_income || null, display_order || 0, 
+      annual_fee || null, time_period || null, image_url || null,
+      short_description || null, logo || null, banner || null, image || null, isCommEnabled,
+      commission_amount || 0, override_percentage || 0, isFeatured, isPubVisible,
+      isPartVisible, eligibility_criteria || null, documents_required || null, benefits || null,
+      fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
+      priority || 0, status || 'Active', isActive, req.user?.id || null
     ]);
 
-    // Log the product creation
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
-
     return created(res, { product_id: p.id }, 'Product created');
   } catch (err) {
     next(err);
@@ -141,68 +177,45 @@ const createProduct = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, commission_type, commission_value, is_active, display_order, annual_fee, time_period } = req.body;
+    const { 
+      name, description, commission_type, commission_value, is_active, display_order, 
+      annual_fee, time_period, short_description, logo, banner, image, commission_enabled,
+      commission_amount, override_percentage, featured, public_visible, partner_visible,
+      eligibility_criteria, documents_required, benefits, fees_charges, apply_button_text,
+      seo_title, seo_description, seo_keywords, priority, status
+    } = req.body;
     let image_url = req.body.image_url;
 
-    // Get existing product for S3 cleanup
     const { rows: [existing] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Product not found');
 
-    // Handle features and eligibility parsing
     let parsedFeatures = req.body.features;
     if (typeof parsedFeatures === 'string') {
-      try {
-        parsedFeatures = JSON.parse(parsedFeatures);
-      } catch (e) {
+      try { parsedFeatures = JSON.parse(parsedFeatures); } catch (e) {
         return error(res, 'Features must be a valid JSON array', 400);
       }
     }
 
     let parsedEligibility = req.body.eligibility;
     if (typeof parsedEligibility === 'string') {
-      try {
-        parsedEligibility = JSON.parse(parsedEligibility);
-      } catch (e) {
+      try { parsedEligibility = JSON.parse(parsedEligibility); } catch (e) {
         return error(res, 'Eligibility must be a valid JSON object', 400);
-      }
-    }
-
-    if (parsedFeatures !== undefined) {
-      if (!Array.isArray(parsedFeatures)) {
-        return error(res, 'Features must be an array', 400);
-      }
-      if (parsedFeatures.length === 0) {
-        return error(res, 'Features cannot be empty', 400);
-      }
-    }
-
-    if (parsedEligibility !== undefined) {
-      if (typeof parsedEligibility !== 'object' || parsedEligibility === null || Array.isArray(parsedEligibility)) {
-        return error(res, 'Eligibility must be an object', 400);
-      }
-      if (Object.keys(parsedEligibility).length === 0) {
-        return error(res, 'Eligibility cannot be empty', 400);
       }
     }
 
     if (req.file) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
-      if (!isS3Configured) {
-        return error(res, 'S3 bucket is not configured.', 503);
-      }
-      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
-      image_url = url;
-
-      // Delete old S3 image
-      if (existing.image_url && existing.image_url.includes(process.env.AWS_S3_BUCKET)) {
-        try {
-          const parts = existing.image_url.split('.com/');
-          if (parts[1]) await deleteFromS3(parts[1]);
-        } catch (s3Err) {
-          console.error('Failed to delete old product image from S3', s3Err);
-        }
+      if (isS3Configured) {
+        const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'products');
+        image_url = url;
       }
     }
+
+    const isCommEnabled = commission_enabled !== undefined ? (commission_enabled === 'true' || commission_enabled === true) : undefined;
+    const isFeatured = featured !== undefined ? (featured === 'true' || featured === true) : undefined;
+    const isPubVisible = public_visible !== undefined ? (public_visible === 'true' || public_visible === true) : undefined;
+    const isPartVisible = partner_visible !== undefined ? (partner_visible === 'true' || partner_visible === true) : undefined;
+    const isActive = is_active !== undefined ? (is_active === 'true' || is_active === true) : undefined;
 
     await query(`
       UPDATE products SET
@@ -217,8 +230,29 @@ const updateProduct = async (req, res, next) => {
         annual_fee = COALESCE($9, annual_fee),
         time_period = COALESCE($10, time_period),
         image_url = COALESCE($11, image_url),
+        short_description = COALESCE($12, short_description),
+        logo = COALESCE($13, logo),
+        banner = COALESCE($14, banner),
+        image = COALESCE($15, image),
+        commission_enabled = COALESCE($16, commission_enabled),
+        commission_amount = COALESCE($17, commission_amount),
+        override_percentage = COALESCE($18, override_percentage),
+        featured = COALESCE($19, featured),
+        public_visible = COALESCE($20, public_visible),
+        partner_visible = COALESCE($21, partner_visible),
+        eligibility_criteria = COALESCE($22, eligibility_criteria),
+        documents_required = COALESCE($23, documents_required),
+        benefits = COALESCE($24, benefits),
+        fees_charges = COALESCE($25, fees_charges),
+        apply_button_text = COALESCE($26, apply_button_text),
+        seo_title = COALESCE($27, seo_title),
+        seo_description = COALESCE($28, seo_description),
+        seo_keywords = COALESCE($29, seo_keywords),
+        priority = COALESCE($30, priority),
+        status = COALESCE($31, status),
+        updated_by = $32,
         updated_at = NOW()
-      WHERE id = $12
+      WHERE id = $33
     `, [
       name || null,
       description || null,
@@ -226,17 +260,36 @@ const updateProduct = async (req, res, next) => {
       parsedEligibility ? JSON.stringify(parsedEligibility) : null,
       commission_type || null,
       commission_value || null,
-      is_active !== undefined ? (is_active === 'true' || is_active === true) : null,
+      isActive,
       display_order || null,
       annual_fee || null,
       time_period || null,
       image_url !== undefined ? image_url : null,
+      short_description || null,
+      logo || null,
+      banner || null,
+      image || null,
+      isCommEnabled,
+      commission_amount || null,
+      override_percentage || null,
+      isFeatured,
+      isPubVisible,
+      isPartVisible,
+      eligibility_criteria || null,
+      documents_required || null,
+      benefits || null,
+      fees_charges || null,
+      apply_button_text || null,
+      seo_title || null,
+      seo_description || null,
+      seo_keywords || null,
+      priority || null,
+      status || null,
+      req.user?.id || null,
       id
     ]);
 
-    // Log product update
     await logAction(req, 'UPDATE_PRODUCT', id, { name, commission_value, is_active });
-
     return success(res, {}, 'Product updated');
   } catch (err) {
     next(err);
@@ -286,19 +339,21 @@ const getProductsByCategory = async (req, res, next) => {
 // POST /products/:id/commission (Super Admin — set commission)
 const setCommission = async (req, res, next) => {
   try {
-    const { product_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+    const { product_id, partner_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
 
     if (effective_to && new Date(effective_from) > new Date(effective_to)) {
       return error(res, 'effective_from cannot be greater than effective_to', 400);
     }
 
+    const finalPartnerId = partner_id || Partner_id || null;
+
     await query(`
-      INSERT INTO commission_structures (product_id, Partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
+      INSERT INTO commission_structures (product_id, partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
-    `, [product_id, Partner_id || null, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
+    `, [product_id, finalPartnerId, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
 
     // Log setting of commission rule
-    await logAction(req, 'SET_COMMISSION_RULE', product_id, { Partner_id, commission_type, commission_value });
+    await logAction(req, 'SET_COMMISSION_RULE', product_id, { partner_id: finalPartnerId, commission_type, commission_value });
 
     return created(res, {}, 'Commission structure set');
   } catch (err) {
@@ -418,10 +473,10 @@ const listCommissionRules = async (req, res, next) => {
         p.category as product_category,
         ap.first_name, 
         ap.last_name, 
-        ap.Partner_code
+        ap.partner_code
       FROM commission_structures cs
       JOIN products p ON p.id = cs.product_id
-      LEFT JOIN Partner_profiles ap ON ap.id = cs.Partner_id
+      LEFT JOIN partner_profiles ap ON ap.id = cs.partner_id
       ORDER BY cs.created_at DESC
     `);
     return success(res, rows);
@@ -440,7 +495,7 @@ const deleteCommissionRule = async (req, res, next) => {
 
     await query(`DELETE FROM commission_structures WHERE id = $1`, [id]);
 
-    await logAction(req, 'DELETE_COMMISSION_RULE', rule.product_id, { Partner_id: rule.Partner_id });
+    await logAction(req, 'DELETE_COMMISSION_RULE', rule.product_id, { partner_id: rule.partner_id || rule.Partner_id });
 
     return success(res, {}, 'Commission rule deleted successfully');
   } catch (err) {
@@ -525,7 +580,7 @@ const resolveApplication = async (req, res, next) => {
 
       if (isPartner) {
         // Authenticated partner flow
-        const partnerCode = req.partner?.Partner_code || '';
+        const partnerCode = req.partner?.partner_code || req.partner?.Partner_code || '';
         const host = req.get('host');
         const trackingUrl = `${req.protocol}://${host}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
         
@@ -601,6 +656,49 @@ const getClickAnalytics = async (req, res, next) => {
   }
 };
 
+const updateStatus = async (req, res, next) => {
+  try {
+    const { id, is_active, status, public_visible, partner_visible } = req.body;
+    if (!id) return error(res, 'Product ID is required', 400);
+    
+    await query(`
+      UPDATE products SET
+        is_active = COALESCE($1, is_active),
+        status = COALESCE($2, status),
+        public_visible = COALESCE($3, public_visible),
+        partner_visible = COALESCE($4, partner_visible),
+        updated_at = NOW()
+      WHERE id = $5
+    `, [is_active, status, public_visible, partner_visible, id]);
+    
+    await logAction(req, 'UPDATE_PRODUCT_STATUS', id, { status, public_visible, partner_visible });
+    return success(res, {}, 'Product status and visibility updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateFeatured = async (req, res, next) => {
+  try {
+    const { id, featured, priority, display_order } = req.body;
+    if (!id) return error(res, 'Product ID is required', 400);
+
+    await query(`
+      UPDATE products SET
+        featured = COALESCE($1, featured),
+        priority = COALESCE($2, priority),
+        display_order = COALESCE($3, display_order),
+        updated_at = NOW()
+      WHERE id = $4
+    `, [featured, priority, display_order, id]);
+
+    await logAction(req, 'UPDATE_PRODUCT_FEATURED', id, { featured, priority, display_order });
+    return success(res, {}, 'Product featured settings updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -619,5 +717,7 @@ module.exports = {
   upsertApplicationSettings,
   deleteApplicationSettings,
   resolveApplication,
-  getClickAnalytics
+  getClickAnalytics,
+  updateStatus,
+  updateFeatured
 };
