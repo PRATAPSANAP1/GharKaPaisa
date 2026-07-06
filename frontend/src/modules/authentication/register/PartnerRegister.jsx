@@ -6,6 +6,7 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
 import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
 import api from "../../../services/api";
+import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
 import logoImg from "../../../assets/logos/logo.png";
 import welcomeBgImg from "./welcome pg-bg.png";
@@ -717,9 +718,11 @@ export default function PartnerRegister() {
         {onboardingStep === 1 && (
           <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", width: "100%" }}>
             
-            {/* Centered Logo */}
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
+            {/* Logo and Language switcher Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexShrink: 0, marginBottom: "8px" }}>
+              <div style={{ width: "40px" }} />
               <img id="img-onboarding-welcome-logo" src={logoImg} alt={t("login.logoAlt", "GharKaPaisa Logo")} style={{ height: "32px", objectFit: "contain" }} />
+              <LanguageSwitcher />
             </div>
 
             {/* Step indicator */}
@@ -821,7 +824,7 @@ export default function PartnerRegister() {
           <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
             
             {/* Top Back bar */}
-            <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "6px", flexShrink: 0 }}>
               <button 
                 id="btn-pref-back-arrow"
                 onClick={() => setOnboardingStep(1)}
@@ -829,6 +832,7 @@ export default function PartnerRegister() {
               >
                 <Icons.arrowLeft size={16} />
               </button>
+              <LanguageSwitcher />
             </div>
 
             {/* Step indicator */}
@@ -1077,7 +1081,7 @@ export default function PartnerRegister() {
           <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
             
             {/* Top Back bar */}
-            <div style={{ display: "flex", width: "100%", marginBottom: "6px", textAlign: "left", flexShrink: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "6px", flexShrink: 0 }}>
               <button 
                 id="btn-register-back-arrow"
                 onClick={() => {
@@ -1092,6 +1096,7 @@ export default function PartnerRegister() {
               >
                 <Icons.arrowLeft size={16} />
               </button>
+              <LanguageSwitcher />
             </div>
 
             {/* Step indicator */}

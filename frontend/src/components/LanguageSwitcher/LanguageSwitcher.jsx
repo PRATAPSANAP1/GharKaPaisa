@@ -30,6 +30,7 @@ export default function LanguageSwitcher() {
         zIndex: 2
       }} />
       <select
+        id="language-switcher"
         value={i18n.language || 'en'}
         onChange={(e) => i18n.changeLanguage(e.target.value)}
         style={{

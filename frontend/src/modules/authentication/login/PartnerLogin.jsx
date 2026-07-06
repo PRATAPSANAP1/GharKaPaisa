@@ -7,6 +7,7 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
 import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 import { FaHandshake, FaUserCog, FaCrown, FaBriefcase, FaArrowLeft } from 'react-icons/fa';
+import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
 import logoImg from "../../../assets/logos/logo.png";
 import welcomeBgImg from "../register/welcome pg-bg.png";
@@ -529,7 +530,7 @@ export default function PartnerLogin() {
                 <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
                   <img id="img-login-header-logo" src={logoImg} alt={t("login.logoAlt", "GharKaPaisa Logo")} style={{ height: "30px", objectFit: "contain" }} />
                 </div>
-                <div style={{ width: "40px" }} /> {/* Spacer to perfectly center the logo */}
+                <LanguageSwitcher />
               </div>
               <div style={{ textAlign: "center", flexShrink: 0 }}>
                 
@@ -746,7 +747,7 @@ export default function PartnerLogin() {
                 <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
                   <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "30px", objectFit: "contain" }} />
                 </div>
-                <div style={{ width: "40px" }} /> {/* Spacer to perfectly center the logo */}
+                <LanguageSwitcher />
               </div>
 
               {/* Progress bar in Step 2 */}
