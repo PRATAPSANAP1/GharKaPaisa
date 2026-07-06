@@ -740,5 +740,6 @@ module.exports = {
   approveApplication,
   rejectApplication,
   reassignApplication,
-  manualCommission
+  manualCommission,
+  updateCommission
 };

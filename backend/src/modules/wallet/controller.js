@@ -427,7 +427,15 @@ const adminAdjustWalletController = async (req, res, next) => {
   }
 };
 
-// POST /withdrawal/approve (Admin)
+const walletManualCredit = async (req, res, next) => {
+  req.body.txn_type = 'credit';
+  return adminAdjustWalletController(req, res, next);
+};
+
+const walletManualDebit = async (req, res, next) => {
+  req.body.txn_type = 'debit';
+  return adminAdjustWalletController(req, res, next);
+};
 const approveWithdrawalController = async (req, res, next) => {
   try {
     const { id, utr_number, admin_note } = req.body;
@@ -550,6 +558,37 @@ const getWalletLedger = async (req, res, next) => {
   }
 };
 
+const listPartnerWithdrawals = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const [count, data] = await Promise.all([
+      query(`SELECT COUNT(*) FROM withdrawal_requests WHERE partner_id = $1`, [partnerId]),
+      query(`
+        SELECT * FROM withdrawal_requests 
+        WHERE partner_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT $2 OFFSET $3
+      `, [partnerId, limit, offset])
+    ]);
+
+    // Decrypt account number
+    const { decrypt } = require('../../utils/helpers/crypto');
+    const rows = data.rows.map(row => {
+      if (row.account_number) {
+        try { row.account_number = decrypt(row.account_number); } catch (_) {}
+      }
+      return row;
+    });
+
+    return paginate(res, rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
@@ -573,5 +612,8 @@ module.exports = {
   saveBankDetails,
   getWalletReports,
   getWalletOverview,
-  getWalletLedger
+  getWalletLedger,
+  listPartnerWithdrawals,
+  walletManualCredit,
+  walletManualDebit
 };

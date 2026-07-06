@@ -339,13 +339,13 @@ const getProductsByCategory = async (req, res, next) => {
 // POST /products/:id/commission (Super Admin — set commission)
 const setCommission = async (req, res, next) => {
   try {
-    const { product_id, partner_id, partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+    const { product_id, partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
 
     if (effective_to && new Date(effective_from) > new Date(effective_to)) {
       return error(res, 'effective_from cannot be greater than effective_to', 400);
     }
 
-    const finalPartnerId = partner_id || partner_id || null;
+    const finalPartnerId = partner_id || null;
 
     await query(`
       INSERT INTO commission_structures (product_id, partner_id, commission_type, commission_value, effective_from, effective_to, created_by)

@@ -12,14 +12,16 @@ router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.pr
 
 // Partner self-endpoints (no ID needed in URL)
 router.get('/', requireApprovedPartner, walletCtrl.getWallet);
-router.get('/balance', requireApprovedPartner, walletCtrl.getWallet);
 router.get('/dashboard', requireApprovedPartner, walletCtrl.getWalletDashboard);
+router.get('/balance', requireApprovedPartner, walletCtrl.getWallet);
+router.get('/transactions', requireApprovedPartner, walletCtrl.getTransactions);
 router.get('/commission-summary', requireApprovedPartner, walletCtrl.getCommissionSummary);
+router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+router.get('/withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/bank-details', requireApprovedPartner, walletCtrl.getBankDetails);
 router.post('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
+router.put('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
 router.get('/reports', requireApprovedPartner, walletCtrl.getWalletReports);
-router.get('/transactions', requireApprovedPartner, walletCtrl.getTransactions);
-router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 // Partner self or admin (with ID)
 router.get('/:PartnerId', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getWallet);
