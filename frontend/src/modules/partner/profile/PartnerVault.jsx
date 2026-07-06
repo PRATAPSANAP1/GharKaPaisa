@@ -38,7 +38,7 @@ export default function PartnerVault() {
       return;
     }
     try {
-      const res = await api.get(`/kyc/documents/${docId}/view`);
+      const res = await api.get(`/partner/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
         if (shouldDownload) {
           const link = document.createElement('a');

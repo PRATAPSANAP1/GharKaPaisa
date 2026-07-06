@@ -232,7 +232,7 @@ export default function ManagePartners() {
       return;
     }
     try {
-      const res = await api.get(`/kyc/documents/${docId}/view`);
+      const res = await api.get(`/partner/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
         window.open(res.data.data.url, '_blank');
       } else {

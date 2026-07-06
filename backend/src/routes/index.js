@@ -29,6 +29,7 @@ router.use('/products',         productRoute);
 router.use('/notifications',    notificationRoute);
 router.use('/reports',          reportRoute);
 router.use('/kyc',              kycRouter);
+router.use('/partner/kyc',      kycRouter);
 router.use('/banks',            bankRoute);
 router.use('/cms/sections',     cmsRouter);
 router.use('/services',         serviceRouter);
