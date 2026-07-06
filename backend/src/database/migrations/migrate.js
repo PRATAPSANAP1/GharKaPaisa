@@ -2,6 +2,47 @@ require('dotenv').config();
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
+// Helper to add an enum value idempotently
+async function addEnumValue(typeName, valName) {
+  try {
+    const { rows } = await query(`
+      SELECT 1 FROM pg_type t
+      JOIN pg_enum e ON t.oid = e.enumtypid
+      WHERE t.typname = $1 AND e.enumlabel = $2
+    `, [typeName, valName]);
+    if (rows.length === 0) {
+      await query(`ALTER TYPE ${typeName} ADD VALUE '${valName}'`);
+      logger.info(`Added enum value '${valName}' to type '${typeName}'`);
+    }
+  } catch (err) {
+    logger.error(`Failed to add enum value '${valName}' to type '${typeName}':`, err);
+  }
+}
+
+// Helper to rename an enum value idempotently
+async function renameEnumValue(typeName, oldVal, newVal) {
+  try {
+    const { rows: oldRows } = await query(`
+      SELECT 1 FROM pg_type t
+      JOIN pg_enum e ON t.oid = e.enumtypid
+      WHERE t.typname = $1 AND e.enumlabel = $2
+    `, [typeName, oldVal]);
+    
+    const { rows: newRows } = await query(`
+      SELECT 1 FROM pg_type t
+      JOIN pg_enum e ON t.oid = e.enumtypid
+      WHERE t.typname = $1 AND e.enumlabel = $2
+    `, [typeName, newVal]);
+
+    if (oldRows.length > 0 && newRows.length === 0) {
+      await query(`ALTER TYPE ${typeName} RENAME VALUE '${oldVal}' TO '${newVal}'`);
+      logger.info(`Renamed enum value '${oldVal}' to '${newVal}' in type '${typeName}'`);
+    }
+  } catch (err) {
+    logger.error(`Failed to rename enum value from '${oldVal}' to '${newVal}' in type '${typeName}':`, err);
+  }
+}
+
 const migrate = async () => {
   logger.info('Running migrations...');
 
@@ -15,37 +56,19 @@ const migrate = async () => {
       CREATE TYPE user_role AS ENUM ('SUPER_ADMIN','ADMIN','EMPLOYEE','PARTNER');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  try { await query(`ALTER TYPE user_role RENAME VALUE 'super_admin' TO 'SUPER_ADMIN'`); } catch (err) {}
-  try { await query(`ALTER TYPE user_role RENAME VALUE 'admin' TO 'ADMIN'`); } catch (err) {}
-  try { await query(`ALTER TYPE user_role RENAME VALUE 'employee' TO 'EMPLOYEE'`); } catch (err) {}
-  try { await query(`ALTER TYPE user_role RENAME VALUE 'Partner' TO 'PARTNER'`); } catch (err) {}
+  await renameEnumValue('user_role', 'super_admin', 'SUPER_ADMIN');
+  await renameEnumValue('user_role', 'admin', 'ADMIN');
+  await renameEnumValue('user_role', 'employee', 'EMPLOYEE');
+  await renameEnumValue('user_role', 'Partner', 'PARTNER');
   try { await query(`ALTER TABLE users ALTER COLUMN role SET DEFAULT 'PARTNER'`); } catch (err) {}
   await query(`
     DO $$ BEGIN
       CREATE TYPE user_status AS ENUM ('pending','active','suspended','rejected');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  try {
-    await query(`ALTER TYPE user_status ADD VALUE 'inactive'`);
-  } catch (err) {
-    if (!err.message.includes('already exists')) {
-      logger.error('Failed to add inactive status:', err);
-    }
-  }
-  try {
-    await query(`ALTER TYPE user_status ADD VALUE 'pending_verification'`);
-  } catch (err) {
-    if (!err.message.includes('already exists')) {
-      logger.error('Failed to add pending_verification status:', err);
-    }
-  }
-  try {
-    await query(`ALTER TYPE user_status ADD VALUE 'blocked'`);
-  } catch (err) {
-    if (!err.message.includes('already exists')) {
-      logger.error('Failed to add blocked status:', err);
-    }
-  }
+  await addEnumValue('user_status', 'inactive');
+  await addEnumValue('user_status', 'pending_verification');
+  await addEnumValue('user_status', 'blocked');
   await query(`
     DO $$ BEGIN
       CREATE TYPE kyc_status AS ENUM ('pending','under_review','approved','rejected');
@@ -56,13 +79,7 @@ const migrate = async () => {
       CREATE TYPE application_status AS ENUM ('draft','submitted','under_review','approved','rejected','disbursed');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  try {
-    await query(`ALTER TYPE application_status ADD VALUE 'confirmed'`);
-  } catch (err) {
-    if (!err.message.includes('already exists')) {
-      throw err;
-    }
-  }
+  await addEnumValue('application_status', 'confirmed');
   await query(`
     DO $$ BEGIN
       CREATE TYPE product_category AS ENUM ('credit_card','personal_loan','home_loan','business_loan',
@@ -70,13 +87,7 @@ const migrate = async () => {
         'life_insurance','general_insurance','fd_card','co_branded_card','investment','card_on_loan');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  try {
-    await query(`ALTER TYPE product_category ADD VALUE 'card_on_loan'`);
-  } catch (err) {
-    if (!err.message.includes('already exists')) {
-      logger.error('Failed to add card_on_loan to product_category:', err);
-    }
-  }
+  await addEnumValue('product_category', 'card_on_loan');
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_type AS ENUM ('credit','debit');
@@ -1279,14 +1290,7 @@ const migrate = async () => {
     logger.info('Running Wallet Schema Updates (Task 8)...');
     
     // 0. Update ledger_transaction_type enum to include OVERRIDE_COMMISSION
-    await query(`
-      DO $$
-      BEGIN
-        ALTER TYPE ledger_transaction_type ADD VALUE 'OVERRIDE_COMMISSION';
-      EXCEPTION
-        WHEN duplicate_object THEN NULL;
-      END $$;
-    `);
+    await addEnumValue('ledger_transaction_type', 'OVERRIDE_COMMISSION');
 
     // 1. Wallets table balance columns
     await query(`
