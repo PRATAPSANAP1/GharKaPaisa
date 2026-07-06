@@ -38,7 +38,7 @@ function Toast({ message, type = "success", onClose }) {
       fontWeight: 600,
       animation: "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
     }}>
-      <span>{isSuccess ? "✅" : "❌"}</span>
+      {isSuccess ? <Icons.check size={16} color="#FFFFFF" /> : <Icons.x size={16} color="#FFFFFF" />}
       <span>{message}</span>
       <span onClick={onClose} style={{ marginLeft: "8px", cursor: "pointer", opacity: 0.8 }}>✕</span>
     </div>
@@ -640,7 +640,7 @@ export default function PartnerLogin() {
               {/* Bottom Section */}
               <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "11px", color: C.textLight }}>
-                  <span>🛡️</span>
+                  <Icons.shield size={14} color={C.textLight} />
                   <span id="label-data-secure">{t("login.dataSecure", "Your data is 100% secure with us")}</span>
                 </div>
                 <button
@@ -718,7 +718,9 @@ export default function PartnerLogin() {
                 <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start" }} />
                 
                 <div>
-                  <div style={{ fontSize: "56px", marginBottom: "16px" }}>🔒</div>
+                  <div style={{ marginBottom: "16px", display: "inline-flex", padding: "16px", borderRadius: "16px", background: "rgba(37, 99, 235, 0.08)" }}>
+                    <Icons.Lock size={40} color="#2563EB" />
+                  </div>
                   <h2 id="label-secure-gateway-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.secureGatewayTitle", "Secure Gateway")}</h2>
                   <p id="label-secure-gateway-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
                     {t("login.secureGatewayDesc", "Please enter your registered credentials or verify via OTP to access your secure dashboard.")}
@@ -769,7 +771,10 @@ export default function PartnerLogin() {
                   fontWeight: 700,
                   color: "#2563EB"
                 }}>
-                  <span id="label-logging-in-as">👤 {t("login.loggingInAs", "Logging in as")} <strong>{getRoleDisplayName(selectedRole)}</strong></span>
+                  <span id="label-logging-in-as" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Icons.User size={14} color="#2563EB" />
+                    <span>{t("login.loggingInAs", "Logging in as")} <strong>{getRoleDisplayName(selectedRole)}</strong></span>
+                  </span>
                   <span 
                     id="link-change-role"
                     onClick={() => { setLoginStep(1); setErr(""); }}
@@ -1031,7 +1036,7 @@ export default function PartnerLogin() {
                       </span>
                     ) : (
                       <>
-                        <span>🔒</span>
+                        <Icons.Lock size={14} color="#FFFFFF" />
                         <span id="label-login-secure">{t("login.secureLoginButton", "Secure Login")}</span>
                       </>
                     )}

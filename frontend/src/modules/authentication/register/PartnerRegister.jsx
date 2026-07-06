@@ -652,7 +652,9 @@ export default function PartnerRegister() {
               textAlign: "left",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "18px" }}>{success.email_verified ? "✅" : "📧"}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  {success.email_verified ? <Icons.check size={18} color={C.green} /> : <Icons.mail size={18} color={C.teal} />}
+                </span>
                 <span id="success-email-title" style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>
                   {success.email_verified ? t('partner.emailVerifiedTitle', 'Email Verified') : t('partner.verifyEmailTitle', 'Verify Your Email')}
                 </span>
