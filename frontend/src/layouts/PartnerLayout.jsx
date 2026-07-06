@@ -13,7 +13,8 @@ import {
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
-import api from '../services/api';
+import api, { getAccessToken } from '../services/api';
+import { getApiV1Url } from '../config/api';
 import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 
@@ -733,7 +734,7 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
     fetchWallet();
     fetchNotifications();
 
-    const eventSource = new EventSource('/api/v1/notifications/stream');
+    const eventSource = new EventSource(`${getApiV1Url()}/notifications/stream?token=${getAccessToken()}`);
     
     eventSource.onmessage = (event) => {
       try {

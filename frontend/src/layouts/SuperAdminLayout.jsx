@@ -5,7 +5,8 @@ import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
-import api from '../services/api';
+import api, { getAccessToken } from '../services/api';
+import { getApiV1Url } from '../config/api';
 import logo from '../assets/logos/logo.png';
 import '../components/Navbar/Navbar.css';
 import { MdNotifications } from 'react-icons/md';
@@ -65,7 +66,7 @@ const SuperAdminLayout = () => {
     if (!user) return;
     fetchNotifications();
 
-    const eventSource = new EventSource('/api/v1/notifications/stream');
+    const eventSource = new EventSource(`${getApiV1Url()}/notifications/stream?token=${getAccessToken()}`);
     eventSource.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
