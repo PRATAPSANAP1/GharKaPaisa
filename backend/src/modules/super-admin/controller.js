@@ -694,11 +694,22 @@ const verifyDocument = async (req, res, next) => {
       WHERE partner_id = $1
     `, [partnerId]);
 
-    // 4. Required documents logic
-    const requiredDocs = ['pan', 'aadhaar', 'cancelled_cheque', 'video'];
-    if (partner.gst_number && partner.gst_number.trim() !== '') {
-      requiredDocs.push('gst_cert');
+    // 4. Required documents logic — only consider docs the partner has actually uploaded
+    const uploadedDocTypes = documents.map(d => d.doc_type);
+    const hasVideo = !!video;
+
+    // Build the list of required docs from what was actually uploaded
+    // Always require pan, aadhaar, cancelled_cheque if uploaded
+    const coreRequired = ['pan', 'aadhaar', 'cancelled_cheque'];
+    const uploadedRequired = coreRequired.filter(d => uploadedDocTypes.includes(d));
+    if (hasVideo) uploadedRequired.push('video');
+    if (partner.gst_number && partner.gst_number.trim() !== '' && uploadedDocTypes.includes('gst_cert')) {
+      uploadedRequired.push('gst_cert');
     }
+
+    // Must have at least pan, aadhaar, cancelled_cheque and video to be approvable
+    const minimumRequired = ['pan', 'aadhaar', 'cancelled_cheque'];
+    const hasMinimum = minimumRequired.every(d => uploadedDocTypes.includes(d)) && hasVideo;
 
     const docStatusMap = {};
     const docReasonMap = {};
@@ -709,8 +720,9 @@ const verifyDocument = async (req, res, next) => {
     docStatusMap['video'] = video ? video.verification_status : null;
     docReasonMap['video'] = video ? video.rejection_reason : null;
 
-    const rejectedReqDocs = requiredDocs.filter(d => docStatusMap[d] === 'rejected');
-    const approvedReqDocs = requiredDocs.filter(d => docStatusMap[d] === 'approved');
+    const rejectedReqDocs = uploadedRequired.filter(d => docStatusMap[d] === 'rejected');
+    const approvedReqDocs = uploadedRequired.filter(d => docStatusMap[d] === 'approved');
+    const requiredDocs = uploadedRequired;
 
     let newKycStatus = 'pending';
     let combinedRejectionReason = null;
@@ -737,7 +749,7 @@ const verifyDocument = async (req, res, next) => {
 
       await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
 
-    } else if (approvedReqDocs.length === requiredDocs.length) {
+    } else if (hasMinimum && approvedReqDocs.length === requiredDocs.length) {
       newKycStatus = 'approved';
 
       await client.query(`
