@@ -16,7 +16,13 @@ const handleSSEStream = (req, res) => {
   // Send initial ping to establish connection
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'SSE stream connected successfully.' })}\n\n`);
 
+  // Periodic heartbeat comment to keep Nginx/proxy connections alive
+  const heartbeat = setInterval(() => {
+    res.write(':\n\n');
+  }, 15000);
+
   req.on('close', () => {
+    clearInterval(heartbeat);
     unregisterClient(userId, res);
   });
 };

@@ -104,9 +104,9 @@ const viewDocument = async (req, res, next) => {
       );
       doc = result;
       if (!doc) {
-        // Fallback: check partner_videos
+        // Fallback: check partner_videos (by id or partner_id)
         const { rows: [videoResult] } = await query(
-          `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE id = $1`,
+          `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE id = $1 OR partner_id = $1`,
           [docId]
         );
         doc = videoResult;
@@ -136,6 +136,10 @@ const viewDocument = async (req, res, next) => {
 
     if (!doc) {
       return notFound(res, 'Document or Video not found.');
+    }
+
+    if (!doc.s3_key) {
+      return error(res, 'File key is missing or not yet uploaded.', 400);
     }
 
     // Authorization check: Admin/Superadmin or document owner
