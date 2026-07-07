@@ -323,6 +323,29 @@ const updatePartnerStatus = async (req, res, next) => {
       [newStatus, targetUser.id]
     );
 
+    // Fetch partner details for status email
+    try {
+      const { rows: [partnerProfile] } = await query(`
+        SELECT first_name, last_name, kyc_status, rejection_reason 
+        FROM partner_profiles 
+        WHERE user_id = $1
+      `, [targetUser.id]);
+
+      if (partnerProfile && targetUser.email) {
+        const { sendPartnerStatusUpdateEmail } = require('../../services/email/email.service.js');
+        await sendPartnerStatusUpdateEmail(
+          targetUser.email,
+          partnerProfile.first_name,
+          partnerProfile.last_name,
+          newStatus,
+          partnerProfile.kyc_status,
+          partnerProfile.rejection_reason
+        );
+      }
+    } catch (mailErr) {
+      logger.error('Failed to send status update email in updatePartnerStatus:', mailErr.message);
+    }
+
     // Log to audit logs
     await logAction(req, 'UPDATE_PARTNER_STATUS', targetUser.id, { 
       email: targetUser.email, 
@@ -384,7 +407,7 @@ const approveKYC = async (req, res, next) => {
     const { partnerId } = req.body;
     if (!partnerId) return error(res, 'partnerId is required', 400);
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -431,10 +454,10 @@ const approveKYC = async (req, res, next) => {
     // Send notifications
     try {
       const { notify } = require('../notifications/service.js');
-      const { sendKycApprovedEmail } = require('../../services/email/email.service.js');
+      const { sendPartnerStatusUpdateEmail } = require('../../services/email/email.service.js');
       await notify.kycApproved(partner.user_id);
       if (user?.email) {
-        await sendKycApprovedEmail(user.email);
+        await sendPartnerStatusUpdateEmail(user.email, partner.first_name, partner.last_name, 'active', 'approved', null);
       }
     } catch (notifErr) {
       logger.error('Failed to send KYC approval notifications:', notifErr.message);
@@ -458,7 +481,7 @@ const rejectKYC = async (req, res, next) => {
     if (!partnerId) return error(res, 'partnerId is required', 400);
     if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -498,10 +521,10 @@ const rejectKYC = async (req, res, next) => {
     // Send notifications
     try {
       const { notify } = require('../notifications/service.js');
-      const { sendKycRejectedEmail } = require('../../services/email/email.service.js');
+      const { sendPartnerStatusUpdateEmail } = require('../../services/email/email.service.js');
       await notify.kycRejected(partner.user_id, rejection_reason);
       if (user?.email) {
-        await sendKycRejectedEmail(user.email, rejection_reason);
+        await sendPartnerStatusUpdateEmail(user.email, partner.first_name, partner.last_name, 'rejected', 'rejected', rejection_reason);
       }
     } catch (notifErr) {
       logger.error('Failed to send KYC rejection notifications:', notifErr.message);
@@ -528,7 +551,7 @@ const requestChangesKYC = async (req, res, next) => {
       return error(res, 'rejected_documents list is required and must contain document types', 400);
     }
 
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
     const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
@@ -590,10 +613,10 @@ const requestChangesKYC = async (req, res, next) => {
     // Send notifications
     try {
       const { notify } = require('../notifications/service.js');
-      const { sendKycRejectedEmail } = require('../../services/email/email.service.js');
+      const { sendPartnerStatusUpdateEmail } = require('../../services/email/email.service.js');
       await notify.kycRejected(partner.user_id, rejection_reason);
       if (user?.email) {
-        await sendKycRejectedEmail(user.email, rejection_reason);
+        await sendPartnerStatusUpdateEmail(user.email, partner.first_name, partner.last_name, 'rejected', 'rejected', rejection_reason);
       }
     } catch (notifErr) {
       logger.error('Failed to send KYC request-changes notifications:', notifErr.message);

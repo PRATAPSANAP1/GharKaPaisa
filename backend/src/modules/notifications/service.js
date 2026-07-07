@@ -136,8 +136,31 @@ const notify = {
   kycRejected: (userId, reason) =>
     createNotification(userId, 'KYC Rejected', `Your KYC was rejected. Reason: ${reason}. Please re-upload correct documents.`, 'warning', `/partner/profile`, { category: 'kyc' }),
 
-  kycSubmitted: (userId) =>
-    createNotification(userId, '📥 KYC Submitted', 'Your KYC documents have been submitted and are awaiting review.', 'info', `/partner/profile`, { category: 'kyc' }),
+  kycSubmitted: async (userId) => {
+    await createNotification(userId, '📥 KYC Submitted', 'Your KYC documents have been submitted and are awaiting review.', 'info', `/partner/profile`, { category: 'kyc' });
+    try {
+      const { rows: admins } = await query(`SELECT id FROM users WHERE role IN ('SUPER_ADMIN', 'ADMIN')`);
+      const { rows: [partnerName] } = await query(`
+        SELECT first_name, last_name, partner_code 
+        FROM partner_profiles 
+        WHERE user_id = $1
+      `, [userId]);
+      const nameStr = partnerName ? `${partnerName.first_name} ${partnerName.last_name} (${partnerName.partner_code})` : 'A partner';
+      
+      for (const admin of admins) {
+        await createNotification(
+          admin.id, 
+          '📥 New KYC Verification Arrived', 
+          `${nameStr} has submitted their KYC documents for verification.`, 
+          'info', 
+          '/admin/partners', 
+          { category: 'kyc', priority: 'high' }
+        );
+      }
+    } catch (err) {
+      logger.error('Failed to notify admins on KYC submission:', err.message);
+    }
+  },
 
   kycUnderReview: (userId) =>
     createNotification(userId, '🔍 KYC Under Review', 'Your KYC documents are now being reviewed by our compliance team.', 'info', `/partner/profile`, { category: 'kyc' }),
