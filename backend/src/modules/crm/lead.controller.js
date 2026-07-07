@@ -7,6 +7,9 @@ const { creditHold, releaseHold } = require('../wallet/service.js');
 // Create a new lead
 const createLead = async (req, res, next) => {
   try {
+    if (req.kycUnapproved) {
+      return error(res, 'KYC not approved. Cannot create leads.', 403);
+    }
     const { productId, customerName, mobile, city } = req.body;
     if (!productId || !customerName || !mobile || !city) {
       return error(res, 'Product ID, Customer Name, Mobile, and City are required', 400);
@@ -47,6 +50,9 @@ const createLead = async (req, res, next) => {
 const listLeads = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
+    if (req.kycUnapproved) {
+      return paginate(res, [], 0, page, limit);
+    }
     const { status, search } = req.query;
 
     let whereClause = 'WHERE 1=1';

@@ -539,6 +539,9 @@ const addTeamMember = async (req, res, next) => {
 // GET /partner/customers — CRM customer list for logged-in partner
 const listPartnerCustomers = async (req, res, next) => {
   try {
+    if (req.kycUnapproved) {
+      return success(res, []);
+    }
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
@@ -695,6 +698,14 @@ const getTeamTree = async (req, res, next) => {
     const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
+    if (req.kycUnapproved) {
+      return success(res, {
+        id: partnerId,
+        label: 'Me',
+        children: []
+      });
+    }
+
     const { rows } = await query(`
       SELECT 
         ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status, ap.parent_partner_id,
@@ -751,6 +762,20 @@ const getTeamDashboard = async (req, res, next) => {
     const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
+    if (req.kycUnapproved) {
+      return success(res, {
+        total_members: 0,
+        joined_today: 0,
+        pending_kyc: 0,
+        approved_partners: 0,
+        rejected_partners: 0,
+        suspended_partners: 0,
+        blocked_partners: 0,
+        monthly_team_earnings: 0,
+        today_team_commission: 0
+      });
+    }
+
     const { rows: summary } = await query(`
       SELECT 
         COUNT(*)::int as total_members,
@@ -800,6 +825,10 @@ const getTeamEarnings = async (req, res, next) => {
     const partnerId = req.params.PartnerId || req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
+    if (req.kycUnapproved) {
+      return success(res, []);
+    }
+
     const { rows: earnings } = await query(`
       SELECT wt.*, p.name as product_name
       FROM wallets w
@@ -820,6 +849,15 @@ const getReferralInfo = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    if (req.kycUnapproved) {
+      return success(res, {
+        referral_code: '',
+        referral_link: '',
+        total_invites: 0,
+        total_registered: 0
+      });
+    }
 
     let { rows: [referral] } = await query(`
       SELECT * FROM partner_referrals WHERE partner_id = $1

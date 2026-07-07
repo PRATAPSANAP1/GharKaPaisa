@@ -103,7 +103,9 @@ const requirePartner = (req, res, next) => {
 const requireApprovedPartner = (req, res, next) => {
   if ((req.user.role || '').toUpperCase() !== 'PARTNER') return forbidden(res, 'Partners only');
   if (!req.partner) return forbidden(res, 'No partner profile found');
-  if (req.partner.kyc_status !== 'approved') return forbidden(res, 'KYC not approved');
+  if (req.partner.kyc_status !== 'approved') {
+    req.kycUnapproved = true;
+  }
   next();
 };
 
