@@ -229,7 +229,7 @@ const getDashboardStats = async (req, res, next) => {
 const listPartners = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, kyc_status, search } = req.query;
+    const { status, kyc_status, search, kyc_filter } = req.query;
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
@@ -240,7 +240,14 @@ const listPartners = async (req, res, next) => {
     let idx = 1;
 
     if (status) { where += ` AND u.status = $${idx++}`; values.push(status); }
-    if (kyc_status) { where += ` AND ap.kyc_status = $${idx++}`; values.push(kyc_status); }
+    if (kyc_filter === 'new') {
+      where += ` AND ap.kyc_status IN ('pending', 'under_review')`;
+    } else if (kyc_filter === 'old') {
+      where += ` AND ap.kyc_status IN ('approved', 'rejected')`;
+    } else if (kyc_status) {
+      where += ` AND ap.kyc_status = $${idx++}`;
+      values.push(kyc_status);
+    }
     if (search) {
       if (shouldMask) {
         where += ` AND ap.partner_code ILIKE $${idx}`;

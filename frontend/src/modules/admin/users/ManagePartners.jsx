@@ -18,6 +18,7 @@ export default function ManagePartners() {
   const [accountStatus, setAccountStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [kycTab, setKycTab] = useState("new"); // 'new', 'old', or 'all'
 
   // Details Modal State
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -56,6 +57,7 @@ export default function ManagePartners() {
           search: search || undefined,
           kyc_status: kycStatus || undefined,
           status: accountStatus || undefined,
+          kyc_filter: kycTab !== 'all' ? kycTab : undefined
         },
       });
       if (res.data?.success) {
@@ -72,7 +74,7 @@ export default function ManagePartners() {
 
   useEffect(() => {
     fetchPartners();
-  }, [page, kycStatus, accountStatus]);
+  }, [page, kycStatus, accountStatus, kycTab]);
 
   useEffect(() => {
     if (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") {
@@ -323,6 +325,34 @@ export default function ManagePartners() {
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Partners Management</h2>
         <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage partner onboarding, review KYC compliance documents, and update wallet balances</p>
+      </div>
+
+      {/* Tabs / Filter Options */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "6px", width: "fit-content" }}>
+        {[
+          { key: "new", label: "New Requests (KYC Pending)" },
+          { key: "old", label: "Processed Requests (Approved/Rejected)" },
+          { key: "all", label: "All Partners" }
+        ].map((tab) => (
+          <button
+            type="button"
+            key={tab.key}
+            onClick={() => { setKycTab(tab.key); setPage(1); }}
+            style={{
+              background: kycTab === tab.key ? C.teal : "transparent",
+              color: kycTab === tab.key ? "#fff" : C.textMid,
+              border: "none", 
+              borderRadius: "8px", 
+              padding: "8px 16px",
+              fontWeight: 700, 
+              fontSize: "13px", 
+              cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters & Search Form */}
