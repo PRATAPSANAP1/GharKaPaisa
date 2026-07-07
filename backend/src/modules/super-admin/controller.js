@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { query } = require('../../config/database');
+const { query, getClient } = require('../../config/database');
 const { logAction } = require('../admin/audit.service.js');
 const { getPaginationParams, sanitizeMobile } = require('../../utils/helpers/helpers');
 const { success, created, error, paginate } = require('../../utils/response/response');
