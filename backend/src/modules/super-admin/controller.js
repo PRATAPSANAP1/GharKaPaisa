@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
 const { logAction } = require('../admin/audit.service.js');
 const { getPaginationParams, sanitizeMobile } = require('../../utils/helpers/helpers');
-const { success, created, error, paginate } = require('../../utils/response/response');
+const { success, created, error, paginate, notFound } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 
 /**
@@ -633,6 +633,187 @@ const requestChangesKYC = async (req, res, next) => {
   }
 };
 
+const verifyDocument = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { partnerId, docType, status, rejectionReason } = req.body;
+    if (!partnerId) return error(res, 'partnerId is required', 400);
+    if (!docType) return error(res, 'docType is required', 400);
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return error(res, 'status must be approved or rejected', 400);
+    }
+    if (status === 'rejected' && !rejectionReason) {
+      return error(res, 'rejectionReason is required when status is rejected', 400);
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Update document status
+    if (docType === 'video') {
+      await client.query(`
+        UPDATE partner_videos 
+        SET verification_status = $1, rejection_reason = $2
+        WHERE partner_id = $3
+      `, [status, status === 'rejected' ? rejectionReason : null, partnerId]);
+    } else {
+      const isVerified = status === 'approved';
+      await client.query(`
+        UPDATE kyc_documents 
+        SET verification_status = $1, 
+            verified = $2, 
+            verified_by = $3, 
+            verified_at = NOW(),
+            rejection_reason = $4
+        WHERE partner_id = $5 AND doc_type = $6
+      `, [status, isVerified, req.user.id, status === 'rejected' ? rejectionReason : null, partnerId, docType]);
+    }
+
+    // 2. Fetch partner profile
+    const { rows: [partner] } = await client.query(`
+      SELECT user_id, first_name, last_name, gst_number 
+      FROM partner_profiles 
+      WHERE id = $1
+    `, [partnerId]);
+    if (!partner) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Partner profile not found');
+    }
+
+    const { rows: [user] } = await client.query(`SELECT email FROM users WHERE id = $1`, [partner.user_id]);
+
+    // 3. Fetch all document statuses for recalculation
+    const { rows: documents } = await client.query(`
+      SELECT doc_type, verification_status, rejection_reason 
+      FROM kyc_documents 
+      WHERE partner_id = $1
+    `, [partnerId]);
+
+    const { rows: [video] } = await client.query(`
+      SELECT verification_status, rejection_reason 
+      FROM partner_videos 
+      WHERE partner_id = $1
+    `, [partnerId]);
+
+    // 4. Required documents logic
+    const requiredDocs = ['pan', 'aadhaar', 'cancelled_cheque', 'video'];
+    if (partner.gst_number && partner.gst_number.trim() !== '') {
+      requiredDocs.push('gst_cert');
+    }
+
+    const docStatusMap = {};
+    const docReasonMap = {};
+    documents.forEach(d => {
+      docStatusMap[d.doc_type] = d.verification_status;
+      docReasonMap[d.doc_type] = d.rejection_reason;
+    });
+    docStatusMap['video'] = video ? video.verification_status : null;
+    docReasonMap['video'] = video ? video.rejection_reason : null;
+
+    const rejectedReqDocs = requiredDocs.filter(d => docStatusMap[d] === 'rejected');
+    const approvedReqDocs = requiredDocs.filter(d => docStatusMap[d] === 'approved');
+
+    let newKycStatus = 'pending';
+    let combinedRejectionReason = null;
+
+    if (rejectedReqDocs.length > 0) {
+      newKycStatus = 'rejected';
+      const reasonsList = rejectedReqDocs.map(d => {
+        const docName = d.replace('_', ' ').toUpperCase();
+        return `${docName}: ${docReasonMap[d] || 'Verification failed'}`;
+      });
+      combinedRejectionReason = reasonsList.join('; ');
+
+      await client.query(`
+        UPDATE partner_profiles 
+        SET kyc_status = 'rejected', 
+            rejection_reason = $1,
+            kyc_rejection_reason = $1,
+            approved_by = NULL,
+            approved_at = NULL,
+            kyc_reviewed_at = NOW(),
+            kyc_reviewed_by = $2
+        WHERE id = $3
+      `, [combinedRejectionReason, req.user.id, partnerId]);
+
+      await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+
+    } else if (approvedReqDocs.length === requiredDocs.length) {
+      newKycStatus = 'approved';
+
+      await client.query(`
+        UPDATE partner_profiles 
+        SET kyc_status = 'approved', 
+            rejection_reason = NULL,
+            kyc_rejection_reason = NULL,
+            approved_by = $1,
+            approved_at = NOW(),
+            kyc_reviewed_at = NOW(),
+            kyc_reviewed_by = $1
+        WHERE id = $2
+      `, [req.user.id, partnerId]);
+
+      await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [partner.user_id]);
+
+      const { ensureWallet } = require('../wallet/service.js');
+      await ensureWallet(partnerId, client);
+
+    } else {
+      newKycStatus = 'pending';
+
+      await client.query(`
+        UPDATE partner_profiles 
+        SET kyc_status = 'pending', 
+            rejection_reason = NULL,
+            kyc_rejection_reason = NULL,
+            approved_by = NULL,
+            approved_at = NULL,
+            kyc_reviewed_at = NULL,
+            kyc_reviewed_by = NULL
+        WHERE id = $1
+      `, [partnerId]);
+
+      await client.query(`UPDATE users SET status = 'pending' WHERE id = $1`, [partner.user_id]);
+    }
+
+    await client.query('COMMIT');
+
+    // Send notifications
+    try {
+      const { notify } = require('../notifications/service.js');
+      const { sendPartnerStatusUpdateEmail } = require('../../services/email/email.service.js');
+
+      if (newKycStatus === 'approved') {
+        await notify.kycApproved(partner.user_id);
+        if (user?.email) {
+          await sendPartnerStatusUpdateEmail(user.email, partner.first_name, partner.last_name, 'active', 'approved', null);
+        }
+      } else if (newKycStatus === 'rejected') {
+        await notify.kycRejected(partner.user_id, combinedRejectionReason);
+        if (user?.email) {
+          await sendPartnerStatusUpdateEmail(user.email, partner.first_name, partner.last_name, 'rejected', 'rejected', combinedRejectionReason);
+        }
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send KYC verification notifications:', notifErr.message);
+    }
+
+    await logAction(req, 'VERIFY_DOCUMENT', partnerId, { 
+      docType, 
+      status, 
+      overallStatus: newKycStatus,
+      rejectionReason 
+    });
+
+    return success(res, { overallStatus: newKycStatus }, 'Document verification updated successfully');
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createCommissionRule,
   getCommissionRules,
@@ -644,5 +825,6 @@ module.exports = {
   updatePartnerStatus,
   approveKYC,
   rejectKYC,
-  requestChangesKYC
+  requestChangesKYC,
+  verifyDocument
 };

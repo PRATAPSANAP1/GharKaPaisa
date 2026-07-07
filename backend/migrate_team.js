@@ -8,6 +8,12 @@ async function migrate() {
     
     console.log('Adding must_change_password to users...');
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;`);
+
+    console.log('Adding rejection_reason to kyc_documents...');
+    await query(`ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`);
+
+    console.log('Adding rejection_reason to partner_videos...');
+    await query(`ALTER TABLE partner_videos ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`);
     
     console.log('Migration completed successfully.');
     process.exit(0);

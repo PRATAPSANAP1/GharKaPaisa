@@ -29,6 +29,7 @@ router.delete('/products/link/:id', linkCtrl.deleteProductLink);
 router.post('/kyc/approve', ctrl.approveKYC);
 router.post('/kyc/reject', ctrl.rejectKYC);
 router.post('/kyc/request-changes', ctrl.requestChangesKYC);
+router.post('/kyc/verify-document', ctrl.verifyDocument);
 
 router.post('/commission-rules', ctrl.createCommissionRule);
 router.get('/commission-rules', ctrl.getCommissionRules);

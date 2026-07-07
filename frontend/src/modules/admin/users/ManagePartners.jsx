@@ -148,8 +148,6 @@ export default function ManagePartners() {
         setTeamStatus(p.team_status || "ACTIVE");
         setAllowTeamCreation(p.allow_team_creation !== false);
 
-        const panDoc = p.kyc_documents?.find(d => d.doc_type === 'pan');
-        const chequeDoc = p.kyc_documents?.find(d => d.doc_type === 'cancelled_cheque');
         const videoDoc = p.partner_video;
         
         setVideoPlayUrl('');
@@ -164,16 +162,19 @@ export default function ManagePartners() {
           }
         }
 
-        setDocReviews({
-          pan: panDoc?.verification_status || null,
-          cancelled_cheque: chequeDoc?.verification_status || null,
-          video: videoDoc?.verification_status || null
+        const initialReviews = {};
+        const initialReasons = {};
+        
+        initialReviews['video'] = videoDoc?.verification_status || null;
+        initialReasons['video'] = videoDoc?.rejection_reason || '';
+
+        p.kyc_documents?.forEach(d => {
+          initialReviews[d.doc_type] = d.verification_status || null;
+          initialReasons[d.doc_type] = d.rejection_reason || '';
         });
-        setDocRejectReasons({
-          pan: panDoc?.rejection_reason || '',
-          cancelled_cheque: chequeDoc?.rejection_reason || '',
-          video: videoDoc?.rejection_reason || ''
-        });
+
+        setDocReviews(initialReviews);
+        setDocRejectReasons(initialReasons);
         setActiveRejectDoc(null);
         setRejectText('');
       }
@@ -276,56 +277,34 @@ export default function ManagePartners() {
     }
   };
 
-  const handleSubmitKYCDecision = async () => {
-    const docsToReview = [];
-    if (profile.kyc_documents?.some(d => d.doc_type === 'pan')) docsToReview.push('pan');
-    if (profile.kyc_documents?.some(d => d.doc_type === 'cancelled_cheque')) docsToReview.push('cancelled_cheque');
-    if (profile.partner_video) docsToReview.push('video');
-
-    const unreviewed = docsToReview.filter(d => !docReviews[d]);
-    if (unreviewed.length > 0) {
-      return alert(`Please Approve or Reject all uploaded items before submitting. Unreviewed: ${unreviewed.map(u => u.replace('_', ' ').toUpperCase()).join(', ')}`);
-    }
-
-    const rejectedDocs = docsToReview.filter(d => docReviews[d] === 'rejected');
-
-    if (rejectedDocs.length > 0) {
-      if (!window.confirm(`Are you sure you want to request changes for ${rejectedDocs.length} document(s)?`)) return;
-      setActionLoading(true);
-      try {
-        const combinedReason = rejectedDocs
-          .map(k => `${k.replace('_', ' ').toUpperCase()}: ${docRejectReasons[k] || 'Verification failed'}`)
-          .join('; ');
-        
-        await api.post("/superadmin/kyc/request-changes", {
-          partnerId: selectedPartner.id,
-          rejection_reason: combinedReason,
-          rejected_documents: rejectedDocs
-        });
-        
-        alert("KYC correction request submitted successfully.");
-        handleViewDetails(selectedPartner);
-        fetchPartners();
-      } catch (err) {
-        alert(err.response?.data?.message || "Failed to submit review.");
-      } finally {
-        setActionLoading(false);
+  const handleDocReviewChange = async (docType, newStatus, reason = null) => {
+    if (newStatus === 'rejected') {
+      if (!window.confirm(`Mark ${docType.replace('_', ' ').toUpperCase()} as rejected and request changes?`)) {
+        return;
       }
     } else {
-      if (!window.confirm("All documents are marked as verified. Approve KYC and activate partner profile?")) return;
-      setActionLoading(true);
-      try {
-        await api.post("/superadmin/kyc/approve", {
-          partnerId: selectedPartner.id
-        });
-        alert("Partner KYC approved and profile activated successfully!");
+      if (!window.confirm(`Mark ${docType.replace('_', ' ').toUpperCase()} as verified?`)) {
+        return;
+      }
+    }
+    
+    setActionLoading(true);
+    try {
+      const res = await api.post("/superadmin/kyc/verify-document", {
+        partnerId: selectedPartner.id,
+        docType,
+        status: newStatus,
+        rejectionReason: reason
+      });
+      if (res.data?.success) {
+        alert(newStatus === 'approved' ? "Document marked as verified." : "Document marked as rejected.");
         handleViewDetails(selectedPartner);
         fetchPartners();
-      } catch (err) {
-        alert(err.response?.data?.message || "KYC approval failed.");
-      } finally {
-        setActionLoading(false);
       }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update document status.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -781,7 +760,7 @@ export default function ManagePartners() {
                                 </button>
                                 
                                 <button 
-                                  onClick={() => setDocReviews({ ...docReviews, [doc.doc_type]: 'approved' })}
+                                  onClick={() => handleDocReviewChange(doc.doc_type, 'approved')}
                                   style={{
                                     padding: '4px 10px',
                                     background: isDocVer ? C.green : 'transparent',
@@ -836,7 +815,7 @@ export default function ManagePartners() {
                       
                       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                         <button 
-                          onClick={() => setDocReviews({ ...docReviews, video: 'approved' })}
+                          onClick={() => handleDocReviewChange('video', 'approved')}
                           style={{
                             padding: '4px 10px',
                             background: docReviews.video === 'approved' ? C.green : 'transparent',
@@ -919,8 +898,7 @@ export default function ManagePartners() {
                         type="button"
                         onClick={() => {
                           if (!rejectText.trim()) return alert("Rejection reason is required.");
-                          setDocReviews({ ...docReviews, [activeRejectDoc]: 'rejected' });
-                          setDocRejectReasons({ ...docRejectReasons, [activeRejectDoc]: rejectText.trim() });
+                          handleDocReviewChange(activeRejectDoc, 'rejected', rejectText.trim());
                           setActiveRejectDoc(null);
                         }}
                         style={{ ...S.btn("primary"), background: C.red, padding: "8px 16px", fontSize: "12px", border: "none" }}
@@ -940,15 +918,6 @@ export default function ManagePartners() {
 
                 {/* Actions Panel */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                  {profile.kyc_status !== "approved" && (
-                    <button
-                      onClick={handleSubmitKYCDecision}
-                      disabled={actionLoading}
-                      style={{ ...S.btn("primary"), padding: "10px 18px", fontSize: "13px" }}
-                    >
-                      {actionLoading ? "Submitting..." : "Submit KYC Review Decision"}
-                    </button>
-                  )}
                   <button
                     onClick={() => setShowWalletForm(!showWalletForm)}
                     disabled={actionLoading}

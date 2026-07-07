@@ -3,8 +3,9 @@ const { notify } = require('../notifications/service.js');
 const logger = require('../../config/logger');
 
 // Ensure wallet exists for partner (called on partner approval)
-const ensureWallet = async (partnerId) => {
-  await query(`
+const ensureWallet = async (partnerId, client = null) => {
+  const db = client || { query };
+  await db.query(`
     INSERT INTO wallets (partner_id) VALUES ($1)
     ON CONFLICT (partner_id) DO NOTHING
   `, [partnerId]);

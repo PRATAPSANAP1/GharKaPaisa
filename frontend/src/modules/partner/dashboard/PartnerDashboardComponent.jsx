@@ -156,13 +156,27 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: kycStatus === 'rejected' ? "#DC2626" : "#D97706" }}>
                 {kycStatus === 'rejected' ? "KYC Rejected" : kycStatus === 'under_review' ? "KYC Under Verification" : "KYC Pending"}
               </h4>
-              <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
-                {kycStatus === 'rejected'
-                  ? "Your documents require correction. Please upload the corrected documents."
-                  : kycStatus === 'under_review'
-                  ? "Your KYC documents have been submitted and are under verification by the Super Admin."
-                  : "Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications."}
-              </p>
+              <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+                {kycStatus === 'rejected' ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                    <div style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>Reason:</div>
+                    {(partner?.rejection_reason || partner?.kyc_rejection_reason) ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "12px", borderLeft: `3px solid #EF4444`, marginBottom: "4px" }}>
+                        {(partner.rejection_reason || partner.kyc_rejection_reason).split('; ').map((reason, idx) => (
+                          <div key={idx} style={{ color: "#EF4444", fontWeight: 700 }}>• {reason}</div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: C.textMid, marginBottom: "4px" }}>Your documents require correction.</div>
+                    )}
+                    <div style={{ fontSize: "13px", color: C.textLight }}>Please upload corrected documents.</div>
+                  </div>
+                ) : kycStatus === 'under_review' ? (
+                  <p style={{ margin: 0 }}>Your KYC documents have been submitted and are under verification by the Super Admin.</p>
+                ) : (
+                  <p style={{ margin: 0 }}>Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications.</p>
+                )}
+              </div>
             </div>
           </div>
           {kycStatus !== 'under_review' && (

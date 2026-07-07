@@ -1201,6 +1201,7 @@ const migrate = async () => {
 
     // Add verification_status to kyc_documents
     await query(`ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'`);
+    await query(`ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
 
     // Create partner_videos table
     await query(`
@@ -1212,7 +1213,8 @@ const migrate = async () => {
         video_size          INTEGER,
         storage_key         VARCHAR(500) NOT NULL,
         uploaded_at         TIMESTAMPTZ DEFAULT NOW(),
-        verification_status VARCHAR(50) DEFAULT 'pending'
+        verification_status VARCHAR(50) DEFAULT 'pending',
+        rejection_reason    TEXT
       )
     `);
 
