@@ -70,6 +70,15 @@ app.use(cors({
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
+    // Allow requests from local loopback (localhost or 127.0.0.1 on any port) for local testing
+    try {
+      const hostname = new URL(origin).hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // Ignore URL parse errors
+    }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
