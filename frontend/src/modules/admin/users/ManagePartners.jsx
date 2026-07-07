@@ -71,7 +71,7 @@ export default function ManagePartners() {
   }, [page, kycStatus, accountStatus]);
 
   useEffect(() => {
-    if (user?.role === "SUPER_ADMIN") {
+    if (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") {
       api.get("/admin/partners", { params: { limit: 1000 } })
         .then((res) => {
           if (res.data?.success) setAllPartnersList(res.data.data);
@@ -520,8 +520,8 @@ export default function ManagePartners() {
                   </div>
                 </div>
 
-                {/* DSA Team Network controls (Super Admin only) */}
-                {user?.role === "SUPER_ADMIN" && (
+                {/* DSA Team Network controls (Admin and Super Admin) */}
+                {(user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && (
                   <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
                     <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "12px" }}>DSA Team Management</h4>
                     

@@ -45,8 +45,8 @@ router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.appr
 
 // Super Admin / Admin team network routes
 router.get('/network/all', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.getWholeNetwork);
-router.patch('/:PartnerId/change-parent', authorize('SUPER_ADMIN'), ctrl.changeParentPartner);
-router.patch('/:PartnerId/deactivate-team', authorize('SUPER_ADMIN'), ctrl.deactivateTeam);
+router.patch('/:PartnerId/change-parent', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.changeParentPartner);
+router.patch('/:PartnerId/deactivate-team', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.deactivateTeam);
 
 // Team management
 router.post('/:PartnerId/team', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.addTeamMember);
