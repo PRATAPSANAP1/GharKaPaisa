@@ -69,6 +69,7 @@ export default function PartnerKyc() {
   const videoChunksRef = useRef([]);
   const liveVideoRef = useRef(null);
   const timerRef = useRef(null);
+  const elapsedRef = useRef(0);
 
   const loadKycDetails = async () => {
     setLoading(true);
@@ -151,9 +152,49 @@ export default function PartnerKyc() {
     setCameraActive(false);
   };
 
+  const autoUploadVideo = async (blob, duration) => {
+    if (!blob) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
+      const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      formData.append('video', blob, `verification-video.${fileExt}`);
+      formData.append('duration', duration || 10);
+
+      const res = await api.post('/partner/kyc/upload-video', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
+      });
+
+      if (res.data?.success) {
+        setSuccessMsg('Verification Video uploaded successfully!');
+        deleteRecording();
+        stopCamera();
+        // Wait a tiny bit and reload details
+        setTimeout(async () => {
+          await loadKycDetails();
+        }, 300);
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Verification Video upload failed.');
+    } finally {
+      setActionLoading(false);
+      setUploadProgress(0);
+    }
+  };
+
   const startRecording = () => {
     if (!streamRef.current) return;
     videoChunksRef.current = [];
+    elapsedRef.current = 0;
     const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
     
     try {
@@ -164,10 +205,12 @@ export default function PartnerKyc() {
         }
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const blob = new Blob(videoChunksRef.current, { type: mimeType });
         setVideoBlob(blob);
         setVideoPreviewUrl(URL.createObjectURL(blob));
+        // Auto upload the video!
+        await autoUploadVideo(blob, elapsedRef.current);
       };
 
       recorder.start(10);
@@ -176,13 +219,11 @@ export default function PartnerKyc() {
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev >= 60) {
-            stopRecording();
-            return 60;
-          }
-          return prev + 1;
-        });
+        elapsedRef.current += 1;
+        setRecordingTime(elapsedRef.current);
+        if (elapsedRef.current >= 60) {
+          stopRecording();
+        }
       }, 1000);
     } catch (err) {
       console.error(err);
@@ -348,21 +389,24 @@ export default function PartnerKyc() {
     <div style={{
       background: isDark ? 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)' : 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)',
       minHeight: '100%',
-      padding: isMobile ? '16px' : '24px 32px 48px 32px',
+      padding: isMobile ? '16px' : isTablet ? '20px 24px 40px 24px' : '24px 32px 48px 32px',
       color: textPrimary,
-      fontFamily: 'Inter, sans-serif'
+      fontFamily: 'Inter, sans-serif',
+      overflowX: 'hidden'
     }}>
 
       {/* Header */}
       <div style={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px'
+        alignItems: isMobile ? 'flex-start' : 'center',
+        marginBottom: isMobile ? '20px' : '24px',
+        gap: isMobile ? '12px' : '16px'
       }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, margin: 0 }}>KYC Center</h1>
-          <p style={{ fontSize: '14px', color: textSecondary, margin: '4px 0 0 0' }}>Complete verification to unlock full dashboard capabilities.</p>
+          <h1 style={{ fontSize: isMobile ? '22px' : isTablet ? '26px' : '32px', fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>KYC Center</h1>
+          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: '4px 0 0 0', wordBreak: 'break-word' }}>Complete verification to unlock full dashboard capabilities.</p>
         </div>
         <button 
           onClick={() => setShowGuidelines(true)}
@@ -370,14 +414,17 @@ export default function PartnerKyc() {
             background: isDark ? '#334155' : '#E2E8F0',
             color: textPrimary,
             border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
+            borderRadius: '10px',
+            padding: isMobile ? '10px 16px' : '8px 16px',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+            flexShrink: 0
           }}
         >
           <MdHelpOutline size={16} /> Guidelines
@@ -395,21 +442,22 @@ export default function PartnerKyc() {
           : 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
         border: `1px solid ${isApproved ? '#10B981' : isUnderReview ? '#F59E0B' : isRejected ? '#EF4444' : '#E2E8F0'}`,
         color: isApproved ? '#065F46' : isUnderReview ? '#92400E' : isRejected ? '#991B1B' : '#475569',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '24px',
+        borderRadius: isMobile ? '12px' : '16px',
+        padding: isMobile ? '16px' : '20px',
+        marginBottom: isMobile ? '20px' : '24px',
         display: 'flex',
-        alignItems: 'center',
-        gap: '16px'
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        gap: isMobile ? '12px' : '16px'
       }}>
-        <div style={{ fontSize: '28px' }}>
+        <div style={{ fontSize: isMobile ? '24px' : '28px', flexShrink: 0 }}>
           {isApproved ? '✅' : isUnderReview ? '⏳' : isRejected ? '❌' : '📋'}
         </div>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, textTransform: 'uppercase' }}>
+        <div style={{ minWidth: 0, width: '100%' }}>
+          <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '16px', fontWeight: 800, textTransform: 'uppercase', wordBreak: 'break-word' }}>
             {isApproved ? 'KYC Approved' : isUnderReview ? 'KYC Under Review' : isRejected ? 'KYC Rejected' : 'KYC Pending'}
           </h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', opacity: 0.9 }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12.5px' : '13.5px', opacity: 0.9, wordBreak: 'break-word', lineHeight: 1.5 }}>
             {isApproved && 'Your identity is fully verified. You now have unrestricted access to Products, Wallet, and Leads.'}
             {isUnderReview && 'Your documentation has been submitted and is pending compliance team approval.'}
             {isRejected && `Reason: ${kycData.rejection_reason || 'Blurry document images'}. Please correct and re-upload the rejected items.`}
@@ -422,41 +470,44 @@ export default function PartnerKyc() {
       <div style={{
         background: cardBg,
         border: `1px solid ${cardBorder}`,
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '32px'
+        borderRadius: isMobile ? '12px' : '16px',
+        padding: isMobile ? '16px' : '20px',
+        marginBottom: isMobile ? '24px' : '32px',
+        boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '13.5px', fontWeight: 700 }}>Verification Completion Progress</span>
-          <span style={{ fontSize: '14px', fontWeight: 800, color: '#2563EB' }}>{getProgress()}%</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 700 }}>Verification Completion Progress</span>
+          <span style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: '#2563EB' }}>{getProgress()}%</span>
         </div>
-        <div style={{ background: isDark ? '#334155' : '#E2E8F0', height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
-          <div style={{ background: '#2563EB', width: `${getProgress()}%`, height: '100%', transition: 'width 0.4s ease' }} />
+        <div style={{ background: isDark ? '#334155' : '#E2E8F0', height: isMobile ? '8px' : '10px', borderRadius: '5px', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(90deg, #2563EB, #3B82F6)', width: `${getProgress()}%`, height: '100%', transition: 'width 0.4s ease', borderRadius: '5px' }} />
         </div>
       </div>
 
       {/* Grid containing upload zones */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-        gap: '24px',
-        marginBottom: '32px'
+        gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+        gap: isMobile ? '16px' : isTablet ? '20px' : '24px',
+        marginBottom: isMobile ? '24px' : '32px'
       }}>
 
         {/* Card 1: PAN Card */}
         <div style={{
           background: cardBg,
           border: `1px solid ${isDocRejected('pan') ? '#EF4444' : cardBorder}`,
-          borderRadius: '16px',
-          padding: '24px',
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          opacity: (isApproved || isUnderReview) ? 0.75 : 1
+          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+          wordBreak: 'break-word'
         }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>1. PAN Card</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>1. PAN Card</h3>
               {isDocApproved('pan') ? (
                 <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : getDoc('pan') ? (
@@ -468,7 +519,7 @@ export default function PartnerKyc() {
               )}
             </div>
 
-            <p style={{ fontSize: '13px', color: textSecondary, margin: '0 0 16px 0' }}>Upload clear digital photo or PDF of your PAN Card. Max 5MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload clear digital photo or PDF of your PAN Card. Max 5MB.</p>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
@@ -517,7 +568,7 @@ export default function PartnerKyc() {
                   }}
                 >
                   <MdUploadFile size={24} color="#2563EB" />
-                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
                     {panFile ? panFile.name : 'Choose File'}
                   </span>
                 </label>
@@ -525,17 +576,18 @@ export default function PartnerKyc() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginTop: '16px' }}>
             {getDoc('pan') && (
               <button 
                 onClick={() => handleViewFile(getDoc('pan').id)}
                 style={{
-                  flex: 1,
+                  flex: isMobile ? 'unset' : 1,
+                  width: isMobile ? '100%' : 'auto',
                   background: 'transparent',
                   border: `1px solid ${cardBorder}`,
                   color: textPrimary,
-                  borderRadius: '8px',
-                  padding: '8px',
+                  borderRadius: '10px',
+                  padding: isMobile ? '10px' : '8px',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer'
@@ -549,12 +601,13 @@ export default function PartnerKyc() {
                 onClick={handleUploadPan}
                 disabled={actionLoading}
                 style={{
-                  flex: 2,
+                  flex: isMobile ? 'unset' : 2,
+                  width: isMobile ? '100%' : 'auto',
                   background: '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px',
+                  borderRadius: '10px',
+                  padding: isMobile ? '10px' : '8px',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer'
@@ -570,16 +623,18 @@ export default function PartnerKyc() {
         <div style={{
           background: cardBg,
           border: `1px solid ${isDocRejected('cancelled_cheque') ? '#EF4444' : cardBorder}`,
-          borderRadius: '16px',
-          padding: '24px',
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          opacity: (isApproved || isUnderReview) ? 0.75 : 1
+          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+          wordBreak: 'break-word'
         }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>2. Bank Account Proof</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>2. Bank Account Proof</h3>
               {isDocApproved('cancelled_cheque') ? (
                 <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : getDoc('cancelled_cheque') ? (
@@ -591,7 +646,7 @@ export default function PartnerKyc() {
               )}
             </div>
 
-            <p style={{ fontSize: '13px', color: textSecondary, margin: '0 0 16px 0' }}>Upload cancelled cheque or latest bank account statement. Max 5MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload cancelled cheque or latest bank account statement. Max 5MB.</p>
 
             {!isDocApproved('cancelled_cheque') && !isUnderReview && (
               <div style={{ marginBottom: '16px' }}>
@@ -617,7 +672,7 @@ export default function PartnerKyc() {
                   }}
                 >
                   <MdUploadFile size={24} color="#2563EB" />
-                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
                     {chequeFile ? chequeFile.name : 'Choose File'}
                   </span>
                 </label>
@@ -625,17 +680,18 @@ export default function PartnerKyc() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginTop: '16px' }}>
             {getDoc('cancelled_cheque') && (
               <button 
                 onClick={() => handleViewFile(getDoc('cancelled_cheque').id)}
                 style={{
-                  flex: 1,
+                  flex: isMobile ? 'unset' : 1,
+                  width: isMobile ? '100%' : 'auto',
                   background: 'transparent',
                   border: `1px solid ${cardBorder}`,
                   color: textPrimary,
-                  borderRadius: '8px',
-                  padding: '8px',
+                  borderRadius: '10px',
+                  padding: isMobile ? '10px' : '8px',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer'
@@ -649,12 +705,13 @@ export default function PartnerKyc() {
                 onClick={handleUploadCheque}
                 disabled={actionLoading}
                 style={{
-                  flex: 2,
+                  flex: isMobile ? 'unset' : 2,
+                  width: isMobile ? '100%' : 'auto',
                   background: '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px',
+                  borderRadius: '10px',
+                  padding: isMobile ? '10px' : '8px',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer'
@@ -670,16 +727,18 @@ export default function PartnerKyc() {
         <div style={{
           background: cardBg,
           border: `1px solid ${isVideoRejected() ? '#EF4444' : cardBorder}`,
-          borderRadius: '16px',
-          padding: '24px',
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          opacity: (isApproved || isUnderReview) ? 0.75 : 1
+          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+          wordBreak: 'break-word'
         }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>3. Video Verification</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>3. Video Verification</h3>
               {isVideoApproved() ? (
                 <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : kycData.video ? (
@@ -691,10 +750,10 @@ export default function PartnerKyc() {
               )}
             </div>
 
-            <p style={{ fontSize: '13px', color: textSecondary, margin: '0 0 16px 0' }}>Record a short browser video reading the official compliance declaration. Max 100MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Record a short browser video reading the official compliance declaration. Max 100MB.</p>
 
             {kycData.video && (
-              <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${cardBorder}`, background: '#000000', height: '140px', position: 'relative' }}>
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${cardBorder}`, background: '#000000', height: isMobile ? '180px' : '140px', position: 'relative' }}>
                 <video 
                   src={kycData.video.video_url} 
                   controls 
@@ -743,25 +802,28 @@ export default function PartnerKyc() {
           bottom: 0,
           background: 'rgba(15, 23, 42, 0.95)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
+          justifyContent: isMobile ? 'stretch' : 'center',
           zIndex: 9999,
-          padding: '20px'
+          padding: isMobile ? '0' : '20px',
+          overflowY: 'auto'
         }}>
           <div style={{
             background: isDark ? '#1E293B' : '#FFFFFF',
-            borderRadius: '24px',
+            borderRadius: isMobile ? '0' : '24px',
             width: '100%',
-            maxWidth: '680px',
-            padding: '24px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            maxWidth: isMobile ? '100%' : '680px',
+            minHeight: isMobile ? '100%' : 'auto',
+            padding: isMobile ? '16px' : '24px',
+            border: isMobile ? 'none' : '1px solid rgba(255,255,255,0.1)',
+            boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.5)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px'
+            gap: isMobile ? '16px' : '20px',
+            overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Record Verification Video</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>Record Verification Video</h3>
               <button 
                 onClick={() => { stopCamera(); deleteRecording(); }}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -774,21 +836,21 @@ export default function PartnerKyc() {
             <div style={{
               background: isDark ? '#0F172A' : '#EFF6FF',
               borderLeft: '4px solid #2563EB',
-              padding: '16px',
+              padding: isMobile ? '12px' : '16px',
               borderRadius: '8px'
             }}>
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Please read this statement aloud:</span>
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary }}>
+              <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
                 "I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
               </p>
             </div>
 
             {/* Live Camera Box / Preview Box */}
             <div style={{
-              borderRadius: '16px',
+              borderRadius: isMobile ? '12px' : '16px',
               overflow: 'hidden',
               background: '#000000',
-              height: '320px',
+              height: isMobile ? '220px' : isTablet ? '280px' : '320px',
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
@@ -833,7 +895,7 @@ export default function PartnerKyc() {
             </div>
 
             {/* Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? '12px' : '0' }}>
               <div>
                 {!videoPreviewUrl ? (
                   !isRecording ? (
@@ -844,13 +906,15 @@ export default function PartnerKyc() {
                         color: '#FFFFFF',
                         border: 'none',
                         borderRadius: '12px',
-                        padding: '10px 24px',
-                        fontSize: '14px',
+                        padding: isMobile ? '12px 20px' : '10px 24px',
+                        fontSize: isMobile ? '13px' : '14px',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: isMobile ? '100%' : 'auto'
                       }}
                     >
                       <MdVideocam size={18} /> Start Recording
@@ -863,20 +927,22 @@ export default function PartnerKyc() {
                         color: '#FFFFFF',
                         border: 'none',
                         borderRadius: '12px',
-                        padding: '10px 24px',
-                        fontSize: '14px',
+                        padding: isMobile ? '12px 20px' : '10px 24px',
+                        fontSize: isMobile ? '13px' : '14px',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: isMobile ? '100%' : 'auto'
                       }}
                     >
                       <MdStop size={18} /> Stop Recording (Save)
                     </button>
                   )
                 ) : (
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
                     <button 
                       onClick={() => { deleteRecording(); startCamera(); }}
                       style={{
@@ -884,13 +950,15 @@ export default function PartnerKyc() {
                         border: `1px solid ${cardBorder}`,
                         color: textPrimary,
                         borderRadius: '12px',
-                        padding: '10px 20px',
-                        fontSize: '14px',
+                        padding: isMobile ? '12px 20px' : '10px 20px',
+                        fontSize: isMobile ? '13px' : '14px',
                         fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: isMobile ? '100%' : 'auto'
                       }}
                     >
                       <MdRefresh size={18} /> Record Again
@@ -903,10 +971,12 @@ export default function PartnerKyc() {
                         color: '#FFFFFF',
                         border: 'none',
                         borderRadius: '12px',
-                        padding: '10px 24px',
-                        fontSize: '14px',
+                        padding: isMobile ? '12px 20px' : '10px 24px',
+                        fontSize: isMobile ? '13px' : '14px',
                         fontWeight: 700,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        width: isMobile ? '100%' : 'auto',
+                        textAlign: 'center'
                       }}
                     >
                       {actionLoading ? 'Uploading...' : 'Upload Video'}
@@ -916,7 +986,7 @@ export default function PartnerKyc() {
               </div>
 
               {uploadProgress > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '120px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: isMobile ? '100%' : '120px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, textAlign: 'right' }}>Uploading: {uploadProgress}%</div>
                   <div style={{ height: '4px', background: '#E2E8F0', borderRadius: '2px', overflow: 'hidden' }}>
                     <div style={{ width: `${uploadProgress}%`, height: '100%', background: '#10B981' }} />
@@ -930,13 +1000,13 @@ export default function PartnerKyc() {
 
       {/* Global Alerts */}
       {errorMsg && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: '12px', padding: '16px', marginBottom: '24px', fontSize: '13.5px', fontWeight: 600 }}>
+        <div style={{ background: '#FEF2F2', border: '1px solid #EF4444', color: '#991B1B', borderRadius: '12px', padding: isMobile ? '12px' : '16px', marginBottom: isMobile ? '16px' : '24px', fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 600, wordBreak: 'break-word' }}>
           {errorMsg}
         </div>
       )}
 
       {successMsg && (
-        <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#065F46', borderRadius: '12px', padding: '16px', marginBottom: '24px', fontSize: '13.5px', fontWeight: 600 }}>
+        <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#065F46', borderRadius: '12px', padding: isMobile ? '12px' : '16px', marginBottom: isMobile ? '16px' : '24px', fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 600, wordBreak: 'break-word' }}>
           {successMsg}
         </div>
       )}
@@ -946,17 +1016,19 @@ export default function PartnerKyc() {
         <div style={{
           background: cardBg,
           border: `1px solid ${cardBorder}`,
-          borderRadius: '16px',
-          padding: '24px',
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
           display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
           flexWrap: 'wrap',
-          gap: '16px'
+          gap: '16px',
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
         }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Submit KYC for Approval</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: textSecondary }}>Ensure all three sections show "Uploaded" or "Verified" before clicking submit.</p>
+            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC for Approval</h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>Ensure all three sections show "Uploaded" or "Verified" before clicking submit.</p>
           </div>
           <button 
             onClick={handleSubmitKyc}
@@ -966,12 +1038,14 @@ export default function PartnerKyc() {
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
-              padding: '12px 28px',
-              fontSize: '14px',
+              padding: isMobile ? '14px 20px' : '12px 28px',
+              fontSize: isMobile ? '13px' : '14px',
               fontWeight: 800,
               cursor: getProgress() < 100 ? 'not-allowed' : 'pointer',
               boxShadow: getProgress() < 100 ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              width: isMobile ? '100%' : 'auto',
+              textAlign: 'center'
             }}
           >
             {actionLoading ? 'Submitting...' : 'Submit Verification'}
@@ -989,22 +1063,25 @@ export default function PartnerKyc() {
           bottom: 0,
           background: 'rgba(15, 23, 42, 0.75)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
+          justifyContent: isMobile ? 'stretch' : 'center',
           zIndex: 9999,
-          padding: '20px'
+          padding: isMobile ? '0' : '20px',
+          overflowY: 'auto'
         }}>
           <div style={{
             background: isDark ? '#1E293B' : '#FFFFFF',
-            borderRadius: '24px',
+            borderRadius: isMobile ? '0' : '24px',
             width: '100%',
-            maxWidth: '520px',
-            padding: '28px',
-            border: `1px solid ${cardBorder}`,
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+            maxWidth: isMobile ? '100%' : '520px',
+            minHeight: isMobile ? '100%' : 'auto',
+            padding: isMobile ? '20px' : '28px',
+            border: isMobile ? 'none' : `1px solid ${cardBorder}`,
+            boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.3)',
+            overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>KYC Guidelines</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '17px' : '20px', fontWeight: 800 }}>KYC Guidelines</h3>
               <button 
                 onClick={() => setShowGuidelines(false)}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -1012,7 +1089,7 @@ export default function PartnerKyc() {
                 <MdClose size={24} />
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13.5px', color: textSecondary, lineHeight: 1.6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: isMobile ? '12.5px' : '13.5px', color: textSecondary, lineHeight: 1.6, wordBreak: 'break-word' }}>
               <p style={{ margin: 0 }}>To ensure quick verification, please verify the following instructions:</p>
               <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <li><strong>PAN Card:</strong> Make sure the text, photo, and signature are completely visible. No corners of the card should be cropped out.</li>

@@ -29,6 +29,10 @@ export default function ManagePartners() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [docCorrections, setDocCorrections] = useState({ pan: false, cancelled_cheque: false, video: false });
+  const [docReviews, setDocReviews] = useState({ pan: null, cancelled_cheque: null, video: null });
+  const [docRejectReasons, setDocRejectReasons] = useState({ pan: "", cancelled_cheque: "", video: "" });
+  const [activeRejectDoc, setActiveRejectDoc] = useState(null);
+  const [rejectText, setRejectText] = useState("");
 
   // Wallet adjustment State
   const [showWalletForm, setShowWalletForm] = useState(false);
@@ -100,6 +104,23 @@ export default function ManagePartners() {
         setSelectedParentId(p.parent_partner_id || "");
         setTeamStatus(p.team_status || "ACTIVE");
         setAllowTeamCreation(p.allow_team_creation !== false);
+
+        const panDoc = p.kyc_documents?.find(d => d.doc_type === 'pan');
+        const chequeDoc = p.kyc_documents?.find(d => d.doc_type === 'cancelled_cheque');
+        const videoDoc = p.partner_video;
+        
+        setDocReviews({
+          pan: panDoc?.verification_status || null,
+          cancelled_cheque: chequeDoc?.verification_status || null,
+          video: videoDoc?.verification_status || null
+        });
+        setDocRejectReasons({
+          pan: panDoc?.rejection_reason || '',
+          cancelled_cheque: chequeDoc?.rejection_reason || '',
+          video: videoDoc?.rejection_reason || ''
+        });
+        setActiveRejectDoc(null);
+        setRejectText('');
       }
     } catch (e) {
       console.error(e);
@@ -197,6 +218,59 @@ export default function ManagePartners() {
       alert(e.response?.data?.message || "KYC action failed.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSubmitKYCDecision = async () => {
+    const docsToReview = [];
+    if (profile.kyc_documents?.some(d => d.doc_type === 'pan')) docsToReview.push('pan');
+    if (profile.kyc_documents?.some(d => d.doc_type === 'cancelled_cheque')) docsToReview.push('cancelled_cheque');
+    if (profile.partner_video) docsToReview.push('video');
+
+    const unreviewed = docsToReview.filter(d => !docReviews[d]);
+    if (unreviewed.length > 0) {
+      return alert(`Please Approve or Reject all uploaded items before submitting. Unreviewed: ${unreviewed.map(u => u.replace('_', ' ').toUpperCase()).join(', ')}`);
+    }
+
+    const rejectedDocs = docsToReview.filter(d => docReviews[d] === 'rejected');
+
+    if (rejectedDocs.length > 0) {
+      if (!window.confirm(`Are you sure you want to request changes for ${rejectedDocs.length} document(s)?`)) return;
+      setActionLoading(true);
+      try {
+        const combinedReason = rejectedDocs
+          .map(k => `${k.replace('_', ' ').toUpperCase()}: ${docRejectReasons[k] || 'Verification failed'}`)
+          .join('; ');
+        
+        await api.post("/superadmin/kyc/request-changes", {
+          partnerId: selectedPartner.id,
+          rejection_reason: combinedReason,
+          rejected_documents: rejectedDocs
+        });
+        
+        alert("KYC correction request submitted successfully.");
+        handleViewDetails(selectedPartner);
+        fetchPartners();
+      } catch (err) {
+        alert(err.response?.data?.message || "Failed to submit review.");
+      } finally {
+        setActionLoading(false);
+      }
+    } else {
+      if (!window.confirm("All documents are marked as verified. Approve KYC and activate partner profile?")) return;
+      setActionLoading(true);
+      try {
+        await api.post("/superadmin/kyc/approve", {
+          partnerId: selectedPartner.id
+        });
+        alert("Partner KYC approved and profile activated successfully!");
+        handleViewDetails(selectedPartner);
+        fetchPartners();
+      } catch (err) {
+        alert(err.response?.data?.message || "KYC approval failed.");
+      } finally {
+        setActionLoading(false);
+      }
     }
   };
 
@@ -469,23 +543,69 @@ export default function ManagePartners() {
                   <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>KYC Uploaded Documents</h4>
                   {profile.kyc_documents && profile.kyc_documents.length > 0 ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                      {profile.kyc_documents.map((doc, idx) => (
-                        <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "10px 14px", borderRadius: "10px", width: "100%" }}>
-                          <div>
-                            <div style={{ fontSize: "12px", fontWeight: 700, textTransform: "capitalize", color: C.text }}>{doc.doc_type.replace("_", " ")}</div>
-                            <div style={{ fontSize: "10px", color: C.textLight }}>
-                              No: {doc.doc_number || "N/A"} • Status: <span style={{ fontWeight: 700, color: doc.verification_status === 'approved' ? C.green : doc.verification_status === 'rejected' ? C.red : C.gold }}>{doc.verification_status || 'pending'}</span>
+                      {profile.kyc_documents.map((doc, idx) => {
+                        const isDocVer = docReviews[doc.doc_type] === 'approved';
+                        const isDocRej = docReviews[doc.doc_type] === 'rejected';
+                        return (
+                          <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "6px", background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "12px", borderRadius: "10px", width: "100%" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                              <div>
+                                <div style={{ fontSize: "12px", fontWeight: 700, textTransform: "capitalize", color: C.text }}>{doc.doc_type.replace("_", " ")}</div>
+                                <div style={{ fontSize: "10px", color: C.textLight }}>
+                                  No: {doc.doc_number || "N/A"} • Status: <span style={{ fontWeight: 700, color: isDocVer ? C.green : isDocRej ? C.red : C.gold }}>{docReviews[doc.doc_type] || 'pending'}</span>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                                <button
+                                  onClick={() => handleViewDocument(doc.id)}
+                                  disabled={!doc.id || doc.id === 'undefined'}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: (!doc.id || doc.id === 'undefined') ? C.textLight : C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: (!doc.id || doc.id === 'undefined') ? "not-allowed" : "pointer", marginRight: "12px" }}
+                                >
+                                  <Icons.eye size={14} /> View File
+                                </button>
+                                
+                                <button 
+                                  onClick={() => setDocReviews({ ...docReviews, [doc.doc_type]: 'approved' })}
+                                  style={{
+                                    padding: '4px 10px',
+                                    background: isDocVer ? C.green : 'transparent',
+                                    color: isDocVer ? '#fff' : C.green,
+                                    border: `1px solid ${C.green}`,
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  Verify
+                                </button>
+                                <button 
+                                  onClick={() => { setActiveRejectDoc(doc.doc_type); setRejectText(docRejectReasons[doc.doc_type] || ''); }}
+                                  style={{
+                                    padding: '4px 10px',
+                                    background: isDocRej ? C.red : 'transparent',
+                                    color: isDocRej ? '#fff' : C.red,
+                                    border: `1px solid ${C.red}`,
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
                             </div>
+                            {isDocRej && docRejectReasons[doc.doc_type] && (
+                              <div style={{ fontSize: "11px", color: C.red, background: `${C.red}08`, padding: "6px 10px", borderRadius: "6px", marginTop: "2px" }}>
+                                <strong>Rejection Reason:</strong> {docRejectReasons[doc.doc_type]}
+                              </div>
+                            )}
                           </div>
-                          <button
-                            onClick={() => handleViewDocument(doc.id)}
-                            disabled={!doc.id || doc.id === 'undefined'}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: (!doc.id || doc.id === 'undefined') ? C.textLight : C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: (!doc.id || doc.id === 'undefined') ? "not-allowed" : "pointer" }}
-                          >
-                            <Icons.eye size={14} /> View File
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p style={{ fontSize: "13px", color: C.textLight, margin: 0 }}>No documents uploaded yet.</p>
@@ -495,7 +615,45 @@ export default function ManagePartners() {
                 {/* KYC Verification Video */}
                 {profile.partner_video && (
                   <div style={{ marginTop: "16px" }}>
-                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>KYC Verification Video</h4>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, margin: 0 }}>KYC Verification Video</h4>
+                      
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button 
+                          onClick={() => setDocReviews({ ...docReviews, video: 'approved' })}
+                          style={{
+                            padding: '4px 10px',
+                            background: docReviews.video === 'approved' ? C.green : 'transparent',
+                            color: docReviews.video === 'approved' ? '#fff' : C.green,
+                            border: `1px solid ${C.green}`,
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          Verify Video
+                        </button>
+                        <button 
+                          onClick={() => { setActiveRejectDoc('video'); setRejectText(docRejectReasons.video || ''); }}
+                          style={{
+                            padding: '4px 10px',
+                            background: docReviews.video === 'rejected' ? C.red : 'transparent',
+                            color: docReviews.video === 'rejected' ? '#fff' : C.red,
+                            border: `1px solid ${C.red}`,
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          Reject Video
+                        </button>
+                      </div>
+                    </div>
+                    
                     <div style={{ borderRadius: "10px", overflow: "hidden", border: `1px solid ${C.border}`, background: "#000", height: "200px" }}>
                       <video 
                         src={profile.partner_video.video_url} 
@@ -504,8 +662,13 @@ export default function ManagePartners() {
                       />
                     </div>
                     <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>
-                      Duration: {profile.partner_video.video_duration}s • Status: <span style={{ fontWeight: 700, color: profile.partner_video.verification_status === 'approved' ? C.green : profile.partner_video.verification_status === 'rejected' ? C.red : C.gold }}>{profile.partner_video.verification_status || 'pending'}</span>
+                      Duration: {profile.partner_video.video_duration}s • Status: <span style={{ fontWeight: 700, color: docReviews.video === 'approved' ? C.green : docReviews.video === 'rejected' ? C.red : C.gold }}>{docReviews.video || 'pending'}</span>
                     </div>
+                    {docReviews.video === 'rejected' && docRejectReasons.video && (
+                      <div style={{ fontSize: "11px", color: C.red, background: `${C.red}08`, padding: "6px 10px", borderRadius: "6px", marginTop: "4px" }}>
+                        <strong>Rejection Reason:</strong> {docRejectReasons.video}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -598,24 +761,52 @@ export default function ManagePartners() {
                   </div>
                 )}
 
+                {/* Rejection reason inline prompt */}
+                {activeRejectDoc && (
+                  <div style={{ margin: "16px 0", padding: "12px", background: `${C.red}05`, border: `1px solid ${C.red}20`, borderRadius: "10px" }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: C.red, marginBottom: "8px" }}>
+                      Specify Rejection Reason for {activeRejectDoc.replace("_", " ").toUpperCase()}:
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input 
+                        type="text" 
+                        value={rejectText} 
+                        onChange={e => setRejectText(e.target.value)}
+                        placeholder="e.g. Details are blurry or signature mismatch"
+                        style={{ ...S.input, flex: 1, margin: 0 }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (!rejectText.trim()) return alert("Rejection reason is required.");
+                          setDocReviews({ ...docReviews, [activeRejectDoc]: 'rejected' });
+                          setDocRejectReasons({ ...docRejectReasons, [activeRejectDoc]: rejectText.trim() });
+                          setActiveRejectDoc(null);
+                        }}
+                        style={{ ...S.btn("primary"), background: C.red, padding: "8px 16px", fontSize: "12px", border: "none" }}
+                      >
+                        Save
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setActiveRejectDoc(null)}
+                        style={{ ...S.btn("outline"), padding: "8px 16px", fontSize: "12px" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Actions Panel */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   {profile.kyc_status !== "approved" && (
                     <button
-                      onClick={handleApproveKYC}
+                      onClick={handleSubmitKYCDecision}
                       disabled={actionLoading}
                       style={{ ...S.btn("primary"), padding: "10px 18px", fontSize: "13px" }}
                     >
-                      Approve KYC & Activate
-                    </button>
-                  )}
-                  {profile.kyc_status !== "rejected" && !showRejectForm && (
-                    <button
-                      onClick={() => setShowRejectForm(true)}
-                      disabled={actionLoading}
-                      style={{ ...S.btn("outline"), padding: "10px 18px", fontSize: "13px", color: C.red, borderColor: C.red }}
-                    >
-                      Reject KYC
+                      {actionLoading ? "Submitting..." : "Submit KYC Review Decision"}
                     </button>
                   )}
                   <button
@@ -669,58 +860,7 @@ export default function ManagePartners() {
                   </div>
                 )}
 
-                {/* Rejection Form */}
-                {showRejectForm && (
-                  <form onSubmit={handleRejectKYC} style={{ background: `${C.red}05`, border: `1px solid ${C.red}20`, padding: "16px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <h5 style={{ fontSize: "13px", fontWeight: 700, color: C.red, margin: 0 }}>Specify Rejection Reason / Request Corrections</h5>
-                    <textarea
-                      style={{ ...S.input, minHeight: "60px", margin: 0, background: C.card }}
-                      placeholder="Explain what was wrong (e.g. Blurred PAN Card upload)"
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      required
-                    />
-                    
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Select documents requiring correction (Check if requesting changes):</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
-                          <input 
-                            type="checkbox" 
-                            checked={docCorrections.pan}
-                            onChange={(e) => setDocCorrections({ ...docCorrections, pan: e.target.checked })}
-                          />
-                          PAN Card Document
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
-                          <input 
-                            type="checkbox" 
-                            checked={docCorrections.cancelled_cheque}
-                            onChange={(e) => setDocCorrections({ ...docCorrections, cancelled_cheque: e.target.checked })}
-                          />
-                          Bank Account Proof (Cheque)
-                        </label>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
-                          <input 
-                            type="checkbox" 
-                            checked={docCorrections.video}
-                            onChange={(e) => setDocCorrections({ ...docCorrections, video: e.target.checked })}
-                          />
-                          Verification Video
-                        </label>
-                      </div>
-                    </div>
 
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button type="submit" disabled={actionLoading} style={{ ...S.btn("primary"), background: C.red, padding: "8px 14px", fontSize: "12px" }}>
-                        {Object.values(docCorrections).some(Boolean) ? 'Request Selected Changes' : 'Reject KYC Entirely'}
-                      </button>
-                      <button type="button" onClick={() => setShowRejectForm(false)} style={{ ...S.btn("outline"), padding: "8px 14px", fontSize: "12px", border: "none", color: C.textLight }}>
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                )}
 
                 {/* Wallet adjustment Form */}
                 {showWalletForm && (
