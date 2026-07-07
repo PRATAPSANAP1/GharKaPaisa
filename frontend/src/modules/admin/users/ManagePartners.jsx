@@ -9,16 +9,19 @@ export default function ManagePartners() {
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
 
-  // Listing State
-  const [partners, setPartners] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  // Listing State (Two Tables: New Onboarding Requests vs Processed Partners)
+  const [partnersNew, setPartnersNew] = useState([]);
+  const [partnersProcessed, setPartnersProcessed] = useState([]);
+  const [totalNew, setTotalNew] = useState(0);
+  const [totalProcessed, setTotalProcessed] = useState(0);
+  const [pageNew, setPageNew] = useState(1);
+  const [pageProcessed, setPageProcessed] = useState(1);
   const [search, setSearch] = useState("");
   const [kycStatus, setKycStatus] = useState("");
   const [accountStatus, setAccountStatus] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingNew, setLoadingNew] = useState(true);
+  const [loadingProcessed, setLoadingProcessed] = useState(true);
   const [err, setErr] = useState("");
-  const [kycTab, setKycTab] = useState("new"); // 'new', 'old', or 'all'
 
   // Details Modal State
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -47,35 +50,70 @@ export default function ManagePartners() {
   const [allowTeamCreation, setAllowTeamCreation] = useState(true);
   const [updatingTeam, setUpdatingTeam] = useState(false);
 
-  const fetchPartners = async () => {
-    setLoading(true);
+  const fetchNewPartners = async () => {
+    setLoadingNew(true);
     setErr("");
     try {
       const res = await api.get("/Partners", {
         params: {
-          page,
+          page: pageNew,
           limit: 10,
           search: search || undefined,
           kyc_status: kycStatus || undefined,
           status: accountStatus || undefined,
-          kyc_filter: kycTab !== 'all' ? kycTab : undefined
+          kyc_filter: "new",
         },
       });
       if (res.data?.success) {
-        setPartners(res.data.data);
-        setTotal(res.data.pagination?.total || res.data.data.length);
+        setPartnersNew(res.data.data);
+        setTotalNew(res.data.pagination?.total || res.data.data.length);
       }
     } catch (e) {
       console.error(e);
-      setErr(e.response?.data?.message || "Failed to load partners");
+      setErr(e.response?.data?.message || "Failed to load new requests");
     } finally {
-      setLoading(false);
+      setLoadingNew(false);
     }
   };
 
+  const fetchProcessedPartners = async () => {
+    setLoadingProcessed(true);
+    setErr("");
+    try {
+      const res = await api.get("/Partners", {
+        params: {
+          page: pageProcessed,
+          limit: 10,
+          search: search || undefined,
+          kyc_status: kycStatus || undefined,
+          status: accountStatus || undefined,
+          kyc_filter: "old",
+        },
+      });
+      if (res.data?.success) {
+        setPartnersProcessed(res.data.data);
+        setTotalProcessed(res.data.pagination?.total || res.data.data.length);
+      }
+    } catch (e) {
+      console.error(e);
+      setErr(e.response?.data?.message || "Failed to load processed partners");
+    } finally {
+      setLoadingProcessed(false);
+    }
+  };
+
+  const fetchPartners = () => {
+    fetchNewPartners();
+    fetchProcessedPartners();
+  };
+
   useEffect(() => {
-    fetchPartners();
-  }, [page, kycStatus, accountStatus, kycTab]);
+    fetchNewPartners();
+  }, [pageNew, kycStatus, accountStatus]);
+
+  useEffect(() => {
+    fetchProcessedPartners();
+  }, [pageProcessed, kycStatus, accountStatus]);
 
   useEffect(() => {
     if (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") {
@@ -89,8 +127,10 @@ export default function ManagePartners() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setPage(1);
-    fetchPartners();
+    setPageNew(1);
+    setPageProcessed(1);
+    fetchNewPartners();
+    fetchProcessedPartners();
   };
 
   const handleViewDetails = async (partner) => {
@@ -340,34 +380,6 @@ export default function ManagePartners() {
         <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage partner onboarding, review KYC compliance documents, and update wallet balances</p>
       </div>
 
-      {/* Tabs / Filter Options */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "20px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "6px", width: "fit-content" }}>
-        {[
-          { key: "new", label: "New Requests (KYC Pending)" },
-          { key: "old", label: "Processed Requests (Approved/Rejected)" },
-          { key: "all", label: "All Partners" }
-        ].map((tab) => (
-          <button
-            type="button"
-            key={tab.key}
-            onClick={() => { setKycTab(tab.key); setPage(1); }}
-            style={{
-              background: kycTab === tab.key ? C.teal : "transparent",
-              color: kycTab === tab.key ? "#fff" : C.textMid,
-              border: "none", 
-              borderRadius: "8px", 
-              padding: "8px 16px",
-              fontWeight: 700, 
-              fontSize: "13px", 
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* Filters & Search Form */}
       <div style={{ ...S.card, padding: "16px", marginBottom: "24px" }}>
         <form onSubmit={handleSearchSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
@@ -382,7 +394,7 @@ export default function ManagePartners() {
           <select
             style={{ ...S.input, width: "auto", minWidth: "150px" }}
             value={kycStatus}
-            onChange={(e) => { setKycStatus(e.target.value); setPage(1); }}
+            onChange={(e) => { setKycStatus(e.target.value); setPageNew(1); setPageProcessed(1); }}
           >
             <option value="">All KYC Status</option>
             <option value="pending">Pending</option>
@@ -393,7 +405,7 @@ export default function ManagePartners() {
           <select
             style={{ ...S.input, width: "auto", minWidth: "150px" }}
             value={accountStatus}
-            onChange={(e) => { setAccountStatus(e.target.value); setPage(1); }}
+            onChange={(e) => { setAccountStatus(e.target.value); setPageNew(1); setPageProcessed(1); }}
           >
             <option value="">All Account Status</option>
             <option value="pending">Pending</option>
@@ -406,101 +418,262 @@ export default function ManagePartners() {
         </form>
       </div>
 
-      {/* Partners List Table */}
       {err && (
         <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
           {err}
         </div>
       )}
 
-      <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-        {loading ? (
+      {/* ==================== TABLE 1: NEW REQUESTS ==================== */}
+      <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>New Onboarding Requests</h3>
+        <span style={{ background: `${C.teal}15`, color: C.teal, fontSize: "11px", fontWeight: 800, padding: "2px 8px", borderRadius: "30px" }}>
+          {totalNew} pending
+        </span>
+      </div>
+
+      <div style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: "32px" }}>
+        {loadingNew ? (
           <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
             <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
-            Loading partners list...
+            Loading new onboarding requests...
           </div>
-        ) : partners.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No partners found matching criteria.</div>
+        ) : partnersNew.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No new onboarding requests found.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
-                  <th style={{ padding: "14px 16px" }}>Partner Info</th>
-                  <th style={{ padding: "14px 16px" }}>Partner Code</th>
-                  <th style={{ padding: "14px 16px" }}>Contact</th>
-                  <th style={{ padding: "14px 16px" }}>KYC Status</th>
-                  <th style={{ padding: "14px 16px" }}>Account Status</th>
-                  <th style={{ padding: "14px 16px" }}>Created At</th>
-                  <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody style={{ fontSize: "13.5px", color: C.text }}>
-                {partners.map((partner) => (
-                  <tr key={partner.id} style={{ borderBottom: `1px solid ${C.border}60` }} className="hover:bg-gray-50/10">
-                    <td style={{ padding: "14px 16px", fontWeight: 600 }}>
-                      {partner.first_name} {partner.last_name}
-                      {partner.company_name && <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 500 }}>{partner.company_name}</div>}
-                    </td>
-                    <td style={{ padding: "14px 16px", fontMono: true }}>
-                      <div>{partner.Partner_code || partner.partner_code}</div>
-                      {partner.parent_code && (
-                        <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>
-                          <span style={{ background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", border: `1px solid ${C.border}` }}>
-                            Child of: {partner.parent_code}
-                          </span>
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div>{partner.email}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{partner.mobile}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span style={{
-                        display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
-                        background: partner.kyc_status === "approved" ? `${C.green}15` : partner.kyc_status === "rejected" ? `${C.red}15` : partner.kyc_status === "under_review" ? `${C.gold}15` : `${C.border}`,
-                        color: partner.kyc_status === "approved" ? C.green : partner.kyc_status === "rejected" ? C.red : partner.kyc_status === "under_review" ? C.gold : C.textMid,
-                      }}>
-                        {partner.kyc_status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span style={{
-                        display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
-                        background: 
-                          partner.status === "active" ? `${C.green}15` : 
-                          partner.status === "inactive" ? `${C.textLight}15` : 
-                          (partner.status === "pending" || partner.status === "pending_verification") ? `${C.gold}15` : 
-                          partner.status === "suspended" ? `${C.red}15` : 
-                          partner.status === "rejected" ? `${C.red}15` : 
-                          partner.status === "blocked" ? `${C.red}15` : `${C.border}`,
-                        color: 
-                          partner.status === "active" ? C.green : 
-                          partner.status === "inactive" ? C.textLight : 
-                          (partner.status === "pending" || partner.status === "pending_verification") ? C.gold : 
-                          partner.status === "suspended" ? C.red : 
-                          partner.status === "rejected" ? C.red : 
-                          partner.status === "blocked" ? C.red : C.textMid,
-                      }}>
-                        {partner.status?.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 16px", color: C.textLight }}>
-                      {new Date(partner.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </td>
-                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => handleViewDetails(partner)}
-                        style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
-                      >
-                        View & Manage
-                      </button>
-                    </td>
+          <div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
+                    <th style={{ padding: "14px 16px" }}>Partner Info</th>
+                    <th style={{ padding: "14px 16px" }}>Partner Code</th>
+                    <th style={{ padding: "14px 16px" }}>Contact</th>
+                    <th style={{ padding: "14px 16px" }}>KYC Status</th>
+                    <th style={{ padding: "14px 16px" }}>Account Status</th>
+                    <th style={{ padding: "14px 16px" }}>Created At</th>
+                    <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody style={{ fontSize: "13.5px", color: C.text }}>
+                  {partnersNew.map((partner) => (
+                    <tr key={partner.id} style={{ borderBottom: `1px solid ${C.border}60` }} className="hover:bg-gray-50/10">
+                      <td style={{ padding: "14px 16px", fontWeight: 600 }}>
+                        {partner.first_name} {partner.last_name}
+                        {partner.company_name && <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 500 }}>{partner.company_name}</div>}
+                      </td>
+                      <td style={{ padding: "14px 16px", fontMono: true }}>
+                        <div>{partner.Partner_code || partner.partner_code}</div>
+                        {partner.parent_code && (
+                          <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>
+                            <span style={{ background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", border: `1px solid ${C.border}` }}>
+                              Child of: {partner.parent_code}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{partner.email}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{partner.mobile}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
+                          background: partner.kyc_status === "approved" ? `${C.green}15` : partner.kyc_status === "rejected" ? `${C.red}15` : partner.kyc_status === "under_review" ? `${C.gold}15` : `${C.border}`,
+                          color: partner.kyc_status === "approved" ? C.green : partner.kyc_status === "rejected" ? C.red : partner.kyc_status === "under_review" ? C.gold : C.textMid,
+                        }}>
+                          {partner.kyc_status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
+                          background: 
+                            partner.status === "active" ? `${C.green}15` : 
+                            partner.status === "inactive" ? `${C.textLight}15` : 
+                            (partner.status === "pending" || partner.status === "pending_verification") ? `${C.gold}15` : 
+                            partner.status === "suspended" ? `${C.red}15` : 
+                            partner.status === "rejected" ? `${C.red}15` : 
+                            partner.status === "blocked" ? `${C.red}15` : `${C.border}`,
+                          color: 
+                            partner.status === "active" ? C.green : 
+                            partner.status === "inactive" ? C.textLight : 
+                            (partner.status === "pending" || partner.status === "pending_verification") ? C.gold : 
+                            partner.status === "suspended" ? C.red : 
+                            partner.status === "rejected" ? C.red : 
+                            partner.status === "blocked" ? C.red : C.textMid,
+                        }}>
+                          {partner.status?.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.textLight }}>
+                        {new Date(partner.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <button
+                          onClick={() => handleViewDetails(partner)}
+                          style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+                        >
+                          View & Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table 1 Pagination */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", borderTop: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: "12px", color: C.textLight }}>
+                Showing page {pageNew} of {Math.ceil(totalNew / 10) || 1} ({totalNew} total requests)
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  disabled={pageNew <= 1}
+                  onClick={() => setPageNew(pageNew - 1)}
+                  style={{ ...S.btn("outline", false), padding: "6px 12px", fontSize: "12px", cursor: pageNew <= 1 ? "not-allowed" : "pointer" }}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={pageNew * 10 >= totalNew}
+                  onClick={() => setPageNew(pageNew + 1)}
+                  style={{ ...S.btn("outline", false), padding: "6px 12px", fontSize: "12px", cursor: pageNew * 10 >= totalNew ? "not-allowed" : "pointer" }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ==================== TABLE 2: PROCESSED PARTNERS ==================== */}
+      <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>Processed Partners & History</h3>
+        <span style={{ background: `${C.textLight}15`, color: C.textMid, fontSize: "11px", fontWeight: 800, padding: "2px 8px", borderRadius: "30px" }}>
+          {totalProcessed} total
+        </span>
+      </div>
+
+      <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+        {loadingProcessed ? (
+          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
+            <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
+            Loading processed partners history...
+          </div>
+        ) : partnersProcessed.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No processed partners found.</div>
+        ) : (
+          <div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
+                    <th style={{ padding: "14px 16px" }}>Partner Info</th>
+                    <th style={{ padding: "14px 16px" }}>Partner Code</th>
+                    <th style={{ padding: "14px 16px" }}>Contact</th>
+                    <th style={{ padding: "14px 16px" }}>KYC Status</th>
+                    <th style={{ padding: "14px 16px" }}>Account Status</th>
+                    <th style={{ padding: "14px 16px" }}>Created At</th>
+                    <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody style={{ fontSize: "13.5px", color: C.text }}>
+                  {partnersProcessed.map((partner) => (
+                    <tr key={partner.id} style={{ borderBottom: `1px solid ${C.border}60` }} className="hover:bg-gray-50/10">
+                      <td style={{ padding: "14px 16px", fontWeight: 600 }}>
+                        {partner.first_name} {partner.last_name}
+                        {partner.company_name && <div style={{ fontSize: "11px", color: C.textLight, fontWeight: 500 }}>{partner.company_name}</div>}
+                      </td>
+                      <td style={{ padding: "14px 16px", fontMono: true }}>
+                        <div>{partner.Partner_code || partner.partner_code}</div>
+                        {partner.parent_code && (
+                          <div style={{ fontSize: "11px", color: C.textLight, marginTop: "4px" }}>
+                            <span style={{ background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", border: `1px solid ${C.border}` }}>
+                              Child of: {partner.parent_code}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{partner.email}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{partner.mobile}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
+                          background: partner.kyc_status === "approved" ? `${C.green}15` : partner.kyc_status === "rejected" ? `${C.red}15` : partner.kyc_status === "under_review" ? `${C.gold}15` : `${C.border}`,
+                          color: partner.kyc_status === "approved" ? C.green : partner.kyc_status === "rejected" ? C.red : partner.kyc_status === "under_review" ? C.gold : C.textMid,
+                        }}>
+                          {partner.kyc_status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
+                          background: 
+                            partner.status === "active" ? `${C.green}15` : 
+                            partner.status === "inactive" ? `${C.textLight}15` : 
+                            (partner.status === "pending" || partner.status === "pending_verification") ? `${C.gold}15` : 
+                            partner.status === "suspended" ? `${C.red}15` : 
+                            partner.status === "rejected" ? `${C.red}15` : 
+                            partner.status === "blocked" ? `${C.red}15` : `${C.border}`,
+                          color: 
+                            partner.status === "active" ? C.green : 
+                            partner.status === "inactive" ? C.textLight : 
+                            (partner.status === "pending" || partner.status === "pending_verification") ? C.gold : 
+                            partner.status === "suspended" ? C.red : 
+                            partner.status === "rejected" ? C.red : 
+                            partner.status === "blocked" ? C.red : C.textMid,
+                        }}>
+                          {partner.status?.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.textLight }}>
+                        {new Date(partner.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <button
+                          onClick={() => handleViewDetails(partner)}
+                          style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+                        >
+                          View & Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table 2 Pagination */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", borderTop: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: "12px", color: C.textLight }}>
+                Showing page {pageProcessed} of {Math.ceil(totalProcessed / 10) || 1} ({totalProcessed} total partners)
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  disabled={pageProcessed <= 1}
+                  onClick={() => setPageProcessed(pageProcessed - 1)}
+                  style={{ ...S.btn("outline", false), padding: "6px 12px", fontSize: "12px", cursor: pageProcessed <= 1 ? "not-allowed" : "pointer" }}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={pageProcessed * 10 >= totalProcessed}
+                  onClick={() => setPageProcessed(pageProcessed + 1)}
+                  style={{ ...S.btn("outline", false), padding: "6px 12px", fontSize: "12px", cursor: pageProcessed * 10 >= totalProcessed ? "not-allowed" : "pointer" }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
