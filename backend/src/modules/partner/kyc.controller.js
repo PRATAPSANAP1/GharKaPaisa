@@ -103,6 +103,14 @@ const viewDocument = async (req, res, next) => {
         [docId]
       );
       doc = result;
+      if (!doc) {
+        // Fallback: check partner_videos
+        const { rows: [videoResult] } = await query(
+          `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE id = $1`,
+          [docId]
+        );
+        doc = videoResult;
+      }
     } else {
       // Fallback: fetch using partner's profile ID and doc_type
       const { rows: [partner] } = await query(
@@ -110,16 +118,24 @@ const viewDocument = async (req, res, next) => {
         [user.id]
       );
       if (partner) {
-        const { rows: [result] } = await query(
-          `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
-          [partner.id, docId]
-        );
-        doc = result;
+        if (docId === 'video') {
+          const { rows: [videoResult] } = await query(
+            `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE partner_id = $1`,
+            [partner.id]
+          );
+          doc = videoResult;
+        } else {
+          const { rows: [result] } = await query(
+            `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
+            [partner.id, docId]
+          );
+          doc = result;
+        }
       }
     }
 
     if (!doc) {
-      return notFound(res, 'Document not found.');
+      return notFound(res, 'Document or Video not found.');
     }
 
     // Authorization check: Admin/Superadmin or document owner

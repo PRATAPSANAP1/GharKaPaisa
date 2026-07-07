@@ -24,6 +24,7 @@ export default function ManagePartners() {
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [videoPlayUrl, setVideoPlayUrl] = useState('');
 
   // Actions State
   const [actionLoading, setActionLoading] = useState(false);
@@ -111,6 +112,18 @@ export default function ManagePartners() {
         const chequeDoc = p.kyc_documents?.find(d => d.doc_type === 'cancelled_cheque');
         const videoDoc = p.partner_video;
         
+        setVideoPlayUrl('');
+        if (videoDoc && videoDoc.id) {
+          try {
+            const videoViewRes = await api.get(`/partner/kyc/documents/${videoDoc.id}/view`);
+            if (videoViewRes.data?.success && videoViewRes.data?.data?.url) {
+              setVideoPlayUrl(videoViewRes.data.data.url);
+            }
+          } catch (vidErr) {
+            console.error("Failed to generate secure video link", vidErr);
+          }
+        }
+
         setDocReviews({
           pan: panDoc?.verification_status || null,
           cancelled_cheque: chequeDoc?.verification_status || null,
@@ -686,7 +699,7 @@ export default function ManagePartners() {
                     
                     <div style={{ borderRadius: "10px", overflow: "hidden", border: `1px solid ${C.border}`, background: "#000", height: "200px" }}>
                       <video 
-                        src={profile.partner_video.video_url} 
+                        src={videoPlayUrl || profile.partner_video.video_url} 
                         controls 
                         style={{ width: "100%", height: "100%", objectFit: "contain" }}
                       />
@@ -713,83 +726,7 @@ export default function ManagePartners() {
                   </div>
                 </div>
 
-                {/* DSA Team Network controls (Admin and Super Admin) */}
-                {(user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
-                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "12px" }}>DSA Team Management</h4>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-                      {/* Change Parent */}
-                      <form onSubmit={handleUpdateParent} style={{ background: C.bgSecondary, padding: "12px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight }}>Parent Partner (DSA Uplink)</label>
-                        <select 
-                          value={selectedParentId}
-                          onChange={e => setSelectedParentId(e.target.value)}
-                          style={S.input}
-                        >
-                          <option value="">None (Direct Root Partner)</option>
-                          {allPartnersList
-                            .filter(p => p.id !== selectedPartner.id)
-                            .map(p => (
-                              <option key={p.id} value={p.id}>
-                                {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code})
-                              </option>
-                            ))
-                          }
-                        </select>
-                        <button 
-                          type="submit" 
-                          disabled={updatingTeam}
-                          style={{
-                            ...S.btn("outline"),
-                            padding: "6px 12px",
-                            fontSize: "12px",
-                            cursor: updatingTeam ? "not-allowed" : "pointer"
-                          }}
-                        >
-                          Update Parent Relation
-                        </button>
-                      </form>
-
-                      {/* Team status and creation controls */}
-                      <form onSubmit={handleUpdateTeamControls} style={{ background: C.bgSecondary, padding: "12px", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                        <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight }}>Team Status & Access</label>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                          <select 
-                            value={teamStatus}
-                            onChange={e => setTeamStatus(e.target.value)}
-                            style={S.input}
-                          >
-                            <option value="ACTIVE">ACTIVE</option>
-                            <option value="INACTIVE">INACTIVE (Frozen)</option>
-                          </select>
-                          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", cursor: "pointer", marginTop: "4px" }}>
-                            <input 
-                              type="checkbox"
-                              checked={allowTeamCreation}
-                              onChange={e => setAllowTeamCreation(e.target.checked)}
-                              style={{ accentColor: C.teal }}
-                            />
-                            Allow creating child partners
-                          </label>
-                        </div>
-                        <button 
-                          type="submit" 
-                          disabled={updatingTeam}
-                          style={{
-                            ...S.btn("outline"),
-                            padding: "6px 12px",
-                            fontSize: "12px",
-                            cursor: updatingTeam ? "not-allowed" : "pointer",
-                            marginTop: "auto"
-                          }}
-                        >
-                          Update Team Controls
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                )}
+                {/* Removed DSA Team Management section as per request */}
 
                 {/* Rejection reason inline prompt */}
                 {activeRejectDoc && (

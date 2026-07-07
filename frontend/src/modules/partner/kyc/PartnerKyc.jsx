@@ -62,6 +62,7 @@ export default function PartnerKyc() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [videoBlob, setVideoBlob] = useState(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState('');
+  const [videoPlayUrl, setVideoPlayUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const streamRef = useRef(null);
@@ -81,6 +82,17 @@ export default function PartnerKyc() {
         const panDoc = data.documents?.find(d => d.doc_type === 'pan');
         if (panDoc?.doc_number) {
           setPanNumber(panDoc.doc_number);
+        }
+
+        if (data.video) {
+          try {
+            const viewRes = await api.get('/partner/kyc/documents/video/view');
+            if (viewRes.data?.success && viewRes.data?.data?.url) {
+              setVideoPlayUrl(viewRes.data.data.url);
+            }
+          } catch (videoErr) {
+            console.error('Failed to load video signed url:', videoErr);
+          }
         }
       }
     } catch (err) {
@@ -755,7 +767,7 @@ export default function PartnerKyc() {
             {kycData.video && (
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${cardBorder}`, background: '#000000', height: isMobile ? '180px' : '140px', position: 'relative' }}>
                 <video 
-                  src={kycData.video.video_url} 
+                  src={videoPlayUrl || videoPreviewUrl || kycData.video.video_url} 
                   controls 
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
