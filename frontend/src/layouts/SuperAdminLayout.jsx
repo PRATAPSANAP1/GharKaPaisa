@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
+import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import { Icons } from '../components/Icon/PartnerIcons';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
@@ -574,31 +575,7 @@ const SuperAdminLayout = () => {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", color: C.text, fontSize: "13px", fontWeight: 700 }}>
                   🌐 Language
                 </div>
-                <select 
-                  value={i18n.language} 
-                  onChange={(e) => i18n.changeLanguage(e.target.value)}
-                  style={{
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    border: `1px solid ${C.border}`,
-                    background: C.inputBg,
-                    color: C.text,
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    outline: "none",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="en">English</option>
-                  <option value="hi">हिंदी</option>
-                  <option value="mr">मराठी</option>
-                  <option value="te">తెలుగు</option>
-                  <option value="kn">ಕನ್ನಡ</option>
-                  <option value="ta">தமிழ்</option>
-                  <option value="bn">বাংলা</option>
-                  <option value="gu">ગુજરાતી</option>
-                  <option value="or">ଓଡ଼ିଆ</option>
-                </select>
+                <LanguageSwitcher />
               </div>
 
               <button

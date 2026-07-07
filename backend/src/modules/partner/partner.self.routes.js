@@ -31,6 +31,7 @@ router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);
+router.post('/training/:moduleId/complete', requirePartner, partnerCtrl.completeTrainingModule);
 router.get('/referral', requireApprovedPartner, partnerCtrl.getReferralInfo);
 router.get('/team-tree', requireApprovedPartner, partnerCtrl.getTeamTree);
 router.get('/team-dashboard', requireApprovedPartner, partnerCtrl.getTeamDashboard);

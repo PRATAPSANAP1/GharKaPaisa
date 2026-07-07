@@ -585,8 +585,57 @@ const listPartnerCustomers = async (req, res, next) => {
 // GET /partner/training — training academy module catalog
 const getTrainingModules = async (req, res, next) => {
   try {
-    const modules = require('../../data/trainingModules');
+    const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+    const partnerId = partner ? partner.id : null;
+
+    const { rows: dbModules } = await query(`
+      SELECT m.*, COALESCE(p.progress, 0) as progress_pct, 
+             COALESCE(p.completed, false) as is_completed,
+             p.completed_at
+      FROM training_modules m
+      LEFT JOIN partner_training_progress p ON m.id = p.training_id AND p.partner_id = $1
+      WHERE m.is_active = true
+      ORDER BY m.created_at ASC
+    `, [partnerId]);
+
+    const modules = dbModules.map(m => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      type: m.video_url ? 'Video' : 'Document',
+      duration: m.video_url ? '15:00' : '5 Pages',
+      category: 'Sales Training',
+      status: m.is_completed ? 'completed' : (m.progress_pct > 0 ? 'in_progress' : 'not_started'),
+      video_url: m.video_url,
+      pdf_url: m.pdf_url
+    }));
+
     return success(res, modules);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/training/:moduleId/complete — mark training module as completed
+const completeTrainingModule = async (req, res, next) => {
+  try {
+    const { moduleId } = req.params;
+    const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+    const partnerId = partner ? partner.id : null;
+
+    if (!partnerId) {
+      return error(res, 'Partner profile not found', 404);
+    }
+
+    // Upsert progress to completed
+    await query(`
+      INSERT INTO partner_training_progress (partner_id, training_id, progress, completed, completed_at)
+      VALUES ($1, $2, 100, true, NOW())
+      ON CONFLICT (partner_id, training_id) 
+      DO UPDATE SET progress = 100, completed = true, completed_at = NOW(), updated_at = NOW()
+    `, [partnerId, moduleId]);
+
+    return success(res, { message: 'Module marked as completed successfully' });
   } catch (err) {
     next(err);
   }
@@ -1199,6 +1248,7 @@ module.exports = {
   getTeamMembers,
   listPartnerCustomers,
   getTrainingModules,
+  completeTrainingModule,
   invitePartnerClick,
   getTeamTree,
   getTeamDashboard,

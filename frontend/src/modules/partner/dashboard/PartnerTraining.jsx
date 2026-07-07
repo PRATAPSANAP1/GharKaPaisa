@@ -13,6 +13,7 @@ export default function PartnerTraining() {
   const [modules, setModules] = useState([]);
   const [activeModule, setActiveModule] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     const loadModules = async () => {
@@ -29,6 +30,21 @@ export default function PartnerTraining() {
     };
     loadModules();
   }, []);
+
+  const handleComplete = async () => {
+    if (!activeModule || completing) return;
+    setCompleting(true);
+    try {
+      await api.post(`/partner/training/${activeModule.id}/complete`);
+      // Update local state
+      setModules(prev => prev.map(m => m.id === activeModule.id ? { ...m, status: 'completed' } : m));
+      setActiveModule(prev => ({ ...prev, status: 'completed' }));
+    } catch (err) {
+      console.error('Failed to complete training module', err);
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   const completedCount = modules.filter((m) => m.status === 'completed').length;
 
@@ -131,10 +147,15 @@ export default function PartnerTraining() {
           </p>
 
           {activeModule.status !== 'completed' && (
-            <button style={{
-              ...S.btn('primary'), border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', cursor: 'pointer'
-            }}>
-              Mark as Completed
+            <button 
+              onClick={handleComplete}
+              disabled={completing}
+              style={{
+                ...S.btn('primary'), border: 'none', borderRadius: '10px', padding: '10px 20px', fontSize: '13px', cursor: 'pointer',
+                opacity: completing ? 0.7 : 1
+              }}
+            >
+              {completing ? 'Updating...' : 'Mark as Completed'}
             </button>
           )}
         </div>

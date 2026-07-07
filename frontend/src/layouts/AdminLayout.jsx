@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
+import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 
 const AdminLayout = () => {
   const { C } = useTheme();
@@ -87,31 +88,7 @@ const AdminLayout = () => {
  
           {/* User Status / Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <select 
-              value={i18n.language} 
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: `1.5px solid ${C.border}`,
-                background: C.inputBg,
-                color: C.text,
-                fontSize: "13px",
-                fontWeight: 700,
-                cursor: "pointer",
-                outline: "none"
-              }}
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी (Hindi)</option>
-              <option value="mr">मराठी (Marathi)</option>
-              <option value="te">తెలుగు (Telugu)</option>
-              <option value="kn">ಕನ್ನಡ (Kannada)</option>
-              <option value="ta">தமிழ் (Tamil)</option>
-              <option value="bn">বাংলা (Bengali)</option>
-              <option value="gu">ગુજરાતી (Gujarati)</option>
-              <option value="or">ଓଡ଼ିଆ (Odia)</option>
-            </select>
+            <LanguageSwitcher />
             <button
               id="admin-logout-button"
               onClick={handleLogout}

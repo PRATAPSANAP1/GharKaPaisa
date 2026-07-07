@@ -1520,11 +1520,96 @@ const migrate = async () => {
     throw productMigrateErr;
   }
 
-   logger.info('✅ All migrations completed successfully');
-   if (require.main === module) {
-     process.exit(0);
-   }
- };
+  // ── Enterprise Database Schema Alignment ─────────────────────────────
+  try {
+    logger.info('Running Enterprise Database Schema Alignment...');
+
+    // 1. users
+    await query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS mobile_verified BOOLEAN DEFAULT FALSE;
+    `);
+
+    // 2. partner_profiles
+    await query(`
+      ALTER TABLE partner_profiles
+      ADD COLUMN IF NOT EXISTS referral_level INTEGER DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS referral_count INTEGER DEFAULT 0;
+    `);
+
+    // 3. partner_bank_details
+    await query(`
+      ALTER TABLE partner_bank_details
+      ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cancelled_cheque_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS verified_by UUID REFERENCES users(id);
+    `);
+
+    // 4. training_modules
+    await query(`
+      CREATE TABLE IF NOT EXISTS training_modules (
+        id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title       VARCHAR(255) NOT NULL,
+        description TEXT,
+        video_url   VARCHAR(500),
+        pdf_url     VARCHAR(500),
+        is_active   BOOLEAN DEFAULT TRUE,
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 5. partner_training_progress
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_training_progress (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id    UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        training_id   UUID NOT NULL REFERENCES training_modules(id) ON DELETE CASCADE,
+        progress      INTEGER DEFAULT 0, -- percentage
+        completed     BOOLEAN DEFAULT FALSE,
+        completed_at  TIMESTAMPTZ,
+        created_at    TIMESTAMPTZ DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(partner_id, training_id)
+      );
+    `);
+
+    // 6. views for enterprise compatibility
+    await query(`
+      CREATE OR REPLACE VIEW referral_tree AS 
+      SELECT id, parent_partner_id, child_partner_id, level, created_at AS joined_at 
+      FROM partner_team_relationships;
+    `);
+    
+    await query(`
+      CREATE OR REPLACE VIEW cms_sections AS 
+      SELECT id, key AS section_key, title, items AS content, NULL::VARCHAR AS language, is_active, updated_at 
+      FROM homepage_sections;
+    `);
+
+    // 7. seed default training modules if empty
+    const { rows: [{ count: trainCount }] } = await query(`SELECT COUNT(*) FROM training_modules`);
+    if (parseInt(trainCount) === 0) {
+      await query(`
+        INSERT INTO training_modules (title, description, video_url, is_active)
+        VALUES 
+        ('Introduction to GharKaPaisa Platform', 'Essential platform rules and guides to start earning.', 'https://www.w3schools.com/html/mov_bbb.mp4', true),
+        ('Pitching Credit Cards effectively', 'Learn best practices on how to recommend cards to customers.', 'https://www.w3schools.com/html/mov_bbb.mp4', true),
+        ('Pitching Personal Loans effectively', 'Step-by-step guide for personal loan leads.', 'https://www.w3schools.com/html/mov_bbb.mp4', true);
+      `);
+    }
+
+    logger.info('Enterprise Database Schema Alignment completed successfully');
+  } catch (alignErr) {
+    logger.error('Failed to run Enterprise Database Schema Alignment:', alignErr);
+    throw alignErr;
+  }
+
+  logger.info('✅ All migrations completed successfully');
+  if (require.main === module) {
+    process.exit(0);
+  }
+};
 
  if (require.main === module) {
    migrate().catch(err => {
