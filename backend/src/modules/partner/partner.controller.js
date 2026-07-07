@@ -240,13 +240,14 @@ const listPartners = async (req, res, next) => {
     let idx = 1;
 
     if (status) { where += ` AND u.status = $${idx++}`; values.push(status); }
+    if (kyc_status) {
+      where += ` AND ap.kyc_status = $${idx++}`;
+      values.push(kyc_status);
+    }
     if (kyc_filter === 'new') {
       where += ` AND (ap.kyc_status IS NULL OR ap.kyc_status NOT IN ('approved', 'rejected'))`;
     } else if (kyc_filter === 'old') {
       where += ` AND ap.kyc_status IN ('approved', 'rejected')`;
-    } else if (kyc_status) {
-      where += ` AND ap.kyc_status = $${idx++}`;
-      values.push(kyc_status);
     }
     if (search) {
       if (shouldMask) {
