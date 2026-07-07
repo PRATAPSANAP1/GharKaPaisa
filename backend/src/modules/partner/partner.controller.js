@@ -17,7 +17,7 @@ const getProfile = async (req, res, next) => {
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
-      WHERE ap.id = $1
+      WHERE ap.id::text = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
 
@@ -241,7 +241,7 @@ const listPartners = async (req, res, next) => {
 
     if (status) { where += ` AND u.status = $${idx++}`; values.push(status); }
     if (kyc_filter === 'new') {
-      where += ` AND ap.kyc_status IN ('pending', 'under_review')`;
+      where += ` AND (ap.kyc_status IS NULL OR ap.kyc_status NOT IN ('approved', 'rejected'))`;
     } else if (kyc_filter === 'old') {
       where += ` AND ap.kyc_status IN ('approved', 'rejected')`;
     } else if (kyc_status) {
