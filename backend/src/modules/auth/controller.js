@@ -360,13 +360,26 @@ const login = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    // Fetch KYC status for partner users
+    let kycStatus = null;
+    let rejectionReason = null;
+    if ((user.role || '').toUpperCase() === 'PARTNER') {
+      const { rows: [partner] } = await query(
+        `SELECT kyc_status, rejection_reason FROM Partner_profiles WHERE user_id = $1`, [user.id]
+      );
+      if (partner) {
+        kycStatus = partner.kyc_status;
+        rejectionReason = partner.rejection_reason;
+      }
+    }
+
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
-    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
+    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -422,6 +435,19 @@ const loginWithMsg91 = async (req, res, next) => {
     );
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    // Fetch KYC status for partner users
+    let kycStatus = null;
+    let rejectionReason = null;
+    if ((user.role || '').toUpperCase() === 'PARTNER') {
+      const { rows: [partner] } = await query(
+        `SELECT kyc_status, rejection_reason FROM Partner_profiles WHERE user_id = $1`, [user.id]
+      );
+      if (partner) {
+        kycStatus = partner.kyc_status;
+        rejectionReason = partner.rejection_reason;
+      }
+    }
+
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
@@ -429,7 +455,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     setRefreshTokenCookie(res, refreshToken);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
-    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
+    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -717,13 +743,26 @@ const loginPassword = async (req, res, next) => {
     // Generate Refresh Token
     const refreshToken = await generateAndSaveRefreshToken(user.id);
 
+    // Fetch KYC status for partner users
+    let kycStatus = null;
+    let rejectionReason = null;
+    if ((user.role || '').toUpperCase() === 'PARTNER') {
+      const { rows: [partner] } = await query(
+        `SELECT kyc_status, rejection_reason FROM Partner_profiles WHERE user_id = $1`, [user.id]
+      );
+      if (partner) {
+        kycStatus = partner.kyc_status;
+        rejectionReason = partner.rejection_reason;
+      }
+    }
+
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                         user.role === 'ADMIN' ? '/admin/dashboard' :
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken);
-    return res.json({ success: true, token, refreshToken, role: user.role, redirect: redirectUrl });
+    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }

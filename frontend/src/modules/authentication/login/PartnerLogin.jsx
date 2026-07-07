@@ -313,7 +313,9 @@ export default function PartnerLogin() {
 
                 const from = location.state?.from?.pathname;
                 const role = profile.role?.toUpperCase();
-                const dest = from || loginRes.redirect ||
+                // Redirect rejected KYC partners to KYC page
+                const kycRedirect = loginRes.kyc_status === 'rejected' ? '/partner/kyc' : null;
+                const dest = kycRedirect || from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
                    role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
@@ -347,7 +349,10 @@ export default function PartnerLogin() {
       const profile = await getMe(true);
       loginStore(profile, loginRes.idToken);
       
-      if (loginRes.redirect) {
+      // Redirect rejected KYC partners to KYC page
+      if (loginRes.kyc_status === 'rejected' && profile.role?.toUpperCase() === 'PARTNER') {
+        navigate('/partner/kyc');
+      } else if (loginRes.redirect) {
         if (loginRes.redirect.startsWith('http')) {
           window.location.href = loginRes.redirect;
         } else {

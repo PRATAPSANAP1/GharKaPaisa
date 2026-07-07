@@ -8,7 +8,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 
 const AdminLayout = () => {
   const { C } = useTheme();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
 

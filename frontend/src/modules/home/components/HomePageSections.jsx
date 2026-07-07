@@ -848,3 +848,155 @@ export function LatestOffersSection({ C, navigate }) {
     </Section>
   );
 }
+
+// Featured Products Section
+export function FeaturedProductsSection({ C, navigate }) {
+  const isMobile = useIsMobile();
+  const { t } = useTranslation();
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem('gkp_featured_products');
+    if (cached) {
+      try { setProducts(JSON.parse(cached)); return; } catch (e) {}
+    }
+    const baseUrl = getApiV1Url();
+    fetch(`${baseUrl}/products?featured=true&limit=6`)
+      .then(r => r.json())
+      .then(data => {
+        const items = data?.data || data?.products || [];
+        setProducts(items.slice(0, 6));
+        sessionStorage.setItem('gkp_featured_products', JSON.stringify(items.slice(0, 6)));
+      })
+      .catch(() => {});
+  }, []);
+
+  if (products.length === 0) return null;
+
+  return (
+    <Section
+      title={t('featuredProducts.title', 'Featured Products')}
+      viewAllLabel={t('home.viewAll', 'View All')}
+      onViewAll={() => navigate("/credit-cards")}
+      C={C}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: "16px" }}>
+        {products.map((product, idx) => (
+          <div
+            key={product.id || idx}
+            onClick={() => navigate(`/product/${product.id}`)}
+            style={{
+              background: C.card,
+              borderRadius: "16px",
+              padding: "16px",
+              border: `1px solid ${C.border}`,
+              cursor: "pointer",
+              transition: "all 0.2s",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px"
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.teal; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}
+          >
+            {product.image_url && (
+              <div style={{ height: "80px", display: "flex", alignItems: "center", justifyContent: "center", background: C.bgSecondary, borderRadius: "12px", padding: "8px" }}>
+                <img src={product.image_url} alt={product.name} style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }} />
+              </div>
+            )}
+            <div>
+              <h4 style={{ margin: "0 0 4px 0", fontSize: "14px", fontWeight: 700, color: C.text }}>{product.name}</h4>
+              {product.bank_name && (
+                <span style={{ fontSize: "11px", color: C.teal, fontWeight: 600 }}>{product.bank_name}</span>
+              )}
+            </div>
+            <button
+              style={{
+                background: `${C.teal}15`, color: C.teal, border: "none", borderRadius: "8px",
+                padding: "8px 12px", fontSize: "12px", fontWeight: 700, cursor: "pointer",
+                width: "100%", textAlign: "center"
+              }}
+            >
+              {t('home.applyNow', 'Apply Now')}
+            </button>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+// Footer Section (reusable across public home and partner dashboard)
+export function FooterSection({ C, navigate }) {
+  const isMobile = useIsMobile();
+  const { t } = useTranslation();
+
+  return (
+    <div style={{
+      marginTop: isMobile ? "24px" : "32px",
+      padding: isMobile ? "32px 20px" : "48px 48px",
+      background: "#081424",
+      color: "#ffffff",
+      borderRadius: "24px"
+    }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr",
+        gap: "40px",
+        marginBottom: "32px"
+      }}>
+        <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
+          <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>
+            GharKaPaisa
+          </h2>
+          <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
+            {t('footer.desc', "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.")}
+          </p>
+        </div>
+
+        <div>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+            {t('footer.products', 'Products')}
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <span onClick={() => navigate?.("/credit-cards")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+              {t('footer.creditCards', 'Credit Cards')}
+            </span>
+            <span onClick={() => navigate?.("/loans")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+              {t('footer.loans', 'Loans')}
+            </span>
+            <span onClick={() => navigate?.("/insurance")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+              {t('footer.insurance', 'Insurance')}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+            {t('footer.company', 'Company')}
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px", color: "#ffffff", opacity: 0.85 }}>
+            <span onClick={() => navigate?.("/contact")} style={{ cursor: "pointer" }}>{t('footer.contactUs', 'Contact Us')}</span>
+            <span onClick={() => navigate?.("/privacy-policy")} style={{ cursor: "pointer" }}>{t('footer.privacy', 'Privacy Policy')}</span>
+            <span onClick={() => navigate?.("/terms-and-conditions")} style={{ cursor: "pointer" }}>{t('footer.terms', 'Terms & Conditions')}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+            {t('footer.support', 'Support')}
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px", color: "#ffffff", opacity: 0.85 }}>
+            <span>support@gharkapaisa.com</span>
+            <span>+91 99999 99999</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
+        <span>{t('footer.rights', '© 2026 GharKaPaisa. All rights reserved.')}</span>
+        <span>{t('footer.made', 'Made with ♥ in India')}</span>
+      </div>
+    </div>
+  );
+}
