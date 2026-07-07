@@ -571,6 +571,53 @@ export default function PartnerLayout() {
           </div>
         )}
 
+        {kycStatus === 'rejected' && (
+          <div style={{
+            background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+            color: '#fff',
+            padding: '14px 20px',
+            boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+            display: 'flex',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '12px',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
+              <MdVerifiedUser size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontWeight: 500, fontSize: '14px' }}>
+                <strong>{t('partnerLayout.kycRejected', 'KYC Rejected:')}</strong>{' '}
+                {t('partnerLayout.kycRejectedMsg', 'Your KYC verification was rejected. Please re-upload your documents.')}
+                {user?.rejection_reason && (
+                  <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
+                    <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}
+                  </div>
+                )}
+              </div>
+            </div>
+            {!isKycPage && (
+              <button
+                onClick={() => navigate('/partner/kyc')}
+                style={{
+                  background: '#fff',
+                  color: '#DC2626',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  border: 'none',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('partnerLayout.reuploadKyc', 'Re-upload Documents')}
+              </button>
+            )}
+          </div>
+        )}
+
         <div style={{
           flex: 1,
           padding: isMobile ? '16px' : '24px 32px',
@@ -735,7 +782,7 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
     return () => {
       eventSource.close();
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {

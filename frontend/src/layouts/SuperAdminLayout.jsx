@@ -89,7 +89,7 @@ const SuperAdminLayout = () => {
     return () => {
       eventSource.close();
     };
-  }, [user]);
+  }, [user?.id]);
 
   // Privacy Mode settings state
   const [privacyMode, setPrivacyMode] = useState(false);
