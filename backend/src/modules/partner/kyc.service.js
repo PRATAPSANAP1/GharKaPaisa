@@ -35,17 +35,34 @@ const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) 
 };
 
 const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
+  const statusVal = isVerified ? 'approved' : 'rejected';
   const { rows: [doc] } = await query(`
     UPDATE kyc_documents SET
       verified = $1,
-      verified_by = $2,
+      verification_status = $2,
+      verified_by = $3,
       verified_at = NOW()
-    WHERE id = $3 AND partner_id = $4
+    WHERE id = $4 AND partner_id = $5
     RETURNING *
-  `, [isVerified, adminUserId, docId, partnerId]);
+  `, [isVerified, statusVal, adminUserId, docId, partnerId]);
   
   if (doc) {
     await logAction(adminUserId, 'VERIFY_KYC_DOCUMENT', docId, { doc_type: doc.doc_type, verified: isVerified });
+    
+    if (!isVerified) {
+      await query(`
+        UPDATE partner_profiles 
+        SET kyc_status = 'rejected', 
+            rejection_reason = $1,
+            kyc_rejection_reason = $1
+        WHERE id = $2
+      `, [`Document ${doc.doc_type.replace('_', ' ').toUpperCase()} was marked as rejected.`, partnerId]);
+      
+      const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+      if (partner) {
+        await query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+      }
+    }
   }
   
   return doc;
