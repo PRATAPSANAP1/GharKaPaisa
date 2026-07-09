@@ -16,7 +16,7 @@ import welcomeBgImg from "../register/welcome pg-bg.png";
 function Toast({ message, type = "success", onClose }) {
   const isSuccess = type === "success";
   useEffect(() => {
-    const t = setTimeout(onClose, 4000);
+    const t = setTimeout(onClose, 5000);
     return () => clearTimeout(t);
   }, [onClose]);
 
@@ -25,25 +25,64 @@ function Toast({ message, type = "success", onClose }) {
       position: "fixed",
       top: "24px",
       right: "24px",
-      zIndex: 1000,
-      background: isSuccess ? "#10B981" : "#EF4444",
-      color: "#FFFFFF",
-      padding: "12px 18px",
-      borderRadius: "12px",
-      boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+      zIndex: 9999,
+      background: isSuccess ? "#F0FDF4" : "#FEF2F2",
+      color: isSuccess ? "#14532D" : "#7F1D1D",
+      padding: "14px 20px",
+      borderRadius: "14px",
+      border: `2px solid ${isSuccess ? "#22C55E" : "#EF4444"}`,
+      boxShadow: isSuccess
+        ? "0 8px 32px rgba(34, 197, 94, 0.18), 0 2px 8px rgba(0,0,0,0.08)"
+        : "0 8px 32px rgba(239, 68, 68, 0.18), 0 2px 8px rgba(0,0,0,0.08)",
       display: "flex",
       alignItems: "center",
-      gap: "10px",
+      gap: "12px",
       fontSize: "14px",
       fontWeight: 600,
-      animation: "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+      minWidth: "280px",
+      maxWidth: "380px",
+      animation: "slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)"
     }}>
-      {isSuccess ? <Icons.check size={16} color="#FFFFFF" /> : <Icons.x size={16} color="#FFFFFF" />}
-      <span>{message}</span>
-      <span onClick={onClose} style={{ marginLeft: "8px", cursor: "pointer", opacity: 0.8 }}>✕</span>
+      {/* Icon circle */}
+      <div style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "50%",
+        background: isSuccess ? "#DCFCE7" : "#FEE2E2",
+        border: `1.5px solid ${isSuccess ? "#22C55E" : "#EF4444"}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0
+      }}>
+        {isSuccess
+          ? <span style={{ fontSize: "16px" }}>✓</span>
+          : <span style={{ fontSize: "16px" }}>✕</span>
+        }
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.5px", opacity: 0.7, marginBottom: "2px" }}>
+          {isSuccess ? "SUCCESS" : "ERROR"}
+        </div>
+        <div style={{ fontSize: "13px", fontWeight: 600, lineHeight: 1.4 }}>{message}</div>
+      </div>
+      <span
+        onClick={onClose}
+        style={{
+          cursor: "pointer",
+          opacity: 0.5,
+          fontSize: "16px",
+          fontWeight: 700,
+          flexShrink: 0,
+          transition: "opacity 0.15s"
+        }}
+        onMouseEnter={e => e.target.style.opacity = 1}
+        onMouseLeave={e => e.target.style.opacity = 0.5}
+      >✕</span>
     </div>
   );
 }
+
 
 export default function PartnerLogin() {
   const { C, isDark } = useTheme();
