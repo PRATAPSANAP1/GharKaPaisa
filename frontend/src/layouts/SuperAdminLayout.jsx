@@ -959,7 +959,7 @@ const SuperAdminLayout = () => {
                     {/* Menu links */}
                     <button 
                       id="super-admin-dropdown-profile"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=profile"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
@@ -967,7 +967,7 @@ const SuperAdminLayout = () => {
                     </button>
                     <button 
                       id="super-admin-dropdown-account"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=profile"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
@@ -975,7 +975,7 @@ const SuperAdminLayout = () => {
                     </button>
                     <button 
                       id="super-admin-dropdown-password"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=security"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >
@@ -983,7 +983,7 @@ const SuperAdminLayout = () => {
                     </button>
                     <button 
                       id="super-admin-dropdown-notifications"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/dashboard"); }}
+                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/notifications"); }}
                       className="profile-dropdown-item"
                       style={dropdownItemStyle}
                     >

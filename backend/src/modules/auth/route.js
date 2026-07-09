@@ -43,4 +43,10 @@ router.put('/admin/set-role', loginLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_A
 // Password update with OTP (Requires JWT Auth)
 router.post('/update-password-with-otp', verifyOtpLimiter, jwtAuth, ctrl.updatePasswordWithOtp);
 
+// User profile update (Requires JWT Auth)
+router.put('/profile', jwtAuth, ctrl.updateProfile);
+
+// User password change directly (Requires JWT Auth)
+router.post('/change-password', jwtAuth, ctrl.changePassword);
+
 module.exports = router;

@@ -1002,6 +1002,63 @@ const updatePasswordWithOtp = async (req, res, next) => {
   }
 };
 
+const updateProfile = async (req, res, next) => {
+  try {
+    const { fullName, mobile } = req.body;
+    if (!fullName) return error(res, 'Full Name is required', 400);
+
+    await query(
+      `UPDATE users SET full_name = $1, mobile = $2, updated_at = NOW() WHERE id = $3`,
+      [fullName, mobile || null, req.user.id]
+    );
+
+    // Fetch updated user
+    const { rows: [updatedUser] } = await query(
+      `SELECT id, email, mobile, role, status, full_name FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+
+    return success(res, updatedUser, 'Profile updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return error(res, 'Old password and new password are required', 400);
+    }
+
+    const { rows: [user] } = await query(
+      `SELECT password_hash FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+
+    if (!user || !user.password_hash) {
+      return error(res, 'Password login is not enabled for this account', 400);
+    }
+
+    const valid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!valid) {
+      return error(res, 'Invalid old password', 400);
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await query(
+      `UPDATE users SET password_hash = $1 WHERE id = $2`,
+      [passwordHash, req.user.id]
+    );
+
+    return success(res, {}, 'Password updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getMe,
   lookupUser,
@@ -1019,5 +1076,7 @@ module.exports = {
   logout,
   setRole,
   refresh,
-  updatePasswordWithOtp
+  updatePasswordWithOtp,
+  updateProfile,
+  changePassword
 };

@@ -60,6 +60,7 @@ import ManageWallet from '../modules/super-admin/wallet/ManageWallet';
 import SuperAdminManageApplications from '../modules/super-admin/crm/ManageApplications';
 import NotificationCenter from '../modules/notifications/NotificationCenter';
 import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
+import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
@@ -245,6 +246,8 @@ const AppRoutes = () => {
         <Route path="applications" element={<SuperAdminManageApplications />} />
         <Route path="notifications" element={<NotificationCenter />} />
         <Route path="announcements" element={<ManageAnnouncements />} />
+        <Route path="profile" element={<AdminProfilePage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Fallback */}
