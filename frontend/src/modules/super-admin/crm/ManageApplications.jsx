@@ -65,8 +65,8 @@ export default function ManageApplications() {
         }
       });
       if (res.data?.success) {
-        setApplications(res.data.data);
-        setTotalPages(res.data.pagination.pages);
+        setApplications(res.data.data || []);
+        setTotalPages(res.data.pagination?.pages || 1);
       }
     } catch (e) {
       console.error(e);
@@ -79,7 +79,7 @@ export default function ManageApplications() {
     try {
       const res = await api.get('/superadmin/wallet/overview', { params: { limit: 100 } });
       if (res.data?.success) {
-        setPartners(res.data.data.data);
+        setPartners(res.data.data?.data || res.data.data || []);
       }
     } catch (e) {
       console.error('Failed to load partners', e);
@@ -108,10 +108,10 @@ export default function ManageApplications() {
     // Load Timelines, Documents, and Notes detail
     try {
       const tRes = await api.get(`/applications/${app.id}/timeline`);
-      if (tRes.data?.success) setTimelines(tRes.data.data);
+      if (tRes.data?.success) setTimelines(tRes.data.data || []);
 
       const dRes = await api.get(`/applications/${app.id}/documents`);
-      if (dRes.data?.success) setDocuments(dRes.data.data);
+      if (dRes.data?.success) setDocuments(dRes.data.data || []);
 
       const detailedAppRes = await api.get(`/applications/${app.id}`);
       if (detailedAppRes.data?.success) {
