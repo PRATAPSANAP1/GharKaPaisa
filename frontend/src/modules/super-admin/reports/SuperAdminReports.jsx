@@ -228,9 +228,9 @@ export default function SuperAdminReports() {
       ]);
 
       if (resOverview.data?.success) setStats(resOverview.data.data);
-      if (resTrend.data?.success) setTrends(resTrend.data.data);
-      if (resPartners.data?.success) setTopPartners(resPartners.data.data);
-      if (resProducts.data?.success) setProductsData(resProducts.data.data);
+      if (resTrend.data?.success) setTrends(resTrend.data.data || []);
+      if (resPartners.data?.success) setTopPartners(resPartners.data.data || []);
+      if (resProducts.data?.success) setProductsData(resProducts.data.data || []);
       if (resClicks.data?.success) setClickAnalytics(resClicks.data.data);
     } catch (e) {
       console.error(e);
@@ -245,7 +245,7 @@ export default function SuperAdminReports() {
     try {
       const res = await api.get("/products", { params: { limit: 100 } });
       if (res.data?.success) {
-        setProducts(res.data.data);
+        setProducts(res.data.data || []);
       }
     } catch (e) {
       console.error(e);

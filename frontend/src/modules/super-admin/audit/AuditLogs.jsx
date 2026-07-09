@@ -32,8 +32,8 @@ export default function AuditLogs() {
         },
       });
       if (res.data?.success) {
-        setLogs(res.data.data);
-        setTotal(res.data.pagination?.total || res.data.data.length);
+        setLogs(res.data.data || []);
+        setTotal(res.data.pagination?.total || (res.data.data?.length || 0));
       }
     } catch (e) {
       console.error(e);
