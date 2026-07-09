@@ -11,10 +11,7 @@ export default function SettingsPage() {
   const S = makeS(C);
 
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser || ((u) => {
-    // Fallback if useAuthStore does not expose setUser directly: we can update in memory
-    useAuthStore.setState({ user: u });
-  }));
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const [activeTab, setActiveTab] = useState('security');
   
@@ -39,10 +36,7 @@ export default function SettingsPage() {
 
   const toggleKycBypass = () => {
     const nextStatus = user.kyc_status === 'approved' ? 'pending' : 'approved';
-    setUser({
-      ...user,
-      kyc_status: nextStatus
-    });
+    updateUser({ kyc_status: nextStatus });
     alert(`[Developer Bypass] KYC Status locally overridden to: ${nextStatus.toUpperCase()}. All sections are now ${nextStatus === 'approved' ? 'UNLOCKED' : 'LOCKED'}.`);
   };
 

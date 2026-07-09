@@ -13,9 +13,7 @@ export default function AdminProfilePage() {
   const location = useLocation();
   
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser || ((u) => {
-    useAuthStore.setState({ user: u });
-  }));
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const queryParams = new URLSearchParams(location.search);
   const [activeTab, setActiveTab] = useState(queryParams.get('tab') || 'profile');
@@ -45,7 +43,7 @@ export default function AdminProfilePage() {
     try {
       const res = await api.put('/auth/profile', profileForm);
       if (res.data?.success) {
-        setUser({ ...user, ...res.data.data });
+        updateUser(res.data.data);
         setMsg({ text: 'Profile details updated successfully!', type: 'success' });
       }
     } catch (err) {
