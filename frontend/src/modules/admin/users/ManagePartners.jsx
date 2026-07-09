@@ -698,10 +698,56 @@ export default function ManagePartners() {
                     <div style={{ fontSize: "11px", color: C.textLight }}>GST Number</div>
                     <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.text }}>{profile.gst_number || "Not provided"}</div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "11px", color: C.textLight }}>KYC Status</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, textTransform: "capitalize", color: profile.kyc_status === "approved" ? C.green : profile.kyc_status === "rejected" ? C.red : C.gold }}>
-                      {profile.kyc_status}
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <div style={{ fontSize: "11px", color: C.textLight, marginBottom: "6px" }}>KYC Status</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                      {/* Status Badge */}
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: "5px",
+                        padding: "4px 12px", borderRadius: "20px", fontWeight: 700, fontSize: "12px",
+                        textTransform: "capitalize",
+                        background: profile.kyc_status === "approved" ? `${C.green}18` : profile.kyc_status === "rejected" ? `${C.red}18` : `${C.gold}18`,
+                        color: profile.kyc_status === "approved" ? C.green : profile.kyc_status === "rejected" ? C.red : C.gold,
+                        border: `1.5px solid ${profile.kyc_status === "approved" ? C.green : profile.kyc_status === "rejected" ? C.red : C.gold}`
+                      }}>
+                        {profile.kyc_status === "approved" ? "✓" : profile.kyc_status === "rejected" ? "✕" : "⏳"} {profile.kyc_status}
+                      </span>
+
+                      {/* Approve Button */}
+                      <button
+                        onClick={handleApproveKYC}
+                        disabled={actionLoading || profile.kyc_status === "approved"}
+                        style={{
+                          padding: "5px 14px", borderRadius: "7px", fontWeight: 700, fontSize: "12px",
+                          cursor: (actionLoading || profile.kyc_status === "approved") ? "not-allowed" : "pointer",
+                          background: profile.kyc_status === "approved" ? `${C.green}20` : `${C.green}15`,
+                          color: C.green,
+                          border: `1.5px solid ${C.green}`,
+                          opacity: profile.kyc_status === "approved" ? 0.5 : 1,
+                          display: "inline-flex", alignItems: "center", gap: "5px",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        ✓ {profile.kyc_status === "approved" ? "Approved" : "Approve KYC"}
+                      </button>
+
+                      {/* Reject Button */}
+                      <button
+                        onClick={() => setShowRejectForm(true)}
+                        disabled={actionLoading || profile.kyc_status === "rejected"}
+                        style={{
+                          padding: "5px 14px", borderRadius: "7px", fontWeight: 700, fontSize: "12px",
+                          cursor: (actionLoading || profile.kyc_status === "rejected") ? "not-allowed" : "pointer",
+                          background: profile.kyc_status === "rejected" ? `${C.red}20` : `${C.red}10`,
+                          color: C.red,
+                          border: `1.5px solid ${C.red}`,
+                          opacity: profile.kyc_status === "rejected" ? 0.5 : 1,
+                          display: "inline-flex", alignItems: "center", gap: "5px",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        ✕ {profile.kyc_status === "rejected" ? "Rejected" : "Reject KYC"}
+                      </button>
                     </div>
                   </div>
                 </div>
