@@ -968,7 +968,7 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
         {/* Notifications Icon */}
         <div style={{ position: 'relative' }}>
           <button 
-            onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+            onClick={() => navigate("/partner/notifications")}
             style={{
               background: C.bgSecondary,
               border: `1.5px solid ${C.border}`,

@@ -807,7 +807,7 @@ const SuperAdminLayout = () => {
               {/* Notification Bell */}
               <div style={{ position: 'relative' }}>
                 <button 
-                  onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                  onClick={() => navigate("/superadmin/notifications")}
                   style={{
                     background: C.bgSecondary,
                     border: `1.5px solid ${C.border}`,
