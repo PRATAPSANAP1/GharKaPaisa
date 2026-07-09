@@ -42,9 +42,7 @@ const SuperAdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Profile Dropdown state
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const dropdownRef = useRef(null);
+
 
   // Notifications states
   const [notifications, setNotifications] = useState([]);
@@ -125,43 +123,7 @@ const SuperAdminLayout = () => {
     fetchPrivacySetting();
   }, []);
 
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowProfileDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, []);
 
-  const getInitials = () => {
-    if (user?.full_name) {
-      return user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return "SA";
-  };
-
-  const dropdownItemStyle = {
-    background: "none",
-    border: "none",
-    padding: "10px 16px",
-    width: "100%",
-    textAlign: "left",
-    fontSize: "13px",
-    fontWeight: 600,
-    color: C.text,
-    cursor: "pointer",
-    transition: "background 0.2s",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  };
 
   // Responsive Layout Detection
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -457,6 +419,32 @@ const SuperAdminLayout = () => {
             </div>
           );
         })}
+        {/* Sidebar Logout Button */}
+        <div style={{ height: "1px", background: C.border, margin: "16px 0" }} />
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '10px 16px',
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: C.red,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            width: '100%',
+            transition: 'all 0.2s',
+            textAlign: 'left',
+          }}
+          onMouseEnter={(e) => { e.target.style.background = `${C.red}10`; }}
+          onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+        >
+          <span>🚪</span>
+          <span>{t('superAdminLayout.logout', 'Logout')}</span>
+        </button>
       </div>
     );
   };
@@ -913,102 +901,7 @@ const SuperAdminLayout = () => {
                 <option value="or">ଓଡ଼ିଆ (Odia)</option>
               </select>
 
-              <div ref={dropdownRef} style={{ position: "relative", borderLeft: `1px solid ${C.border}`, paddingLeft: "20px" }}>
-                {/* Profile Clickable Avatar */}
-                <div 
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", userSelect: "none" }}
-                >
-                  <div style={{ width: "38px", height: "38px", borderRadius: "50%", background: C.teal, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 }}>
-                    {getInitials()}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: C.text, display: "flex", alignItems: "center", gap: "4px" }}>
-                      {user?.full_name || "Super Admin"} <span style={{ fontSize: "10px" }}>▼</span>
-                    </span>
-                    <span style={{ fontSize: "11px", color: C.textLight }}>System Owner</span>
-                  </div>
-                </div>
 
-                {/* Dropdown Menu */}
-                {showProfileDropdown && (
-                  <div style={{
-                    position: "absolute",
-                    top: "48px",
-                    right: 0,
-                    width: "220px",
-                    background: C.card,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: "12px",
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                    zIndex: 1000,
-                    padding: "8px 0",
-                    display: "flex",
-                    flexDirection: "column"
-                  }}>
-                    {/* Header info */}
-                    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, marginBottom: "4px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 800, color: C.text }}>
-                        {user?.full_name || "Super Admin"}
-                      </div>
-                      <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>
-                        {user?.email || "admin@gharkapaisa.in"}
-                      </div>
-                    </div>
-
-                    {/* Menu links */}
-                    <button 
-                      id="super-admin-dropdown-profile"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=profile"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      👤 {t('superAdminLayout.profile', 'Profile')}
-                    </button>
-                    <button 
-                      id="super-admin-dropdown-password"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=security"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      🔑 {t('superAdminLayout.changePassword', 'Change Password')}
-                    </button>
-                    <button 
-                      id="super-admin-dropdown-notifications"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/notifications"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      🔔 {t('superAdminLayout.notifications', 'Notifications')}
-                    </button>
-                    <button 
-                      id="super-admin-dropdown-activity"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/audit-logs"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      📋 {t('superAdminLayout.activityLog', 'Activity Log')}
-                    </button>
-                    <button 
-                      id="super-admin-dropdown-settings"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/settings"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      ⚙️ {t('superAdminLayout.settings', 'Settings')}
-                    </button>
-                    <div style={{ height: "1px", background: C.border, margin: "6px 0" }} />
-                    <button 
-                      id="super-admin-logout-button"
-                      onClick={() => { setShowProfileDropdown(false); handleLogout(); }}
-                      className="profile-dropdown-item"
-                      style={{ ...dropdownItemStyle, color: C.red }}
-                    >
-                      🚪 {t('superAdminLayout.logout', 'Logout')}
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </header>
         )}
