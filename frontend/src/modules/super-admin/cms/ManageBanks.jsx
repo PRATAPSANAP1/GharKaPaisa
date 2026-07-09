@@ -3,6 +3,22 @@ import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 
+const HOME_PAGE_BANKS = [
+  { name: "HDFC Bank", code: "HDFC" },
+  { name: "SBI Card", code: "SBI" },
+  { name: "Axis Bank", code: "AXIS" },
+  { name: "ICICI Bank", code: "ICICI" },
+  { name: "Kotak Bank", code: "KOTAK" },
+  { name: "Yes Bank", code: "YES" },
+  { name: "Bank of Baroda", code: "BOB" },
+  { name: "DCB Bank", code: "DCB" },
+  { name: "Federal Bank", code: "FEDERAL" },
+  { name: "SBM Bank", code: "SBM" },
+  { name: "IDFC FIRST", code: "IDFC" },
+  { name: "RBL Bank", code: "RBL" },
+  { name: "Equitas", code: "EQUITAS" }
+];
+
 export default function ManageBanks() {
   const { C } = useTheme();
   const S = makeS(C);
@@ -13,6 +29,7 @@ export default function ManageBanks() {
   const [errorMsg, setErrorMsg] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [selectedBankType, setSelectedBankType] = useState("");
 
   // Form Fields State
   const [form, setForm] = useState({
@@ -61,6 +78,7 @@ export default function ManageBanks() {
       status: "Active",
       is_active: true
     });
+    setSelectedBankType("");
     setModalOpen(true);
   };
 
@@ -74,6 +92,8 @@ export default function ManageBanks() {
       status: item.status || "Active",
       is_active: item.is_active
     });
+    const matched = HOME_PAGE_BANKS.find(b => b.name === item.name);
+    setSelectedBankType(matched ? item.name : "custom");
     setModalOpen(true);
   };
 
@@ -342,14 +362,45 @@ export default function ManageBanks() {
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
                 <label style={S.label}>Bank Partner Name *</label>
-                <input
+                <select
                   style={S.input}
                   required
-                  placeholder="e.g. HDFC Bank"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
+                  value={selectedBankType}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedBankType(val);
+                    if (val === "custom") {
+                      setForm({ ...form, name: "", short_code: "" });
+                    } else if (val === "") {
+                      setForm({ ...form, name: "", short_code: "" });
+                    } else {
+                      const matched = HOME_PAGE_BANKS.find(b => b.name === val);
+                      if (matched) {
+                        setForm({ ...form, name: matched.name, short_code: matched.code });
+                      }
+                    }
+                  }}
+                >
+                  <option value="">-- Select Bank Partner --</option>
+                  {HOME_PAGE_BANKS.map((b) => (
+                    <option key={b.name} value={b.name}>{b.name}</option>
+                  ))}
+                  <option value="custom">Other (Enter custom bank name)</option>
+                </select>
               </div>
+
+              {selectedBankType === "custom" && (
+                <div>
+                  <label style={S.label}>Custom Bank Name *</label>
+                  <input
+                    style={S.input}
+                    required
+                    placeholder="e.g. Canara Bank"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+              )}
 
               <div>
                 <label style={S.label}>Short Code *</label>
