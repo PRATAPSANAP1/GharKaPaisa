@@ -147,7 +147,7 @@ export default function AuditLogs() {
           <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No audit logs recorded matching criteria.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={{ width: "100%", minWidth: "1000px", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
                   <th style={{ padding: "14px 16px" }}>Timestamp</th>
