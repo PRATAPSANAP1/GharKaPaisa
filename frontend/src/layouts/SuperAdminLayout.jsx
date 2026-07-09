@@ -89,39 +89,7 @@ const SuperAdminLayout = () => {
     };
   }, [user?.id]);
 
-  // Privacy Mode settings state
-  const [privacyMode, setPrivacyMode] = useState(false);
-  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
 
-  const fetchPrivacySetting = async () => {
-    try {
-      const res = await api.get("/settings");
-      if (res.data?.success) {
-        setPrivacyMode(res.data.data.admin_privacy_mode === "on");
-      }
-    } catch (e) {
-      console.error("Failed to fetch settings:", e);
-    }
-  };
-
-  const togglePrivacyMode = async () => {
-    setLoadingPrivacy(true);
-    const newValue = !privacyMode ? "on" : "off";
-    try {
-      const res = await api.post("/settings", { key: "admin_privacy_mode", value: newValue });
-      if (res.data?.success) {
-        setPrivacyMode(!privacyMode);
-      }
-    } catch (e) {
-      console.error("Failed to update privacy setting:", e);
-    } finally {
-      setLoadingPrivacy(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPrivacySetting();
-  }, []);
 
 
 
@@ -517,39 +485,6 @@ const SuperAdminLayout = () => {
                 <ThemeToggle />
               </div>
 
-              {/* Privacy Mode widget */}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "10px 16px",
-                borderRadius: "10px",
-                background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "16px" }}>🔒</span>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>
-                    Privacy Mode
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={togglePrivacyMode}
-                  disabled={loadingPrivacy}
-                  style={{
-                    background: privacyMode ? C.red : C.teal,
-                    color: "#fff",
-                    border: "none",
-                    padding: "4px 10px",
-                    borderRadius: "6px",
-                    fontWeight: 700,
-                    fontSize: "11px",
-                    cursor: "pointer",
-                  }}
-                >
-                  {loadingPrivacy ? "..." : privacyMode ? "ON" : "OFF"}
-                </button>
-              </div>
 
               {/* Language Changer widget */}
               <div style={{
@@ -651,39 +586,6 @@ const SuperAdminLayout = () => {
               <ThemeToggle />
             </div>
 
-            {/* Privacy Mode widget */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 16px",
-              borderRadius: "10px",
-              background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "16px" }}>🔒</span>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>
-                  Privacy Mode
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={togglePrivacyMode}
-                disabled={loadingPrivacy}
-                style={{
-                  background: privacyMode ? C.red : C.teal,
-                  color: "#fff",
-                  border: "none",
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  fontWeight: 700,
-                  fontSize: "11px",
-                  cursor: "pointer",
-                }}
-              >
-                {loadingPrivacy ? "..." : privacyMode ? "ON" : "OFF"}
-              </button>
-            </div>
 
             <button
               onClick={handleLogout}
