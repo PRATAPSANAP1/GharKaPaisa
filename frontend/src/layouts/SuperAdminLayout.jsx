@@ -966,14 +966,6 @@ const SuperAdminLayout = () => {
                       👤 {t('superAdminLayout.profile', 'Profile')}
                     </button>
                     <button 
-                      id="super-admin-dropdown-account"
-                      onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=profile"); }}
-                      className="profile-dropdown-item"
-                      style={dropdownItemStyle}
-                    >
-                      💼 {t('superAdminLayout.myAccount', 'My Account')}
-                    </button>
-                    <button 
                       id="super-admin-dropdown-password"
                       onClick={() => { setShowProfileDropdown(false); navigate("/superadmin/profile?tab=security"); }}
                       className="profile-dropdown-item"
