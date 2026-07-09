@@ -1152,15 +1152,24 @@ const uploadVideo = async (req, res, next) => {
         video_size = EXCLUDED.video_size,
         storage_key = EXCLUDED.storage_key,
         verification_status = 'pending',
+        rejection_reason = NULL,
         uploaded_at = NOW()
       RETURNING *
     `, [partnerId, url, parseInt(duration || 0), req.file.size, key]);
+
+    // Reset overall KYC to pending so recalculation runs fresh after re-upload
+    await query(`
+      UPDATE partner_profiles 
+      SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL 
+      WHERE id = $1
+    `, [partnerId]);
 
     return success(res, video, 'Verification video uploaded successfully');
   } catch (err) {
     next(err);
   }
 };
+
 
 const submitKyc = async (req, res, next) => {
   try {

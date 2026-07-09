@@ -15,8 +15,8 @@ const getPartnerKyc = async (partnerId) => {
 
 const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) => {
   const { rows: [doc] } = await query(`
-    INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key, verification_status, rejection_reason)
+    VALUES ($1, $2, $3, $4, $5, 'pending', NULL)
     ON CONFLICT (partner_id, doc_type) DO UPDATE SET
       doc_number = EXCLUDED.doc_number,
       file_url = EXCLUDED.file_url,
@@ -24,15 +24,18 @@ const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) 
       verified = FALSE,
       verified_by = NULL,
       verified_at = NULL,
+      verification_status = 'pending',
+      rejection_reason = NULL,
       uploaded_at = NOW()
     RETURNING *
   `, [partnerId, docType, docNumber, fileUrl, s3Key]);
   
-  // Also update overall status to pending if they upload new documents
-  await query(`UPDATE partner_profiles SET kyc_status = 'pending' WHERE id = $1`, [partnerId]);
+  // Reset overall KYC status to pending so recalculation runs fresh
+  await query(`UPDATE partner_profiles SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL WHERE id = $1`, [partnerId]);
   
   return doc;
 };
+
 
 const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
   const statusVal = isVerified ? 'approved' : 'rejected';
