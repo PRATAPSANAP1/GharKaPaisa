@@ -762,18 +762,21 @@ export default function ManagePartners() {
                                 <button 
                                   onClick={() => handleDocReviewChange(doc.doc_type, 'approved')}
                                   style={{
-                                    padding: '4px 10px',
-                                    background: isDocVer ? C.green : 'transparent',
+                                    padding: '5px 12px',
+                                    background: isDocVer ? C.green : `${C.green}15`,
                                     color: isDocVer ? '#fff' : C.green,
-                                    border: `1px solid ${C.green}`,
-                                    borderRadius: '6px',
+                                    border: `1.5px solid ${C.green}`,
+                                    borderRadius: '7px',
                                     fontSize: '11px',
                                     cursor: 'pointer',
                                     fontWeight: 700,
-                                    transition: 'all 0.15s'
+                                    transition: 'all 0.15s',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
                                   }}
                                 >
-                                  Verify
+                                  {isDocVer ? '✓ Approved' : '✓ Approve'}
                                 </button>
                                 <button 
                                   onClick={() => { setActiveRejectDoc(doc.doc_type); setRejectText(docRejectReasons[doc.doc_type] || ''); }}
@@ -817,18 +820,21 @@ export default function ManagePartners() {
                         <button 
                           onClick={() => handleDocReviewChange('video', 'approved')}
                           style={{
-                            padding: '4px 10px',
-                            background: docReviews.video === 'approved' ? C.green : 'transparent',
+                            padding: '5px 12px',
+                            background: docReviews.video === 'approved' ? C.green : `${C.green}15`,
                             color: docReviews.video === 'approved' ? '#fff' : C.green,
-                            border: `1px solid ${C.green}`,
-                            borderRadius: '6px',
+                            border: `1.5px solid ${C.green}`,
+                            borderRadius: '7px',
                             fontSize: '11px',
                             cursor: 'pointer',
                             fontWeight: 700,
-                            transition: 'all 0.15s'
+                            transition: 'all 0.15s',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}
                         >
-                          Verify Video
+                          {docReviews.video === 'approved' ? '✓ Approved' : '✓ Approve Video'}
                         </button>
                         <button 
                           onClick={() => { setActiveRejectDoc('video'); setRejectText(docRejectReasons.video || ''); }}
