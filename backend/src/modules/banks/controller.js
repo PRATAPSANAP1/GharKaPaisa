@@ -163,11 +163,17 @@ const deleteBank = async (req, res, next) => {
       return notFound(res, 'Bank partner not found');
     }
 
-    // Check if products are assigned to this bank
-    const { rows: [product] } = await query('SELECT id FROM products WHERE bank_id = $1 LIMIT 1', [id]);
-    if (product) {
+    // Check if active products are assigned to this bank
+    const { rows: [activeProduct] } = await query('SELECT id FROM products WHERE bank_id = $1 AND is_active = true LIMIT 1', [id]);
+    if (activeProduct) {
       return error(res, 'Cannot delete bank partner because active products are assigned to it. Deactivate the products first.', 400);
     }
+
+    // Make bank_id nullable on products table to avoid foreign key restrict errors
+    await query('ALTER TABLE products ALTER COLUMN bank_id DROP NOT NULL');
+
+    // Set bank_id to NULL for deactivated products assigned to this bank
+    await query('UPDATE products SET bank_id = NULL WHERE bank_id = $1', [id]);
 
     await query('DELETE FROM banks WHERE id = $1', [id]);
 

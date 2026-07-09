@@ -303,6 +303,7 @@ export default function ManageProducts() {
       const payload = {
         ...form,
         features: parsedFeatures,
+        is_active: form.status !== "Inactive",
         eligibility: {
           min_age: Number(form.min_age),
           max_age: Number(form.max_age),
