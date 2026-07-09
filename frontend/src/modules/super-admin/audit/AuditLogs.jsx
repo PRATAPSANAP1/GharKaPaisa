@@ -147,7 +147,7 @@ export default function AuditLogs() {
           <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No audit logs recorded matching criteria.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", minWidth: "1000px", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={{ width: "100%", minWidth: "1200px", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
                   <th style={{ padding: "14px 16px" }}>Timestamp</th>
@@ -177,8 +177,23 @@ export default function AuditLogs() {
                       <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{log.admin_role || "automated"}</div>
                     </td>
                     <td style={{ padding: "14px 16px", fontMono: true }}>{log.target_id}</td>
-                    <td style={{ padding: "14px 16px", maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={JSON.stringify(log.details)}>
-                      <code style={{ fontSize: "12px", color: C.textMid }}>{JSON.stringify(log.details)}</code>
+                    <td style={{ padding: "14px 16px", minWidth: "300px" }}>
+                      <pre style={{
+                        margin: 0,
+                        fontFamily: "monospace",
+                        fontSize: "11px",
+                        color: C.textMid,
+                        background: C.bgSecondary,
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        border: `1px solid ${C.border}`,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        maxHeight: "180px",
+                        overflowY: "auto"
+                      }}>
+                        {JSON.stringify(log.details, null, 2)}
+                      </pre>
                     </td>
                   </tr>
                 ))}
