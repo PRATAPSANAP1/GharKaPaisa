@@ -54,7 +54,7 @@ export default function ManageBanks() {
         }
       });
       if (res.data?.success) {
-        setBanks(res.data.data);
+        setBanks(res.data.data || []);
       }
     } catch (e) {
       console.error("[ManageBanks] Fetch Error:", e);
