@@ -331,20 +331,10 @@ const approvePartner = async (req, res, next) => {
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
     } else {
-      // Check if partner uploaded any documents
-      const { rows: [{ docCount }] } = await client.query(`
-        SELECT (
-          (SELECT COUNT(*) FROM kyc_documents WHERE partner_id = $1) +
-          (SELECT COUNT(*) FROM partner_videos WHERE partner_id = $1)
-        ) AS "docCount"
-      `, [PartnerId]);
-      const hasUploaded = parseInt(docCount) > 0;
-      const nextUserStatus = hasUploaded ? 'rejected' : 'inactive';
-
       await client.query(`
         UPDATE partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
-      await client.query(`UPDATE users SET status = $1::user_status WHERE id = $2`, [nextUserStatus, Partner.user_id]);
+      await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
       await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);

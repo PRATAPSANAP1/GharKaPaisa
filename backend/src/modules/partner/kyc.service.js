@@ -63,7 +63,7 @@ const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
       
       const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
       if (partner) {
-        await query(`UPDATE users SET status = 'rejected'::user_status WHERE id = $1`, [partner.user_id]);
+        await query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
       }
     }
   }
