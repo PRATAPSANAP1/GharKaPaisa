@@ -554,7 +554,7 @@ const register = async (req, res, next) => {
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, CASE WHEN $7 THEN 'active' ELSE 'pending' END, $7, $5, $6) RETURNING id`,
+         VALUES ($1, $2, $3, $4, CASE WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
         [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
 
@@ -797,6 +797,49 @@ const forgotPassword = async (req, res, next) => {
     }
 
     return res.json({ success: true, message: 'If an account exists, a reset link has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── POST /auth/forgot-mobile ──────────────────────────────────────────────────
+const forgotMobile = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return error(res, 'Email required', 400);
+
+    let reqRole = String(req.body.role || '').toUpperCase().trim();
+    if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
+
+    let userQuery = `SELECT id, email, mobile, role FROM users WHERE LOWER(email) = LOWER($1)`;
+    let queryParams = [email];
+    if (reqRole) {
+      userQuery += ` AND role = $2`;
+      queryParams.push(reqRole);
+    }
+
+    const { rows: [user] } = await query(userQuery, queryParams);
+
+    // Return generic success to avoid enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'If an account exists, a retrieval email has been sent.' });
+    }
+
+    // Send email with mobile number
+    try {
+      const html = `<p>You requested your registered mobile number for GharKaPaisa.</p><p>Your registered mobile number is: <strong>${user.mobile}</strong></p>`;
+      await sendEmail({
+        to: user.email,
+        subject: 'Retrieve your GharKaPaisa mobile number',
+        html,
+        text: `Your registered mobile number is: ${user.mobile}`
+      });
+      logger.info(`[Forgot Mobile] Sent mobile number retrieval to ${user.email}`);
+    } catch (emailErr) {
+      logger.error(`[Forgot Mobile] Failed to send email to ${user.email}: ${emailErr.message}`);
+    }
+
+    return res.json({ success: true, message: 'If an account exists, a retrieval email has been sent.' });
   } catch (err) {
     next(err);
   }
@@ -1071,6 +1114,7 @@ module.exports = {
   register,
   verifyEmail,
   forgotPassword,
+  forgotMobile,
   resetPassword,
   resendVerificationEmail,
   logout,
