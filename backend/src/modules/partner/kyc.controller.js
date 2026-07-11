@@ -90,7 +90,7 @@ const viewDocument = async (req, res, next) => {
       `SELECT id, role, status FROM users WHERE id = $1`,
       [decodedToken.id]
     );
-    if (!user || user.status === 'suspended' || user.status === 'rejected') {
+    if (!user || user.status === 'suspended' || user.status === 'blocked') {
       return error(res, 'User account is inactive or suspended.', 403);
     }
 
