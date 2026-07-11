@@ -262,8 +262,9 @@ export default function PartnerKyc() {
   };
 
   // Upload handlers
-  const handleUploadPan = async () => {
-    if (!panFile && !isDocApproved('pan')) return setErrorMsg('Please choose a file for PAN Card.');
+  const handleUploadPan = async (selectedFile) => {
+    const fileToUpload = selectedFile || panFile;
+    if (!fileToUpload && !isDocApproved('pan')) return setErrorMsg('Please choose a file for PAN Card.');
     if (!panNumber.trim()) return setErrorMsg('Please enter your PAN Card number.');
     setActionLoading(true);
     setErrorMsg('');
@@ -271,7 +272,7 @@ export default function PartnerKyc() {
     
     try {
       const formData = new FormData();
-      if (panFile) formData.append('document', panFile);
+      if (fileToUpload) formData.append('document', fileToUpload);
       formData.append('pan_number', panNumber.trim().toUpperCase());
 
       const res = await api.post('/partner/kyc/upload-pan', formData, {
@@ -289,15 +290,16 @@ export default function PartnerKyc() {
     }
   };
 
-  const handleUploadCheque = async () => {
-    if (!chequeFile) return setErrorMsg('Please choose a file for Cancelled Cheque.');
+  const handleUploadCheque = async (selectedFile) => {
+    const fileToUpload = selectedFile || chequeFile;
+    if (!fileToUpload) return setErrorMsg('Please choose a file for Cancelled Cheque.');
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
 
     try {
       const formData = new FormData();
-      formData.append('document', chequeFile);
+      formData.append('document', fileToUpload);
 
       const res = await api.post('/partner/kyc/upload-cheque', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -562,7 +564,17 @@ export default function PartnerKyc() {
                   type="file"
                   id="pan-file"
                   accept="image/*,application/pdf"
-                  onChange={(e) => setPanFile(e.target.files[0])}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setPanFile(file);
+                      if (panNumber.trim()) {
+                        handleUploadPan(file);
+                      } else {
+                        setErrorMsg('Please enter your PAN Card number first.');
+                      }
+                    }
+                  }}
                   style={{ display: 'none' }}
                 />
                 <label 
@@ -666,7 +678,13 @@ export default function PartnerKyc() {
                   type="file"
                   id="cheque-file"
                   accept="image/*,application/pdf"
-                  onChange={(e) => setChequeFile(e.target.files[0])}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setChequeFile(file);
+                      handleUploadCheque(file);
+                    }
+                  }}
                   style={{ display: 'none' }}
                 />
                 <label 
