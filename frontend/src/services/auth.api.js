@@ -118,6 +118,15 @@ export async function forgotPassword(email) {
   }
 }
 
+export async function forgotMobile(email, role) {
+  try {
+    const res = await api.post('/auth/forgot-mobile', { email, role });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to request mobile retrieve.');
+  }
+}
+
 export async function resetPassword(token, password) {
   try {
     const res = await api.post('/auth/reset-password', { token, password });
@@ -133,7 +142,9 @@ export async function registerPartner(formData) {
     const res = await api.post('/auth/register', formData);
     return res.data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || 'Registration failed.');
+    const errorObj = new Error(err.response?.data?.message || 'Registration failed.');
+    errorObj.response = err.response; // Attach response for validation error access
+    throw errorObj;
   }
 }
 

@@ -20,6 +20,45 @@ const COMPANY_TYPES = [
   { label: "Private Limited Company", value: "pvt_ltd" },
 ];
 
+const FIELD_TO_STEP = {
+  first_name: 0,
+  last_name: 0,
+  email: 0,
+  mobile: 0,
+  aadhaar: 0,
+  password: 0,
+  company_name: 1,
+  current_address: 1,
+  pincode: 1,
+  business_location: 1,
+  company_type: 1,
+  gst_number: 1,
+  bank_name: 2,
+  account_number: 2,
+  ifsc_code: 2,
+  account_holder_name: 2,
+  pan: 3,
+};
+
+const BACKEND_TO_FRONTEND_FIELD = {
+  first_name: 'firstName',
+  last_name: 'lastName',
+  email: 'email',
+  mobile: 'mobile',
+  aadhaar: 'aadhaar',
+  company_name: 'companyName',
+  current_address: 'currentAddress',
+  pincode: 'pincode',
+  business_location: 'businessLocation',
+  company_type: 'companyType',
+  gst_number: 'gst',
+  bank_name: 'bankName',
+  account_number: 'accountNumber',
+  ifsc_code: 'ifsc',
+  account_holder_name: 'accountHolderName',
+  pan: 'pan',
+};
+
 const INDIA_BANKS = [
   'State Bank of India', 'Punjab National Bank', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank',
   'Bank of Baroda', 'Canara Bank', 'Union Bank of India', 'IDBI Bank', 'Indian Bank', 'Indian Overseas Bank',
@@ -63,7 +102,7 @@ export default function PartnerRegister() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null); // { Partner_code }
 
-  const [aadhaarBackendError, setAadhaarBackendError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [fullName, setFullName] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
@@ -92,15 +131,22 @@ export default function PartnerRegister() {
     termsAgreed: false,
   });
 
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+  const set = (key) => (e) => {
+    setForm(f => ({ ...f, [key]: e.target.value }));
+    setFieldErrors(prev => ({ ...prev, [key]: "" }));
+  };
 
   const handleFullNameChange = (e) => {
     const value = e.target.value;
     setFullName(value);
     const parts = value.trim().split(/\s+/);
     const first = parts[0] || "";
-    const last = parts.slice(1).join(" ") || "";
+    let last = parts.slice(1).join(" ") || "";
+    if (first && !last) {
+      last = ".";
+    }
     setForm(f => ({ ...f, firstName: first, lastName: last }));
+    setFieldErrors(prev => ({ ...prev, firstName: "", lastName: "" }));
   };
 
   const handleLangSelect = (code) => {
@@ -198,7 +244,7 @@ export default function PartnerRegister() {
   }, [form.mobile]);
 
   useEffect(() => {
-    setAadhaarBackendError("");
+    setFieldErrors(prev => ({ ...prev, aadhaar: "" }));
   }, [form.aadhaar]);
 
   useEffect(() => {
@@ -502,26 +548,50 @@ export default function PartnerRegister() {
         setSuccess({ ...res.data, email: form.email });
       } else {
         if (res.errors && Array.isArray(res.errors)) {
-          const aadhaarErr = res.errors.find(e => e.field === 'aadhaar');
-          if (aadhaarErr) {
-            setStep(0); // Redirect back to Personal step
-            setAadhaarBackendError(aadhaarErr.message);
-            return;
+          const errorsMap = {};
+          let firstErrStep = null;
+          res.errors.forEach(errObj => {
+            const frontendKey = BACKEND_TO_FRONTEND_FIELD[errObj.field] || errObj.field;
+            errorsMap[frontendKey] = errObj.message;
+            if (firstErrStep === null) {
+              const stepNum = FIELD_TO_STEP[errObj.field];
+              if (stepNum !== undefined) {
+                firstErrStep = stepNum;
+              }
+            }
+          });
+          setFieldErrors(errorsMap);
+          if (firstErrStep !== null) {
+            setStep(firstErrStep);
           }
+          setErr(res.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
+        } else {
+          setErr(res.message || t("partner.errors.registrationFailed", "Registration failed. Please try again."));
         }
-        setErr(res.message || t("partner.errors.registrationFailed", "Registration failed. Please try again."));
       }
     } catch (e) {
       const resData = e.response?.data;
       if (resData && resData.errors && Array.isArray(resData.errors)) {
-        const aadhaarErr = resData.errors.find(errObj => errObj.field === 'aadhaar');
-        if (aadhaarErr) {
-          setStep(0); // Redirect back to Personal step
-          setAadhaarBackendError(aadhaarErr.message);
-          return;
+        const errorsMap = {};
+        let firstErrStep = null;
+        resData.errors.forEach(errObj => {
+          const frontendKey = BACKEND_TO_FRONTEND_FIELD[errObj.field] || errObj.field;
+          errorsMap[frontendKey] = errObj.message;
+          if (firstErrStep === null) {
+            const stepNum = FIELD_TO_STEP[errObj.field];
+            if (stepNum !== undefined) {
+              firstErrStep = stepNum;
+            }
+          }
+        });
+        setFieldErrors(errorsMap);
+        if (firstErrStep !== null) {
+          setStep(firstErrStep);
         }
+        setErr(resData.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
+      } else {
+        setErr(e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
       }
-      setErr(e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
     } finally {
       setLoading(false);
     }
@@ -1185,6 +1255,11 @@ export default function PartnerRegister() {
                         onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
                       />
                     </div>
+                    {(fieldErrors.firstName || fieldErrors.lastName) && (
+                      <div id="error-fullname-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.firstName || fieldErrors.lastName}
+                      </div>
+                    )}
                   </div>
 
 
@@ -1224,6 +1299,11 @@ export default function PartnerRegister() {
                         {form.mobilePreVerified ? t("onboarding.otpVerified", "✓ Verified") : mobileOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
                       </button>
                     </div>
+                    {fieldErrors.mobile && (
+                      <div id="error-mobile-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.mobile}
+                      </div>
+                    )}
 
                     {/* Mobile OTP verify inputs */}
                     {mobileOtpSent && !form.mobilePreVerified && (
@@ -1307,6 +1387,11 @@ export default function PartnerRegister() {
                         {form.emailPreVerified ? t("onboarding.otpVerified", "✓ Verified") : emailOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
                       </button>
                     </div>
+                    {fieldErrors.email && (
+                      <div id="error-email-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.email}
+                      </div>
+                    )}
 
                     {/* Email OTP verify inputs */}
                     {emailOtpSent && !form.emailPreVerified && (
@@ -1367,9 +1452,9 @@ export default function PartnerRegister() {
                         style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
                       />
                     </div>
-                    {aadhaarBackendError && (
+                    {fieldErrors.aadhaar && (
                       <div id="error-aadhaar-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
-                        {aadhaarBackendError}
+                        {fieldErrors.aadhaar}
                       </div>
                     )}
                   </div>
@@ -1393,6 +1478,11 @@ export default function PartnerRegister() {
                         {showPassword ? <Icons.eyeOff size={14} /> : <Icons.eye size={14} />}
                       </span>
                     </div>
+                    {fieldErrors.password && (
+                      <div id="error-password-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.password}
+                      </div>
+                    )}
                   </div>
 
                   {/* Confirm Password */}
@@ -1431,36 +1521,66 @@ export default function PartnerRegister() {
                         <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
                     </select>
+                    {fieldErrors.companyType && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.companyType}
+                      </div>
+                    )}
                   </div>
 
                   {/* Company Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-company-name" style={S.label}>{t("onboarding.companyName", "Company Name")}</label>
                     <input {...inputProps("companyName")} placeholder={t("onboarding.companyNamePlaceholder", "Enter company / firm name")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.companyName && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.companyName}
+                      </div>
+                    )}
                   </div>
 
                   {/* Company Address */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-company-address" style={S.label}>{t("onboarding.companyAddress", "Company Address")}</label>
                     <input {...inputProps("currentAddress")} placeholder={t("onboarding.companyAddressPlaceholder", "Full business address")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.currentAddress && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.currentAddress}
+                      </div>
+                    )}
                   </div>
 
                   {/* Pincode */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-pincode" style={S.label}>{t("onboarding.pincode", "Pincode")}</label>
                     <input {...inputProps("pincode")} maxLength={6} placeholder={t("onboarding.pincodePlaceholder", "6-digit pincode")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.pincode && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.pincode}
+                      </div>
+                    )}
                   </div>
 
                   {/* City / Region */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-city-region" style={S.label}>{t("onboarding.cityRegion", "City / Region")}</label>
                     <input {...inputProps("businessLocation")} placeholder={t("onboarding.cityRegionPlaceholder", "e.g. Mumbai, Maharashtra")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.businessLocation && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.businessLocation}
+                      </div>
+                    )}
                   </div>
 
                   {/* GST Number */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-gst" style={S.label}>{t("onboarding.gstNumber", "GST Number (Optional)")}</label>
                     <input {...inputProps("gst")} placeholder={t("onboarding.gstPlaceholder", "e.g. 27AAPFU0939F1ZV")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
+                    {fieldErrors.gst && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.gst}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1475,24 +1595,44 @@ export default function PartnerRegister() {
                     <datalist id="onboarding-bank-list">
                       {INDIA_BANKS.map(bank => <option key={bank} value={bank} />)}
                     </datalist>
+                    {fieldErrors.bankName && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.bankName}
+                      </div>
+                    )}
                   </div>
 
                   {/* Account Number */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-account-number" style={S.label}>{t("onboarding.accountNumber", "Account Number")}</label>
                     <input {...inputProps("accountNumber")} placeholder={t("onboarding.accountNumberPlaceholder", "Enter settlement account number")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.accountNumber && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.accountNumber}
+                      </div>
+                    )}
                   </div>
 
                   {/* IFSC Code */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-ifsc" style={S.label}>{t("onboarding.ifscCode", "IFSC Code")}</label>
                     <input {...inputProps("ifsc")} placeholder={t("onboarding.ifscPlaceholder", "Enter 11-digit IFSC code")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} />
+                    {fieldErrors.ifsc && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.ifsc}
+                      </div>
+                    )}
                   </div>
 
                   {/* Account Holder Name */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-holder-name" style={S.label}>{t("onboarding.accountHolderName", "Account Holder Name")}</label>
                     <input {...inputProps("accountHolderName")} placeholder={t("onboarding.accountHolderPlaceholder", "Name as per bank records")} style={{ ...S.input, paddingVertical: "10px" }} />
+                    {fieldErrors.accountHolderName && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.accountHolderName}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1504,6 +1644,11 @@ export default function PartnerRegister() {
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-pan" style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
                     <input {...inputProps("pan")} placeholder={t("onboarding.panPlaceholder", "Enter 10-char PAN")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
+                    {fieldErrors.pan && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.pan}
+                      </div>
+                    )}
                   </div>
 
                   {/* Info callout card */}
