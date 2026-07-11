@@ -520,6 +520,8 @@ export default function PartnerLayout() {
             navigate={navigate}
             t={t}
             i18n={i18n}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
           />
         )}
         {/* Status Banners */}
@@ -732,7 +734,8 @@ export default function PartnerLayout() {
 }
 
 // ── DESKTOP HEADER COMPONENT ─────────────────────────────────
-function DesktopHeader({ C, user, navigate, t, i18n }) {
+function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSidebarCollapsed }) {
+  const { isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -859,8 +862,29 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
       boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
       flexShrink: 0
     }}>
-      {/* Search Input */}
-      <div style={{ position: 'relative', width: '380px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            borderRadius: '8px',
+            color: C.text,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <MdMenu size={24} style={{ color: SIDEBAR_TEXT }} />
+        </button>
+
+        {/* Search Input */}
+        <div style={{ position: 'relative', width: '380px' }}>
         <div style={{ display: 'flex', alignItems: 'center', background: C.bgSecondary, borderRadius: '10px', padding: '0 12px', border: `1.5px solid ${C.border}` }}>
           <MdSearch size={20} style={{ color: SIDEBAR_TEXT }} />
           <input
@@ -954,6 +978,7 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
           </div>
         )}
       </div>
+    </div>
 
       {/* Right Strip */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>

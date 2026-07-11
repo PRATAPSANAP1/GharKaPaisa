@@ -18,6 +18,21 @@ export default function PartnerCrm() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [width, setWidth] = useState(window.innerWidth);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newCust, setNewCust] = useState({
+    fullName: '',
+    mobile: '',
+    email: '',
+    panNumber: '',
+    employmentType: 'salaried',
+    monthlyIncome: '',
+    employer: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+  const [addError, setAddError] = useState('');
+  const [addLoading, setAddLoading] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -25,6 +40,56 @@ export default function PartnerCrm() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [fetchCustomers]);
+
+  const createCustomer = usePartnerStore((state) => state.createCustomer);
+
+  const handleAddCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCust.fullName.trim()) return setAddError('Full Name is required.');
+    if (!newCust.mobile.trim() || newCust.mobile.trim().length < 10) return setAddError('Please enter a valid 10-digit mobile number.');
+    
+    setAddError('');
+    setAddLoading(true);
+    try {
+      await createCustomer({
+        fullName: newCust.fullName.trim(),
+        mobile: newCust.mobile.trim(),
+        email: newCust.email.trim() || null,
+        panNumber: newCust.panNumber.trim() || null,
+        employmentType: newCust.employmentType || null,
+        monthlyIncome: newCust.monthlyIncome ? parseFloat(newCust.monthlyIncome) : null,
+        employer: newCust.employer.trim() || null,
+        city: newCust.city.trim() || null,
+        state: newCust.state.trim() || null,
+        pincode: newCust.pincode.trim() || null
+      });
+
+      // Refresh and select the newly added customer
+      const freshCustomers = usePartnerStore.getState().customers;
+      if (freshCustomers && freshCustomers.length > 0) {
+        const justAdded = freshCustomers.find(c => c.mobile === newCust.mobile.trim());
+        if (justAdded) setSelectedCustomer(justAdded);
+      }
+
+      setNewCust({
+        fullName: '',
+        mobile: '',
+        email: '',
+        panNumber: '',
+        employmentType: 'salaried',
+        monthlyIncome: '',
+        employer: '',
+        city: '',
+        state: '',
+        pincode: ''
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      setAddError(err.message || 'Failed to add customer. Please try again.');
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
   const isMobile = width < 992;
 
@@ -83,7 +148,30 @@ export default function PartnerCrm() {
       {/* ═══ CUSTOMER LIST SIDEBAR ═══ */}
       <div style={listPaneStyle}>
         <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}` }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 14px' }}>Customer CRM</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Customer CRM</h2>
+            <button
+              id="btn-crm-add-customer"
+              type="button"
+              onClick={() => { setShowAddModal(true); setAddError(''); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                background: C.primary,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: `0 4px 10px ${C.primary}30`
+              }}
+            >
+              <MdAddBox size={16} /> Add
+            </button>
+          </div>
           <div style={{ position: 'relative' }}>
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
             <input
@@ -319,6 +407,211 @@ export default function PartnerCrm() {
           </div>
         )}
       </div>
+
+      {/* ═══ ADD CUSTOMER MODAL ═══ */}
+      {showAddModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: C.card,
+            border: `1.5px solid ${C.border}`,
+            borderRadius: '24px',
+            padding: '28px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            textAlign: 'left'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Add New Customer</h3>
+              <button 
+                onClick={() => { setShowAddModal(false); setAddError(''); }} 
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: C.textLight }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {addError && (
+              <div style={{
+                background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
+                borderRadius: '10px', padding: '10px 14px',
+                fontSize: '12.5px', color: C.red,
+                marginBottom: '16px'
+              }}>
+                {addError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddCustomerSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Group 1: Basic Info */}
+              <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter full name"
+                    value={newCust.fullName}
+                    onChange={e => setNewCust(n => ({ ...n, fullName: e.target.value }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Mobile Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    placeholder="Enter 10-digit mobile"
+                    value={newCust.mobile}
+                    onChange={e => setNewCust(n => ({ ...n, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Group 2: Additional Contact */}
+              <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="Enter email address"
+                    value={newCust.email}
+                    onChange={e => setNewCust(n => ({ ...n, email: e.target.value }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>PAN Number</label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    placeholder="ABCDE1234F"
+                    value={newCust.panNumber}
+                    onChange={e => setNewCust(n => ({ ...n, panNumber: e.target.value.toUpperCase().slice(0, 10) }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Group 3: Professional Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Employment Type</label>
+                  <select
+                    value={newCust.employmentType}
+                    onChange={e => setNewCust(n => ({ ...n, employmentType: e.target.value }))}
+                    style={{
+                      ...S.input,
+                      paddingVertical: '10px',
+                      background: C.inputBg || C.card,
+                      color: C.text,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="salaried">Salaried</option>
+                    <option value="self_employed">Self Employed</option>
+                    <option value="business">Business Owner</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Monthly Income (₹)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 50000"
+                    value={newCust.monthlyIncome}
+                    onChange={e => setNewCust(n => ({ ...n, monthlyIncome: e.target.value }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Employer Name</label>
+                <input
+                  type="text"
+                  placeholder="Company name"
+                  value={newCust.employer}
+                  onChange={e => setNewCust(n => ({ ...n, employer: e.target.value }))}
+                  style={{ ...S.input, paddingVertical: '10px' }}
+                />
+              </div>
+
+              {/* Group 4: Address Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>City</label>
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={newCust.city}
+                    onChange={e => setNewCust(n => ({ ...n, city: e.target.value }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>State</label>
+                  <input
+                    type="text"
+                    placeholder="State"
+                    value={newCust.state}
+                    onChange={e => setNewCust(n => ({ ...n, state: e.target.value }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Pincode</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Pincode"
+                    value={newCust.pincode}
+                    onChange={e => setNewCust(n => ({ ...n, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                    style={{ ...S.input, paddingVertical: '10px' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={addLoading}
+                style={{
+                  background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '14px',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: addLoading ? 'not-allowed' : 'pointer',
+                  opacity: addLoading ? 0.8 : 1,
+                  marginTop: '12px',
+                  boxShadow: `0 4px 14px ${C.primary}30`
+                }}
+              >
+                {addLoading ? 'Adding Customer...' : 'Add Customer'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );

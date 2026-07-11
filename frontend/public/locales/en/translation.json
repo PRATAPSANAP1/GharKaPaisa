@@ -10,7 +10,9 @@
     "employee": "Employee",
     "partner": "Partner",
     "signIn": "Sign In",
-    "signUp": "Sign Up"
+    "signUp": "Sign Up",
+    "login": "Login",
+    "register": "Register"
   },
   "sections": {
     "moneyTransfer": "Money Transfer & Payments",

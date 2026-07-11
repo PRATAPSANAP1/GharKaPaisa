@@ -766,6 +766,18 @@ export default function PartnerLogin() {
                 >
                   <FaArrowLeft size={12} /> <span id="label-back-to-home">{t("login.backToHome", "Back to Home")}</span>
                 </button>
+
+                {/* Register Link */}
+                <div style={{ textAlign: "center", fontSize: "12.5px", color: C.textLight, marginTop: "8px" }}>
+                  <span>{t("login.dontHaveAccount", "Don't have an account?")}</span>{" "}
+                  <span 
+                    id="link-become-partner-step1"
+                    onClick={() => navigate("/register")} 
+                    style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    {t("login.becomePartner", "Become a Partner →")}
+                  </span>
+                </div>
               </div>
             </div>
 

@@ -10,7 +10,9 @@
     "employee": "कर्मचारी",
     "partner": "पार्टनर",
     "signIn": "साइन इन",
-    "signUp": "साइन अप"
+    "signUp": "साइन अप",
+    "login": "लॉगिन",
+    "register": "रजिस्टर"
   },
   "sections": {
     "moneyTransfer": "मनी ट्रांसफर और भुगतान",

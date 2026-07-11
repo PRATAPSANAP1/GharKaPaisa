@@ -407,8 +407,9 @@ export default function PartnerRegister() {
     window.retryOtp(...retryArgs);
   };
 
-  const handleVerifyMobileOtp = () => {
-    if (!/^\d{6}$/.test(form.mobileOtp.trim())) {
+  const handleVerifyMobileOtp = (otpVal) => {
+    const otpToVerify = otpVal || form.mobileOtp;
+    if (!/^\d{6}$/.test(String(otpToVerify || '').trim())) {
       return setErr(t('partner.errors.enterMobileOtp', 'Please enter the 6-digit OTP.'));
     }
 
@@ -437,7 +438,7 @@ export default function PartnerRegister() {
     }
 
     const verifyArgs = [
-      Number(form.mobileOtp.trim()),
+      Number(String(otpToVerify).trim()),
       (data) => {
         completeMobileVerification();
       },
@@ -469,15 +470,16 @@ export default function PartnerRegister() {
     }
   };
 
-  const handleVerifyRegistrationOtp = async () => {
+  const handleVerifyRegistrationOtp = async (otpVal) => {
+    const otpToVerify = otpVal || form.emailOtp;
     if (!form.email.trim()) return setErr(t('partner.errors.emailRequired', 'Please enter your email address.'));
-    if (!form.emailOtp.trim() || form.emailOtp.trim().length < 6) return setErr(t('partner.errors.enterEmailOtp', 'Please enter the 6-digit OTP.'));
+    if (!otpToVerify || String(otpToVerify).trim().length < 6) return setErr(t('partner.errors.enterEmailOtp', 'Please enter the 6-digit OTP.'));
 
     setErr('');
     setInfoMsg('');
     setEmailOtpLoading(true);
     try {
-      await verifyRegistrationOtp(form.email.trim(), form.emailOtp.trim());
+      await verifyRegistrationOtp(form.email.trim(), String(otpToVerify).trim());
       setForm(f => ({ ...f, emailPreVerified: true }));
       setEmailOtpSent(false);
       setEmailOtpTimer(0);
@@ -1317,14 +1319,14 @@ export default function PartnerRegister() {
                           onChange={e => {
                             const val = e.target.value.replace(/\D/g, '').slice(0, 6);
                             setForm(f => ({ ...f, mobileOtp: val }));
-                            if (val.length === 6) setTimeout(() => handleVerifyMobileOtp(), 0);
+                            if (val.length === 6) handleVerifyMobileOtp(val);
                           }}
                           onPaste={e => {
                             e.preventDefault();
                             const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
                             if (!pasted) return;
                             setForm(f => ({ ...f, mobileOtp: pasted }));
-                            if (pasted.length === 6) setTimeout(() => handleVerifyMobileOtp(), 0);
+                            if (pasted.length === 6) handleVerifyMobileOtp(pasted);
                           }}
                           placeholder={t("onboarding.enterSmsOtp", "Enter 6-digit SMS OTP")}
                           maxLength={6}
@@ -1405,14 +1407,14 @@ export default function PartnerRegister() {
                           onChange={e => {
                             const val = e.target.value.replace(/\D/g, '').slice(0, 6);
                             setForm(f => ({ ...f, emailOtp: val }));
-                            if (val.length === 6) setTimeout(() => handleVerifyRegistrationOtp(), 0);
+                            if (val.length === 6) handleVerifyRegistrationOtp(val);
                           }}
                           onPaste={e => {
                             e.preventDefault();
                             const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
                             if (!pasted) return;
                             setForm(f => ({ ...f, emailOtp: pasted }));
-                            if (pasted.length === 6) setTimeout(() => handleVerifyRegistrationOtp(), 0);
+                            if (pasted.length === 6) handleVerifyRegistrationOtp(pasted);
                           }}
                           placeholder={t("onboarding.enterEmailOtp", "Enter 6-digit Email OTP")}
                           maxLength={6}

@@ -112,14 +112,14 @@ const Navbar = () => {
               onClick={() => { navigate('/login'); toggleLink(); }}
               style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
             >
-              <FaSignInAlt /> {t('nav.signIn', 'Sign In')}
+              <FaSignInAlt /> {t('nav.login', 'Login')}
             </button>
             <button 
               id="drawer-register-button"
               onClick={() => { navigate('/register'); toggleLink(); }}
               style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: C.text, fontSize: "15px", fontWeight: 600, cursor: "pointer" }}
             >
-              <FaUserPlus /> {t('nav.signUp', 'Sign Up')}
+              <FaUserPlus /> {t('nav.register', 'Register')}
             </button>
           </>
         )}
@@ -225,19 +225,19 @@ const Navbar = () => {
                 style={{ color: C.text }}
                 onMouseEnter={(e) => e.currentTarget.style.background = C.bgSecondary}
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                title={t('nav.signIn', 'Login')}
+                title={t('nav.login', 'Login')}
               >
                 <FaSignInAlt className="nav-btn-icon" />
-                <span className="nav-btn-text">{t('nav.signIn', 'Login')}</span>
+                <span className="nav-btn-text">{t('nav.login', 'Login')}</span>
               </button>
               <button 
                 id="nav-register-button"
                 onClick={() => navigate('/register')}
                 className="nav-auth-btn nav-register-btn"
-                title={t('nav.signUp', 'Register')}
+                title={t('nav.register', 'Register')}
               >
                 <FaUserPlus className="nav-btn-icon" />
-                <span className="nav-btn-text">{t('nav.signUp', 'Register')}</span>
+                <span className="nav-btn-text">{t('nav.register', 'Register')}</span>
               </button>
             </>
           )}
