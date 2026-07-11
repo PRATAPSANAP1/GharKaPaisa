@@ -66,9 +66,16 @@ const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 
 const videoFileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExts = ['.mp4', '.webm', '.mov', '.mkv'];
+  const allowedExts = ['.mp4', '.webm', '.mov', '.mkv', '']; // Allow empty extension for raw blobs
+  const allowedMimeTypes = [...ALLOWED_VIDEO_TYPES, 'application/octet-stream', 'audio/mp4']; // Allow octet-stream and audio/mp4 for iOS Safari blobs
 
-  if (allowedExts.includes(ext) || ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
+  if (
+    allowedExts.includes(ext) || 
+    allowedMimeTypes.includes(file.mimetype) || 
+    file.originalname === 'blob' ||
+    file.mimetype.startsWith('video/') ||
+    file.mimetype.startsWith('audio/')
+  ) {
     cb(null, true);
   } else {
     cb(new Error('Only MP4, WebM, and MOV video formats are allowed'), false);
@@ -83,14 +90,17 @@ const uploadVideo = multer({
 
 // Upload a buffer to S3
 const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
-  const ext = path.extname(originalName);
+  let ext = path.extname(originalName).toLowerCase();
+  if (!ext || ext === '') {
+    ext = '.mp4'; // Default to mp4 if extension is missing (e.g. raw iOS Safari blob upload)
+  }
   const key = `${folder}/${uuidv4()}${ext}`;
 
   await s3Client.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
-    ContentType: MIME_MAP[ext.toLowerCase()] || 'application/octet-stream',
+    ContentType: MIME_MAP[ext] || 'video/mp4',
     ServerSideEncryption: 'AES256',
   }));
 

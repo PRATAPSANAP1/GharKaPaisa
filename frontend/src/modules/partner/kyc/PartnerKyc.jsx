@@ -175,7 +175,9 @@ export default function PartnerKyc() {
       const formData = new FormData();
       const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
       const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      formData.append('video', blob, `verification-video.${fileExt}`);
+      // Wrap blob in a File object to bypass iOS Safari FormData filename bug
+      const videoFile = new File([blob], `verification-video.${fileExt}`, { type: blob.type || mimeType });
+      formData.append('video', videoFile);
       formData.append('duration', duration || 10);
 
       const res = await api.post('/partner/kyc/upload-video', formData, {
@@ -345,7 +347,9 @@ export default function PartnerKyc() {
       const formData = new FormData();
       const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
       const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      formData.append('video', videoBlob, `verification-video.${fileExt}`);
+      // Wrap blob in a File object to bypass iOS Safari FormData filename bug
+      const videoFile = new File([videoBlob], `verification-video.${fileExt}`, { type: videoBlob.type || mimeType });
+      formData.append('video', videoFile);
       formData.append('duration', recordingTime);
 
       const res = await api.post('/partner/kyc/upload-video', formData, {
