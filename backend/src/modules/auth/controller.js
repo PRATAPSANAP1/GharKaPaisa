@@ -554,7 +554,7 @@ const register = async (req, res, next) => {
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4, CASE WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
+         VALUES ($1, $2, $3, $4::user_role, CASE WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
         [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
 
@@ -892,7 +892,7 @@ const verifyEmail = async (req, res, next) => {
     await query(
       `UPDATE users 
        SET email_verified = TRUE, 
-           status = CASE WHEN status = 'pending' THEN 'active' ELSE status END,
+           status = CASE WHEN status = 'pending'::user_status THEN 'active'::user_status ELSE status END,
            verification_token = NULL,
            verification_token_expires_at = NULL
        WHERE id = $1`,
@@ -1001,7 +1001,7 @@ const setRole = async (req, res, next) => {
       return error(res, 'Admins are not allowed to modify administrative accounts', 403);
     }
 
-    await query(`UPDATE users SET role = $1 WHERE id = $2`, [newRole, userId]);
+    await query(`UPDATE users SET role = $1::user_role WHERE id = $2`, [newRole, userId]);
     logger.info(`Admin ${req.user.id} (${req.user.role}) changed role of User ${userId} to ${newRole}`);
     return success(res, `Role updated to ${newRole}`);
   } catch (err) {

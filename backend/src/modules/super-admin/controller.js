@@ -78,7 +78,7 @@ const createAdmin = async (req, res, next) => {
         email, mobile, password_hash, role, status, 
         full_name, employee_id, department, designation, created_by, is_active, email_verified
       )
-      VALUES ($1, $2, $3, $9, 'active', $4, $5, $6, $7, $8, true, true)
+      VALUES ($1, $2, $3, $9::user_role, 'active'::user_status, $4, $5, $6, $7, $8, true, true)
       RETURNING id, email, role, status`,
       [email, formattedMobile, hashedPassword, fullName, uniqueEmployeeId, department, designation, req.user.id, role]
     );
@@ -157,7 +157,7 @@ const blockUser = async (req, res, next) => {
 
     // 2. Update status in PostgreSQL
     await query(
-      `UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2`,
+      `UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`,
       [newStatus, targetUser.id]
     );
 
@@ -319,7 +319,7 @@ const updatePartnerStatus = async (req, res, next) => {
 
     // Update in database
     await query(
-      `UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2`,
+      `UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`,
       [newStatus, targetUser.id]
     );
 

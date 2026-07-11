@@ -322,7 +322,7 @@ const approvePartner = async (req, res, next) => {
       await client.query(`
         UPDATE partner_profiles SET kyc_status = 'approved', approved_by = $1, approved_at = NOW() WHERE id = $2
       `, [req.user.id, PartnerId]);
-      await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [Partner.user_id]);
+      await client.query(`UPDATE users SET status = 'active'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query(`
         INSERT INTO wallets (partner_id) VALUES ($1)
         ON CONFLICT (partner_id) DO NOTHING
@@ -334,7 +334,7 @@ const approvePartner = async (req, res, next) => {
       await client.query(`
         UPDATE partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
-      await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [Partner.user_id]);
+      await client.query(`UPDATE users SET status = 'rejected'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
       await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);
@@ -514,7 +514,7 @@ const addTeamMember = async (req, res, next) => {
     // Insert user (must_change_password = true)
     const { rows: [user] } = await client.query(
       `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, must_change_password)
-       VALUES ($1, $2, $3, 'PARTNER', 'active', true, true) RETURNING id`,
+       VALUES ($1, $2, $3, 'PARTNER'::user_role, 'active'::user_status, true, true) RETURNING id`,
       [email, mobile, passwordHash]
     );
 
@@ -568,26 +568,130 @@ const listPartnerCustomers = async (req, res, next) => {
         c.employer,
         MIN(a.created_at) AS first_application_at,
         COUNT(a.id)::int AS application_count,
-        json_agg(json_build_object(
-          'id', a.id,
-          'app_number', a.app_number,
-          'status', a.status,
-          'product_name', p.name,
-          'bank_name', b.name,
-          'bank_code', b.short_code,
-          'commission_amount', a.commission_amount,
-          'created_at', a.created_at
-        ) ORDER BY a.created_at DESC) AS applications
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', a.id,
+              'app_number', a.app_number,
+              'status', a.status,
+              'product_name', p.name,
+              'bank_name', b.name,
+              'bank_code', b.short_code,
+              'commission_amount', a.commission_amount,
+              'created_at', a.created_at
+            ) ORDER BY a.created_at DESC
+          ) FILTER (WHERE a.id IS NOT NULL),
+          '[]'::json
+        ) AS applications
       FROM customers c
-      JOIN applications a ON a.customer_id = c.id
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
-      WHERE a.partner_id = $1
+      LEFT JOIN applications a ON a.customer_id = c.id AND a.partner_id = $1
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
       GROUP BY c.id
-      ORDER BY MAX(a.created_at) DESC
+      ORDER BY COALESCE(MAX(a.created_at), c.created_at) DESC
     `, [partnerId]);
 
     return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/customers — Add a new customer to CRM
+const createPartnerCustomer = async (req, res, next) => {
+  try {
+    if (req.kycUnapproved) {
+      return error(res, 'KYC not approved. Cannot create customers.', 403);
+    }
+    const {
+      fullName,
+      mobile,
+      email,
+      panNumber,
+      employmentType,
+      monthlyIncome,
+      employer,
+      city,
+      state,
+      pincode
+    } = req.body;
+
+    if (!fullName || !mobile) {
+      return error(res, 'Full Name and Mobile number are required', 400);
+    }
+
+    const trimmedMobile = String(mobile).trim();
+
+    // Check if customer already exists by mobile
+    const { rows: [existingCust] } = await query(
+      `SELECT id, created_by FROM customers WHERE mobile = $1`,
+      [trimmedMobile]
+    );
+
+    let customerId;
+    if (existingCust) {
+      customerId = existingCust.id;
+      await query(`
+        UPDATE customers 
+        SET 
+          full_name = $1, 
+          email = $2, 
+          pan_number = $3, 
+          employment_type = $4, 
+          monthly_income = $5, 
+          employer = $6, 
+          city = $7, 
+          state = $8, 
+          pincode = $9, 
+          created_by = COALESCE(created_by, $10),
+          updated_at = NOW() 
+        WHERE id = $11
+      `, [
+        fullName,
+        email || null,
+        panNumber || null,
+        employmentType || null,
+        monthlyIncome ? parseFloat(monthlyIncome) : null,
+        employer || null,
+        city || null,
+        state || null,
+        pincode || null,
+        req.user.id,
+        customerId
+      ]);
+    } else {
+      const { rows: [newCust] } = await query(`
+        INSERT INTO customers (
+          full_name, mobile, email, pan_number, employment_type, 
+          monthly_income, employer, city, state, pincode, created_by, 
+          created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING id
+      `, [
+        fullName,
+        trimmedMobile,
+        email || null,
+        panNumber || null,
+        employmentType || null,
+        monthlyIncome ? parseFloat(monthlyIncome) : null,
+        employer || null,
+        city || null,
+        state || null,
+        pincode || null,
+        req.user.id
+      ]);
+      customerId = newCust.id;
+    }
+
+    // Fetch the saved customer to return
+    const { rows: [savedCustomer] } = await query(
+      `SELECT id, full_name, mobile, email, pan_number, employment_type, monthly_income, employer, city, state, pincode FROM customers WHERE id = $1`,
+      [customerId]
+    );
+
+    return created(res, savedCustomer, 'Customer added successfully');
   } catch (err) {
     next(err);
   }
@@ -1302,6 +1406,7 @@ module.exports = {
   addTeamMember,
   getTeamMembers,
   listPartnerCustomers,
+  createPartnerCustomer,
   getTrainingModules,
   completeTrainingModule,
   invitePartnerClick,
