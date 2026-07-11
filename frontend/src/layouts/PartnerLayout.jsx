@@ -56,6 +56,7 @@ export default function PartnerLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -161,7 +162,7 @@ export default function PartnerLayout() {
       {/* ──── DESKTOP SIDEBAR ──── */}
       {!isMobile && (
         <aside style={{
-          width: '280px',
+          width: sidebarCollapsed ? '80px' : '280px',
           background: SIDEBAR_BG,
           borderRight: `1px solid ${C.border}`,
           display: 'flex',
@@ -169,24 +170,26 @@ export default function PartnerLayout() {
           flexShrink: 0,
           height: '100%',
           overflow: 'hidden',
+          transition: 'width 0.2s ease',
         }}>
           {/* Logo */}
           <div style={{
-            padding: '20px 24px',
+            padding: sidebarCollapsed ? '20px 0' : '20px 24px',
             borderBottom: `1px solid ${C.border}`,
             display: 'flex',
             alignItems: 'center',
+            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             gap: '12px',
           }}>
             <img src={logo} alt="Logo" style={{ height: '32px' }} />
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>Partner Panel</h2>
+            {!sidebarCollapsed && <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>Partner Panel</h2>}
           </div>
 
           {/* Nav Items */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '16px 12px',
+            padding: sidebarCollapsed ? '16px 8px' : '16px 12px',
           }}>
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
@@ -197,11 +200,13 @@ export default function PartnerLayout() {
                   key={item.id}
                   id={`partner-nav-${item.id}`}
                   to={item.path}
+                  title={sidebarCollapsed ? t('partnerLayout.' + item.id.replace(/-/g, ''), item.label) : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 16px',
+                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                    gap: sidebarCollapsed ? '0' : '12px',
+                    padding: sidebarCollapsed ? '12px 0' : '10px 16px',
                     borderRadius: '12px',
                     fontSize: '14px',
                     fontWeight: 600,
@@ -214,7 +219,7 @@ export default function PartnerLayout() {
                   }}
                 >
                   <Icon size={20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
-                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+                  {!sidebarCollapsed && t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                 </NavLink>
               );
             })}
@@ -222,90 +227,100 @@ export default function PartnerLayout() {
 
           {/* Sidebar Footer */}
           <div style={{
-            padding: '16px',
+            padding: sidebarCollapsed ? '16px 8px' : '16px',
             borderTop: `1px solid ${C.border}`,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
+            alignItems: sidebarCollapsed ? 'center' : 'stretch',
           }}>
             {/* Theme toggle */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 16px',
-              borderRadius: '10px',
-              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
-                  {isDark ? 'DARK' : 'LIGHT'}
-                </span>
-              </div>
+            {sidebarCollapsed ? (
               <ThemeToggle />
-            </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
+                    {isDark ? 'DARK' : 'LIGHT'}
+                  </span>
+                </div>
+                <ThemeToggle />
+              </div>
+            )}
 
             {/* Language Selector */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 16px',
-              borderRadius: '10px',
-              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
-                🌐 Language
+            {!sidebarCollapsed && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
+                  🌐 Language
+                </div>
+                <select
+                  value={i18n.language}
+                  onChange={(e) => i18n.changeLanguage(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: `1px solid ${C.border}`,
+                    background: C.inputBg || C.card,
+                    color: C.text,
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="en">English</option>
+                  <option value="hi">हिंदी</option>
+                  <option value="mr">मराठी</option>
+                  <option value="te">తెలుగు</option>
+                  <option value="kn">ಕನ್ನಡ</option>
+                  <option value="ta">தமிழ்</option>
+                  <option value="bn">বাংলা</option>
+                  <option value="gu">ગુજરાતી</option>
+                  <option value="or">ଓଡ଼ିଆ</option>
+                </select>
               </div>
-              <select
-                value={i18n.language}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  border: `1px solid ${C.border}`,
-                  background: C.inputBg || C.card,
-                  color: C.text,
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="en">English</option>
-                <option value="hi">हिंदी</option>
-                <option value="mr">मराठी</option>
-                <option value="te">తెలుగు</option>
-                <option value="kn">ಕನ್ನಡ</option>
-                <option value="ta">தமிழ்</option>
-                <option value="bn">বাংলা</option>
-                <option value="gu">ગુજરાતી</option>
-                <option value="or">ଓଡ଼ିଆ</option>
-              </select>
-            </div>
+            )}
 
             {/* Logout */}
             <button
               id="partner-logout-button"
               onClick={handleLogout}
+              title={sidebarCollapsed ? t('partnerLayout.logout', 'Logout') : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
+                gap: sidebarCollapsed ? '0' : '8px',
                 background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
                 color: '#EF4444',
                 border: 'none',
                 borderRadius: '10px',
-                padding: '12px 16px',
+                padding: sidebarCollapsed ? '12px' : '12px 16px',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
+                width: sidebarCollapsed ? '44px' : 'auto',
+                height: sidebarCollapsed ? '44px' : 'auto',
               }}
             >
-              <MdLogout size={18} />
-              {t('partnerLayout.logout', 'Logout')}
+              <MdLogout size={20} />
+              {!sidebarCollapsed && t('partnerLayout.logout', 'Logout')}
             </button>
           </div>
         </aside>
@@ -327,7 +342,6 @@ export default function PartnerLayout() {
           justifyContent: 'space-between',
           padding: '0 16px',
         }}>
-          <img src={logo} alt="Logo" style={{ height: '28px' }} />
           <button
             onClick={() => setMobileMenuOpen(true)}
             style={{
@@ -342,6 +356,7 @@ export default function PartnerLayout() {
           >
             <MdMenu size={24} style={{ color: SIDEBAR_TEXT }} />
           </button>
+          <img src={logo} alt="Logo" style={{ height: '28px' }} />
         </div>
       )}
 

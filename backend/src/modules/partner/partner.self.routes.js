@@ -30,6 +30,7 @@ router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
+router.post('/customers', requireApprovedPartner, partnerCtrl.createPartnerCustomer);
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);
 router.post('/training/:moduleId/complete', requirePartner, partnerCtrl.completeTrainingModule);
 router.get('/referral', requireApprovedPartner, partnerCtrl.getReferralInfo);

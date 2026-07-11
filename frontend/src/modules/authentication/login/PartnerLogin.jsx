@@ -5,7 +5,7 @@ import { useAuthStore } from "../../../app/store/authStore";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
-import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, forgotMobile, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 import { FaHandshake, FaUserCog, FaCrown, FaBriefcase, FaArrowLeft } from 'react-icons/fa';
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
@@ -110,6 +110,13 @@ export default function PartnerLogin() {
   const [otpSentTime, setOtpSentTime] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   
+  // Forgot password/mobile modal states
+  const [forgotModal, setForgotModal] = useState(null); // "password" or "mobile" or null
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  
   // Refs for 6 OTP input boxes
   const otpInputs = useRef([]);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -163,6 +170,30 @@ export default function PartnerLogin() {
   const handleRoleSelect = (roleName) => {
     setSelectedRole(roleName);
     localStorage.setItem("gkp_last_role", roleName);
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setForgotError("Email address is required.");
+      return;
+    }
+    setForgotError("");
+    setForgotSuccess("");
+    setForgotLoading(true);
+    try {
+      if (forgotModal === "password") {
+        await forgotPassword(forgotEmail.trim());
+        setForgotSuccess("Password reset instructions have been sent to your email.");
+      } else if (forgotModal === "mobile") {
+        await forgotMobile(forgotEmail.trim(), selectedRole);
+        setForgotSuccess("Your registered mobile number has been sent to your email.");
+      }
+    } catch (err) {
+      setForgotError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   const handleOtpDigitChange = (value, index) => {
@@ -1027,14 +1058,44 @@ export default function PartnerLogin() {
                   )}
 
                   {/* Remember & Links Row */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "4px", width: "100%" }}>
                     {method === "otp" ? (
-                      <span id="link-forgot-mobile" style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}>{t("login.forgotMobile", "Forgot Mobile Number?")}</span>
+                      <>
+                        <span 
+                          id="link-forgot-mobile" 
+                          onClick={() => {
+                            setForgotModal("mobile");
+                            setForgotEmail("");
+                            setForgotError("");
+                            setForgotSuccess("");
+                          }}
+                          style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          {t("login.forgotMobile", "Forgot Mobile?")}
+                        </span>
+                        <span 
+                          id="link-forgot-password-otp" 
+                          onClick={() => {
+                            setForgotModal("password");
+                            setForgotEmail("");
+                            setForgotError("");
+                            setForgotSuccess("");
+                          }}
+                          style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          {t("login.forgotPassword", "Forgot Password?")}
+                        </span>
+                      </>
                     ) : (
                       <span 
                         id="link-forgot-password"
-                        onClick={() => navigate("/reset-password")}
-                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                        onClick={() => {
+                          setForgotModal("password");
+                          setForgotEmail("");
+                          setForgotError("");
+                          setForgotSuccess("");
+                        }}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", marginLeft: "auto" }}
                       >
                         {t("login.forgotPassword", "Forgot Password?")}
                       </span>
@@ -1106,6 +1167,135 @@ export default function PartnerLogin() {
 
           </div>
         )}
+
+      {/* ── FORGOT CREDENTIALS MODAL ── */}
+      {forgotModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: C.card,
+            border: `1.5px solid ${C.border}`,
+            borderRadius: "24px",
+            padding: "28px",
+            maxWidth: "400px",
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+            animation: "slideIn 0.3s ease",
+            textAlign: "left"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>
+                {forgotModal === "password" ? "Forgot Password" : "Forgot Mobile Number"}
+              </h3>
+              <button 
+                onClick={() => setForgotModal(null)} 
+                style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: C.textLight }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p style={{ fontSize: "13px", color: C.textLight || "#64748B", margin: "0 0 20px", lineHeight: 1.5 }}>
+              {forgotModal === "password" 
+                ? "Enter your registered email address and we'll send you a secure link to reset your password."
+                : "Enter your registered email address and we'll send you your registered mobile number."
+              }
+            </p>
+
+            {forgotError && (
+              <div style={{
+                background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
+                borderRadius: "10px", padding: "10px 14px",
+                fontSize: "12.5px", color: C.red,
+                marginBottom: "16px"
+              }}>
+                {forgotError}
+              </div>
+            )}
+
+            {forgotSuccess ? (
+              <div style={{ textAlign: "center", padding: "10px 0" }}>
+                <div style={{
+                  background: "#DCFCE7",
+                  border: "1.5px solid #22C55E",
+                  color: "#14532D",
+                  borderRadius: "14px",
+                  padding: "12px 16px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  marginBottom: "20px"
+                }}>
+                  {forgotSuccess}
+                </div>
+                <button
+                  onClick={() => setForgotModal(null)}
+                  style={{
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "12px 24px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    width: "100%"
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="Enter registered email"
+                    style={{ ...S.input, paddingVertical: "10px" }}
+                    onFocus={e => (e.target.style.border = focusBorder)}
+                    onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  style={{
+                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "12px 16px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: forgotLoading ? "not-allowed" : "pointer",
+                    opacity: forgotLoading ? 0.8 : 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    marginTop: "8px",
+                    boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
+                  }}
+                >
+                  {forgotLoading ? "Sending..." : "Submit"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       </div>
       <style>{`

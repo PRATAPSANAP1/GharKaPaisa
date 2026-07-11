@@ -44,5 +44,18 @@ export const usePartnerStore = create((set) => ({
     }
   },
 
+  createCustomer: async (customerData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.post('/partner/customers', customerData);
+      const updatedCustomers = await api.get('/partner/customers');
+      set({ customers: updatedCustomers.data.data, isLoading: false });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.response?.data?.message || 'Failed to create customer', isLoading: false });
+      throw error;
+    }
+  },
+
   clearData: () => set({ profile: null, applications: [], customers: [], error: null })
 }));

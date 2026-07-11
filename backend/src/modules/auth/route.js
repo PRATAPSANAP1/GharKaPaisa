@@ -28,6 +28,7 @@ router.post('/verify-registration-otp',  verifyOtpLimiter,      ctrl.verifyRegis
 router.post('/lookup',                   loginLimiter,          ctrl.lookupUser);
 router.post('/register',                 registerLimiter,       registerRules, validate, ctrl.register);
 router.post('/forgot-password',          forgotPasswordLimiter, ctrl.forgotPassword);
+router.post('/forgot-mobile',            forgotPasswordLimiter, ctrl.forgotMobile);
 router.post('/reset-password',           forgotPasswordLimiter, ctrl.resetPassword);
 router.post('/verify-email',             verifyOtpLimiter,      ctrl.verifyEmail);
 router.post('/resend-verification',      sendOtpLimiter,        ctrl.resendVerificationEmail);
