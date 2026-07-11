@@ -488,6 +488,16 @@ const rejectKYC = async (req, res, next) => {
 
     await client.query('BEGIN');
 
+    // Check if partner uploaded any documents
+    const { rows: [{ docCount }] } = await client.query(`
+      SELECT (
+        (SELECT COUNT(*) FROM kyc_documents WHERE partner_id = $1) +
+        (SELECT COUNT(*) FROM partner_videos WHERE partner_id = $1)
+      ) AS "docCount"
+    `, [partnerId]);
+    const hasUploaded = parseInt(docCount) > 0;
+    const nextUserStatus = hasUploaded ? 'rejected' : 'inactive';
+
     // 1. Update partner profile
     await client.query(`
       UPDATE partner_profiles 
@@ -499,8 +509,8 @@ const rejectKYC = async (req, res, next) => {
       WHERE id = $3
     `, [req.user.id, rejection_reason, partnerId]);
 
-    // 2. Update user status to rejected
-    await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+    // 2. Update user status
+    await client.query(`UPDATE users SET status = $1::user_status WHERE id = $2`, [nextUserStatus, partner.user_id]);
 
     // 3. Mark all unverified documents as rejected
     await client.query(`
@@ -558,6 +568,16 @@ const requestChangesKYC = async (req, res, next) => {
 
     await client.query('BEGIN');
 
+    // Check if partner uploaded any documents
+    const { rows: [{ docCount }] } = await client.query(`
+      SELECT (
+        (SELECT COUNT(*) FROM kyc_documents WHERE partner_id = $1) +
+        (SELECT COUNT(*) FROM partner_videos WHERE partner_id = $1)
+      ) AS "docCount"
+    `, [partnerId]);
+    const hasUploaded = parseInt(docCount) > 0;
+    const nextUserStatus = hasUploaded ? 'rejected' : 'inactive';
+
     // 1. Update partner profile status to rejected
     await client.query(`
       UPDATE partner_profiles 
@@ -569,8 +589,8 @@ const requestChangesKYC = async (req, res, next) => {
       WHERE id = $3
     `, [req.user.id, rejection_reason, partnerId]);
 
-    // 2. Set user status to rejected so they correct documents
-    await client.query(`UPDATE users SET status = 'rejected' WHERE id = $1`, [partner.user_id]);
+    // 2. Set user status to rejected or inactive so they correct documents
+    await client.query(`UPDATE users SET status = $1::user_status WHERE id = $2`, [nextUserStatus, partner.user_id]);
 
     // 3. Mark selected documents as rejected
     for (const docType of rejected_documents) {

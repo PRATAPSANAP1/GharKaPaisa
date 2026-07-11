@@ -554,7 +554,7 @@ const register = async (req, res, next) => {
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
-         VALUES ($1, $2, $3, $4::user_role, CASE WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
+         VALUES ($1, $2, $3, $4::user_role, CASE WHEN $4 = 'PARTNER' THEN 'inactive'::user_status WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
         [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
 
@@ -592,9 +592,9 @@ const register = async (req, res, next) => {
           INSERT INTO partner_profiles (
             user_id, partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
-            parent_partner_id, team_level, team_joined_at
+            parent_partner_id, team_level, team_joined_at, kyc_status
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'rejected') RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
           business_location || '', company_name, company_type, gst_number || null, pincode || null,

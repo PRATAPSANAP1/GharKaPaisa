@@ -1086,6 +1086,115 @@ export default function ManagePartners() {
           </div>
         </div>
       )}
+
+      {/* ── KYC REJECTION MODAL ── */}
+      {showRejectForm && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: C.card,
+            border: `1.5px solid ${C.border}`,
+            borderRadius: "24px",
+            padding: "28px",
+            maxWidth: "450px",
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+            textAlign: "left"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>Reject KYC / Request Changes</h3>
+              <button 
+                onClick={() => { setShowRejectForm(false); setRejectionReason(""); }} 
+                style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: C.textLight }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRejectKYC} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: C.text, marginBottom: "8px", display: "block" }}>
+                  Select documents requiring correction (Optional):
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: C.text, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={docCorrections.pan}
+                      onChange={e => setDocCorrections(prev => ({ ...prev, pan: e.target.checked }))}
+                    />
+                    PAN Card
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: C.text, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={docCorrections.cancelled_cheque}
+                      onChange={e => setDocCorrections(prev => ({ ...prev, cancelled_cheque: e.target.checked }))}
+                    />
+                    Bank Proof (Cancelled Cheque / Passbook)
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: C.text, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={docCorrections.video}
+                      onChange={e => setDocCorrections(prev => ({ ...prev, video: e.target.checked }))}
+                    />
+                    Video KYC
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>Rejection / Correction Reason *</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Describe why the KYC is rejected or what correction is needed..."
+                  value={rejectionReason}
+                  onChange={e => setRejectionReason(e.target.value)}
+                  style={{
+                    ...S.input,
+                    paddingVertical: "10px",
+                    resize: "vertical",
+                    fontFamily: "inherit"
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={actionLoading}
+                style={{
+                  background: "linear-gradient(135deg, #EF4444, #DC2626)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "14px",
+                  padding: "12px 16px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: actionLoading ? "not-allowed" : "pointer",
+                  opacity: actionLoading ? 0.8 : 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 14px rgba(239, 68, 68, 0.25)"
+                }}
+              >
+                {actionLoading ? "Submitting..." : "Submit Rejection"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
