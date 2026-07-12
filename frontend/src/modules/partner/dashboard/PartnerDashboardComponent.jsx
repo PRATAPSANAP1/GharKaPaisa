@@ -468,48 +468,27 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between"
+          justifyContent: "center"
         }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "12px",
-                background: "#FEF3C7",
-                color: "#D97706",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <MdEmojiEvents size={28} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A", margin: 0 }}>{partnerRank}</h4>
-                <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0" }}>Since {partner?.created_at ? new Date(partner.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Jan 2024"}</p>
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "#FEF3C7",
+              color: "#D97706",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <MdEmojiEvents size={28} />
             </div>
-
-            <div style={{ marginTop: "24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
-                <span>Profile Completion</span>
-                <span>{getProfileCompletion()}%</span>
-              </div>
-              <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
-                <div style={{ width: `${getProfileCompletion()}%`, height: "100%", background: "#1E40AF", borderRadius: "10px" }} />
-              </div>
+            <div>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>Partner Rank</span>
+              <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A", margin: "4px 0 0" }}>{partnerRank}</h4>
+              <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0" }}>Since {partner?.created_at ? new Date(partner.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Jan 2024"}</p>
             </div>
           </div>
-
-          <button 
-            onClick={() => navigate("/partner/kyc-centre")}
-            style={{
-              background: "none", border: "none", color: "#1E40AF", fontSize: "13px", fontWeight: 800,
-              cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0, marginTop: "16px"
-            }}
-          >
-            Complete Your Profile <MdChevronRight size={16} />
-          </button>
         </div>
 
       </div>
