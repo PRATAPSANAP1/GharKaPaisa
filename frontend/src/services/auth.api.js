@@ -28,8 +28,8 @@ export const syncSession = async () => {
           status:       p.status       || 'pending',
           first_name:   p.first_name   || '',
           last_name:    p.last_name    || '',
-          Partner_code: p.Partner_code || '',
-          Partner_id:   p.Partner_id   || '',
+          Partner_code: p.partner_code || p.Partner_code || '',
+          Partner_id:   p.partner_id   || p.Partner_id   || '',
           kyc_status:   p.kyc_status   || 'pending',
         },
       });

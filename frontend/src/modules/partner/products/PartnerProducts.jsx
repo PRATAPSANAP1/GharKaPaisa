@@ -25,7 +25,7 @@ export default function PartnerProducts() {
   const S = makeS(C);
   
   const { user } = useAuthStore();
-  const partnerCode = user?.Partner_code || '';
+  const partnerCode = user?.partner_code || user?.Partner_code || '';
 
   const handleCopyLink = (product) => {
     if (!partnerCode) {

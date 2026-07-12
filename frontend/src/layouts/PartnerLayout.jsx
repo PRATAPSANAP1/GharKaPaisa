@@ -719,6 +719,7 @@ export default function PartnerLayout() {
 
 // ── DESKTOP HEADER COMPONENT ─────────────────────────────────
 function DesktopHeader({ C, user, navigate, t, i18n }) {
+  const partnerId = user?.partner_id || user?.Partner_id || user?.PartnerId;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -729,9 +730,9 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
 
   useEffect(() => {
     const fetchWallet = async () => {
-      if (!user?.PartnerId) return;
+      if (!partnerId) return;
       try {
-        const res = await api.get(`/wallet/${user.PartnerId}`);
+        const res = await api.get(`/wallet/${partnerId}`);
         if (res.data?.success) {
           const bal = res.data.data.available_balance || 0;
           setWalletBalance(`₹${parseFloat(bal).toLocaleString("en-IN")}`);
@@ -1067,7 +1068,7 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || t('partnerLayout.partner', 'Partner')}</div>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.Partner_code || "GKP000"}</div>
+            <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.partner_code || user?.Partner_code || "GKP000"}</div>
           </div>
         </div>
 

@@ -18,6 +18,9 @@ export default function PartnerTeam() {
 
   const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
+
+  const partnerId = user?.partner_id || user?.Partner_id || user?.PartnerId;
+  const partnerCode = user?.partner_code || user?.Partner_code || user?.PartnerCode || '';
   
   // State variables
   const [team, setTeam] = useState([]);
@@ -53,7 +56,7 @@ export default function PartnerTeam() {
 
   const fetchTeam = async () => {
     try {
-      const res = await api.get(`/partner/${user.PartnerId}/team`);
+      const res = await api.get(`/partner/${partnerId}/team`);
       setTeam(res.data.data || []);
     } catch (err) {
       setError('Failed to load direct team members');
@@ -106,7 +109,7 @@ export default function PartnerTeam() {
   };
 
   const loadAllData = async () => {
-    if (!user?.PartnerId) return;
+    if (!partnerId) return;
     setLoading(true);
     setError('');
     try {
@@ -134,7 +137,7 @@ export default function PartnerTeam() {
     setAddLoading(true);
     setAddError('');
     try {
-      await api.post(`/partner/${user.PartnerId}/team`, formData);
+      await api.post(`/partner/${partnerId}/team`, formData);
       setIsAddModalOpen(false);
       setFormData({ first_name: '', last_name: '', email: '', mobile: '', password: '' });
       loadAllData();
@@ -166,28 +169,28 @@ export default function PartnerTeam() {
   };
 
   const copyReferralLink = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareOnWhatsapp = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     const text = `Join my GharKaPaisa partner network using my invite link and start earning: ${link}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareViaEmail = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     const subject = `Opportunity to partner with GharKaPaisa`;
     const body = `Hi,\n\nJoin my partner network at GharKaPaisa and start earning overrides on payouts. Register using this referral link:\n${link}\n\nRegards,\n${user.first_name}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   const shareViaSMS = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
-    const text = `Register as a GharKaPaisa partner using code ${user?.Partner_code || 'GKP'}: ${link}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
+    const text = `Register as a GharKaPaisa partner using code ${partnerCode || 'GKP'}: ${link}`;
     window.open(`sms:?&body=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -403,13 +406,13 @@ export default function PartnerTeam() {
             <div>
               <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>{t('team.partnerCodeLabel', 'Partner Code')}: </span>
               <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px' }}>
-                {user?.Partner_code || 'N/A'}
+                {partnerCode || 'N/A'}
               </span>
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)' }}>
               <span>{t('team.partnerIdLabel', 'Partner ID')}: </span>
               <span style={{ fontFamily: 'monospace' }}>
-                {user?.PartnerId || 'N/A'}
+                {partnerId || 'N/A'}
               </span>
             </div>
           </div>

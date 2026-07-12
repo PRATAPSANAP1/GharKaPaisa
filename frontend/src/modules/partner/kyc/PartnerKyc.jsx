@@ -878,7 +878,7 @@ export default function PartnerKyc() {
             }}>
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t("Please read this statement aloud:")}</span>
               <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
-                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.Partner_code || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
+                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.partner_code || user?.Partner_code || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
               </p>
             </div>
 
