@@ -37,6 +37,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   const [banners, setBanners] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [allLeads, setAllLeads] = useState([]);
+  const [products, setProducts] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
@@ -50,14 +51,15 @@ export default function PartnerDashboard({ partner, onTabChange }) {
     const fetchAllDashboardData = async () => {
       setLoading(true);
       try {
-        const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes] = await Promise.all([
+        const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes, prodRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
           api.get(`/wallet/${partnerId}`).catch(() => null),
           api.get('/partner/team-dashboard').catch(() => null),
           api.get('/partner/training').catch(() => null),
           api.get('/banners').catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
-          api.get('/leads', { params: { limit: 100 } }).catch(() => null)
+          api.get('/leads', { params: { limit: 100 } }).catch(() => null),
+          api.get('/products', { params: { is_active: 'true', limit: 100 } }).catch(() => null)
         ]);
 
         if (dashRes?.data?.success) setDashboardData(dashRes.data.data);
@@ -66,6 +68,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         if (trainRes?.data?.success) setTrainingModules(trainRes.data.data || []);
         if (bannerRes?.data?.success) setBanners(bannerRes.data.data || []);
         if (leadsRes?.data?.success) setAllLeads(leadsRes.data.data || []);
+        if (prodRes?.data?.success) setProducts(prodRes.data.data || []);
 
         if (notifRes?.data?.success) {
           setNotifications(notifRes.data.data.notifications || []);
@@ -85,36 +88,68 @@ export default function PartnerDashboard({ partner, onTabChange }) {
     return <DashboardSkeleton C={C} />;
   }
 
-  // Dynamic values & fallbacks
+  // Dynamic values & fallbacks directly from DB
   const w = walletData || { available_balance: 0, hold_balance: 0, total_earned: 0, total_withdrawn: 0 };
   const l = dashboardData?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 };
 
-  const walletBalance = w.available_balance && parseFloat(w.available_balance) > 0 
-    ? `₹${parseFloat(w.available_balance).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
-    : "₹12,450";
-  const pendingAmount = w.hold_balance && parseFloat(w.hold_balance) > 0 
-    ? `₹${parseFloat(w.hold_balance).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
-    : "₹3,250";
-  const totalEarned = w.total_earned && parseFloat(w.total_earned) > 0 
-    ? `₹${parseFloat(w.total_earned).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
-    : "₹48,750";
+  const walletBalance = `₹${parseFloat(w.available_balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
+  const pendingAmount = `₹${parseFloat(w.hold_balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
+  const totalEarned = `₹${parseFloat(w.total_earned || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
   
-  // App counts for KPI Cards
-  const kpiTotalApps = l.total_leads && parseInt(l.total_leads) > 0 ? parseInt(l.total_leads) : 128;
-  const kpiApprovedApps = l.approved_leads && parseInt(l.approved_leads) > 0 ? parseInt(l.approved_leads) : 96;
-  const kpiPendingApps = l.pending_leads && parseInt(l.pending_leads) > 0 ? parseInt(l.pending_leads) : 20;
-  const kpiRejectedApps = l.rejected_leads && parseInt(l.rejected_leads) > 0 ? parseInt(l.rejected_leads) : 8;
-  const kpiDisbursedApps = Math.max(0, kpiTotalApps - kpiApprovedApps - kpiPendingApps - kpiRejectedApps) || 4;
+  // Real App counts for KPI Cards
+  const kpiTotalApps = allLeads.length;
+  const kpiApprovedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'approved').length;
+  const kpiPendingApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'pending' || lead.status?.toLowerCase() === 'under_review').length;
+  const kpiRejectedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'rejected').length;
+  const kpiDisbursedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'disbursed').length;
 
   // Donut chart calculations
-  const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 75;
-  const pendingPct = kpiTotalApps > 0 ? Math.round((kpiPendingApps / kpiTotalApps) * 100) : 16;
-  const rejectedPct = kpiTotalApps > 0 ? Math.round((kpiRejectedApps / kpiTotalApps) * 100) : 6;
-  const disbursedPct = kpiTotalApps > 0 ? Math.round((kpiDisbursedApps / kpiTotalApps) * 100) : 3;
+  const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 0;
+  const pendingPct = kpiTotalApps > 0 ? Math.round((kpiPendingApps / kpiTotalApps) * 100) : 0;
+  const rejectedPct = kpiTotalApps > 0 ? Math.round((kpiRejectedApps / kpiTotalApps) * 100) : 0;
+  const disbursedPct = kpiTotalApps > 0 ? Math.round((kpiDisbursedApps / kpiTotalApps) * 100) : 0;
 
   const deg1 = (approvedPct / 100) * 360;
   const deg2 = deg1 + (pendingPct / 100) * 360;
   const deg3 = deg2 + (rejectedPct / 100) * 360;
+
+  // Month-over-month calculation for application trends
+  const getLeadsTrend = () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
+    
+    const thisMonthLeads = allLeads.filter(l => new Date(l.created_at || l.uploaded_at) >= thirtyDaysAgo).length;
+    const lastMonthLeads = allLeads.filter(l => {
+      const d = new Date(l.created_at || l.uploaded_at);
+      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+    }).length;
+
+    if (lastMonthLeads === 0) {
+      return thisMonthLeads > 0 ? `+${thisMonthLeads} leads this month` : "0% change";
+    }
+    const pct = Math.round(((thisMonthLeads - lastMonthLeads) / lastMonthLeads) * 100);
+    return pct >= 0 ? `↑ ${pct}% vs last month` : `↓ ${Math.abs(pct)}% vs last month`;
+  };
+
+  const getApprovedTrend = () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
+    
+    const approvedLeads = allLeads.filter(l => l.status?.toLowerCase() === 'approved');
+    const thisMonthApproved = approvedLeads.filter(l => new Date(l.created_at || l.uploaded_at) >= thirtyDaysAgo).length;
+    const lastMonthApproved = approvedLeads.filter(l => {
+      const d = new Date(l.created_at || l.uploaded_at);
+      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+    }).length;
+
+    if (lastMonthApproved === 0) {
+      return thisMonthApproved > 0 ? `+${thisMonthApproved} approved this month` : "0% change";
+    }
+    const pct = Math.round(((thisMonthApproved - lastMonthApproved) / lastMonthApproved) * 100);
+    return pct >= 0 ? `↑ ${pct}% vs last month` : `↓ ${Math.abs(pct)}% vs last month`;
+  };
 
   // dynamic greeting based on time of day
   const getGreeting = () => {
@@ -124,12 +159,32 @@ export default function PartnerDashboard({ partner, onTabChange }) {
     return "Good Evening";
   };
 
+  // dynamic partner rank based on total leads count
+  const getPartnerRank = () => {
+    const count = allLeads.length;
+    if (count >= 20) return "Gold Partner";
+    if (count >= 5) return "Silver Partner";
+    return "Bronze Partner";
+  };
+  const partnerRank = getPartnerRank();
+
+  // Target goals scaled to rank
+  const getTargetGoal = () => {
+    const rank = getPartnerRank();
+    if (rank === "Gold Partner") return 200000;
+    if (rank === "Silver Partner") return 100000;
+    return 50000;
+  };
+  const targetGoal = getTargetGoal();
+  const currentEarnings = parseFloat(w.total_earned || 0);
+  const targetPercent = targetGoal > 0 ? Math.min(100, Math.round((currentEarnings / targetGoal) * 100)) : 0;
+
   // dynamic profile completion score
   const getProfileCompletion = () => {
     let score = 30; // base score
     if (partner?.pan_number) score += 20;
     if (partner?.kyc_status === 'approved') score += 30;
-    if (partner?.bank_name) score += 26; // max 86% matching mockup profile completion
+    if (partner?.bank_name) score += 20;
     return score;
   };
 
@@ -142,32 +197,50 @@ export default function PartnerDashboard({ partner, onTabChange }) {
     alert("Partner Code copied to clipboard!");
   };
 
-  const handleCopyCampaignLink = (campaignName, category) => {
+  const handleCopyCampaignLink = (prod) => {
     if (!partnerCode) {
       alert("Partner profile code not found. Make sure you are fully onboarded.");
       return;
     }
-    const trackingLink = `${window.location.origin}/redirect/${category}?partner=${partnerCode}`;
+    const trackingLink = `${window.location.origin}/redirect/${prod.category}?id=${prod.id}&partner=${partnerCode}`;
     navigator.clipboard.writeText(trackingLink);
-    alert(`Tracking link for ${campaignName} copied to clipboard!`);
+    alert(`Tracking link for ${prod.name} copied to clipboard!`);
   };
 
-  // Recent apps list logic
-  const getRecentApplications = () => {
-    const fallbackApps = [
-      { initials: "AK", name: "Amit Kumar", product: "Personal Loan", amount: "₹2,50,000", status: "Approved", color: "#10B981", bg: "#ECFDF5" },
-      { initials: "NS", name: "Neha Singh", product: "Credit Card", amount: "₹1,20,000", status: "Under Review", color: "#3B82F6", bg: "#EFF6FF" },
-      { initials: "RP", name: "Rajesh Patel", product: "Home Loan", amount: "₹15,00,000", status: "Approved", color: "#10B981", bg: "#ECFDF5" },
-      { initials: "PS", name: "Priya Sharma", product: "Business Loan", amount: "₹5,00,000", status: "Rejected", color: "#EF4444", bg: "#FEE2E2" },
-      { initials: "SY", name: "Suresh Yadav", product: "Two Wheeler Loan", amount: "₹80,000", status: "Under Review", color: "#3B82F6", bg: "#EFF6FF" }
-    ];
+  // Get active products for Campaigns list
+  const getActiveCampaigns = () => {
+    if (!products || products.length === 0) {
+      return [];
+    }
+    return [...products]
+      .filter(p => p.is_active !== false)
+      .sort((a, b) => parseFloat(b.commission_value || 0) - parseFloat(a.commission_value || 0))
+      .slice(0, 4);
+  };
+  const activeCampaignsList = getActiveCampaigns();
 
+  // Match brand logo from file assets
+  const getBankLogoForProduct = (productName) => {
+    const nameLower = (productName || "").toLowerCase();
+    if (nameLower.includes("hdfc")) return hdfcLogo;
+    if (nameLower.includes("axis")) return axisLogo;
+    if (nameLower.includes("kotak")) return kotakLogo;
+    if (nameLower.includes("sbi")) return sbiLogo;
+    if (nameLower.includes("icici")) return iciciLogo;
+    if (nameLower.includes("yes")) return yesLogo;
+    if (nameLower.includes("idfc")) return idfcLogo;
+    if (nameLower.includes("baroda") || nameLower.includes("bob")) return bobLogo;
+    return null;
+  };
+
+  // Format dynamic recent applications list
+  const getRecentApplications = () => {
     if (!allLeads || allLeads.length === 0) {
-      return fallbackApps;
+      return [];
     }
 
-    const realApps = allLeads.slice(0, 5).map(lead => {
-      const name = lead.customer_name || "Unknown Customer";
+    return allLeads.slice(0, 5).map(lead => {
+      const name = lead.customer_name || "Customer";
       const names = name.split(" ");
       const initials = names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
       
@@ -186,8 +259,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       if (statusRaw.toLowerCase() === 'approved') status = "Approved";
       if (statusRaw.toLowerCase() === 'rejected') status = "Rejected";
 
-      // Mocked transaction amount
-      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString("en-IN")}` : "₹1,50,000";
+      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString("en-IN")}` : "—";
 
       return {
         initials,
@@ -196,15 +268,10 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         amount,
         status,
         color: status === "Approved" ? "#10B981" : status === "Rejected" ? "#EF4444" : "#3B82F6",
-        bg: status === "Approved" ? "#ECFDF5" : status === "Rejected" ? "#FEE2E2" : "#EFF6FF"
+        bg: status === "Approved" ? "#ECFDF5" : status === "Rejected" ? "#FEE2E2" : "#EFF6FF",
+        ...themeColors
       };
     });
-
-    if (realApps.length < 5) {
-      return [...realApps, ...fallbackApps.slice(realApps.length)];
-    }
-
-    return realApps;
   };
 
   const recentAppsList = getRecentApplications();
@@ -303,7 +370,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
       )}
 
-      {/* ──── NEW DESIGN HEADER BAR ──── */}
+      {/* ──── HEADER BAR ──── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", margin: "4px 0" }}>
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Partner Dashboard</h1>
         {partnerCode && (
@@ -332,7 +399,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         )}
       </div>
 
-      {/* ──── NEW GREETING & GOLD STATUS BANNER ROW ──── */}
+      {/* ──── GREETING & STATUS BANNER ROW ──── */}
       <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
         
         {/* Welcome Card */}
@@ -361,7 +428,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </svg>
 
           <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#1E3A8A", margin: 0 }}>
-            {getGreeting()}, {partner?.first_name || "Rohit"}! 👋
+            {getGreeting()}, {partner?.first_name || "Partner"}! 👋
           </h2>
           <p style={{ fontSize: "14px", color: "#1E40AF", marginTop: "6px", fontWeight: 600, maxWidth: "80%" }}>
             Here's what's happening with your business today.
@@ -390,7 +457,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
         </div>
 
-        {/* Profile/Gold Status Card */}
+        {/* Profile Status Card */}
         <div style={{
           flex: "1",
           minWidth: "260px",
@@ -418,7 +485,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                 <MdEmojiEvents size={28} />
               </div>
               <div>
-                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Gold Partner</h4>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A", margin: 0 }}>{partnerRank}</h4>
                 <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0" }}>Since {partner?.created_at ? new Date(partner.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Jan 2024"}</p>
               </div>
             </div>
@@ -458,11 +525,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Applications</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 18% vs last month</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>{getLeadsTrend()}</div>
           </div>
           <div style={{
             width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
-            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdDescription size={22} />
           </div>
@@ -476,11 +543,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Approved Applications</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 22% vs last month</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>{getApprovedTrend()}</div>
           </div>
           <div style={{
             width: "44px", height: "44px", borderRadius: "12px", background: "#ECFDF5", color: "#10B981",
-            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdCheckCircle size={22} />
           </div>
@@ -494,11 +561,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Earnings</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 28% vs last month</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>Calculated live</div>
           </div>
           <div style={{
             width: "44px", height: "44px", borderRadius: "12px", background: "#F3E8FF", color: "#8B5CF6",
-            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
           </div>
@@ -512,11 +579,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Available Balance</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", marginTop: "6px" }}>Withdraw anytime</div>
+            <div style={{ fontSize: "11px", color: "#64748B", marginTop: "6px" }}>Withdraw anytime</div>
           </div>
           <div style={{
             width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
-            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
           </div>
@@ -527,7 +594,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       {/* ──── MIDDLE SECTION (3 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
         
-        {/* Column 1: Active Campaigns & Payout Boosts (Replaced Earning Overview) */}
+        {/* Column 1: Active Campaigns & Payout Boosts (100% Dynamic) */}
         <div style={{
           flex: "1.2",
           minWidth: "300px",
@@ -535,43 +602,58 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           borderRadius: "20px",
           padding: "24px",
           border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Active Campaigns</h3>
-            <span style={{ fontSize: "11px", fontWeight: 800, color: "#3B82F6", background: "#EFF6FF", padding: "2px 8px", borderRadius: "4px" }}>HIGH PAYOUTS</span>
+            <span style={{ fontSize: "11px", fontWeight: 800, color: "#3B82F6", background: "#EFF6FF", padding: "2px 8px", borderRadius: "4px" }}>LIVE OFFERS</span>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {[
-              { name: "HDFC Tata Neu Plus Card", payout: "₹2,500 Payout", category: "credit_card", logo: hdfcLogo },
-              { name: "SBI SimplyClick Credit Card", payout: "₹1,800 Payout", category: "credit_card", logo: sbiLogo },
-              { name: "IDFC First Personal Loan", payout: "3.5% Commission", category: "personal_loan", logo: idfcLogo },
-              { name: "Yes Bank Credit Card", payout: "₹2,000 Payout", category: "credit_card", logo: yesLogo }
-            ].map((camp, idx) => (
-              <div key={idx} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px", borderRadius: "12px", border: "1px solid #F1F5F9",
-                background: "#FAFAFA"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <img src={camp.logo} alt="" style={{ height: "24px", width: "24px", objectFit: "contain" }} />
-                  <div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>{camp.name}</div>
-                    <span style={{ fontSize: "11px", color: "#10B981", fontWeight: 700 }}>{camp.payout}</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => handleCopyCampaignLink(camp.name, camp.category)}
-                  style={{
-                    background: "#FFFFFF", color: "#1E40AF", border: "1px solid #BFDBFE",
-                    padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer"
-                  }}
-                >
-                  Share Link
-                </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
+            {activeCampaignsList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "#64748B", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1 }}>
+                <MdCampaign size={36} style={{ color: "#CBD5E1", marginBottom: "8px" }} />
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>No active offers</div>
+                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>Check back later for active campaigns.</p>
               </div>
-            ))}
+            ) : (
+              activeCampaignsList.map((camp, idx) => {
+                const logo = getBankLogoForProduct(camp.name);
+                const payoutValText = camp.commission_type === 'percentage' 
+                  ? `${parseFloat(camp.commission_value)}% Commission` 
+                  : `₹${parseFloat(camp.commission_value).toLocaleString("en-IN")} Payout`;
+                return (
+                  <div key={idx} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px", borderRadius: "12px", border: "1px solid #F1F5F9",
+                    background: "#FAFAFA"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {logo ? (
+                        <img src={logo} alt="" style={{ height: "24px", width: "24px", objectFit: "contain" }} />
+                      ) : (
+                        <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>🏦</div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{camp.name}</div>
+                        <span style={{ fontSize: "11px", color: "#10B981", fontWeight: 700 }}>{payoutValText}</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleCopyCampaignLink(camp)}
+                      style={{
+                        background: "#FFFFFF", color: "#1E40AF", border: "1px solid #BFDBFE",
+                        padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      Share Link
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -597,7 +679,9 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               width: "110px",
               height: "110px",
               borderRadius: "50%",
-              background: `conic-gradient(#10B981 0deg ${deg1}deg, #3B82F6 ${deg1}deg ${deg2}deg, #EF4444 ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`,
+              background: kpiTotalApps > 0 
+                ? `conic-gradient(#10B981 0deg ${deg1}deg, #3B82F6 ${deg1}deg ${deg2}deg, #EF4444 ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`
+                : "#F1F5F9",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -645,7 +729,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
         </div>
 
-        {/* Column 3: Recent Applications */}
+        {/* Column 3: Recent Applications (100% Dynamic) */}
         <div style={{
           flex: "1",
           minWidth: "280px",
@@ -653,7 +737,9 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           borderRadius: "20px",
           padding: "24px",
           border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Recent Applications</h3>
@@ -665,32 +751,40 @@ export default function PartnerDashboard({ partner, onTabChange }) {
             </button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {recentAppsList.map((app, idx) => (
-              <div key={idx} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : "1px solid #F8FAFC"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{
-                    width: "32px", height: "32px", borderRadius: "50%", background: app.bg, color: app.color,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700
-                  }}>
-                    {app.initials}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>{app.name}</div>
-                    <span style={{ fontSize: "11px", color: "#64748B" }}>{app.product} · {app.amount}</span>
-                  </div>
-                </div>
-                <span style={{
-                  color: app.color, background: `${app.color}15`, padding: "2px 8px", borderRadius: "20px",
-                  fontSize: "10px", fontWeight: 700
-                }}>
-                  {app.status}
-                </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1, justifyContent: "center" }}>
+            {recentAppsList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "#64748B" }}>
+                <MdDescription size={40} style={{ color: "#CBD5E1", marginBottom: "8px" }} />
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>No applications yet</div>
+                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>Start applying for products to submit leads.</p>
               </div>
-            ))}
+            ) : (
+              recentAppsList.map((app, idx) => (
+                <div key={idx} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : "1px solid #F8FAFC"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{
+                      width: "32px", height: "32px", borderRadius: "50%", background: app.bg, color: app.color,
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700
+                    }}>
+                      {app.initials}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.name}</div>
+                      <span style={{ fontSize: "11px", color: "#64748B" }}>{app.product} · {app.amount}</span>
+                    </div>
+                  </div>
+                  <span style={{
+                    color: app.color, background: `${app.color}15`, padding: "2px 8px", borderRadius: "20px",
+                    fontSize: "10px", fontWeight: 700
+                  }}>
+                    {app.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -741,7 +835,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
         </div>
 
-        {/* Team Performance */}
+        {/* Team Performance (100% Dynamic) */}
         <div style={{
           flex: "1",
           minWidth: "260px",
@@ -761,13 +855,13 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               <div style={{ display: "flex", gap: "24px" }}>
                 <div>
                   <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A" }}>
-                    {teamDashboard?.total_team_members || 12}
+                    {teamDashboard?.total_team_members || 0}
                   </div>
                   <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Total Members</span>
                 </div>
                 <div>
                   <div style={{ fontSize: "22px", fontWeight: 800, color: "#10B981" }}>
-                    {teamDashboard?.active_team_members || 8}
+                    {teamDashboard?.active_team_members || 0}
                   </div>
                   <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Active Members</span>
                 </div>
@@ -792,7 +886,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </button>
         </div>
 
-        {/* Monthly Target */}
+        {/* Monthly Target (100% Dynamic) */}
         <div style={{
           flex: "1",
           minWidth: "260px",
@@ -816,14 +910,14 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>₹1,20,000</div>
-            <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>of ₹2,00,000 target achieved</span>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>₹{currentEarnings.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
+            <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>of ₹{targetGoal.toLocaleString("en-IN", { maximumFractionDigits: 0 })} target achieved</span>
             
             <div style={{ marginTop: "16px" }}>
               <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden", marginBottom: "6px" }}>
-                <div style={{ width: "60%", height: "100%", background: "#3B82F6", borderRadius: "10px" }} />
+                <div style={{ width: `${targetPercent}%`, height: "100%", background: "#3B82F6", borderRadius: "10px" }} />
               </div>
-              <span style={{ fontSize: "11px", color: "#3B82F6", fontWeight: 700 }}>60% completed</span>
+              <span style={{ fontSize: "11px", color: "#3B82F6", fontWeight: 700 }}>{targetPercent}% completed</span>
             </div>
           </div>
         </div>
