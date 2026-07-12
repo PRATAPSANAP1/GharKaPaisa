@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import { 
@@ -27,6 +28,7 @@ import {
 } from 'recharts';
 
 const PartnerWallet = () => {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -198,6 +200,7 @@ const PartnerWallet = () => {
   };
 
   const handleExportCSV = () => {
+  const { t } = useTranslation();
     if (!transactions.length) return alert('No transactions found to export');
     const headers = ['Date', 'Transaction ID', 'Customer', 'Product', 'Type', 'GST', 'TDS', 'Net Amount', 'Status', 'Remarks'];
     const rows = transactions.map(tx => [
@@ -253,8 +256,8 @@ const PartnerWallet = () => {
       {/* Upper header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>Partner Wallet</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>View your commission ledger, track payouts, and manage settings.</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>{t("Partner Wallet")}</h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{t("View your commission ledger, track payouts, and manage settings.")}</p>
         </div>
         <button 
           onClick={() => { fetchDashboard(); if(activeTab === 'ledger') fetchTransactions(); }}
@@ -329,52 +332,52 @@ const PartnerWallet = () => {
           {/* Main Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
             <StatBox 
-              title="Available Wallet Balance" 
+              title={t("Available Wallet Balance")} 
               value={dashboardData?.available_balance} 
               gradient="linear-gradient(135deg, #0f766e, #134e4a)" 
-              subtitle="Withdrawable to registered bank account"
+              subtitle={t("Withdrawable to registered bank account")}
             />
             <StatBox 
-              title="Pending Commission" 
+              title={t("Pending Commission")} 
               value={dashboardData?.pending_balance} 
               gradient="linear-gradient(135deg, #b45309, #78350f)" 
-              subtitle="Awaiting maturity release"
+              subtitle={t("Awaiting maturity release")}
             />
             <StatBox 
-              title="Today's Earnings" 
+              title={t("Today's Earnings")} 
               value={dashboardData?.today_earnings} 
               gradient="linear-gradient(135deg, #1d4ed8, #1e3a8a)" 
-              subtitle="Earned in current calendar day"
+              subtitle={t("Earned in current calendar day")}
             />
             <StatBox 
-              title="Current Month Earnings" 
+              title={t("Current Month Earnings")} 
               value={dashboardData?.monthly_earnings} 
               gradient="linear-gradient(135deg, #701a75, #4a044e)" 
-              subtitle="Earned in current calendar month"
+              subtitle={t("Earned in current calendar month")}
             />
             <StatBox 
-              title="Lifetime Earnings" 
+              title={t("Lifetime Earnings")} 
               value={dashboardData?.lifetime_earnings} 
               gradient="linear-gradient(135deg, #475569, #1e293b)" 
-              subtitle="Lifetime commission credited"
+              subtitle={t("Lifetime commission credited")}
             />
             <StatBox 
-              title="Total Outflow Withdrawn" 
+              title={t("Total Outflow Withdrawn")} 
               value={dashboardData?.total_withdrawn} 
               gradient="linear-gradient(135deg, #be123c, #881337)" 
-              subtitle="Settled successfully to bank"
+              subtitle={t("Settled successfully to bank")}
             />
             <StatBox 
-              title="Team Override Commission" 
+              title={t("Team Override Commission")} 
               value={dashboardData?.override_commission} 
               gradient="linear-gradient(135deg, #0369a1, #0c4a6e)" 
-              subtitle="Earnings from child network overrides"
+              subtitle={t("Earnings from child network overrides")}
             />
             <StatBox 
-              title="Referral Bonus" 
+              title={t("Referral Bonus")} 
               value={dashboardData?.referral_bonus} 
               gradient="linear-gradient(135deg, #15803d, #14532d)" 
-              subtitle="Earned from direct invites"
+              subtitle={t("Earned from direct invites")}
             />
           </div>
 
@@ -383,13 +386,13 @@ const PartnerWallet = () => {
             
             {/* Left Column: Quick Withdrawal Form */}
             <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Initiate Bank Settlement</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Initiate Bank Settlement")}</h3>
               <form onSubmit={handleWithdraw} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Request Amount (₹)</label>
+                  <label style={S.label}>{t("Request Amount (₹)")}</label>
                   <input 
                     type="number" 
-                    placeholder="Min ₹100" 
+                    placeholder={t("Min ₹100")} 
                     style={S.input}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -397,10 +400,10 @@ const PartnerWallet = () => {
                   />
                 </div>
                 <div>
-                  <label style={S.label}>Remarks (Optional)</label>
+                  <label style={S.label}>{t("Remarks (Optional)")}</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. Monthly withdrawal" 
+                    placeholder={t("e.g. Monthly withdrawal")} 
                     style={S.input}
                     value={withdrawRemarks}
                     onChange={(e) => setWithdrawRemarks(e.target.value)}
@@ -421,14 +424,14 @@ const PartnerWallet = () => {
                 </button>
               </form>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: C.bgSecondary, padding: '12px', borderRadius: '8px', fontSize: '11px', color: C.textLight }}>
-                <div>⏱️ Processing Time: 1-2 business days (NEFT/IMPS)</div>
+                <div>{t("⏱️ Processing Time: 1-2 business days (NEFT/IMPS)")}</div>
                 <div>🛡️ KYC Lock Status: {kycStatus === 'approved' ? '🟢 KYC Approved' : '🔴 KYC Required'}</div>
               </div>
             </div>
 
             {/* Right Column: Earnings Chart */}
             <div style={{ ...S.card, padding: '20px', minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginBottom: '16px' }}>Monthly Earnings Progression</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginBottom: '16px' }}>{t("Monthly Earnings Progression")}</h3>
               <div style={{ flex: 1, minHeight: '220px' }}>
                 {dashboardData?.history?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -467,7 +470,7 @@ const PartnerWallet = () => {
               <MdSearch size={18} style={{ color: C.textLight, marginTop: '8px' }} />
               <input 
                 type="text" 
-                placeholder="Search by ID or Reference..." 
+                placeholder={t("Search by ID or Reference...")} 
                 value={txSearch} 
                 onChange={(e) => setTxSearch(e.target.value)}
                 style={{ background: 'transparent', border: 'none', outline: 'none', color: C.text, fontSize: '13px', width: '100%', padding: '6px 0' }}
@@ -475,20 +478,20 @@ const PartnerWallet = () => {
             </div>
             
             <select style={{ ...S.input, width: '140px', margin: 0 }} value={txType} onChange={e => setTxType(e.target.value)}>
-              <option value="">All Types</option>
-              <option value="PERSONAL_COMMISSION">Personal Commission</option>
-              <option value="TEAM_COMMISSION">Team Commission</option>
-              <option value="OVERRIDE_COMMISSION">Override Commission</option>
-              <option value="WITHDRAWAL">Withdrawal</option>
-              <option value="REFERRAL_BONUS">Referral Bonus</option>
-              <option value="ADJUSTMENT">Adjustment</option>
+              <option value="">{t("All Types")}</option>
+              <option value="PERSONAL_COMMISSION">{t("Personal Commission")}</option>
+              <option value="TEAM_COMMISSION">{t("Team Commission")}</option>
+              <option value="OVERRIDE_COMMISSION">{t("Override Commission")}</option>
+              <option value="WITHDRAWAL">{t("Withdrawal")}</option>
+              <option value="REFERRAL_BONUS">{t("Referral Bonus")}</option>
+              <option value="ADJUSTMENT">{t("Adjustment")}</option>
             </select>
 
             <select style={{ ...S.input, width: '130px', margin: 0 }} value={txStatus} onChange={e => setTxStatus(e.target.value)}>
-              <option value="">All Status</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
+              <option value="">{t("All Status")}</option>
+              <option value="completed">{t("Completed")}</option>
+              <option value="pending">{t("Pending")}</option>
+              <option value="rejected">{t("Rejected")}</option>
             </select>
 
             <button 
@@ -512,24 +515,24 @@ const PartnerWallet = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}` }}>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>Date & Time</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>Transaction ID / Ref</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>Type</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>Amount</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>TDS (5%)</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>Net Amount</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'center', textTransform: 'uppercase' }}>Status</th>
-                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>Remarks</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>{t("Date & Time")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>{t("Transaction ID / Ref")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>{t("Type")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>{t("Amount")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>{t("TDS (5%)")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'right', textTransform: 'uppercase' }}>{t("Net Amount")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'center', textTransform: 'uppercase' }}>{t("Status")}</th>
+                    <th style={{ padding: '12px 16px', fontSize: '11px', color: C.textLight, textAlign: 'left', textTransform: 'uppercase' }}>{t("Remarks")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingTx ? (
                     <tr>
-                      <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>Loading ledger records...</td>
+                      <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t("Loading ledger records...")}</td>
                     </tr>
                   ) : transactions.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No matching transaction logs found.</td>
+                      <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t("No matching transaction logs found.")}</td>
                     </tr>
                   ) : (
                     transactions.map((tx) => {
@@ -599,13 +602,13 @@ const PartnerWallet = () => {
           
           {/* Form */}
           <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Registered Bank Details</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Registered Bank Details")}</h3>
             
             {kycStatus !== 'approved' ? (
               <div style={{ background: `${C.red}10`, border: `1px solid ${C.red}20`, padding: '14px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <MdLock size={24} style={{ color: C.red, flexShrink: 0 }} />
                 <div style={{ fontSize: '12px', color: C.red }}>
-                  <strong>Setup Locked:</strong> Only partners with fully verified and approved KYC can configure or edit bank account details.
+                  <strong>{t("Setup Locked:")}</strong> Only partners with fully verified and approved KYC can configure or edit bank account details.
                 </div>
               </div>
             ) : (
@@ -619,7 +622,7 @@ const PartnerWallet = () => {
 
             <form onSubmit={handleSaveBank} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={S.label}>Account Holder Name</label>
+                <label style={S.label}>{t("Account Holder Name")}</label>
                 <input 
                   type="text" 
                   style={S.input}
@@ -631,7 +634,7 @@ const PartnerWallet = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Bank Name</label>
+                  <label style={S.label}>{t("Bank Name")}</label>
                   <input 
                     type="text" 
                     style={S.input}
@@ -642,7 +645,7 @@ const PartnerWallet = () => {
                   />
                 </div>
                 <div>
-                  <label style={S.label}>Branch Name</label>
+                  <label style={S.label}>{t("Branch Name")}</label>
                   <input 
                     type="text" 
                     style={S.input}
@@ -654,7 +657,7 @@ const PartnerWallet = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Account Number</label>
+                  <label style={S.label}>{t("Account Number")}</label>
                   <input 
                     type="password" 
                     style={S.input}
@@ -665,7 +668,7 @@ const PartnerWallet = () => {
                   />
                 </div>
                 <div>
-                  <label style={S.label}>IFSC Code</label>
+                  <label style={S.label}>{t("IFSC Code")}</label>
                   <input 
                     type="text" 
                     style={S.input}
@@ -677,10 +680,10 @@ const PartnerWallet = () => {
                 </div>
               </div>
               <div>
-                <label style={S.label}>UPI ID (Optional)</label>
+                <label style={S.label}>{t("UPI ID (Optional)")}</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. partner@upi" 
+                  placeholder={t("e.g. partner@upi")} 
                   style={S.input}
                   value={bankDetails.upi_id || ''}
                   onChange={(e) => setBankDetails({ ...bankDetails, upi_id: e.target.value })}
@@ -705,12 +708,12 @@ const PartnerWallet = () => {
 
           {/* Guidelines */}
           <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>Security & Settlement Guidelines</h4>
+            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Security & Settlement Guidelines")}</h4>
             <ul style={{ fontSize: '13px', color: C.textMid, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px', margin: 0 }}>
-              <li>🔒 <strong>Bank Details Encryption:</strong> All bank account numbers are protected with bank-level AES-256-CBC encryption before database storage.</li>
-              <li>✔️ <strong>Name Verification:</strong> Make sure the account holder name exactly matches the name submitted on your PAN Card and cheque.</li>
-              <li>🕒 <strong>Maturity Period:</strong> Commissions remain in "Pending Balance" for a minimum of 48 hours to prevent fraud or reversals.</li>
-              <li>💼 <strong>TDS & Taxes:</strong> A standard 5% TDS (Tax Deducted at Source) is deducted from all partner payouts under Section 194H of the Income Tax Act.</li>
+              <li>🔒 <strong>{t("Bank Details Encryption:")}</strong> All bank account numbers are protected with bank-level AES-256-CBC encryption before database storage.</li>
+              <li>✔️ <strong>{t("Name Verification:")}</strong> Make sure the account holder name exactly matches the name submitted on your PAN Card and cheque.</li>
+              <li>🕒 <strong>{t("Maturity Period:")}</strong> Commissions remain in "Pending Balance" for a minimum of 48 hours to prevent fraud or reversals.</li>
+              <li>💼 <strong>{t("TDS & Taxes:")}</strong> A standard 5% TDS (Tax Deducted at Source) is deducted from all partner payouts under Section 194H of the Income Tax Act.</li>
             </ul>
           </div>
         </div>

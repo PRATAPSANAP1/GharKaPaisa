@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
@@ -16,6 +17,7 @@ const STAGES = [
 ];
 
 export default function PartnerApplications() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -202,8 +204,8 @@ export default function PartnerApplications() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>My Applications Pipeline</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Track commission distributions, log comments, and manage customer verifications</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>{t("My Applications Pipeline")}</h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t("Track commission distributions, log comments, and manage customer verifications")}</p>
         </div>
         <button onClick={handleExportCSV} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }}>
           <MdFileDownload /> Export Pipeline
@@ -235,7 +237,7 @@ export default function PartnerApplications() {
           <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
           <input 
             type="text" 
-            placeholder="Search by customer name or App ID..." 
+            placeholder={t("Search by customer name or App ID...")} 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ ...S.input, paddingLeft: '36px' }}
@@ -247,11 +249,11 @@ export default function PartnerApplications() {
           onChange={(e) => setStatusFilter(e.target.value)}
           style={{ ...S.input, width: 'auto', minWidth: '150px' }}
         >
-          <option value="">All Application Stages</option>
-          <option value="submitted">Applied</option>
-          <option value="under_review">Verification / Review</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="">{t("All Application Stages")}</option>
+          <option value="submitted">{t("Applied")}</option>
+          <option value="under_review">{t("Verification / Review")}</option>
+          <option value="approved">{t("Approved")}</option>
+          <option value="rejected">{t("Rejected")}</option>
         </select>
 
         <select 
@@ -259,18 +261,18 @@ export default function PartnerApplications() {
           onChange={(e) => setCommFilter(e.target.value)}
           style={{ ...S.input, width: 'auto', minWidth: '150px' }}
         >
-          <option value="">All Commissions Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="received">Commission Received</option>
-          <option value="approved">Wallet Credited (Hold)</option>
-          <option value="processed">Commission Paid</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="">{t("All Commissions Statuses")}</option>
+          <option value="pending">{t("Pending")}</option>
+          <option value="received">{t("Commission Received")}</option>
+          <option value="approved">{t("Wallet Credited (Hold)")}</option>
+          <option value="processed">{t("Commission Paid")}</option>
+          <option value="cancelled">{t("Cancelled")}</option>
         </select>
       </div>
 
       {/* Applications list */}
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>Loading pipeline...</div>
+        <div style={{ textAlign: 'center', padding: '40px' }}>{t("Loading pipeline...")}</div>
       ) : applications.length === 0 ? (
         <div style={{ ...S.card, padding: '48px', textAlign: 'center', color: C.textLight }}>
           No customer application records found matching current filters.
@@ -319,7 +321,7 @@ export default function PartnerApplications() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '9px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Payout Commission</span>
+                      <span style={{ fontSize: '9px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>{t("Payout Commission")}</span>
                       <strong style={{ fontSize: '14px', color: C.green }}>₹{app.commission_amount || 0}</strong>
                     </div>
 
@@ -378,7 +380,7 @@ export default function PartnerApplications() {
 
                       {/* Documents Manager */}
                       <div style={{ background: C.bgSecondary + '30', padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Verification Documents Upload Checklist</h4>
+                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>{t("Verification Documents Upload Checklist")}</h4>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
                           {['PAN Card', 'Aadhaar Card', 'Salary Slip', 'Bank Statement'].map((docType) => {
@@ -396,7 +398,7 @@ export default function PartnerApplications() {
                                       {matchedDoc.status.toUpperCase()}
                                     </span>
                                   ) : (
-                                    <span style={{ fontSize: '10px', color: C.textLight }}>Missing</span>
+                                    <span style={{ fontSize: '10px', color: C.textLight }}>{t("Missing")}</span>
                                   )}
                                 </div>
                                 
@@ -425,7 +427,7 @@ export default function PartnerApplications() {
 
                       {/* Timeline activity stream */}
                       <div>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>History Logs & Audit</h4>
+                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>{t("History Logs & Audit")}</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
                           {timelines[app.id]?.map((t, index) => (
                             <div key={index} style={{ borderLeft: `2px solid ${C.primary}`, paddingLeft: '12px', fontSize: '12px' }}>
@@ -446,7 +448,7 @@ export default function PartnerApplications() {
                       
                       {/* Customer Communication Actions */}
                       <div style={{ ...S.card, padding: '14px', borderRadius: '12px', background: C.bgSecondary + '30', border: `1px solid ${C.border}` }}>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>Quick Communications</h4>
+                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>{t("Quick Communications")}</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <a href={`https://wa.me/${app.customer_mobile}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: '8px', padding: '8px', fontSize: '12.5px', fontWeight: 700 }}>
                             <MdOutlineWhatsapp size={16} /> WhatsApp Customer
@@ -465,7 +467,7 @@ export default function PartnerApplications() {
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto' }}>
                           {!app.notes_list || app.notes_list.length === 0 ? (
-                            <span style={{ fontSize: '11.5px', color: C.textLight }}>No public comments available yet.</span>
+                            <span style={{ fontSize: '11.5px', color: C.textLight }}>{t("No public comments available yet.")}</span>
                           ) : (
                             app.notes_list.map((note) => (
                               <div key={note.id} style={{ background: C.bgSecondary, padding: '8px 10px', borderRadius: '8px', fontSize: '12px' }}>
@@ -482,12 +484,12 @@ export default function PartnerApplications() {
                         <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '6px' }}>
                           <input 
                             type="text" 
-                            placeholder="Add public remark..." 
+                            placeholder={t("Add public remark...")} 
                             style={{ ...S.input, padding: '6px 10px', fontSize: '12.5px' }}
                             value={newNote}
                             onChange={e => setNewNote(e.target.value)}
                           />
-                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px' }}>Post</button>
+                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px' }}>{t("Post")}</button>
                         </form>
                       </div>
 

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
@@ -19,6 +20,7 @@ const CATEGORIES = [
 const BANKS = ['All Banks', 'HDFC', 'SBI', 'Axis', 'ICICI', 'BOB', 'IndusInd', 'AU Small Finance', 'IDFC'];
 
 export default function PartnerProducts() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
   
@@ -131,7 +133,7 @@ export default function PartnerProducts() {
           </h3>
 
           {/* Categories */}
-          <p style={sectionLabel}>Categories</p>
+          <p style={sectionLabel}>{t("Categories")}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
             {CATEGORIES.map(cat => {
               const isActive = activeCategory === cat.id;
@@ -156,7 +158,7 @@ export default function PartnerProducts() {
           <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
           {/* Banks */}
-          <p style={sectionLabel}>Filter by Bank</p>
+          <p style={sectionLabel}>{t("Filter by Bank")}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
             {BANKS.map(bank => {
               const isActive = activeBank === bank;
@@ -191,7 +193,7 @@ export default function PartnerProducts() {
           <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
           {/* Quick Features */}
-          <p style={sectionLabel}>Quick Features</p>
+          <p style={sectionLabel}>{t("Quick Features")}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {[
               { label: 'High Approval', color: C.green },
@@ -220,7 +222,7 @@ export default function PartnerProducts() {
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
             <input 
               type="text" 
-              placeholder="Search products, cards, loans..." 
+              placeholder={t("Search products, cards, loans...")} 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ ...S.input, paddingLeft: '38px' }}
@@ -259,8 +261,8 @@ export default function PartnerProducts() {
             }}>
               <MdSearch size={28} />
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>No products found</h3>
-            <p style={{ color: C.textMid, margin: '0 0 20px' }}>Try adjusting your filters or search terms.</p>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{t("No products found")}</h3>
+            <p style={{ color: C.textMid, margin: '0 0 20px' }}>{t("Try adjusting your filters or search terms.")}</p>
             <button
               onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
               style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
@@ -337,7 +339,7 @@ export default function PartnerProducts() {
                 {/* Footer */}
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                   <div>
-                    <span style={{ fontSize: '10px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Your Payout</span>
+                    <span style={{ fontSize: '10px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{t("Your Payout")}</span>
                     <span style={{ fontSize: '20px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value).toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -401,7 +403,7 @@ export default function PartnerProducts() {
             </button>
 
             <div style={{ padding: '24px', borderBottom: `1px solid ${C.border}` }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>Add Customer Lead</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>{t("Add Customer Lead")}</h3>
               <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
                 Applying for <strong style={{ color: C.primary }}>{selectedProduct.name}</strong>.
               </p>
@@ -409,22 +411,22 @@ export default function PartnerProducts() {
 
             <form onSubmit={handleSubmitLead} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={S.label}>Customer Full Name *</label>
+                <label style={S.label}>{t("Customer Full Name *")}</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder={t("e.g. Rahul Sharma")}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   style={S.input}
                 />
               </div>
               <div>
-                <label style={S.label}>Mobile Number *</label>
+                <label style={S.label}>{t("Mobile Number *")}</label>
                 <input
                   type="tel"
                   required
-                  placeholder="10-digit mobile number"
+                  placeholder={t("10-digit mobile number")}
                   maxLength={10}
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
@@ -432,11 +434,11 @@ export default function PartnerProducts() {
                 />
               </div>
               <div>
-                <label style={S.label}>City *</label>
+                <label style={S.label}>{t("City *")}</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Mumbai"
+                  placeholder={t("e.g. Mumbai")}
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   style={S.input}

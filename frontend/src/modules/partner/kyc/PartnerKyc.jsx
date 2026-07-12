@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -31,6 +32,7 @@ function useIsMobile() {
 }
 
 export default function PartnerKyc() {
+  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const { isMobile, isTablet } = useIsMobile();
 
@@ -424,8 +426,8 @@ export default function PartnerKyc() {
         gap: isMobile ? '12px' : '16px'
       }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? '22px' : isTablet ? '26px' : '32px', fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>KYC Center</h1>
-          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: '4px 0 0 0', wordBreak: 'break-word' }}>Complete verification to unlock full dashboard capabilities.</p>
+          <h1 style={{ fontSize: isMobile ? '22px' : isTablet ? '26px' : '32px', fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>{t("KYC Center")}</h1>
+          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: '4px 0 0 0', wordBreak: 'break-word' }}>{t("Complete verification to unlock full dashboard capabilities.")}</p>
         </div>
         <button 
           onClick={() => setShowGuidelines(true)}
@@ -495,7 +497,7 @@ export default function PartnerKyc() {
         boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 700 }}>Verification Completion Progress</span>
+          <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 700 }}>{t("Verification Completion Progress")}</span>
           <span style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: '#2563EB' }}>{getProgress()}%</span>
         </div>
         <div style={{ background: isDark ? '#334155' : '#E2E8F0', height: isMobile ? '8px' : '10px', borderRadius: '5px', overflow: 'hidden' }}>
@@ -526,28 +528,28 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>1. PAN Card</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("1. PAN Card")}</h3>
               {isDocApproved('pan') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
               ) : getDoc('pan') ? (
                 <span style={{ color: isDocRejected('pan') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('pan') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isDocRejected('pan') ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload clear digital photo or PDF of your PAN Card. Max 5MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload clear digital photo or PDF of your PAN Card. Max 5MB.")}</p>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>{t("PAN Card Number")}</label>
               <input 
                 type="text"
                 disabled={isDocApproved('pan') || isUnderReview}
                 value={panNumber}
                 onChange={(e) => setPanNumber(e.target.value)}
-                placeholder="Enter 10-digit PAN"
+                placeholder={t("Enter 10-digit PAN")}
                 maxLength={10}
                 style={{
                   width: '100%',
@@ -663,19 +665,19 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>2. Bank Account Proof</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("2. Bank Account Proof")}</h3>
               {isDocApproved('cancelled_cheque') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
               ) : getDoc('cancelled_cheque') ? (
                 <span style={{ color: isDocRejected('cancelled_cheque') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('cancelled_cheque') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isDocRejected('cancelled_cheque') ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload cancelled cheque or latest bank account statement. Max 5MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload cancelled cheque or latest bank account statement. Max 5MB.")}</p>
 
             {!isDocApproved('cancelled_cheque') && !isUnderReview && (
               <div style={{ marginBottom: '16px' }}>
@@ -773,19 +775,19 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>3. Video Verification</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("3. Video Verification")}</h3>
               {isVideoApproved() ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
               ) : kycData.video ? (
                 <span style={{ color: isVideoRejected() ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isVideoRejected() ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isVideoRejected() ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Record a short browser video reading the official compliance declaration. Max 100MB.</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Record a short browser video reading the official compliance declaration. Max 100MB.")}</p>
 
             {kycData.video && (
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${cardBorder}`, background: '#000000', height: isMobile ? '180px' : '140px', position: 'relative' }}>
@@ -858,7 +860,7 @@ export default function PartnerKyc() {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>Record Verification Video</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>{t("Record Verification Video")}</h3>
               <button 
                 onClick={() => { stopCamera(); deleteRecording(); }}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -874,7 +876,7 @@ export default function PartnerKyc() {
               padding: isMobile ? '12px' : '16px',
               borderRadius: '8px'
             }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Please read this statement aloud:</span>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t("Please read this statement aloud:")}</span>
               <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
                 "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.Partner_code || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
               </p>
@@ -1062,8 +1064,8 @@ export default function PartnerKyc() {
           boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
         }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC for Approval</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>Ensure all three sections show "Uploaded" or "Verified" before clicking submit.</p>
+            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("Submit KYC for Approval")}</h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>{t("Ensure all three sections show \"Uploaded\" or \"Verified\" before clicking submit.")}</p>
           </div>
           <button 
             onClick={handleSubmitKyc}
@@ -1116,7 +1118,7 @@ export default function PartnerKyc() {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '17px' : '20px', fontWeight: 800 }}>KYC Guidelines</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '17px' : '20px', fontWeight: 800 }}>{t("KYC Guidelines")}</h3>
               <button 
                 onClick={() => setShowGuidelines(false)}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -1125,11 +1127,11 @@ export default function PartnerKyc() {
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: isMobile ? '12.5px' : '13.5px', color: textSecondary, lineHeight: 1.6, wordBreak: 'break-word' }}>
-              <p style={{ margin: 0 }}>To ensure quick verification, please verify the following instructions:</p>
+              <p style={{ margin: 0 }}>{t("To ensure quick verification, please verify the following instructions:")}</p>
               <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <li><strong>PAN Card:</strong> Make sure the text, photo, and signature are completely visible. No corners of the card should be cropped out.</li>
-                <li><strong>Cancelled Cheque:</strong> Your printed name, account number, and IFSC code must be completely readable. Draw two parallel diagonal lines across the cheque writing "CANCELLED" clearly.</li>
-                <li><strong>Video Declaration:</strong> Read the printed statement in a clear voice. Ensure your face is fully lit, looking straight at the camera. Do not wear sunglasses or hats.</li>
+                <li><strong>{t("PAN Card:")}</strong> Make sure the text, photo, and signature are completely visible. No corners of the card should be cropped out.</li>
+                <li><strong>{t("Cancelled Cheque:")}</strong> Your printed name, account number, and IFSC code must be completely readable. Draw two parallel diagonal lines across the cheque writing "CANCELLED" clearly.</li>
+                <li><strong>{t("Video Declaration:")}</strong> Read the printed statement in a clear voice. Ensure your face is fully lit, looking straight at the camera. Do not wear sunglasses or hats.</li>
               </ul>
             </div>
           </div>

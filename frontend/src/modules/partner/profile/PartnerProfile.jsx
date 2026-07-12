@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
@@ -16,6 +17,7 @@ const tabs = [
 ];
 
 export default function PartnerProfile() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -78,7 +80,7 @@ export default function PartnerProfile() {
   }
 
   if (!profile) {
-    return <p style={{ color: C.red, padding: 24 }}>Failed to load profile.</p>;
+    return <p style={{ color: C.red, padding: 24 }}>{t("Failed to load profile.")}</p>;
   }
 
   const fieldLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px' };
@@ -182,23 +184,23 @@ export default function PartnerProfile() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
                 <div>
-                  <p style={fieldLabel}>Email Address</p>
+                  <p style={fieldLabel}>{t("Email Address")}</p>
                   <p style={fieldValue}>{profile.email || '—'}</p>
                 </div>
                 <div>
-                  <p style={fieldLabel}>Mobile Number</p>
+                  <p style={fieldLabel}>{t("Mobile Number")}</p>
                   <p style={fieldValue}>{profile.mobile}</p>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <p style={fieldLabel}>Residential Address</p>
+                  <p style={fieldLabel}>{t("Residential Address")}</p>
                   <p style={fieldValue}>{profile.current_address || '—'}</p>
                 </div>
                 <div>
-                  <p style={fieldLabel}>Pincode</p>
+                  <p style={fieldLabel}>{t("Pincode")}</p>
                   <p style={fieldValue}>{profile.pincode || '—'}</p>
                 </div>
                 <div>
-                  <p style={fieldLabel}>KYC Status</p>
+                  <p style={fieldLabel}>{t("KYC Status")}</p>
                   <p style={{ ...fieldValue, textTransform: 'capitalize', color: kycTagColor }}>{profile.kyc_status}</p>
                 </div>
               </div>
@@ -212,15 +214,15 @@ export default function PartnerProfile() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
                 <div>
-                  <p style={fieldLabel}>Company / Agency Name</p>
+                  <p style={fieldLabel}>{t("Company / Agency Name")}</p>
                   <p style={fieldValue}>{profile.company_name || 'Individual Freelancer'}</p>
                 </div>
                 <div>
-                  <p style={fieldLabel}>Entity Type</p>
+                  <p style={fieldLabel}>{t("Entity Type")}</p>
                   <p style={fieldValue}>{profile.company_type || 'Sole Proprietor'}</p>
                 </div>
                 <div>
-                  <p style={fieldLabel}>GST Number</p>
+                  <p style={fieldLabel}>{t("GST Number")}</p>
                   <p style={{ ...fieldValue, fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>
                     {profile.gst_number || 'Not Registered'}
                   </p>
@@ -252,7 +254,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: 0 }}>
                         {profile.bank_name || 'No Bank Linked'}
                       </h4>
-                      <p style={{ fontSize: '13px', color: C.textMid, margin: '2px 0 0' }}>Payout Account</p>
+                      <p style={{ fontSize: '13px', color: C.textMid, margin: '2px 0 0' }}>{t("Payout Account")}</p>
                     </div>
                     {profile.bank_verified !== undefined && (
                       <span style={S.tag(profile.bank_verified ? C.green : C.gold)}>
@@ -266,19 +268,19 @@ export default function PartnerProfile() {
                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'
                   }}>
                     <div>
-                      <p style={fieldLabel}>Account Number</p>
+                      <p style={fieldLabel}>{t("Account Number")}</p>
                       <p style={{ ...fieldValue, fontFamily: 'monospace' }}>
                         {profile.account_number || '—'}
                       </p>
                     </div>
                     <div>
-                      <p style={fieldLabel}>IFSC Code</p>
+                      <p style={fieldLabel}>{t("IFSC Code")}</p>
                       <p style={{ ...fieldValue, fontFamily: 'monospace' }}>
                         {profile.ifsc_code || '—'}
                       </p>
                     </div>
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <p style={fieldLabel}>Account Holder Name</p>
+                      <p style={fieldLabel}>{t("Account Holder Name")}</p>
                       <p style={fieldValue}>
                         {profile.account_holder_name || `${profile.first_name} ${profile.last_name}`}
                       </p>
@@ -298,7 +300,7 @@ export default function PartnerProfile() {
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <MdSecurity style={{ color: C.text }} /> Security Settings
               </h3>
-              <p style={{ fontSize: '14px', color: C.textLight, margin: '0 0 28px' }}>Update your password to keep your account secure.</p>
+              <p style={{ fontSize: '14px', color: C.textLight, margin: '0 0 28px' }}>{t("Update your password to keep your account secure.")}</p>
               <ChangePasswordWidget />
             </div>
           )}
@@ -317,7 +319,7 @@ export default function PartnerProfile() {
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Edit Profile</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Edit Profile")}</h3>
               <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMid }}>
                 <MdClose size={20} />
               </button>
@@ -326,27 +328,27 @@ export default function PartnerProfile() {
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>First Name</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
                   <input type="text" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Last Name</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Last Name")}</label>
                   <input type="text" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Company Name</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company Name")}</label>
                 <input type="text" value={editForm.company_name} onChange={e => setEditForm({...editForm, company_name: e.target.value})} style={{ ...S.input, padding: '10px' }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Residential Address</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Residential Address")}</label>
                 <textarea value={editForm.current_address} onChange={e => setEditForm({...editForm, current_address: e.target.value})} style={{ ...S.input, padding: '10px', minHeight: '60px', resize: 'none' }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Pincode</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
                 <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} />
               </div>
 

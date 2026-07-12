@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
@@ -8,6 +9,7 @@ import {
 } from 'react-icons/md';
 
 export default function PartnerCrm() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -154,7 +156,7 @@ export default function PartnerCrm() {
         gap: '12px'
       }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Customers</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>{t("Customers")}</h1>
           <p style={{ fontSize: '13px', color: C.textMid || '#64748B', margin: '4px 0 0' }}>
             Manage your customer relationships and track applications
           </p>
@@ -190,7 +192,7 @@ export default function PartnerCrm() {
       <div style={listPaneStyle}>
         <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Customer CRM</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Customer CRM")}</h2>
             <button
               id="btn-crm-add-customer"
               type="button"
@@ -217,7 +219,7 @@ export default function PartnerCrm() {
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
             <input
               type="text"
-              placeholder="Search by name or mobile..."
+              placeholder={t("Search by name or mobile...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ ...S.input, paddingLeft: '36px', paddingTop: '10px', paddingBottom: '10px' }}
@@ -237,8 +239,8 @@ export default function PartnerCrm() {
           ) : filteredCustomers.length === 0 ? (
             <div style={{ textCenter: 'center', padding: '30px 16px', color: C.textLight, textAlign: 'center' }}>
               <MdPerson size={36} style={{ color: C.border, marginBottom: '8px' }} />
-              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>No customers found.</p>
-              <p style={{ fontSize: '12px', margin: '4px 0 0' }}>Customers appear here after you submit leads.</p>
+              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>{t("No customers found.")}</p>
+              <p style={{ fontSize: '12px', margin: '4px 0 0' }}>{t("Customers appear here after you submit leads.")}</p>
             </div>
           ) : (
             filteredCustomers.map((customer) => {
@@ -339,27 +341,27 @@ export default function PartnerCrm() {
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <span style={labelStyle}>Mobile</span>
+                      <span style={labelStyle}>{t("Mobile")}</span>
                       <span style={valStyle}><MdPhone size={14} style={{ color: C.textLight }} /> {selectedCustomer.mobile || '—'}</span>
                     </div>
                     <div>
-                      <span style={labelStyle}>Email</span>
+                      <span style={labelStyle}>{t("Email")}</span>
                       <span style={valStyle}><MdEmail size={14} style={{ color: C.textLight }} /> {selectedCustomer.email || '—'}</span>
                     </div>
                     <div>
-                      <span style={labelStyle}>Employment</span>
+                      <span style={labelStyle}>{t("Employment")}</span>
                       <span style={valStyle}><MdWork size={14} style={{ color: C.textLight }} /> {selectedCustomer.employment_type || '—'}</span>
                     </div>
                     <div>
-                      <span style={labelStyle}>City</span>
+                      <span style={labelStyle}>{t("City")}</span>
                       <span style={valStyle}><MdLocationOn size={14} style={{ color: C.textLight }} /> {[selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(', ') || '—'}</span>
                     </div>
                     <div>
-                      <span style={labelStyle}>PAN</span>
+                      <span style={labelStyle}>{t("PAN")}</span>
                       <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>{selectedCustomer.pan_number || '—'}</span>
                     </div>
                     <div>
-                      <span style={labelStyle}>Aadhaar</span>
+                      <span style={labelStyle}>{t("Aadhaar")}</span>
                       <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>
                         {selectedCustomer.aadhaar_last4 ? `XXXX-XXXX-${selectedCustomer.aadhaar_last4}` : '—'}
                       </span>
@@ -441,7 +443,7 @@ export default function PartnerCrm() {
             }}>
               <MdPerson size={36} />
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>Select a Customer</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>{t("Select a Customer")}</h2>
             <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '340px', margin: 0 }}>
               Choose a customer from the left panel to view their profile and application history.
             </p>
@@ -475,7 +477,7 @@ export default function PartnerCrm() {
             textAlign: 'left'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Add New Customer</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Add New Customer")}</h3>
               <button 
                 onClick={() => { setShowAddModal(false); setAddError(''); }} 
                 style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: C.textLight }}
@@ -499,11 +501,11 @@ export default function PartnerCrm() {
               {/* Group 1: Basic Info */}
               <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Full Name *</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Full Name *")}</label>
                   <input
                     type="text"
                     required
-                    placeholder="Enter full name"
+                    placeholder={t("Enter full name")}
                     value={newCust.fullName}
                     onChange={e => setNewCust(n => ({ ...n, fullName: e.target.value }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
@@ -511,12 +513,12 @@ export default function PartnerCrm() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Mobile Number *</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Mobile Number *")}</label>
                   <input
                     type="tel"
                     required
                     maxLength={10}
-                    placeholder="Enter 10-digit mobile"
+                    placeholder={t("Enter 10-digit mobile")}
                     value={newCust.mobile}
                     onChange={e => setNewCust(n => ({ ...n, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
@@ -527,10 +529,10 @@ export default function PartnerCrm() {
               {/* Group 2: Additional Contact */}
               <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Email Address</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Email Address")}</label>
                   <input
                     type="email"
-                    placeholder="Enter email address"
+                    placeholder={t("Enter email address")}
                     value={newCust.email}
                     onChange={e => setNewCust(n => ({ ...n, email: e.target.value }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
@@ -538,11 +540,11 @@ export default function PartnerCrm() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>PAN Number</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("PAN Number")}</label>
                   <input
                     type="text"
                     maxLength={10}
-                    placeholder="ABCDE1234F"
+                    placeholder={t("ABCDE1234F")}
                     value={newCust.panNumber}
                     onChange={e => setNewCust(n => ({ ...n, panNumber: e.target.value.toUpperCase().slice(0, 10) }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
@@ -553,7 +555,7 @@ export default function PartnerCrm() {
               {/* Group 3: Professional Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Employment Type</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Employment Type")}</label>
                   <select
                     value={newCust.employmentType}
                     onChange={e => setNewCust(n => ({ ...n, employmentType: e.target.value }))}
@@ -565,18 +567,18 @@ export default function PartnerCrm() {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="salaried">Salaried</option>
-                    <option value="self_employed">Self Employed</option>
-                    <option value="business">Business Owner</option>
-                    <option value="other">Other</option>
+                    <option value="salaried">{t("Salaried")}</option>
+                    <option value="self_employed">{t("Self Employed")}</option>
+                    <option value="business">{t("Business Owner")}</option>
+                    <option value="other">{t("Other")}</option>
                   </select>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Monthly Income (₹)</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Monthly Income (₹)")}</label>
                   <input
                     type="number"
-                    placeholder="e.g. 50000"
+                    placeholder={t("e.g. 50000")}
                     value={newCust.monthlyIncome}
                     onChange={e => setNewCust(n => ({ ...n, monthlyIncome: e.target.value }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
@@ -585,10 +587,10 @@ export default function PartnerCrm() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Employer Name</label>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Employer Name")}</label>
                 <input
                   type="text"
-                  placeholder="Company name"
+                  placeholder={t("Company name")}
                   value={newCust.employer}
                   onChange={e => setNewCust(n => ({ ...n, employer: e.target.value }))}
                   style={{ ...S.input, paddingVertical: '10px' }}
@@ -598,31 +600,31 @@ export default function PartnerCrm() {
               {/* Group 4: Address Info */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>City</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("City")}</label>
                   <input
                     type="text"
-                    placeholder="City"
+                    placeholder={t("City")}
                     value={newCust.city}
                     onChange={e => setNewCust(n => ({ ...n, city: e.target.value }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>State</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("State")}</label>
                   <input
                     type="text"
-                    placeholder="State"
+                    placeholder={t("State")}
                     value={newCust.state}
                     onChange={e => setNewCust(n => ({ ...n, state: e.target.value }))}
                     style={{ ...S.input, paddingVertical: '10px' }}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>Pincode</label>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Pincode")}</label>
                   <input
                     type="text"
                     maxLength={6}
-                    placeholder="Pincode"
+                    placeholder={t("Pincode")}
                     value={newCust.pincode}
                     onChange={e => setNewCust(n => ({ ...n, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
                     style={{ ...S.input, paddingVertical: '10px' }}

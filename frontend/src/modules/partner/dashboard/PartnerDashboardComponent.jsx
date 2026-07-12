@@ -305,7 +305,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
                 {kycStatus === 'rejected' ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
-                    <div style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>Reason:</div>
+                    <div style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>{t("Reason:")}</div>
                     {(partner?.rejection_reason || partner?.kyc_rejection_reason) ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "12px", borderLeft: `3px solid #EF4444`, marginBottom: "4px" }}>
                         {(partner.rejection_reason || partner.kyc_rejection_reason).split('; ').map((reason, idx) => (
@@ -313,14 +313,14 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                         ))}
                       </div>
                     ) : (
-                      <div style={{ color: C.textMid, marginBottom: "4px" }}>Your documents require correction.</div>
+                      <div style={{ color: C.textMid, marginBottom: "4px" }}>{t("Your documents require correction.")}</div>
                     )}
-                    <div style={{ fontSize: "13px", color: C.textLight }}>Please upload corrected documents.</div>
+                    <div style={{ fontSize: "13px", color: C.textLight }}>{t("Please upload corrected documents.")}</div>
                   </div>
                 ) : kycStatus === 'under_review' ? (
-                  <p style={{ margin: 0 }}>Your KYC documents have been submitted and are under verification by the Super Admin.</p>
+                  <p style={{ margin: 0 }}>{t("Your KYC documents have been submitted and are under verification by the Super Admin.")}</p>
                 ) : (
-                  <p style={{ margin: 0 }}>Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications.</p>
+                  <p style={{ margin: 0 }}>{t("Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications.")}</p>
                 )}
               </div>
             </div>

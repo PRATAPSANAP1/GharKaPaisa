@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
@@ -22,6 +23,7 @@ const DOC_CATEGORIES = {
 };
 
 export default function PartnerVault() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -104,7 +106,7 @@ export default function PartnerVault() {
               <MdFolderSpecial size={28} />
             </div>
             <div>
-              <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Document Vault</h2>
+              <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Document Vault")}</h2>
               <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0', fontWeight: 500 }}>
                 Your uploaded KYC documents from the verification center.
               </p>
@@ -161,7 +163,7 @@ export default function PartnerVault() {
           background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px',
           padding: '48px 24px', textAlign: 'center'
         }}>
-          <p style={{ color: C.textMid, fontWeight: 600, marginBottom: '16px' }}>No documents uploaded yet.</p>
+          <p style={{ color: C.textMid, fontWeight: 600, marginBottom: '16px' }}>{t("No documents uploaded yet.")}</p>
           <Link to="/partner/kyc" style={{
             ...S.btn('primary'), textDecoration: 'none',
             padding: '10px 22px', fontSize: '13px', borderRadius: '10px'
@@ -194,7 +196,7 @@ export default function PartnerVault() {
                   {doc.type === 'PDF' ? <MdPictureAsPdf size={22} /> : <MdOutlineInsertDriveFile size={22} />}
                 </div>
                 {doc.verified && (
-                  <span style={{ color: C.green }} title="Verified Document">
+                  <span style={{ color: C.green }} title={t("Verified Document")}>
                     <MdVerifiedUser size={18} />
                   </span>
                 )}
@@ -257,7 +259,7 @@ export default function PartnerVault() {
             }}>
               <MdAdd size={22} />
             </div>
-            <h3 style={{ fontWeight: 700, color: C.text, fontSize: '14px', margin: '0 0 4px' }}>Upload Document</h3>
+            <h3 style={{ fontWeight: 700, color: C.text, fontSize: '14px', margin: '0 0 4px' }}>{t("Upload Document")}</h3>
             <p style={{ fontSize: '12px', color: C.textLight, maxWidth: '200px', margin: 0 }}>
               Manage KYC uploads from the KYC center.
             </p>

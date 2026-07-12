@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdFlight, MdHotel, MdDirectionsBus, MdTrain, 
@@ -21,6 +22,7 @@ const UTILITIES = [
 ];
 
 export default function TravelUtilitiesPage() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -145,7 +147,7 @@ export default function TravelUtilitiesPage() {
             </div>
 
             <div>
-              <label style={S.label}>Transaction Amount (₹) *</label>
+              <label style={S.label}>{t("Transaction Amount (₹) *")}</label>
               <input
                 type="number"
                 required
@@ -180,7 +182,7 @@ export default function TravelUtilitiesPage() {
               background: C.bgSecondary, border: `1px solid ${C.border}`,
               padding: '12px', borderRadius: '12px', textAlign: 'center'
             }}>
-              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>Total Volume</span>
+              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>{t("Total Volume")}</span>
               <span style={{ fontSize: '17px', fontWeight: 800, color: C.text }}>
                 ₹{transactions.reduce((acc, t) => acc + parseInt(t.amount.replace('₹', '')), 0).toLocaleString('en-IN')}
               </span>
@@ -189,7 +191,7 @@ export default function TravelUtilitiesPage() {
               background: C.bgSecondary, border: `1px solid ${C.border}`,
               padding: '12px', borderRadius: '12px', textAlign: 'center'
             }}>
-              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>Commission</span>
+              <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>{t("Commission")}</span>
               <span style={{ fontSize: '17px', fontWeight: 800, color: C.green }}>
                 ₹{transactions.reduce((acc, t) => acc + parseFloat(t.commission.replace('₹', '')), 0).toFixed(2)}
               </span>
