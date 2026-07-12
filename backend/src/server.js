@@ -182,6 +182,12 @@ const redirectCtrl = require('./modules/products/link-management.controller.js')
 app.get('/redirect/:productId', redirectCtrl.handleRedirect);
 app.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
 
+// ── Public Unauthenticated Endpoints ───────────────────────────
+const partnerCtrl = require('./modules/partner/partner.controller.js');
+const walletCtrl  = require('./modules/wallet/controller.js');
+app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
+app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
+
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
 app.use('/api/v1', apiRouter);
