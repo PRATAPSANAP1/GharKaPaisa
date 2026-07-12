@@ -110,7 +110,7 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
     const partnerId = app.partner_id;
 
     const { rows: [wallet] } = await client.query(`
-      SELECT id FROM wallets WHERE partner_id = $1 FOR UPDATE
+      SELECT id FROM partner_wallets WHERE partner_id = $1 FOR UPDATE
     `, [partnerId]);
     if (!wallet) throw new Error('Wallet not found');
 

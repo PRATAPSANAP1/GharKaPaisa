@@ -277,7 +277,7 @@ const requestWithdrawal = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM wallets WHERE partner_id = $1 FOR UPDATE`, [PartnerId]
+      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`, [PartnerId]
     );
     if (!wallet) {
       await client.query('ROLLBACK');
@@ -290,7 +290,7 @@ const requestWithdrawal = async (req, res, next) => {
     }
 
     const { rows: pending } = await client.query(
-      `SELECT id FROM withdrawal_requests WHERE partner_id = $1 AND status = 'pending'`, [PartnerId]
+      `SELECT id FROM wallet_withdrawals WHERE partner_id = $1 AND status = 'pending'`, [PartnerId]
     );
     if (pending.length) {
       await client.query('ROLLBACK');
@@ -299,14 +299,14 @@ const requestWithdrawal = async (req, res, next) => {
 
     // Get bank/upi details
     const { rows: [bank] } = await client.query(
-      `SELECT bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1`, [PartnerId]
+      `SELECT id, bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1`, [PartnerId]
     );
 
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
-      INSERT INTO withdrawal_requests (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id
-    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null]);
+      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING id
+    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null]);
 
     await debitAvailable(PartnerId, parsedAmount, {
       reference_type: 'withdrawal',
@@ -331,18 +331,54 @@ const listWithdrawals = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { status = 'pending' } = req.query;
 
-    const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM withdrawal_requests WHERE status = $1`, [status]),
-      query(`
+    let countQuery = '';
+    let dataQuery = '';
+    let params = [];
+
+    if (status === 'pending') {
+      countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status IN ('pending', 'approved', 'processing', 'failed')`;
+      dataQuery = `
         SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
-        FROM withdrawal_requests wr
+        FROM wallet_withdrawals wr
+        JOIN partner_profiles ap ON ap.id = wr.partner_id
+        JOIN users u ON u.id = ap.user_id
+        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        WHERE wr.status IN ('pending', 'approved', 'processing', 'failed')
+        ORDER BY wr.created_at ASC
+        LIMIT $1 OFFSET $2
+      `;
+      params = [limit, offset];
+    } else if (status === 'processed') {
+      countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status IN ('processed', 'transferred')`;
+      dataQuery = `
+        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        FROM wallet_withdrawals wr
+        JOIN partner_profiles ap ON ap.id = wr.partner_id
+        JOIN users u ON u.id = ap.user_id
+        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        WHERE wr.status IN ('processed', 'transferred')
+        ORDER BY wr.created_at DESC
+        LIMIT $1 OFFSET $2
+      `;
+      params = [limit, offset];
+    } else {
+      countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status = $1`;
+      dataQuery = `
+        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        FROM wallet_withdrawals wr
         JOIN partner_profiles ap ON ap.id = wr.partner_id
         JOIN users u ON u.id = ap.user_id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         WHERE wr.status = $1
-        ORDER BY wr.created_at ASC
+        ORDER BY wr.created_at DESC
         LIMIT $2 OFFSET $3
-      `, [status, limit, offset]),
+      `;
+      params = [status, limit, offset];
+    }
+
+    const [count, data] = await Promise.all([
+      query(countQuery, params.length === 3 ? [params[0]] : []),
+      query(dataQuery, params),
     ]);
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
@@ -379,13 +415,19 @@ const listWithdrawals = async (req, res, next) => {
 const processWithdrawalRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { approved, utr_number, rejection_reason, admin_note } = req.body;
-    await processWithdrawal(id, approved, req.user.id, utr_number, rejection_reason, admin_note);
+    const { approved, utr_number, rejection_reason, admin_note, action } = req.body;
 
-    const actionName = approved ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL';
+    let determinedAction = action;
+    if (!determinedAction) {
+      determinedAction = approved ? (utr_number ? 'transfer' : 'approve') : 'reject';
+    }
+
+    await processWithdrawal(id, determinedAction, req.user.id, utr_number, rejection_reason, admin_note);
+
+    const actionName = determinedAction === 'transfer' ? 'TRANSFER_WITHDRAWAL' : (determinedAction === 'approve' ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL');
     await logAction(req, actionName, id, { utr_number, rejection_reason, admin_note });
 
-    return success(res, {}, `Withdrawal ${approved ? 'approved' : 'rejected'}`);
+    return success(res, {}, `Withdrawal successfully processed: ${determinedAction}`);
   } catch (err) {
     next(err);
   }
@@ -438,14 +480,20 @@ const walletManualDebit = async (req, res, next) => {
 };
 const approveWithdrawalController = async (req, res, next) => {
   try {
-    const { id, utr_number, admin_note } = req.body;
+    const { id, utr_number, admin_note, action } = req.body;
     if (!id) return error(res, 'Withdrawal request ID is required');
-    if (!utr_number) return error(res, 'UTR number is required to approve withdrawal');
 
-    await processWithdrawal(id, true, req.user.id, utr_number, null, admin_note);
-    await logAction(req, 'APPROVE_WITHDRAWAL', id, { utr_number, admin_note });
+    let determinedAction = action;
+    if (!determinedAction) {
+      determinedAction = utr_number ? 'transfer' : 'approve';
+    }
 
-    return success(res, {}, 'Withdrawal request successfully approved and processed');
+    await processWithdrawal(id, determinedAction, req.user.id, utr_number, null, admin_note);
+
+    const actionName = determinedAction === 'transfer' ? 'TRANSFER_WITHDRAWAL' : 'APPROVE_WITHDRAWAL';
+    await logAction(req, actionName, id, { utr_number, admin_note });
+
+    return success(res, {}, `Withdrawal request successfully processed: ${determinedAction}`);
   } catch (err) {
     next(err);
   }
@@ -458,7 +506,7 @@ const rejectWithdrawalController = async (req, res, next) => {
     if (!id) return error(res, 'Withdrawal request ID is required');
     if (!rejection_reason) return error(res, 'Rejection reason is required to reject withdrawal');
 
-    await processWithdrawal(id, false, req.user.id, null, rejection_reason, admin_note);
+    await processWithdrawal(id, 'reject', req.user.id, null, rejection_reason, admin_note);
     await logAction(req, 'REJECT_WITHDRAWAL', id, { rejection_reason, admin_note });
 
     return success(res, {}, 'Withdrawal request successfully rejected');
@@ -483,13 +531,13 @@ const getWalletOverview = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`
         SELECT COUNT(*) 
-        FROM wallets w
+        FROM partner_wallets w
         JOIN partner_profiles ap ON ap.id = w.partner_id
         ${where}
       `, values),
       query(`
         SELECT w.*, ap.partner_code, ap.first_name, ap.last_name, u.email
-        FROM wallets w
+        FROM partner_wallets w
         JOIN partner_profiles ap ON ap.id = w.partner_id
         JOIN users u ON u.id = ap.user_id
         ${where}
@@ -565,9 +613,9 @@ const listPartnerWithdrawals = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
 
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM withdrawal_requests WHERE partner_id = $1`, [partnerId]),
+      query(`SELECT COUNT(*) FROM wallet_withdrawals WHERE partner_id = $1`, [partnerId]),
       query(`
-        SELECT * FROM withdrawal_requests 
+        SELECT * FROM wallet_withdrawals 
         WHERE partner_id = $1 
         ORDER BY created_at DESC 
         LIMIT $2 OFFSET $3
@@ -593,6 +641,159 @@ const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
 
+// POST /api/v1/razorpay/webhook (Unauthenticated)
+const handleRazorpayWebhook = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const signature = req.headers['x-razorpay-signature'];
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    // Verify signature in production
+    if (process.env.NODE_ENV === 'production' && secret) {
+      const crypto = require('crypto');
+      const shasum = crypto.createHmac('sha256', secret);
+      shasum.update(JSON.stringify(req.body));
+      const digest = shasum.digest('hex');
+      if (digest !== signature) {
+        return error(res, 'Signature mismatch', 400);
+      }
+    }
+
+    const { event, payload } = req.body;
+    if (!payload || !payload.payout || !payload.payout.entity) {
+      return success(res, {}, 'Ignored non-payout event');
+    }
+
+    const payout = payload.payout.entity;
+    const withdrawalId = payout.reference_id; // WD reference ID
+    if (!withdrawalId) {
+      return success(res, {}, 'No reference ID found in payout');
+    }
+
+    await client.query('BEGIN');
+
+    // Lock withdrawal row
+    const { rows: [wr] } = await client.query(
+      `SELECT * FROM wallet_withdrawals WHERE id = $1 FOR UPDATE`,
+      [withdrawalId]
+    );
+
+    if (!wr) {
+      await client.query('ROLLBACK');
+      return success(res, {}, 'Withdrawal request not found in database');
+    }
+
+    const utr = payout.utr || wr.utr;
+    const payoutId = payout.id;
+    const failureReason = payout.failure_reason || null;
+
+    if (event === 'payout.processed') {
+      if (wr.status === 'transferred') {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'Payout already marked transferred');
+      }
+
+      // Update status to transferred
+      await client.query(`
+        UPDATE wallet_withdrawals SET
+          status = 'transferred',
+          utr = $1,
+          razorpay_payout_id = $2,
+          updated_at = NOW()
+        WHERE id = $3
+      `, [utr, payoutId, withdrawalId]);
+
+      // Complete the ledger transaction
+      await client.query(`
+        UPDATE wallet_ledger SET
+          status = 'completed',
+          reference_number = COALESCE($1, reference_number)
+        WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $3
+      `, [utr || payoutId, withdrawalId.toString(), wr.partner_id]);
+
+      const { rows: ledgerRows } = await client.query(
+        `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
+         WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
+        [withdrawalId.toString(), wr.partner_id]
+      );
+      for (const row of ledgerRows) {
+        await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal transferred (Webhook) - UTR: ${utr}`, null, null, null);
+      }
+
+      // Record in partner settlements
+      await client.query(`
+        INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
+        VALUES ($1, $2, 'Bank Transfer', $3, NOW(), 'completed')
+        ON CONFLICT (withdrawal_id) DO NOTHING
+      `, [withdrawalId, wr.partner_id, utr || payoutId]);
+
+      await syncWalletBalance(wr.partner_id, client);
+      await client.query('COMMIT');
+
+      // Notify
+      const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
+      if (partner) {
+        try {
+          await notify.withdrawalApproved(partner.user_id, wr.amount);
+        } catch (_) {}
+      }
+
+    } else if (event === 'payout.failed' || event === 'payout.reversed') {
+      if (wr.status === 'failed' || wr.status === 'rejected') {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'Payout already marked failed/rejected');
+      }
+
+      // Update status to failed
+      await client.query(`
+        UPDATE wallet_withdrawals SET
+          status = 'failed',
+          failure_reason = $1,
+          razorpay_payout_id = $2,
+          updated_at = NOW()
+        WHERE id = $3
+      `, [failureReason, payoutId, withdrawalId]);
+
+      // Reject ledger transaction (unlock available balance)
+      await client.query(`
+        UPDATE wallet_ledger SET
+          status = 'rejected',
+          description = COALESCE(description, '') || ' [Failed via Webhook]'
+        WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $1 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $2
+      `, [withdrawalId.toString(), wr.partner_id]);
+
+      const { rows: ledgerRows } = await client.query(
+        `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
+         WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
+        [withdrawalId.toString(), wr.partner_id]
+      );
+      for (const row of ledgerRows) {
+        await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'rejected', `Withdrawal failed (Webhook) - Reason: ${failureReason}`, null, null, null);
+      }
+
+      await syncWalletBalance(wr.partner_id, client);
+      await client.query('COMMIT');
+
+      // Notify partner of failure
+      const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
+      if (partner) {
+        try {
+          await notify.withdrawalRejected(partner.user_id, wr.amount, failureReason || 'Razorpay payout failed');
+        } catch (_) {}
+      }
+    } else {
+      await client.query('ROLLBACK');
+    }
+
+    return success(res, {}, 'Webhook handled successfully');
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    next(err);
+  } finally {
+    try { client.release(); } catch (_) {}
+  }
+};
+
 module.exports = {
   getWallet,
   getTransactions,
@@ -615,5 +816,6 @@ module.exports = {
   getWalletLedger,
   listPartnerWithdrawals,
   walletManualCredit,
-  walletManualDebit
+  walletManualDebit,
+  handleRazorpayWebhook
 };

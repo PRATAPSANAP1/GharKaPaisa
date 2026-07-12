@@ -1608,6 +1608,96 @@ const migrate = async () => {
     throw alignErr;
   }
 
+  // ── Wallet & Razorpay Payout System Alignment Migrations ──
+  try {
+    logger.info('Running Wallet & Razorpay Payout System Alignment Migrations...');
+
+    // 1. Rename wallets table to partner_wallets
+    await query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallets') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'partner_wallets') THEN
+          ALTER TABLE wallets RENAME TO partner_wallets;
+          RAISE NOTICE 'Renamed table wallets to partner_wallets';
+        END IF;
+      END $$;
+    `);
+
+    // 2. Align partner_wallets columns
+    await query(`
+      ALTER TABLE partner_wallets ADD COLUMN IF NOT EXISTS locked_balance DECIMAL(15,2) DEFAULT 0.00;
+      ALTER TABLE partner_wallets ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+      ALTER TABLE partner_wallets ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE partner_wallets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    `);
+
+    // 3. Rename withdrawal_requests table to wallet_withdrawals
+    await query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'withdrawal_requests') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallet_withdrawals') THEN
+          ALTER TABLE withdrawal_requests RENAME TO wallet_withdrawals;
+          RAISE NOTICE 'Renamed table withdrawal_requests to wallet_withdrawals';
+        END IF;
+      END $$;
+    `);
+
+    // 4. Align wallet_withdrawals columns
+    await query(`
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES partner_wallets(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_account_id UUID REFERENCES partner_bank_details(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS transferred_by UUID REFERENCES users(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS transferred_at TIMESTAMPTZ;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_contact_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_fund_account_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_payout_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_reference VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS failure_reason TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS utr VARCHAR(100);
+    `);
+
+    // Migrate existing data if needed
+    await query(`
+      UPDATE wallet_withdrawals 
+      SET utr = utr_number 
+      WHERE utr IS NULL AND utr_number IS NOT NULL;
+    `);
+
+    // 5. Create payout_logs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS payout_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        withdrawal_id UUID REFERENCES wallet_withdrawals(id) ON DELETE CASCADE,
+        api_request JSONB,
+        api_response JSONB,
+        http_status INTEGER,
+        retry_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 6. Create backwards compatibility views for SELECT queries
+    await query(`
+      CREATE OR REPLACE VIEW wallets AS 
+      SELECT * FROM partner_wallets;
+    `);
+
+    await query(`
+      CREATE OR REPLACE VIEW withdrawal_requests AS 
+      SELECT 
+        id, wallet_id, partner_id, amount, status, 
+        bank_name, account_number, ifsc_code, utr as utr_number, 
+        processed_by, processed_at, rejection_reason, admin_note, 
+        created_at, updated_at 
+      FROM wallet_withdrawals;
+    `);
+
+    logger.info('Wallet & Razorpay Payout System Alignment Migrations completed successfully.');
+  } catch (payoutMigrateErr) {
+    logger.error('Failed to run Wallet & Razorpay Payout System Alignment Migrations:', payoutMigrateErr);
+    throw payoutMigrateErr;
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

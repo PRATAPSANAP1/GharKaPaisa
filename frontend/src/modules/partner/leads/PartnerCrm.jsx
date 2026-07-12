@@ -144,6 +144,47 @@ export default function PartnerCrm() {
   const valStyle = { fontSize: '14px', fontWeight: 600, color: C.text, display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 0' };
 
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* ═══ PAGE HEADER WITH ADD CUSTOMER BUTTON ═══ */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Customers</h1>
+          <p style={{ fontSize: '13px', color: C.textMid || '#64748B', margin: '4px 0 0' }}>
+            Manage your customer relationships and track applications
+          </p>
+        </div>
+        <button
+          id="btn-page-add-customer"
+          type="button"
+          onClick={() => { setShowAddModal(true); setAddError(''); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: `0 4px 14px ${C.primary}30`,
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${C.primary}40`; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 14px ${C.primary}30`; }}
+        >
+          <MdAddBox size={18} /> Add Customer
+        </button>
+      </div>
+
     <div style={crmContainerStyle}>
       {/* ═══ CUSTOMER LIST SIDEBAR ═══ */}
       <div style={listPaneStyle}>
@@ -613,6 +654,7 @@ export default function PartnerCrm() {
         </div>
       )}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
     </div>
   );
 }

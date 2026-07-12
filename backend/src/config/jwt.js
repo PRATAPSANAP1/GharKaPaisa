@@ -12,7 +12,11 @@ if (!JWT_REFRESH_SECRET) {
   process.exit(1);
 }
 
-const OTP_PEPPER = process.env.OTP_PEPPER || 'gharkapaisa-otp-pepper-default';
+const OTP_PEPPER = process.env.OTP_PEPPER || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-otp-pepper-default');
+if (!OTP_PEPPER) {
+  logger.error('FATAL ERROR: OTP_PEPPER environment variable is not defined in production.');
+  process.exit(1);
+}
 
 module.exports = {
   JWT_SECRET,

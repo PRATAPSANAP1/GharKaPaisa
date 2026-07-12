@@ -16,6 +16,12 @@ const { cmsRouter, serviceRouter, serviceCatalogRouter } = require('../modules/c
 const redirectCtrl = require('../modules/products/link-management.controller.js');
 const analyticsRoute = require('../modules/analytics/route.js');
 
+const walletCtrl = require('../modules/wallet/controller.js');
+const partnerCtrl = require('../modules/partner/partner.controller.js');
+
+router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
+router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
+
 router.use('/auth',             authRoute);
 router.use('/Partners',         partnerRouter);
 router.use('/partner',          partnerSelfRouter);

@@ -223,9 +223,9 @@ const updateLeadStatus = async (req, res, next) => {
         if (txn) {
           const amount = parseFloat(txn.amount);
 
-          // Deduct from hold_balance in wallets
+          // Deduct from hold_balance in partner_wallets
           await client.query(`
-            UPDATE wallets SET
+            UPDATE partner_wallets SET
               hold_balance = GREATEST(0, hold_balance - $1),
               last_updated = NOW()
             WHERE id = $2

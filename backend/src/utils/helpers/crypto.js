@@ -1,6 +1,11 @@
 const crypto = require('crypto');
+const logger = require('../../config/logger');
 
-const ENCRYPTION_KEY_RAW = process.env.ENCRYPTION_KEY || 'gharkapaisa-encryption-key-fallback';
+const ENCRYPTION_KEY_RAW = process.env.ENCRYPTION_KEY || (process.env.NODE_ENV === 'production' ? null : 'gharkapaisa-encryption-key-fallback');
+if (!ENCRYPTION_KEY_RAW) {
+  logger.error('FATAL ERROR: ENCRYPTION_KEY environment variable is not defined in production.');
+  process.exit(1);
+}
 const ENCRYPTION_KEY = crypto.createHash('sha256').update(ENCRYPTION_KEY_RAW).digest();
 
 const ALGORITHM = 'aes-256-cbc';

@@ -324,7 +324,7 @@ const approvePartner = async (req, res, next) => {
       `, [req.user.id, PartnerId]);
       await client.query(`UPDATE users SET status = 'active'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query(`
-        INSERT INTO wallets (partner_id) VALUES ($1)
+        INSERT INTO partner_wallets (partner_id) VALUES ($1)
         ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
       await client.query('COMMIT');
@@ -532,7 +532,7 @@ const addTeamMember = async (req, res, next) => {
     `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
 
     // Create wallet
-    await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
+    await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1)`, [childPartner.id]);
 
     await client.query('COMMIT');
     return created(res, { partner_code: partnerCode }, 'Team member created successfully. They can now log in using their email and password.');
@@ -779,9 +779,9 @@ const getTeamMembers = async (req, res, next) => {
              (SELECT COUNT(*)::int FROM applications WHERE partner_id = ap.id) as applications_count,
              (SELECT COALESCE(SUM(wt.amount), 0)::float 
               FROM wallet_transactions wt 
-              JOIN wallets w ON w.id = wt.wallet_id 
+              JOIN partner_wallets w ON w.id = wt.wallet_id 
               WHERE w.partner_id = ap.id AND wt.reference_type = 'commission') as commission_amount,
-             (SELECT COALESCE(available_balance, 0)::float FROM wallets WHERE partner_id = ap.id) as wallet_balance
+             (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1
@@ -913,7 +913,7 @@ const getTeamDashboard = async (req, res, next) => {
       SELECT
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0)::float as monthly_earnings,
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0)::float as today_earnings
-      FROM wallets w
+      FROM partner_wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
     `, [partnerId]);
@@ -949,7 +949,7 @@ const getTeamEarnings = async (req, res, next) => {
 
     const { rows: earnings } = await query(`
       SELECT wt.*, p.name as product_name
-      FROM wallets w
+      FROM partner_wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       LEFT JOIN applications a ON a.id = wt.reference_id::uuid
       LEFT JOIN products p ON p.id = a.product_id

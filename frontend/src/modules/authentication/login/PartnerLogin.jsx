@@ -5,7 +5,7 @@ import { useAuthStore } from "../../../app/store/authStore";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
-import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, forgotMobile, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
+import { sendOtp, loginWithOtp, loginWithPassword, forgotPassword, getMe, loginWithMsg91, lookupUser } from "../../../services/auth.api.js";
 import { FaHandshake, FaUserCog, FaCrown, FaBriefcase, FaArrowLeft } from 'react-icons/fa';
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
@@ -110,17 +110,45 @@ export default function PartnerLogin() {
   const [otpSentTime, setOtpSentTime] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Forgot password/mobile modal states
-  const [forgotModal, setForgotModal] = useState(null); // "password" or "mobile" or null
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotSuccess, setForgotSuccess] = useState("");
-  const [forgotError, setForgotError] = useState("");
-  
   // Refs for 6 OTP input boxes
   const otpInputs = useRef([]);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const verifyingRef = useRef(false);
+
+  // Forgot Mobile / Forgot Password modal states
+  const [showForgotMobileModal, setShowForgotMobileModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+
+  // Handle forgot password submit
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return setForgotError(t('partner.errors.enterEmail', 'Please enter your registered email address.'));
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim());
+    if (!isEmail) return setForgotError(t('partner.errors.validEmail', 'Please enter a valid email address.'));
+    
+    setForgotError("");
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail.trim());
+      setForgotSuccess(true);
+    } catch (error) {
+      setForgotError(error.message || t('partner.errors.forgotPasswordFailed', 'Failed to send reset link. Please try again.'));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgotPasswordModal = () => {
+    setShowForgotPasswordModal(false);
+    setForgotEmail("");
+    setForgotLoading(false);
+    setForgotSuccess(false);
+    setForgotError("");
+  };
 
   // Reset OTP state when username/identity changes
   useEffect(() => {
@@ -170,30 +198,6 @@ export default function PartnerLogin() {
   const handleRoleSelect = (roleName) => {
     setSelectedRole(roleName);
     localStorage.setItem("gkp_last_role", roleName);
-  };
-
-  const handleForgotSubmit = async (e) => {
-    e.preventDefault();
-    if (!forgotEmail.trim()) {
-      setForgotError("Email address is required.");
-      return;
-    }
-    setForgotError("");
-    setForgotSuccess("");
-    setForgotLoading(true);
-    try {
-      if (forgotModal === "password") {
-        await forgotPassword(forgotEmail.trim());
-        setForgotSuccess("Password reset instructions have been sent to your email.");
-      } else if (forgotModal === "mobile") {
-        await forgotMobile(forgotEmail.trim(), selectedRole);
-        setForgotSuccess("Your registered mobile number has been sent to your email.");
-      }
-    } catch (err) {
-      setForgotError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setForgotLoading(false);
-    }
   };
 
   const handleOtpDigitChange = (value, index) => {
@@ -766,18 +770,6 @@ export default function PartnerLogin() {
                 >
                   <FaArrowLeft size={12} /> <span id="label-back-to-home">{t("login.backToHome", "Back to Home")}</span>
                 </button>
-
-                {/* Register Link */}
-                <div style={{ textAlign: "center", fontSize: "12.5px", color: C.textLight, marginTop: "8px" }}>
-                  <span>{t("login.dontHaveAccount", "Don't have an account?")}</span>{" "}
-                  <span 
-                    id="link-become-partner-step1"
-                    onClick={() => navigate("/register")} 
-                    style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
-                  >
-                    {t("login.becomePartner", "Become a Partner →")}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -1070,44 +1062,20 @@ export default function PartnerLogin() {
                   )}
 
                   {/* Remember & Links Row */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "4px", width: "100%" }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "11px", marginTop: "4px" }}>
                     {method === "otp" ? (
-                      <>
-                        <span 
-                          id="link-forgot-mobile" 
-                          onClick={() => {
-                            setForgotModal("mobile");
-                            setForgotEmail("");
-                            setForgotError("");
-                            setForgotSuccess("");
-                          }}
-                          style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          {t("login.forgotMobile", "Forgot Mobile?")}
-                        </span>
-                        <span 
-                          id="link-forgot-password-otp" 
-                          onClick={() => {
-                            setForgotModal("password");
-                            setForgotEmail("");
-                            setForgotError("");
-                            setForgotSuccess("");
-                          }}
-                          style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          {t("login.forgotPassword", "Forgot Password?")}
-                        </span>
-                      </>
+                      <span 
+                        id="link-forgot-mobile" 
+                        onClick={() => setShowForgotMobileModal(true)}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        {t("login.forgotMobile", "Forgot Mobile Number?")}
+                      </span>
                     ) : (
                       <span 
                         id="link-forgot-password"
-                        onClick={() => {
-                          setForgotModal("password");
-                          setForgotEmail("");
-                          setForgotError("");
-                          setForgotSuccess("");
-                        }}
-                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer", marginLeft: "auto" }}
+                        onClick={() => setShowForgotPasswordModal(true)}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
                       >
                         {t("login.forgotPassword", "Forgot Password?")}
                       </span>
@@ -1180,136 +1148,275 @@ export default function PartnerLogin() {
           </div>
         )}
 
-      {/* ── FORGOT CREDENTIALS MODAL ── */}
-      {forgotModal && (
+      </div>
+
+      {/* ══ FORGOT MOBILE NUMBER MODAL ══ */}
+      {showForgotMobileModal && (
         <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 9999,
-          padding: "20px"
+          position: "fixed", inset: 0, zIndex: 10000,
+          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", animation: "slideIn 0.3s ease"
         }}>
           <div style={{
-            background: C.card,
-            border: `1.5px solid ${C.border}`,
-            borderRadius: "24px",
-            padding: "28px",
-            maxWidth: "400px",
-            width: "100%",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-            animation: "slideIn 0.3s ease",
-            textAlign: "left"
+            background: C.card, border: `1.5px solid ${C.border}`,
+            borderRadius: "24px", padding: "28px", maxWidth: "420px", width: "100%",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.2)", textAlign: "center"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>
-                {forgotModal === "password" ? "Forgot Password" : "Forgot Mobile Number"}
-              </h3>
-              <button 
-                onClick={() => setForgotModal(null)} 
-                style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: C.textLight }}
-              >
-                ✕
-              </button>
+            {/* Close button */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+              <span onClick={() => setShowForgotMobileModal(false)}
+                style={{ cursor: "pointer", color: C.textLight, fontSize: "18px", fontWeight: 700, padding: "4px 8px", borderRadius: "8px", transition: "all 0.15s" }}
+                onMouseEnter={e => e.target.style.background = isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9'}
+                onMouseLeave={e => e.target.style.background = 'transparent'}
+              >✕</span>
             </div>
-            
-            <p style={{ fontSize: "13px", color: C.textLight || "#64748B", margin: "0 0 20px", lineHeight: 1.5 }}>
-              {forgotModal === "password" 
-                ? "Enter your registered email address and we'll send you a secure link to reset your password."
-                : "Enter your registered email address and we'll send you your registered mobile number."
-              }
+
+            {/* Icon */}
+            <div style={{
+              width: "64px", height: "64px", borderRadius: "50%",
+              background: "linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.15))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", border: "2px solid rgba(37, 99, 235, 0.2)"
+            }}>
+              <Icons.phone size={28} color="#2563EB" />
+            </div>
+
+            <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "0 0 8px" }}>
+              {t("login.forgotMobileTitle", "Forgot Your Mobile Number?")}
+            </h3>
+            <p style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6, margin: "0 0 20px" }}>
+              {t("login.forgotMobileDesc", "Don't worry! Here are some ways to recover your account:")}
             </p>
 
-            {forgotError && (
+            {/* Recovery options */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", textAlign: "left", marginBottom: "20px" }}>
               <div style={{
-                background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
-                borderRadius: "10px", padding: "10px 14px",
-                fontSize: "12.5px", color: C.red,
-                marginBottom: "16px"
+                display: "flex", alignItems: "flex-start", gap: "12px",
+                padding: "12px 14px", borderRadius: "14px",
+                background: isDark ? "rgba(37, 99, 235, 0.08)" : "#EFF6FF",
+                border: `1px solid ${isDark ? 'rgba(37, 99, 235, 0.2)' : '#DBEAFE'}`
               }}>
-                {forgotError}
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icons.mail size={16} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{t("login.forgotMobileOption1Title", "Login with Email")}</div>
+                  <div style={{ fontSize: "11px", color: C.textMid, marginTop: "2px" }}>{t("login.forgotMobileOption1Desc", "Switch to 'Login with Password' and use your registered email address to sign in.")}</div>
+                </div>
               </div>
-            )}
+
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: "12px",
+                padding: "12px 14px", borderRadius: "14px",
+                background: isDark ? "rgba(16, 185, 129, 0.08)" : "#ECFDF5",
+                border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5'}`
+              }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: "16px", color: "#fff" }}>📞</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{t("login.forgotMobileOption2Title", "Contact Support")}</div>
+                  <div style={{ fontSize: "11px", color: C.textMid, marginTop: "2px" }}>{t("login.forgotMobileOption2Desc", "Reach out to our support team for assistance with account recovery.")}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button
+                onClick={() => { setShowForgotMobileModal(false); setMethod("password"); }}
+                style={{
+                  background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                  color: "#FFFFFF", border: "none", borderRadius: "14px",
+                  padding: "11px 16px", fontSize: "13px", fontWeight: 700,
+                  width: "100%", cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
+                }}
+              >
+                {t("login.switchToPassword", "Switch to Email & Password Login")}
+              </button>
+              <button
+                onClick={() => setShowForgotMobileModal(false)}
+                style={{
+                  background: "transparent", color: C.textMid,
+                  border: `1.5px solid ${C.border}`, borderRadius: "14px",
+                  padding: "10px 16px", fontSize: "12px", fontWeight: 700,
+                  width: "100%", cursor: "pointer"
+                }}
+              >
+                {t("login.goBack", "Go Back")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ FORGOT PASSWORD MODAL ══ */}
+      {showForgotPasswordModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10000,
+          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", animation: "slideIn 0.3s ease"
+        }}>
+          <div style={{
+            background: C.card, border: `1.5px solid ${C.border}`,
+            borderRadius: "24px", padding: "28px", maxWidth: "420px", width: "100%",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.2)", textAlign: "center"
+          }}>
+            {/* Close button */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+              <span onClick={closeForgotPasswordModal}
+                style={{ cursor: "pointer", color: C.textLight, fontSize: "18px", fontWeight: 700, padding: "4px 8px", borderRadius: "8px", transition: "all 0.15s" }}
+                onMouseEnter={e => e.target.style.background = isDark ? 'rgba(255,255,255,0.1)' : '#f1f5f9'}
+                onMouseLeave={e => e.target.style.background = 'transparent'}
+              >✕</span>
+            </div>
 
             {forgotSuccess ? (
-              <div style={{ textAlign: "center", padding: "10px 0" }}>
+              /* ── Success State ── */
+              <div>
                 <div style={{
-                  background: "#DCFCE7",
-                  border: "1.5px solid #22C55E",
-                  color: "#14532D",
-                  borderRadius: "14px",
-                  padding: "12px 16px",
-                  fontSize: "13px",
-                  fontWeight: 600,
+                  width: "64px", height: "64px", borderRadius: "50%",
+                  background: "linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.15))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 16px", border: "2px solid rgba(34, 197, 94, 0.3)"
+                }}>
+                  <span style={{ fontSize: "28px" }}>✉️</span>
+                </div>
+                <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "0 0 8px" }}>
+                  {t("login.resetLinkSentTitle", "Reset Link Sent!")}
+                </h3>
+                <p style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6, margin: "0 0 8px" }}>
+                  {t("login.resetLinkSentDesc", "We've sent a password reset link to:")}
+                </p>
+                <div style={{
+                  padding: "10px 16px", borderRadius: "12px",
+                  background: isDark ? "rgba(34, 197, 94, 0.08)" : "#F0FDF4",
+                  border: `1px solid ${isDark ? 'rgba(34, 197, 94, 0.2)' : '#BBF7D0'}`,
+                  fontSize: "14px", fontWeight: 700, color: "#16A34A",
                   marginBottom: "20px"
                 }}>
-                  {forgotSuccess}
+                  {forgotEmail}
                 </div>
+                <p style={{ fontSize: "11px", color: C.textLight, lineHeight: 1.5, margin: "0 0 20px" }}>
+                  {t("login.resetLinkCheckSpam", "Please check your inbox and spam folder. The link will expire in 30 minutes.")}
+                </p>
                 <button
-                  onClick={() => setForgotModal(null)}
+                  onClick={closeForgotPasswordModal}
                   style={{
                     background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "12px 24px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    width: "100%"
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: C.text }}>Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={e => setForgotEmail(e.target.value)}
-                    placeholder="Enter registered email"
-                    style={{ ...S.input, paddingVertical: "10px" }}
-                    onFocus={e => (e.target.style.border = focusBorder)}
-                    onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={forgotLoading}
-                  style={{
-                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "12px 16px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: forgotLoading ? "not-allowed" : "pointer",
-                    opacity: forgotLoading ? 0.8 : 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    marginTop: "8px",
+                    color: "#FFFFFF", border: "none", borderRadius: "14px",
+                    padding: "11px 16px", fontSize: "13px", fontWeight: 700,
+                    width: "100%", cursor: "pointer",
                     boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
                   }}
                 >
-                  {forgotLoading ? "Sending..." : "Submit"}
+                  {t("login.backToLogin", "Back to Login")}
                 </button>
-              </form>
+              </div>
+            ) : (
+              /* ── Form State ── */
+              <div>
+                <div style={{
+                  width: "64px", height: "64px", borderRadius: "50%",
+                  background: "linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.15))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 16px", border: "2px solid rgba(37, 99, 235, 0.2)"
+                }}>
+                  <Icons.Lock size={28} color="#2563EB" />
+                </div>
+                <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "0 0 8px" }}>
+                  {t("login.forgotPasswordTitle", "Forgot Your Password?")}
+                </h3>
+                <p style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.6, margin: "0 0 20px" }}>
+                  {t("login.forgotPasswordDesc", "Enter your registered email address and we'll send you a link to reset your password.")}
+                </p>
+
+                {forgotError && (
+                  <div style={{
+                    background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
+                    borderRadius: "10px", padding: "8px 12px",
+                    fontSize: "12px", color: C.red,
+                    marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px",
+                    textAlign: "left"
+                  }}>
+                    <Icons.x size={12} /> {forgotError}
+                  </div>
+                )}
+
+                <form onSubmit={handleForgotPasswordSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px", textAlign: "left" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={{ fontSize: "11px", fontWeight: 700, color: C.text, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {t("login.emailAddress", "Email Address")}
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>
+                        <Icons.mail size={14} />
+                      </span>
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        placeholder={t("login.forgotEmailPlaceholder", "Enter your registered email")}
+                        style={{ ...S.input, paddingLeft: "36px" }}
+                        onFocus={e => (e.target.style.border = focusBorder)}
+                        onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                      color: "#FFFFFF", border: "none", borderRadius: "14px",
+                      padding: "12px 16px", fontSize: "13px", fontWeight: 700,
+                      width: "100%", cursor: forgotLoading ? "not-allowed" : "pointer",
+                      opacity: forgotLoading ? 0.8 : 1,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                      boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
+                    }}
+                  >
+                    {forgotLoading ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{
+                          width: "12px", height: "12px", borderRadius: "50%",
+                          border: "2px solid rgba(255,255,255,0.4)",
+                          borderTop: "2px solid #fff",
+                          animation: "spin 0.7s linear infinite"
+                        }} />
+                        {t("login.sending", "Sending...")}
+                      </span>
+                    ) : (
+                      <>
+                        <Icons.mail size={14} color="#FFFFFF" />
+                        {t("login.sendResetLink", "Send Reset Link")}
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <button
+                  onClick={closeForgotPasswordModal}
+                  style={{
+                    background: "transparent", color: C.textMid,
+                    border: `1.5px solid ${C.border}`, borderRadius: "14px",
+                    padding: "10px 16px", fontSize: "12px", fontWeight: 700,
+                    width: "100%", cursor: "pointer", marginTop: "8px"
+                  }}
+                >
+                  {t("login.goBack", "Go Back")}
+                </button>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      </div>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn {
