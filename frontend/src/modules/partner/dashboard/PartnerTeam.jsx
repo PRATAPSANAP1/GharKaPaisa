@@ -30,6 +30,7 @@ export default function PartnerTeam() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [copied, setCopied] = useState(false);
   
   const [formData, setFormData] = useState({
     first_name: '', last_name: '', email: '', mobile: '', password: ''
@@ -167,7 +168,8 @@ export default function PartnerTeam() {
   const copyReferralLink = () => {
     const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
     navigator.clipboard.writeText(link);
-    alert('Referral link copied to clipboard!');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const shareOnWhatsapp = () => {
@@ -418,12 +420,13 @@ export default function PartnerTeam() {
             onClick={copyReferralLink}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '10px 18px', background: C.card, color: C.primary,
-              borderRadius: '10px', border: 'none', fontWeight: 700, fontSize: '13px',
-              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              padding: '10px 18px', background: copied ? `${C.green}15` : C.card, color: copied ? C.green : C.primary,
+              borderRadius: '10px', border: copied ? `1px solid ${C.green}` : 'none', fontWeight: 700, fontSize: '13px',
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              transition: 'all 0.2s'
             }}
           >
-            <MdContentCopy size={16} /> {t('team.copyLink', 'Copy Link')}
+            {copied ? <MdCheckCircle size={16} /> : <MdContentCopy size={16} />} {copied ? t('team.copied', 'Copied!') : t('team.copyLink', 'Copy Link')}
           </button>
           <button 
             onClick={shareOnWhatsapp}
@@ -551,9 +554,9 @@ export default function PartnerTeam() {
             /* TAB: OVERVIEW */
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: C.text }}>Link Activity & Statistics</h4>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: C.text }}>{t("Link Activity & Statistics")}</h4>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '20px', border: `1px dashed ${C.border}`, borderRadius: '12px' }}>
-                  <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 700 }}>Total Referral Clicks</p>
+                  <p style={{ fontSize: '12px', color: C.textLight, margin: 0, fontWeight: 700 }}>{t("Total Referral Clicks")}</p>
                   <h2 style={{ fontSize: '32px', fontWeight: 800, margin: '8px 0', color: C.primary }}>{referralInfo?.total_invites || 0}</h2>
                   <p style={{ fontSize: '12px', color: C.textLight, margin: 0 }}>Registered Accounts: <span style={{ fontWeight: 700, color: C.text }}>{referralInfo?.total_registered || 0}</span></p>
                   
@@ -567,18 +570,18 @@ export default function PartnerTeam() {
               </div>
 
               <div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 12px', color: C.text }}>Hierarchy KYC Approvals</h4>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 12px', color: C.text }}>{t("Hierarchy KYC Approvals")}</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '10px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '12px' }}>KYC Approved Team Members</span>
+                    <span style={{ fontWeight: 600, fontSize: '12px' }}>{t("KYC Approved Team Members")}</span>
                     <span style={{ fontWeight: 700, fontSize: '12px', color: C.green }}>{teamDashboard?.approved_partners || 0}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '10px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '12px' }}>Pending KYC Reviews</span>
+                    <span style={{ fontWeight: 600, fontSize: '12px' }}>{t("Pending KYC Reviews")}</span>
                     <span style={{ fontWeight: 700, fontSize: '12px', color: C.gold }}>{teamDashboard?.pending_kyc || 0}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '10px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '12px' }}>Rejected / Incomplete Uploads</span>
+                    <span style={{ fontWeight: 600, fontSize: '12px' }}>{t("Rejected / Incomplete Uploads")}</span>
                     <span style={{ fontWeight: 700, fontSize: '12px', color: C.red }}>{teamDashboard?.rejected_partners || 0}</span>
                   </div>
                 </div>
@@ -597,15 +600,15 @@ export default function PartnerTeam() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary }}>
-                      <th style={thStyle}>Partner</th>
-                      <th style={thStyle}>Code</th>
-                      <th style={thStyle}>Level</th>
-                      <th style={thStyle}>Leads</th>
-                      <th style={thStyle}>Commission Generated</th>
-                      <th style={thStyle}>Wallet Balance</th>
-                      <th style={thStyle}>KYC</th>
-                      <th style={thStyle}>Status</th>
-                      <th style={thStyle}>Actions</th>
+                      <th style={thStyle}>{t("Partner")}</th>
+                      <th style={thStyle}>{t("Code")}</th>
+                      <th style={thStyle}>{t("Level")}</th>
+                      <th style={thStyle}>{t("Leads")}</th>
+                      <th style={thStyle}>{t("Commission Generated")}</th>
+                      <th style={thStyle}>{t("Wallet Balance")}</th>
+                      <th style={thStyle}>{t("KYC")}</th>
+                      <th style={thStyle}>{t("Status")}</th>
+                      <th style={thStyle}>{t("Actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -628,7 +631,7 @@ export default function PartnerTeam() {
                           </div>
                         </td>
                         <td style={{ ...tdStyle, fontFamily: 'monospace', fontWeight: 600 }}>{member.partner_code}</td>
-                        <td style={tdStyle}>Level 1</td>
+                        <td style={tdStyle}>{t("Level 1")}</td>
                         <td style={tdStyle}>{member.applications_count || 0}</td>
                         <td style={{ ...tdStyle, color: C.green, fontWeight: 700 }}>₹{parseFloat(member.commission_amount || 0).toFixed(2)}</td>
                         <td style={tdStyle}>₹{parseFloat(member.wallet_balance || 0).toFixed(2)}</td>
@@ -684,7 +687,7 @@ export default function PartnerTeam() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ ...S.card, padding: '20px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 12px', color: C.textLight }}>Monthly Growth Curve</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 12px', color: C.textLight }}>{t("Monthly Growth Curve")}</h4>
                   
                   {/* Dynamic CSS mini bar chart */}
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', padding: '10px 0' }}>
@@ -708,11 +711,11 @@ export default function PartnerTeam() {
                 </div>
 
                 <div style={{ ...S.card, padding: '20px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 12px', color: C.textLight }}>Conversion Efficiency</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 12px', color: C.textLight }}>{t("Conversion Efficiency")}</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'center', height: '140px' }}>
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
-                        <span>Approved Applications</span>
+                        <span>{t("Approved Applications")}</span>
                         <span>{teamDashboard?.approved_partners || 0} Accounts</span>
                       </div>
                       <div style={{ width: '100%', height: '8px', background: C.border, borderRadius: '4px', overflow: 'hidden' }}>
@@ -725,7 +728,7 @@ export default function PartnerTeam() {
 
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
-                        <span>Pending Accounts</span>
+                        <span>{t("Pending Accounts")}</span>
                         <span>{teamDashboard?.pending_kyc || 0} Accounts</span>
                       </div>
                       <div style={{ width: '100%', height: '8px', background: C.border, borderRadius: '4px', overflow: 'hidden' }}>
@@ -750,25 +753,25 @@ export default function PartnerTeam() {
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px'
               }}>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '16px' }}>
-                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>SELF COMMISSION</span>
+                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>{t("SELF COMMISSION")}</span>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '4px 0 0' }}>
                     ₹{parseFloat(selfProfile?.personal_earnings || 0).toFixed(2)}
                   </h3>
                 </div>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '16px' }}>
-                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>TEAM OVERRIDE COMMISSION</span>
+                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>{t("TEAM OVERRIDE COMMISSION")}</span>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.primary, margin: '4px 0 0' }}>
                     ₹{parseFloat(selfProfile?.team_earnings || 0).toFixed(2)}
                   </h3>
                 </div>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '16px' }}>
-                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>PENDING COMMISSIONS</span>
+                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>{t("PENDING COMMISSIONS")}</span>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.gold, margin: '4px 0 0' }}>
                     ₹{parseFloat(selfProfile?.pending_team_commission || 0).toFixed(2)}
                   </h3>
                 </div>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '16px' }}>
-                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>RELEASED COMMISSIONS</span>
+                  <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>{t("RELEASED COMMISSIONS")}</span>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.green, margin: '4px 0 0' }}>
                     ₹{parseFloat(selfProfile?.released_team_commission || 0).toFixed(2)}
                   </h3>
@@ -777,7 +780,7 @@ export default function PartnerTeam() {
 
               {/* Commission Ledger Logs */}
               <div style={{ overflowX: 'auto', marginTop: '10px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 10px', color: C.text }}>Recent Commission Override Transactions</h4>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 10px', color: C.text }}>{t("Recent Commission Override Transactions")}</h4>
                 {teamEarnings.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '20px', color: C.textLight }}>
                     No override commissions have been logged yet.
@@ -786,11 +789,11 @@ export default function PartnerTeam() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: C.bgSecondary }}>
-                        <th style={thStyle}>Date</th>
-                        <th style={thStyle}>Amount</th>
-                        <th style={thStyle}>Product</th>
-                        <th style={thStyle}>Status</th>
-                        <th style={thStyle}>Details</th>
+                        <th style={thStyle}>{t("Date")}</th>
+                        <th style={thStyle}>{t("Amount")}</th>
+                        <th style={thStyle}>{t("Product")}</th>
+                        <th style={thStyle}>{t("Status")}</th>
+                        <th style={thStyle}>{t("Details")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -825,11 +828,11 @@ export default function PartnerTeam() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary }}>
-                      <th style={thStyle}>Rank</th>
-                      <th style={thStyle}>Partner</th>
-                      <th style={thStyle}>Partner Code</th>
-                      <th style={thStyle}>Total Leads</th>
-                      <th style={thStyle}>Earnings Generated</th>
+                      <th style={thStyle}>{t("Rank")}</th>
+                      <th style={thStyle}>{t("Partner")}</th>
+                      <th style={thStyle}>{t("Partner Code")}</th>
+                      <th style={thStyle}>{t("Total Leads")}</th>
+                      <th style={thStyle}>{t("Earnings Generated")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -873,11 +876,11 @@ export default function PartnerTeam() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary }}>
-                      <th style={thStyle}>Partner</th>
-                      <th style={thStyle}>Code</th>
-                      <th style={thStyle}>Contact</th>
-                      <th style={thStyle}>KYC Status</th>
-                      <th style={thStyle}>Actions</th>
+                      <th style={thStyle}>{t("Partner")}</th>
+                      <th style={thStyle}>{t("Code")}</th>
+                      <th style={thStyle}>{t("Contact")}</th>
+                      <th style={thStyle}>{t("KYC Status")}</th>
+                      <th style={thStyle}>{t("Actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -924,11 +927,11 @@ export default function PartnerTeam() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary }}>
-                      <th style={thStyle}>Partner</th>
-                      <th style={thStyle}>Code</th>
-                      <th style={thStyle}>Joined Date</th>
-                      <th style={thStyle}>KYC Status</th>
-                      <th style={thStyle}>Actions</th>
+                      <th style={thStyle}>{t("Partner")}</th>
+                      <th style={thStyle}>{t("Code")}</th>
+                      <th style={thStyle}>{t("Joined Date")}</th>
+                      <th style={thStyle}>{t("KYC Status")}</th>
+                      <th style={thStyle}>{t("Actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1041,27 +1044,27 @@ export default function PartnerTeam() {
               
               {activeDrawerTab === 'personal' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Contact & Account Details</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Contact & Account Details")}</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Email</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Email")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.email}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Mobile</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Mobile")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.mobile}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Address</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Address")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.current_address || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Pincode</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Pincode")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.pincode || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>KYC Review Status</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("KYC Review Status")}</span>
                       <p style={{ margin: '4px 0 0' }}>
                         <span style={S.tag(selectedChildProfile.kyc_status === 'approved' ? C.green : C.gold)}>
                           {selectedChildProfile.kyc_status || 'pending'}
@@ -1069,7 +1072,7 @@ export default function PartnerTeam() {
                       </p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Account Status</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Account Status")}</span>
                       <p style={{ margin: '4px 0 0' }}>
                         <span style={S.tag(selectedChildProfile.account_status === 'active' ? C.green : C.red)}>
                           {selectedChildProfile.account_status || 'inactive'}
@@ -1082,23 +1085,23 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'business' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Company Profile Info</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Company Profile Info")}</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Company Name</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Company Name")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.company_name || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Company Type</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Company Type")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.company_type || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>GST Number</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("GST Number")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.gst_number || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Location</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Location")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.business_location || 'N/A'}</p>
                     </div>
                   </div>
@@ -1107,23 +1110,23 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'bank' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Direct Settlement Bank Details</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Direct Settlement Bank Details")}</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Bank Name</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Bank Name")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.bank_name || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Account Number</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Account Number")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.account_number || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>IFSC Code</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("IFSC Code")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.ifsc_code || 'N/A'}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Holder Name</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Holder Name")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: '13px', color: C.text }}>{selectedChildProfile.account_holder_name || 'N/A'}</p>
                     </div>
                   </div>
@@ -1132,10 +1135,10 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'kyc' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Verification Files & Docs</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Verification Files & Docs")}</h4>
                   
                   {selectedChildProfile.kyc_documents?.length === 0 ? (
-                    <p style={{ fontSize: '13px', color: C.textLight }}>No documents have been uploaded by this sub-partner.</p>
+                    <p style={{ fontSize: '13px', color: C.textLight }}>{t("No documents have been uploaded by this sub-partner.")}</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {selectedChildProfile.kyc_documents.map(doc => (
@@ -1169,7 +1172,7 @@ export default function PartnerTeam() {
 
                   {selectedChildProfile.partner_video && (
                     <div style={{ marginTop: '10px' }}>
-                      <h5 style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 6px', color: C.text }}>Video KYC Submission</h5>
+                      <h5 style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 6px', color: C.text }}>{t("Video KYC Submission")}</h5>
                       <video 
                         src={selectedChildProfile.partner_video.video_url} 
                         controls 
@@ -1182,10 +1185,10 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'leads' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Submissions Ledger</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Submissions Ledger")}</h4>
                   
                   {!selectedChildDashboard?.recent_applications || selectedChildDashboard.recent_applications.length === 0 ? (
-                    <p style={{ fontSize: '13px', color: C.textLight }}>This partner hasn't logged any applications yet.</p>
+                    <p style={{ fontSize: '13px', color: C.textLight }}>{t("This partner hasn't logged any applications yet.")}</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {selectedChildDashboard.recent_applications.map((app, idx) => (
@@ -1211,29 +1214,29 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'commission' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Earnings Profile</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Earnings Profile")}</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div style={{ padding: '12px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Total Earnings</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Total Earnings")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 700, fontSize: '14px', color: C.green }}>
                         ₹{parseFloat(selectedChildDashboard?.wallet?.total_earned || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ padding: '12px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Available Balance</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Available Balance")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 700, fontSize: '14px', color: C.text }}>
                         ₹{parseFloat(selectedChildDashboard?.wallet?.available_balance || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ padding: '12px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Hold / Pending balance</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Hold / Pending balance")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 700, fontSize: '14px', color: C.gold }}>
                         ₹{parseFloat(selectedChildDashboard?.wallet?.hold_balance || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ padding: '12px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Total Settled / Withdrawn</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Total Settled / Withdrawn")}</span>
                       <p style={{ margin: '4px 0 0', fontWeight: 700, fontSize: '14px', color: C.text }}>
                         ₹{parseFloat(selectedChildDashboard?.wallet?.total_withdrawn || 0).toFixed(2)}
                       </p>
@@ -1244,29 +1247,29 @@ export default function PartnerTeam() {
 
               {activeDrawerTab === 'performance' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>Sales & Leads Performance</h4>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0, color: C.primary }}>{t("Sales & Leads Performance")}</h4>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                     <div style={{ padding: '10px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Applications</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Applications")}</span>
                       <p style={{ margin: '2px 0 0', fontWeight: 700, color: C.text }}>
                         {selectedChildDashboard?.applications?.total || 0}
                       </p>
                     </div>
                     <div style={{ padding: '10px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Approved</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Approved")}</span>
                       <p style={{ margin: '2px 0 0', fontWeight: 700, color: C.green }}>
                         {selectedChildDashboard?.applications?.approved || 0}
                       </p>
                     </div>
                     <div style={{ padding: '10px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Rejected</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Rejected")}</span>
                       <p style={{ margin: '2px 0 0', fontWeight: 700, color: C.red }}>
                         {selectedChildDashboard?.applications?.rejected || 0}
                       </p>
                     </div>
                     <div style={{ padding: '10px', background: C.bgSecondary, borderRadius: '10px' }}>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>Pending</span>
+                      <span style={{ fontSize: '11px', color: C.textLight }}>{t("Pending")}</span>
                       <p style={{ margin: '2px 0 0', fontWeight: 700, color: C.gold }}>
                         {selectedChildDashboard?.applications?.pending || 0}
                       </p>
@@ -1275,7 +1278,7 @@ export default function PartnerTeam() {
 
                   {selectedChildDashboard?.applications?.total > 0 && (
                     <div style={{ padding: '14px', background: `${C.green}12`, borderRadius: '12px', border: `1px solid ${C.green}20` }}>
-                      <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>SALES CONVERSION RATE</span>
+                      <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>{t("SALES CONVERSION RATE")}</span>
                       <h4 style={{ fontSize: '22px', fontWeight: 800, color: C.green, margin: '4px 0 0' }}>
                         {((selectedChildDashboard.applications.approved / selectedChildDashboard.applications.total) * 100).toFixed(0)}%
                       </h4>
@@ -1316,7 +1319,7 @@ export default function PartnerTeam() {
               padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
               background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
             }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Add Direct Partner</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Add Direct Partner")}</h3>
               <button 
                 onClick={() => setIsAddModalOpen(false)}
                 style={{
@@ -1337,27 +1340,27 @@ export default function PartnerTeam() {
               <form id="add-team-form" onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={S.label}>First Name *</label>
+                    <label style={S.label}>{t("First Name *")}</label>
                     <input type="text" required value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Last Name</label>
+                    <label style={S.label}>{t("Last Name")}</label>
                     <input type="text" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} style={S.input} />
                   </div>
                 </div>
 
                 <div>
-                  <label style={S.label}>Email Address *</label>
+                  <label style={S.label}>{t("Email Address *")}</label>
                   <input type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} style={S.input} />
                 </div>
 
                 <div>
-                  <label style={S.label}>Mobile Number *</label>
+                  <label style={S.label}>{t("Mobile Number *")}</label>
                   <input type="tel" required pattern="[0-9]{10}" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} style={S.input} />
                 </div>
 
                 <div>
-                  <label style={S.label}>Initial Password *</label>
+                  <label style={S.label}>{t("Initial Password *")}</label>
                   <input type="text" required minLength={6} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={S.input} />
                   <p style={{
                     fontSize: '11px', color: C.gold, background: `${C.gold}12`,
@@ -1411,7 +1414,7 @@ export default function PartnerTeam() {
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
           }}>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: C.text }}>Referral QR Code</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: C.text }}>{t("Referral QR Code")}</h3>
               <button 
                 onClick={() => setIsQrOpen(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}
