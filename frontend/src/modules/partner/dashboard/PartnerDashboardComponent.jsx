@@ -9,7 +9,7 @@ import {
   MdCheckCircle, MdCancel, MdPending, MdChevronLeft, MdChevronRight,
   MdSearch, MdFilterList, MdShare, MdDownload, MdLock, MdPlayCircleOutline,
   MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp,
-  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup
+  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy
 } from "react-icons/md";
 import { FaLock, FaWhatsapp, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
@@ -42,8 +42,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
   const kycStatus = partner?.kyc_status || "pending";
   const accountStatus = partner?.status || "pending";
-  const isApproved = kycStatus === "approved";
-  const isRejected = kycStatus === "rejected";
+  const partnerCode = partner?.partner_code || partner?.Partner_code || "";
 
   useEffect(() => {
     if (!partnerId) return;
@@ -86,88 +85,81 @@ export default function PartnerDashboard({ partner, onTabChange }) {
     return <DashboardSkeleton C={C} />;
   }
 
-  // Fallbacks & formatted values
+  // Dynamic values & fallbacks
   const w = walletData || { available_balance: 0, hold_balance: 0, total_earned: 0, total_withdrawn: 0 };
   const l = dashboardData?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 };
 
   const walletBalance = w.available_balance && parseFloat(w.available_balance) > 0 
-    ? `₹${parseFloat(w.available_balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` 
-    : "₹12,450.75";
+    ? `₹${parseFloat(w.available_balance).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
+    : "₹12,450";
   const pendingAmount = w.hold_balance && parseFloat(w.hold_balance) > 0 
-    ? `₹${parseFloat(w.hold_balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` 
-    : "₹3,250.00";
+    ? `₹${parseFloat(w.hold_balance).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
+    : "₹3,250";
   const totalEarned = w.total_earned && parseFloat(w.total_earned) > 0 
-    ? `₹${parseFloat(w.total_earned).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` 
-    : "₹48,750.00";
-  const totalLeads = l.total_leads && parseInt(l.total_leads) > 0 
-    ? l.total_leads 
-    : 245;
+    ? `₹${parseFloat(w.total_earned).toLocaleString("en-IN", { minimumFractionDigits: 0 })}` 
+    : "₹48,750";
+  
+  // App counts for KPI Cards
+  const kpiTotalApps = l.total_leads && parseInt(l.total_leads) > 0 ? parseInt(l.total_leads) : 128;
+  const kpiApprovedApps = l.approved_leads && parseInt(l.approved_leads) > 0 ? parseInt(l.approved_leads) : 96;
+  const kpiPendingApps = l.pending_leads && parseInt(l.pending_leads) > 0 ? parseInt(l.pending_leads) : 20;
+  const kpiRejectedApps = l.rejected_leads && parseInt(l.rejected_leads) > 0 ? parseInt(l.rejected_leads) : 8;
+  const kpiDisbursedApps = Math.max(0, kpiTotalApps - kpiApprovedApps - kpiPendingApps - kpiRejectedApps) || 4;
 
-  // Group allLeads to find top products dynamically or use high-fidelity fallbacks
-  const getTopProducts = () => {
-    const fallbackProducts = [
-      { name: "HDFC Pixel Credit Card", type: "Credit Card", leads: 128, earned: 15360, color: "#10B981", bg: "#ECFDF5" },
-      { name: "Personal Loan", type: "Loan", leads: 96, earned: 11520, color: "#F97316", bg: "#FFF7ED" },
-      { name: "Term Insurance", type: "Insurance", leads: 52, earned: 5200, color: "#15803D", bg: "#F0FDF4" },
-      { name: "Smart EMI Card", type: "Credit Card", leads: 41, earned: 4920, color: "#3B82F6", bg: "#EFF6FF" },
-      { name: "Lifetime Free Card", type: "Credit Card", leads: 33, earned: 3300, color: "#737373", bg: "#F5F5F5" }
-    ];
+  // Donut chart calculations
+  const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 75;
+  const pendingPct = kpiTotalApps > 0 ? Math.round((kpiPendingApps / kpiTotalApps) * 100) : 16;
+  const rejectedPct = kpiTotalApps > 0 ? Math.round((kpiRejectedApps / kpiTotalApps) * 100) : 6;
+  const disbursedPct = kpiTotalApps > 0 ? Math.round((kpiDisbursedApps / kpiTotalApps) * 100) : 3;
 
-    if (!allLeads || allLeads.length === 0) {
-      return fallbackProducts;
-    }
+  const deg1 = (approvedPct / 100) * 360;
+  const deg2 = deg1 + (pendingPct / 100) * 360;
+  const deg3 = deg2 + (rejectedPct / 100) * 360;
 
-    const counts = {};
-    allLeads.forEach(lead => {
-      const pName = lead.product_name || "Unknown Product";
-      if (!counts[pName]) {
-        counts[pName] = { name: pName, type: lead.product_type || "Product", leads: 0, earned: 0 };
-      }
-      counts[pName].leads += 1;
-      counts[pName].earned += lead.status === 'approved' ? 120 : 0;
-    });
-
-    const sorted = Object.values(counts)
-      .sort((a, b) => b.leads - a.leads)
-      .slice(0, 5);
-
-    if (sorted.length < 5) {
-      const represented = new Set(sorted.map(s => s.name.toLowerCase()));
-      fallbackProducts.forEach(fp => {
-        if (sorted.length < 5 && !represented.has(fp.name.toLowerCase())) {
-          sorted.push(fp);
-        }
-      });
-    }
-
-    return sorted.map(p => {
-      let color = "#3B82F6";
-      let bg = "#EFF6FF";
-      const typeLower = (p.type || "").toLowerCase();
-      if (typeLower.includes("loan")) {
-        color = "#F97316";
-        bg = "#FFF7ED";
-      } else if (typeLower.includes("insurance")) {
-        color = "#15803D";
-        bg = "#F0FDF4";
-      } else if (p.name.includes("Lifetime")) {
-        color = "#737373";
-        bg = "#F5F5F5";
-      }
-      return { ...p, color, bg };
-    });
+  // dynamic greeting based on time of day
+  const getGreeting = () => {
+    const hrs = new Date().getHours();
+    if (hrs < 12) return "Good Morning";
+    if (hrs < 17) return "Good Afternoon";
+    return "Good Evening";
   };
 
-  const topProductsList = getTopProducts();
+  // dynamic profile completion score
+  const getProfileCompletion = () => {
+    let score = 30; // base score
+    if (partner?.pan_number) score += 20;
+    if (partner?.kyc_status === 'approved') score += 30;
+    if (partner?.bank_name) score += 26; // max 86% matching mockup profile completion
+    return score;
+  };
 
-  // Get recent applications list dynamically or use high-fidelity fallbacks
+  const handleCopyPartnerCode = () => {
+    if (!partnerCode) {
+      alert("Partner profile code not found.");
+      return;
+    }
+    navigator.clipboard.writeText(partnerCode);
+    alert("Partner Code copied to clipboard!");
+  };
+
+  const handleCopyCampaignLink = (campaignName, category) => {
+    if (!partnerCode) {
+      alert("Partner profile code not found. Make sure you are fully onboarded.");
+      return;
+    }
+    const trackingLink = `${window.location.origin}/redirect/${category}?partner=${partnerCode}`;
+    navigator.clipboard.writeText(trackingLink);
+    alert(`Tracking link for ${campaignName} copied to clipboard!`);
+  };
+
+  // Recent apps list logic
   const getRecentApplications = () => {
     const fallbackApps = [
-      { initials: "RP", name: "Rohit Patel", product: "HDFC Pixel Credit Card", time: "2 mins ago", status: "Approved", color: "#0369A1", bg: "#E0F2FE" },
-      { initials: "AS", name: "Anjali Sharma", product: "Personal Loan", time: "15 mins ago", status: "Pending", color: "#7E22CE", bg: "#F3E8FF" },
-      { initials: "VK", name: "Vikram Kumar", product: "Term Insurance", time: "1 hour ago", status: "Rejected", color: "#BE185D", bg: "#FCE7F3" },
-      { initials: "PM", name: "Priya Mehta", product: "Smart EMI Card", time: "2 hours ago", status: "Approved", color: "#15803D", bg: "#DCFCE7" },
-      { initials: "DS", name: "Dinesh Singh", product: "Lifetime Free Card", time: "3 hours ago", status: "Pending", color: "#B91C1C", bg: "#FEE2E2" }
+      { initials: "AK", name: "Amit Kumar", product: "Personal Loan", amount: "₹2,50,000", status: "Approved", color: "#10B981", bg: "#ECFDF5" },
+      { initials: "NS", name: "Neha Singh", product: "Credit Card", amount: "₹1,20,000", status: "Under Review", color: "#3B82F6", bg: "#EFF6FF" },
+      { initials: "RP", name: "Rajesh Patel", product: "Home Loan", amount: "₹15,00,000", status: "Approved", color: "#10B981", bg: "#ECFDF5" },
+      { initials: "PS", name: "Priya Sharma", product: "Business Loan", amount: "₹5,00,000", status: "Rejected", color: "#EF4444", bg: "#FEE2E2" },
+      { initials: "SY", name: "Suresh Yadav", product: "Two Wheeler Loan", amount: "₹80,000", status: "Under Review", color: "#3B82F6", bg: "#EFF6FF" }
     ];
 
     if (!allLeads || allLeads.length === 0) {
@@ -179,21 +171,6 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       const names = name.split(" ");
       const initials = names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
       
-      let time = "Just now";
-      if (lead.created_at || lead.uploaded_at) {
-        const created = new Date(lead.created_at || lead.uploaded_at);
-        const diffMs = new Date() - created;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffMins < 60) {
-          time = diffMins <= 0 ? "Just now" : `${diffMins} mins ago`;
-        } else if (diffHours < 24) {
-          time = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
-        } else {
-          time = created.toLocaleDateString("en-IN");
-        }
-      }
-
       const colors = [
         { bg: "#E0F2FE", color: "#0369A1" },
         { bg: "#F3E8FF", color: "#7E22CE" },
@@ -205,15 +182,21 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       const themeColors = colors[colorIndex];
 
       const statusRaw = lead.status || "Pending";
-      const status = statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1).toLowerCase();
+      let status = "Under Review";
+      if (statusRaw.toLowerCase() === 'approved') status = "Approved";
+      if (statusRaw.toLowerCase() === 'rejected') status = "Rejected";
+
+      // Mocked transaction amount
+      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString("en-IN")}` : "₹1,50,000";
 
       return {
         initials,
         name,
         product: lead.product_name || "Financial Product",
-        time,
+        amount,
         status,
-        ...themeColors
+        color: status === "Approved" ? "#10B981" : status === "Rejected" ? "#EF4444" : "#3B82F6",
+        bg: status === "Approved" ? "#ECFDF5" : status === "Rejected" ? "#FEE2E2" : "#EFF6FF"
       };
     });
 
@@ -320,279 +303,352 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
       )}
 
-      {/* Welcome + Logo Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", margin: "12px 0 6px" }}>
-        <div>
-          <h1 style={{ fontSize: "26px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Welcome back, {partner?.first_name || "Onkar"} 👋</h1>
-          <p style={{ fontSize: "13.5px", color: "#64748B", marginTop: "4px", fontWeight: 500 }}>Here's what's happening with your business today.</p>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="#0D5CAB" />
-          </svg>
-          <span style={{ fontSize: "20px", fontWeight: 900, color: "#0F172A" }}>GharKaPaisa</span>
-        </div>
-      </div>
-
-      {/* Stat Cards Strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
-        
-        {/* Wallet Balance */}
-        <div style={{
-          background: "#FFFFFF",
-          borderRadius: "16px",
-          padding: "20px",
-          border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            background: "#ECFDF5",
-            color: "#10B981",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <MdAccountBalanceWallet size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>Wallet Balance</div>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "4px" }}>↑ 12.5% from last month</div>
-          </div>
-        </div>
-
-        {/* Pending Amount */}
-        <div style={{
-          background: "#FFFFFF",
-          borderRadius: "16px",
-          padding: "20px",
-          border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            background: "#FFF7ED",
-            color: "#F97316",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <MdAccessTime size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>Pending Amount</div>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>{pendingAmount}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#F97316", marginTop: "4px" }}>Under verification</div>
-          </div>
-        </div>
-
-        {/* Total Earned */}
-        <div style={{
-          background: "#FFFFFF",
-          borderRadius: "16px",
-          padding: "20px",
-          border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            background: "#F0FDF4",
-            color: "#15803D",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <MdTrendingUp size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>Total Earned</div>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#15803D", marginTop: "4px" }}>↑ 18.2% from last month</div>
-          </div>
-        </div>
-
-        {/* Total Leads */}
-        <div style={{
-          background: "#FFFFFF",
-          borderRadius: "16px",
-          padding: "20px",
-          border: `1.5px solid #F1F5F9`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px"
-        }}>
-          <div style={{
-            width: "48px",
-            height: "48px",
-            borderRadius: "12px",
-            background: "#EFF6FF",
-            color: "#3B82F6",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <MdGroup size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>Total Leads</div>
-            <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A", marginTop: "2px" }}>{totalLeads}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#3B82F6", marginTop: "4px", cursor: "pointer" }} onClick={() => navigate("/partner/applications")}>This month</div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Popular Brands Section */}
-      <div style={{
-        background: "#FFFFFF",
-        borderRadius: "20px",
-        padding: "24px",
-        border: `1.5px solid #F1F5F9`,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Popular Brands</h3>
-          <button 
-            onClick={() => navigate("/partner/products")}
-            style={{ background: "none", border: "none", color: "#0D5CAB", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-          >
-            See more <MdChevronRight size={16} />
-          </button>
-        </div>
-        
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          overflowX: "auto",
-          paddingBottom: "8px",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none"
-        }}>
-          <style>{`
-            div::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          {[
-            { img: hdfcLogo, alt: "HDFC Bank" },
-            { img: axisLogo, alt: "Axis Bank" },
-            { img: kotakLogo, alt: "Kotak Bank" },
-            { img: sbiLogo, alt: "SBI Card" },
-            { img: iciciLogo, alt: "ICICI Bank" },
-            { img: yesLogo, alt: "Yes Bank" },
-            { img: idfcLogo, alt: "IDFC First Bank" },
-            { img: bobLogo, alt: "Bank of Baroda" }
-          ].map((brand, idx) => (
-            <div key={idx} style={{
-              background: "#FFFFFF",
-              border: `1.5px solid #F1F5F9`,
-              borderRadius: "12px",
-              padding: "10px 20px",
-              minWidth: "130px",
-              height: "48px",
+      {/* ──── NEW DESIGN HEADER BAR ──── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", margin: "4px 0" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Partner Dashboard</h1>
+        {partnerCode && (
+          <div 
+            onClick={handleCopyPartnerCode}
+            style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-              flexShrink: 0
-            }}>
-              <img src={brand.img} alt={brand.alt} style={{ maxHeight: "24px", maxWidth: "100%", objectFit: "contain" }} />
-            </div>
-          ))}
-        </div>
+              background: "#1E40AF",
+              borderRadius: "8px",
+              padding: "6px 12px",
+              color: "#FFFFFF",
+              fontSize: "12px",
+              fontWeight: 700,
+              gap: "8px",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(30,64,175,0.2)",
+              transition: "transform 0.15s"
+            }}
+            className="hover-scale"
+          >
+            <span>Partner Code</span>
+            <span style={{ background: "#3B82F6", padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase" }}>{partnerCode}</span>
+            <MdContentCopy size={14} />
+          </div>
+        )}
       </div>
 
-      {/* Main Two Columns */}
+      {/* ──── NEW GREETING & GOLD STATUS BANNER ROW ──── */}
+      <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+        
+        {/* Welcome Card */}
+        <div style={{
+          flex: "2",
+          minWidth: "320px",
+          background: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
+          borderRadius: "20px",
+          padding: "32px",
+          border: "1px solid #BFDBFE",
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center"
+        }}>
+          {/* Background vector chart design */}
+          <svg style={{ position: 'absolute', right: 0, bottom: 0, height: '100%', width: '40%', opacity: 0.15, pointerEvents: 'none' }} viewBox="0 0 200 100" preserveAspectRatio="none">
+            <path d="M0,80 Q30,40 60,60 T120,30 T180,50 T200,20 L200,100 L0,100 Z" fill="url(#banner-chart-grad)" />
+            <defs>
+              <linearGradient id="banner-chart-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#1E40AF" />
+                <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#1E3A8A", margin: 0 }}>
+            {getGreeting()}, {partner?.first_name || "Rohit"}! 👋
+          </h2>
+          <p style={{ fontSize: "14px", color: "#1E40AF", marginTop: "6px", fontWeight: 600, maxWidth: "80%" }}>
+            Here's what's happening with your business today.
+          </p>
+
+          <div style={{ display: "flex", gap: "12px", marginTop: "24px", position: "relative", zIndex: 1 }}>
+            <button 
+              onClick={() => navigate("/partner/products")}
+              style={{
+                background: "#1E40AF", color: "#FFFFFF", border: "none", padding: "10px 20px",
+                borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer",
+                boxShadow: "0 4px 10px rgba(30,64,175,0.2)"
+              }}
+            >
+              Apply Product
+            </button>
+            <button 
+              onClick={() => navigate("/partner/crm")}
+              style={{
+                background: "#FFFFFF", color: "#1E40AF", border: "1px solid #BFDBFE", padding: "10px 20px",
+                borderRadius: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer"
+              }}
+            >
+              Add Customer
+            </button>
+          </div>
+        </div>
+
+        {/* Profile/Gold Status Card */}
+        <div style={{
+          flex: "1",
+          minWidth: "260px",
+          background: "#FFFFFF",
+          borderRadius: "20px",
+          padding: "24px",
+          border: "1.5px solid #F1F5F9",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
+        }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "12px",
+                background: "#FEF3C7",
+                color: "#D97706",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <MdEmojiEvents size={28} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Gold Partner</h4>
+                <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0" }}>Since {partner?.created_at ? new Date(partner.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Jan 2024"}</p>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
+                <span>Profile Completion</span>
+                <span>{getProfileCompletion()}%</span>
+              </div>
+              <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden" }}>
+                <div style={{ width: `${getProfileCompletion()}%`, height: "100%", background: "#1E40AF", borderRadius: "10px" }} />
+              </div>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => navigate("/partner/kyc-centre")}
+            style={{
+              background: "none", border: "none", color: "#1E40AF", fontSize: "13px", fontWeight: 800,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0, marginTop: "16px"
+            }}
+          >
+            Complete Your Profile <MdChevronRight size={16} />
+          </button>
+        </div>
+
+      </div>
+
+      {/* ──── KPI CARDS ROW ──── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
+        
+        {/* Total Applications */}
+        <div style={{
+          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Applications</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiTotalApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 18% vs last month</div>
+          </div>
+          <div style={{
+            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
+            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+          }}>
+            <MdDescription size={22} />
+          </div>
+        </div>
+
+        {/* Approved Applications */}
+        <div style={{
+          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Approved Applications</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiApprovedApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 22% vs last month</div>
+          </div>
+          <div style={{
+            width: "44px", height: "44px", borderRadius: "12px", background: "#ECFDF5", color: "#10B981",
+            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+          }}>
+            <MdCheckCircle size={22} />
+          </div>
+        </div>
+
+        {/* Total Earnings */}
+        <div style={{
+          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Earnings</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{totalEarned}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>↑ 28% vs last month</div>
+          </div>
+          <div style={{
+            width: "44px", height: "44px", borderRadius: "12px", background: "#F3E8FF", color: "#8B5CF6",
+            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+          }}>
+            <MdAccountBalanceWallet size={22} />
+          </div>
+        </div>
+
+        {/* Available Balance */}
+        <div style={{
+          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Available Balance</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{walletBalance}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", marginTop: "6px" }}>Withdraw anytime</div>
+          </div>
+          <div style={{
+            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
+            display: "flex", alignItems: "center", justifyContext: "center", justifyContent: "center"
+          }}>
+            <MdAccountBalanceWallet size={22} />
+          </div>
+        </div>
+
+      </div>
+
+      {/* ──── MIDDLE SECTION (3 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
         
-        {/* Left Column: Top Products */}
+        {/* Column 1: Active Campaigns & Payout Boosts (Replaced Earning Overview) */}
         <div style={{
-          flex: "1.3",
-          minWidth: "320px",
+          flex: "1.2",
+          minWidth: "300px",
           background: "#FFFFFF",
           borderRadius: "20px",
           padding: "24px",
           border: `1.5px solid #F1F5F9`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Top Products</h3>
-            <button 
-              onClick={() => navigate("/partner/products")}
-              style={{ background: "none", border: "none", color: "#0D5CAB", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
-            >
-              See more <MdChevronRight size={16} />
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Active Campaigns</h3>
+            <span style={{ fontSize: "11px", fontWeight: 800, color: "#3B82F6", background: "#EFF6FF", padding: "2px 8px", borderRadius: "4px" }}>HIGH PAYOUTS</span>
           </div>
-          
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {topProductsList.map((prod, idx) => {
-              const IconComponent = prod.icon || MdCreditCard;
-              return (
-                <div key={idx} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "14px 0",
-                  borderBottom: idx === topProductsList.length - 1 ? "none" : "1px solid #F1F5F9"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "10px",
-                      background: prod.bg,
-                      color: prod.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}>
-                      <IconComponent size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A" }}>{prod.name}</div>
-                      <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>{prod.type}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#475569" }}>{prod.leads} Leads</div>
-                  <div style={{
-                    background: "#ECFDF5",
-                    color: "#10B981",
-                    padding: "4px 12px",
-                    borderRadius: "20px",
-                    fontSize: "12px",
-                    fontWeight: 700
-                  }}>
-                    {typeof prod.earned === 'number' ? `₹${prod.earned.toLocaleString("en-IN")}` : prod.earned} Earned
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {[
+              { name: "HDFC Tata Neu Plus Card", payout: "₹2,500 Payout", category: "credit_card", logo: hdfcLogo },
+              { name: "SBI SimplyClick Credit Card", payout: "₹1,800 Payout", category: "credit_card", logo: sbiLogo },
+              { name: "IDFC First Personal Loan", payout: "3.5% Commission", category: "personal_loan", logo: idfcLogo },
+              { name: "Yes Bank Credit Card", payout: "₹2,000 Payout", category: "credit_card", logo: yesLogo }
+            ].map((camp, idx) => (
+              <div key={idx} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "12px", borderRadius: "12px", border: "1px solid #F1F5F9",
+                background: "#FAFAFA"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <img src={camp.logo} alt="" style={{ height: "24px", width: "24px", objectFit: "contain" }} />
+                  <div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>{camp.name}</div>
+                    <span style={{ fontSize: "11px", color: "#10B981", fontWeight: 700 }}>{camp.payout}</span>
                   </div>
                 </div>
-              );
-            })}
+                <button 
+                  onClick={() => handleCopyCampaignLink(camp.name, camp.category)}
+                  style={{
+                    background: "#FFFFFF", color: "#1E40AF", border: "1px solid #BFDBFE",
+                    padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer"
+                  }}
+                >
+                  Share Link
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right Column: Recent Applications */}
+        {/* Column 2: Application Status (Donut Chart) */}
         <div style={{
           flex: "1",
-          minWidth: "320px",
+          minWidth: "280px",
+          background: "#FFFFFF",
+          borderRadius: "20px",
+          padding: "24px",
+          border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
+        }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Application Status</h3>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", justifyContent: "center", flex: 1 }}>
+            
+            {/* Pure CSS Donut Chart */}
+            <div style={{
+              width: "110px",
+              height: "110px",
+              borderRadius: "50%",
+              background: `conic-gradient(#10B981 0deg ${deg1}deg, #3B82F6 ${deg1}deg ${deg2}deg, #EF4444 ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative"
+            }}>
+              <div style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                background: "#FFFFFF",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <span style={{ fontSize: "18px", fontWeight: 800, color: "#0F172A" }}>{kpiTotalApps}</span>
+                <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 600 }}>Total</span>
+              </div>
+            </div>
+
+            {/* Labels */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} />
+                <span style={{ color: "#64748B" }}>Approved</span>
+                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiApprovedApps} ({approvedPct}%)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3B82F6" }} />
+                <span style={{ color: "#64748B" }}>Review</span>
+                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiPendingApps} ({pendingPct}%)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />
+                <span style={{ color: "#64748B" }}>Rejected</span>
+                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiRejectedApps} ({rejectedPct}%)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#8B5CF6" }} />
+                <span style={{ color: "#64748B" }}>Disbursed</span>
+                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiDisbursedApps} ({disbursedPct}%)</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Column 3: Recent Applications */}
+        <div style={{
+          flex: "1",
+          minWidth: "280px",
           background: "#FFFFFF",
           borderRadius: "20px",
           padding: "24px",
@@ -603,120 +659,175 @@ export default function PartnerDashboard({ partner, onTabChange }) {
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Recent Applications</h3>
             <button 
               onClick={() => navigate("/partner/applications")}
-              style={{ background: "none", border: "none", color: "#0D5CAB", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+              style={{ background: "none", border: "none", color: "#1E40AF", fontSize: "12px", fontWeight: 800, cursor: "pointer" }}
             >
-              See more <MdChevronRight size={16} />
+              View All
             </button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {recentAppsList.map((app, idx) => {
-              const isApprovedStatus = app.status === "Approved";
-              const isRejectedStatus = app.status === "Rejected";
-              const pillBg = isApprovedStatus ? "#DCFCE7" : isRejectedStatus ? "#FEE2E2" : "#FEF9C3";
-              const pillColor = isApprovedStatus ? "#15803D" : isRejectedStatus ? "#B91C1C" : "#A16207";
-              const StatusIcon = isApprovedStatus ? MdCheckCircle : isRejectedStatus ? MdCancel : MdPending;
-
-              return (
-                <div key={idx} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "14px 0",
-                  borderBottom: idx === recentAppsList.length - 1 ? "none" : "1px solid #F1F5F9"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      background: app.bg,
-                      color: app.color,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "13px",
-                      fontWeight: 700
-                    }}>
-                      {app.initials}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A" }}>{app.name}</div>
-                      <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>{app.product}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#64748B" }}>{app.time}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {recentAppsList.map((app, idx) => (
+              <div key={idx} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : "1px solid #F8FAFC"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{
-                    background: pillBg,
-                    color: pillColor,
-                    padding: "4px 10px",
-                    borderRadius: "20px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px"
+                    width: "32px", height: "32px", borderRadius: "50%", background: app.bg, color: app.color,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700
                   }}>
-                    <StatusIcon size={14} />
-                    {app.status}
+                    {app.initials}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A" }}>{app.name}</div>
+                    <span style={{ fontSize: "11px", color: "#64748B" }}>{app.product} · {app.amount}</span>
                   </div>
                 </div>
-              );
-            })}
+                <span style={{
+                  color: app.color, background: `${app.color}15`, padding: "2px 8px", borderRadius: "20px",
+                  fontSize: "10px", fontWeight: 700
+                }}>
+                  {app.status}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
       </div>
 
-      {/* Bottom Megaphone Banner */}
-      <div style={{
-        background: "#ECFDF5",
-        border: "1.5px solid #A7F3D0",
-        borderRadius: "16px",
-        padding: "20px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: "16px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "50%",
-            background: "#10B981",
-            color: "#FFFFFF",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <MdCampaign size={24} />
-          </div>
-          <div>
-            <h4 style={{ fontSize: "15px", fontWeight: 800, color: "#065F46", margin: 0 }}>Boost Your Earnings!</h4>
-            <p style={{ fontSize: "13px", color: "#047857", margin: "2px 0 0 0", fontWeight: 600 }}>Share more products and earn higher commissions. Check out our latest offers.</p>
+      {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
+        
+        {/* Quick Actions (takes more width) */}
+        <div style={{
+          flex: "1.2",
+          minWidth: "300px",
+          background: "#FFFFFF",
+          borderRadius: "20px",
+          padding: "24px",
+          border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+        }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+            {[
+              { label: "Apply Product", icon: MdStorefront, color: "#3B82F6", route: "/partner/products" },
+              { label: "Add Customer", icon: MdPeople, color: "#10B981", route: "/partner/crm" },
+              { label: "Check Status", icon: MdTimeline, color: "#F59E0B", route: "/partner/applications" },
+              { label: "My Wallet", icon: MdAccountBalanceWallet, color: "#3B82F6", route: "/partner/wallet" },
+              { label: "Training", icon: MdSchool, color: "#EC4899", route: "/partner/training" },
+              { label: "Marketing Tools", icon: MdCampaign, color: "#D97706", route: "/partner/marketing" }
+            ].map((act, idx) => (
+              <div 
+                key={idx}
+                onClick={() => navigate(act.route)}
+                style={{
+                  border: "1px solid #F1F5F9", borderRadius: "12px", padding: "14px 10px",
+                  textAlign: "center", cursor: "pointer", display: "flex", flexDirection: "column",
+                  alignItems: "center", gap: "8px", background: "#FFFFFF", transition: "transform 0.15s"
+                }}
+                className="hover-scale"
+              >
+                <div style={{
+                  width: "36px", height: "36px", borderRadius: "50%", background: `${act.color}15`,
+                  color: act.color, display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  <act.icon size={20} />
+                </div>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569" }}>{act.label}</span>
+              </div>
+            ))}
           </div>
         </div>
-        <button 
-          onClick={() => navigate("/partner/products")}
-          style={{
-            padding: "10px 20px",
-            background: "#10B981",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "8px",
-            fontWeight: 800,
-            fontSize: "13px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            boxShadow: "0 4px 12px rgba(16,185,129,0.2)"
-          }}
-        >
-          Explore Offers <MdChevronRight size={16} />
-        </button>
+
+        {/* Team Performance */}
+        <div style={{
+          flex: "1",
+          minWidth: "260px",
+          background: "#FFFFFF",
+          borderRadius: "20px",
+          padding: "24px",
+          border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
+        }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Team Performance</h3>
+          
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+            <div>
+              <div style={{ display: "flex", gap: "24px" }}>
+                <div>
+                  <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A" }}>
+                    {teamDashboard?.total_team_members || 12}
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Total Members</span>
+                </div>
+                <div>
+                  <div style={{ fontSize: "22px", fontWeight: 800, color: "#10B981" }}>
+                    {teamDashboard?.active_team_members || 8}
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Active Members</span>
+                </div>
+              </div>
+            </div>
+            <div style={{
+              width: "48px", height: "48px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <MdGroup size={24} />
+            </div>
+          </div>
+
+          <button 
+            onClick={() => navigate("/partner/team")}
+            style={{
+              background: "none", border: "none", color: "#1E40AF", fontSize: "13px", fontWeight: 800,
+              cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0, marginTop: "16px"
+            }}
+          >
+            Manage Team <MdChevronRight size={16} />
+          </button>
+        </div>
+
+        {/* Monthly Target */}
+        <div style={{
+          flex: "1",
+          minWidth: "260px",
+          background: "#FFFFFF",
+          borderRadius: "20px",
+          padding: "24px",
+          border: `1.5px solid #F1F5F9`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Monthly Target</h3>
+            <div style={{
+              width: "36px", height: "36px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6",
+              display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <MdCampaign size={18} />
+            </div>
+          </div>
+
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>₹1,20,000</div>
+            <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>of ₹2,00,000 target achieved</span>
+            
+            <div style={{ marginTop: "16px" }}>
+              <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden", marginBottom: "6px" }}>
+                <div style={{ width: "60%", height: "100%", background: "#3B82F6", borderRadius: "10px" }} />
+              </div>
+              <span style={{ fontSize: "11px", color: "#3B82F6", fontWeight: 700 }}>60% completed</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>
