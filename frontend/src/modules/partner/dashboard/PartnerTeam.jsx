@@ -169,27 +169,27 @@ export default function PartnerTeam() {
   };
 
   const copyReferralLink = () => {
-    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareOnWhatsapp = () => {
-    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     const text = `Join my GharKaPaisa partner network using my invite link and start earning: ${link}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareViaEmail = () => {
-    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     const subject = `Opportunity to partner with GharKaPaisa`;
     const body = `Hi,\n\nJoin my partner network at GharKaPaisa and start earning overrides on payouts. Register using this referral link:\n${link}\n\nRegards,\n${user.first_name}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   const shareViaSMS = () => {
-    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${partnerCode || 'GKP'}`;
     const text = `Register as a GharKaPaisa partner: ${link}`;
     window.open(`sms:?&body=${encodeURIComponent(text)}`, '_blank');
   };
