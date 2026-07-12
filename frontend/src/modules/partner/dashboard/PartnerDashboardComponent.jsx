@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import api from "../../../services/api";
 import {
   MdDashboard, MdStorefront, MdLeaderboard, MdPeople,
@@ -27,6 +28,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Core Data States
   const [loading, setLoading] = useState(true);
@@ -348,8 +350,8 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       {/* Account Inactive Banner (only shown if KYC is approved but account status is inactive) */}
       {kycStatus === 'approved' && accountStatus === 'inactive' && (
         <div style={{
-          background: "rgba(239, 68, 68, 0.08)",
-          border: "1.5px solid #EF4444",
+          background: isDark ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.08)",
+          border: `1.5px solid ${C.red}`,
           borderRadius: "16px",
           padding: "20px 24px",
           color: C.text,
@@ -360,11 +362,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         }}>
           <span style={{ fontSize: "28px" }}>🟠</span>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: "#DC2626" }}>
-              Account Inactive
+            <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: C.red }}>
+              {t('dashboard.accountInactive', 'Account Inactive')}
             </h4>
             <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
-              Your account is inactive. Please contact support.
+              {t('dashboard.accountInactiveDesc', 'Your account is inactive. Please contact support.')}
             </p>
           </div>
         </div>
@@ -372,14 +374,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
       {/* ──── HEADER BAR ──── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", margin: "4px 0" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Partner Dashboard</h1>
+        <h1 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>
+          {t('dashboard.title', 'Partner Dashboard')}
+        </h1>
         {partnerCode && (
           <div 
             onClick={handleCopyPartnerCode}
             style={{
               display: "flex",
               alignItems: "center",
-              background: "#1E40AF",
+              background: C.primary,
               borderRadius: "8px",
               padding: "6px 12px",
               color: "#FFFFFF",
@@ -387,13 +391,13 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               fontWeight: 700,
               gap: "8px",
               cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(30,64,175,0.2)",
+              boxShadow: `0 2px 4px ${C.primary}30`,
               transition: "transform 0.15s"
             }}
             className="hover-scale"
           >
-            <span>Partner Code</span>
-            <span style={{ background: "#3B82F6", padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase" }}>{partnerCode}</span>
+            <span>{t('dashboard.partnerCode', 'Partner Code')}</span>
+            <span style={{ background: C.primaryDark, padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase" }}>{partnerCode}</span>
             <MdContentCopy size={14} />
           </div>
         )}
@@ -405,16 +409,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         
         {/* Total Applications */}
         <div style={{
-          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
         }}>
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Applications</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>{getLeadsTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{getLeadsTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
+            width: "44px", height: "44px", borderRadius: "12px", background: `${C.primary}15`, color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdDescription size={22} />
@@ -423,16 +427,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
         {/* Approved Applications */}
         <div style={{
-          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
         }}>
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Approved Applications</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>{getApprovedTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{getApprovedTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#ECFDF5", color: "#10B981",
+            width: "44px", height: "44px", borderRadius: "12px", background: `${C.green}15`, color: C.green,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdCheckCircle size={22} />
@@ -441,16 +445,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
         {/* Total Earnings */}
         <div style={{
-          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
         }}>
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Total Earnings</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#10B981", marginTop: "6px" }}>Calculated live</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#F3E8FF", color: "#8B5CF6",
+            width: "44px", height: "44px", borderRadius: "12px", background: `${C.gold}15`, color: C.gold,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
@@ -459,16 +463,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
         {/* Available Balance */}
         <div style={{
-          background: "#FFFFFF", borderRadius: "16px", padding: "20px", border: `1.5px solid #F1F5F9`,
+          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
         }}>
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>Available Balance</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A", marginTop: "6px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", color: "#64748B", marginTop: "6px" }}>Withdraw anytime</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
+            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#3B82F6",
+            width: "44px", height: "44px", borderRadius: "12px", background: `${C.primary}15`, color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
@@ -484,25 +488,25 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1.2",
           minWidth: "300px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Active Campaigns</h3>
-            <span style={{ fontSize: "11px", fontWeight: 800, color: "#3B82F6", background: "#EFF6FF", padding: "2px 8px", borderRadius: "4px" }}>LIVE OFFERS</span>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.activeCampaigns', 'Active Campaigns')}</h3>
+            <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, background: `${C.primary}15`, padding: "2px 8px", borderRadius: "4px" }}>{t('dashboard.liveOffers', 'LIVE OFFERS')}</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
             {activeCampaignsList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: "#64748B", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1 }}>
-                <MdCampaign size={36} style={{ color: "#CBD5E1", marginBottom: "8px" }} />
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>No active offers</div>
-                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>Check back later for active campaigns.</p>
+              <div style={{ textAlign: "center", padding: "32px 0", color: C.textLight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1 }}>
+                <MdCampaign size={36} style={{ color: C.textLight, marginBottom: "8px" }} />
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>{t('dashboard.noActiveOffers', 'No active offers')}</div>
+                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>{t('dashboard.checkBackLaterCampaigns', 'Check back later for active campaigns.')}</p>
               </div>
             ) : (
               activeCampaignsList.map((camp, idx) => {
@@ -513,28 +517,28 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                 return (
                   <div key={idx} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "12px", borderRadius: "12px", border: "1px solid #F1F5F9",
-                    background: "#FAFAFA"
+                    padding: "12px", borderRadius: "12px", border: `1px solid ${C.border}`,
+                    background: C.bgSecondary
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       {logo ? (
                         <img src={logo} alt="" style={{ height: "24px", width: "24px", objectFit: "contain" }} />
                       ) : (
-                        <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>🏦</div>
+                        <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>🏦</div>
                       )}
                       <div>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{camp.name}</div>
-                        <span style={{ fontSize: "11px", color: "#10B981", fontWeight: 700 }}>{payoutValText}</span>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{camp.name}</div>
+                        <span style={{ fontSize: "11px", color: C.green, fontWeight: 700 }}>{payoutValText}</span>
                       </div>
                     </div>
                     <button 
                       onClick={() => handleCopyCampaignLink(camp)}
                       style={{
-                        background: "#FFFFFF", color: "#1E40AF", border: "1px solid #BFDBFE",
+                        background: C.card, color: C.primary, border: `1px solid ${C.border}`,
                         padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer"
                       }}
                     >
-                      Share Link
+                      {t('dashboard.shareLink', 'Share Link')}
                     </button>
                   </div>
                 );
@@ -547,16 +551,16 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1",
           minWidth: "280px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between"
         }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Application Status</h3>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.appStatus', 'Application Status')}</h3>
 
           <div style={{ display: "flex", alignItems: "center", gap: "20px", justifyContent: "center", flex: 1 }}>
             
@@ -566,8 +570,8 @@ export default function PartnerDashboard({ partner, onTabChange }) {
               height: "110px",
               borderRadius: "50%",
               background: kpiTotalApps > 0 
-                ? `conic-gradient(#10B981 0deg ${deg1}deg, #3B82F6 ${deg1}deg ${deg2}deg, #EF4444 ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`
-                : "#F1F5F9",
+                ? `conic-gradient(${C.green} 0deg ${deg1}deg, ${C.primary} ${deg1}deg ${deg2}deg, ${C.red} ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`
+                : C.bgSecondary,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -577,38 +581,38 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                 width: "80px",
                 height: "80px",
                 borderRadius: "50%",
-                background: "#FFFFFF",
+                background: C.card,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center"
               }}>
-                <span style={{ fontSize: "18px", fontWeight: 800, color: "#0F172A" }}>{kpiTotalApps}</span>
-                <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 600 }}>Total</span>
+                <span style={{ fontSize: "18px", fontWeight: 800, color: C.text }}>{kpiTotalApps}</span>
+                <span style={{ fontSize: "10px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.total', 'Total')}</span>
               </div>
             </div>
 
             {/* Labels */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} />
-                <span style={{ color: "#64748B" }}>Approved</span>
-                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiApprovedApps} ({approvedPct}%)</span>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.green }} />
+                <span style={{ color: C.textLight }}>{t('dashboard.approved', 'Approved')}</span>
+                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiApprovedApps} ({approvedPct}%)</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3B82F6" }} />
-                <span style={{ color: "#64748B" }}>Review</span>
-                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiPendingApps} ({pendingPct}%)</span>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.primary }} />
+                <span style={{ color: C.textLight }}>{t('dashboard.review', 'Review')}</span>
+                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiPendingApps} ({pendingPct}%)</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />
-                <span style={{ color: "#64748B" }}>Rejected</span>
-                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiRejectedApps} ({rejectedPct}%)</span>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.red }} />
+                <span style={{ color: C.textLight }}>{t('dashboard.rejected', 'Rejected')}</span>
+                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiRejectedApps} ({rejectedPct}%)</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#8B5CF6" }} />
-                <span style={{ color: "#64748B" }}>Disbursed</span>
-                <span style={{ color: "#0F172A", marginLeft: "auto" }}>{kpiDisbursedApps} ({disbursedPct}%)</span>
+                <span style={{ color: C.textLight }}>{t('dashboard.disbursed', 'Disbursed')}</span>
+                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiDisbursedApps} ({disbursedPct}%)</span>
               </div>
             </div>
 
@@ -619,36 +623,36 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1",
           minWidth: "280px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Recent Applications</h3>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.recentApps', 'Recent Applications')}</h3>
             <button 
               onClick={() => navigate("/partner/applications")}
-              style={{ background: "none", border: "none", color: "#1E40AF", fontSize: "12px", fontWeight: 800, cursor: "pointer" }}
+              style={{ background: "none", border: "none", color: C.primary, fontSize: "12px", fontWeight: 800, cursor: "pointer" }}
             >
-              View All
+              {t('dashboard.viewAll', 'View All')}
             </button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1, justifyContent: "center" }}>
             {recentAppsList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: "#64748B" }}>
-                <MdDescription size={40} style={{ color: "#CBD5E1", marginBottom: "8px" }} />
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>No applications yet</div>
-                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>Start applying for products to submit leads.</p>
+              <div style={{ textAlign: "center", padding: "32px 0", color: C.textLight }}>
+                <MdDescription size={40} style={{ color: C.textLight, marginBottom: "8px" }} />
+                <div style={{ fontSize: "13px", fontWeight: 700 }}>{t('dashboard.noAppsYet', 'No applications yet')}</div>
+                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>{t('dashboard.startApplyingDesc', 'Start applying for products to submit leads.')}</p>
               </div>
             ) : (
               recentAppsList.map((app, idx) => (
                 <div key={idx} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : "1px solid #F8FAFC"
+                  padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : `1px solid ${C.border}`
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <div style={{
@@ -658,8 +662,8 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                       {app.initials}
                     </div>
                     <div>
-                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#0F172A", maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.name}</div>
-                      <span style={{ fontSize: "11px", color: "#64748B" }}>{app.product} · {app.amount}</span>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.name}</div>
+                      <span style={{ fontSize: "11px", color: C.textLight }}>{app.product} · {app.amount}</span>
                     </div>
                   </div>
                   <span style={{
@@ -683,29 +687,29 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1.2",
           minWidth: "300px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
         }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Quick Actions</h3>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.quickActions', 'Quick Actions')}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
             {[
-              { label: "Apply Product", icon: MdStorefront, color: "#3B82F6", route: "/partner/products" },
-              { label: "Add Customer", icon: MdPeople, color: "#10B981", route: "/partner/crm" },
-              { label: "Check Status", icon: MdTimeline, color: "#F59E0B", route: "/partner/applications" },
-              { label: "My Wallet", icon: MdAccountBalanceWallet, color: "#3B82F6", route: "/partner/wallet" },
-              { label: "Training", icon: MdSchool, color: "#EC4899", route: "/partner/training" },
-              { label: "Marketing Tools", icon: MdCampaign, color: "#D97706", route: "/partner/marketing" }
+              { label: t('dashboard.actions.applyProduct', 'Apply Product'), icon: MdStorefront, color: "#3B82F6", route: "/partner/products" },
+              { label: t('dashboard.actions.addCustomer', 'Add Customer'), icon: MdPeople, color: "#10B981", route: "/partner/crm" },
+              { label: t('dashboard.actions.checkStatus', 'Check Status'), icon: MdTimeline, color: "#F59E0B", route: "/partner/applications" },
+              { label: t('dashboard.actions.myWallet', 'My Wallet'), icon: MdAccountBalanceWallet, color: "#3B82F6", route: "/partner/wallet" },
+              { label: t('dashboard.actions.training', 'Training'), icon: MdSchool, color: "#EC4899", route: "/partner/training" },
+              { label: t('dashboard.actions.marketingTools', 'Marketing Tools'), icon: MdCampaign, color: "#D97706", route: "/partner/marketing" }
             ].map((act, idx) => (
               <div 
                 key={idx}
                 onClick={() => navigate(act.route)}
                 style={{
-                  border: "1px solid #F1F5F9", borderRadius: "12px", padding: "14px 10px",
+                  border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 10px",
                   textAlign: "center", cursor: "pointer", display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: "8px", background: "#FFFFFF", transition: "transform 0.15s"
+                  alignItems: "center", gap: "8px", background: C.card, transition: "transform 0.15s"
                 }}
                 className="hover-scale"
               >
@@ -715,7 +719,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
                 }}>
                   <act.icon size={20} />
                 </div>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569" }}>{act.label}</span>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: C.textMid }}>{act.label}</span>
               </div>
             ))}
           </div>
@@ -725,36 +729,36 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1",
           minWidth: "260px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between"
         }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: "0 0 16px" }}>Team Performance</h3>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.teamPerformance', 'Team Performance')}</h3>
           
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
             <div>
               <div style={{ display: "flex", gap: "24px" }}>
                 <div>
-                  <div style={{ fontSize: "22px", fontWeight: 800, color: "#0F172A" }}>
+                  <div style={{ fontSize: "22px", fontWeight: 800, color: C.text }}>
                     {teamDashboard?.total_team_members || 0}
                   </div>
-                  <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Total Members</span>
+                  <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.totalMembers', 'Total Members')}</span>
                 </div>
                 <div>
-                  <div style={{ fontSize: "22px", fontWeight: 800, color: "#10B981" }}>
+                  <div style={{ fontSize: "22px", fontWeight: 800, color: C.green }}>
                     {teamDashboard?.active_team_members || 0}
                   </div>
-                  <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>Active Members</span>
+                  <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.activeMembers', 'Active Members')}</span>
                 </div>
               </div>
             </div>
             <div style={{
-              width: "48px", height: "48px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6",
+              width: "48px", height: "48px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary,
               display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               <MdGroup size={24} />
@@ -764,11 +768,11 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           <button 
             onClick={() => navigate("/partner/team")}
             style={{
-              background: "none", border: "none", color: "#1E40AF", fontSize: "13px", fontWeight: 800,
+              background: "none", border: "none", color: C.primary, fontSize: "13px", fontWeight: 800,
               cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0, marginTop: "16px"
             }}
           >
-            Manage Team <MdChevronRight size={16} />
+            {t('dashboard.manageTeam', 'Manage Team')} <MdChevronRight size={16} />
           </button>
         </div>
 
@@ -776,19 +780,19 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         <div style={{
           flex: "1",
           minWidth: "260px",
-          background: "#FFFFFF",
+          background: C.card,
           borderRadius: "20px",
           padding: "24px",
-          border: `1.5px solid #F1F5F9`,
+          border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A", margin: 0 }}>Monthly Target</h3>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.monthlyTarget', 'Monthly Target')}</h3>
             <div style={{
-              width: "36px", height: "36px", borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6",
+              width: "36px", height: "36px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary,
               display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               <MdCampaign size={18} />
@@ -796,14 +800,14 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           </div>
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>₹{currentEarnings.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
-            <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>of ₹{targetGoal.toLocaleString("en-IN", { maximumFractionDigits: 0 })} target achieved</span>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>₹{currentEarnings.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
+            <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.ofTargetAchieved', 'of ₹{{target}} target achieved', { target: targetGoal.toLocaleString("en-IN", { maximumFractionDigits: 0 }) })}</span>
             
             <div style={{ marginTop: "16px" }}>
-              <div style={{ height: "6px", background: "#F1F5F9", borderRadius: "10px", overflow: "hidden", marginBottom: "6px" }}>
-                <div style={{ width: `${targetPercent}%`, height: "100%", background: "#3B82F6", borderRadius: "10px" }} />
+              <div style={{ height: "6px", background: C.bgSecondary, borderRadius: "10px", overflow: "hidden", marginBottom: "6px" }}>
+                <div style={{ width: `${targetPercent}%`, height: "100%", background: C.primary, borderRadius: "10px" }} />
               </div>
-              <span style={{ fontSize: "11px", color: "#3B82F6", fontWeight: 700 }}>{targetPercent}% completed</span>
+              <span style={{ fontSize: "11px", color: C.primary, fontWeight: 700 }}>{t('dashboard.percentCompleted', '{{percent}}% completed', { percent: targetPercent })}</span>
             </div>
           </div>
         </div>
@@ -816,11 +820,13 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
 // ── PERMISSION LOCK OVERLAY ─────────────────────────────────
 function PermissionOverlay({ C, isRejected }) {
+  const { isDark } = useTheme();
+  const { t } = useTranslation();
   return (
     <div style={{
       position: "absolute",
       inset: 0,
-      background: "rgba(255, 255, 255, 0.12)",
+      background: isDark ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.4)",
       backdropFilter: "blur(4px)",
       zIndex: 10,
       display: "flex",
@@ -844,11 +850,13 @@ function PermissionOverlay({ C, isRejected }) {
       }}>
         <MdLock size={24} />
       </div>
-      <h4 style={{ fontSize: "14px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>Action Blocked</h4>
+      <h4 style={{ fontSize: "14px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>
+        {t('dashboard.actionBlocked', 'Action Blocked')}
+      </h4>
       <p style={{ fontSize: "11px", color: C.textLight, margin: 0, maxWidth: "220px", fontWeight: 600 }}>
         {isRejected 
-          ? "Your KYC documents were rejected. Please fix and re-upload documents in the KYC Centre." 
-          : "Your KYC verification is currently pending. Some features will remain disabled until approval."}
+          ? t('dashboard.kycRejectedDesc', 'Your KYC documents were rejected. Please fix and re-upload documents in the KYC Centre.')
+          : t('dashboard.kycPendingDesc', 'Your KYC verification is currently pending. Some features will remain disabled until approval.')}
       </p>
     </div>
   );
