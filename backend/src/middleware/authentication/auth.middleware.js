@@ -115,14 +115,28 @@ const requireApprovedPartnerOrAdmin = (req, res, next) => {
   return requireApprovedPartner(req, res, next);
 };
 
-const selfOrAdmin = (paramName = 'id') => (req, res, next) => {
-  const targetId = req.params[paramName];
-  const userRole = (req.user.role || '').toUpperCase();
-  if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
-  if (req.user.id.toString() === targetId) return next();
-  if (req.user.PartnerId && req.user.PartnerId.toString() === targetId) return next();
-  if (req.user.partner_id && req.user.partner_id.toString() === targetId) return next();
-  return forbidden(res);
+const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
+  try {
+    const targetId = req.params[paramName];
+    const userRole = (req.user.role || '').toUpperCase();
+    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
+    if (req.user.id.toString() === targetId) return next();
+    if (req.user.PartnerId && req.user.PartnerId.toString() === targetId) return next();
+    if (req.user.partner_id && req.user.partner_id.toString() === targetId) return next();
+
+    // Check if current user is parent/ancestor of target partner
+    if (req.user.PartnerId) {
+      const { rows } = await query(`
+        SELECT 1 FROM partner_team_relationships
+        WHERE parent_partner_id = $1 AND child_partner_id = $2
+      `, [req.user.PartnerId, targetId]);
+      if (rows.length > 0) return next();
+    }
+
+    return forbidden(res);
+  } catch (err) {
+    next(err);
+  }
 };
 
 const optionalAuth = async (req, res, next) => {

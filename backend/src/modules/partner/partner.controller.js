@@ -775,7 +775,13 @@ const getTeamMembers = async (req, res, next) => {
 
     const { rows: team } = await query(`
       SELECT ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status,
-             u.email, u.mobile, u.status, u.created_at
+             u.email, u.mobile, u.status, u.created_at,
+             (SELECT COUNT(*)::int FROM applications WHERE partner_id = ap.id) as applications_count,
+             (SELECT COALESCE(SUM(wt.amount), 0)::float 
+              FROM wallet_transactions wt 
+              JOIN wallets w ON w.id = wt.wallet_id 
+              WHERE w.partner_id = ap.id AND wt.reference_type = 'commission') as commission_amount,
+             (SELECT COALESCE(available_balance, 0)::float FROM wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1

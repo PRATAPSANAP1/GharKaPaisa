@@ -358,7 +358,52 @@ const updateStatus = async (req, res, next) => {
     // Notifications
     const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [app.partner_id]);
     if (partner) {
-      if (status === 'approved') await notify.applicationApproved(partner.user_id, app.app_number, app.commission_amount);
+      if (status === 'approved') {
+        await notify.applicationApproved(partner.user_id, app.app_number, app.commission_amount);
+        
+        // Parent team notifications
+        try {
+          const { query: queryDB } = require('../../config/database');
+          const { createNotification } = require('../notifications/service.js');
+          
+          const { rows: [{ count }] } = await queryDB(`
+            SELECT COUNT(*)::int FROM applications 
+            WHERE partner_id = $1 AND status = 'approved'
+          `, [app.partner_id]);
+          
+          const { rows: [childProfile] } = await queryDB(`
+            SELECT first_name, last_name, parent_partner_id FROM partner_profiles WHERE id = $1
+          `, [app.partner_id]);
+
+          if (childProfile && childProfile.parent_partner_id) {
+            const { rows: [parentProfile] } = await queryDB(`
+              SELECT user_id FROM partner_profiles WHERE id = $1
+            `, [childProfile.parent_partner_id]);
+            
+            if (parentProfile && parentProfile.user_id) {
+              if (count === 1) {
+                await createNotification(
+                  parentProfile.user_id,
+                  '🎉 Team Member First Sale!',
+                  `${childProfile.first_name} ${childProfile.last_name} completed their first sale!`,
+                  'success',
+                  '/partner/team-network'
+                );
+              } else {
+                await createNotification(
+                  parentProfile.user_id,
+                  '💰 Team Member Earned Commission',
+                  `${childProfile.first_name} ${childProfile.last_name} earned a commission on application ${app.app_number}!`,
+                  'success',
+                  '/partner/team-network'
+                );
+              }
+            }
+          }
+        } catch (err) {
+          logger.error('Failed to notify parent on child sale:', err.message);
+        }
+      }
       if (status === 'rejected') await notify.applicationRejected(partner.user_id, app.app_number, remarks);
     }
 

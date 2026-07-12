@@ -166,10 +166,31 @@ const notify = {
     createNotification(userId, '🔍 KYC Under Review', 'Your KYC documents are now being reviewed by our compliance team.', 'info', `/partner/profile`, { category: 'kyc' }),
 };
 
+const notifyParent = async (childPartnerId, title, message, type = 'info', link = null, opts = {}) => {
+  try {
+    const { rows: [partner] } = await query(`
+      SELECT parent_partner_id FROM partner_profiles WHERE id = $1
+    `, [childPartnerId]);
+    
+    if (partner && partner.parent_partner_id) {
+      const { rows: [parent] } = await query(`
+        SELECT user_id FROM partner_profiles WHERE id = $1
+      `, [partner.parent_partner_id]);
+      
+      if (parent && parent.user_id) {
+        await createNotification(parent.user_id, title, message, type, link, opts);
+      }
+    }
+  } catch (err) {
+    logger.error('Failed to notify parent:', err.message);
+  }
+};
+
 module.exports = { 
   createNotification, 
   bulkNotify, 
   notify, 
+  notifyParent,
   registerClient, 
   unregisterClient, 
   sendLiveUpdate,
