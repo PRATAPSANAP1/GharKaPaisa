@@ -124,7 +124,7 @@ export default function PartnerProducts() {
     <div style={{ display: 'flex', gap: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px', flexWrap: 'wrap' }}>
       
       {/* ═══ SIDEBAR FILTERS ═══ */}
-      <aside style={{ width: '240px', flexShrink: 0 }}>
+      <aside style={{ width: '240px', flexShrink: 0, position: 'sticky', top: '94px', alignSelf: 'start', zIndex: 10 }}>
         <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
           <h3 style={{ fontWeight: 700, color: C.text, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '15px' }}>
             <MdFilterList /> Filter Market
