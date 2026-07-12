@@ -568,7 +568,8 @@ const register = async (req, res, next) => {
 
       if (referral_code && role === 'PARTNER') {
         const { rows: [parentPartner] } = await client.query(`
-          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles WHERE partner_code = $1
+          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles 
+          WHERE partner_code = $1 OR id::text = $1
         `, [referral_code]);
         if (parentPartner) {
           if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {

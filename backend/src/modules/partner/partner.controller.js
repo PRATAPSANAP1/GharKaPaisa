@@ -802,7 +802,7 @@ const invitePartnerClick = async (req, res, next) => {
     await query(`
       UPDATE partner_referrals 
       SET total_invites = total_invites + 1 
-      WHERE referral_code = $1
+      WHERE referral_code = $1 OR partner_id::text = $1
     `, [ref]);
 
     return success(res, {}, 'Invite recorded');
@@ -981,21 +981,25 @@ const getReferralInfo = async (req, res, next) => {
       SELECT * FROM partner_referrals WHERE partner_id = $1
     `, [partnerId]);
 
+    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${partnerId}`;
+
     if (!referral) {
       const { rows: [partner] } = await query(`
         SELECT partner_code FROM partner_profiles WHERE id = $1
       `, [partnerId]);
       
-      const code = partner?.partner_code || partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
-      const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${code}`;
+      const code = partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
       
       const { rows: [newRef] } = await query(`
         INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
         VALUES ($1, $2, $3)
         ON CONFLICT (partner_id) DO UPDATE SET referral_code = EXCLUDED.referral_code RETURNING *
-      `, [partnerId, code, referralLink]);
+      `, [partnerId, code, codeReferralLink]);
       referral = newRef;
     }
+
+    // Always overwrite referralLink response to use partnerId
+    referral.referral_link = codeReferralLink;
 
     return success(res, referral);
   } catch (err) {
