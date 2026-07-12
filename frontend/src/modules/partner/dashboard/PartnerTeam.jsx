@@ -169,27 +169,27 @@ export default function PartnerTeam() {
   };
 
   const copyReferralLink = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerId || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const shareOnWhatsapp = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerId || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
     const text = `Join my GharKaPaisa partner network using my invite link and start earning: ${link}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareViaEmail = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerId || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
     const subject = `Opportunity to partner with GharKaPaisa`;
     const body = `Hi,\n\nJoin my partner network at GharKaPaisa and start earning overrides on payouts. Register using this referral link:\n${link}\n\nRegards,\n${user.first_name}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   const shareViaSMS = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${partnerId || 'GKP'}`;
+    const link = `https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`;
     const text = `Register as a GharKaPaisa partner: ${link}`;
     window.open(`sms:?&body=${encodeURIComponent(text)}`, '_blank');
   };
@@ -1404,7 +1404,7 @@ export default function PartnerTeam() {
       )}
 
       {/* QR Code Modal */}
-      {isQrOpen && referralInfo && (
+      {isQrOpen && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1431,14 +1431,14 @@ export default function PartnerTeam() {
               border: `1px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
             }}>
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralInfo.referral_link)}`} 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://gharkapaisa.in/register?ref=${user?.id || 'GKP'}`)}`} 
                 alt="Referral QR Code" 
                 style={{ width: '180px', height: '180px', display: 'block' }}
               />
             </div>
 
             <p style={{ fontSize: '11px', color: C.textLight, textAlign: 'center', margin: 0 }}>
-              Scan this code to load the partner registration form with referral code <span style={{ fontWeight: 700, color: C.primary }}>{referralInfo.referral_code}</span>
+              Scan this code to load the partner registration form with referral ID <span style={{ fontWeight: 700, color: C.primary, wordBreak: 'break-all', display: 'block', marginTop: '4px' }}>{user?.id || 'N/A'}</span>
             </p>
           </div>
         </div>

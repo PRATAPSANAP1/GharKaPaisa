@@ -802,7 +802,9 @@ const invitePartnerClick = async (req, res, next) => {
     await query(`
       UPDATE partner_referrals 
       SET total_invites = total_invites + 1 
-      WHERE referral_code = $1 OR partner_id::text = $1
+      WHERE referral_code = $1 
+        OR partner_id::text = $1
+        OR partner_id IN (SELECT id FROM partner_profiles WHERE user_id::text = $1)
     `, [ref]);
 
     return success(res, {}, 'Invite recorded');
@@ -981,13 +983,14 @@ const getReferralInfo = async (req, res, next) => {
       SELECT * FROM partner_referrals WHERE partner_id = $1
     `, [partnerId]);
 
-    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${partnerId}`;
+    const { rows: [partner] } = await query(`
+      SELECT user_id, partner_code FROM partner_profiles WHERE id = $1
+    `, [partnerId]);
+    
+    const userId = partner?.user_id || partnerId;
+    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${userId}`;
 
     if (!referral) {
-      const { rows: [partner] } = await query(`
-        SELECT partner_code FROM partner_profiles WHERE id = $1
-      `, [partnerId]);
-      
       const code = partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
       
       const { rows: [newRef] } = await query(`
@@ -998,7 +1001,7 @@ const getReferralInfo = async (req, res, next) => {
       referral = newRef;
     }
 
-    // Always overwrite referralLink response to use partnerId
+    // Always overwrite referralLink response to use userId
     referral.referral_link = codeReferralLink;
 
     return success(res, referral);
