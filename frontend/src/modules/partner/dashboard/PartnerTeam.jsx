@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { 
   MdAdd, MdPerson, MdEmail, MdPhone, MdCheckCircle, 
   MdPendingActions, MdClose, MdContentCopy,
@@ -16,6 +17,7 @@ export default function PartnerTeam() {
   const S = makeS(C);
 
   const user = useAuthStore((state) => state.user);
+  const { t } = useTranslation();
   
   // State variables
   const [team, setTeam] = useState([]);
@@ -163,27 +165,27 @@ export default function PartnerTeam() {
   };
 
   const copyReferralLink = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
     navigator.clipboard.writeText(link);
     alert('Referral link copied to clipboard!');
   };
 
   const shareOnWhatsapp = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
     const text = `Join my GharKaPaisa partner network using my invite link and start earning: ${link}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const shareViaEmail = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
     const subject = `Opportunity to partner with GharKaPaisa`;
     const body = `Hi,\n\nJoin my partner network at GharKaPaisa and start earning overrides on payouts. Register using this referral link:\n${link}\n\nRegards,\n${user.first_name}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   const shareViaSMS = () => {
-    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.PartnerCode || 'GKP'}`;
-    const text = `Register as a GharKaPaisa partner using code ${user?.PartnerCode || 'GKP'}: ${link}`;
+    const link = referralInfo?.referral_link || `https://gharkapaisa.in/register?ref=${user?.Partner_code || 'GKP'}`;
+    const text = `Register as a GharKaPaisa partner using code ${user?.Partner_code || 'GKP'}: ${link}`;
     window.open(`sms:?&body=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -278,8 +280,8 @@ export default function PartnerTeam() {
       {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>My Team & Hierarchy</h2>
-          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Invite sub-partners, manage your team network, check commissions and monitor performance.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('team.title', 'My Team & Hierarchy')}</h2>
+          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>{t('team.subtitle', 'Invite sub-partners, manage your team network, check commissions and monitor performance.')}</p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -288,7 +290,7 @@ export default function PartnerTeam() {
             display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer'
           }}
         >
-          <MdAdd size={20} /> Add Direct Partner
+          <MdAdd size={20} /> {t('team.addDirectPartner', 'Add Direct Partner')}
         </button>
       </div>
 
@@ -297,80 +299,80 @@ export default function PartnerTeam() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.primary}12`, color: C.primary, borderRadius: '10px' }}>
-              <MdPeople size={20} />
+              <MdPeople size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Total Team Size</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.totalTeamSize', 'Total Team Size')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.total_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.green}12`, color: C.green, borderRadius: '10px' }}>
-              <MdPerson size={20} />
+              <MdPerson size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Direct Partners (L1)</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.directPartnersL1', 'Direct Partners (L1)')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.level_1_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.gold}12`, color: C.gold, borderRadius: '10px' }}>
-              <MdDeviceHub size={20} />
+              <MdDeviceHub size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Level 2 Team</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.level2Team', 'Level 2 Team')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.level_2_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.primary}12`, color: C.primary, borderRadius: '10px' }}>
-              <MdDeviceHub size={20} />
+              <MdDeviceHub size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Level 3 Team</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.level3Team', 'Level 3 Team')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.level_3_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.green}12`, color: C.green, borderRadius: '10px' }}>
-              <MdTrendingUp size={20} />
+              <MdTrendingUp size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Today's Registrations</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.todaysRegistrations', "Today's Registrations")}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.joined_today || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.green}12`, color: C.green, borderRadius: '10px' }}>
-              <MdCheckCircle size={20} />
+              <MdCheckCircle size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Active Partners</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.activePartners', 'Active Partners')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.active_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.gold}12`, color: C.gold, borderRadius: '10px' }}>
-              <MdPendingActions size={20} />
+              <MdPendingActions size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Inactive Partners</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.inactivePartners', 'Inactive Partners')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.inactive_members || 0}</h3>
             </div>
           </div>
 
           <div style={{ ...S.card, padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '10px', background: `${C.red}12`, color: C.red, borderRadius: '10px' }}>
-              <MdBlock size={20} />
+              <MdBlock size={22} />
             </div>
             <div>
-              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>Blocked / Suspended</p>
+              <p style={{ fontSize: '11px', color: C.textLight, margin: 0, fontWeight: 600 }}>{t('team.blockedSuspended', 'Blocked / Suspended')}</p>
               <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0', color: C.text }}>{teamDashboard.blocked_partners || 0}</h3>
             </div>
           </div>
@@ -391,10 +393,24 @@ export default function PartnerTeam() {
         }} />
         
         <div style={{ flex: 1, minWidth: '280px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>Invite Sub-Partners & Build Your Business Hierarchy</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>{t('team.inviteSubPartnersTitle', 'Invite Sub-Partners & Build Your Business Hierarchy')}</h3>
           <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, maxWidth: '460px' }}>
-            Every partner registered via your code becomes a child partner. Share your referral link via multiple social channels below:
+            {t('team.inviteSubPartnersDesc', 'Every partner registered via your code becomes a child partner. Share your referral link via multiple social channels below:')}
           </p>
+          <div style={{ marginTop: '12px', fontSize: '12.5px', background: 'rgba(255, 255, 255, 0.15)', padding: '8px 12px', borderRadius: '8px', display: 'inline-flex', flexDirection: 'column', gap: '4px', border: '1px solid rgba(255, 255, 255, 0.25)' }}>
+            <div>
+              <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>{t('team.partnerCodeLabel', 'Partner Code')}: </span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px', marginLeft: '4px' }}>
+                {user?.Partner_code || 'N/A'}
+              </span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)' }}>
+              <span>{t('team.partnerIdLabel', 'Partner ID')}: </span>
+              <span style={{ fontFamily: 'monospace' }}>
+                {user?.PartnerId || 'N/A'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -407,7 +423,7 @@ export default function PartnerTeam() {
               cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
             }}
           >
-            <MdContentCopy size={16} /> Copy Link
+            <MdContentCopy size={16} /> {t('team.copyLink', 'Copy Link')}
           </button>
           <button 
             onClick={shareOnWhatsapp}
@@ -418,7 +434,7 @@ export default function PartnerTeam() {
               cursor: 'pointer'
             }}
           >
-            <MdOutlineWhatsapp size={16} /> WhatsApp
+            <MdOutlineWhatsapp size={16} /> {t('team.whatsapp', 'WhatsApp')}
           </button>
           <button 
             onClick={shareViaEmail}
@@ -429,7 +445,7 @@ export default function PartnerTeam() {
               cursor: 'pointer'
             }}
           >
-            <MdEmail size={16} /> Email Link
+            <MdEmail size={16} /> {t('team.emailLink', 'Email Link')}
           </button>
           <button 
             onClick={shareViaSMS}
@@ -440,7 +456,7 @@ export default function PartnerTeam() {
               cursor: 'pointer'
             }}
           >
-            <MdShare size={16} /> SMS Invite
+            <MdShare size={16} /> {t('team.smsInvite', 'SMS Invite')}
           </button>
           <button 
             onClick={() => setIsQrOpen(true)}
@@ -451,7 +467,7 @@ export default function PartnerTeam() {
               cursor: 'pointer'
             }}
           >
-            <MdOutlineQrCode2 size={16} /> QR Code
+            <MdOutlineQrCode2 size={16} /> {t('team.qrCode', 'QR Code')}
           </button>
         </div>
       </div>
@@ -465,14 +481,14 @@ export default function PartnerTeam() {
           padding: '8px', gap: '6px', background: C.bgSecondary
         }}>
           {[
-            { id: 'overview', label: 'Overview', icon: MdInfo },
-            { id: 'direct_team', label: 'Direct Team (L1)', icon: MdPeople },
-            { id: 'complete_tree', label: 'Complete Tree', icon: MdDeviceHub },
-            { id: 'performance', label: 'Performance', icon: MdAnalytics },
-            { id: 'commissions', label: 'MLM Commissions', icon: MdMonetizationOn },
-            { id: 'leaderboard', label: 'Leaderboard', icon: MdLeaderboard },
-            { id: 'pending_members', label: 'Pending KYC', icon: MdPendingActions },
-            { id: 'inactive_members', label: 'Inactive Members', icon: MdBlock }
+            { id: 'overview', label: t('team.tabs.overview', 'Overview'), icon: MdInfo },
+            { id: 'direct_team', label: t('team.tabs.directTeam', 'Direct Team (L1)'), icon: MdPeople },
+            { id: 'complete_tree', label: t('team.tabs.completeTree', 'Complete Tree'), icon: MdDeviceHub },
+            { id: 'performance', label: t('team.tabs.performance', 'Performance'), icon: MdAnalytics },
+            { id: 'commissions', label: t('team.tabs.mlmCommissions', 'MLM Commissions'), icon: MdMonetizationOn },
+            { id: 'leaderboard', label: t('team.tabs.leaderboard', 'Leaderboard'), icon: MdLeaderboard },
+            { id: 'pending_members', label: t('team.tabs.pendingKyc', 'Pending KYC'), icon: MdPendingActions },
+            { id: 'inactive_members', label: t('team.tabs.inactiveMembers', 'Inactive Members'), icon: MdBlock }
           ].map(tab => (
             <button
               key={tab.id}
@@ -506,7 +522,7 @@ export default function PartnerTeam() {
               <MdSearch size={20} color={C.textLight} />
               <input 
                 type="text" 
-                placeholder="Search sub-partners by name, code or email..."
+                placeholder={t('team.searchPlaceholder', 'Search sub-partners by name, code or email...')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{

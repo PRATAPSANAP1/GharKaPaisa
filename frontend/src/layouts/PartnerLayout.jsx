@@ -56,7 +56,6 @@ export default function PartnerLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -162,7 +161,7 @@ export default function PartnerLayout() {
       {/* ──── DESKTOP SIDEBAR ──── */}
       {!isMobile && (
         <aside style={{
-          width: sidebarCollapsed ? '80px' : '280px',
+          width: '280px',
           background: SIDEBAR_BG,
           borderRight: `1px solid ${C.border}`,
           display: 'flex',
@@ -170,26 +169,24 @@ export default function PartnerLayout() {
           flexShrink: 0,
           height: '100%',
           overflow: 'hidden',
-          transition: 'width 0.2s ease',
         }}>
           {/* Logo */}
           <div style={{
-            padding: sidebarCollapsed ? '20px 0' : '20px 24px',
+            padding: '20px 24px',
             borderBottom: `1px solid ${C.border}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             gap: '12px',
           }}>
             <img src={logo} alt="Logo" style={{ height: '32px' }} />
-            {!sidebarCollapsed && <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>Partner Panel</h2>}
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>{t('partnerLayout.panelTitle', 'Partner Panel')}</h2>
           </div>
 
           {/* Nav Items */}
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: sidebarCollapsed ? '16px 8px' : '16px 12px',
+            padding: '16px 12px',
           }}>
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
@@ -200,13 +197,11 @@ export default function PartnerLayout() {
                   key={item.id}
                   id={`partner-nav-${item.id}`}
                   to={item.path}
-                  title={sidebarCollapsed ? t('partnerLayout.' + item.id.replace(/-/g, ''), item.label) : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                    gap: sidebarCollapsed ? '0' : '12px',
-                    padding: sidebarCollapsed ? '12px 0' : '10px 16px',
+                    gap: '12px',
+                    padding: '10px 16px',
                     borderRadius: '12px',
                     fontSize: '14px',
                     fontWeight: 600,
@@ -219,7 +214,7 @@ export default function PartnerLayout() {
                   }}
                 >
                   <Icon size={20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
-                  {!sidebarCollapsed && t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                 </NavLink>
               );
             })}
@@ -227,100 +222,90 @@ export default function PartnerLayout() {
 
           {/* Sidebar Footer */}
           <div style={{
-            padding: sidebarCollapsed ? '16px 8px' : '16px',
+            padding: '16px',
             borderTop: `1px solid ${C.border}`,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            alignItems: sidebarCollapsed ? 'center' : 'stretch',
           }}>
             {/* Theme toggle */}
-            {sidebarCollapsed ? (
-              <ThemeToggle />
-            ) : (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
-                    {isDark ? 'DARK' : 'LIGHT'}
-                  </span>
-                </div>
-                <ThemeToggle />
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
+                  {isDark ? t('partnerLayout.dark', 'DARK') : t('partnerLayout.light', 'LIGHT')}
+                </span>
               </div>
-            )}
+              <ThemeToggle />
+            </div>
 
             {/* Language Selector */}
-            {!sidebarCollapsed && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
-                  🌐 Language
-                </div>
-                <select
-                  value={i18n.language}
-                  onChange={(e) => i18n.changeLanguage(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: `1px solid ${C.border}`,
-                    background: C.inputBg || C.card,
-                    color: C.text,
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    outline: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="en">English</option>
-                  <option value="hi">हिंदी</option>
-                  <option value="mr">मराठी</option>
-                  <option value="te">తెలుగు</option>
-                  <option value="kn">ಕನ್ನಡ</option>
-                  <option value="ta">தமிழ்</option>
-                  <option value="bn">বাংলা</option>
-                  <option value="gu">ગુજરાતી</option>
-                  <option value="or">ଓଡ଼ିଆ</option>
-                </select>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
+                🌐 {t('partnerLayout.language', 'Language')}
               </div>
-            )}
+              <select
+                value={i18n.language}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: `1px solid ${C.border}`,
+                  background: C.inputBg || C.card,
+                  color: C.text,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="en">English</option>
+                <option value="hi">हिंदी</option>
+                <option value="mr">मराठी</option>
+                <option value="te">తెలుగు</option>
+                <option value="kn">ಕನ್ನಡ</option>
+                <option value="ta">தமிழ்</option>
+                <option value="bn">বাংলা</option>
+                <option value="gu">ગુજરાતી</option>
+                <option value="or">ଓଡ଼ିଆ</option>
+              </select>
+            </div>
 
             {/* Logout */}
             <button
               id="partner-logout-button"
               onClick={handleLogout}
-              title={sidebarCollapsed ? t('partnerLayout.logout', 'Logout') : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: sidebarCollapsed ? '0' : '8px',
+                gap: '8px',
                 background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
                 color: '#EF4444',
                 border: 'none',
                 borderRadius: '10px',
-                padding: sidebarCollapsed ? '12px' : '12px 16px',
+                padding: '12px 16px',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                width: sidebarCollapsed ? '44px' : 'auto',
-                height: sidebarCollapsed ? '44px' : 'auto',
               }}
             >
-              <MdLogout size={20} />
-              {!sidebarCollapsed && t('partnerLayout.logout', 'Logout')}
+              <MdLogout size={18} />
+              {t('partnerLayout.logout', 'Logout')}
             </button>
           </div>
         </aside>
@@ -343,6 +328,7 @@ export default function PartnerLayout() {
           padding: '0 16px',
         }}>
           <button
+            id="partner-mobile-hamburger"
             onClick={() => setMobileMenuOpen(true)}
             style={{
               padding: '8px',
@@ -520,8 +506,6 @@ export default function PartnerLayout() {
             navigate={navigate}
             t={t}
             i18n={i18n}
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
           />
         )}
         {/* Status Banners */}
@@ -590,10 +574,10 @@ export default function PartnerLayout() {
 
         {kycStatus === 'rejected' && (
           <div style={{
-            background: user?.rejection_reason ? 'linear-gradient(135deg, #DC2626, #B91C1C)' : '#F59E0B',
+            background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
             color: '#fff',
             padding: '14px 20px',
-            boxShadow: user?.rejection_reason ? '0 2px 8px rgba(220,38,38,0.25)' : '0 2px 8px rgba(0,0,0,0.1)',
+            boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
             display: 'flex',
             alignItems: isMobile ? 'flex-start' : 'center',
             justifyContent: 'space-between',
@@ -604,28 +588,21 @@ export default function PartnerLayout() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
               <MdVerifiedUser size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                {user?.rejection_reason ? (
-                  <>
-                    <strong>{t('partnerLayout.kycRejected', 'KYC Rejected:')}</strong>{' '}
-                    {t('partnerLayout.kycRejectedMsg', 'Your KYC verification was rejected. Please re-upload your documents.')}
-                    <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
-                      <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <strong>{t('partnerLayout.kycRequired', 'KYC Verification Required:')}</strong>{' '}
-                    {t('partnerLayout.kycRequiredMsg', 'Please upload your KYC documents to activate your partner profile. Some features will remain disabled until verification is completed.')}
-                  </>
+                <strong>{t('partnerLayout.kycRejected', 'KYC Rejected:')}</strong>{' '}
+                {t('partnerLayout.kycRejectedMsg', 'Your KYC verification was rejected. Please re-upload your documents.')}
+                {user?.rejection_reason && (
+                  <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
+                    <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}
+                  </div>
                 )}
               </div>
             </div>
             {!isKycPage && (
               <button
-                onClick={() => navigate('/partner/kyc-centre')}
+                onClick={() => navigate('/partner/kyc')}
                 style={{
                   background: '#fff',
-                  color: user?.rejection_reason ? '#DC2626' : '#D97706',
+                  color: '#DC2626',
                   padding: '8px 16px',
                   borderRadius: '8px',
                   fontSize: '13px',
@@ -636,9 +613,7 @@ export default function PartnerLayout() {
                   cursor: 'pointer',
                 }}
               >
-                {user?.rejection_reason 
-                  ? t('partnerLayout.reuploadKyc', 'Re-upload Documents') 
-                  : t('partnerLayout.uploadDocuments', 'Upload Documents')}
+                {t('partnerLayout.reuploadKyc', 'Re-upload Documents')}
               </button>
             )}
           </div>
@@ -743,8 +718,7 @@ export default function PartnerLayout() {
 }
 
 // ── DESKTOP HEADER COMPONENT ─────────────────────────────────
-function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSidebarCollapsed }) {
-  const { isDark } = useTheme();
+function DesktopHeader({ C, user, navigate, t, i18n }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -871,34 +845,13 @@ function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSideba
       boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
       flexShrink: 0
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '8px',
-            borderRadius: '8px',
-            color: C.text,
-            transition: 'background 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-        >
-          <MdMenu size={24} style={{ color: SIDEBAR_TEXT }} />
-        </button>
-
-        {/* Search Input */}
-        <div style={{ position: 'relative', width: '380px' }}>
+      {/* Search Input */}
+      <div style={{ position: 'relative', width: '380px' }}>
         <div style={{ display: 'flex', alignItems: 'center', background: C.bgSecondary, borderRadius: '10px', padding: '0 12px', border: `1.5px solid ${C.border}` }}>
           <MdSearch size={20} style={{ color: SIDEBAR_TEXT }} />
           <input
             type="text"
-            placeholder="Search Customer, Application, Product..."
+            placeholder={t('partnerLayout.searchPlaceholder', 'Search Customer, Application, Product...')}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -987,7 +940,6 @@ function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSideba
           </div>
         )}
       </div>
-    </div>
 
       {/* Right Strip */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -1009,7 +961,7 @@ function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSideba
         >
           <span style={{ fontSize: '14px' }}>💳</span>
           <div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Balance</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('partnerLayout.balance', 'Balance')}</div>
             <div style={{ fontSize: '13px', fontWeight: 800, color: C.green }}>{walletBalance}</div>
           </div>
         </div>
@@ -1114,8 +1066,8 @@ function DesktopHeader({ C, user, navigate, t, i18n, sidebarCollapsed, setSideba
             {user?.name?.[0]?.toUpperCase() || 'P'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || "Partner"}</div>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.PartnerCode || "GKP000"}</div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || t('partnerLayout.partner', 'Partner')}</div>
+            <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.Partner_code || "GKP000"}</div>
           </div>
         </div>
 
