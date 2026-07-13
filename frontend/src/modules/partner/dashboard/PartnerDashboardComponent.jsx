@@ -408,10 +408,17 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
         
         {/* Total Applications */}
-        <div style={{
-          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
-        }}>
+        <div 
+          onClick={() => navigate('/partner/applications')}
+          style={{
+            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+          }}
+          className="hover-card-clickable"
+          role="button"
+          tabIndex={0}
+        >
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
@@ -426,10 +433,17 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
 
         {/* Approved Applications */}
-        <div style={{
-          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
-        }}>
+        <div 
+          onClick={() => navigate('/partner/applications?status=approved')}
+          style={{
+            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+          }}
+          className="hover-card-clickable"
+          role="button"
+          tabIndex={0}
+        >
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
@@ -444,10 +458,17 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
 
         {/* Total Earnings */}
-        <div style={{
-          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
-        }}>
+        <div 
+          onClick={() => navigate('/partner/wallet')}
+          style={{
+            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+          }}
+          className="hover-card-clickable"
+          role="button"
+          tabIndex={0}
+        >
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
@@ -462,10 +483,17 @@ export default function PartnerDashboard({ partner, onTabChange }) {
         </div>
 
         {/* Available Balance */}
-        <div style={{
-          background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between"
-        }}>
+        <div 
+          onClick={() => navigate('/partner/wallet')}
+          style={{
+            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+          }}
+          className="hover-card-clickable"
+          role="button"
+          tabIndex={0}
+        >
           <div>
             <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
             <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
