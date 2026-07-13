@@ -5,7 +5,10 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
 import { useAuthStore } from '../../../app/store/authStore';
 
-import { MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, MdAccessTime, MdInfoOutline } from 'react-icons/md';
+import { 
+  MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
+  MdAccessTime, MdInfoOutline, MdClose, MdShare, MdChevronRight 
+} from 'react-icons/md';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
@@ -26,6 +29,15 @@ export default function PartnerProducts() {
   
   const { user } = useAuthStore();
   const partnerCode = user?.partner_code || user?.Partner_code || '';
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleCopyLink = (product) => {
     if (!partnerCode) {
@@ -122,115 +134,231 @@ export default function PartnerProducts() {
 
   const sectionLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' };
 
-  return (
-    <div style={{ display: 'flex', gap: '24px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px', flexWrap: 'wrap' }}>
-      
-      {/* ═══ SIDEBAR FILTERS ═══ */}
-      <aside style={{ width: '240px', flexShrink: 0, position: 'sticky', top: '94px', alignSelf: 'start', zIndex: 10 }}>
-        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-          <h3 style={{ fontWeight: 700, color: C.text, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '15px' }}>
-            <MdFilterList /> Filter Market
-          </h3>
+  // Helper to render filter options block
+  const renderFilterContent = () => (
+    <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h3 style={{ fontWeight: 700, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '15px' }}>
+          <MdFilterList /> Filter Market
+        </h3>
+        {isMobile && (
+          <button 
+            onClick={() => setShowMobileFilter(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMid, padding: '4px' }}
+          >
+            <MdClose size={20} />
+          </button>
+        )}
+      </div>
 
-          {/* Categories */}
-          <p style={sectionLabel}>{t("Categories")}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
-            {CATEGORIES.map(cat => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button 
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  style={{
-                    textAlign: 'left', padding: '8px 12px', borderRadius: '10px',
-                    fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
-                    color: isActive ? '#fff' : C.textMid,
-                  }}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
+      {/* Categories */}
+      <p style={sectionLabel}>{t("Categories")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+        {CATEGORIES.map(cat => {
+          const isActive = activeCategory === cat.id;
+          return (
+            <button 
+              key={cat.id}
+              onClick={() => { setActiveCategory(cat.id); if (isMobile) setShowMobileFilter(false); }}
+              style={{
+                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
+                color: isActive ? '#fff' : C.textMid,
+              }}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
 
-          <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
-          {/* Banks */}
-          <p style={sectionLabel}>{t("Filter by Bank")}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
-            {BANKS.map(bank => {
-              const isActive = activeBank === bank;
-              return (
-                <label key={bank} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '6px 8px', cursor: 'pointer'
-                }}>
-                  <div style={{
-                    width: 16, height: 16, borderRadius: '4px',
-                    border: `1.5px solid ${isActive ? C.primary : C.border}`,
-                    background: isActive ? C.primary : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s ease', flexShrink: 0
-                  }}>
-                    {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
-                  <input 
-                    type="radio" 
-                    name="bankFilter" 
-                    value={bank}
-                    checked={activeBank === bank}
-                    onChange={(e) => setActiveBank(e.target.value)}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              );
-            })}
-          </div>
-
-          <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
-
-          {/* Quick Features */}
-          <p style={sectionLabel}>{t("Quick Features")}</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {[
-              { label: 'High Approval', color: C.green },
-              { label: 'Lifetime Free', color: C.gold },
-              { label: 'Highest Payout', color: C.primary }
-            ].map(f => (
-              <span key={f.label} style={{
-                ...S.tag(f.color), padding: '6px 10px', fontSize: '11px', cursor: 'pointer'
+      {/* Banks */}
+      <p style={sectionLabel}>{t("Filter by Bank")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+        {BANKS.map(bank => {
+          const isActive = activeBank === bank;
+          return (
+            <label key={bank} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px', cursor: 'pointer', borderRadius: '8px',
+              background: isActive ? `${C.primary}08` : 'transparent'
+            }}>
+              <div style={{
+                width: 16, height: 16, borderRadius: '4px',
+                border: `1.5px solid ${isActive ? C.primary : C.border}`,
+                background: isActive ? C.primary : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s ease', flexShrink: 0
               }}>
-                {f.label}
-              </span>
-            ))}
+                {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
+              <input 
+                type="radio" 
+                name="bankFilter" 
+                value={bank}
+                checked={activeBank === bank}
+                onChange={(e) => { setActiveBank(e.target.value); if (isMobile) setShowMobileFilter(false); }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+
+      {/* Quick Features */}
+      <p style={sectionLabel}>{t("Quick Features")}</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {[
+          { label: 'High Approval', color: C.green },
+          { label: 'Lifetime Free', color: C.gold },
+          { label: 'Highest Payout', color: C.primary }
+        ].map(f => (
+          <span key={f.label} style={{
+            ...S.tag(f.color), padding: '6px 10px', fontSize: '11px', cursor: 'pointer'
+          }}>
+            {f.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: '20px',
+      maxWidth: '1280px',
+      margin: '0 auto',
+      paddingBottom: isMobile ? '80px' : '40px',
+      boxSizing: 'border-box'
+    }}>
+      
+      {/* ═══ DESKTOP SIDEBAR FILTERS ═══ */}
+      {!isMobile && (
+        <aside style={{ width: '240px', flexShrink: 0, position: 'sticky', top: '94px', alignSelf: 'start', zIndex: 10 }}>
+          {renderFilterContent()}
+        </aside>
+      )}
+
+      {/* ═══ MOBILE FILTER MODAL / DRAWER ═══ */}
+      {isMobile && showMobileFilter && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', justifyContent: 'flex-end'
+        }}>
+          <div style={{
+            width: '85%', maxWidth: '320px', height: '100%',
+            background: C.card, overflowY: 'auto', padding: '16px',
+            boxShadow: '-10px 0 30px rgba(0,0,0,0.2)'
+          }}>
+            {renderFilterContent()}
           </div>
         </div>
-      </aside>
+      )}
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* Search Header */}
+        {/* Search & Mobile Control Header */}
         <div style={{
-          ...S.card, padding: '14px 20px', borderRadius: '14px',
-          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', justifyContent: 'space-between'
+          ...S.card, padding: isMobile ? '12px 16px' : '14px 20px', borderRadius: '16px',
+          display: 'flex', flexDirection: 'column', gap: '12px'
         }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '420px' }}>
-            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
-            <input 
-              type="text" 
-              placeholder={t("Search products, cards, loans...")} 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ ...S.input, paddingLeft: '38px' }}
-            />
+          {/* Search bar row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
+              <input 
+                type="text" 
+                placeholder={t("Search products, cards, loans...")} 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ ...S.input, paddingLeft: '38px', height: '42px', fontSize: '13px' }}
+              />
+            </div>
+            {isMobile && (
+              <button
+                onClick={() => setShowMobileFilter(true)}
+                style={{
+                  background: `${C.primary}12`,
+                  border: `1.5px solid ${C.primary}30`,
+                  color: C.primary,
+                  borderRadius: '10px',
+                  padding: '0 12px',
+                  height: '42px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <MdFilterList size={18} /> Filters
+              </button>
+            )}
           </div>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, flexShrink: 0 }}>
-            Showing <span style={{ color: C.text }}>{filteredProducts.length}</span> Products
-          </span>
+
+          {/* Mobile Horizontal Category Scroll Chips */}
+          {isMobile && (
+            <div style={{
+              display: 'flex',
+              overflowX: 'auto',
+              gap: '8px',
+              paddingBottom: '4px',
+              msOverflowStyle: 'none',
+              scrollbarWidth: 'none'
+            }}>
+              {CATEGORIES.map(cat => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      whiteSpace: 'nowrap',
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      border: isActive ? 'none' : `1px solid ${C.border}`,
+                      background: isActive ? C.primary : C.bgSecondary,
+                      color: isActive ? '#FFFFFF' : C.textMid,
+                      cursor: 'pointer',
+                      flexShrink: 0
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Results count & Active filter status */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid }}>
+            <span>
+              Showing <strong style={{ color: C.text }}>{filteredProducts.length}</strong> Products
+            </span>
+            {(activeCategory !== 'all' || activeBank !== 'All Banks' || search) && (
+              <button
+                onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
+                style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '11px' }}
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -262,7 +390,7 @@ export default function PartnerProducts() {
               <MdSearch size={28} />
             </div>
             <h3 style={{ fontSize: '17px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{t("No products found")}</h3>
-            <p style={{ color: C.textMid, margin: '0 0 20px' }}>{t("Try adjusting your filters or search terms.")}</p>
+            <p style={{ color: C.textMid, margin: '0 0 20px', fontSize: '13px' }}>{t("Try adjusting your filters or search terms.")}</p>
             <button
               onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
               style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
@@ -271,51 +399,69 @@ export default function PartnerProducts() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
+            gap: '16px'
+          }}>
             {filteredProducts.map((product) => (
               <div key={product.id} style={{
-                ...S.card, padding: '20px', borderRadius: '16px',
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                ...S.card,
+                padding: isMobile ? '16px' : '20px',
+                borderRadius: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '14px',
                 transition: 'all 0.2s ease'
               }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <span style={S.tag(C.primary)}>
+                  {/* Category Tag & Bank Code Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
+                    <span style={{ ...S.tag(C.primary), fontSize: '10px', padding: '4px 8px' }}>
                       {product.category?.replace(/_/g, ' ') || 'Finance'}
                     </span>
                     <span style={{
-                      fontSize: '11px', fontWeight: 700, color: C.textMid,
-                      background: C.bgSecondary, padding: '4px 10px', borderRadius: '6px',
+                      fontSize: '10.5px', fontWeight: 700, color: C.textMid,
+                      background: C.bgSecondary, padding: '4px 8px', borderRadius: '6px',
                       textTransform: 'uppercase', letterSpacing: '0.5px'
                     }}>
                       {product.bank_code || 'BANK'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '14px' }}>
+                  {/* Product Logo & Info Header */}
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <div style={{
-                      width: 56, height: 56, flexShrink: 0, background: C.bgSecondary,
-                      borderRadius: '12px', border: `1px solid ${C.border}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                      width: isMobile ? 48 : 56,
+                      height: isMobile ? 48 : 56,
+                      flexShrink: 0,
+                      background: C.bgSecondary,
+                      borderRadius: '12px',
+                      border: `1px solid ${C.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
                     }}>
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '8px' }} />
+                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
                       ) : (
-                        <MdLocalOffer style={{ color: C.textLight, fontSize: '24px' }} />
+                        <MdLocalOffer style={{ color: C.textLight, fontSize: '22px' }} />
                       )}
                     </div>
-                    <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{product.name}</h3>
-                      <p style={{ fontSize: '13px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{ fontSize: isMobile ? '15px' : '16px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.3 }}>{product.name}</h3>
+                      <p style={{ fontSize: '12px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
                         {product.description || 'No specific details provided for this product.'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Highlights */}
+                  {/* Highlights Bar */}
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: '16px',
-                    margin: '16px 0', padding: '12px', background: C.bgSecondary,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+                    margin: '14px 0 0', padding: '10px 8px', background: C.bgSecondary,
                     borderRadius: '12px', border: `1px solid ${C.border}`
                   }}>
                     {[
@@ -324,50 +470,75 @@ export default function PartnerProducts() {
                       { icon: MdInfoOutline, label: 'CIBIL', val: '750+' },
                     ].map((h, i) => (
                       <React.Fragment key={h.label}>
-                        {i > 0 && <div style={{ width: 1, height: 28, background: C.border }} />}
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <h.icon size={12} /> {h.label}
+                        {i > 0 && <div style={{ width: 1, height: 24, background: C.border }} />}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                          <span style={{ fontSize: '9.5px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <h.icon size={11} /> {h.label}
                           </span>
-                          <span style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{h.val}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginTop: '2px' }}>{h.val}</span>
                         </div>
                       </React.Fragment>
                     ))}
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                  <div>
-                    <span style={{ fontSize: '10px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{t("Your Payout")}</span>
-                    <span style={{ fontSize: '20px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value).toLocaleString('en-IN')}</span>
+                {/* Footer Action Bar */}
+                <div style={{
+                  borderTop: `1px solid ${C.border}`,
+                  paddingTop: '12px',
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? '10px' : '8px',
+                  justifyContent: 'space-between',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  marginTop: 'auto'
+                }}>
+                  {/* Payout Tag */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t("Your Payout")}</span>
+                    <span style={{ fontSize: '19px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+
+                  {/* Buttons */}
+                  <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
                     {(product.public_url || product.partner_url) && (
                       <button
                         onClick={() => handleCopyLink(product)}
                         type="button"
                         style={{
-                          ...S.btn('outline'), padding: '8px 12px', fontSize: '12px', borderRadius: '10px',
-                          cursor: 'pointer'
+                          ...S.btn('outline'),
+                          flex: isMobile ? 1 : 'none',
+                          padding: '8px 10px',
+                          fontSize: '11.5px',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
                         }}
                       >
-                        Copy Link
+                        <MdShare size={14} /> Link
                       </button>
                     )}
-                    <button style={{
-                      ...S.btn('outline'), padding: '8px 16px', fontSize: '13px', borderRadius: '10px'
-                    }}>
-                      Details
-                    </button>
                     <button
                       onClick={() => handleApply(product)}
                       style={{
-                        ...S.btn('primary'), padding: '8px 20px', fontSize: '13px',
-                        border: 'none', borderRadius: '10px', cursor: 'pointer'
+                        ...S.btn('primary'),
+                        flex: isMobile ? 2 : 'none',
+                        padding: '8px 16px',
+                        fontSize: '12.5px',
+                        border: 'none',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
                       }}
                     >
-                      Apply Now
+                      Apply Now <MdChevronRight size={16} />
                     </button>
                   </div>
                 </div>
@@ -380,7 +551,7 @@ export default function PartnerProducts() {
       {/* ═══ LEAD SUBMISSION MODAL ═══ */}
       {selectedProduct && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 50,
+          position: 'fixed', inset: 0, zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
@@ -402,14 +573,14 @@ export default function PartnerProducts() {
               ✕
             </button>
 
-            <div style={{ padding: '24px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>{t("Add Customer Lead")}</h3>
               <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>
                 Applying for <strong style={{ color: C.primary }}>{selectedProduct.name}</strong>.
               </p>
             </div>
 
-            <form onSubmit={handleSubmitLead} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleSubmitLead} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={S.label}>{t("Customer Full Name *")}</label>
                 <input
@@ -418,7 +589,7 @@ export default function PartnerProducts() {
                   placeholder={t("e.g. Rahul Sharma")}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  style={S.input}
+                  style={{ ...S.input, height: '42px', fontSize: '13px' }}
                 />
               </div>
               <div>
@@ -430,7 +601,7 @@ export default function PartnerProducts() {
                   maxLength={10}
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                  style={S.input}
+                  style={{ ...S.input, height: '42px', fontSize: '13px' }}
                 />
               </div>
               <div>
@@ -441,7 +612,7 @@ export default function PartnerProducts() {
                   placeholder={t("e.g. Mumbai")}
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  style={S.input}
+                  style={{ ...S.input, height: '42px', fontSize: '13px' }}
                 />
               </div>
 
@@ -450,7 +621,7 @@ export default function PartnerProducts() {
                   type="button"
                   onClick={() => setSelectedProduct(null)}
                   style={{
-                    ...S.btn('outline'), flex: 1, padding: '12px', fontSize: '14px',
+                    ...S.btn('outline'), flex: 1, padding: '12px', fontSize: '13px',
                     borderRadius: '12px', cursor: 'pointer'
                   }}
                 >
@@ -460,11 +631,12 @@ export default function PartnerProducts() {
                   type="submit"
                   disabled={submitting}
                   style={{
-                    ...S.btn('primary'), flex: 2, padding: '12px', fontSize: '14px',
+                    ...S.btn('primary'), flex: 2, padding: '12px', fontSize: '13px',
                     border: 'none', borderRadius: '12px',
                     cursor: submitting ? 'not-allowed' : 'pointer',
                     opacity: submitting ? 0.7 : 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700
                   }}
                 >
                   {submitting ? (
