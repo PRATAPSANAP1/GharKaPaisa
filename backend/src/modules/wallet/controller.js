@@ -205,8 +205,14 @@ const getCommissionSummary = async (req, res, next) => {
 // GET /wallet/bank-details (Secure bank details retriever)
 const getBankDetails = async (req, res, next) => {
   try {
-    const PartnerId = req.partner?.id;
-    if (!PartnerId) return error(res, 'Partner profile not found');
+    let PartnerId = req.partner?.id;
+    if (!PartnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) PartnerId = p.id;
+      else PartnerId = req.user.id;
+    }
+
+    if (!PartnerId) return success(res, null, 'No bank details registered yet');
 
     const { rows: [bank] } = await query(`
       SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified 
