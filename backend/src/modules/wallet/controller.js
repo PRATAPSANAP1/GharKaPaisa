@@ -678,7 +678,7 @@ const getWalletLedger = async (req, res, next) => {
 
 const listPartnerWithdrawals = async (req, res, next) => {
   try {
-    let partnerId = req.partner?.id;
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
     if (!partnerId && req.user) {
       const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) partnerId = p.id;
@@ -1092,7 +1092,7 @@ const getWithdrawalDetail = async (req, res, next) => {
 // ── Bank Details: Get All (Primary + Secondary) ──────────────────────
 const getAllBankDetails = async (req, res, next) => {
   try {
-    let partnerId = req.partner?.id;
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
     if (!partnerId && req.user) {
       const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) partnerId = p.id;

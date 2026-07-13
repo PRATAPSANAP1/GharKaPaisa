@@ -36,16 +36,17 @@ router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancel
 router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);
 router.get('/withdrawals/:id', requireApprovedPartner, walletCtrl.getWithdrawalDetail);
 
-// Bank details management
-router.get('/bank-details', requireApprovedPartner, walletCtrl.getBankDetails);
+// Bank details management (Sub-routes placed first to prevent path matching conflicts)
 router.get('/bank-details/all', requireApprovedPartner, walletCtrl.getAllBankDetails);
+router.get('/bank-details/history', requireApprovedPartner, walletCtrl.getBankEditHistory);
 router.post('/bank-details/secondary', requireApprovedPartner, walletCtrl.addSecondaryBankDetail);
 router.post('/bank-details/primary', requireApprovedPartner, walletCtrl.setPrimaryBank);
 router.post('/bank-details/verify/penny-drop', requireApprovedPartner, walletCtrl.verifyBankPennyDrop);
 router.post('/bank-details/verify/upi', requireApprovedPartner, walletCtrl.verifyBankUPI);
-router.get('/bank-details/history', requireApprovedPartner, walletCtrl.getBankEditHistory);
+router.get('/bank-details', requireApprovedPartner, walletCtrl.getBankDetails);
 router.post('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
 router.put('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
+
 router.get('/reports', requireApprovedPartner, walletCtrl.getWalletReports);
 
 // Partner self or admin (with ID)
