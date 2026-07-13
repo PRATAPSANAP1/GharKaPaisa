@@ -191,12 +191,10 @@ const submitPublicApplication = async (req, res, next) => {
 const getApplicationsDashboard = async (req, res, next) => {
   try {
     let partnerId = null;
-    let userId = null;
+    let userId = req.user?.id || null;
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!partner) return error(res, 'Partner profile not found', 404);
-      partnerId = partner.id;
-      userId = req.user.id;
+      partnerId = partner ? partner.id : req.user.id;
     }
 
     const { rows: [stats] } = await query(`
@@ -218,7 +216,7 @@ const getApplicationsDashboard = async (req, res, next) => {
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid)
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2::uuid))
     `, [partnerId, userId]);
 
     const totalCount = parseInt(stats?.total || 0);
@@ -654,8 +652,7 @@ const listApplications = async (req, res, next) => {
     let partnerId = null;
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!partner) return error(res, 'Partner profile not found', 404);
-      partnerId = partner.id;
+      partnerId = partner ? partner.id : req.user.id;
     } else if (targetPartnerId) {
       partnerId = targetPartnerId;
     }

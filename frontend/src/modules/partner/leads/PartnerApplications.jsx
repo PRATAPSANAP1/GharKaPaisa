@@ -60,7 +60,9 @@ export default function PartnerApplications() {
         }
       });
       if (res.data?.success) {
-        setApplications(res.data.data);
+        const rawData = res.data.data;
+        const appList = Array.isArray(rawData) ? rawData : (rawData?.items || rawData?.rows || []);
+        setApplications(appList);
       }
     } catch (e) {
       console.error(e);
