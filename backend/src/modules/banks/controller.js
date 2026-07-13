@@ -163,11 +163,15 @@ const deleteBank = async (req, res, next) => {
       return notFound(res, 'Bank partner not found');
     }
 
-    // Make bank_id nullable on products table to avoid foreign key restrict errors
-    await query('ALTER TABLE products ALTER COLUMN bank_id DROP NOT NULL');
+    // Make bank_id nullable across tables to avoid foreign key restrict errors
+    await query('ALTER TABLE products ALTER COLUMN bank_id DROP NOT NULL').catch(() => {});
+    await query('UPDATE products SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
 
-    // Unlink all products (active or inactive) assigned to this bank
-    await query('UPDATE products SET bank_id = NULL WHERE bank_id = $1', [id]);
+    await query('ALTER TABLE applications ALTER COLUMN bank_id DROP NOT NULL').catch(() => {});
+    await query('UPDATE applications SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
+
+    await query('UPDATE leads SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
+    await query('UPDATE card_applications SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
 
     await query('DELETE FROM banks WHERE id = $1', [id]);
 
