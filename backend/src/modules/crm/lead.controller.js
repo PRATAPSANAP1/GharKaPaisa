@@ -8,22 +8,24 @@ const { decrypt } = require('../../utils/helpers/crypto');
 // Create a new lead
 const createLead = async (req, res, next) => {
   try {
-    if (req.kycUnapproved) {
-      return error(res, 'KYC not approved. Cannot create leads.', 403);
-    }
     const { productId, customerName, mobile, city } = req.body;
     if (!productId || !customerName || !mobile || !city) {
       return error(res, 'Product ID, Customer Name, Mobile, and City are required', 400);
     }
 
-    // Fetch partner profile from logged-in user id
-    const { rows: [partner] } = await query(
+    // Fetch partner profile from logged-in user id or auto-provision
+    let { rows: [partner] } = await query(
       `SELECT id FROM partner_profiles WHERE user_id = $1`,
       [req.user.id]
     );
 
     if (!partner) {
-      return error(res, 'Partner profile not found for this user', 404);
+      const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+      const { rows: [newP] } = await query(`
+        INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+        VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
+      `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
+      partner = newP;
     }
 
     // Validate product exists

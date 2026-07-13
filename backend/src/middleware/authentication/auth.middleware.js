@@ -60,11 +60,22 @@ const syncUser = async (req, res, next) => {
 
     // Attach partner profile for Partner role
     if ((user.role || '').toUpperCase() === 'PARTNER') {
-      const { rows: [partner] } = await query(
+      let { rows: [partner] } = await query(
         `SELECT id, kyc_status, first_name, last_name, partner_code
          FROM partner_profiles WHERE user_id = $1`,
         [user.id]
       );
+      if (!partner) {
+        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+        const { rows: [newP] } = await query(
+          `INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+           VALUES ($1, $2, $3, $4, 'active', 'pending')
+           ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+           RETURNING id, kyc_status, first_name, last_name, partner_code`,
+          [user.id, partnerCode, user.first_name || 'Partner', user.last_name || '']
+        );
+        partner = newP;
+      }
       req.partner = partner || null;
       if (partner) {
         req.dbUser.PartnerId = partner.id;

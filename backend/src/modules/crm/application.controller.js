@@ -23,7 +23,22 @@ const submitApplication = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { product_id, customer, loan_amount, notes } = req.body;
-    const PartnerId = req.partner?.id || req.body.partner_id;
+    let PartnerId = req.partner?.id || req.body.partner_id;
+
+    if (!PartnerId && req.user?.id) {
+      const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) {
+        PartnerId = p.id;
+      } else {
+        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+        const { rows: [newP] } = await client.query(`
+          INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+          VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
+        `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
+        PartnerId = newP.id;
+      }
+    }
+
     if (!PartnerId) return error(res, 'Partner ID is required', 400);
 
     // Validate product
