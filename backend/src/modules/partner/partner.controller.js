@@ -75,11 +75,16 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-// PUT /Partners/:PartnerId/profile (Update partner profile)
+// PUT /Partners/:PartnerId/profile (Update partner profile & bank details)
 const updateProfile = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
-    const { first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode } = req.body;
+    const { 
+      first_name, last_name, current_address, business_location, 
+      company_name, company_type, gst_number, pincode,
+      account_holder_name, bank_name, account_number, ifsc_code, upi_id
+    } = req.body;
+
     await query(`
       UPDATE partner_profiles SET
         first_name = COALESCE($1, first_name),
@@ -93,7 +98,30 @@ const updateProfile = async (req, res, next) => {
         updated_at = NOW()
       WHERE id = $9
     `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId]);
-    return success(res, {}, 'Profile updated');
+
+    if (bank_name || account_number || ifsc_code || account_holder_name || upi_id) {
+      let encryptedAccount = account_number || null;
+      if (encryptedAccount) {
+        const { encrypt } = require('../../utils/helpers/crypto');
+        try {
+          encryptedAccount = encrypt(encryptedAccount);
+        } catch (_) {}
+      }
+
+      await query(`
+        INSERT INTO partner_bank_details (partner_id, account_holder_name, bank_name, account_number, ifsc_code, upi_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (partner_id) DO UPDATE SET
+          account_holder_name = COALESCE($2, partner_bank_details.account_holder_name),
+          bank_name = COALESCE($3, partner_bank_details.bank_name),
+          account_number = CASE WHEN $4 IS NOT NULL THEN $4 ELSE partner_bank_details.account_number END,
+          ifsc_code = COALESCE($5, partner_bank_details.ifsc_code),
+          upi_id = COALESCE($6, partner_bank_details.upi_id),
+          updated_at = NOW()
+      `, [PartnerId, account_holder_name || null, bank_name || null, encryptedAccount, ifsc_code || null, upi_id || null]);
+    }
+
+    return success(res, {}, 'Profile and bank details updated successfully');
   } catch (err) {
     next(err);
   }

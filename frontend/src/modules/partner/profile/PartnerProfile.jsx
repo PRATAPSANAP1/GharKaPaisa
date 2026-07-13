@@ -32,8 +32,15 @@ export default function PartnerProfile() {
     first_name: '',
     last_name: '',
     company_name: '',
+    company_type: '',
+    gst_number: '',
     current_address: '',
-    pincode: ''
+    pincode: '',
+    account_holder_name: '',
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
+    upi_id: ''
   });
 
   useEffect(() => {
@@ -46,8 +53,15 @@ export default function PartnerProfile() {
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
         company_name: profile.company_name || '',
+        company_type: profile.company_type || '',
+        gst_number: profile.gst_number || '',
         current_address: profile.current_address || '',
-        pincode: profile.pincode || ''
+        pincode: profile.pincode || '',
+        account_holder_name: profile.account_holder_name || '',
+        bank_name: profile.bank_name || '',
+        account_number: profile.account_number || '',
+        ifsc_code: profile.ifsc_code || '',
+        upi_id: profile.upi_id || ''
       });
     }
   }, [profile]);
@@ -59,6 +73,7 @@ export default function PartnerProfile() {
       await api.put(`/Partners/${profile.id}/profile`, editForm);
       await fetchProfile();
       setIsEditing(false);
+      alert('Profile and bank details updated successfully!');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -311,53 +326,116 @@ export default function PartnerProfile() {
       {isEditing && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px',
-            width: '90%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '20px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px 28px',
+            width: '100%', maxWidth: '640px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflowY: 'auto'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Edit Profile")}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Edit Account & Bank Details")}</h3>
+                <p style={{ fontSize: '12px', color: C.textMid, margin: '2px 0 0' }}>Update your personal profile, business info, and bank account for payouts.</p>
+              </div>
               <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMid }}>
-                <MdClose size={20} />
+                <MdClose size={22} />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
-                  <input type="text" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* 1. Personal & Contact Details */}
+              <div>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                  👤 Personal & Contact Info
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
+                    <input type="text" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Last Name")}</label>
+                    <input type="text" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Last Name")}</label>
-                  <input type="text" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
+              </div>
+
+              {/* 2. Business & Tax Info */}
+              <div>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                  🏢 Business & GST Details
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company / Agency Name")}</label>
+                    <input type="text" value={editForm.company_name} onChange={e => setEditForm({...editForm, company_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Acme Financials" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("GST Number")}</label>
+                    <input type="text" value={editForm.gst_number} onChange={e => setEditForm({...editForm, gst_number: e.target.value.toUpperCase()})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" />
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company Name")}</label>
-                <input type="text" value={editForm.company_name} onChange={e => setEditForm({...editForm, company_name: e.target.value})} style={{ ...S.input, padding: '10px' }} />
+              {/* 3. Address & Location */}
+              <div>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                  📍 Residential Address
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Address")}</label>
+                    <input type="text" value={editForm.current_address} onChange={e => setEditForm({...editForm, current_address: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="House/Flat No, Street, Landmark" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
+                    <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="400001" />
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Residential Address")}</label>
-                <textarea value={editForm.current_address} onChange={e => setEditForm({...editForm, current_address: e.target.value})} style={{ ...S.input, padding: '10px', minHeight: '60px', resize: 'none' }} />
+              {/* 4. Registered Bank Details for Payouts */}
+              <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>
+                  🏦 Bank Account Details (For Payouts & Commission)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Holder Name")}</label>
+                    <input type="text" value={editForm.account_holder_name} onChange={e => setEditForm({...editForm, account_holder_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="As printed on Passbook/Cheque" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Bank Name")}</label>
+                    <input type="text" value={editForm.bank_name} onChange={e => setEditForm({...editForm, bank_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. HDFC Bank, ICICI Bank" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("IFSC Code")}</label>
+                    <input type="text" value={editForm.ifsc_code} onChange={e => setEditForm({...editForm, ifsc_code: e.target.value.toUpperCase()})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="HDFC0001234" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Number")}</label>
+                    <input type="password" value={editForm.account_number} onChange={e => setEditForm({...editForm, account_number: e.target.value})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="Account Number" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("UPI ID (Optional)")}</label>
+                    <input type="text" value={editForm.upi_id} onChange={e => setEditForm({...editForm, upi_id: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="username@upi" />
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
-                <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} />
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button type="button" onClick={() => setIsEditing(false)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px' }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={editLoading} style={{
+                  ...S.btn('primary'), padding: '10px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, color: '#fff'
+                }}>
+                  {editLoading ? 'Saving Details...' : 'Save Profile & Bank Details'}
+                </button>
               </div>
-
-              <button type="submit" disabled={editLoading} style={{
-                ...S.btn('primary'), width: '100%', padding: '12px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, color: '#fff'
-              }}>
-                {editLoading ? 'Saving...' : 'Save Changes'}
-              </button>
             </form>
           </div>
         </div>
