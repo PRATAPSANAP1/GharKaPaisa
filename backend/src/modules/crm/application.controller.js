@@ -191,34 +191,35 @@ const submitPublicApplication = async (req, res, next) => {
 const getApplicationsDashboard = async (req, res, next) => {
   try {
     let partnerId = null;
+    let userId = null;
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!partner) return error(res, 'Partner profile not found', 404);
       partnerId = partner.id;
-    }
-
-    let filter = '';
-    const params = [];
-    if (partnerId) {
-      filter = 'WHERE partner_id = $1';
-      params.push(partnerId);
+      userId = req.user.id;
     }
 
     const { rows: [stats] } = await query(`
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as today,
-        COUNT(*) FILTER (WHERE status = 'submitted') as pending,
-        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed')) as approved,
+        COUNT(*) FILTER (WHERE status = 'submitted' OR status = 'pending') as pending,
+        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed', 'confirmed')) as approved,
         COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
         COUNT(*) FILTER (WHERE status = 'under_review') as under_review,
         COUNT(*) FILTER (WHERE commission_status = 'pending') as comm_pending,
         COUNT(*) FILTER (WHERE commission_status = 'approved') as comm_approved,
         COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
         COALESCE(SUM(commission_amount) FILTER (WHERE commission_status = 'processed'), 0) as total_earnings
-      FROM applications
-      ${filter}
-    `, params);
+      FROM (
+        SELECT a.id, a.partner_id, a.status, a.commission_status, a.commission_amount, a.created_at FROM applications a
+        UNION ALL
+        SELECT l.id, l.partner_id, l.status, 'pending' as commission_status, p.commission_value as commission_amount, l.created_at
+        FROM leads l
+        LEFT JOIN products p ON p.id = l.product_id
+      ) combined
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid)
+    `, [partnerId, userId]);
 
     const totalCount = parseInt(stats?.total || 0);
     const approvedCount = parseInt(stats?.approved || 0);
@@ -226,21 +227,31 @@ const getApplicationsDashboard = async (req, res, next) => {
 
     // Recent 5 applications
     const { rows: recent } = await query(`
-      SELECT a.id, a.app_number, a.status, a.commission_amount, a.commission_status, a.created_at,
-             c.full_name as customer_name, p.name as product_name
-      FROM applications a
-      JOIN customers c ON c.id = a.customer_id
-      JOIN products p ON p.id = a.product_id
-      ${filter}
-      ORDER BY a.created_at DESC LIMIT 5
-    `, params);
+      SELECT combined.id, combined.app_number, combined.status, combined.commission_amount, combined.commission_status, combined.created_at,
+             combined.customer_name, combined.product_name
+      FROM (
+        SELECT a.id, a.app_number, a.status, a.commission_amount, a.commission_status, a.created_at, a.partner_id,
+               COALESCE(c.full_name, 'Customer') as customer_name, p.name as product_name
+        FROM applications a
+        LEFT JOIN customers c ON c.id = a.customer_id
+        LEFT JOIN products p ON p.id = a.product_id
+        UNION ALL
+        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status, p.commission_value as commission_amount, 'pending' as commission_status, l.created_at, l.partner_id,
+               COALESCE(c.full_name, l.customer_name) as customer_name, p.name as product_name
+        FROM leads l
+        LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN products p ON p.id = l.product_id
+      ) combined
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid)
+      ORDER BY combined.created_at DESC LIMIT 5
+    `, [partnerId, userId]);
 
     return success(res, {
       stats: {
         total: parseInt(stats?.total || 0),
         today: parseInt(stats?.today || 0),
         pending: parseInt(stats?.pending || 0),
-        approved: approvedCount,
+        approved: parseInt(stats?.approved || 0),
         rejected: parseInt(stats?.rejected || 0),
         under_review: parseInt(stats?.under_review || 0),
         comm_pending: parseInt(stats?.comm_pending || 0),
@@ -655,6 +666,9 @@ const listApplications = async (req, res, next) => {
     const validStatus = status && status.trim() ? status.trim() : null;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
 
+    const userId = req.user?.id || null;
+    const validUserId = isUuid(userId) ? userId : null;
+
     const { rows } = await query(`
       SELECT * FROM (
         SELECT 
@@ -737,14 +751,14 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $8::uuid)
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
-    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset]);
+    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId]);
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
@@ -758,12 +772,12 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $6::uuid)
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
-    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch]);
+    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, validUserId]);
 
     return paginate(res, rows, parseInt(count), page, limit);
   } catch (err) {
