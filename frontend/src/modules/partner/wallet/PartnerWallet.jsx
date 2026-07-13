@@ -751,16 +751,6 @@ const PartnerWallet = () => {
                     </div>
                   )}
                 </div>
-                <div>
-                  <label style={S.label}>{t("Remarks (Optional)")}</label>
-                  <input 
-                    type="text" 
-                    placeholder={t("e.g. Monthly withdrawal")} 
-                    style={S.input}
-                    value={withdrawRemarks}
-                    onChange={(e) => setWithdrawRemarks(e.target.value)}
-                  />
-                </div>
                 <button 
                   type="submit" 
                   disabled={requestingWithdraw || !availableBal || availableBal < 100 || parseFloat(withdrawAmount) < 100 || parseFloat(withdrawAmount) > 50000 || parseFloat(withdrawAmount) > availableBal}
@@ -1072,21 +1062,9 @@ const PartnerWallet = () => {
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     required
                   />
-                  <div style={{ fontSize: '11px', color: C.textLight, marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, marginTop: '4px' }}>
                     <span>Min: ₹100 — Max: ₹50,000</span>
-                    <span>TDS Deduction: 5%</span>
                   </div>
-                </div>
-
-                <div>
-                  <label style={S.label}>Withdrawal Remarks / Purpose</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Weekly settlement request"
-                    style={S.input}
-                    value={withdrawRemarks}
-                    onChange={(e) => setWithdrawRemarks(e.target.value)}
-                  />
                 </div>
 
                 <button 
