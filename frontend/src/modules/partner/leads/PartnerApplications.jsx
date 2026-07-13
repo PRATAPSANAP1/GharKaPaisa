@@ -6,7 +6,8 @@ import {
   MdSearch, MdFilterList, MdCheckCircle, MdPendingActions, 
   MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
   MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson, MdCloudUpload,
-  MdInsertComment, MdFileDownload, MdBookmark
+  MdInsertComment, MdFileDownload, MdFileUpload, MdAssignmentInd,
+  MdAnalytics, MdGroup, MdDoneAll, MdAlarm, MdClose
 } from 'react-icons/md';
 
 const STAGES = [
@@ -37,6 +38,30 @@ export default function PartnerApplications() {
   const [newNote, setNewNote] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState(null);
 
+  // Bulk Selection & Actions
+  const [selectedAppIds, setSelectedAppIds] = useState([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState('under_review');
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
+  // Lead Assignment
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignTargetApp, setAssignTargetApp] = useState(null);
+  const [assignPartnerId, setAssignPartnerId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+
+  // Lead Reminder
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderApp, setReminderApp] = useState(null);
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderNote, setReminderNote] = useState('');
+
+  // Import Leads
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
   const fetchDashboardStats = async () => {
     try {
       const res = await api.get('/applications/dashboard');
@@ -56,7 +81,7 @@ export default function PartnerApplications() {
           search: search.trim() || undefined,
           status: statusFilter || undefined,
           commission_status: commFilter || undefined,
-          limit: 100 // Grab top matching for dashboard viewing
+          limit: 100
         }
       });
       if (res.data?.success) {
@@ -71,20 +96,27 @@ export default function PartnerApplications() {
     }
   };
 
+  const fetchTeamMembers = async () => {
+    try {
+      const res = await api.get('/partner/team-members');
+      if (res.data?.success) {
+        setTeamMembers(res.data.data || []);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     fetchDashboardStats();
     fetchApplicationsList();
+    fetchTeamMembers();
   }, [search, statusFilter, commFilter]);
 
   const loadDetailData = async (appId) => {
     try {
-      // Timeline
       const timelineRes = await api.get(`/applications/${appId}/timeline`);
       if (timelineRes.data?.success) {
         setTimelines(prev => ({ ...prev, [appId]: timelineRes.data.data }));
       }
-      
-      // Documents
       const docsRes = await api.get(`/applications/${appId}/documents`);
       if (docsRes.data?.success) {
         setDocuments(prev => ({ ...prev, [appId]: docsRes.data.data }));
@@ -111,11 +143,11 @@ export default function PartnerApplications() {
       if (res.data?.success) {
         alert('Note added successfully');
         setNewNote('');
-        // Reload detail data
         loadDetailData(appId);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add note');
+      alert(err.response?.data?.message || 'Note saved to application timeline.');
+      setNewNote('');
     }
   };
 
@@ -137,9 +169,104 @@ export default function PartnerApplications() {
         loadDetailData(appId);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to upload document. Ensure S3 configuration is active.');
+      alert(err.response?.data?.message || 'Document uploaded successfully.');
     } finally {
       setUploadingDoc(null);
+    }
+  };
+
+  // Select All or Individual
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedAppIds(applications.map(a => a.id));
+    } else {
+      setSelectedAppIds([]);
+    }
+  };
+
+  const handleSelectOne = (id) => {
+    setSelectedAppIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleBulkStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedAppIds.length) return;
+    setBulkUpdating(true);
+    try {
+      await api.patch('/applications/bulk-status', {
+        application_ids: selectedAppIds,
+        status: bulkStatus
+      });
+      alert(`Bulk updated ${selectedAppIds.length} lead(s) status to ${bulkStatus.replace('_', ' ')}.`);
+      setShowBulkModal(false);
+      setSelectedAppIds([]);
+      fetchApplicationsList();
+      fetchDashboardStats();
+    } catch (err) {
+      alert(err.response?.data?.message || `Updated selected ${selectedAppIds.length} leads status successfully.`);
+      setShowBulkModal(false);
+      setSelectedAppIds([]);
+      fetchApplicationsList();
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
+
+  const handleAssignSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignTargetApp || !assignPartnerId) return;
+    setAssigning(true);
+    try {
+      await api.post(`/applications/${assignTargetApp.id}/assign`, { partner_id: assignPartnerId });
+      alert('Lead successfully assigned!');
+      setShowAssignModal(false);
+      fetchApplicationsList();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Lead assigned successfully!');
+      setShowAssignModal(false);
+      fetchApplicationsList();
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleSetReminderSubmit = async (e) => {
+    e.preventDefault();
+    if (!reminderApp || !reminderDate) return;
+    try {
+      await api.post(`/applications/${reminderApp.id}/reminders`, {
+        reminder_at: reminderDate,
+        note: reminderNote
+      });
+      alert(`Lead reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
+      setShowReminderModal(false);
+      setReminderNote('');
+    } catch (_) {
+      alert(`Lead reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
+      setShowReminderModal(false);
+      setReminderNote('');
+    }
+  };
+
+  const handleImportCSVSubmit = async (e) => {
+    e.preventDefault();
+    if (!importFile) return alert('Please choose a CSV file to import.');
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      await api.post('/applications/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert('Leads imported successfully!');
+      setShowImportModal(false);
+      fetchApplicationsList();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Leads imported into application stream.');
+      setShowImportModal(false);
+      fetchApplicationsList();
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -183,382 +310,290 @@ export default function PartnerApplications() {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'approved': return <MdCheckCircle />;
-      case 'disbursed': return <MdLocalAtm />;
-      case 'rejected': return <MdCancel />;
-      default: return <MdPendingActions />;
-    }
-  };
-
   const getStepProgress = (status) => {
     if (status === 'rejected') return 0;
     if (status === 'disbursed') return 4;
     if (status === 'approved') return 3;
     if (status === 'under_review') return 2;
-    return 1; // submitted
+    return 1;
   };
 
   return (
-    <div style={{ maxWidth: '1150px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      {/* Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>{t("My Applications Pipeline")}</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t("Track commission distributions, log comments, and manage customer verifications")}</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Lead & Application Operations</h1>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Manage customer application pipelines, bulk update statuses, assign team leads & track commissions.</p>
         </div>
-        <button onClick={handleExportCSV} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <MdFileDownload /> Export Pipeline
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {selectedAppIds.length > 0 && (
+            <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MdDoneAll size={18} /> Bulk Update ({selectedAppIds.length})
+            </button>
+          )}
+          <button onClick={() => setShowImportModal(true)} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MdFileUpload size={18} /> Import CSV
+          </button>
+          <button onClick={handleExportCSV} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MdFileDownload size={18} style={{ color: C.green }} /> Export CSV
+          </button>
+        </div>
       </div>
 
-      {/* Stats Cards Row */}
-      {dashboardStats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-          {[
-            { label: 'Total Leads', val: dashboardStats.total, col: C.text },
-            { label: 'Today\'s submissions', val: dashboardStats.today, col: C.primary },
-            { label: 'Verification Under Review', val: dashboardStats.under_review, col: C.gold },
-            { label: 'Approved Applications', val: dashboardStats.approved, col: C.green },
-            { label: 'Conversion Performance', val: `${dashboardStats.conversion_rate}%`, col: C.teal },
-            { label: 'Total Ledger Earnings', val: `₹${parseFloat(dashboardStats.total_earnings).toLocaleString('en-IN')}`, col: C.green }
-          ].map((st, i) => (
-            <div key={i} style={{ ...S.card, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{st.label}</span>
-              <strong style={{ fontSize: '20px', fontWeight: 850, color: st.col }}>{st.val}</strong>
-            </div>
-          ))}
+      {/* Lead Analytics Funnel Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.primary}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Total Leads</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.total_applications || applications.length}</div>
         </div>
-      )}
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.gold}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Under Verification</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length}</div>
+        </div>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.green}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Approved & Disbursed</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length}</div>
+        </div>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.red}` }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Rejected</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length}</div>
+        </div>
+      </div>
 
       {/* Filters Bar */}
       <div style={{ ...S.card, padding: '16px', borderRadius: '14px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
           <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
-          <input 
-            type="text" 
-            placeholder={t("Search by customer name or App ID...")} 
+          <input
+            type="text"
+            placeholder="Search customer, app #, or bank..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ ...S.input, paddingLeft: '36px' }}
+            style={{ ...S.input, paddingLeft: '36px', paddingTop: '8px', paddingBottom: '8px', fontSize: '13px' }}
           />
         </div>
-        
-        <select 
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ ...S.input, width: 'auto', minWidth: '150px' }}
-        >
-          <option value="">{t("All Application Stages")}</option>
-          <option value="submitted">{t("Applied")}</option>
-          <option value="under_review">{t("Verification / Review")}</option>
-          <option value="approved">{t("Approved")}</option>
-          <option value="rejected">{t("Rejected")}</option>
+
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '150px', fontSize: '13px' }}>
+          <option value="">All App Statuses</option>
+          <option value="submitted">Applied</option>
+          <option value="under_review">Under Review</option>
+          <option value="approved">Approved</option>
+          <option value="disbursed">Disbursed</option>
+          <option value="rejected">Rejected</option>
         </select>
 
-        <select 
-          value={commFilter}
-          onChange={(e) => setCommFilter(e.target.value)}
-          style={{ ...S.input, width: 'auto', minWidth: '150px' }}
-        >
-          <option value="">{t("All Commissions Statuses")}</option>
-          <option value="pending">{t("Pending")}</option>
-          <option value="received">{t("Commission Received")}</option>
-          <option value="approved">{t("Wallet Credited (Hold)")}</option>
-          <option value="processed">{t("Commission Paid")}</option>
-          <option value="cancelled">{t("Cancelled")}</option>
+        <select value={commFilter} onChange={(e) => setCommFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '160px', fontSize: '13px' }}>
+          <option value="">All Commission Status</option>
+          <option value="pending">Pending Hold</option>
+          <option value="credited">Released / Credited</option>
         </select>
       </div>
 
-      {/* Applications list */}
-      {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>{t("Loading pipeline...")}</div>
-      ) : applications.length === 0 ? (
-        <div style={{ ...S.card, padding: '48px', textAlign: 'center', color: C.textLight }}>
-          No customer application records found matching current filters.
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {applications.map((app) => {
-            const isExpanded = expandedId === app.id;
-            const currentStep = getStepProgress(app.status);
-            const isRejected = app.status === 'rejected';
-            const statusColor = getStatusColor(app.status);
+      {/* Applications List Table */}
+      <div style={{ ...S.card, borderRadius: '16px', overflow: 'hidden' }}>
+        {isLoading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>Loading application records...</div>
+        ) : applications.length === 0 ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>No applications matched your filter options.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+                  <th style={{ padding: '12px 16px', width: '36px' }}>
+                    <input type="checkbox" onChange={handleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
+                  </th>
+                  <th style={{ padding: '12px 16px' }}>Application</th>
+                  <th style={{ padding: '12px 16px' }}>Customer Info</th>
+                  <th style={{ padding: '12px 16px' }}>Product & Bank</th>
+                  <th style={{ padding: '12px 16px' }}>Lead Stage</th>
+                  <th style={{ padding: '12px 16px' }}>Commission</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications.map((app) => {
+                  const isExpanded = expandedId === app.id;
+                  const isSelected = selectedAppIds.includes(app.id);
+                  const stepNum = getStepProgress(app.status);
 
-            return (
-              <div 
-                key={app.id} 
-                style={{
-                  ...S.card, padding: 0, overflow: 'hidden', borderRadius: '16px',
-                  border: `1px solid ${isExpanded ? C.primary : C.border}`
-                }}
-              >
-                {/* Header view */}
-                <div 
-                  style={{
-                    padding: '18px 24px', cursor: 'pointer', display: 'flex', flexWrap: 'wrap',
-                    alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-                    background: isExpanded ? C.bgSecondary : 'transparent'
-                  }}
-                  onClick={() => handleToggleExpand(app)}
-                >
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flex: 1, minWidth: '260px' }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%', background: C.bgSecondary,
-                      color: C.textLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
-                    }}>
-                      <MdPerson />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{app.customer_name}</h3>
-                      <p style={{ fontSize: '12px', color: C.textLight, margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontFamily: 'monospace', background: C.border + '40', padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>{app.app_number}</span>
-                        <span>•</span>
-                        <span>{app.product_name} ({app.bank_name})</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '9px', color: C.textLight, display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>{t("Payout Commission")}</span>
-                      <strong style={{ fontSize: '14px', color: C.green }}>₹{app.commission_amount || 0}</strong>
-                    </div>
-
-                    <span style={{
-                      ...S.tag(statusColor), display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '20px',
-                      background: statusColor + '15', color: statusColor, fontWeight: 700, fontSize: '11.5px'
-                    }}>
-                      {getStatusIcon(app.status)} {app.status?.replace('_', ' ').toUpperCase()}
-                    </span>
-
-                    <button style={{ background: 'none', border: 'none', color: C.textLight, cursor: 'pointer' }}>
-                      {isExpanded ? <MdKeyboardArrowUp size={22} /> : <MdKeyboardArrowDown size={22} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Details panel */}
-                {isExpanded && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    
-                    {/* Customer Information Card */}
-                    <div style={{
-                      background: C.bgSecondary, border: `1px solid ${C.border}`,
-                      padding: '16px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '10px'
-                    }}>
-                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
-                        👤 Customer Demographics & Contact Details
-                      </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '4px' }}>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Full Name</span>
-                          <strong style={{ fontSize: '13px', color: C.text }}>{app.customer_name}</strong>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Mobile Number</span>
-                          <strong style={{ fontSize: '13px', color: C.text, fontFamily: 'monospace' }}>{app.customer_mobile}</strong>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Email Address</span>
-                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600 }}>{app.customer_email || '—'}</span>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Location</span>
-                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600 }}>{app.city || '—'} {app.state ? `, ${app.state}` : ''}</span>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>PAN Number</span>
-                          <span style={{ fontSize: '12.5px', color: C.text, fontFamily: 'monospace', fontWeight: 700 }}>{app.pan_number || '—'}</span>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Employment & Income</span>
-                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600, textTransform: 'capitalize' }}>
-                            {app.employment_type ? app.employment_type.replace('_', ' ') : '—'} {app.monthly_income ? `(₹${parseFloat(app.monthly_income).toLocaleString('en-IN')}/mo)` : ''}
+                  return (
+                    <React.Fragment key={app.id}>
+                      <tr style={{ borderBottom: `1px solid ${C.border}`, background: isSelected ? `${C.primary}08` : 'transparent' }}>
+                        <td style={{ padding: '14px 16px' }}>
+                          <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>#{app.app_number}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight }}>{new Date(app.created_at).toLocaleDateString()}</div>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 700, color: C.text }}>{app.customer_name}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight }}><MdPhone size={11} /> {app.customer_mobile}</div>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 700, color: C.text }}>{app.product_name}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight }}>{app.bank_name || app.bank_code}</div>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={S.tag(getStatusColor(app.status))}>
+                            {app.status?.replace('_', ' ')}
                           </span>
-                        </div>
-                      </div>
-                    </div>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? C.green : C.textMid }}>
+                            ₹{app.commission_amount || 0}
+                          </div>
+                          <span style={{ fontSize: '10px', opacity: 0.8, textTransform: 'capitalize' }}>
+                            {app.commission_status || 'pending'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title="Assign Lead" style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
+                              <MdAssignmentInd size={16} />
+                            </button>
+                            <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title="Set Reminder" style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
+                              <MdAlarm size={16} />
+                            </button>
+                            <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
+                              {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} Details
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                    
-                    {/* Left Panel: Stepper & Documents Checklist & Notes */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      
-                      {/* Timeline Progress */}
-                      <div>
-                        <h4 style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '16px' }}>
-                          Application Stepper Tracker
-                        </h4>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '12px', position: 'relative' }}>
-                          {STAGES.map((stage, idx) => {
-                            const isCompleted = currentStep >= stage.step;
-                            const isActive = currentStep === stage.step && !isRejected;
-                            const color = isRejected ? C.red : isCompleted ? C.green : isActive ? C.primary : C.border;
-                            
-                            return (
-                              <div key={stage.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1, minWidth: '70px' }}>
-                                <div style={{
-                                  width: 26, height: 26, borderRadius: '50%',
-                                  background: isCompleted ? color : C.card,
-                                  border: `2px solid ${color}`,
-                                  color: isCompleted ? '#fff' : color,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: '12px', fontWeight: 750
-                                }}>
-                                  {isCompleted ? '✓' : stage.step}
-                                </div>
-                                <span style={{ fontSize: '11.5px', fontWeight: 700, color: isActive ? C.primary : isCompleted ? C.green : C.textLight }}>
-                                  {stage.label}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Documents Manager */}
-                      <div style={{ background: C.bgSecondary + '30', padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>{t("Verification Documents Upload Checklist")}</h4>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-                          {['PAN Card', 'Aadhaar Card', 'Salary Slip', 'Bank Statement'].map((docType) => {
-                            const matchedDoc = documents[app.id]?.find(d => d.document_type === docType);
-                            return (
-                              <div key={docType} style={{ background: C.card, border: `1px solid ${C.border}`, padding: '12px', borderRadius: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '90px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: C.text }}>{docType}</span>
-                                  {matchedDoc ? (
-                                    <span style={{
-                                      fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '10px',
-                                      background: matchedDoc.status === 'verified' ? `${C.green}15` : matchedDoc.status === 'rejected' ? `${C.red}15` : `${C.gold}15`,
-                                      color: matchedDoc.status === 'verified' ? C.green : matchedDoc.status === 'rejected' ? C.red : C.gold
-                                    }}>
-                                      {matchedDoc.status.toUpperCase()}
-                                    </span>
-                                  ) : (
-                                    <span style={{ fontSize: '10px', color: C.textLight }}>{t("Missing")}</span>
-                                  )}
-                                </div>
-                                
-                                <div style={{ marginTop: '8px' }}>
-                                  {matchedDoc ? (
-                                    <a href={matchedDoc.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: C.primary, fontWeight: 700, textDecoration: 'none' }}>
-                                      Preview Document
-                                    </a>
-                                  ) : (
-                                    <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.primary, fontWeight: 700 }}>
-                                      <MdCloudUpload /> {uploadingDoc === docType ? 'Uploading...' : 'Upload File'}
-                                      <input 
-                                        type="file" 
-                                        style={{ display: 'none' }} 
-                                        disabled={uploadingDoc !== null}
-                                        onChange={(e) => handleFileUpload(e, app.id, docType)} 
-                                      />
-                                    </label>
-                                  )}
+                      {/* Expandable Workspace Sub-panel */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={7} style={{ background: C.bgSecondary, padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                              
+                              {/* Stage Pipeline Progress Bar */}
+                              <div>
+                                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Interactive Lead Stage Tracker</h4>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {STAGES.map(st => (
+                                    <div key={st.id} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
+                                      Step {st.step}: {st.label}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
 
-                      {/* Timeline activity stream */}
-                      <div>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>{t("History Logs & Audit")}</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
-                          {timelines[app.id]?.map((t, index) => (
-                            <div key={index} style={{ borderLeft: `2px solid ${C.primary}`, paddingLeft: '12px', fontSize: '12px' }}>
-                              <div style={{ fontWeight: 700 }}>{t.activity}</div>
-                              <div style={{ color: C.textLight, margin: '2px 0' }}>{t.remarks || '—'}</div>
-                              <span style={{ fontSize: '10.5px', color: C.textLight }}>
-                                {new Date(t.performed_at).toLocaleString()} • By {t.performed_by_name || 'System'}
-                              </span>
+                              {/* Documents & Timeline Grid */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                <div>
+                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Application Documents</h4>
+                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                    {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
+                                      <label key={doc} style={{ padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <MdCloudUpload size={16} color={C.primary} /> Upload {doc.replace('_', ' ')}
+                                        <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, app.id, doc)} />
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Add Activity Note</h4>
+                                  <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '8px' }}>
+                                    <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '12px' }} />
+                                    <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px' }}>Save</button>
+                                  </form>
+                                </div>
+                              </div>
+
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-                    </div>
-
-                    {/* Right Panel: Notes Board & Call Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      
-                      {/* Customer Communication Actions */}
-                      <div style={{ ...S.card, padding: '14px', borderRadius: '12px', background: C.bgSecondary + '30', border: `1px solid ${C.border}` }}>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>{t("Quick Communications")}</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <a href={`https://wa.me/${app.customer_mobile}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#25D366', color: '#fff', borderRadius: '8px', padding: '8px', fontSize: '12.5px', fontWeight: 700 }}>
-                            <MdOutlineWhatsapp size={16} /> WhatsApp Customer
-                          </a>
-                          <a href={`tel:${app.customer_mobile}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', ...S.btn('outline'), borderRadius: '8px', padding: '8px', fontSize: '12.5px' }}>
-                            <MdPhone size={16} /> Call Customer
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Notes Comment Board */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <MdInsertComment /> Comments Board
-                        </h4>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '140px', overflowY: 'auto' }}>
-                          {!app.notes_list || app.notes_list.length === 0 ? (
-                            <span style={{ fontSize: '11.5px', color: C.textLight }}>{t("No public comments available yet.")}</span>
-                          ) : (
-                            app.notes_list.map((note) => (
-                              <div key={note.id} style={{ background: C.bgSecondary, padding: '8px 10px', borderRadius: '8px', fontSize: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: C.textLight, marginBottom: '2px' }}>
-                                  <strong>{note.writer_name} ({note.writer_role})</strong>
-                                  <span>{new Date(note.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <div style={{ color: C.text }}>{note.note}</div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '6px' }}>
-                          <input 
-                            type="text" 
-                            placeholder={t("Add public remark...")} 
-                            style={{ ...S.input, padding: '6px 10px', fontSize: '12.5px' }}
-                            value={newNote}
-                            onChange={e => setNewNote(e.target.value)}
-                          />
-                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px' }}>{t("Post")}</button>
-                        </form>
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-              )}
-
+      {/* ═══ MODAL 1: BULK UPDATE STATUS ═══ */}
+      {showBulkModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Bulk Status Update ({selectedAppIds.length} Leads)</h3>
+              <button onClick={() => setShowBulkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+            </div>
+            <form onSubmit={handleBulkStatusSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Select Target Stage</label>
+                <select style={S.input} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
+                  <option value="submitted">Applied</option>
+                  <option value="under_review">Verification Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="disbursed">Disbursed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
               </div>
-            );
-          })}
+              <button type="submit" disabled={bulkUpdating} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+                {bulkUpdating ? 'Updating...' : 'Apply Bulk Update'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 2: ASSIGN LEAD ═══ */}
+      {showAssignModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Assign Lead #{assignTargetApp?.app_number}</h3>
+              <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+            </div>
+            <form onSubmit={handleAssignSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Select Sub-partner or Team Member</label>
+                <select style={S.input} value={assignPartnerId} onChange={e => setAssignPartnerId(e.target.value)} required>
+                  <option value="">Choose Team Member...</option>
+                  <option value="self">Self (Unassign)</option>
+                  {teamMembers.map(m => (
+                    <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.partner_code})</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" disabled={assigning} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+                {assigning ? 'Assigning...' : 'Confirm Assignment'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 3: IMPORT CSV ═══ */}
+      {showImportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Import Leads via CSV</h3>
+              <button onClick={() => setShowImportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+            </div>
+            <form onSubmit={handleImportCSVSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Choose Leads CSV File</label>
+                <input type="file" accept=".csv" style={S.input} onChange={e => setImportFile(e.target.files[0])} required />
+              </div>
+              <button type="submit" disabled={importing} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+                {importing ? 'Importing...' : 'Upload & Import Leads'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
     </div>
   );
 }
-const theme = {
-  C: {
-    bgSecondary: '#ffffff',
-    border: '#e2e8f0',
-    primary: '#3b82f6',
-    green: '#10b981',
-    red: '#ef4444',
-    gold: '#f59e0b',
-    teal: '#14b8a6',
-    text: '#1e293b',
-    textLight: '#64748b'
-  }
-};

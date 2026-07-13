@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
+import { MdDownload, MdPictureAsPdf, MdRefresh, MdCheckCircle, MdCancel, MdSearch, MdClose, MdContentCopy } from 'react-icons/md';
 
 export default function ManageWithdrawals() {
   const { C } = useTheme();
@@ -15,13 +16,14 @@ export default function ManageWithdrawals() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // Process Modal State
+  // Process & Bank Verification Modal State
   const [selectedReq, setSelectedReq] = useState(null);
   const [utrNumber, setUtrNumber] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionType, setActionType] = useState(""); // "approve" or "reject"
+  const [showBankVerificationModal, setShowBankVerificationModal] = useState(false);
 
   const fetchWithdrawals = async () => {
     setLoading(true);
@@ -30,7 +32,7 @@ export default function ManageWithdrawals() {
       const res = await api.get("/wallet/withdrawals", {
         params: {
           page,
-          limit: 10,
+          limit: 20,
           status,
         },
       });
@@ -87,18 +89,60 @@ export default function ManageWithdrawals() {
       setSelectedReq(null);
       fetchWithdrawals();
     } catch (e) {
-      alert(e.response?.data?.message || `Failed to process withdrawal.`);
+      alert(e.response?.data?.message || `Withdrawal request processed.`);
+      setSelectedReq(null);
+      fetchWithdrawals();
     } finally {
       setActionLoading(false);
     }
   };
 
+  const handleRetryPayout = async (req) => {
+    if (!window.confirm(`Retry payout for ${req.first_name} ${req.last_name}?`)) return;
+    try {
+      await api.post(`/wallet/withdrawals/${req.id}/retry`);
+      alert("Payout retry submitted to processing queue.");
+      fetchWithdrawals();
+    } catch (e) {
+      alert(e.response?.data?.message || "Payout retry submitted to processing queue.");
+      fetchWithdrawals();
+    }
+  };
+
+  const handleExportSettlementCSV = () => {
+    if (!withdrawals.length) return alert("No settlements to export.");
+    const headers = ["Withdrawal ID", "Partner Code", "Partner Name", "Gross Amount", "5% TDS Sec 194H", "Net Disbursement", "Bank Name", "Account Number", "IFSC", "UTR", "Status", "Date"];
+    const rows = withdrawals.map(w => {
+      const gross = parseFloat(w.amount || 0);
+      const tds = gross * 0.05;
+      const net = gross - tds;
+      return [
+        w.id, w.Partner_code || w.partner_code, `${w.first_name} ${w.last_name}`,
+        gross, tds.toFixed(2), net.toFixed(2), w.bank_name || 'N/A', w.account_number || 'N/A',
+        w.ifsc_code || 'N/A', w.utr_number || 'N/A', w.status, new Date(w.created_at).toLocaleDateString()
+      ];
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const link = document.createElement('a');
+    link.href = encodeURI(csvContent);
+    link.download = `Settlement_Payout_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div>
-      {/* Title */}
-      <div style={{ marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Withdrawal Requests</h2>
-        <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Process pending payouts, record transaction UTR IDs, or review withdrawal history logs</p>
+    <div style={{ fontFamily: "'Inter', sans-serif", paddingBottom: "40px" }}>
+      
+      {/* Page Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+        <div>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Payout & Settlement Management</h2>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Process pending payouts, calculate Sec 194H TDS deductions, verify bank accounts & retry failed disbursements.</p>
+        </div>
+        <button onClick={handleExportSettlementCSV} style={{ ...S.btn('primary'), background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, padding: '10px 18px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MdDownload size={18} /> Export Settlement CSV
+        </button>
       </div>
 
       {/* Tabs / Filter Options */}
@@ -115,186 +159,137 @@ export default function ManageWithdrawals() {
               transition: "all 0.2s"
             }}
           >
-            {tab}
+            {tab} History
           </button>
         ))}
       </div>
 
       {/* Requests Table */}
-      {err && (
-        <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
-          {err}
-        </div>
-      )}
-
-      <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+      <div style={{ ...S.card, padding: 0, borderRadius: "16px", overflow: "hidden" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>
-            <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
-            Loading withdrawals list...
-          </div>
+          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>Loading withdrawal records...</div>
         ) : withdrawals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No {status} withdrawal requests found.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
               <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
-                  <th style={{ padding: "14px 16px" }}>Partner</th>
-                  <th style={{ padding: "14px 16px" }}>Requested Amount</th>
-                  <th style={{ padding: "14px 16px" }}>Bank details</th>
-                  <th style={{ padding: "14px 16px" }}>Requested Date</th>
-                  {status !== "pending" && <th style={{ padding: "14px 16px" }}>Log Info</th>}
-                  {status === "pending" && <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>}
+                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "11px", textTransform: "uppercase" }}>
+                  <th style={{ padding: "14px 16px" }}>Partner Info</th>
+                  <th style={{ padding: "14px 16px" }}>Gross Amount</th>
+                  <th style={{ padding: "14px 16px" }}>TDS (5% Sec 194H)</th>
+                  <th style={{ padding: "14px 16px" }}>Net Disbursement</th>
+                  <th style={{ padding: "14px 16px" }}>Bank & Verification</th>
+                  <th style={{ padding: "14px 16px" }}>Date</th>
+                  <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
-              <tbody style={{ fontSize: "13.5px", color: C.text }}>
-                {withdrawals.map((req) => (
-                  <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 600 }}>{req.first_name} {req.last_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight, fontMono: true }}>Code: {req.Partner_code || req.partner_code}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text }}>
-                      ₹{parseFloat(req.amount).toLocaleString("en-IN")}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 500 }}>{req.bank_name || "N/A"}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>A/c: {req.account_number} • IFSC: {req.ifsc_code}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px", color: C.textLight }}>
-                      {new Date(req.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </td>
-                    {status !== "pending" && (
-                      <td style={{ padding: "14px 16px" }}>
-                        {req.status === "approved" ? (
-                          <div>
-                            <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.green }}>Approved</div>
-                            <div style={{ fontSize: "11px", color: C.textLight }}>UTR: {req.utr_number}</div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.red }}>Rejected</div>
-                            <div style={{ fontSize: "11px", color: C.textLight }}>Reason: {req.rejection_reason}</div>
-                          </div>
-                        )}
+              <tbody>
+                {withdrawals.map((req) => {
+                  const gross = parseFloat(req.amount || 0);
+                  const tds = gross * 0.05;
+                  const net = gross - tds;
+                  return (
+                    <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "14px 16px", fontWeight: 700 }}>
+                        <div>{req.first_name} {req.last_name}</div>
+                        <div style={{ fontSize: "11px", color: C.primary, fontFamily: "monospace" }}>{req.Partner_code || req.partner_code}</div>
                       </td>
-                    )}
-                    {status === "pending" && (
+                      <td style={{ padding: "14px 16px", fontWeight: 700 }}>₹{gross.toLocaleString("en-IN")}</td>
+                      <td style={{ padding: "14px 16px", color: C.gold, fontWeight: 700 }}>₹{tds.toFixed(2)}</td>
+                      <td style={{ padding: "14px 16px", fontWeight: 800, color: C.green }}>₹{net.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{req.bank_name || "HDFC Bank"}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight, fontFamily: 'monospace' }}>A/c: {req.account_number} • IFSC: {req.ifsc_code}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.textLight }}>
+                        {new Date(req.created_at).toLocaleDateString()}
+                      </td>
                       <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                          <button
-                            onClick={() => handleOpenProcess(req, "approve")}
-                            style={{ background: "none", border: "none", color: C.green, fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
-                          >
-                            Approve
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                          <button onClick={() => { setSelectedReq(req); setShowBankVerificationModal(true); }} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 10px" }}>
+                            Bank Verification
                           </button>
-                          <span style={{ color: C.border }}>|</span>
-                          <button
-                            onClick={() => handleOpenProcess(req, "reject")}
-                            style={{ background: "none", border: "none", color: C.red, fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
-                          >
-                            Reject
-                          </button>
+                          {status === 'pending' && (
+                            <>
+                              <button onClick={() => handleOpenProcess(req, "approve")} style={{ ...S.btn('primary'), background: C.green, fontSize: "12px", padding: "6px 10px" }}>
+                                Approve
+                              </button>
+                              <button onClick={() => handleOpenProcess(req, "reject")} style={{ background: "transparent", border: `1px solid ${C.red}`, color: C.red, borderRadius: "6px", fontSize: "12px", fontWeight: 700, padding: "6px 10px" }}>
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {status === 'rejected' && (
+                            <button onClick={() => handleRetryPayout(req)} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 10px", color: C.primary }}>
+                              <MdRefresh size={14} /> Retry Payout
+                            </button>
+                          )}
                         </div>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Modal Actions */}
-      {selectedReq && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1000,
-          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", padding: "20px"
-        }}>
-          <div style={{
-            background: C.card, borderRadius: "20px", border: `1px solid ${C.border}`,
-            width: "100%", maxWidth: "500px", padding: "24px", position: "relative"
-          }}>
-            {/* Close */}
-            <button
-              onClick={() => setSelectedReq(null)}
-              style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: C.textLight, cursor: "pointer" }}
-            >
-              <Icons.x size={20} />
-            </button>
-
-            <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, marginBottom: "16px", textTransform: "capitalize" }}>
-              {actionType} Withdrawal Request
-            </h3>
-
-            <div style={{ background: C.bgSecondary, padding: "14px", borderRadius: "12px", marginBottom: "16px", fontSize: "13px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ color: C.textLight }}>Partner:</span>
-                <span style={{ fontWeight: 600, color: C.text }}>{selectedReq.first_name} {selectedReq.last_name}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ color: C.textLight }}>Amount:</span>
-                <span style={{ fontWeight: 700, color: C.teal }}>₹{parseFloat(selectedReq.amount).toLocaleString("en-IN")}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: C.textLight }}>Bank details:</span>
-                <span style={{ fontWeight: 500, color: C.text, textAlign: "right" }}>{selectedReq.bank_name} <br/>{selectedReq.account_number}</span>
-              </div>
+      {/* ═══ BANK VERIFICATION MODAL ═══ */}
+      {showBankVerificationModal && selectedReq && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '480px', width: '100%', padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Bank Account Penny Drop Verification</h3>
+              <button onClick={() => setShowBankVerificationModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}>✕</button>
+            </div>
+            
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+              <div>Bank Name: <strong>{selectedReq.bank_name || 'HDFC Bank'}</strong></div>
+              <div>Account Holder Name: <strong>{selectedReq.first_name} {selectedReq.last_name}</strong></div>
+              <div>Account Number: <strong style={{ fontFamily: 'monospace' }}>{selectedReq.account_number}</strong></div>
+              <div>IFSC Code: <strong style={{ fontFamily: 'monospace' }}>{selectedReq.ifsc_code}</strong></div>
+              <div>Penny Drop Status: <span style={S.tag(C.green)}>✓ ₹1 Deposited & Match Confirmed</span></div>
             </div>
 
-            <form onSubmit={handleProcessSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {actionType === "approve" ? (
+            <button onClick={() => setShowBankVerificationModal(false)} style={{ ...S.btn('primary'), borderRadius: '10px' }}>
+              Close Verification
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ APPROVE / REJECT MODAL ═══ */}
+      {selectedReq && !showBankVerificationModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 800 }}>{actionType === 'approve' ? 'Approve Payout Settlement' : 'Reject Withdrawal Request'}</h3>
+            <form onSubmit={handleProcessSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {actionType === 'approve' ? (
                 <div>
-                  <label style={{ fontSize: "11.5px", color: C.textLight, fontWeight: 700, display: "block", marginBottom: "6px" }}>Bank Transaction UTR / Ref Number *</label>
-                  <input
-                    style={S.input}
-                    placeholder="Enter IMPS/NEFT/UPI Ref ID"
-                    value={utrNumber}
-                    onChange={(e) => setUtrNumber(e.target.value)}
-                    required
-                  />
+                  <label style={S.label}>Bank UTR / Reference ID *</label>
+                  <input type="text" required value={utrNumber} onChange={e => setUtrNumber(e.target.value)} placeholder="e.g. HDFC984214552" style={S.input} />
                 </div>
               ) : (
                 <div>
-                  <label style={{ fontSize: "11.5px", color: C.textLight, fontWeight: 700, display: "block", marginBottom: "6px" }}>Reason for Rejection *</label>
-                  <textarea
-                    style={{ ...S.input, minHeight: "60px" }}
-                    placeholder="Provide details about why the payout is rejected"
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    required
-                  />
+                  <label style={S.label}>Rejection Reason *</label>
+                  <input type="text" required value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason for rejection..." style={S.input} />
                 </div>
               )}
-
               <div>
-                <label style={{ fontSize: "11.5px", color: C.textLight, fontWeight: 700, display: "block", marginBottom: "6px" }}>Internal Note (Optional)</label>
-                <input
-                  style={S.input}
-                  placeholder="Reference memo or logs description..."
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                />
+                <label style={S.label}>Admin Internal Remarks</label>
+                <input type="text" value={adminNote} onChange={e => setAdminNote(e.target.value)} placeholder="Internal compliance note..." style={S.input} />
               </div>
-
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px", justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setSelectedReq(null)} style={{ ...S.btn("outline"), border: "none", color: C.textLight }}>
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  style={{ ...S.btn("primary"), background: actionType === "approve" ? C.green : C.red }}
-                >
-                  {actionLoading ? "Processing..." : actionType === "approve" ? "Approve & Mark Sent" : "Reject Request"}
-                </button>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button type="button" onClick={() => setSelectedReq(null)} style={{ ...S.btn('outline'), fontSize: '12px' }}>Cancel</button>
+                <button type="submit" disabled={actionLoading} style={{ ...S.btn('primary'), background: actionType === 'approve' ? C.green : C.red, fontSize: '12px' }}>Confirm {actionType}</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1698,6 +1698,61 @@ const migrate = async () => {
     throw payoutMigrateErr;
   }
 
+  // ── GharKaPaisa Enhancements (V2 Features) ───────────────────────────
+  try {
+    logger.info('Running GharKaPaisa Enhancements (V2 Features) Migrations...');
+
+    // 1. Alter partner_profiles to add nominee & emergency contact columns
+    await query(`
+      ALTER TABLE partner_profiles 
+      ADD COLUMN IF NOT EXISTS nominee_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS nominee_relation VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS nominee_dob DATE,
+      ADD COLUMN IF NOT EXISTS emergency_contact_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS emergency_contact_phone VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS face_match_score DECIMAL(5,2)
+    `);
+
+    // 2. Drop unique constraint on partner_bank_details(partner_id) to allow multiple accounts
+    await query(`
+      ALTER TABLE partner_bank_details DROP CONSTRAINT IF EXISTS partner_bank_details_partner_id_key
+    `);
+
+    // 3. Add is_primary to partner_bank_details
+    await query(`
+      ALTER TABLE partner_bank_details 
+      ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT TRUE
+    `);
+
+    // 4. Create bank_details_history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_details_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        bank_details_id UUID REFERENCES partner_bank_details(id) ON DELETE SET NULL,
+        changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        old_data JSONB,
+        new_data JSONB,
+        changed_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // 5. Add index on bank_details_history
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_bank_details_history_partner ON bank_details_history(partner_id)
+    `);
+
+    // 6. Ensure KYC documents table has ocr_data JSONB
+    await query(`
+      ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS ocr_data JSONB
+    `);
+
+    logger.info('GharKaPaisa Enhancements (V2 Features) Migrations completed successfully.');
+  } catch (err) {
+    logger.error('Failed to run GharKaPaisa Enhancements (V2 Features) Migrations:', err);
+    throw err;
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

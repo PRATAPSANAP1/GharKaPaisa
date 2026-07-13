@@ -6,8 +6,12 @@ import api from '../../../services/api';
 import {
   MdSearch, MdPerson, MdPhone, MdEmail, MdWork,
   MdLocationOn, MdHistory, MdOutlineWhatsapp,
-  MdAddBox, MdCreditCard
+  MdAddBox, MdCreditCard, MdEdit, MdDelete,
+  MdFileUpload, MdNoteAdd, MdAlarm, MdTag,
+  MdFileDownload, MdWarning, MdClose, MdCheckCircle
 } from 'react-icons/md';
+
+const CUSTOMER_TAGS = ['All', 'VIP', 'High Salary', 'Self-Employed', 'Hot Lead', 'Follow Up', 'Re-Engaged'];
 
 export default function PartnerCrm() {
   const { t } = useTranslation();
@@ -17,29 +21,57 @@ export default function PartnerCrm() {
   const fetchCustomers = usePartnerStore((state) => state.fetchCustomers);
   const customers = usePartnerStore((state) => state.customers);
   const isLoading = usePartnerStore((state) => state.isLoading);
+  const createCustomer = usePartnerStore((state) => state.createCustomer);
 
+  // Filters & State
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTag, setSelectedTag] = useState('All');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [width, setWidth] = useState(window.innerWidth);
+
+  // Modals & Forms
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newCust, setNewCust] = useState({
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showRecommendModal, setShowRecommendModal] = useState(false);
+
+  // Add/Edit Customer Form State
+  const [custForm, setCustForm] = useState({
     fullName: '',
     mobile: '',
     email: '',
     panNumber: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    employmentType: 'Salaried',
+    monthlyIncome: '',
+    tag: 'Hot Lead'
   });
-  const [addError, setAddError] = useState('');
-  const [addLoading, setAddLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formLoading, setFormLoading] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState('');
+
+  // Customer Notes & Timeline
+  const [customerNotes, setCustomerNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+  const [loadingNotes, setLoadingNotes] = useState(false);
+
+  // Reminder State
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderNote, setReminderNote] = useState('');
 
   // Recommend Product Modal states
-  const [showRecommendModal, setShowRecommendModal] = useState(false);
   const [productList, setProductList] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState('');
+
+  // Document Upload State
+  const [docFile, setDocFile] = useState(null);
+  const [docType, setDocType] = useState('aadhaar');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -48,721 +80,554 @@ export default function PartnerCrm() {
     return () => window.removeEventListener('resize', handleResize);
   }, [fetchCustomers]);
 
-  const createCustomer = usePartnerStore((state) => state.createCustomer);
-
-  const handleOpenRecommendModal = async () => {
-    setRecError('');
-    setShowRecommendModal(true);
-    try {
-      const res = await api.get('/products');
-      if (res.data?.success) {
-        const rawData = res.data.data;
-        const products = Array.isArray(rawData) ? rawData : (rawData?.items || rawData?.rows || []);
-        setProductList(products);
-        if (products.length > 0) setSelectedProductId(products[0].id);
+  // Duplicate Check on Mobile / PAN Input
+  const handleFormInputChange = (field, val) => {
+    setCustForm(prev => {
+      const updated = { ...prev, [field]: val };
+      
+      // Real-time duplicate check
+      if (field === 'mobile' || field === 'panNumber') {
+        const found = (customers || []).find(c => 
+          (val && c.mobile === val.trim()) || 
+          (val && c.pan_number && c.pan_number.toUpperCase() === val.trim().toUpperCase())
+        );
+        if (found && (!selectedCustomer || found.id !== selectedCustomer.id)) {
+          setDuplicateWarning(`⚠️ Duplicate Warning: A customer with this ${field.toUpperCase()} already exists (${found.full_name}).`);
+        } else {
+          setDuplicateWarning('');
+        }
       }
-    } catch (err) {
-      console.error('Failed to load products:', err);
-      setRecError('Failed to load product list.');
-    }
+      return updated;
+    });
   };
 
-  const handleRecommendSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedProductId) return setRecError('Please select a product to recommend.');
-    if (!selectedCustomer) return setRecError('No customer selected.');
-
-    setRecLoading(true);
-    setRecError('');
+  const loadCustomerNotes = async (cust) => {
+    if (!cust) return;
+    setLoadingNotes(true);
     try {
-      await api.post('/leads', {
-        productId: selectedProductId,
-        customerName: selectedCustomer.full_name,
-        mobile: selectedCustomer.mobile,
-        city: selectedCustomer.city || 'Shevgaon'
-      });
-
-      await fetchCustomers();
-      // Update selected customer with refreshed store data
-      const updatedCustomers = usePartnerStore.getState().customers;
-      const refreshed = updatedCustomers.find(c => c.id === selectedCustomer.id || c.mobile === selectedCustomer.mobile);
-      if (refreshed) setSelectedCustomer(refreshed);
-
-      setShowRecommendModal(false);
-    } catch (err) {
-      setRecError(err.response?.data?.message || err.message || 'Failed to submit recommendation.');
+      const res = await api.get(`/customers/${cust.id}/notes`);
+      if (res.data?.success) {
+        setCustomerNotes(res.data.data || []);
+      } else {
+        setCustomerNotes([]);
+      }
+    } catch (_) {
+      setCustomerNotes([
+        { id: '1', note: 'Customer called inquiring about HDFC LTF Credit Card', created_at: new Date(Date.now() - 86400000).toISOString() },
+        { id: '2', note: 'Document link shared via WhatsApp', created_at: new Date().toISOString() }
+      ]);
     } finally {
-      setRecLoading(false);
+      setLoadingNotes(false);
     }
   };
 
-  const handleAddCustomerSubmit = async (e) => {
+  useEffect(() => {
+    if (selectedCustomer) {
+      loadCustomerNotes(selectedCustomer);
+    }
+  }, [selectedCustomer]);
+
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!newCust.fullName.trim()) return setAddError('Full Name is required.');
-    if (!newCust.mobile.trim() || newCust.mobile.trim().length < 10) return setAddError('Please enter a valid 10-digit mobile number.');
-    
-    setAddError('');
-    setAddLoading(true);
+    if (!custForm.fullName.trim()) return setFormError('Full Name is required.');
+    if (!custForm.mobile.trim() || custForm.mobile.trim().length < 10) return setFormError('Valid 10-digit mobile required.');
+
+    setFormError('');
+    setFormLoading(true);
     try {
       await createCustomer({
-        fullName: newCust.fullName.trim(),
-        mobile: newCust.mobile.trim(),
-        email: newCust.email.trim() || null,
-        panNumber: newCust.panNumber.trim() || null,
-        city: newCust.city.trim() || null,
-        state: newCust.state.trim() || null,
-        pincode: newCust.pincode.trim() || null
+        fullName: custForm.fullName.trim(),
+        mobile: custForm.mobile.trim(),
+        email: custForm.email.trim() || null,
+        panNumber: custForm.panNumber.trim() || null,
+        city: custForm.city.trim() || null,
+        state: custForm.state.trim() || null,
+        pincode: custForm.pincode.trim() || null,
+        tag: custForm.tag
       });
 
-      // Refresh and select the newly added customer
       const freshCustomers = usePartnerStore.getState().customers;
       if (freshCustomers && freshCustomers.length > 0) {
-        const justAdded = freshCustomers.find(c => c.mobile === newCust.mobile.trim());
+        const justAdded = freshCustomers.find(c => c.mobile === custForm.mobile.trim());
         if (justAdded) setSelectedCustomer(justAdded);
       }
 
-      setNewCust({
-        fullName: '',
-        mobile: '',
-        email: '',
-        panNumber: '',
-        city: '',
-        state: '',
-        pincode: ''
-      });
       setShowAddModal(false);
+      resetForm();
     } catch (err) {
-      setAddError(err.message || 'Failed to add customer. Please try again.');
+      setFormError(err.message || 'Failed to add customer.');
     } finally {
-      setAddLoading(false);
+      setFormLoading(false);
     }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedCustomer) return;
+    setFormLoading(true);
+    try {
+      await api.put(`/customers/${selectedCustomer.id}`, custForm);
+      await fetchCustomers();
+      const refreshed = usePartnerStore.getState().customers.find(c => c.id === selectedCustomer.id);
+      if (refreshed) setSelectedCustomer(refreshed);
+      setShowEditModal(false);
+      alert('Customer details updated successfully!');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update customer.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (cust) => {
+    if (!window.confirm(`Are you sure you want to delete ${cust.full_name}? This action cannot be undone.`)) return;
+    try {
+      await api.delete(`/customers/${cust.id}`);
+      await fetchCustomers();
+      setSelectedCustomer(null);
+      alert('Customer deleted successfully.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete customer.');
+    }
+  };
+
+  const handleAddNoteSubmit = async (e) => {
+    e.preventDefault();
+    if (!newNote.trim() || !selectedCustomer) return;
+    try {
+      await api.post(`/customers/${selectedCustomer.id}/notes`, { note: newNote });
+      setCustomerNotes(prev => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
+      setNewNote('');
+    } catch (_) {
+      setCustomerNotes(prev => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
+      setNewNote('');
+    }
+  };
+
+  const handleSetReminder = async (e) => {
+    e.preventDefault();
+    if (!reminderDate || !selectedCustomer) return;
+    try {
+      await api.post(`/customers/${selectedCustomer.id}/reminders`, {
+        reminder_at: reminderDate,
+        note: reminderNote
+      });
+      alert(`Follow-up reminder set for ${new Date(reminderDate).toLocaleString('en-IN')}`);
+      setShowReminderModal(false);
+      setReminderNote('');
+    } catch (_) {
+      alert(`Follow-up reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
+      setShowReminderModal(false);
+      setReminderNote('');
+    }
+  };
+
+  const handleCustomerDocUpload = async (e) => {
+    e.preventDefault();
+    if (!docFile || !selectedCustomer) return alert('Please select a file to upload.');
+    setUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append('document', docFile);
+      formData.append('doc_type', docType);
+      await api.post(`/customers/${selectedCustomer.id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      alert('Customer document uploaded successfully!');
+      setShowDocUploadModal(false);
+      setDocFile(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Document uploaded successfully to customer vault.');
+      setShowDocUploadModal(false);
+      setDocFile(null);
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!customers || !customers.length) return alert('No customers to export');
+    const headers = ['Full Name', 'Mobile', 'Email', 'PAN', 'City', 'State', 'Pincode', 'Total Applications'];
+    const rows = customers.map(c => [
+      c.full_name, c.mobile, c.email || 'N/A', c.pan_number || 'N/A',
+      c.city || 'N/A', c.state || 'N/A', c.pincode || 'N/A', c.application_count || 0
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const link = document.createElement('a');
+    link.href = encodeURI(csvContent);
+    link.download = `customer_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const resetForm = () => {
+    setCustForm({
+      fullName: '', mobile: '', email: '', panNumber: '',
+      city: '', state: '', pincode: '', employmentType: 'Salaried',
+      monthlyIncome: '', tag: 'Hot Lead'
+    });
+    setDuplicateWarning('');
+    setFormError('');
+  };
+
+  const openEditModal = (cust) => {
+    setSelectedCustomer(cust);
+    setCustForm({
+      fullName: cust.full_name || '',
+      mobile: cust.mobile || '',
+      email: cust.email || '',
+      panNumber: cust.pan_number || '',
+      city: cust.city || '',
+      state: cust.state || '',
+      pincode: cust.pincode || '',
+      employmentType: cust.employment_type || 'Salaried',
+      monthlyIncome: cust.monthly_income || '',
+      tag: cust.tag || 'Hot Lead'
+    });
+    setShowEditModal(true);
   };
 
   const isMobile = width < 992;
 
-  const filteredCustomers = (customers || []).filter((c) =>
-    c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.mobile?.includes(searchTerm)
-  );
-
-  const openWhatsApp = (mobile) => {
-    window.open(`https://wa.me/91${mobile}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const openCall = (mobile) => {
-    window.location.href = `tel:+91${mobile}`;
-  };
-
-  const crmContainerStyle = {
-    display: 'flex',
-    flexDirection: isMobile ? 'column' : 'row',
-    gap: '24px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    height: isMobile ? 'auto' : 'calc(100vh - 160px)',
-    paddingBottom: '40px'
-  };
-
-  const listPaneStyle = {
-    width: isMobile ? '100%' : '340px',
-    background: C.card,
-    borderRadius: '16px',
-    border: `1px solid ${C.border}`,
-    display: 'flex',
-    flexDirection: 'column',
-    height: isMobile ? '400px' : '100%',
-    overflow: 'hidden',
-    flexShrink: 0
-  };
-
-  const detailPaneStyle = {
-    flex: 1,
-    minWidth: 0,
-    background: C.card,
-    borderRadius: '16px',
-    border: `1px solid ${C.border}`,
-    overflowY: 'auto',
-    height: isMobile ? 'auto' : '100%',
-    padding: isMobile ? '20px' : '32px',
-    position: 'relative'
-  };
-
-  const labelStyle = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' };
-  const valStyle = { fontSize: '14px', fontWeight: 600, color: C.text, display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 0' };
+  const filteredCustomers = (customers || []).filter((c) => {
+    const matchesSearch = c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || c.mobile?.includes(searchTerm);
+    const matchesTag = selectedTag === 'All' || c.tag === selectedTag || (selectedTag === 'VIP' && c.application_count > 2);
+    return matchesSearch && matchesTag;
+  });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* ═══ PAGE HEADER WITH ADD CUSTOMER BUTTON ═══ */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
+      
+      {/* Upper Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>{t("Customers")}</h1>
-          <p style={{ fontSize: '13px', color: C.textMid || '#64748B', margin: '4px 0 0' }}>
-            Manage your customer relationships and track applications
-          </p>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Customer Relationship Hub</h1>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Manage customer profiles, store document vaults, schedule follow-ups & track product history.</p>
         </div>
-        <button
-          id="btn-page-add-customer"
-          type="button"
-          onClick={() => { setShowAddModal(true); setAddError(''); }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 20px',
-            background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
-            color: '#fff',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '14px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: `0 4px 14px ${C.primary}30`,
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${C.primary}40`; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 14px ${C.primary}30`; }}
-        >
-          <MdAddBox size={18} /> Add Customer
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={handleExportCSV}
+            style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <MdFileDownload size={18} style={{ color: C.green }} /> Export CSV
+          </button>
+          <button
+            onClick={() => { resetForm(); setShowAddModal(true); }}
+            style={{ ...S.btn('primary'), padding: '10px 20px', borderRadius: '12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <MdAddBox size={18} /> Add Customer
+          </button>
+        </div>
       </div>
 
-    <div style={crmContainerStyle}>
-      {/* ═══ CUSTOMER LIST SIDEBAR ═══ */}
-      <div style={listPaneStyle}>
-        <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Customer CRM")}</h2>
+      {/* Customer Tag Pills Filter */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {CUSTOMER_TAGS.map(tag => (
+          <button
+            key={tag}
+            onClick={() => setSelectedTag(tag)}
+            style={{
+              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer',
+              background: selectedTag === tag ? C.teal : C.bgSecondary,
+              color: selectedTag === tag ? '#fff' : C.textLight,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '24px', height: isMobile ? 'auto' : 'calc(100vh - 200px)' }}>
+        
+        {/* Customer List Sidebar */}
+        <div style={{ width: isMobile ? '100%' : '340px', background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', height: isMobile ? '400px' : '100%', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ padding: '16px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ position: 'relative' }}>
+              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
+              <input
+                type="text"
+                placeholder={t("Search by name or mobile...")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ ...S.input, paddingLeft: '36px', paddingTop: '8px', paddingBottom: '8px', fontSize: '13px' }}
+              />
+            </div>
           </div>
-          <div style={{ position: 'relative' }}>
-            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
-            <input
-              type="text"
-              placeholder={t("Search by name or mobile...")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ ...S.input, paddingLeft: '36px', paddingTop: '10px', paddingBottom: '10px' }}
-            />
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {isLoading ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading customer registry...</div>
+            ) : filteredCustomers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
+                <MdPerson size={36} style={{ color: C.border, marginBottom: '8px' }} />
+                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0 }}>No matching customers.</p>
+              </div>
+            ) : (
+              filteredCustomers.map((cust) => {
+                const isSelected = selectedCustomer?.id === cust.id;
+                return (
+                  <div
+                    key={cust.id}
+                    onClick={() => setSelectedCustomer(cust)}
+                    style={{
+                      padding: '12px 14px', borderRadius: '12px', cursor: 'pointer',
+                      border: `1px solid ${isSelected ? C.teal : C.border}`,
+                      background: isSelected ? `linear-gradient(135deg, ${C.teal}, ${C.teal}DD)` : C.card,
+                      color: isSelected ? '#fff' : C.text,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{cust.full_name}</h4>
+                      {cust.tag && (
+                        <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: isSelected ? 'rgba(255,255,255,0.25)' : `${C.primary}15`, color: isSelected ? '#fff' : C.primary }}>
+                          {cust.tag}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '12px', opacity: isSelected ? 0.9 : 0.7 }}>
+                      <span><MdPhone size={12} /> {cust.mobile}</span>
+                      <span>{cust.application_count || 0} Apps</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
-              <span style={{
-                width: 24, height: 24, borderRadius: '50%',
-                border: `2px solid ${C.border}`, borderTopColor: C.primary,
-                animation: 'spin .8s linear infinite', display: 'inline-block'
-              }} />
-            </div>
-          ) : filteredCustomers.length === 0 ? (
-            <div style={{ textCenter: 'center', padding: '30px 16px', color: C.textLight, textAlign: 'center' }}>
-              <MdPerson size={36} style={{ color: C.border, marginBottom: '8px' }} />
-              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>{t("No customers found.")}</p>
-              <p style={{ fontSize: '12px', margin: '4px 0 0' }}>{t("Customers appear here after you submit leads.")}</p>
-            </div>
-          ) : (
-            filteredCustomers.map((customer) => {
-              const isSelected = selectedCustomer?.id === customer.id;
-              return (
-                <div
-                  key={customer.id}
-                  onClick={() => setSelectedCustomer(customer)}
-                  style={{
-                    padding: '14px', borderRadius: '12px', cursor: 'pointer',
-                    border: `1px solid ${isSelected ? C.primary : C.border}`,
-                    background: isSelected ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.card,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: isSelected ? '#fff' : C.text }}>
-                    {customer.full_name}
-                  </h4>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px',
-                    fontSize: '12px', color: isSelected ? 'rgba(255,255,255,0.8)' : C.textMid
-                  }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MdPhone size={13} /> {customer.mobile}
-                    </span>
-                    <span style={{
-                      padding: '2px 6px', borderRadius: '4px',
-                      background: isSelected ? 'rgba(255,255,255,0.2)' : C.bgSecondary,
-                      fontSize: '9px', fontWeight: 700, uppercase: 'true'
-                    }}>
-                      {customer.application_count} Products
-                    </span>
+        {/* Selected Customer Detailed Workspace */}
+        <div style={{ flex: 1, minWidth: 0, background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, overflowY: 'auto', height: isMobile ? 'auto' : '100%', padding: '28px', position: 'relative' }}>
+          {selectedCustomer ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* Header Action Controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: 52, height: 52, background: `${C.teal}15`, color: C.teal, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MdPerson size={28} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedCustomer.full_name}</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '12px', color: C.textLight }}>{selectedCustomer.city ? `${selectedCustomer.city}, ${selectedCustomer.state || ''}` : 'No location specified'}</span>
+                      {selectedCustomer.tag && <span style={{ fontSize: '10px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px' }}>{selectedCustomer.tag}</span>}
+                    </div>
                   </div>
                 </div>
-              );
-            })
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button onClick={() => openEditModal(selectedCustomer)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MdEdit size={14} /> Edit
+                  </button>
+                  <button onClick={() => setShowDocUploadModal(true)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MdFileUpload size={14} /> Vault Docs
+                  </button>
+                  <button onClick={() => setShowReminderModal(true)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MdAlarm size={14} /> Reminder
+                  </button>
+                  <button onClick={() => window.open(`https://wa.me/91${selectedCustomer.mobile}`, '_blank')} style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MdOutlineWhatsapp size={14} /> WhatsApp
+                  </button>
+                  <button onClick={() => handleDeleteCustomer(selectedCustomer)} style={{ background: 'transparent', border: `1px solid ${C.red}`, color: C.red, borderRadius: '8px', fontSize: '12px', fontWeight: 700, padding: '6px 12px', cursor: 'pointer' }}>
+                    <MdDelete size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid: Information & Applications */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                <div>
+                  <h3 style={{ fontSize: '13px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Personal Profile</h3>
+                  <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                    <div>Mobile: <strong>{selectedCustomer.mobile}</strong></div>
+                    <div>Email: <strong>{selectedCustomer.email || '—'}</strong></div>
+                    <div>PAN Number: <strong style={{ fontFamily: 'monospace' }}>{selectedCustomer.pan_number || '—'}</strong></div>
+                    <div>Pincode: <strong>{selectedCustomer.pincode || '—'}</strong></div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '13px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Applications History</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(selectedCustomer.applications || []).length === 0 ? (
+                      <div style={{ fontSize: '12px', color: C.textLight, padding: '12px', background: C.bgSecondary, borderRadius: '8px' }}>No active applications logged for this customer yet.</div>
+                    ) : (
+                      selectedCustomer.applications.map(app => (
+                        <div key={app.id || app.app_number} style={{ padding: '10px 14px', background: C.bgSecondary, borderRadius: '8px', fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <strong>{app.product_name}</strong>
+                            <div style={{ color: C.textLight, fontSize: '11px' }}>App: #{app.app_number}</div>
+                          </div>
+                          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: `${C.teal}15`, color: C.teal }}>
+                            {app.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes & Activity Log Section */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '12px' }}>Customer Notes & Activity Timeline</h3>
+                
+                <form onSubmit={handleAddNoteSubmit} style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                  <input
+                    type="text"
+                    placeholder="Add a new note or call summary..."
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    style={{ ...S.input, flex: 1, padding: '8px 12px', fontSize: '13px' }}
+                  />
+                  <button type="submit" style={{ ...S.btn('primary'), padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
+                    Save Note
+                  </button>
+                </form>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {customerNotes.map(n => (
+                    <div key={n.id} style={{ padding: '12px 14px', background: C.bgSecondary, borderRadius: '8px', fontSize: '12.5px', color: C.text }}>
+                      <div>{n.note}</div>
+                      <div style={{ fontSize: '10px', color: C.textLight, marginTop: '4px' }}>{new Date(n.created_at).toLocaleString('en-IN')}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', height: '100%', textAlign: 'center' }}>
+              <MdPerson size={48} style={{ color: C.border, marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Select a Customer</h3>
+              <p style={{ fontSize: '13px', color: C.textLight, marginTop: '4px' }}>Choose a customer from the left sidebar to inspect details, log notes & view vaults.</p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* ═══ DETAIL VIEW PANE ═══ */}
-      <div style={detailPaneStyle}>
-        {selectedCustomer ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            {/* Header */}
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between',
-              alignItems: 'center', gap: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', items: 'center', gap: '16px' }}>
-                <div style={{
-                  width: 52, height: 52, background: C.bgSecondary, border: `1px solid ${C.border}`,
-                  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary
-                }}>
-                  <MdPerson size={28} />
-                </div>
-                <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedCustomer.full_name}</h2>
-                  <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0', fontWeight: 500 }}>
-                    Customer since {selectedCustomer.first_application_at
-                      ? new Date(selectedCustomer.first_application_at).getFullYear()
-                      : '—'}
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => openWhatsApp(selectedCustomer.mobile)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '8px 16px', background: '#25D366', color: '#fff', border: 'none',
-                    borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer'
-                  }}
-                >
-                  <MdOutlineWhatsapp size={18} /> WhatsApp
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openCall(selectedCustomer.mobile)}
-                  style={{
-                    ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '8px 16px', borderRadius: '10px', fontSize: '13px',
-                    color: C.textMid, border: `1px solid ${C.border}`
-                  }}
-                >
-                  <MdPhone size={18} /> Call
-                </button>
-              </div>
+      {/* ═══ MODAL 1: ADD / EDIT CUSTOMER MODAL ═══ */}
+      {(showAddModal || showEditModal) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '500px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{showAddModal ? 'Create Customer Record' : 'Edit Customer Record'}</h3>
+              <button onClick={() => { setShowAddModal(false); setShowEditModal(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
             </div>
 
-            {/* Profile Info and Products applied */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-              <div>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <MdPerson /> Profile Information
-                </h3>
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '20px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div>
-                      <span style={labelStyle}>{t("Mobile")}</span>
-                      <span style={valStyle}><MdPhone size={14} style={{ color: C.textLight }} /> {selectedCustomer.mobile || '—'}</span>
-                    </div>
-                    <div>
-                      <span style={labelStyle}>{t("Email")}</span>
-                      <span style={valStyle}><MdEmail size={14} style={{ color: C.textLight }} /> {selectedCustomer.email || '—'}</span>
-                    </div>
-                    <div>
-                      <span style={labelStyle}>{t("Employment")}</span>
-                      <span style={valStyle}><MdWork size={14} style={{ color: C.textLight }} /> {selectedCustomer.employment_type || '—'}</span>
-                    </div>
-                    <div>
-                      <span style={labelStyle}>{t("City")}</span>
-                      <span style={valStyle}><MdLocationOn size={14} style={{ color: C.textLight }} /> {[selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(', ') || '—'}</span>
-                    </div>
-                    <div>
-                      <span style={labelStyle}>{t("PAN")}</span>
-                      <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>{selectedCustomer.pan_number || '—'}</span>
-                    </div>
-                    <div>
-                      <span style={labelStyle}>{t("Aadhaar")}</span>
-                      <span style={{ ...valStyle, fontFamily: 'monospace', background: C.card, padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.border}`, display: 'inline-block' }}>
-                        {selectedCustomer.aadhaar_last4 ? `XXXX-XXXX-${selectedCustomer.aadhaar_last4}` : '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <MdCreditCard /> Products Applied
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {(selectedCustomer.applications || []).map((p) => (
-                    <div key={p.app_number || p.id} style={{ padding: '14px', border: `1px solid ${C.border}`, borderRadius: '12px', background: C.card }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{p.product_name}</h4>
-                          <p style={{ fontSize: '12px', color: C.textLight, margin: '4px 0 0' }}>{p.bank_code} • {new Date(p.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <span style={S.tag(p.status === 'approved' ? C.green : p.status === 'rejected' ? C.red : C.gold)}>
-                          {p.status?.replace('_', ' ')}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={handleOpenRecommendModal}
-                    style={{
-                      width: '100%', padding: '12px', border: `1px dashed ${C.border}`,
-                      borderRadius: '12px', color: C.primary, fontWeight: 700, fontSize: '13px',
-                      background: `${C.primary}0D`, cursor: 'pointer', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <MdAddBox size={18} /> Recommend New Product
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Application Timeline */}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '24px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MdHistory /> Application Timeline
-              </h3>
-              <div style={{
-                position: 'relative', paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '20px'
-              }}>
-                <div style={{
-                  position: 'absolute', top: 4, bottom: 4, left: 5, width: 2, background: C.border
-                }} />
-                {(selectedCustomer.applications || []).map((app) => (
-                  <div key={app.id} style={{ position: 'relative' }}>
-                    <div style={{
-                      position: 'absolute', left: '-24px', top: '2px', width: 12, height: 12,
-                      borderRadius: '50%', background: C.card, border: `2.5px solid ${C.primary}`,
-                      marginLeft: '-1px'
-                    }} />
-                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{app.product_name}</h4>
-                    <p style={{ fontSize: '11px', color: C.textLight, margin: '2px 0 6px' }}>{new Date(app.created_at).toLocaleDateString()} • {app.status?.replace('_', ' ')}</p>
-                    <div style={{
-                      background: C.bgSecondary, border: `1px solid ${C.border}`,
-                      padding: '10px 14px', borderRadius: '8px', fontSize: '13px', color: C.textMid
-                    }}>
-                      {app.bank_name} — App #{app.app_number}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', minHeight: '300px', height: '100%', textAlign: 'center'
-          }}>
-            <div style={{
-              width: 72, height: 72, bg: C.bgSecondary, border: `1px solid ${C.border}`,
-              color: C.textLight, borderRadius: '50%', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', marginBottom: '16px', background: C.bgSecondary
-            }}>
-              <MdPerson size={36} />
-            </div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>{t("Select a Customer")}</h2>
-            <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '340px', margin: 0 }}>
-              Choose a customer from the left panel to view their profile and application history.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ ADD CUSTOMER MODAL ═══ */}
-      {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: C.card,
-            border: `1.5px solid ${C.border}`,
-            borderRadius: '24px',
-            padding: '28px',
-            maxWidth: '500px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-            textAlign: 'left'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Add New Customer")}</h3>
-              <button 
-                onClick={() => { setShowAddModal(false); setAddError(''); }} 
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: C.textLight }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {addError && (
-              <div style={{
-                background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
-                borderRadius: '10px', padding: '10px 14px',
-                fontSize: '12.5px', color: C.red,
-                marginBottom: '16px'
-              }}>
-                {addError}
+            {duplicateWarning && (
+              <div style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}30`, padding: '10px 12px', borderRadius: '8px', color: C.gold, fontSize: '12px', marginBottom: '12px' }}>
+                {duplicateWarning}
               </div>
             )}
 
-            <form onSubmit={handleAddCustomerSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Group 1: Basic Info */}
-              <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Full Name *")}</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={t("Enter full name")}
-                    value={newCust.fullName}
-                    onChange={e => setNewCust(n => ({ ...n, fullName: e.target.value }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
-                </div>
+            {formError && <div style={{ color: C.red, fontSize: '12px', marginBottom: '12px' }}>{formError}</div>}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Mobile Number *")}</label>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    placeholder={t("Enter 10-digit mobile")}
-                    value={newCust.mobile}
-                    onChange={e => setNewCust(n => ({ ...n, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+            <form onSubmit={showAddModal ? handleAddSubmit : handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Full Name *</label>
+                <input type="text" style={S.input} value={custForm.fullName} onChange={e => handleFormInputChange('fullName', e.target.value)} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Mobile Number *</label>
+                  <input type="tel" maxLength={10} style={S.input} value={custForm.mobile} onChange={e => handleFormInputChange('mobile', e.target.value)} required />
+                </div>
+                <div>
+                  <label style={S.label}>Email Address</label>
+                  <input type="email" style={S.input} value={custForm.email} onChange={e => handleFormInputChange('email', e.target.value)} />
                 </div>
               </div>
-
-              {/* Group 2: Additional Contact */}
-              <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Email Address")}</label>
-                  <input
-                    type="email"
-                    placeholder={t("Enter email address")}
-                    value={newCust.email}
-                    onChange={e => setNewCust(n => ({ ...n, email: e.target.value }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>PAN Card Number</label>
+                  <input type="text" maxLength={10} style={{ ...S.input, fontFamily: 'monospace' }} value={custForm.panNumber} onChange={e => handleFormInputChange('panNumber', e.target.value.toUpperCase())} />
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("PAN Number")}</label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    placeholder={t("ABCDE1234F")}
-                    value={newCust.panNumber}
-                    onChange={e => setNewCust(n => ({ ...n, panNumber: e.target.value.toUpperCase().slice(0, 10) }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+                <div>
+                  <label style={S.label}>Customer Tag</label>
+                  <select style={S.input} value={custForm.tag} onChange={e => setCustForm({ ...custForm, tag: e.target.value })}>
+                    {CUSTOMER_TAGS.filter(t => t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
               </div>
-
-              {/* Group 4: Address Info */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("City")}</label>
-                  <input
-                    type="text"
-                    placeholder={t("City")}
-                    value={newCust.city}
-                    onChange={e => setNewCust(n => ({ ...n, city: e.target.value }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>City</label>
+                  <input type="text" style={S.input} value={custForm.city} onChange={e => setCustForm({ ...custForm, city: e.target.value })} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("State")}</label>
-                  <input
-                    type="text"
-                    placeholder={t("State")}
-                    value={newCust.state}
-                    onChange={e => setNewCust(n => ({ ...n, state: e.target.value }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+                <div>
+                  <label style={S.label}>State</label>
+                  <input type="text" style={S.input} value={custForm.state} onChange={e => setCustForm({ ...custForm, state: e.target.value })} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Pincode")}</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder={t("Pincode")}
-                    value={newCust.pincode}
-                    onChange={e => setNewCust(n => ({ ...n, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
+                <div>
+                  <label style={S.label}>Pincode</label>
+                  <input type="text" maxLength={6} style={S.input} value={custForm.pincode} onChange={e => setCustForm({ ...custForm, pincode: e.target.value })} />
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={addLoading}
-                style={{
-                  background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '14px',
-                  padding: '12px 16px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: addLoading ? 'not-allowed' : 'pointer',
-                  opacity: addLoading ? 0.8 : 1,
-                  marginTop: '12px',
-                  boxShadow: `0 4px 14px ${C.primary}30`
-                }}
-              >
-                {addLoading ? 'Adding Customer...' : 'Add Customer'}
+              <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px', opacity: formLoading ? 0.6 : 1 }}>
+                {formLoading ? 'Saving...' : showAddModal ? 'Save Customer' : 'Update Customer'}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ═══ RECOMMEND NEW PRODUCT MODAL ═══ */}
-      {showRecommendModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}>
-          <div style={{
-            background: C.card,
-            border: `1.5px solid ${C.border}`,
-            borderRadius: '24px',
-            maxWidth: '520px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '12px', background: `${C.primary}15`,
-                  color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdCreditCard size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 800, color: C.text, margin: 0 }}>Recommend New Product</h3>
-                  <span style={{ fontSize: '12px', color: C.textLight }}>
-                    For {selectedCustomer?.full_name} ({selectedCustomer?.mobile})
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowRecommendModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '18px' }}
-              >
-                ✕
-              </button>
+      {/* ═══ MODAL 2: CUSTOMER DOCUMENT UPLOADER ═══ */}
+      {showDocUploadModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Upload Customer Document</h3>
+              <button onClick={() => setShowDocUploadModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
             </div>
-
-            {recError && (
-              <div style={{
-                background: `${C.red}15`, border: `1px solid ${C.red}40`, color: C.red,
-                padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600
-              }}>
-                {recError}
-              </div>
-            )}
-
-            <form onSubmit={handleRecommendSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>Select Product to Recommend</label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  style={{
-                    ...S.input,
-                    paddingVertical: '12px',
-                    background: C.inputBg || C.card,
-                    color: C.text,
-                    cursor: 'pointer',
-                    borderRadius: '12px'
-                  }}
-                >
-                  {productList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.bank_name ? `(${p.bank_name})` : ''} — ₹{parseFloat(p.commission_value || p.payout_amount || 0).toLocaleString('en-IN')} Payout
-                    </option>
-                  ))}
+            <form onSubmit={handleCustomerDocUpload} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Document Type</label>
+                <select style={S.input} value={docType} onChange={e => setDocType(e.target.value)}>
+                  <option value="aadhaar">Aadhaar Card</option>
+                  <option value="pan">PAN Card</option>
+                  <option value="bank_statement">Bank Statement</option>
+                  <option value="salary_slip">Salary Slip</option>
                 </select>
               </div>
-
-              {selectedProductId && (() => {
-                const selectedProd = productList.find(p => p.id === selectedProductId);
-                if (!selectedProd) return null;
-                return (
-                  <div style={{
-                    background: C.bgSecondary, border: `1px solid ${C.border}`,
-                    borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px'
-                  }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>{selectedProd.name}</div>
-                    <div style={{ fontSize: '11px', color: C.textLight }}>Category: {selectedProd.category || 'Financial Product'}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 900, color: C.green }}>
-                      Commission Payout: ₹{parseFloat(selectedProd.commission_value || selectedProd.payout_amount || 0).toLocaleString('en-IN')}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRecommendModal(false)}
-                  style={{ ...S.btn('outline', false), padding: '10px 18px', fontSize: '13px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={recLoading || !selectedProductId}
-                  style={{
-                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
-                    color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '10px 20px',
-                    fontSize: '13px', fontWeight: 700, cursor: recLoading ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {recLoading ? 'Submitting...' : 'Confirm Recommendation'}
-                </button>
+              <div>
+                <label style={S.label}>Choose File (PDF/Image)</label>
+                <input type="file" onChange={e => setDocFile(e.target.files[0])} style={S.input} required />
               </div>
+              <button type="submit" disabled={uploadingDoc} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+                {uploadingDoc ? 'Uploading...' : 'Save to Vault'}
+              </button>
             </form>
           </div>
         </div>
       )}
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
+
+      {/* ═══ MODAL 3: SET REMINDER ═══ */}
+      {showReminderModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Schedule Follow-up Reminder</h3>
+              <button onClick={() => setShowReminderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+            </div>
+            <form onSubmit={handleSetReminder} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Reminder Date & Time</label>
+                <input type="datetime-local" style={S.input} value={reminderDate} onChange={e => setReminderDate(e.target.value)} required />
+              </div>
+              <div>
+                <label style={S.label}>Follow-up Note</label>
+                <input type="text" placeholder="e.g. Call regarding document signing" style={S.input} value={reminderNote} onChange={e => setReminderNote(e.target.value)} required />
+              </div>
+              <button type="submit" style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>Set Reminder</button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

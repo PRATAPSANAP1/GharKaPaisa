@@ -23,12 +23,17 @@ router.post('/upload-docs', requirePartner, kycUpload, partnerCtrl.uploadSelfKYC
 
 // Video KYC endpoints
 router.post('/kyc/upload-pan', requirePartner, upload.single('document'), partnerCtrl.uploadPan);
+router.post('/kyc/upload-aadhaar', requirePartner, upload.single('document'), partnerCtrl.uploadAadhaar);
 router.post('/kyc/upload-cheque', requirePartner, upload.single('document'), partnerCtrl.uploadCheque);
 router.post('/kyc/upload-video', requirePartner, uploadVideo.single('video'), partnerCtrl.uploadVideo);
 router.post('/kyc/submit', requirePartner, partnerCtrl.submitKyc);
 router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
+router.post('/profile/photo', requirePartner, upload.single('photo'), partnerCtrl.uploadProfilePhoto);
+router.post('/kyc/upload-selfie', requirePartner, upload.single('selfie'), partnerCtrl.uploadSelfie);
+router.post('/kyc/ocr-scan', requirePartner, partnerCtrl.simulateOCR);
+router.post('/kyc/face-match', requirePartner, partnerCtrl.simulateFaceMatch);
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
 router.post('/customers', requireApprovedPartner, partnerCtrl.createPartnerCustomer);
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);

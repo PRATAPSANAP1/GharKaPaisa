@@ -16,9 +16,28 @@ router.get('/dashboard', requireApprovedPartner, walletCtrl.getWalletDashboard);
 router.get('/balance', requireApprovedPartner, walletCtrl.getWallet);
 router.get('/transactions', requireApprovedPartner, walletCtrl.getTransactions);
 router.get('/commission-summary', requireApprovedPartner, walletCtrl.getCommissionSummary);
+
+// Statement Export
+router.get('/statement/pdf', requireApprovedPartner, walletCtrl.exportStatementPDF);
+router.get('/statement/excel', requireApprovedPartner, walletCtrl.exportStatementExcel);
+
+// OTP & Withdrawals
+router.post('/withdraw/otp/send', requireApprovedPartner, walletCtrl.sendWithdrawalOTP);
+router.post('/withdraw/otp/verify', requireApprovedPartner, walletCtrl.verifyWithdrawalOTP);
 router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
+router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);
+router.get('/withdrawals/:id', requireApprovedPartner, walletCtrl.getWithdrawalDetail);
 router.get('/withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
+
+// Bank details management
 router.get('/bank-details', requireApprovedPartner, walletCtrl.getBankDetails);
+router.get('/bank-details/all', requireApprovedPartner, walletCtrl.getAllBankDetails);
+router.post('/bank-details/secondary', requireApprovedPartner, walletCtrl.addSecondaryBankDetail);
+router.post('/bank-details/primary', requireApprovedPartner, walletCtrl.setPrimaryBank);
+router.post('/bank-details/verify/penny-drop', requireApprovedPartner, walletCtrl.verifyBankPennyDrop);
+router.post('/bank-details/verify/upi', requireApprovedPartner, walletCtrl.verifyBankUPI);
+router.get('/bank-details/history', requireApprovedPartner, walletCtrl.getBankEditHistory);
 router.post('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
 router.put('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
 router.get('/reports', requireApprovedPartner, walletCtrl.getWalletReports);

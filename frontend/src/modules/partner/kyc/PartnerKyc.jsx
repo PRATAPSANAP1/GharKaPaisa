@@ -45,7 +45,8 @@ export default function PartnerKyc() {
     kyc_status: 'draft',
     rejection_reason: null,
     documents: [],
-    video: null
+    video: null,
+    timeline: []
   });
 
   const [loading, setLoading] = useState(false);
@@ -56,8 +57,16 @@ export default function PartnerKyc() {
 
   // File uploads
   const [panFile, setPanFile] = useState(null);
+  const [aadhaarFile, setAadhaarFile] = useState(null);
+  const [selfieFile, setSelfieFile] = useState(null);
   const [chequeFile, setChequeFile] = useState(null);
   const [panNumber, setPanNumber] = useState('');
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+
+  // OCR state
+  const [ocrLoading, setOcrLoading] = useState({ pan: false, aadhaar: false });
+  // Face Match state
+  const [faceMatchLoading, setFaceMatchLoading] = useState(false);
 
   // Video recording states
   const [cameraActive, setCameraActive] = useState(false);
@@ -86,6 +95,10 @@ export default function PartnerKyc() {
         if (panDoc?.doc_number) {
           setPanNumber(panDoc.doc_number);
         }
+        const aadhaarDoc = data.documents?.find(d => d.doc_type === 'aadhaar');
+        if (aadhaarDoc?.doc_number) {
+          setAadhaarNumber(aadhaarDoc.doc_number);
+        }
 
         if (data.video) {
           try {
@@ -110,21 +123,22 @@ export default function PartnerKyc() {
     fetchProfile();
   }, []);
 
-  // Compute progress percentage
+  // Compute progress percentage based on 5 parts (PAN, Aadhaar, Selfie, Cheque, Video)
   const getProgress = () => {
     const hasPan = kycData.documents?.some(d => d.doc_type === 'pan' && d.verification_status !== 'rejected');
+    const hasAadhaar = kycData.documents?.some(d => d.doc_type === 'aadhaar' && d.verification_status !== 'rejected');
+    const hasSelfie = kycData.documents?.some(d => d.doc_type === 'selfie' && d.verification_status !== 'rejected');
     const hasCheque = kycData.documents?.some(d => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
     const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
     
     let count = 0;
     if (hasPan) count++;
+    if (hasAadhaar) count++;
+    if (hasSelfie) count++;
     if (hasCheque) count++;
     if (hasVideo) count++;
 
-    if (count === 0) return 0;
-    if (count === 1) return 33;
-    if (count === 2) return 66;
-    return 100;
+    return Math.round((count / 5) * 100);
   };
 
   // Document Helpers
@@ -292,6 +306,98 @@ export default function PartnerKyc() {
       setErrorMsg(err.response?.data?.message || 'PAN Card upload failed.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleUploadAadhaar = async (selectedFile) => {
+    const fileToUpload = selectedFile || aadhaarFile;
+    if (!fileToUpload && !isDocApproved('aadhaar')) return setErrorMsg('Please choose a file for Aadhaar Card.');
+    if (!aadhaarNumber.trim()) return setErrorMsg('Please enter your Aadhaar Card number.');
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    
+    try {
+      const formData = new FormData();
+      if (fileToUpload) formData.append('document', fileToUpload);
+      formData.append('aadhaar_number', aadhaarNumber.trim());
+
+      const res = await api.post('/partner/kyc/upload-aadhaar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.success) {
+        setSuccessMsg('Aadhaar Card uploaded successfully!');
+        setAadhaarFile(null);
+        loadKycDetails();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Aadhaar Card upload failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUploadSelfie = async (selectedFile) => {
+    const fileToUpload = selectedFile || selfieFile;
+    if (!fileToUpload) return setErrorMsg('Please choose a selfie image.');
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const formData = new FormData();
+      formData.append('selfie', fileToUpload);
+
+      const res = await api.post('/partner/kyc/upload-selfie', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.success) {
+        setSuccessMsg('Selfie uploaded successfully!');
+        setSelfieFile(null);
+        loadKycDetails();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Selfie upload failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRunOCR = async (docType) => {
+    setOcrLoading(prev => ({ ...prev, [docType]: true }));
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      // Add simulated loading delay of 1.5s
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const res = await api.post('/partner/kyc/ocr-scan', { doc_type: docType });
+      if (res.data?.success) {
+        setSuccessMsg(`OCR scan completed for ${docType.toUpperCase()} Card!`);
+        loadKycDetails();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'OCR scanning failed.');
+    } finally {
+      setOcrLoading(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  const handleRunFaceMatch = async () => {
+    setFaceMatchLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      // Add simulated loading delay of 2s
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const res = await api.post('/partner/kyc/face-match');
+      if (res.data?.success) {
+        setSuccessMsg(`Face match check completed! Score: ${res.data.data.match_score}%`);
+        loadKycDetails();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Face match verification failed.');
+    } finally {
+      setFaceMatchLoading(false);
     }
   };
 
@@ -605,40 +711,69 @@ export default function PartnerKyc() {
                 </label>
               </div>
             )}
+
+            {/* OCR Scanned Results display */}
+            {getDoc('pan')?.ocr_data && (
+              <div style={{ background: isDark ? '#0F172A' : '#F0FDF4', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BBF7D0'}`, fontSize: '12px', marginTop: '12px' }}>
+                <div style={{ fontWeight: 'bold', color: '#16A34A', marginBottom: '6px' }}>⚡ OCR Read Results:</div>
+                <div>Name: <strong>{getDoc('pan').ocr_data.name}</strong></div>
+                <div>DOB: <strong>{getDoc('pan').ocr_data.date_of_birth}</strong></div>
+                <div>PAN: <strong>{getDoc('pan').ocr_data.pan_number}</strong></div>
+              </div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
             {getDoc('pan') && (
-              <button 
-                onClick={() => handleViewFile(getDoc('pan').id)}
-                style={{
-                  flex: isMobile ? 'unset' : 1,
-                  width: isMobile ? '100%' : 'auto',
-                  background: 'transparent',
-                  border: `1px solid ${cardBorder}`,
-                  color: textPrimary,
-                  borderRadius: '10px',
-                  padding: isMobile ? '10px' : '8px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                View Upload
-              </button>
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <button 
+                  onClick={() => handleViewFile(getDoc('pan').id)}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: `1px solid ${cardBorder}`,
+                    color: textPrimary,
+                    borderRadius: '10px',
+                    padding: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  View
+                </button>
+                {!isDocApproved('pan') && !isUnderReview && (
+                  <button 
+                    onClick={() => handleRunOCR('pan')}
+                    disabled={ocrLoading.pan}
+                    style={{
+                      flex: 1.5,
+                      background: '#0D9488',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {ocrLoading.pan ? 'Scanning...' : 'Scan PAN (OCR)'}
+                  </button>
+                )}
+              </div>
             )}
-            {!isDocApproved('pan') && !isUnderReview && (
+            {!isDocApproved('pan') && !isUnderReview && !getDoc('pan') && (
               <button 
                 onClick={handleUploadPan}
                 disabled={actionLoading}
                 style={{
-                  flex: isMobile ? 'unset' : 2,
-                  width: isMobile ? '100%' : 'auto',
+                  width: '100%',
                   background: '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '10px',
-                  padding: isMobile ? '10px' : '8px',
+                  padding: '10px',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer'
@@ -650,7 +785,318 @@ export default function PartnerKyc() {
           </div>
         </div>
 
-        {/* Card 2: Cancelled Cheque */}
+        {/* Card 2: Aadhaar Card */}
+        <div style={{
+          background: cardBg,
+          border: `1px solid ${isDocRejected('aadhaar') ? '#EF4444' : cardBorder}`,
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+          wordBreak: 'break-word'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("2. Aadhaar Card")}</h3>
+              {isDocApproved('aadhaar') ? (
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
+              ) : getDoc('aadhaar') ? (
+                <span style={{ color: isDocRejected('aadhaar') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('aadhaar') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
+                  {isDocRejected('aadhaar') ? 'Rejected' : 'Uploaded'}
+                </span>
+              ) : (
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
+              )}
+            </div>
+
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload clear digital photo or PDF of your Aadhaar. Max 5MB.")}</p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>{t("Aadhaar Number")}</label>
+              <input 
+                type="text"
+                disabled={isDocApproved('aadhaar') || isUnderReview}
+                value={aadhaarNumber}
+                onChange={(e) => setAadhaarNumber(e.target.value)}
+                placeholder={t("Enter Aadhaar number")}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '10px',
+                  background: isDark ? '#0F172A' : '#F8FAFC',
+                  border: `1px solid ${cardBorder}`,
+                  borderRadius: '8px',
+                  color: textPrimary,
+                  fontWeight: 600
+                }}
+              />
+            </div>
+
+            {!isDocApproved('aadhaar') && !isUnderReview && (
+              <div style={{ marginBottom: '16px' }}>
+                <input 
+                  type="file"
+                  id="aadhaar-file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setAadhaarFile(file);
+                      if (aadhaarNumber.trim()) {
+                        handleUploadAadhaar(file);
+                      } else {
+                        setErrorMsg('Please enter your Aadhaar number first.');
+                      }
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+                <label 
+                  htmlFor="aadhaar-file"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px',
+                    border: `2px dashed ${cardBorder}`,
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    background: isDark ? '#1E293B' : '#F8FAFC'
+                  }}
+                >
+                  <MdUploadFile size={24} color="#2563EB" />
+                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
+                    {aadhaarFile ? aadhaarFile.name : 'Choose File'}
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* OCR Scanned Results display */}
+            {getDoc('aadhaar')?.ocr_data && (
+              <div style={{ background: isDark ? '#0F172A' : '#F0FDF4', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BBF7D0'}`, fontSize: '12px', marginTop: '12px' }}>
+                <div style={{ fontWeight: 'bold', color: '#16A34A', marginBottom: '6px' }}>⚡ OCR Read Results:</div>
+                <div>Name: <strong>{getDoc('aadhaar').ocr_data.name}</strong></div>
+                <div>Number: <strong>{getDoc('aadhaar').ocr_data.aadhaar_number}</strong></div>
+                <div>Address: <strong>{getDoc('aadhaar').ocr_data.address}</strong></div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+            {getDoc('aadhaar') && (
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <button 
+                  onClick={() => handleViewFile(getDoc('aadhaar').id)}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: `1px solid ${cardBorder}`,
+                    color: textPrimary,
+                    borderRadius: '10px',
+                    padding: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  View
+                </button>
+                {!isDocApproved('aadhaar') && !isUnderReview && (
+                  <button 
+                    onClick={() => handleRunOCR('aadhaar')}
+                    disabled={ocrLoading.aadhaar}
+                    style={{
+                      flex: 1.5,
+                      background: '#0D9488',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {ocrLoading.aadhaar ? 'Scanning...' : 'Scan Aadhaar (OCR)'}
+                  </button>
+                )}
+              </div>
+            )}
+            {!isDocApproved('aadhaar') && !isUnderReview && !getDoc('aadhaar') && (
+              <button 
+                onClick={handleUploadAadhaar}
+                disabled={actionLoading}
+                style={{
+                  width: '100%',
+                  background: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {actionLoading ? 'Uploading...' : 'Upload Aadhaar'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Card 3: Selfie Verification */}
+        <div style={{
+          background: cardBg,
+          border: `1px solid ${isDocRejected('selfie') ? '#EF4444' : cardBorder}`,
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '16px' : '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+          wordBreak: 'break-word'
+        }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("3. Selfie Verification")}</h3>
+              {isDocApproved('selfie') ? (
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
+              ) : getDoc('selfie') ? (
+                <span style={{ color: isDocRejected('selfie') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('selfie') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
+                  {isDocRejected('selfie') ? 'Rejected' : 'Uploaded'}
+                </span>
+              ) : (
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
+              )}
+            </div>
+
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload a close-up passport size selfie photo for face match validation. Max 5MB.")}</p>
+
+            {!isDocApproved('selfie') && !isUnderReview && (
+              <div style={{ marginBottom: '16px' }}>
+                <input 
+                  type="file"
+                  id="selfie-file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setSelfieFile(file);
+                      handleUploadSelfie(file);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+                <label 
+                  htmlFor="selfie-file"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px',
+                    border: `2px dashed ${cardBorder}`,
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    background: isDark ? '#1E293B' : '#F8FAFC'
+                  }}
+                >
+                  <MdUploadFile size={24} color="#2563EB" />
+                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
+                    {selfieFile ? selfieFile.name : 'Choose File'}
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Face Match Scorecard */}
+            {kycData.face_match_score !== null && (
+              <div style={{ background: isDark ? '#0F172A' : '#EFF6FF', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BFDBFE'}`, fontSize: '12px', marginTop: '12px' }}>
+                <div style={{ fontWeight: 'bold', color: '#1D4ED8', marginBottom: '6px' }}>🧬 Similarity Scorecard:</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Face Similarity Match:</span>
+                  <strong style={{ fontSize: '14px', color: kycData.face_match_score >= 80 ? '#16A34A' : '#DC2626' }}>
+                    {kycData.face_match_score}%
+                  </strong>
+                </div>
+                <div style={{ fontSize: '11px', color: textSecondary, marginTop: '4px' }}>
+                  {kycData.face_match_score >= 80 ? '✓ Verification threshold passed' : '✗ Manual compliance review required'}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+            {getDoc('selfie') && (
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                <button 
+                  onClick={() => handleViewFile(getDoc('selfie').id)}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: `1px solid ${cardBorder}`,
+                    color: textPrimary,
+                    borderRadius: '10px',
+                    padding: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  View
+                </button>
+                {!isDocApproved('selfie') && !isUnderReview && (
+                  <button 
+                    onClick={handleRunFaceMatch}
+                    disabled={faceMatchLoading || !getDoc('pan')}
+                    style={{
+                      flex: 1.5,
+                      background: '#1D4ED8',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '8px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      opacity: !getDoc('pan') ? 0.6 : 1
+                    }}
+                    title={!getDoc('pan') ? 'Upload PAN Card first' : ''}
+                  >
+                    {faceMatchLoading ? 'Verifying...' : 'Face Match'}
+                  </button>
+                )}
+              </div>
+            )}
+            {!isDocApproved('selfie') && !isUnderReview && !getDoc('selfie') && (
+              <button 
+                onClick={handleUploadSelfie}
+                disabled={actionLoading}
+                style={{
+                  width: '100%',
+                  background: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {actionLoading ? 'Uploading...' : 'Upload Selfie'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Card 4: Cancelled Cheque */}
         <div style={{
           background: cardBg,
           border: `1px solid ${isDocRejected('cancelled_cheque') ? '#EF4444' : cardBorder}`,
@@ -665,7 +1111,7 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("2. Bank Account Proof")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("4. Bank Account Proof")}</h3>
               {isDocApproved('cancelled_cheque') ? (
                 <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
               ) : getDoc('cancelled_cheque') ? (
@@ -760,7 +1206,7 @@ export default function PartnerKyc() {
           </div>
         </div>
 
-        {/* Card 3: Video Verification */}
+        {/* Card 5: Video Verification */}
         <div style={{
           background: cardBg,
           border: `1px solid ${isVideoRejected() ? '#EF4444' : cardBorder}`,
@@ -775,7 +1221,7 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("3. Video Verification")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("5. Video Verification")}</h3>
               {isVideoApproved() ? (
                 <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
               ) : kycData.video ? (
@@ -828,6 +1274,47 @@ export default function PartnerKyc() {
         </div>
 
       </div>
+
+      {/* KYC Stepper Timeline Milestone Tracker */}
+      {kycData.timeline && kycData.timeline.length > 0 && (
+        <div style={{
+          background: cardBg,
+          border: `1px solid ${cardBorder}`,
+          borderRadius: isMobile ? '12px' : '16px',
+          padding: isMobile ? '20px' : '28px',
+          marginBottom: isMobile ? '24px' : '32px',
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MdTimeline style={{ color: '#2563EB' }} /> KYC Verification Timeline
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '24px' }}>
+            <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '2px', background: isDark ? '#334155' : '#E2E8F0' }} />
+            {kycData.timeline.map((step, idx) => (
+              <div key={idx} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {/* Node */}
+                <div style={{
+                  position: 'absolute', left: '-23px', top: '4px',
+                  width: '12px', height: '12px', borderRadius: '50%',
+                  background: step.status === 'completed' ? '#10B981' : step.status === 'rejected' ? '#EF4444' : '#64748B',
+                  border: `2px solid ${cardBg}`
+                }} />
+                <div style={{ fontSize: '14px', fontWeight: 700, color: textPrimary }}>{step.step}</div>
+                {step.date && (
+                  <div style={{ fontSize: '11px', color: textSecondary }}>
+                    {new Date(step.date).toLocaleString('en-IN')}
+                  </div>
+                )}
+                {step.reason && (
+                  <div style={{ fontSize: '12px', color: '#EF4444', background: '#FEF2F2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #FEE2E2', marginTop: '4px', display: 'inline-block', width: 'fit-content' }}>
+                    Reason: {step.reason}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Video Recording Modal / Panel overlay if cameraActive */}
       {cameraActive && (

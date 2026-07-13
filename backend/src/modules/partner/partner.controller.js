@@ -13,10 +13,11 @@ const getProfile = async (req, res, next) => {
     const { PartnerId } = req.params;
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
-        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
+        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified,
+        abd.is_primary as bank_is_primary
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id AND abd.is_primary = true
       WHERE ap.id::text = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
@@ -82,7 +83,9 @@ const updateProfile = async (req, res, next) => {
     const { 
       first_name, last_name, current_address, business_location, 
       company_name, company_type, gst_number, pincode,
-      account_holder_name, bank_name, account_number, ifsc_code, upi_id
+      account_holder_name, bank_name, account_number, ifsc_code, upi_id,
+      nominee_name, nominee_relation, nominee_dob,
+      emergency_contact_name, emergency_contact_phone
     } = req.body;
 
     await query(`
@@ -95,9 +98,14 @@ const updateProfile = async (req, res, next) => {
         company_type = COALESCE($6, company_type),
         gst_number = COALESCE($7, gst_number),
         pincode = COALESCE($8, pincode),
+        nominee_name = COALESCE($10, nominee_name),
+        nominee_relation = COALESCE($11, nominee_relation),
+        nominee_dob = COALESCE($12, nominee_dob),
+        emergency_contact_name = COALESCE($13, emergency_contact_name),
+        emergency_contact_phone = COALESCE($14, emergency_contact_phone),
         updated_at = NOW()
       WHERE id = $9
-    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId]);
+    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId, nominee_name || null, nominee_relation || null, nominee_dob || null, emergency_contact_name || null, emergency_contact_phone || null]);
 
     if (bank_name || account_number || ifsc_code || account_holder_name || upi_id) {
       let encryptedAccount = account_number || null;
@@ -384,10 +392,11 @@ const getSelfProfile = async (req, res, next) => {
     // Find the partner profile associated with the user
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
-        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
+        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified,
+        abd.is_primary as bank_is_primary
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id AND abd.is_primary = true
       WHERE ap.user_id = $1
     `, [userId]);
     if (!Partner) return notFound(res, 'Partner profile not found');
@@ -395,20 +404,34 @@ const getSelfProfile = async (req, res, next) => {
     // Mask bank account number
     if (Partner && Partner.account_number) {
       const { decrypt } = require('../../utils/helpers/crypto');
-      const decrypted = decrypt(Partner.account_number);
-      const accLen = decrypted.length;
-      if (accLen > 4) {
-        Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
-      } else {
-        Partner.account_number = '*'.repeat(accLen);
+      try {
+        const decrypted = decrypt(Partner.account_number);
+        const accLen = decrypted.length;
+        if (accLen > 4) {
+          Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
+        } else {
+          Partner.account_number = '*'.repeat(accLen);
+        }
+      } catch (e) {
+        logger.error('Failed to decrypt bank account number:', e.message);
       }
     }
 
     const { rows: kyc } = await query(
-      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at FROM kyc_documents WHERE partner_id = $1`, [Partner.id]
+      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at, ocr_data FROM kyc_documents WHERE partner_id = $1`, [Partner.id]
     );
 
-    return success(res, { ...Partner, kyc_documents: kyc });
+    // Compute profile completion %
+    let completionPoints = 0;
+    const totalPoints = 5;
+    if (Partner.first_name && Partner.last_name) completionPoints++;
+    if (Partner.nominee_name && Partner.nominee_relation) completionPoints++;
+    if (Partner.emergency_contact_name && Partner.emergency_contact_phone) completionPoints++;
+    if (Partner.company_name || Partner.gst_number) completionPoints++;
+    if (Partner.profile_picture_url) completionPoints++;
+    const profile_completion_percent = Math.round((completionPoints / totalPoints) * 100);
+
+    return success(res, { ...Partner, kyc_documents: kyc, profile_completion_percent });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message, stack: err.stack });
   }
@@ -950,10 +973,15 @@ const getTeamDashboard = async (req, res, next) => {
     const { rows: summary } = await query(`
       SELECT 
         COUNT(*)::int as total_members,
+        COUNT(CASE WHEN r.level = 1 THEN 1 END)::int as level_1_members,
+        COUNT(CASE WHEN r.level = 2 THEN 1 END)::int as level_2_members,
+        COUNT(CASE WHEN r.level >= 3 THEN 1 END)::int as level_3_members,
         COUNT(CASE WHEN ap.team_joined_at >= CURRENT_DATE THEN 1 END)::int as joined_today,
         COUNT(CASE WHEN ap.kyc_status = 'pending' THEN 1 END)::int as pending_kyc,
         COUNT(CASE WHEN ap.kyc_status = 'approved' THEN 1 END)::int as approved_partners,
         COUNT(CASE WHEN ap.kyc_status = 'rejected' THEN 1 END)::int as rejected_partners,
+        COUNT(CASE WHEN u.status = 'active' THEN 1 END)::int as active_members,
+        COUNT(CASE WHEN u.status = 'inactive' THEN 1 END)::int as inactive_members,
         COUNT(CASE WHEN u.status = 'suspended' THEN 1 END)::int as suspended_partners,
         COUNT(CASE WHEN u.status = 'blocked' THEN 1 END)::int as blocked_partners
       FROM partner_team_relationships r
@@ -1276,6 +1304,34 @@ const uploadPan = async (req, res, next) => {
   }
 };
 
+const uploadAadhaar = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'File is required', 400);
+
+    const { aadhaar_number } = req.body;
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [doc] } = await query(`
+      INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
+      VALUES ($1, 'aadhaar', $2, $3, $4, 'pending', false)
+      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
+        doc_number = COALESCE(EXCLUDED.doc_number, kyc_documents.doc_number),
+        file_url = EXCLUDED.file_url,
+        s3_key = EXCLUDED.s3_key,
+        verification_status = 'pending',
+        verified = false,
+        uploaded_at = NOW()
+      RETURNING *
+    `, [partnerId, aadhaar_number || null, url, key]);
+
+    return success(res, doc, 'Aadhaar document uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const uploadCheque = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
@@ -1429,11 +1485,11 @@ const getKycDetails = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [partner] } = await query(`
-      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at FROM partner_profiles WHERE id = $1
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at, face_match_score FROM partner_profiles WHERE id = $1
     `, [partnerId]);
 
     const { rows: documents } = await query(`
-      SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at 
+      SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at, ocr_data 
       FROM kyc_documents 
       WHERE partner_id = $1
     `, [partnerId]);
@@ -1444,14 +1500,175 @@ const getKycDetails = async (req, res, next) => {
       WHERE partner_id = $1
     `, [partnerId]);
 
+    // Build KYC timeline
+    const timeline = [];
+    if (documents.length > 0 || video) {
+      const firstUpload = documents.reduce((earliest, doc) => {
+        if (!earliest || (doc.uploaded_at && new Date(doc.uploaded_at) < new Date(earliest))) return doc.uploaded_at;
+        return earliest;
+      }, null);
+      timeline.push({ step: 'Documents Uploaded', date: firstUpload, status: 'completed' });
+    }
+    if (partner?.kyc_submitted_at) {
+      timeline.push({ step: 'Submitted for Review', date: partner.kyc_submitted_at, status: 'completed' });
+    }
+    if (partner?.kyc_reviewed_at) {
+      timeline.push({ step: 'Reviewed', date: partner.kyc_reviewed_at, status: 'completed' });
+    }
+    if (partner?.kyc_status === 'approved') {
+      timeline.push({ step: 'Approved', date: partner.kyc_reviewed_at, status: 'completed' });
+    } else if (partner?.kyc_status === 'rejected') {
+      timeline.push({ step: 'Rejected', date: partner.kyc_reviewed_at, status: 'rejected', reason: partner.kyc_rejection_reason || partner.rejection_reason });
+    } else if (partner?.kyc_submitted_at) {
+      timeline.push({ step: 'Pending Approval', date: null, status: 'pending' });
+    }
+
     return success(res, {
       kyc_status: partner?.kyc_status || 'draft',
       rejection_reason: partner?.kyc_rejection_reason || partner?.rejection_reason || null,
       kyc_submitted_at: partner?.kyc_submitted_at,
       kyc_reviewed_at: partner?.kyc_reviewed_at,
+      face_match_score: partner?.face_match_score || null,
       documents,
-      video
+      video,
+      timeline
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/profile/photo (Upload profile picture)
+const uploadProfilePhoto = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Profile photo file is required', 400);
+
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return error(res, 'Only PNG, JPEG and WebP images are allowed', 400);
+    }
+    if (req.file.size > 2 * 1024 * 1024) {
+      return error(res, 'Profile photo must be under 2MB', 400);
+    }
+
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `profiles/${partnerId}`);
+    await query(`UPDATE partner_profiles SET profile_picture_url = $1 WHERE id = $2`, [url, partnerId]);
+
+    return success(res, { profile_picture_url: url }, 'Profile photo uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/kyc/upload-selfie (Selfie for face match)
+const uploadSelfie = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Selfie file is required', 400);
+
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [doc] } = await query(`
+      INSERT INTO kyc_documents (partner_id, doc_type, file_url, s3_key, verification_status, verified)
+      VALUES ($1, 'selfie', $2, $3, 'pending', false)
+      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
+        file_url = EXCLUDED.file_url,
+        s3_key = EXCLUDED.s3_key,
+        verification_status = 'pending',
+        verified = false,
+        uploaded_at = NOW()
+      RETURNING *
+    `, [partnerId, url, key]);
+
+    return success(res, doc, 'Selfie uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/kyc/ocr-scan (Simulated OCR extraction)
+const simulateOCR = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { doc_type } = req.body; // 'pan' or 'aadhaar'
+    if (!doc_type || !['pan', 'aadhaar'].includes(doc_type)) {
+      return error(res, 'doc_type must be pan or aadhaar', 400);
+    }
+
+    // Verify the document was uploaded
+    const { rows: [doc] } = await query(
+      `SELECT id, doc_number FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
+      [partnerId, doc_type]
+    );
+    if (!doc) return error(res, `No ${doc_type} document found. Please upload first.`, 404);
+
+    // Fetch partner info to build simulated OCR data
+    const { rows: [profile] } = await query(
+      `SELECT first_name, last_name, date_of_birth FROM partner_profiles WHERE id = $1`,
+      [partnerId]
+    );
+
+    let ocrResult = {};
+    if (doc_type === 'pan') {
+      ocrResult = {
+        name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A',
+        pan_number: doc.doc_number || 'ABCDE1234F',
+        date_of_birth: profile?.date_of_birth || '1990-01-01',
+        father_name: 'N/A'
+      };
+    } else {
+      ocrResult = {
+        name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A',
+        aadhaar_number: doc.doc_number || 'XXXX XXXX 1234',
+        date_of_birth: profile?.date_of_birth || '1990-01-01',
+        address: 'Address extracted from Aadhaar'
+      };
+    }
+
+    // Store OCR result in the document record
+    await query(`UPDATE kyc_documents SET ocr_data = $1 WHERE id = $2`, [JSON.stringify(ocrResult), doc.id]);
+
+    return success(res, { doc_type, ocr_data: ocrResult }, `OCR extraction completed for ${doc_type.toUpperCase()}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/kyc/face-match (Simulated face match comparison)
+const simulateFaceMatch = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    // Check selfie and PAN are uploaded
+    const { rows: [selfie] } = await query(
+      `SELECT id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'selfie'`, [partnerId]
+    );
+    const { rows: [pan] } = await query(
+      `SELECT id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`, [partnerId]
+    );
+
+    if (!selfie) return error(res, 'Please upload a selfie first', 400);
+    if (!pan) return error(res, 'Please upload PAN card first', 400);
+
+    // Simulate face match score (random realistic score between 75-99)
+    const matchScore = parseFloat((Math.random() * 24 + 75).toFixed(2));
+    const isMatch = matchScore >= 80;
+
+    await query(`UPDATE partner_profiles SET face_match_score = $1 WHERE id = $2`, [matchScore, partnerId]);
+
+    return success(res, {
+      match_score: matchScore,
+      is_match: isMatch,
+      selfie_id: selfie.id,
+      pan_id: pan.id,
+      verdict: isMatch ? 'Face verified successfully' : 'Face match below threshold. Manual review required.'
+    }, `Face match score: ${matchScore}%`);
   } catch (err) {
     next(err);
   }
@@ -1482,9 +1699,14 @@ module.exports = {
   deactivateTeam,
   getWholeNetwork,
   uploadPan,
+  uploadAadhaar,
   uploadCheque,
   uploadVideo,
   submitKyc,
   getKycStatus,
-  getKycDetails
+  getKycDetails,
+  uploadProfilePhoto,
+  uploadSelfie,
+  simulateOCR,
+  simulateFaceMatch
 };

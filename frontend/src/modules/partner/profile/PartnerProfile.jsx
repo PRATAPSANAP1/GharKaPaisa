@@ -40,7 +40,12 @@ export default function PartnerProfile() {
     bank_name: '',
     account_number: '',
     ifsc_code: '',
-    upi_id: ''
+    upi_id: '',
+    nominee_name: '',
+    nominee_relation: '',
+    nominee_dob: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: ''
   });
 
   useEffect(() => {
@@ -61,7 +66,12 @@ export default function PartnerProfile() {
         bank_name: profile.bank_name || '',
         account_number: profile.account_number || '',
         ifsc_code: profile.ifsc_code || '',
-        upi_id: profile.upi_id || ''
+        upi_id: profile.upi_id || '',
+        nominee_name: profile.nominee_name || '',
+        nominee_relation: profile.nominee_relation || '',
+        nominee_dob: profile.nominee_dob ? profile.nominee_dob.split('T')[0] : '',
+        emergency_contact_name: profile.emergency_contact_name || '',
+        emergency_contact_phone: profile.emergency_contact_phone || ''
       });
     }
   }, [profile]);
@@ -78,6 +88,22 @@ export default function PartnerProfile() {
       alert(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      await api.post('/partner/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      await fetchProfile();
+      alert('Profile photo updated successfully!');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to upload photo');
     }
   };
 
@@ -116,17 +142,33 @@ export default function PartnerProfile() {
           display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '20px', marginTop: '-48px'
         }}>
           {/* Avatar */}
-          <div style={{
-            width: 96, height: 96, borderRadius: '50%', background: C.card,
-            border: `4px solid ${C.card}`, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}>
+          <div 
+            style={{
+              width: 96, height: 96, borderRadius: '50%', background: C.card,
+              border: `4px solid ${C.card}`, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              position: 'relative', cursor: 'pointer', overflow: 'hidden'
+            }} 
+            onClick={() => document.getElementById('avatar-upload-input').click()}
+          >
+            {profile.profile_picture_url ? (
+              <img src={profile.profile_picture_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            ) : (
+              <div style={{
+                width: '100%', height: '100%', borderRadius: '50%',
+                background: C.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary
+              }}>
+                <MdPerson size={52} />
+              </div>
+            )}
             <div style={{
-              width: '100%', height: '100%', borderRadius: '50%',
-              background: C.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary
-            }}>
-              <MdPerson size={52} />
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)',
+              color: '#fff', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: 0, transition: 'opacity 0.2s', borderRadius: '50%', textAlign: 'center', padding: '4px'
+            }} onMouseEnter={(e) => e.target.style.opacity = 1} onMouseLeave={(e) => e.target.style.opacity = 0}>
+              Change Photo
             </div>
+            <input type="file" id="avatar-upload-input" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
           </div>
 
           {/* Name & badges */}
@@ -134,18 +176,28 @@ export default function PartnerProfile() {
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: '0 0 8px' }}>
               {profile.first_name} {profile.last_name}
             </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{
                 fontFamily: 'monospace', fontWeight: 700, fontSize: '13px',
                 color: C.primary, background: `${C.primary}15`, padding: '4px 12px',
                 borderRadius: '8px', border: `1px solid ${C.primary}30`
               }}>
-                {profile.Partner_code}
+                {profile.partner_code || profile.Partner_code}
               </span>
               <span style={{ ...S.tag(kycTagColor), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 {profile.kyc_status === 'approved' && <MdCheckCircle size={13} />}
                 KYC: {profile.kyc_status}
               </span>
+            </div>
+            {/* Completion Percentage Progress Bar */}
+            <div style={{ maxWidth: '260px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: C.textMid, marginBottom: '4px' }}>
+                <span>Profile Completion</span>
+                <span>{profile.profile_completion_percent || 0}%</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: C.border, borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: `${profile.profile_completion_percent || 0}%`, height: '100%', background: `linear-gradient(90deg, ${C.primary}, ${C.primaryDark})`, borderRadius: '3px', transition: 'width 0.5s ease-in-out' }} />
+              </div>
             </div>
           </div>
 
@@ -193,30 +245,70 @@ export default function PartnerProfile() {
         <div style={{ flex: 1, minWidth: 0 }}>
 
           {activeTab === 'personal' && (
-            <div style={sectionCard}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <MdPerson style={{ color: C.primary }} /> Personal Information
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                <div>
-                  <p style={fieldLabel}>{t("Email Address")}</p>
-                  <p style={fieldValue}>{profile.email || '—'}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={sectionCard}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <MdPerson style={{ color: C.primary }} /> Personal Information
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
+                  <div>
+                    <p style={fieldLabel}>{t("Email Address")}</p>
+                    <p style={fieldValue}>{profile.email || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("Mobile Number")}</p>
+                    <p style={fieldValue}>{profile.mobile}</p>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <p style={fieldLabel}>{t("Residential Address")}</p>
+                    <p style={fieldValue}>{profile.current_address || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("Pincode")}</p>
+                    <p style={fieldValue}>{profile.pincode || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("KYC Status")}</p>
+                    <p style={{ ...fieldValue, textTransform: 'capitalize', color: kycTagColor }}>{profile.kyc_status}</p>
+                  </div>
                 </div>
-                <div>
-                  <p style={fieldLabel}>{t("Mobile Number")}</p>
-                  <p style={fieldValue}>{profile.mobile}</p>
+              </div>
+
+              {/* Nominee details card */}
+              <div style={sectionCard}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  👤 Nominee Details
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
+                  <div>
+                    <p style={fieldLabel}>{t("Nominee Name")}</p>
+                    <p style={fieldValue}>{profile.nominee_name || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("Relation")}</p>
+                    <p style={fieldValue}>{profile.nominee_relation || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("Date of Birth")}</p>
+                    <p style={fieldValue}>{profile.nominee_dob ? new Date(profile.nominee_dob).toLocaleDateString('en-IN') : '—'}</p>
+                  </div>
                 </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <p style={fieldLabel}>{t("Residential Address")}</p>
-                  <p style={fieldValue}>{profile.current_address || '—'}</p>
-                </div>
-                <div>
-                  <p style={fieldLabel}>{t("Pincode")}</p>
-                  <p style={fieldValue}>{profile.pincode || '—'}</p>
-                </div>
-                <div>
-                  <p style={fieldLabel}>{t("KYC Status")}</p>
-                  <p style={{ ...fieldValue, textTransform: 'capitalize', color: kycTagColor }}>{profile.kyc_status}</p>
+              </div>
+
+              {/* Emergency contact card */}
+              <div style={sectionCard}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🚨 Emergency Contact
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
+                  <div>
+                    <p style={fieldLabel}>{t("Contact Name")}</p>
+                    <p style={fieldValue}>{profile.emergency_contact_name || '—'}</p>
+                  </div>
+                  <div>
+                    <p style={fieldLabel}>{t("Mobile Number")}</p>
+                    <p style={fieldValue}>{profile.emergency_contact_phone || '—'}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -392,6 +484,44 @@ export default function PartnerProfile() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
                     <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="400001" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Nominee details form section */}
+              <div>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                  👤 Nominee Details
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Nominee Name")}</label>
+                    <input type="text" value={editForm.nominee_name} onChange={e => setEditForm({...editForm, nominee_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Nominee Full Name" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Relation")}</label>
+                    <input type="text" value={editForm.nominee_relation} onChange={e => setEditForm({...editForm, nominee_relation: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Spouse, Father" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Date of Birth")}</label>
+                    <input type="date" value={editForm.nominee_dob} onChange={e => setEditForm({...editForm, nominee_dob: e.target.value})} style={{ ...S.input, padding: '10px' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Contact form section */}
+              <div>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                  🚨 Emergency Contact Info
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Name")}</label>
+                    <input type="text" value={editForm.emergency_contact_name} onChange={e => setEditForm({...editForm, emergency_contact_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Contact Full Name" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Phone")}</label>
+                    <input type="text" value={editForm.emergency_contact_phone} onChange={e => setEditForm({...editForm, emergency_contact_phone: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Mobile Number" />
                   </div>
                 </div>
               </div>

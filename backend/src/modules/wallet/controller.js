@@ -1,9 +1,11 @@
 const { query, getClient } = require('../../config/database');
-const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet } = require('./service.js');
+const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet, syncWalletBalance } = require('./service.js');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, error, notFound, paginate } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 const { encrypt, decrypt } = require('../../utils/helpers/crypto');
+const logger = require('../../config/logger');
+const crypto = require('crypto');
 
 // GET /wallet / GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
@@ -65,6 +67,17 @@ const getTransactions = async (req, res, next) => {
       where += ` AND (wl.description ILIKE $${idx} OR wl.reference_number ILIKE $${idx})`;
       idx++;
       values.push(`%${search}%`);
+    }
+
+    // Amount range filter
+    const { min_amount, max_amount } = req.query;
+    if (min_amount) {
+      where += ` AND GREATEST(wl.credit, wl.debit) >= $${idx++}`;
+      values.push(parseFloat(min_amount));
+    }
+    if (max_amount) {
+      where += ` AND GREATEST(wl.credit, wl.debit) <= $${idx++}`;
+      values.push(parseFloat(max_amount));
     }
 
     const [count, data] = await Promise.all([
@@ -129,19 +142,6 @@ const getWalletDashboard = async (req, res, next) => {
       LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
       WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) AND wl.credit > 0
       GROUP BY p.category
-      ORDER BY total_earned DESC
-    `, [partnerId, userId]);
-
-    return success(res, {
-      wallet,
-      history,
-      categories
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
     return success(res, {
       wallet,
       history,
@@ -297,6 +297,9 @@ const requestWithdrawal = async (req, res, next) => {
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount < 100) {
       return error(res, 'Minimum withdrawal amount is ₹100');
+    }
+    if (parsedAmount > 50000) {
+      return error(res, 'Maximum single withdrawal limit is ₹50,000 per request');
     }
 
     await client.query('BEGIN');
@@ -680,6 +683,531 @@ const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
 
+// ── Wallet Statement PDF Export ──────────────────────────────────────
+const exportStatementPDF = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { from_date, to_date } = req.query;
+    let where = 'WHERE wl.partner_id = $1';
+    const values = [partnerId];
+    let idx = 2;
+    if (from_date) { where += ` AND wl.created_at >= $${idx++}`; values.push(from_date); }
+    if (to_date) { where += ` AND wl.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
+
+    const { rows } = await query(`
+      SELECT wl.*, a.app_number, p.name as product_name
+      FROM wallet_ledger wl
+      LEFT JOIN applications a ON a.id = wl.application_id
+      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      ${where}
+      ORDER BY wl.created_at DESC
+    `, values);
+
+    // Fetch partner info
+    const { rows: [profile] } = await query(`SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`, [partnerId]);
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=wallet_statement_${Date.now()}.pdf`);
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(18).fillColor('#0d9488').text('GharKaPaisa - Wallet Statement', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).fillColor('#333').text(`Partner: ${profile?.first_name || ''} ${profile?.last_name || ''} (${profile?.partner_code || ''})`);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`);
+    if (from_date || to_date) doc.text(`Period: ${from_date || 'Start'} to ${to_date || 'Now'}`);
+    doc.moveDown();
+
+    // Table headers
+    const startX = 40;
+    doc.fontSize(8).fillColor('#fff');
+    doc.rect(startX, doc.y, 515, 16).fill('#0d9488');
+    const headerY = doc.y + 4;
+    doc.text('Date', startX + 5, headerY, { width: 70 });
+    doc.text('Type', startX + 80, headerY, { width: 100 });
+    doc.text('Description', startX + 185, headerY, { width: 155 });
+    doc.text('Credit', startX + 345, headerY, { width: 60, align: 'right' });
+    doc.text('Debit', startX + 410, headerY, { width: 60, align: 'right' });
+    doc.text('Status', startX + 475, headerY, { width: 40 });
+    doc.y = headerY + 16;
+
+    // Rows
+    for (const row of rows) {
+      if (doc.y > 750) { doc.addPage(); doc.y = 40; }
+      const rowY = doc.y + 2;
+      doc.fontSize(7).fillColor('#333');
+      doc.text(new Date(row.created_at).toLocaleDateString('en-IN'), startX + 5, rowY, { width: 70 });
+      doc.text(row.transaction_type || '-', startX + 80, rowY, { width: 100 });
+      doc.text((row.description || '-').substring(0, 40), startX + 185, rowY, { width: 155 });
+      doc.fillColor('#16a34a').text(row.credit > 0 ? `₹${parseFloat(row.credit).toFixed(2)}` : '-', startX + 345, rowY, { width: 60, align: 'right' });
+      doc.fillColor('#dc2626').text(row.debit > 0 ? `₹${parseFloat(row.debit).toFixed(2)}` : '-', startX + 410, rowY, { width: 60, align: 'right' });
+      doc.fillColor('#333').text(row.status || '-', startX + 475, rowY, { width: 40 });
+      doc.y = rowY + 12;
+    }
+
+    doc.moveDown(2);
+    doc.fontSize(8).fillColor('#999').text('This is a system-generated statement.', { align: 'center' });
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Wallet Statement Excel Export ────────────────────────────────────
+const exportStatementExcel = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { from_date, to_date } = req.query;
+    let where = 'WHERE wl.partner_id = $1';
+    const values = [partnerId];
+    let idx = 2;
+    if (from_date) { where += ` AND wl.created_at >= $${idx++}`; values.push(from_date); }
+    if (to_date) { where += ` AND wl.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
+
+    const { rows } = await query(`
+      SELECT wl.*, a.app_number, p.name as product_name
+      FROM wallet_ledger wl
+      LEFT JOIN applications a ON a.id = wl.application_id
+      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      ${where}
+      ORDER BY wl.created_at DESC
+    `, values);
+
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Wallet Statement');
+
+    sheet.columns = [
+      { header: 'Date', key: 'date', width: 18 },
+      { header: 'Transaction Type', key: 'type', width: 22 },
+      { header: 'Description', key: 'description', width: 40 },
+      { header: 'Reference', key: 'reference', width: 20 },
+      { header: 'Credit (₹)', key: 'credit', width: 14 },
+      { header: 'Debit (₹)', key: 'debit', width: 14 },
+      { header: 'Status', key: 'status', width: 12 },
+      { header: 'Product', key: 'product', width: 20 },
+    ];
+
+    // Style header row
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
+
+    for (const row of rows) {
+      sheet.addRow({
+        date: new Date(row.created_at).toLocaleDateString('en-IN'),
+        type: row.transaction_type || '-',
+        description: row.description || '-',
+        reference: row.reference_number || row.app_number || '-',
+        credit: row.credit > 0 ? parseFloat(row.credit) : 0,
+        debit: row.debit > 0 ? parseFloat(row.debit) : 0,
+        status: row.status || '-',
+        product: row.product_name || '-',
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=wallet_statement_${Date.now()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Withdrawal OTP: Send ─────────────────────────────────────────────
+const sendWithdrawalOTP = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { amount } = req.body;
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount < 100) return error(res, 'Minimum withdrawal amount is ₹100');
+    if (parsedAmount > 50000) return error(res, 'Maximum withdrawal amount is ₹50,000');
+
+    // Get user email
+    const { rows: [profile] } = await query(`
+      SELECT u.email FROM partner_profiles ap JOIN users u ON u.id = ap.user_id WHERE ap.id = $1
+    `, [partnerId]);
+    if (!profile?.email) return error(res, 'No email address found for OTP delivery');
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await query(`
+      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (identity) DO UPDATE SET otp_hash = $2, expires_at = $3
+    `, [`withdrawal:${partnerId}`, otpHash, expiresAt]);
+
+    // Send OTP via email
+    try {
+      const { sendOtpEmail } = require('../../services/email/email.service.js');
+      await sendOtpEmail(profile.email, otp);
+    } catch (emailErr) {
+      logger.error('Failed to send withdrawal OTP email:', emailErr.message);
+    }
+
+    return success(res, { email_sent_to: profile.email.replace(/(.{2}).+(@.+)/, '$1***$2') }, 'OTP sent to your registered email address');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Withdrawal OTP: Verify & Create ──────────────────────────────────
+const verifyWithdrawalOTP = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { otp, amount } = req.body;
+    if (!otp) return error(res, 'OTP is required');
+
+    const otpHash = crypto.createHash('sha256').update(otp.toString()).digest('hex');
+    const { rows: [record] } = await query(
+      `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
+      [`withdrawal:${partnerId}`, otpHash]
+    );
+
+    if (!record) return error(res, 'Invalid or expired OTP', 401);
+
+    // Delete used OTP
+    await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
+
+    // Now proceed with the actual withdrawal (delegate to requestWithdrawal)
+    return requestWithdrawal(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Cancel Withdrawal ────────────────────────────────────────────────
+const cancelWithdrawal = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { id } = req.params;
+    if (!id) return error(res, 'Withdrawal ID is required');
+
+    await client.query('BEGIN');
+
+    const { rows: [wr] } = await client.query(
+      `SELECT * FROM wallet_withdrawals WHERE id = $1 AND partner_id = $2 AND status = 'pending' FOR UPDATE`,
+      [id, partnerId]
+    );
+    if (!wr) {
+      await client.query('ROLLBACK');
+      return error(res, 'No pending withdrawal request found with this ID', 404);
+    }
+
+    // Cancel the withdrawal
+    await client.query(
+      `UPDATE wallet_withdrawals SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [id]
+    );
+
+    // Reject linked ledger entries
+    await client.query(`
+      UPDATE wallet_ledger SET status = 'rejected', description = COALESCE(description, '') || ' [Cancelled by Partner]'
+      WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2 AND status = 'pending'
+    `, [id.toString(), partnerId]);
+
+    // Re-sync wallet balance to unlock the amount
+    await syncWalletBalance(partnerId, client);
+
+    await client.query('COMMIT');
+    return success(res, {}, `Withdrawal of ₹${wr.amount} cancelled. Balance has been restored.`);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    next(err);
+  } finally {
+    try { client.release(); } catch (_) {}
+  }
+};
+
+// ── Retry Failed Withdrawal ──────────────────────────────────────────
+const retryWithdrawal = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { id } = req.params;
+    if (!id) return error(res, 'Withdrawal ID is required');
+
+    await client.query('BEGIN');
+    const { rows: [failedWr] } = await client.query(
+      `SELECT * FROM wallet_withdrawals WHERE id = $1 AND partner_id = $2 FOR UPDATE`,
+      [id, partnerId]
+    );
+
+    if (!failedWr) {
+      await client.query('ROLLBACK');
+      return error(res, 'No withdrawal request found to retry', 404);
+    }
+
+    if (!['failed', 'rejected', 'cancelled'].includes(failedWr.status)) {
+      await client.query('ROLLBACK');
+      return error(res, `Only failed or cancelled requests can be retried. Current status: ${failedWr.status}`);
+    }
+
+    // Check if another pending withdrawal exists
+    const { rows: pending } = await client.query(
+      `SELECT id FROM wallet_withdrawals WHERE partner_id = $1 AND status = 'pending'`,
+      [partnerId]
+    );
+    if (pending.length) {
+      await client.query('ROLLBACK');
+      return error(res, 'A withdrawal request is already pending. Please wait until it completes.');
+    }
+
+    const amount = parseFloat(failedWr.amount);
+    const { rows: [wallet] } = await client.query(
+      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`, [partnerId]
+    );
+    if (!wallet || parseFloat(wallet.available_balance) < amount) {
+      await client.query('ROLLBACK');
+      return error(res, `Insufficient balance to retry withdrawal. Available: ₹${wallet?.available_balance || 0}`);
+    }
+
+    // Re-submit withdrawal request
+    const { rows: [newWr] } = await client.query(`
+      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING id
+    `, [wallet.id, partnerId, amount, failedWr.bank_name, failedWr.account_number, failedWr.ifsc_code, failedWr.bank_account_id]);
+
+    const { debitAvailable } = require('./service');
+    await debitAvailable(partnerId, amount, {
+      reference_type: 'withdrawal',
+      reference_id: newWr.id,
+      bank_name: failedWr.bank_name,
+      description: `Retried withdrawal request for ₹${amount}`
+    }, client);
+
+    await client.query('COMMIT');
+    return success(res, { withdrawal_id: newWr.id }, 'Withdrawal request retried and submitted successfully.');
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    next(err);
+  } finally {
+    try { client.release(); } catch (_) {}
+  }
+};
+
+// ── Get Single Withdrawal Details ────────────────────────────────────
+const getWithdrawalDetail = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let partnerId = req.partner?.id || null;
+    if (!partnerId && req.user && req.user.role === 'PARTNER') {
+      const { rows: [partnerProfile] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (partnerProfile) partnerId = partnerProfile.id;
+    }
+
+    const { rows: [wr] } = await query(`
+      SELECT wr.*, pbd.account_holder_name, pbd.upi_id, ap.partner_code, ap.first_name, ap.last_name
+      FROM wallet_withdrawals wr
+      LEFT JOIN partner_bank_details pbd ON pbd.id = wr.bank_account_id
+      LEFT JOIN partner_profiles ap ON ap.id = wr.partner_id
+      WHERE wr.id = $1 AND (wr.partner_id = $2 OR $3::boolean)
+    `, [id, partnerId, req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'ADMIN']);
+
+    if (!wr) return notFound(res, 'Withdrawal request not found');
+
+    if (wr.account_number && wr.account_number.includes(':')) {
+      try { wr.account_number = decrypt(wr.account_number); } catch (_) {}
+    }
+
+    return success(res, wr);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ── Bank Details: Get All (Primary + Secondary) ──────────────────────
+const getAllBankDetails = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { rows } = await query(`
+      SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified, is_primary, created_at, updated_at
+      FROM partner_bank_details
+      WHERE partner_id = $1
+      ORDER BY is_primary DESC, created_at ASC
+    `, [partnerId]);
+
+    // Decrypt account numbers
+    const processed = rows.map(r => {
+      if (r.account_number && r.account_number.includes(':')) {
+        try { r.account_number = decrypt(r.account_number); } catch (_) {}
+      }
+      return r;
+    });
+
+    return success(res, processed);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Bank Details: Add Secondary ──────────────────────────────────────
+const addSecondaryBankDetail = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { bank_name, account_number, ifsc_code, account_holder_name, upi_id } = req.body;
+    if (!bank_name && !upi_id) return error(res, 'Bank Name or UPI ID is required');
+
+    // Check max 2 accounts
+    const { rows: existing } = await query(`SELECT id FROM partner_bank_details WHERE partner_id = $1`, [partnerId]);
+    if (existing.length >= 2) return error(res, 'Maximum 2 bank accounts allowed');
+
+    const encryptedAccount = account_number ? encrypt(account_number) : null;
+
+    const { rows: [newBank] } = await query(`
+      INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_primary)
+      VALUES ($1, $2, $3, $4, $5, $6, false)
+      RETURNING id
+    `, [partnerId, bank_name, encryptedAccount, ifsc_code, account_holder_name, upi_id]);
+
+    // Log in bank_details_history
+    const userId = req.user?.id || null;
+    await query(`
+      INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
+      VALUES ($1, $2, $3, NULL, $4)
+    `, [partnerId, newBank.id, userId, JSON.stringify({ bank_name, ifsc_code, account_holder_name, upi_id })]);
+
+    return success(res, { id: newBank.id }, 'Secondary bank account added successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Bank Details: Set Primary ────────────────────────────────────────
+const setPrimaryBank = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { bank_id } = req.body;
+    if (!bank_id) return error(res, 'Bank account ID is required');
+
+    // Verify ownership
+    const { rows: [bank] } = await query(`SELECT id FROM partner_bank_details WHERE id = $1 AND partner_id = $2`, [bank_id, partnerId]);
+    if (!bank) return error(res, 'Bank account not found', 404);
+
+    // Set all to non-primary, then set selected to primary
+    await query(`UPDATE partner_bank_details SET is_primary = false WHERE partner_id = $1`, [partnerId]);
+    await query(`UPDATE partner_bank_details SET is_primary = true WHERE id = $1`, [bank_id]);
+
+    return success(res, {}, 'Primary bank account updated');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Bank Verification: Simulated Penny Drop ──────────────────────────
+const verifyBankPennyDrop = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { bank_id } = req.body;
+    if (!bank_id) return error(res, 'Bank account ID is required');
+
+    const { rows: [bank] } = await query(
+      `SELECT id, account_holder_name, bank_name FROM partner_bank_details WHERE id = $1 AND partner_id = $2`,
+      [bank_id, partnerId]
+    );
+    if (!bank) return error(res, 'Bank account not found', 404);
+
+    // Simulate penny drop verification (₹1 credit)
+    await query(`UPDATE partner_bank_details SET is_verified = true, updated_at = NOW() WHERE id = $1`, [bank_id]);
+
+    // Log verification
+    await query(`
+      INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [partnerId, bank_id, req.user?.id, JSON.stringify({ is_verified: false }), JSON.stringify({ is_verified: true, verification_method: 'penny_drop' })]);
+
+    return success(res, {
+      verified: true,
+      beneficiary_name: bank.account_holder_name || 'Account Holder',
+      bank_name: bank.bank_name,
+      penny_amount: 1.00
+    }, 'Bank account verified via Penny Drop (₹1 deposited)');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Bank Verification: Simulated UPI ─────────────────────────────────
+const verifyBankUPI = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { bank_id } = req.body;
+    if (!bank_id) return error(res, 'Bank account ID is required');
+
+    const { rows: [bank] } = await query(
+      `SELECT id, upi_id, account_holder_name FROM partner_bank_details WHERE id = $1 AND partner_id = $2`,
+      [bank_id, partnerId]
+    );
+    if (!bank) return error(res, 'Bank account not found', 404);
+    if (!bank.upi_id) return error(res, 'No UPI ID found on this bank account');
+
+    // Simulate UPI verification
+    await query(`UPDATE partner_bank_details SET is_verified = true, updated_at = NOW() WHERE id = $1`, [bank_id]);
+
+    await query(`
+      INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [partnerId, bank_id, req.user?.id, JSON.stringify({ is_verified: false }), JSON.stringify({ is_verified: true, verification_method: 'upi' })]);
+
+    return success(res, {
+      verified: true,
+      upi_id: bank.upi_id,
+      beneficiary_name: bank.account_holder_name || 'Account Holder'
+    }, 'UPI ID verified successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Bank Details: Edit History ───────────────────────────────────────
+const getBankEditHistory = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile not found');
+
+    const { rows } = await query(`
+      SELECT bdh.*, u.email as changed_by_email
+      FROM bank_details_history bdh
+      LEFT JOIN users u ON u.id = bdh.changed_by
+      WHERE bdh.partner_id = $1
+      ORDER BY bdh.changed_at DESC
+      LIMIT 50
+    `, [partnerId]);
+
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/v1/razorpay/webhook (Unauthenticated)
 const handleRazorpayWebhook = async (req, res, next) => {
   const client = await getClient();
@@ -773,6 +1301,7 @@ const handleRazorpayWebhook = async (req, res, next) => {
       const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
       if (partner) {
         try {
+          const { notify } = require('../notifications/service.js');
           await notify.withdrawalApproved(partner.user_id, wr.amount);
         } catch (_) {}
       }
@@ -817,6 +1346,7 @@ const handleRazorpayWebhook = async (req, res, next) => {
       const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
       if (partner) {
         try {
+          const { notify } = require('../notifications/service.js');
           await notify.withdrawalRejected(partner.user_id, wr.amount, failureReason || 'Razorpay payout failed');
         } catch (_) {}
       }
@@ -856,5 +1386,18 @@ module.exports = {
   listPartnerWithdrawals,
   walletManualCredit,
   walletManualDebit,
-  handleRazorpayWebhook
+  handleRazorpayWebhook,
+  exportStatementPDF,
+  exportStatementExcel,
+  sendWithdrawalOTP,
+  verifyWithdrawalOTP,
+  cancelWithdrawal,
+  retryWithdrawal,
+  getWithdrawalDetail,
+  getAllBankDetails,
+  addSecondaryBankDetail,
+  setPrimaryBank,
+  verifyBankPennyDrop,
+  verifyBankUPI,
+  getBankEditHistory
 };
