@@ -827,7 +827,7 @@ const invitePartnerClick = async (req, res, next) => {
       SET total_invites = total_invites + 1 
       WHERE referral_code = $1 
         OR partner_id::text = $1
-        OR partner_id IN (SELECT id FROM partner_profiles WHERE user_id::text = $1)
+        OR partner_id IN (SELECT id FROM partner_profiles WHERE user_id::text = $1 OR partner_code = $1)
     `, [ref]);
 
     return success(res, {}, 'Invite recorded');
