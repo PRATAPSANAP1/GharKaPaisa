@@ -26,9 +26,6 @@ export default function PartnerCrm() {
     mobile: '',
     email: '',
     panNumber: '',
-    employmentType: 'salaried',
-    monthlyIncome: '',
-    employer: '',
     city: '',
     state: '',
     pincode: ''
@@ -58,9 +55,6 @@ export default function PartnerCrm() {
         mobile: newCust.mobile.trim(),
         email: newCust.email.trim() || null,
         panNumber: newCust.panNumber.trim() || null,
-        employmentType: newCust.employmentType || null,
-        monthlyIncome: newCust.monthlyIncome ? parseFloat(newCust.monthlyIncome) : null,
-        employer: newCust.employer.trim() || null,
         city: newCust.city.trim() || null,
         state: newCust.state.trim() || null,
         pincode: newCust.pincode.trim() || null
@@ -78,9 +72,6 @@ export default function PartnerCrm() {
         mobile: '',
         email: '',
         panNumber: '',
-        employmentType: 'salaried',
-        monthlyIncome: '',
-        employer: '',
         city: '',
         state: '',
         pincode: ''
@@ -550,51 +541,6 @@ export default function PartnerCrm() {
                     style={{ ...S.input, paddingVertical: '10px' }}
                   />
                 </div>
-              </div>
-
-              {/* Group 3: Professional Info */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Employment Type")}</label>
-                  <select
-                    value={newCust.employmentType}
-                    onChange={e => setNewCust(n => ({ ...n, employmentType: e.target.value }))}
-                    style={{
-                      ...S.input,
-                      paddingVertical: '10px',
-                      background: C.inputBg || C.card,
-                      color: C.text,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="salaried">{t("Salaried")}</option>
-                    <option value="self_employed">{t("Self Employed")}</option>
-                    <option value="business">{t("Business Owner")}</option>
-                    <option value="other">{t("Other")}</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Monthly Income (₹)")}</label>
-                  <input
-                    type="number"
-                    placeholder={t("e.g. 50000")}
-                    value={newCust.monthlyIncome}
-                    onChange={e => setNewCust(n => ({ ...n, monthlyIncome: e.target.value }))}
-                    style={{ ...S.input, paddingVertical: '10px' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("Employer Name")}</label>
-                <input
-                  type="text"
-                  placeholder={t("Company name")}
-                  value={newCust.employer}
-                  onChange={e => setNewCust(n => ({ ...n, employer: e.target.value }))}
-                  style={{ ...S.input, paddingVertical: '10px' }}
-                />
               </div>
 
               {/* Group 4: Address Info */}
