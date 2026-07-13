@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
-import { 
+import {
   MdAccountBalanceWallet, 
   MdHistory, 
   MdAccountBalance, 
@@ -14,6 +14,7 @@ import {
   MdError,
   MdRefresh
 } from 'react-icons/md';
+import RazorpayCheckoutButton from '../../../components/Razorpay/RazorpayCheckoutButton';
 import {
   AreaChart,
   Area,
@@ -426,6 +427,40 @@ const PartnerWallet = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: C.bgSecondary, padding: '12px', borderRadius: '8px', fontSize: '11px', color: C.textLight }}>
                 <div>{t("⏱️ Processing Time: 1-2 business days (NEFT/IMPS)")}</div>
                 <div>🛡️ KYC Lock Status: {kycStatus === 'approved' ? '🟢 KYC Approved' : '🔴 KYC Required'}</div>
+              </div>
+            </div>
+
+            {/* Middle Column: Razorpay Checkout Gateway Test */}
+            <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>💳</span>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Razorpay Standard Checkout</h3>
+                </div>
+                <p style={{ fontSize: '12.5px', color: C.textMid, margin: '0 0 16px', lineHeight: 1.5 }}>
+                  Test instant payments using Razorpay's verified Checkout modal. Order creation and HMAC signature verification are powered by live server endpoints.
+                </p>
+                <div style={{ background: `${C.primary}10`, border: `1px solid ${C.primary}25`, padding: '12px', borderRadius: '10px', fontSize: '12px', color: C.primary, fontWeight: 600 }}>
+                  ⚡ Test Mode Active (Key: rzp_test_TCqZGvr7067i7N)
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <RazorpayCheckoutButton
+                  amount={500}
+                  buttonText="Pay ₹500 Test Order"
+                  description="Razorpay Integration Test Payment"
+                  userDetails={{
+                    name: partner?.first_name || "Partner User",
+                    email: partner?.email || "partner@gharkapaisa.in",
+                    contact: partner?.mobile || "9999999999"
+                  }}
+                  onSuccess={(verifyRes, rzpResponse) => {
+                    alert(`✅ Payment Verified Successfully!\nPayment ID: ${rzpResponse.razorpay_payment_id}\nOrder ID: ${rzpResponse.razorpay_order_id}`);
+                  }}
+                  onFailure={(err) => {
+                    console.log("Payment failure or dismissed:", err);
+                  }}
+                />
               </div>
             </div>
 
