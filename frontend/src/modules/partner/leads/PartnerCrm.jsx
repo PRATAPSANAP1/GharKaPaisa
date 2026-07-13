@@ -238,27 +238,6 @@ export default function PartnerCrm() {
         <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Customer CRM")}</h2>
-            <button
-              id="btn-crm-add-customer"
-              type="button"
-              onClick={() => { setShowAddModal(true); setAddError(''); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                background: C.primary,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: `0 4px 10px ${C.primary}30`
-              }}
-            >
-              <MdAddBox size={16} /> Add
-            </button>
           </div>
           <div style={{ position: 'relative' }}>
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
