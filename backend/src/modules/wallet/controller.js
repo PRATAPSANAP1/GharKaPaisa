@@ -297,10 +297,24 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, 'A withdrawal request is already pending');
     }
 
+    // Check Partner KYC Status
+    const { rows: [partnerProfile] } = await client.query(
+      `SELECT kyc_status FROM partner_profiles WHERE id = $1`, [PartnerId]
+    );
+    if (!partnerProfile || partnerProfile.kyc_status !== 'approved') {
+      await client.query('ROLLBACK');
+      return error(res, 'KYC Verification is required before requesting withdrawals. Please ensure your KYC status is Approved.', 403);
+    }
+
     // Get bank/upi details
     const { rows: [bank] } = await client.query(
       `SELECT id, bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1`, [PartnerId]
     );
+
+    if (!bank || (!bank.account_number && !bank.upi_id)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Please register your Bank Account or UPI details under Wallet -> Bank Details before requesting a withdrawal.', 400);
+    }
 
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
