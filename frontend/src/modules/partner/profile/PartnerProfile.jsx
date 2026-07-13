@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
