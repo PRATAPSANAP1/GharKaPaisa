@@ -27,17 +27,23 @@ const getWallet = async (req, res, next) => {
 // GET /wallet/transactions / GET /wallet/:PartnerId/transactions
 const getTransactions = async (req, res, next) => {
   try {
-    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
-    if (!PartnerId) return error(res, 'Partner ID is required');
+    const rawPartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    const userId = req.user?.id || null;
+
+    let partnerId = rawPartnerId;
+    if (req.user && req.user.role === 'PARTNER') {
+      const { rows: [partnerProfile] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (partnerProfile) {
+        partnerId = partnerProfile.id;
+      }
+    }
+
     const { page, limit, offset } = getPaginationParams(req.query);
     const { type, status, from_date, to_date, search } = req.query;
 
-    const { rows: [wallet] } = await query(`SELECT id FROM wallets WHERE partner_id = $1`, [PartnerId]);
-    if (!wallet) return notFound(res, 'Wallet not found');
-
-    let where = `WHERE wl.partner_id = $1`;
-    const values = [PartnerId];
-    let idx = 2;
+    let where = `WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid)`;
+    const values = [partnerId, userId];
+    let idx = 3;
 
     if (type) { 
       where += ` AND wl.transaction_type = $${idx++}`; 
@@ -64,11 +70,13 @@ const getTransactions = async (req, res, next) => {
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM wallet_ledger wl ${where}`, values),
       query(`
-        SELECT wl.*, a.app_number, c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
+        SELECT wl.*, 
+               COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(wl.reference_number::text, 1, 8)))) as app_number, 
+               c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
         FROM wallet_ledger wl
-        LEFT JOIN applications a ON a.id = wl.application_id
+        LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
         LEFT JOIN customers c ON c.id = a.customer_id
-        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
         ORDER BY wl.created_at DESC
@@ -85,8 +93,15 @@ const getTransactions = async (req, res, next) => {
 // GET /wallet/dashboard (Partner Wallet Analytics Summary)
 const getWalletDashboard = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
+    let partnerId = req.partner?.id || null;
+    let userId = req.user?.id || null;
+
+    if (!partnerId && req.user && req.user.role === 'PARTNER') {
+      const { rows: [partnerProfile] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (partnerProfile) partnerId = partnerProfile.id;
+    }
+
+    if (!partnerId) partnerId = userId;
 
     const wallet = await getWalletSummary(partnerId);
     if (!wallet) return notFound(res, 'Wallet not found');
@@ -98,24 +113,34 @@ const getWalletDashboard = async (req, res, next) => {
         TO_CHAR(created_at, 'YYYY-MM') as month_val,
         SUM(credit) as total_credited
       FROM wallet_ledger
-      WHERE partner_id = $1 AND status = 'completed' AND credit > 0
+      WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'completed' AND credit > 0
         AND created_at >= NOW() - INTERVAL '6 months'
       GROUP BY TO_CHAR(created_at, 'Mon YYYY'), TO_CHAR(created_at, 'YYYY-MM')
       ORDER BY month_val ASC
-    `, [partnerId]);
+    `, [partnerId, userId]);
 
     // Top Product commission categories
     const { rows: categories } = await query(`
       SELECT 
-        p.category,
+        COALESCE(p.category, 'General Commission') as category,
         COALESCE(SUM(wl.credit), 0) as total_earned
       FROM wallet_ledger wl
-      JOIN applications a ON a.id = wl.application_id
-      JOIN products p ON p.id = a.product_id
-      WHERE wl.partner_id = $1 AND wl.status = 'completed' AND wl.credit > 0
+      LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
+      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) AND wl.credit > 0
       GROUP BY p.category
       ORDER BY total_earned DESC
-    `, [partnerId]);
+    `, [partnerId, userId]);
+
+    return success(res, {
+      wallet,
+      history,
+      categories
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
     return success(res, {
       wallet,

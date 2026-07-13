@@ -73,7 +73,10 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
 };
 
 // Sync Wallet Balance Cache in partner_wallets table
-const syncWalletBalance = async (partnerId, client) => {
+  const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id = $1 OR user_id = $1`, [partnerId]);
+  const pId = p ? p.id : partnerId;
+  const uId = p ? p.user_id : partnerId;
+
   // 1. Completed Credits (excluding debits)
   const creditQuery = await client.query(`
     SELECT 
@@ -83,16 +86,16 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
       COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn
     FROM wallet_ledger 
-    WHERE partner_id = $1 AND status = 'completed'
-  `, [partnerId]);
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'completed'
+  `, [pId, uId]);
   
   // 2. Completed Debits (e.g. withdrawal payouts settled)
   const debitQuery = await client.query(`
     SELECT 
       COALESCE(SUM(debit), 0) as completed_debits
     FROM wallet_ledger 
-    WHERE partner_id = $1 AND status = 'completed'
-  `, [partnerId]);
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'completed'
+  `, [pId, uId]);
 
   // 3. Hold Balance = Pending Credits
   const holdQuery = await client.query(`
@@ -100,16 +103,16 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(credit), 0) as hold_bal,
       COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_pending
     FROM wallet_ledger 
-    WHERE partner_id = $1 AND status = 'pending'
-  `, [partnerId]);
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'pending'
+  `, [pId, uId]);
 
   // 4. Locked Balance = Pending/Approved Withdrawal Requests
   const lockedQuery = await client.query(`
     SELECT 
       COALESCE(SUM(amount), 0) as locked_bal
     FROM wallet_withdrawals
-    WHERE partner_id = $1 AND status IN ('pending', 'approved', 'processing')
-  `, [partnerId]);
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status IN ('pending', 'approved', 'processing')
+  `, [pId, uId]);
 
   const cr = creditQuery.rows[0];
   const db = debitQuery.rows[0];
