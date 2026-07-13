@@ -598,7 +598,7 @@ const PartnerWallet = () => {
 
       {/* Bank Account Setup Tab */}
       {activeTab === 'bank' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'start' }}>
           
           {/* Form */}
           <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

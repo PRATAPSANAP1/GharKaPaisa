@@ -555,7 +555,7 @@ export default function PartnerTeam() {
           ) : activeTab === 'overview' ? (
             
             /* TAB: OVERVIEW */
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: C.text }}>{t("Link Activity & Statistics")}</h4>
                 <div style={{ ...S.card, background: C.bgSecondary, padding: '20px', border: `1px dashed ${C.border}`, borderRadius: '12px' }}>

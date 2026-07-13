@@ -271,7 +271,7 @@ export default function PartnerProducts() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {filteredProducts.map((product) => (
               <div key={product.id} style={{
                 ...S.card, padding: '20px', borderRadius: '16px',

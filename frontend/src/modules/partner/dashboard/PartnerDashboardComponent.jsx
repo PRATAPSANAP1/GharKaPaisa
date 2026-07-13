@@ -694,7 +694,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
         }}>
           <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.quickActions', 'Quick Actions')}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "12px" }}>
             {[
               { label: t('dashboard.actions.applyProduct', 'Apply Product'), icon: MdStorefront, color: "#3B82F6", route: "/partner/products" },
               { label: t('dashboard.actions.addCustomer', 'Add Customer'), icon: MdPeople, color: "#10B981", route: "/partner/crm" },

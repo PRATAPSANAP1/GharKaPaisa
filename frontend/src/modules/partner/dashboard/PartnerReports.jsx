@@ -204,7 +204,7 @@ export default function PartnerReports() {
           </div>
 
           {/* Charts */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
             <div style={{ ...S.card, padding: "20px", borderRadius: "16px" }}>
               <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: "0 0 16px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <MdShowChart size={18} style={{ color: C.primary }} /> Monthly Applications

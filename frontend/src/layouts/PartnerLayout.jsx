@@ -621,7 +621,7 @@ export default function PartnerLayout() {
 
         <div style={{
           flex: 1,
-          padding: isMobile ? '16px' : '24px 32px',
+          padding: isMobile ? '12px 12px 80px 12px' : '24px 32px',
           maxWidth: '1280px',
           margin: '0 auto',
           width: '100%',

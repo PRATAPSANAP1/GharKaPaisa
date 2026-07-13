@@ -83,7 +83,7 @@ export default function TravelUtilitiesPage() {
       </div>
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
 
         {/* Form Area */}
         <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>

@@ -340,7 +340,7 @@ export default function PartnerApplications() {
 
                 {/* Expanded Details panel */}
                 {isExpanded && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '24px', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '20px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                     
                     {/* Left Panel: Stepper & Documents Checklist & Notes */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

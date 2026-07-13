@@ -598,7 +598,7 @@ export default function PartnerCrm() {
               </div>
 
               {/* Group 4: Address Info */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '11px', fontWeight: 700, color: C.text }}>{t("City")}</label>
                   <input
