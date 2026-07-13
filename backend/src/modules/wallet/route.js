@@ -6,10 +6,6 @@ const { withdrawalRules, validate } = require('../../middleware/validation/valid
 
 router.use(authenticate, syncUser);
 
-// Admin: list/process withdrawals
-router.get('/withdrawals', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.listWithdrawals);
-router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
-
 // Partner self-endpoints (no ID needed in URL)
 router.get('/', requireApprovedPartner, walletCtrl.getWallet);
 router.get('/dashboard', requireApprovedPartner, walletCtrl.getWalletDashboard);
@@ -25,10 +21,20 @@ router.get('/statement/excel', requireApprovedPartner, walletCtrl.exportStatemen
 router.post('/withdraw/otp/send', requireApprovedPartner, walletCtrl.sendWithdrawalOTP);
 router.post('/withdraw/otp/verify', requireApprovedPartner, walletCtrl.verifyWithdrawalOTP);
 router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+
+// Polymorphic Withdrawals Listing (Dispatches based on User Role: Admin vs Partner)
+router.get('/withdrawals', requireApprovedPartner, (req, res, next) => {
+  const role = (req.user?.role || '').toUpperCase();
+  if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+    return walletCtrl.listWithdrawals(req, res, next);
+  }
+  return walletCtrl.listPartnerWithdrawals(req, res, next);
+});
+
+router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
 router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);
 router.get('/withdrawals/:id', requireApprovedPartner, walletCtrl.getWithdrawalDetail);
-router.get('/withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 
 // Bank details management
 router.get('/bank-details', requireApprovedPartner, walletCtrl.getBankDetails);

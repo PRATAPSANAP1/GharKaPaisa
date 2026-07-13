@@ -672,8 +672,14 @@ const getWalletLedger = async (req, res, next) => {
 
 const listPartnerWithdrawals = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
+    let partnerId = req.partner?.id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+      else partnerId = req.user.id;
+    }
+
+    if (!partnerId) return paginate(res, [], 0, 1, 10);
     const { page, limit, offset } = getPaginationParams(req.query);
 
     const [count, data] = await Promise.all([
@@ -1080,8 +1086,14 @@ const getWithdrawalDetail = async (req, res, next) => {
 // ── Bank Details: Get All (Primary + Secondary) ──────────────────────
 const getAllBankDetails = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
+    let partnerId = req.partner?.id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+      else partnerId = req.user.id;
+    }
+
+    if (!partnerId) return success(res, []);
 
     const { rows } = await query(`
       SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified, is_primary, created_at, updated_at
