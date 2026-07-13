@@ -3,6 +3,7 @@ const { success, created, error, notFound, paginate } = require('../../utils/res
 const { logAction } = require('../admin/audit.service.js');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { creditHold, releaseHold } = require('../wallet/service.js');
+const { decrypt } = require('../../utils/helpers/crypto');
 
 // Create a new lead
 const createLead = async (req, res, next) => {
@@ -107,11 +108,23 @@ const listLeads = async (req, res, next) => {
 
     const dataQuery = `
       SELECT l.*, 
-        p.name as product_name, p.commission_value as product_commission,
-        ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.partner_code
+        p.name as product_name, p.commission_value as product_commission, p.bank_code as product_bank_code,
+        ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.partner_code,
+        ap.kyc_status as partner_kyc_status, ap.cancel_cheque_url as partner_cancel_cheque_url,
+        c.email as customer_email, c.pan_number as customer_pan, c.aadhaar_last4 as customer_aadhaar,
+        c.state as customer_state, c.pincode as customer_pincode, c.employment_type as customer_employment_type,
+        c.monthly_income as customer_monthly_income, c.employer as customer_employer,
+        pbd.account_holder_name as partner_account_holder_name,
+        pbd.bank_name as partner_bank_name,
+        pbd.account_number as partner_account_number,
+        pbd.ifsc_code as partner_ifsc_code,
+        pbd.upi_id as partner_upi_id,
+        pbd.is_verified as partner_bank_is_verified
       FROM leads l
       JOIN products p ON p.id = l.product_id
       JOIN partner_profiles ap ON ap.id = l.partner_id
+      LEFT JOIN customers c ON c.mobile = l.mobile
+      LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
       ${whereClause}
       ORDER BY l.created_at DESC
       LIMIT $${idx} OFFSET $${idx + 1}
@@ -122,8 +135,21 @@ const listLeads = async (req, res, next) => {
       query(dataQuery, [...values, limit, offset])
     ]);
 
+    const formattedRows = dataResult.rows.map(row => {
+      let decryptedAccount = row.partner_account_number;
+      if (decryptedAccount) {
+        try {
+          decryptedAccount = decrypt(decryptedAccount);
+        } catch (_) {}
+      }
+      return {
+        ...row,
+        partner_account_number: decryptedAccount
+      };
+    });
+
     const total = parseInt(countResult.rows[0].count);
-    return paginate(res, dataResult.rows, total, page, limit);
+    return paginate(res, formattedRows, total, page, limit);
   } catch (err) {
     next(err);
   }
