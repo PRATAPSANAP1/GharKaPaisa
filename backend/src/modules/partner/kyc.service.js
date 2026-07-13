@@ -37,6 +37,59 @@ const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) 
 };
 
 
+const recalculatePartnerKycStatus = async (partnerId, adminUserId = null) => {
+  const { rows: docs } = await query(`
+    SELECT doc_type, verification_status FROM kyc_documents WHERE partner_id = $1
+  `, [partnerId]);
+
+  const requiredTypes = ['pan', 'aadhaar', 'cancel_cheque'];
+  
+  const hasRejected = docs.some(d => d.verification_status === 'rejected');
+  if (hasRejected) {
+    const rejectedDoc = docs.find(d => d.verification_status === 'rejected');
+    const reasonMsg = `Document ${rejectedDoc.doc_type.replace('_', ' ').toUpperCase()} was marked as rejected.`;
+    await query(`
+      UPDATE partner_profiles 
+      SET kyc_status = 'rejected', 
+          rejection_reason = $1,
+          kyc_rejection_reason = $1
+      WHERE id = $2
+    `, [reasonMsg, partnerId]);
+
+    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    if (partner) {
+      await query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
+    }
+    return 'rejected';
+  }
+
+  const approvedTypes = docs.filter(d => d.verification_status === 'approved').map(d => d.doc_type);
+  const allRequiredApproved = requiredTypes.every(reqType => approvedTypes.includes(reqType));
+
+  if (allRequiredApproved) {
+    await query(`
+      UPDATE partner_profiles 
+      SET kyc_status = 'approved',
+          approved_by = $1,
+          approved_at = NOW(),
+          rejection_reason = NULL,
+          kyc_rejection_reason = NULL
+      WHERE id = $2
+    `, [adminUserId, partnerId]);
+
+    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    if (partner) {
+      await query(`UPDATE users SET status = 'active'::user_status WHERE id = $1`, [partner.user_id]);
+    }
+    return 'approved';
+  }
+
+  await query(`
+    UPDATE partner_profiles SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL WHERE id = $1
+  `, [partnerId]);
+  return 'pending';
+};
+
 const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
   const statusVal = isVerified ? 'approved' : 'rejected';
   const { rows: [doc] } = await query(`
@@ -51,21 +104,7 @@ const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {
   
   if (doc) {
     await logAction(adminUserId, 'VERIFY_KYC_DOCUMENT', docId, { doc_type: doc.doc_type, verified: isVerified });
-    
-    if (!isVerified) {
-      await query(`
-        UPDATE partner_profiles 
-        SET kyc_status = 'rejected', 
-            rejection_reason = $1,
-            kyc_rejection_reason = $1
-        WHERE id = $2
-      `, [`Document ${doc.doc_type.replace('_', ' ').toUpperCase()} was marked as rejected.`, partnerId]);
-      
-      const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
-      if (partner) {
-        await query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
-      }
-    }
+    await recalculatePartnerKycStatus(partnerId, adminUserId);
   }
   
   return doc;
