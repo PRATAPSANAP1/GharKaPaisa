@@ -58,7 +58,27 @@ const listProducts = async (req, res, next) => {
       `, [...values, limit, offset]),
     ]);
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const isPartnerOrAdmin = req.user && ['PARTNER', 'ADMIN', 'SUPER_ADMIN'].includes(req.user.role);
+
+    const sanitizedRows = data.rows.map(prod => {
+      const { ...prodData } = prod;
+      
+      // Default metadata
+      prodData.hold_days = prodData.hold_days || 7;
+      prodData.approval_rate = prodData.approval_rate || 82;
+
+      if (!isPartnerOrAdmin) {
+        // Public Visitor View - Strip out commission and margin metrics
+        delete prodData.commission_value;
+        delete prodData.commission_type;
+        delete prodData.commission_enabled;
+        delete prodData.company_margin;
+        delete prodData.internal_notes;
+      }
+      return prodData;
+    });
+
+    return paginate(res, sanitizedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }

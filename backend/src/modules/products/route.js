@@ -15,7 +15,7 @@ router.get('/insurance', productCtrl.getInsurance);
 router.post('/click', optionalAuth, linkCtrl.logClick);
 router.get('/links', optionalAuth, linkCtrl.listProductLinks);
 router.get('/link/:id', optionalAuth, linkCtrl.getProductLink);
-router.get('/', productCtrl.listProducts);
+router.get('/', optionalAuth, productCtrl.listProducts);
 router.get('/:id/apply', optionalAuth, productCtrl.resolveApplication);
 router.get('/:id', productCtrl.getProduct);
 
