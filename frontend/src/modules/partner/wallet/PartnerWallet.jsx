@@ -1573,15 +1573,15 @@ const PartnerWallet = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.textLight }}>Application Number:</span>
-                <strong>{selectedTxForBreakup.app_number || 'N/A'}</strong>
+                <strong>{selectedTxForBreakup.app_number || selectedTxForBreakup.reference_number || (selectedTxForBreakup.id ? `APP-${selectedTxForBreakup.id.substring(0, 8).toUpperCase()}` : 'N/A')}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.textLight }}>Customer Name:</span>
-                <strong>{selectedTxForBreakup.customer_name || 'N/A'}</strong>
+                <strong>{selectedTxForBreakup.customer_name || selectedTxForBreakup.customer || 'Customer Applicant'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.textLight }}>Product:</span>
-                <strong>{selectedTxForBreakup.product_name || 'General Commission'}</strong>
+                <strong>{selectedTxForBreakup.product_name || selectedTxForBreakup.product || 'General Financial Commission'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.textLight }}>Gross Commission Amount:</span>

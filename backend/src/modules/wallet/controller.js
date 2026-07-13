@@ -84,12 +84,34 @@ const getTransactions = async (req, res, next) => {
       query(`SELECT COUNT(*) FROM wallet_ledger wl ${where}`, values),
       query(`
         SELECT wl.*, 
-               COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(wl.reference_number::text, 1, 8)))) as app_number, 
-               c.full_name as customer_name, p.name as product_name, b.short_code as bank_code
+               COALESCE(
+                 a.app_number, 
+                 CASE 
+                   WHEN wl.reference_number ILIKE 'APP-%' OR wl.reference_number ILIKE 'GKP-%' OR wl.reference_number ILIKE 'LEAD-%' 
+                   THEN wl.reference_number 
+                   WHEN wl.reference_number IS NOT NULL AND wl.reference_number != ''
+                   THEN CONCAT('APP-', UPPER(SUBSTRING(wl.reference_number::text, 1, 8)))
+                   ELSE CONCAT('APP-', UPPER(SUBSTRING(wl.id::text, 1, 8)))
+                 END
+               ) as app_number, 
+               COALESCE(
+                 c.full_name, 
+                 ld.customer_name, 
+                 SUBSTRING(wl.description FROM 'for (?:customer )?([A-Za-z ]+)'),
+                 'Customer Applicant'
+               ) as customer_name, 
+               COALESCE(
+                 p.name, 
+                 ld.product_name, 
+                 SUBSTRING(wl.description FROM 'Product: ([A-Za-z0-9 ]+)'), 
+                 'General Financial Commission'
+               ) as product_name, 
+               b.short_code as bank_code
         FROM wallet_ledger wl
-        LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
+        LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
         LEFT JOIN customers c ON c.id = a.customer_id
-        LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+        LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
+        LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id OR p.id = ld.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
         ORDER BY wl.created_at DESC
