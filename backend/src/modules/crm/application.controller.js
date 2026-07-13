@@ -638,58 +638,126 @@ const listApplications = async (req, res, next) => {
     const { status, partner_id, partner_id: q_partner_id, product_id, from_date, to_date, search, commission_status, bank_id, category } = req.query;
     const targetPartnerId = q_partner_id || partner_id;
 
-    let where = 'WHERE 1=1';
-    const values = [];
-    let idx = 1;
-
+    let partnerId = null;
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!partner) return error(res, 'Partner profile not found', 404);
-      where += ` AND a.partner_id = $${idx++}`;
-      values.push(partner.id);
+      partnerId = partner.id;
     } else if (targetPartnerId) {
-      where += ` AND a.partner_id = $${idx++}`;
-      values.push(targetPartnerId);
+      partnerId = targetPartnerId;
     }
 
-    if (status) { where += ` AND a.status = $${idx++}`; values.push(status); }
-    if (commission_status) { where += ` AND a.commission_status = $${idx++}`; values.push(commission_status); }
-    if (product_id) { where += ` AND a.product_id = $${idx++}`; values.push(product_id); }
-    if (bank_id) { where += ` AND a.bank_id = $${idx++}`; values.push(bank_id); }
-    if (category) { where += ` AND p.category = $${idx++}`; values.push(category); }
-    if (from_date) { where += ` AND a.created_at >= $${idx++}`; values.push(from_date); }
-    if (to_date) { where += ` AND a.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
-    if (search) {
-      where += ` AND (a.app_number ILIKE $${idx} OR c.full_name ILIKE $${idx} OR c.mobile ILIKE $${idx})`;
-      values.push(`%${search}%`); idx++;
-    }
+    const { rows } = await query(`
+      SELECT * FROM (
+        SELECT 
+          a.id,
+          a.app_number,
+          a.status,
+          a.loan_amount,
+          a.approved_amount,
+          a.commission_amount,
+          a.commission_status,
+          a.created_at,
+          a.updated_at,
+          a.bank_ref_number,
+          a.submitted_at,
+          a.approved_at,
+          a.commission_received_at,
+          a.commission_paid_at,
+          COALESCE(c.full_name, 'Customer') as customer_name,
+          c.mobile as customer_mobile,
+          c.email as customer_email,
+          c.pan_number,
+          c.city,
+          c.state,
+          c.employment_type,
+          c.monthly_income,
+          p.name as product_name,
+          p.category,
+          b.name as bank_name,
+          b.short_code as bank_code,
+          ap.partner_code,
+          ap.first_name as partner_first_name,
+          ap.last_name as partner_last_name,
+          a.partner_id,
+          a.product_id,
+          p.bank_id
+        FROM applications a
+        LEFT JOIN customers c ON c.id = a.customer_id OR (c.mobile IS NOT NULL AND c.mobile = a.mobile)
+        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
 
-    const baseQuery = `
-      FROM applications a
-      JOIN customers c ON c.id = a.customer_id
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
-      JOIN partner_profiles ap ON ap.id = a.partner_id
-      ${where}
-    `;
+        UNION ALL
 
-    const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) ${baseQuery}`, values),
-      query(`
-        SELECT a.id, a.app_number, a.status, a.loan_amount, a.approved_amount, a.commission_amount,
-          a.commission_status, a.created_at, a.updated_at, a.bank_ref_number, a.submitted_at, a.approved_at, a.commission_received_at, a.commission_paid_at,
-          c.full_name as customer_name, c.mobile as customer_mobile,
-          p.name as product_name, p.category,
-          b.name as bank_name, b.short_code as bank_code,
-          ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
-        ${baseQuery}
-        ORDER BY a.created_at DESC
-        LIMIT $${idx++} OFFSET $${idx++}
-      `, [...values, limit, offset]),
-    ]);
+        SELECT 
+          l.id,
+          CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number,
+          l.status,
+          NULL::numeric as loan_amount,
+          NULL::numeric as approved_amount,
+          p.commission_value as commission_amount,
+          'pending' as commission_status,
+          l.created_at,
+          l.updated_at,
+          NULL as bank_ref_number,
+          l.created_at as submitted_at,
+          NULL as approved_at,
+          NULL as commission_received_at,
+          NULL as commission_paid_at,
+          COALESCE(c.full_name, l.customer_name) as customer_name,
+          COALESCE(c.mobile, l.mobile) as customer_mobile,
+          c.email as customer_email,
+          c.pan_number,
+          COALESCE(c.city, l.city) as city,
+          c.state,
+          c.employment_type,
+          c.monthly_income,
+          p.name as product_name,
+          p.category,
+          COALESCE(b.name, 'Bank Partner') as bank_name,
+          COALESCE(b.short_code, 'LEAD') as bank_code,
+          ap.partner_code,
+          ap.first_name as partner_first_name,
+          ap.last_name as partner_last_name,
+          l.partner_id,
+          l.product_id,
+          p.bank_id
+        FROM leads l
+        LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN products p ON p.id = l.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
+      ) combined
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
+        AND ($2::text IS NULL OR combined.status = $2)
+        AND ($3::text IS NULL OR combined.product_id = $3::uuid)
+        AND ($4::text IS NULL OR combined.bank_id = $4::uuid)
+        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
+      ORDER BY combined.created_at DESC
+      LIMIT $6 OFFSET $7
+    `, [partnerId, status || null, product_id || null, bank_id || null, search ? `%${search}%` : null, limit, offset]);
 
-    const processedRows = data.rows;
-    return paginate(res, processedRows, parseInt(count.rows[0].count), page, limit);
+    const { rows: [{ count }] } = await query(`
+      SELECT COUNT(*) FROM (
+        SELECT a.id, a.partner_id, a.status, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile
+        FROM applications a
+        LEFT JOIN customers c ON c.id = a.customer_id
+        LEFT JOIN products p ON p.id = a.product_id
+        UNION ALL
+        SELECT l.id, l.partner_id, l.status, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile
+        FROM leads l
+        LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN products p ON p.id = l.product_id
+      ) combined
+      WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
+        AND ($2::text IS NULL OR combined.status = $2)
+        AND ($3::text IS NULL OR combined.product_id = $3::uuid)
+        AND ($4::text IS NULL OR combined.bank_id = $4::uuid)
+        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
+    `, [partnerId, status || null, product_id || null, bank_id || null, search ? `%${search}%` : null]);
+
+    return paginate(res, rows, parseInt(count), page, limit);
   } catch (err) {
     next(err);
   }

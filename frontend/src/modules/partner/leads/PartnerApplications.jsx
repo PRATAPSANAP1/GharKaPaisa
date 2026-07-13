@@ -340,7 +340,47 @@ export default function PartnerApplications() {
 
                 {/* Expanded Details panel */}
                 {isExpanded && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '20px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <div style={{ borderTop: `1px solid ${C.border}`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    
+                    {/* Customer Information Card */}
+                    <div style={{
+                      background: C.bgSecondary, border: `1px solid ${C.border}`,
+                      padding: '16px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '10px'
+                    }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
+                        👤 Customer Demographics & Contact Details
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '4px' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Full Name</span>
+                          <strong style={{ fontSize: '13px', color: C.text }}>{app.customer_name}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Mobile Number</span>
+                          <strong style={{ fontSize: '13px', color: C.text, fontFamily: 'monospace' }}>{app.customer_mobile}</strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Email Address</span>
+                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600 }}>{app.customer_email || '—'}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Location</span>
+                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600 }}>{app.city || '—'} {app.state ? `, ${app.state}` : ''}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>PAN Number</span>
+                          <span style={{ fontSize: '12.5px', color: C.text, fontFamily: 'monospace', fontWeight: 700 }}>{app.pan_number || '—'}</span>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Employment & Income</span>
+                          <span style={{ fontSize: '12.5px', color: C.text, fontWeight: 600, textTransform: 'capitalize' }}>
+                            {app.employment_type ? app.employment_type.replace('_', ' ') : '—'} {app.monthly_income ? `(₹${parseFloat(app.monthly_income).toLocaleString('en-IN')}/mo)` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                     
                     {/* Left Panel: Stepper & Documents Checklist & Notes */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -494,9 +534,9 @@ export default function PartnerApplications() {
                       </div>
 
                     </div>
-
                   </div>
-                )}
+                </div>
+              )}
 
               </div>
             );
