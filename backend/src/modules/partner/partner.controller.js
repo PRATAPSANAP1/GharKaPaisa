@@ -566,30 +566,53 @@ const listPartnerCustomers = async (req, res, next) => {
         c.employment_type,
         c.monthly_income,
         c.employer,
-        MIN(a.created_at) AS first_application_at,
-        COUNT(a.id)::int AS application_count,
+        COALESCE(MIN(a.created_at), MIN(l.created_at), c.created_at) AS first_application_at,
+        (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
         COALESCE(
-          json_agg(
-            json_build_object(
-              'id', a.id,
-              'app_number', a.app_number,
-              'status', a.status,
-              'product_name', p.name,
-              'bank_name', b.name,
-              'bank_code', b.short_code,
-              'commission_amount', a.commission_amount,
-              'created_at', a.created_at
-            ) ORDER BY a.created_at DESC
-          ) FILTER (WHERE a.id IS NOT NULL),
+          (
+            SELECT json_agg(item ORDER BY item->>'created_at' DESC)
+            FROM (
+              SELECT 
+                a.id,
+                a.app_number,
+                a.status,
+                p.name AS product_name,
+                b.name AS bank_name,
+                b.short_code AS bank_code,
+                a.commission_amount,
+                a.created_at
+              FROM applications a
+              JOIN products p ON p.id = a.product_id
+              LEFT JOIN banks b ON b.id = p.bank_id
+              WHERE a.customer_id = c.id AND a.partner_id = $1
+
+              UNION ALL
+
+              SELECT
+                l.id,
+                CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) AS app_number,
+                l.status,
+                p.name AS product_name,
+                COALESCE(b.name, 'Partner Lead') AS bank_name,
+                COALESCE(b.short_code, p.bank_code, 'LEAD') AS bank_code,
+                p.commission_value AS commission_amount,
+                l.created_at
+              FROM leads l
+              JOIN products p ON p.id = l.product_id
+              LEFT JOIN banks b ON b.id = p.bank_id
+              WHERE l.mobile = c.mobile AND l.partner_id = $1
+            ) item
+          ),
           '[]'::json
         ) AS applications
       FROM customers c
       LEFT JOIN applications a ON a.customer_id = c.id AND a.partner_id = $1
-      LEFT JOIN products p ON p.id = a.product_id
-      LEFT JOIN banks b ON b.id = p.bank_id
-      WHERE a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
+      LEFT JOIN leads l ON l.mobile = c.mobile AND l.partner_id = $1
+      WHERE a.partner_id = $1 
+         OR l.partner_id = $1 
+         OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
       GROUP BY c.id
-      ORDER BY COALESCE(MAX(a.created_at), c.created_at) DESC
+      ORDER BY COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) DESC
     `, [partnerId]);
 
     return success(res, rows);

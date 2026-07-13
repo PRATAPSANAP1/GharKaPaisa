@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
-import { useAuthStore } from '../../../app/store/authStore';
+import { usePartnerStore } from '../../../app/store/partnerStore';
 
 import { 
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
@@ -112,7 +112,8 @@ export default function PartnerProducts() {
       });
 
       if (res.data?.success) {
-        alert("Lead submitted successfully! Check your Lead Management timeline.");
+        usePartnerStore.getState().fetchCustomers().catch(() => {});
+        alert("Lead submitted successfully! Customer added to your Customers page.");
         setSelectedProduct(null);
       }
     } catch (err) {

@@ -34,10 +34,26 @@ const createLead = async (req, res, next) => {
       return error(res, 'Product not found or is inactive', 404);
     }
 
+    const trimmedMobile = String(mobile).trim();
+    const trimmedName = String(customerName).trim();
+    const trimmedCity = String(city).trim();
+
+    // Upsert into customers table so this customer immediately appears in partner's Customers CRM list
+    await query(
+      `INSERT INTO customers (full_name, mobile, city, created_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (mobile) DO UPDATE
+       SET full_name = EXCLUDED.full_name,
+           city = COALESCE(customers.city, EXCLUDED.city),
+           created_by = COALESCE(customers.created_by, EXCLUDED.created_by),
+           updated_at = NOW()`,
+      [trimmedName, trimmedMobile, trimmedCity, req.user.id]
+    );
+
     const { rows: [lead] } = await query(
       `INSERT INTO leads (partner_id, product_id, customer_name, mobile, city, status)
        VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`,
-      [partner.id, productId, customerName, mobile, city]
+      [partner.id, productId, trimmedName, trimmedMobile, trimmedCity]
     );
 
     return created(res, lead, 'Lead created successfully');
