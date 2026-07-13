@@ -416,45 +416,59 @@ export default function ManageLeads() {
                   <div style={{ height: 1, background: C.border }} />
 
                   {/* Bank Account Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Account Holder Name:</span>
-                      <div style={{ fontSize: "13.5px", fontWeight: 700, color: C.text }}>
-                        {viewingLead.partner_account_holder_name || `${viewingLead.partner_first_name} ${viewingLead.partner_last_name}`}
+                  {!viewingLead.partner_bank_name && !viewingLead.partner_account_number && !viewingLead.partner_upi_id ? (
+                    <div style={{
+                      background: `${C.gold}15`, border: `1px solid ${C.gold}40`, borderRadius: "10px",
+                      padding: "12px 14px", display: "flex", alignItems: "center", justifyBetween: "space-between", gap: "10px"
+                    }}>
+                      <span style={{ fontSize: "12px", color: C.text, fontWeight: 700 }}>
+                        ⚠️ Partner has not linked bank account details yet.
+                      </span>
+                      <span style={{ fontSize: "11px", color: C.gold, fontWeight: 800, textTransform: "uppercase" }}>
+                        Pending Registration
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Account Holder Name:</span>
+                        <div style={{ fontSize: "13.5px", fontWeight: 700, color: C.text }}>
+                          {viewingLead.partner_account_holder_name || `${viewingLead.partner_first_name} ${viewingLead.partner_last_name}`}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Bank Name:</span>
+                        <div style={{ fontSize: "13.5px", fontWeight: 700, color: C.primary }}>
+                          {viewingLead.partner_bank_name || "Not Configured"}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Account Number:</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "13.5px", fontWeight: 800, color: C.text, fontFamily: "monospace" }}>
+                            {viewingLead.partner_account_number ? (
+                              showAccountNum ? viewingLead.partner_account_number : `••••••••${viewingLead.partner_account_number.slice(-4)}`
+                            ) : "Not Configured"}
+                          </span>
+                          {viewingLead.partner_account_number && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAccountNum(!showAccountNum)}
+                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", color: C.primary, fontWeight: 700, padding: 0 }}
+                            >
+                              {showAccountNum ? "Hide" : "Show"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>IFSC / UPI:</span>
+                        <div style={{ fontSize: "13.5px", fontWeight: 800, color: C.text, fontFamily: "monospace" }}>
+                          {viewingLead.partner_ifsc_code || viewingLead.partner_upi_id || "Not Configured"}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Bank Name:</span>
-                      <div style={{ fontSize: "13.5px", fontWeight: 700, color: C.primary }}>
-                        {viewingLead.partner_bank_name || "N/A"}
-                      </div>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Account Number:</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "13.5px", fontWeight: 800, color: C.text, fontFamily: "monospace" }}>
-                          {viewingLead.partner_account_number ? (
-                            showAccountNum ? viewingLead.partner_account_number : `••••••••${viewingLead.partner_account_number.slice(-4)}`
-                          ) : "N/A"}
-                        </span>
-                        {viewingLead.partner_account_number && (
-                          <button
-                            type="button"
-                            onClick={() => setShowAccountNum(!showAccountNum)}
-                            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", color: C.primary, fontWeight: 700, padding: 0 }}
-                          >
-                            {showAccountNum ? "Hide" : "Show"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>IFSC Code:</span>
-                      <div style={{ fontSize: "13.5px", fontWeight: 800, color: C.text, fontFamily: "monospace" }}>
-                        {viewingLead.partner_ifsc_code || "N/A"}
-                      </div>
-                    </div>
-                  </div>
+                  )}
 
                 </div>
               </div>
