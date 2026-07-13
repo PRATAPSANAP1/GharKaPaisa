@@ -224,30 +224,17 @@ export default function ManageLeads() {
                         )}
 
                         {lead.status === "approved" && (
-                          <>
-                            <button
-                              disabled={actionLoading !== null}
-                              onClick={() => { setViewingLead(lead); setShowAccountNum(false); }}
-                              style={{ 
-                                background: C.teal + "20", color: C.teal, 
-                                border: `1px solid ${C.teal}40`, padding: "6px 10px",
-                                borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer"
-                              }}
-                            >
-                              Bank Confirm
-                            </button>
-                            <button
-                              disabled={actionLoading !== null}
-                              onClick={() => handleStatusChange(lead.id, "rejected")}
-                              style={{ 
-                                background: C.red + "20", color: C.red, 
-                                border: `1px solid ${C.red}40`, padding: "6px 10px",
-                                borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer"
-                              }}
-                            >
-                              Reject
-                            </button>
-                          </>
+                          <button
+                            disabled={actionLoading !== null}
+                            onClick={() => handleStatusChange(lead.id, "rejected")}
+                            style={{ 
+                              background: C.red + "20", color: C.red, 
+                              border: `1px solid ${C.red}40`, padding: "6px 10px",
+                              borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer"
+                            }}
+                          >
+                            Reject
+                          </button>
                         )}
                       </div>
                     </td>
@@ -298,21 +285,21 @@ export default function ManageLeads() {
           }}>
             {/* Header */}
             <div style={{
-              padding: "18px 24px", borderBottom: `1px solid ${C.border}`,
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: C.bgSecondary
+              padding: "20px 24px", borderBottom: `1px solid ${C.border}`,
+              display: "flex", justifyContent: "space-between", alignItems: "center"
             }}>
               <div>
                 <h3 style={{ fontSize: "17px", fontWeight: 800, color: C.text, margin: 0 }}>
                   Bank & Customer Verification
                 </h3>
-                <span style={{ fontSize: "12px", color: C.textLight }}>
-                  Lead ID: <span style={{ fontFamily: "monospace" }}>{viewingLead.id}</span>
+                <span style={{ fontSize: "11px", color: C.textLight, fontFamily: "monospace" }}>
+                  Lead ID: {viewingLead.id}
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setViewingLead(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: C.textLight, fontSize: "20px", fontWeight: 700 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: C.textLight, fontSize: "18px" }}
               >
                 ✕
               </button>
@@ -475,7 +462,7 @@ export default function ManageLeads() {
 
             </div>
 
-            {/* Footer Verification Action Buttons */}
+            {/* Footer Action Buttons */}
             <div style={{
               padding: "16px 24px", borderTop: `1px solid ${C.border}`,
               background: C.bgSecondary, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px"
@@ -500,20 +487,6 @@ export default function ManageLeads() {
                 >
                   Reject Lead
                 </button>
-                {viewingLead.status !== "confirmed" && (
-                  <button
-                    type="button"
-                    disabled={actionLoading !== null}
-                    onClick={() => handleStatusChange(viewingLead.id, "confirmed")}
-                    style={{
-                      background: "linear-gradient(135deg, #0D5CAB, #083E7A)", color: "#FFFFFF",
-                      border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "13px",
-                      fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(13, 92, 171, 0.2)"
-                    }}
-                  >
-                    ✓ Confirm Bank Verification & Approve
-                  </button>
-                )}
               </div>
             </div>
 

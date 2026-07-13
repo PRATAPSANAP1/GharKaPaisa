@@ -64,7 +64,14 @@ const recalculatePartnerKycStatus = async (partnerId, adminUserId = null) => {
   }
 
   const approvedTypes = docs.filter(d => d.verification_status === 'approved').map(d => d.doc_type);
-  const allRequiredApproved = requiredTypes.every(reqType => approvedTypes.includes(reqType));
+  const allRequiredDocsApproved = requiredTypes.every(reqType => approvedTypes.includes(reqType));
+
+  const { rows: [bank] } = await query(`
+    SELECT bank_name, account_number, ifsc_code FROM partner_bank_details WHERE partner_id = $1
+  `, [partnerId]);
+  const hasBankDetails = !!(bank && bank.bank_name && bank.account_number && bank.ifsc_code);
+
+  const allRequiredApproved = allRequiredDocsApproved && hasBankDetails;
 
   if (allRequiredApproved) {
     await query(`
