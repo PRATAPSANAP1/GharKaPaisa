@@ -361,22 +361,28 @@ export default function ManageLeads() {
                     <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>City / Location:</span>
                     <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.text }}>{viewingLead.city || viewingLead.customer_city || "N/A"} {viewingLead.customer_state || viewingLead.state ? `, ${viewingLead.customer_state || viewingLead.state}` : ""}</div>
                   </div>
-                  <div>
-                    <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Employment Type:</span>
-                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{(viewingLead.customer_employment_type || viewingLead.employment_type || "N/A").replace('_', ' ')}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Monthly Income:</span>
-                    <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.text }}>{(viewingLead.customer_monthly_income || viewingLead.monthly_income) ? `₹${parseFloat(viewingLead.customer_monthly_income || viewingLead.monthly_income).toLocaleString('en-IN')}` : "N/A"}</div>
-                  </div>
+                  {(viewingLead.customer_employment_type || viewingLead.employment_type) && (viewingLead.customer_employment_type || viewingLead.employment_type) !== 'N/A' && (
+                    <div>
+                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Employment Type:</span>
+                      <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{(viewingLead.customer_employment_type || viewingLead.employment_type).replace('_', ' ')}</div>
+                    </div>
+                  )}
+                  {(viewingLead.customer_monthly_income || viewingLead.monthly_income) && (viewingLead.customer_monthly_income || viewingLead.monthly_income) !== 'N/A' && (
+                    <div>
+                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Monthly Income:</span>
+                      <div style={{ fontSize: "12.5px", fontWeight: 600, color: C.text }}>₹{parseFloat(viewingLead.customer_monthly_income || viewingLead.monthly_income).toLocaleString('en-IN')}</div>
+                    </div>
+                  )}
                   <div>
                     <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>PAN Number:</span>
                     <div style={{ fontSize: "12.5px", fontWeight: 700, color: C.text, fontFamily: "monospace" }}>{viewingLead.customer_pan || viewingLead.pan_number || viewingLead.pan || "N/A"}</div>
                   </div>
-                  <div>
-                    <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Aadhaar Last 4:</span>
-                    <div style={{ fontSize: "12.5px", fontWeight: 700, color: C.text, fontFamily: "monospace" }}>{(viewingLead.customer_aadhaar || viewingLead.aadhaar_last4) ? `XXXX-XXXX-${viewingLead.customer_aadhaar || viewingLead.aadhaar_last4}` : "N/A"}</div>
-                  </div>
+                  {(viewingLead.customer_aadhaar || viewingLead.aadhaar_last4) && (viewingLead.customer_aadhaar || viewingLead.aadhaar_last4) !== 'N/A' && (
+                    <div>
+                      <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Aadhaar Last 4:</span>
+                      <div style={{ fontSize: "12.5px", fontWeight: 700, color: C.text, fontFamily: "monospace" }}>XXXX-XXXX-{viewingLead.customer_aadhaar || viewingLead.aadhaar_last4}</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
