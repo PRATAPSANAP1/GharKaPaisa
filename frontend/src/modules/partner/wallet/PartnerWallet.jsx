@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useAuthStore } from '../../../app/store/authStore';
 import api from '../../../services/api';
 import {
   MdAccountBalanceWallet, 
@@ -32,6 +33,7 @@ const PartnerWallet = () => {
   const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
+  const user = useAuthStore((state) => state.user);
 
   // States
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -450,9 +452,9 @@ const PartnerWallet = () => {
                   buttonText="Pay ₹500 Test Order"
                   description="Razorpay Integration Test Payment"
                   userDetails={{
-                    name: partner?.first_name || "Partner User",
-                    email: partner?.email || "partner@gharkapaisa.in",
-                    contact: partner?.mobile || "9999999999"
+                    name: user?.name || user?.first_name || "Partner User",
+                    email: user?.email || "partner@gharkapaisa.in",
+                    contact: user?.mobile || "9999999999"
                   }}
                   onSuccess={(verifyRes, rzpResponse) => {
                     alert(`✅ Payment Verified Successfully!\nPayment ID: ${rzpResponse.razorpay_payment_id}\nOrder ID: ${rzpResponse.razorpay_order_id}`);

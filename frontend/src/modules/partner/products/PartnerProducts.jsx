@@ -311,39 +311,82 @@ export default function PartnerProducts() {
             )}
           </div>
 
-          {/* Mobile Horizontal Category Scroll Chips */}
+          {/* Mobile Horizontal X-Scrolling Filter Chips */}
           {isMobile && (
-            <div style={{
-              display: 'flex',
-              overflowX: 'auto',
-              gap: '8px',
-              paddingBottom: '4px',
-              msOverflowStyle: 'none',
-              scrollbarWidth: 'none'
-            }}>
-              {CATEGORIES.map(cat => {
-                const isActive = activeCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    style={{
-                      whiteSpace: 'nowrap',
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      border: isActive ? 'none' : `1px solid ${C.border}`,
-                      background: isActive ? C.primary : C.bgSecondary,
-                      color: isActive ? '#FFFFFF' : C.textMid,
-                      cursor: 'pointer',
-                      flexShrink: 0
-                    }}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {/* Category X-Scroll */}
+              <div style={{
+                display: 'flex',
+                overflowX: 'auto',
+                gap: '8px',
+                paddingBottom: '2px',
+                WebkitOverflowScrolling: 'touch',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none'
+              }}>
+                {CATEGORIES.map(cat => {
+                  const isActive = activeCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      style={{
+                        whiteSpace: 'nowrap',
+                        padding: '7px 14px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        border: isActive ? 'none' : `1px solid ${C.border}`,
+                        background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.bgSecondary,
+                        color: isActive ? '#FFFFFF' : C.textMid,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        boxShadow: isActive ? '0 2px 8px rgba(13,92,171,0.25)' : 'none'
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Bank X-Scroll */}
+              <div style={{
+                display: 'flex',
+                overflowX: 'auto',
+                gap: '6px',
+                paddingBottom: '4px',
+                WebkitOverflowScrolling: 'touch',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none'
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, alignSelf: 'center', flexShrink: 0, paddingRight: '2px' }}>
+                  Banks:
+                </span>
+                {BANKS.map(bank => {
+                  const isActive = activeBank === bank;
+                  return (
+                    <button
+                      key={bank}
+                      onClick={() => setActiveBank(bank)}
+                      style={{
+                        whiteSpace: 'nowrap',
+                        padding: '5px 12px',
+                        borderRadius: '16px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        border: isActive ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                        background: isActive ? `${C.teal}15` : C.bgSecondary,
+                        color: isActive ? C.teal : C.textMid,
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      {bank}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
