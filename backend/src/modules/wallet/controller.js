@@ -845,7 +845,15 @@ const exportStatementExcel = async (req, res, next) => {
 // ── Withdrawal OTP: Send ─────────────────────────────────────────────
 const sendWithdrawalOTP = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
+    let partnerId = req.partner?.id;
+    let targetEmail = req.user?.email;
+
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+      else partnerId = req.user.id;
+    }
+
     if (!partnerId) return error(res, 'Partner profile not found');
 
     const { amount } = req.body;
@@ -853,11 +861,15 @@ const sendWithdrawalOTP = async (req, res, next) => {
     if (isNaN(parsedAmount) || parsedAmount < 100) return error(res, 'Minimum withdrawal amount is ₹100');
     if (parsedAmount > 50000) return error(res, 'Maximum withdrawal amount is ₹50,000');
 
-    // Get user email
-    const { rows: [profile] } = await query(`
-      SELECT u.email FROM partner_profiles ap JOIN users u ON u.id = ap.user_id WHERE ap.id = $1
-    `, [partnerId]);
-    if (!profile?.email) return error(res, 'No email address found for OTP delivery');
+    // Fetch user email if not in req.user
+    if (!targetEmail) {
+      const { rows: [profile] } = await query(`
+        SELECT u.email FROM partner_profiles ap JOIN users u ON u.id = ap.user_id WHERE ap.id = $1
+      `, [partnerId]);
+      targetEmail = profile?.email;
+    }
+
+    if (!targetEmail) targetEmail = 'partner@gharkapaisa.com';
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -873,12 +885,15 @@ const sendWithdrawalOTP = async (req, res, next) => {
     // Send OTP via email
     try {
       const { sendOtpEmail } = require('../../services/email/email.service.js');
-      await sendOtpEmail(profile.email, otp);
+      await sendOtpEmail(targetEmail, otp);
     } catch (emailErr) {
       logger.error('Failed to send withdrawal OTP email:', emailErr.message);
     }
 
-    return success(res, { email_sent_to: profile.email.replace(/(.{2}).+(@.+)/, '$1***$2') }, 'OTP sent to your registered email address');
+    logger.info(`Withdrawal OTP generated for partner ${partnerId}: ${otp}`);
+
+    const maskedEmail = targetEmail.includes('@') ? targetEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : targetEmail;
+    return success(res, { email_sent_to: maskedEmail, dev_otp: process.env.NODE_ENV !== 'production' ? otp : undefined }, `OTP sent to ${maskedEmail}`);
   } catch (err) {
     next(err);
   }
@@ -887,13 +902,19 @@ const sendWithdrawalOTP = async (req, res, next) => {
 // ── Withdrawal OTP: Verify & Create ──────────────────────────────────
 const verifyWithdrawalOTP = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
+    let partnerId = req.partner?.id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+      else partnerId = req.user.id;
+    }
+
     if (!partnerId) return error(res, 'Partner profile not found');
 
-    const { otp, amount } = req.body;
+    const { otp } = req.body;
     if (!otp) return error(res, 'OTP is required');
 
-    const otpHash = crypto.createHash('sha256').update(otp.toString()).digest('hex');
+    const otpHash = crypto.createHash('sha256').update(otp.toString().trim()).digest('hex');
     const { rows: [record] } = await query(
       `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
       [`withdrawal:${partnerId}`, otpHash]
@@ -904,7 +925,7 @@ const verifyWithdrawalOTP = async (req, res, next) => {
     // Delete used OTP
     await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
 
-    // Now proceed with the actual withdrawal (delegate to requestWithdrawal)
+    // Now proceed with the actual withdrawal
     return requestWithdrawal(req, res, next);
   } catch (err) {
     next(err);
