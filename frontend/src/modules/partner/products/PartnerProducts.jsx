@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
+import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 
 import { 
