@@ -670,12 +670,6 @@ const PartnerWallet = () => {
               subtitle={t("Releases in 48h maturity schedule")}
             />
             <StatBox 
-              title={t("Today's Earnings")} 
-              value={todayEarn} 
-              gradient="linear-gradient(135deg, #1d4ed8, #1e3a8a)" 
-              subtitle={t("Credited in last 24 hours")}
-            />
-            <StatBox 
               title={t("Current Month Earnings")} 
               value={monthlyEarn} 
               gradient="linear-gradient(135deg, #701a75, #4a044e)" 
@@ -688,26 +682,14 @@ const PartnerWallet = () => {
               subtitle={t("Total gross commission credited")}
             />
             <StatBox 
-              title={t("Total Settled Outflow")} 
-              value={totalWithdrawnVal} 
-              gradient="linear-gradient(135deg, #be123c, #881337)" 
-              subtitle={t("Successfully transferred to bank")}
-            />
-            <StatBox 
               title={t("Team Override Earnings")} 
               value={overrideComm} 
               gradient="linear-gradient(135deg, #0369a1, #0c4a6e)" 
               subtitle={t("Override from child network")}
             />
-            <StatBox 
-              title={t("Referral Bonuses")} 
-              value={refBonus} 
-              gradient="linear-gradient(135deg, #15803d, #14532d)" 
-              subtitle={t("Direct partner onboard bonuses")}
-            />
           </div>
 
-          {/* Quick Bank & Notification Status Row */}
+          {/* Quick Bank Status Row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             
             {/* Bank Verification Card */}
@@ -741,23 +723,6 @@ const PartnerWallet = () => {
               >
                 Manage
               </button>
-            </div>
-
-            {/* Hold Maturity Info Card */}
-            <div style={{ ...S.card, padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '12px',
-                background: `${C.teal}15`, color: C.teal,
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                <MdSchedule size={24} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: C.text }}>Held Balance Auto Scheduler</h4>
-                <p style={{ margin: '4px 0 0', fontSize: '12px', color: C.textLight }}>
-                  Pending commissions are auto-released into Available Balance 48 hours after application disbursement verification.
-                </p>
-              </div>
             </div>
 
           </div>
