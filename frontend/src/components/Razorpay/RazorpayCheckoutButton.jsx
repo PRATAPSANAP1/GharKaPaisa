@@ -50,13 +50,12 @@ export default function RazorpayCheckoutButton({
       }
 
       // 2. Step 1: Create Order on Backend
-      const orderRes = await api.post('/create-order', {
+      const orderRes = await api.post('/payment/create-order', {
         amount,
         currency: 'INR',
         receipt: `rcpt_${Date.now()}`
-      }).catch(async (err) => {
-        // Fallback to /payment/create-order or /api/v1/payment/create-order if top level endpoint route varies
-        return await api.post('/payment/create-order', {
+      }).catch(async () => {
+        return await api.post('/create-order', {
           amount,
           currency: 'INR',
           receipt: `rcpt_${Date.now()}`

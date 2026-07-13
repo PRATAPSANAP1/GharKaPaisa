@@ -194,6 +194,8 @@ app.post('/api/create-order', paymentCtrl.createOrder);
 app.post('/api/verify-payment', paymentCtrl.verifyPayment);
 app.post('/api/v1/create-order', paymentCtrl.createOrder);
 app.post('/api/v1/verify-payment', paymentCtrl.verifyPayment);
+app.post('/api/v1/payment/create-order', paymentCtrl.createOrder);
+app.post('/api/v1/payment/verify-payment', paymentCtrl.verifyPayment);
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
