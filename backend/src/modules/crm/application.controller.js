@@ -632,10 +632,12 @@ const manualCommission = async (req, res, next) => {
 };
 
 // GET /applications — Filtered list
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
 const listApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, partner_id, partner_id: q_partner_id, product_id, from_date, to_date, search, commission_status, bank_id, category } = req.query;
+    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id } = req.query;
     const targetPartnerId = q_partner_id || partner_id;
 
     let partnerId = null;
@@ -646,6 +648,12 @@ const listApplications = async (req, res, next) => {
     } else if (targetPartnerId) {
       partnerId = targetPartnerId;
     }
+
+    const validPartnerId = isUuid(partnerId) ? partnerId : null;
+    const validProductId = isUuid(product_id) ? product_id : null;
+    const validBankId = isUuid(bank_id) ? bank_id : null;
+    const validStatus = status && status.trim() ? status.trim() : null;
+    const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -731,12 +739,12 @@ const listApplications = async (req, res, next) => {
       ) combined
       WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
         AND ($2::text IS NULL OR combined.status = $2)
-        AND ($3::text IS NULL OR combined.product_id = $3::uuid)
-        AND ($4::text IS NULL OR combined.bank_id = $4::uuid)
+        AND ($3::uuid IS NULL OR combined.product_id = $3)
+        AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
-    `, [partnerId, status || null, product_id || null, bank_id || null, search ? `%${search}%` : null, limit, offset]);
+    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset]);
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
@@ -752,10 +760,10 @@ const listApplications = async (req, res, next) => {
       ) combined
       WHERE ($1::uuid IS NULL OR combined.partner_id = $1)
         AND ($2::text IS NULL OR combined.status = $2)
-        AND ($3::text IS NULL OR combined.product_id = $3::uuid)
-        AND ($4::text IS NULL OR combined.bank_id = $4::uuid)
+        AND ($3::uuid IS NULL OR combined.product_id = $3)
+        AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
-    `, [partnerId, status || null, product_id || null, bank_id || null, search ? `%${search}%` : null]);
+    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch]);
 
     return paginate(res, rows, parseInt(count), page, limit);
   } catch (err) {
