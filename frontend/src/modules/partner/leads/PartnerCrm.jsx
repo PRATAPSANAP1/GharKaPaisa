@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import {
   MdSearch, MdPerson, MdPhone, MdEmail, MdWork,
   MdLocationOn, MdHistory, MdOutlineWhatsapp,
@@ -33,6 +34,13 @@ export default function PartnerCrm() {
   const [addError, setAddError] = useState('');
   const [addLoading, setAddLoading] = useState(false);
 
+  // Recommend Product Modal states
+  const [showRecommendModal, setShowRecommendModal] = useState(false);
+  const [productList, setProductList] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [recLoading, setRecLoading] = useState(false);
+  const [recError, setRecError] = useState('');
+
   useEffect(() => {
     fetchCustomers();
     const handleResize = () => setWidth(window.innerWidth);
@@ -41,6 +49,52 @@ export default function PartnerCrm() {
   }, [fetchCustomers]);
 
   const createCustomer = usePartnerStore((state) => state.createCustomer);
+
+  const handleOpenRecommendModal = async () => {
+    setRecError('');
+    setShowRecommendModal(true);
+    try {
+      const res = await api.get('/products');
+      if (res.data?.success) {
+        const rawData = res.data.data;
+        const products = Array.isArray(rawData) ? rawData : (rawData?.items || rawData?.rows || []);
+        setProductList(products);
+        if (products.length > 0) setSelectedProductId(products[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load products:', err);
+      setRecError('Failed to load product list.');
+    }
+  };
+
+  const handleRecommendSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProductId) return setRecError('Please select a product to recommend.');
+    if (!selectedCustomer) return setRecError('No customer selected.');
+
+    setRecLoading(true);
+    setRecError('');
+    try {
+      await api.post('/leads', {
+        productId: selectedProductId,
+        customerName: selectedCustomer.full_name,
+        mobile: selectedCustomer.mobile,
+        city: selectedCustomer.city || 'Shevgaon'
+      });
+
+      await fetchCustomers();
+      // Update selected customer with refreshed store data
+      const updatedCustomers = usePartnerStore.getState().customers;
+      const refreshed = updatedCustomers.find(c => c.id === selectedCustomer.id || c.mobile === selectedCustomer.mobile);
+      if (refreshed) setSelectedCustomer(refreshed);
+
+      setShowRecommendModal(false);
+    } catch (err) {
+      setRecError(err.response?.data?.message || err.message || 'Failed to submit recommendation.');
+    } finally {
+      setRecLoading(false);
+    }
+  };
 
   const handleAddCustomerSubmit = async (e) => {
     e.preventDefault();
@@ -379,12 +433,16 @@ export default function PartnerCrm() {
                       </div>
                     </div>
                   ))}
-                  <button type="button" style={{
-                    width: '100%', padding: '12px', border: `1px dashed ${C.border}`,
-                    borderRadius: '12px', color: C.textMid, fontWeight: 700, fontSize: '13px',
-                    background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', gap: '6px'
-                  }}>
+                  <button
+                    type="button"
+                    onClick={handleOpenRecommendModal}
+                    style={{
+                      width: '100%', padding: '12px', border: `1px dashed ${C.border}`,
+                      borderRadius: '12px', color: C.primary, fontWeight: 700, fontSize: '13px',
+                      background: `${C.primary}0D`, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', gap: '6px', transition: 'all 0.2s ease'
+                    }}
+                  >
                     <MdAddBox size={18} /> Recommend New Product
                   </button>
                 </div>
@@ -597,6 +655,129 @@ export default function PartnerCrm() {
               >
                 {addLoading ? 'Adding Customer...' : 'Add Customer'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ RECOMMEND NEW PRODUCT MODAL ═══ */}
+      {showRecommendModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: C.card,
+            border: `1.5px solid ${C.border}`,
+            borderRadius: '24px',
+            maxWidth: '520px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '12px', background: `${C.primary}15`,
+                  color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <MdCreditCard size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 800, color: C.text, margin: 0 }}>Recommend New Product</h3>
+                  <span style={{ fontSize: '12px', color: C.textLight }}>
+                    For {selectedCustomer?.full_name} ({selectedCustomer?.mobile})
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRecommendModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '18px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {recError && (
+              <div style={{
+                background: `${C.red}15`, border: `1px solid ${C.red}40`, color: C.red,
+                padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600
+              }}>
+                {recError}
+              </div>
+            )}
+
+            <form onSubmit={handleRecommendSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>Select Product to Recommend</label>
+                <select
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  style={{
+                    ...S.input,
+                    paddingVertical: '12px',
+                    background: C.inputBg || C.card,
+                    color: C.text,
+                    cursor: 'pointer',
+                    borderRadius: '12px'
+                  }}
+                >
+                  {productList.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.bank_name ? `(${p.bank_name})` : ''} — ₹{parseFloat(p.commission_value || p.payout_amount || 0).toLocaleString('en-IN')} Payout
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedProductId && (() => {
+                const selectedProd = productList.find(p => p.id === selectedProductId);
+                if (!selectedProd) return null;
+                return (
+                  <div style={{
+                    background: C.bgSecondary, border: `1px solid ${C.border}`,
+                    borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px'
+                  }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>{selectedProd.name}</div>
+                    <div style={{ fontSize: '11px', color: C.textLight }}>Category: {selectedProd.category || 'Financial Product'}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: C.green }}>
+                      Commission Payout: ₹{parseFloat(selectedProd.commission_value || selectedProd.payout_amount || 0).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRecommendModal(false)}
+                  style={{ ...S.btn('outline', false), padding: '10px 18px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={recLoading || !selectedProductId}
+                  style={{
+                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})`,
+                    color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '10px 20px',
+                    fontSize: '13px', fontWeight: 700, cursor: recLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {recLoading ? 'Submitting...' : 'Confirm Recommendation'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
