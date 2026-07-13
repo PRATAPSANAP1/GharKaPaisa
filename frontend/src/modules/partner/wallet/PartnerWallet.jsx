@@ -670,12 +670,6 @@ const PartnerWallet = () => {
               subtitle={t("Releases in 48h maturity schedule")}
             />
             <StatBox 
-              title={t("Current Month Earnings")} 
-              value={monthlyEarn} 
-              gradient="linear-gradient(135deg, #701a75, #4a044e)" 
-              subtitle={t("Earned this month")}
-            />
-            <StatBox 
               title={t("Lifetime Ledger Earnings")} 
               value={lifetimeEarn} 
               gradient="linear-gradient(135deg, #475569, #1e293b)" 
@@ -1267,12 +1261,6 @@ const PartnerWallet = () => {
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Registered Bank Accounts</h3>
               <p style={{ fontSize: '12px', color: C.textLight, margin: '4px 0 0' }}>Configure settlement destination. Bank accounts require verified partner status.</p>
             </div>
-            <button
-              onClick={() => { fetchBankHistory(); setShowHistoryModal(true); }}
-              style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', borderRadius: '10px' }}
-            >
-              <MdHistory size={16} /> View Audit Logs
-            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
