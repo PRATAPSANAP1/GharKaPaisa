@@ -5,7 +5,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { globalLimiter } = require('./middleware/rate-limit/rateLimit.middleware.js');
-const path = require('path');
 const fs = require('fs');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
