@@ -644,6 +644,27 @@ const migrate = async () => {
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_audit_logs_created_at ON wallet_audit_logs(created_at DESC)`);
 
+  // Fix FK constraint if it references old 'wallets' table instead of 'partner_wallets'
+  await query(`
+    DO $$
+    DECLARE
+      ref_table TEXT;
+    BEGIN
+      SELECT ccu.table_name INTO ref_table
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+      WHERE tc.table_name = 'wallet_audit_logs' AND tc.constraint_type = 'FOREIGN KEY'
+        AND tc.constraint_name = 'wallet_audit_logs_wallet_id_fkey';
+
+      IF ref_table IS NOT NULL AND ref_table <> 'partner_wallets' THEN
+        ALTER TABLE wallet_audit_logs DROP CONSTRAINT wallet_audit_logs_wallet_id_fkey;
+        ALTER TABLE wallet_audit_logs ADD CONSTRAINT wallet_audit_logs_wallet_id_fkey
+          FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id) ON DELETE CASCADE;
+        RAISE NOTICE 'Fixed wallet_audit_logs FK to point to partner_wallets';
+      END IF;
+    END $$;
+  `);
+
   // ── Wallet Trigger Function ───────────────────────────────────
   await query(`
     CREATE OR REPLACE FUNCTION log_wallet_changes()
