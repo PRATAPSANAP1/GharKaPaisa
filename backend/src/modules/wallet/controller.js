@@ -107,13 +107,12 @@ const getTransactions = async (req, res, next) => {
                  SUBSTRING(wl.description FROM 'for (?:customer )?([A-Za-z ]+)'),
                  'Customer Applicant'
                ) as customer_name, 
-               COALESCE(
-                  p.name, 
-                  p2.name,
-                  ld.product_name, 
-                  SUBSTRING(wl.description FROM 'Product: ([A-Za-z0-9 ]+)'), 
-                  'General Financial Commission'
-                ) as product_name, 
+                COALESCE(
+                   p.name, 
+                   p2.name,
+                   SUBSTRING(wl.description FROM 'Product: ([A-Za-z0-9 ]+)'), 
+                   'General Financial Commission'
+                 ) as product_name, 
                 COALESCE(b.short_code, b2.short_code) as bank_code
          FROM wallet_ledger wl
          LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
