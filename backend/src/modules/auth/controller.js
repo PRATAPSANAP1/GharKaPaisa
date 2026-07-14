@@ -715,6 +715,19 @@ const register = async (req, res, next) => {
       await client.query('COMMIT');
       committed = true;
 
+      if (Partner && Partner.id) {
+        try {
+          const { syncOnboardingProgress } = require('../partner/onboarding.service.js');
+          const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
+          await syncOnboardingProgress(Partner.id);
+          if (parentPartnerId) {
+            await recalculateTeamMetrics(parentPartnerId);
+          }
+        } catch (syncErr) {
+          logger.error('Failed to run post-registration sync:', syncErr.message);
+        }
+      }
+
       // Send after commit so a delivered link always points to a saved account.
       if (!emailVerified) {
         try {

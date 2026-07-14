@@ -24,6 +24,8 @@ import yesLogo from "../../home/components/banks/yes_bank.png";
 import idfcLogo from "../../home/components/banks/idfc_first_bank.png";
 import bobLogo from "../../home/components/banks/bank_of_baroda.png";
 
+import OnboardingProgressCard from "./OnboardingProgressCard";
+
 export default function PartnerDashboard({ partner, onTabChange }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -281,6 +283,9 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
+      {/* ──── ONBOARDING PROGRESS CARD ──── */}
+      <OnboardingProgressCard onTabChange={onTabChange} C={C} />
+
       {/* ──── STATUS / KYC WARNING BANNERS ──── */}
       {kycStatus !== 'approved' && (
         <div style={{

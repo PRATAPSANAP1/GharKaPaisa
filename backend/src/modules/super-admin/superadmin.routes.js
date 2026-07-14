@@ -19,6 +19,7 @@ router.delete('/admins/:id', ctrl.deleteAdmin);
 router.post('/block-user', ctrl.blockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
+router.get('/referral-analytics', ctrl.getReferralAnalytics);
 
 // Dynamic Product Link Management endpoints
 router.post('/products/link', linkCtrl.saveProductLink);

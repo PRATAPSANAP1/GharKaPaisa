@@ -1,12 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import api from "../../../services/api";
-import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { Icons } from "../../../components/Icon/PartnerIcons";
-
-export default function SuperAdminReports() {
-  const { C } = useTheme();
-  const S = makeS(C);
-
   // Tabs: 'analytics' or 'commissions'
   const [activeTab, setActiveTab] = useState("analytics");
 
@@ -326,6 +318,18 @@ export default function SuperAdminReports() {
             }}
           >
             Analytics Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("referrals")}
+            style={{
+              background: activeTab === "referrals" ? C.teal : "transparent",
+              color: activeTab === "referrals" ? "#fff" : C.textMid,
+              border: "none", borderRadius: "8px", padding: "8px 16px",
+              fontWeight: 700, fontSize: "13px", cursor: "pointer",
+              transition: "all 0.2s"
+            }}
+          >
+            Referral Insights
           </button>
           <button
             onClick={() => setActiveTab("commissions")}

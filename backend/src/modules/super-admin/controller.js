@@ -826,6 +826,17 @@ const verifyDocument = async (req, res, next) => {
   }
 };
 
+// ── Referral & Team Analytics ──────────────────────────────────────
+const getReferralAnalytics = async (req, res, next) => {
+  try {
+    const { getReferralAnalytics: fetchAnalytics } = require('../admin/analytics.service.js');
+    const analytics = await fetchAnalytics();
+    return success(res, analytics, 'Referral and team analytics retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCommissionRule,
   getCommissionRules,
@@ -838,5 +849,6 @@ module.exports = {
   approveKYC,
   rejectKYC,
   requestChangesKYC,
-  verifyDocument
+  verifyDocument,
+  getReferralAnalytics
 };

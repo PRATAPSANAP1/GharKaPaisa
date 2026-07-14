@@ -110,6 +110,17 @@ const submitApplication = async (req, res, next) => {
 
     await client.query('COMMIT');
 
+    try {
+      const { syncOnboardingProgress } = require('../partner/onboarding.service.js');
+      const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
+      await syncOnboardingProgress(PartnerId);
+      if (parentPartnerId) {
+        await recalculateTeamMetrics(parentPartnerId);
+      }
+    } catch (syncErr) {
+      logger.error('Failed to run application submission sync:', syncErr.message);
+    }
+
     // Notify partner
     await notify.applicationSubmitted(req.user.id, appNumber);
 

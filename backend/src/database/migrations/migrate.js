@@ -1804,8 +1804,16 @@ const migrate = async () => {
     `);
 
     // 6. Clean up legacy wallets view/table to enforce partner_wallets schema
-    await query(`DROP VIEW IF EXISTS wallets CASCADE`);
-    await query(`DROP TABLE IF EXISTS wallets CASCADE`);
+    await query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'wallets' AND relkind = 'v') THEN
+          DROP VIEW wallets CASCADE;
+        ELSIF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'wallets' AND relkind = 'r') THEN
+          DROP TABLE wallets CASCADE;
+        END IF;
+      END $$;
+    `);
 
     await query(`
       DO $$
@@ -2065,6 +2073,46 @@ const migrate = async () => {
   } catch (task11Err) {
     logger.error('Failed to run Production Readiness & Referral Clicks Updates (Task 11):', task11Err);
     throw task11Err;
+  }
+
+  // ── Partner Onboarding & Team Metrics Schema Migration (Task 12) ──
+  try {
+    logger.info('Running Partner Onboarding & Team Metrics Schema Migration (Task 12)...');
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_onboarding (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        profile_completed BOOLEAN DEFAULT FALSE,
+        kyc_completed BOOLEAN DEFAULT FALSE,
+        bank_completed BOOLEAN DEFAULT FALSE,
+        training_completed BOOLEAN DEFAULT FALSE,
+        first_lead_completed BOOLEAN DEFAULT FALSE,
+        first_application_completed BOOLEAN DEFAULT FALSE,
+        progress_percentage INT DEFAULT 0,
+        completed_at TIMESTAMPTZ NULLABLE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await query(`
+      ALTER TABLE partner_profiles 
+        ADD COLUMN IF NOT EXISTS active_children INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS inactive_children INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS verified_children INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS pending_children INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS blocked_children INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS total_leads INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS total_applications INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS total_approved INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS team_commission DECIMAL(15,2) DEFAULT 0.00;
+    `);
+
+    logger.info('Partner Onboarding & Team Metrics Schema Migration (Task 12) completed successfully.');
+  } catch (task12Err) {
+    logger.error('Failed to run Partner Onboarding & Team Metrics Schema Migration (Task 12):', task12Err);
+    throw task12Err;
   }
 
   logger.info('✅ All migrations completed successfully');

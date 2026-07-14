@@ -59,6 +59,19 @@ const createLead = async (req, res, next) => {
       [partner.id, productId, trimmedName, trimmedMobile, trimmedCity]
     );
 
+    try {
+      const { syncOnboardingProgress } = require('../partner/onboarding.service.js');
+      const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
+      await syncOnboardingProgress(partner.id);
+      
+      const { rows: [pProfile] } = await query(`SELECT parent_partner_id FROM partner_profiles WHERE id = $1`, [partner.id]);
+      if (pProfile?.parent_partner_id) {
+        await recalculateTeamMetrics(pProfile.parent_partner_id);
+      }
+    } catch (syncErr) {
+      console.error('Failed to run lead creation sync:', syncErr.message);
+    }
+
     return created(res, lead, 'Lead created successfully');
   } catch (err) {
     next(err);

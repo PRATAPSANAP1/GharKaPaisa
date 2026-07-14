@@ -834,6 +834,13 @@ const completeTrainingModule = async (req, res, next) => {
       DO UPDATE SET progress = 100, completed = true, completed_at = NOW(), updated_at = NOW()
     `, [partnerId, moduleId]);
 
+    try {
+      const { syncOnboardingProgress } = require('./onboarding.service.js');
+      await syncOnboardingProgress(partnerId);
+    } catch (syncErr) {
+      logger.error('Failed to sync onboarding on training module complete:', syncErr.message);
+    }
+
     return success(res, { message: 'Module marked as completed successfully' });
   } catch (err) {
     next(err);
@@ -1965,8 +1972,81 @@ const updatePartnerKYCStatus = async (req, res, next) => {
   }
 };
 
+// ── Self Onboarding Status ──────────────────────────────────────────
+const getSelfOnboarding = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id || (req.user ? req.user.id : null);
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { syncOnboardingProgress } = require('./onboarding.service.js');
+    const onboarding = await syncOnboardingProgress(partnerId);
+    return success(res, onboarding, 'Onboarding progress status retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Team Metrics Automation Helper ────────────────────────────────────
+const recalculateTeamMetrics = async (parentPartnerId, existingClient = null) => {
+  if (!parentPartnerId) return;
+  const db = existingClient || { query };
+
+  try {
+    await db.query(`
+      WITH child_stats AS (
+        SELECT 
+          COUNT(pp.id) as children_count,
+          COUNT(pp.id) FILTER (WHERE u.status = 'active') as active_children,
+          COUNT(pp.id) FILTER (WHERE u.status IN ('inactive', 'pending')) as inactive_children,
+          COUNT(pp.id) FILTER (WHERE u.status = 'blocked' OR u.status = 'suspended' OR u.status = 'rejected') as blocked_children,
+          COUNT(pp.id) FILTER (WHERE pp.kyc_status = 'approved') as verified_children,
+          COUNT(pp.id) FILTER (WHERE pp.kyc_status IN ('pending', 'under_review')) as pending_children
+        FROM partner_profiles pp
+        JOIN users u ON u.id = pp.user_id
+        WHERE pp.parent_partner_id = $1
+      ),
+      lead_stats AS (
+        SELECT COUNT(l.id) as total_leads
+        FROM leads l
+        WHERE l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR id = $1)
+      ),
+      app_stats AS (
+        SELECT 
+          COUNT(a.id) as total_applications,
+          COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'disbursed', 'confirmed')) as total_approved
+        FROM applications a
+        WHERE a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR id = $1)
+      ),
+      comm_stats AS (
+        SELECT COALESCE(SUM(credit), 0) as team_commission
+        FROM wallet_ledger
+        WHERE partner_id = $1 AND transaction_type = 'TEAM_COMMISSION' AND status = 'completed'
+      )
+      UPDATE partner_profiles SET
+        children_count = cs.children_count,
+        active_children = cs.active_children,
+        inactive_children = cs.inactive_children,
+        blocked_children = cs.blocked_children,
+        verified_children = cs.verified_children,
+        pending_children = cs.pending_children,
+        total_leads = ls.total_leads,
+        total_applications = aps.total_applications,
+        total_approved = aps.total_approved,
+        team_commission = cm.team_commission,
+        updated_at = NOW()
+      FROM child_stats cs, lead_stats ls, app_stats aps, comm_stats cm
+      WHERE partner_profiles.id = $1
+    `, [parentPartnerId]);
+  } catch (err) {
+    logger.error('Failed to recalculate team metrics for parent:', parentPartnerId, err.message);
+  }
+};
+
 module.exports.bulkPartnerAction = bulkPartnerAction;
 module.exports.updatePartnerStatus = updatePartnerStatus;
 module.exports.resetPartnerPassword = resetPartnerPassword;
 module.exports.impersonatePartner = impersonatePartner;
 module.exports.updatePartnerKYCStatus = updatePartnerKYCStatus;
+module.exports.getSelfOnboarding = getSelfOnboarding;
+module.exports.recalculateTeamMetrics = recalculateTeamMetrics;
+

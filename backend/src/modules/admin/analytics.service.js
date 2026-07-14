@@ -71,8 +71,81 @@ const getPartnerDashboard = async (partnerId) => {
   };
 };
 
+const getReferralAnalytics = async () => {
+  const { rows: [summary] } = await query(`
+    SELECT
+      (SELECT COUNT(*) FROM partner_profiles) as total_partners,
+      (SELECT COUNT(*) FROM users u JOIN partner_profiles p ON p.user_id = u.id WHERE u.status = 'active') as active_partners,
+      (SELECT COUNT(*) FROM users u JOIN partner_profiles p ON p.user_id = u.id WHERE u.status IN ('inactive', 'pending')) as inactive_partners,
+      (SELECT COUNT(*) FROM partner_profiles WHERE kyc_status = 'pending' OR kyc_status = 'under_review') as pending_kyc,
+      (SELECT COUNT(*) FROM partner_profiles WHERE kyc_status = 'approved') as approved_kyc,
+      (SELECT COUNT(*) FROM partner_profiles WHERE parent_partner_id IS NOT NULL) as total_team_members,
+      (SELECT COALESCE(MAX(children_count), 0) FROM partner_profiles) as largest_team_size,
+      (SELECT COALESCE(MAX(team_commission), 0) FROM partner_profiles) as highest_team_commission,
+      (SELECT COUNT(*) FROM partner_profiles WHERE created_at >= NOW() - INTERVAL '1 day') as daily_registrations,
+      (SELECT COUNT(*) FROM partner_profiles WHERE created_at >= NOW() - INTERVAL '7 days') as weekly_registrations,
+      (SELECT COUNT(*) FROM partner_profiles WHERE created_at >= NOW() - INTERVAL '30 days') as monthly_registrations
+  `);
+
+  const totalPartners = parseInt(summary.total_partners || 0);
+  const totalTeamMembers = parseInt(summary.total_team_members || 0);
+
+  const referralConversionRate = totalPartners > 0 
+    ? parseFloat(((totalTeamMembers / totalPartners) * 100).toFixed(2)) 
+    : 0;
+
+  const { rows: [avgTeam] } = await query(`
+    SELECT COALESCE(AVG(cnt), 0)::numeric(10,2) as avg_team_size
+    FROM (
+      SELECT parent_partner_id, COUNT(*) as cnt 
+      FROM partner_profiles 
+      WHERE parent_partner_id IS NOT NULL 
+      GROUP BY parent_partner_id
+    ) t
+  `);
+
+  const { rows: topReferrers } = await query(`
+    SELECT p.id, p.first_name, p.last_name, p.partner_code, p.referral_count, p.children_count, p.team_commission,
+           u.email, u.mobile, u.status
+    FROM partner_profiles p
+    JOIN users u ON u.id = p.user_id
+    ORDER BY p.referral_count DESC, p.children_count DESC
+    LIMIT 5
+  `);
+
+  const { rows: topTeams } = await query(`
+    SELECT p.id, p.first_name, p.last_name, p.partner_code, p.children_count, p.team_commission,
+           u.email, u.mobile
+    FROM partner_profiles p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.children_count > 0
+    ORDER BY p.team_commission DESC, p.children_count DESC
+    LIMIT 5
+  `);
+
+  return {
+    ...summary,
+    total_partners: parseInt(summary.total_partners),
+    active_partners: parseInt(summary.active_partners),
+    inactive_partners: parseInt(summary.inactive_partners),
+    pending_kyc: parseInt(summary.pending_kyc),
+    approved_kyc: parseInt(summary.approved_kyc),
+    total_team_members: parseInt(summary.total_team_members),
+    largest_team_size: parseInt(summary.largest_team_size),
+    highest_team_commission: parseFloat(summary.highest_team_commission),
+    daily_registrations: parseInt(summary.daily_registrations),
+    weekly_registrations: parseInt(summary.weekly_registrations),
+    monthly_registrations: parseInt(summary.monthly_registrations),
+    referral_conversion_rate: referralConversionRate,
+    average_team_size: parseFloat(avgTeam?.avg_team_size || 0),
+    top_referrers: topReferrers,
+    top_performing_teams: topTeams
+  };
+};
+
 module.exports = {
   getSuperAdminDashboard,
   getAdminDashboard,
-  getPartnerDashboard
+  getPartnerDashboard,
+  getReferralAnalytics
 };
