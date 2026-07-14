@@ -73,6 +73,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
 };
 
 // Sync Wallet Balance Cache in partner_wallets table
+const syncWalletBalance = async (partnerId, client) => {
   const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id = $1 OR user_id = $1`, [partnerId]);
   const pId = p ? p.id : partnerId;
   const uId = p ? p.user_id : partnerId;
