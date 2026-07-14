@@ -717,7 +717,7 @@ const listApplications = async (req, res, next) => {
           a.product_id,
           p.bank_id
         FROM applications a
-        LEFT JOIN customers c ON c.id = a.customer_id OR (c.mobile IS NOT NULL AND c.mobile = a.mobile)
+        LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id

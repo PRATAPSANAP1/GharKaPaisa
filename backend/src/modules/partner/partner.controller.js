@@ -830,10 +830,12 @@ const completeTrainingModule = async (req, res, next) => {
   }
 };
 
-// GET /partner/:PartnerId/team (List child partners)
 const getTeamMembers = async (req, res, next) => {
   try {
-    const { PartnerId } = req.params;
+    const partnerId = req.params.PartnerId || req.params.partnerId || req.partner?.id;
+    if (!partnerId) {
+      return error(res, 'Partner ID is required', 400);
+    }
     
     // Check if parent_partner_id column exists safely (in case migration is pending)
     let hasParentCol = true;
@@ -855,12 +857,12 @@ const getTeamMembers = async (req, res, next) => {
               FROM wallet_transactions wt 
               JOIN partner_wallets w ON w.id = wt.wallet_id 
               WHERE w.partner_id = ap.id AND wt.reference_type = 'commission') as commission_amount,
-             (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
+              (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1
       ORDER BY u.created_at DESC
-    `, [PartnerId]);
+    `, [partnerId]);
 
     return success(res, team);
   } catch (err) {

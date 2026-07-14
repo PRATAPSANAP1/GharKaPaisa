@@ -42,5 +42,6 @@ router.get('/referral', requireApprovedPartner, partnerCtrl.getReferralInfo);
 router.get('/team-tree', requireApprovedPartner, partnerCtrl.getTeamTree);
 router.get('/team-dashboard', requireApprovedPartner, partnerCtrl.getTeamDashboard);
 router.get('/team-earnings', requireApprovedPartner, partnerCtrl.getTeamEarnings);
+router.get('/team-members', requireApprovedPartner, partnerCtrl.getTeamMembers);
 
 module.exports = router;
