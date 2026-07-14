@@ -172,7 +172,7 @@ const getWalletDashboard = async (req, res, next) => {
       LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
       LEFT JOIN products p ON p.id = a.product_id
       WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) AND wl.credit > 0
-      GROUP BY p.category
+      GROUP BY COALESCE(p.category::text, 'General Commission')
     `, [partnerId, userId]);
 
     return success(res, {

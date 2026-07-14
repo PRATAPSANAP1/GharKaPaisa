@@ -99,6 +99,15 @@ const submitApplication = async (req, res, next) => {
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Application created inside portal.', req.user.id);
     await logTimeline(client, app.id, 'submitted', 'Redirected to Bank', `Initiated bank integration lead flow.`, req.user.id);
 
+    // Update referral clicks if this partner registered via referral and this is their first application submission
+    await client.query(`
+      UPDATE referral_clicks 
+      SET status = 'CONVERTED',
+          converted_at = NOW(),
+          application_id = $1
+      WHERE customer_id = $2 AND status = 'REGISTERED'
+    `, [app.id, req.user.id]);
+
     await client.query('COMMIT');
 
     // Notify partner
@@ -189,6 +198,28 @@ const submitPublicApplication = async (req, res, next) => {
 
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Public direct landing application logged.', sysUserId);
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
+
+    // Update referral clicks if this public lead came from a referral session or matching IP
+    const referralSession = req.cookies?.referral_session || null;
+    if (referralSession) {
+      await client.query(`
+        UPDATE referral_clicks 
+        SET status = 'CONVERTED',
+            converted_at = NOW(),
+            application_id = $1
+        WHERE session_id = $2 AND status IN ('CLICKED', 'VISITED')
+      `, [app.id, referralSession]);
+    } else {
+      const visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+      await client.query(`
+        UPDATE referral_clicks 
+        SET status = 'CONVERTED',
+            converted_at = NOW(),
+            application_id = $1
+        WHERE visitor_ip = $2 AND partner_id = $3 AND status IN ('CLICKED', 'VISITED')
+          AND clicked_at >= NOW() - INTERVAL '24 hours'
+      `, [app.id, visitorIp, partnerId]);
+    }
 
     await client.query('COMMIT');
     
@@ -375,7 +406,24 @@ const updateStatus = async (req, res, next) => {
     `, [status, approvedAt, historyEntry, id]);
 
     await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
-    await logAction(req, 'UPDATE_APPLICATION_STATUS', id, { status, remarks });
+    // Update referral click status based on application status transition
+    let clickStatus = null;
+    if (status === 'approved' || status === 'disbursed') {
+      clickStatus = 'APPLICATION_APPROVED';
+    } else if (status === 'rejected') {
+      clickStatus = 'APPLICATION_REJECTED';
+    } else if (status === 'submitted') {
+      clickStatus = 'APPLICATION_SUBMITTED';
+    }
+
+    if (clickStatus) {
+      await client.query(`
+        UPDATE referral_clicks 
+        SET status = $1,
+            updated_at = NOW()
+        WHERE application_id = $2
+      `, [clickStatus, id]);
+    }
 
     await client.query('COMMIT');
 
@@ -477,6 +525,19 @@ const updateCommission = async (req, res, next) => {
         INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
         VALUES ($1, $2, $3, $4, $5, 'approved')
       `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+
+      // Set commission_released flag on the application itself
+      await client.query(`
+        UPDATE applications SET commission_released = TRUE WHERE id = $1
+      `, [id]);
+
+      // Update referral clicks tracking status to COMMISSION_RELEASED
+      await client.query(`
+        UPDATE referral_clicks 
+        SET status = 'COMMISSION_RELEASED',
+            updated_at = NOW()
+        WHERE application_id = $1
+      `, [id]);
     }
 
     await logTimeline(client, id, app.status, `Commission ${status.toUpperCase()}`, `Updated commission state to ${status}.`, req.user.id);

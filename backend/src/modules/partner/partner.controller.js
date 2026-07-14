@@ -1,4 +1,5 @@
 const { query, getClient } = require('../../config/database');
+const crypto = require('crypto');
 const { uploadToS3, getSignedDownloadUrl } = require('../../services/aws/s3.service.js');
 const { ensureWallet } = require('../wallet/service.js');
 const { notify } = require('../notifications/service.js');
@@ -363,6 +364,15 @@ const approvePartner = async (req, res, next) => {
         INSERT INTO partner_wallets (partner_id) VALUES ($1)
         ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
+
+      // Update referral click status to KYC_COMPLETED
+      await client.query(`
+        UPDATE referral_clicks 
+        SET status = 'KYC_COMPLETED',
+            updated_at = NOW()
+        WHERE converted_partner_id = $1 AND status = 'REGISTERED'
+      `, [PartnerId]);
+
       await client.query('COMMIT');
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
@@ -870,20 +880,94 @@ const getTeamMembers = async (req, res, next) => {
   }
 };
 
+const parseUserAgent = (ua) => {
+  if (!ua) return { deviceType: 'desktop', browser: 'unknown', os: 'unknown' };
+  
+  let deviceType = 'desktop';
+  if (/mobile|android|iphone|ipad|phone/i.test(ua)) {
+    deviceType = 'mobile';
+  } else if (/tablet|ipad|playbook|silk/i.test(ua)) {
+    deviceType = 'tablet';
+  }
+
+  let browser = 'other';
+  if (/chrome|crios/i.test(ua) && !/edge|opr|opios|ucbrowser/i.test(ua)) browser = 'Chrome';
+  else if (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua)) browser = 'Safari';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/edge|edg/i.test(ua)) browser = 'Edge';
+  else if (/opera|opr/i.test(ua)) browser = 'Opera';
+
+  let os = 'other';
+  if (/windows/i.test(ua)) os = 'Windows';
+  else if (/macintosh|mac os x/i.test(ua) && !/iphone|ipad|ipod/i.test(ua)) os = 'macOS';
+  else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  return { deviceType, browser, os };
+};
+
 const invitePartnerClick = async (req, res, next) => {
   try {
-    const { ref } = req.query;
-    if (!ref) return error(res, 'Referral code is required', 400);
+    const data = { ...req.query, ...req.body };
+    const referralCode = data.referral_code || data.ref;
+    const landingPage = data.landing_page || '/register';
+    const referrer = data.referrer || req.headers['referer'] || null;
+    const utmSource = data.utm_source || data.source || 'direct';
+    const utmMedium = data.utm_medium || data.medium || null;
+    const utmCampaign = data.utm_campaign || data.campaign || null;
 
+    if (!referralCode) return error(res, 'Referral code is required', 400);
+
+    const visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+    const userAgent = req.headers['user-agent'] || null;
+    const { deviceType, browser, os } = parseUserAgent(userAgent);
+
+    // Find the partner ID corresponding to the referral code/ID
+    const { rows: [partner] } = await query(`
+      SELECT id, partner_code FROM partner_profiles 
+      WHERE partner_code = $1 
+         OR id::text = $1 
+         OR user_id::text = $1
+      LIMIT 1
+    `, [referralCode]);
+
+    if (!partner) {
+      return error(res, 'Invalid referral code or partner profile not found', 404);
+    }
+
+    // Generate unique session ID for the click
+    const sessionId = crypto.randomUUID();
+
+    // Insert click record
+    await query(`
+      INSERT INTO referral_clicks (
+        partner_id, partner_code, referral_code, session_id, visitor_ip, user_agent,
+        device_type, browser, os, utm_source, utm_medium, utm_campaign, referrer, landing_page, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'CLICKED')
+    `, [
+      partner.id, partner.partner_code, referralCode, sessionId, visitorIp, userAgent,
+      deviceType, browser, os, utmSource, utmMedium, utmCampaign, referrer, landingPage
+    ]);
+
+    // Update total_invites in partner_referrals (backward compatibility)
     await query(`
       UPDATE partner_referrals 
       SET total_invites = total_invites + 1 
-      WHERE referral_code = $1 
-        OR partner_id::text = $1
-        OR partner_id IN (SELECT id FROM partner_profiles WHERE user_id::text = $1 OR partner_code = $1)
-    `, [ref]);
+      WHERE partner_id = $1
+    `, [partner.id]);
 
-    return success(res, {}, 'Invite recorded');
+    // Set cookie referral_session=sessionId with 30-day expiry
+    const cookieOptions = {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' || req.secure,
+      sameSite: 'lax',
+      path: '/'
+    };
+    res.cookie('referral_session', sessionId, cookieOptions);
+
+    return success(res, { session_id: sessionId }, 'Referral click recorded and session created');
   } catch (err) {
     next(err);
   }

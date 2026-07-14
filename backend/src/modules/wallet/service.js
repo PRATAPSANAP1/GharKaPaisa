@@ -171,15 +171,35 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
   try {
     if (isInternalTxn) await client.query('BEGIN');
 
+    // Resolve partner profile ID in case user_id was passed
+    let resolvedPartnerId = partnerId;
+    const { rows: [p] } = await client.query(
+      `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1`,
+      [partnerId]
+    );
+    if (p) {
+      resolvedPartnerId = p.id;
+    }
+
     // Get/ensure wallet
     let { rows: [wallet] } = await client.query(
       `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
-      [partnerId]
+      [resolvedPartnerId]
     );
     if (!wallet) {
-      await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [partnerId]);
-      const result = await client.query(`SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`, [partnerId]);
+      await client.query(
+        `INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`,
+        [resolvedPartnerId]
+      );
+      const result = await client.query(
+        `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+        [resolvedPartnerId]
+      );
       wallet = result.rows[0];
+    }
+
+    if (!wallet) {
+      throw new Error(`Partner wallet record does not exist for partner_id: ${resolvedPartnerId}`);
     }
 
     // Insert into wallet_ledger
@@ -188,16 +208,33 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     if (meta.reference_type === 'referral_bonus') txnType = 'REFERRAL_BONUS';
     if (meta.reference_type === 'override_commission') txnType = 'OVERRIDE_COMMISSION';
 
+    let productId = meta.product_id || null;
+    let bankId = meta.bank_id || null;
+    const appId = meta.application_id || null;
+
+    if (appId) {
+      const { rows: [app] } = await client.query(
+        `SELECT product_id, bank_id FROM applications WHERE id = $1`,
+        [appId]
+      );
+      if (app) {
+        productId = app.product_id || productId;
+        bankId = app.bank_id || bankId;
+      }
+    }
+
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
-        wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending', $8)
+        wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
+      ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending', $8, $9, $10)
       RETURNING id
     `, [
-      wallet.id, partnerId, meta.application_id || null, txnType, amount, 
+      wallet.id, resolvedPartnerId, appId, txnType, amount, 
       meta.description || 'Commission credit on hold', 
-      meta.reference_id || meta.application_id || null,
-      meta.processed_by || null
+      meta.reference_id || appId || null,
+      meta.processed_by || null,
+      productId,
+      bankId
     ]);
 
     // Also sync to wallet_transactions
@@ -209,16 +246,16 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     const balanceBefore = parseFloat(wallet.available_balance || 0);
     const balanceAfter = balanceBefore;
 
-    await syncTransactionTable(client, txn.id, wallet.id, partnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, 'pending', meta.description || 'Commission credit on hold', meta.reference_type, meta.reference_id || meta.application_id || null, meta.processed_by || null, {
+    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, 'pending', meta.description || 'Commission credit on hold', meta.reference_type, meta.reference_id || meta.application_id || null, meta.processed_by || null, {
       product_id: meta.product_id || null,
       commission_type: commissionType,
       remarks: meta.remarks || null
     });
 
-    await syncWalletBalance(partnerId, client);
+    await syncWalletBalance(resolvedPartnerId, client);
 
     if (isInternalTxn) await client.query('COMMIT');
-    logger.info(`creditHold ₹${amount} (hold) for partner ${partnerId}, txn: ${txn.id}`);
+    logger.info(`creditHold ₹${amount} (hold) for partner ${resolvedPartnerId}, txn: ${txn.id}`);
     return txn;
   } catch (err) {
     if (isInternalTxn) await client.query('ROLLBACK');
@@ -258,16 +295,33 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
       if (meta.reference_type === 'referral_bonus') txnType = 'REFERRAL_BONUS';
       if (meta.reference_type === 'override_commission') txnType = 'OVERRIDE_COMMISSION';
 
+      let productId = meta.product_id || null;
+      let bankId = meta.bank_id || null;
+      const appId = meta.application_id || null;
+
+      if (appId) {
+        const { rows: [app] } = await client.query(
+          `SELECT product_id, bank_id FROM applications WHERE id = $1`,
+          [appId]
+        );
+        if (app) {
+          productId = app.product_id || productId;
+          bankId = app.bank_id || bankId;
+        }
+      }
+
       const { rows: [txn] } = await client.query(`
         INSERT INTO wallet_ledger (
-          wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by
-        ) VALUES ($1, $2, null, $3, $4, 0, $5, $6, 'completed', $7)
+          wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
+        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'completed', $8, $9, $10)
         RETURNING id
       `, [
-        wallet.id, partnerId, txnType, amount, 
+        wallet.id, partnerId, appId, txnType, amount, 
         meta.description || 'Hold released', 
-        meta.reference_id || null,
-        meta.processed_by || null
+        meta.reference_id || appId || null,
+        meta.processed_by || null,
+        productId,
+        bankId
       ]);
 
       const balanceBefore = parseFloat(wallet.available_balance || 0);

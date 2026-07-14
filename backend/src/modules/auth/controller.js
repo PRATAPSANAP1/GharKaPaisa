@@ -581,19 +581,51 @@ const register = async (req, res, next) => {
 
       let parentPartnerId = null;
       let parentTeamLevel = 0;
+      let referralClickRecord = null;
 
-      if (referral_code && role === 'PARTNER') {
-        const { rows: [parentPartner] } = await client.query(`
-          SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles 
-          WHERE partner_code = $1 OR id::text = $1 OR user_id::text = $1
-        `, [referral_code]);
-        if (parentPartner) {
-          if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
-            await client.query('ROLLBACK');
-            return error(res, 'The referring partner is currently not accepting new team members.', 403);
+      const referralSession = req.cookies?.referral_session || null;
+
+      if (role === 'PARTNER') {
+        // 1. Try to find the referral click by session_id first
+        if (referralSession) {
+          const { rows: [click] } = await client.query(`
+            SELECT id, partner_id, referral_code FROM referral_clicks 
+            WHERE session_id = $1 LIMIT 1
+          `, [referralSession]);
+          if (click) {
+            referralClickRecord = click;
           }
-          parentPartnerId = parentPartner.id;
-          parentTeamLevel = parseInt(parentPartner.team_level || 1);
+        }
+
+        // 2. Fall back to finding click by referral_code and registrant IP if no session cookie matched
+        const effectiveCode = referralClickRecord ? referralClickRecord.referral_code : referral_code;
+        if (!referralClickRecord && effectiveCode) {
+          const registrantIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+          const { rows: [click] } = await client.query(`
+            SELECT id, partner_id, referral_code FROM referral_clicks 
+            WHERE referral_code = $1 AND visitor_ip = $2 AND status = 'CLICKED'
+            ORDER BY clicked_at DESC LIMIT 1
+          `, [effectiveCode, registrantIp]);
+          if (click) {
+            referralClickRecord = click;
+          }
+        }
+
+        // 3. Resolve parent partner details
+        const codeToResolve = referralClickRecord ? referralClickRecord.referral_code : referral_code;
+        if (codeToResolve) {
+          const { rows: [parentPartner] } = await client.query(`
+            SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles 
+            WHERE partner_code = $1 OR id::text = $1 OR user_id::text = $1
+          `, [codeToResolve]);
+          if (parentPartner) {
+            if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
+              await client.query('ROLLBACK');
+              return error(res, 'The referring partner is currently not accepting new team members.', 403);
+            }
+            parentPartnerId = parentPartner.id;
+            parentTeamLevel = parseInt(parentPartner.team_level || 1);
+          }
         }
       }
 
@@ -617,6 +649,18 @@ const register = async (req, res, next) => {
           business_location || '', company_name, company_type, gst_number || null, pincode || null,
           parentPartnerId, parentTeamLevel + 1
         ]);
+
+        // Update referral clicks conversion status
+        if (referralClickRecord) {
+          await client.query(`
+            UPDATE referral_clicks 
+            SET status = 'REGISTERED',
+                registered_at = NOW(),
+                customer_id = $1,
+                converted_partner_id = $2
+            WHERE id = $3
+          `, [user.id, Partner.id, referralClickRecord.id]);
+        }
 
         // Create team relationships recursively
         if (parentPartnerId) {

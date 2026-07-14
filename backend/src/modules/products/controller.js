@@ -98,15 +98,27 @@ const getProduct = async (req, res, next) => {
       `, [idOrSlug]);
       product = rows[0];
     } else {
+      // Direct lookup by slug first
       const { rows } = await query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code
-        FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
-      `);
-      product = rows.find(p => {
-        const nameClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const slugClean = idOrSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return nameClean === slugClean || nameClean.includes(slugClean) || slugClean.includes(nameClean);
-      });
+        FROM products p JOIN banks b ON b.id = p.bank_id 
+        WHERE LOWER(p.slug) = LOWER($1) AND p.is_active = true
+        LIMIT 1
+      `, [idOrSlug]);
+      product = rows[0];
+
+      // Fallback to name-similarity matching
+      if (!product) {
+        const { rows: allActive } = await query(`
+          SELECT p.*, b.name as bank_name, b.short_code as bank_code
+          FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
+        `);
+        product = allActive.find(p => {
+          const nameClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const slugClean = idOrSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return nameClean === slugClean || nameClean.includes(slugClean) || slugClean.includes(nameClean);
+        });
+      }
     }
 
     if (!product) return notFound(res);
@@ -162,6 +174,16 @@ const createProduct = async (req, res, next) => {
     const isPartVisible = partner_visible !== undefined ? (partner_visible === 'true' || partner_visible === true) : true;
     const isActive = is_active !== undefined ? (is_active === 'true' || is_active === true) : true;
 
+    // Generate unique slug
+    let productSlug = req.body.slug;
+    if (!productSlug || !productSlug.trim()) {
+      productSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    const { rows: existingSlug } = await query(`SELECT id FROM products WHERE slug = $1`, [productSlug]);
+    if (existingSlug.length > 0) {
+      productSlug = `${productSlug}-${Date.now().toString().slice(-4)}`;
+    }
+
     const { rows: [p] } = await query(`
       INSERT INTO products (
         bank_id, name, category, description, features, eligibility, 
@@ -171,9 +193,9 @@ const createProduct = async (req, res, next) => {
         commission_amount, override_percentage, featured, public_visible, 
         partner_visible, eligibility_criteria, documents_required, benefits, 
         fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
-        priority, status, is_active, created_by
+        priority, status, is_active, created_by, slug
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37) RETURNING id
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38) RETURNING id
     `, [
       bank_id, name, category, description, JSON.stringify(parsedFeatures || []), 
       JSON.stringify(parsedEligibility || {}), commission_type || 'fixed', 
@@ -183,7 +205,7 @@ const createProduct = async (req, res, next) => {
       commission_amount || 0, override_percentage || 0, isFeatured, isPubVisible,
       isPartVisible, eligibility_criteria || null, documents_required || null, benefits || null,
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
-      priority || 0, status || 'Active', isActive, req.user?.id || null
+      priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -237,6 +259,18 @@ const updateProduct = async (req, res, next) => {
     const isPartVisible = partner_visible !== undefined ? (partner_visible === 'true' || partner_visible === true) : undefined;
     const isActive = is_active !== undefined ? (is_active === 'true' || is_active === true) : undefined;
 
+    // Generate/update unique slug
+    let productSlug = req.body.slug;
+    if (name && (!productSlug || !productSlug.trim())) {
+      productSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    if (productSlug) {
+      const { rows: existingSlug } = await query(`SELECT id FROM products WHERE slug = $1 AND id <> $2`, [productSlug, id]);
+      if (existingSlug.length > 0) {
+        productSlug = `${productSlug}-${Date.now().toString().slice(-4)}`;
+      }
+    }
+
     await query(`
       UPDATE products SET
         name = COALESCE($1, name),
@@ -271,6 +305,7 @@ const updateProduct = async (req, res, next) => {
         priority = COALESCE($30, priority),
         status = COALESCE($31, status),
         updated_by = $32,
+        slug = COALESCE($34, slug),
         updated_at = NOW()
       WHERE id = $33
     `, [
@@ -306,7 +341,8 @@ const updateProduct = async (req, res, next) => {
       priority || null,
       status || null,
       req.user?.id || null,
-      id
+      id,
+      productSlug || null
     ]);
 
     await logAction(req, 'UPDATE_PRODUCT', id, { name, commission_value, is_active });

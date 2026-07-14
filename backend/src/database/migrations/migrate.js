@@ -1684,6 +1684,35 @@ const migrate = async () => {
           AND tc.constraint_name = 'wallet_ledger_wallet_id_fkey';
 
         IF ref_table IS NOT NULL AND ref_table <> 'partner_wallets' THEN
+          -- 1. Ensure partner_wallets exist for all partners in wallet_ledger
+          INSERT INTO partner_wallets (partner_id)
+          SELECT DISTINCT wl.partner_id
+          FROM wallet_ledger wl
+          WHERE wl.partner_id IS NOT NULL 
+            AND NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.partner_id = wl.partner_id)
+            AND EXISTS (SELECT 1 FROM partner_profiles pp WHERE pp.id = wl.partner_id)
+          ON CONFLICT (partner_id) DO NOTHING;
+
+          -- 2. Remap wallet_id in wallet_ledger if it stored partner_profiles.id instead of partner_wallets.id
+          UPDATE wallet_ledger wl
+          SET wallet_id = pw.id
+          FROM partner_wallets pw
+          WHERE (wl.wallet_id = pw.partner_id OR (wl.wallet_id IS NOT NULL AND wl.partner_id = pw.partner_id))
+            AND NOT EXISTS (SELECT 1 FROM partner_wallets pw2 WHERE pw2.id = wl.wallet_id);
+
+          -- 3. Create fallback partner_wallets records for any remaining orphan wallet_id in wallet_ledger
+          INSERT INTO partner_wallets (id, partner_id)
+          SELECT DISTINCT wl.wallet_id, wl.partner_id
+          FROM wallet_ledger wl
+          WHERE wl.wallet_id IS NOT NULL 
+            AND NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.id = wl.wallet_id)
+            AND EXISTS (SELECT 1 FROM partner_profiles pp WHERE pp.id = wl.partner_id)
+          ON CONFLICT (id) DO NOTHING;
+
+          -- 4. Clean up any remaining unresolvable orphan records from wallet_ledger
+          DELETE FROM wallet_ledger wl
+          WHERE NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.id = wl.wallet_id);
+
           ALTER TABLE wallet_ledger DROP CONSTRAINT wallet_ledger_wallet_id_fkey;
           ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_wallet_id_fkey
             FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id);
@@ -1891,6 +1920,149 @@ const migrate = async () => {
   } catch (err) {
     logger.error('Failed to run GharKaPaisa Enhancements (V2 Features) Migrations:', err);
     throw err;
+  }
+
+  // ── Production Readiness & Referral Clicks Updates (Task 11) ────
+  try {
+    logger.info('Running Production Readiness & Referral Clicks Updates (Task 11)...');
+
+    // 1. Notifications table updates
+    await query(`
+      ALTER TABLE notifications 
+      ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS entity_id UUID
+    `);
+
+    // 2. Audit Logs table updates
+    await query(`
+      ALTER TABLE audit_logs 
+      ADD COLUMN IF NOT EXISTS old_data JSONB,
+      ADD COLUMN IF NOT EXISTS new_data JSONB
+    `);
+
+    // 3. Wallet Ledger table updates (avoiding expensive joins)
+    await query(`
+      ALTER TABLE wallet_ledger 
+      ADD COLUMN IF NOT EXISTS product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL
+    `);
+
+    // 4. Partner Team Relationships table updates
+    await query(`
+      ALTER TABLE partner_team_relationships 
+      ADD COLUMN IF NOT EXISTS commission_percentage DECIMAL(5,2),
+      ADD COLUMN IF NOT EXISTS override_percentage DECIMAL(5,2)
+    `);
+
+    // 5. Support Tickets table updates
+    await query(`
+      ALTER TABLE support_tickets 
+      ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS closed_by UUID REFERENCES users(id) ON DELETE SET NULL
+    `);
+
+    // 6. Partner Training Progress table updates
+    await query(`
+      ALTER TABLE partner_training_progress 
+      ADD COLUMN IF NOT EXISTS quiz_score DECIMAL(5,2),
+      ADD COLUMN IF NOT EXISTS certificate_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS attempt_count INT DEFAULT 1
+    `);
+
+    // 7. Marketing Materials table updates
+    await query(`
+      ALTER TABLE marketing_materials 
+      ADD COLUMN IF NOT EXISTS file_type VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS downloads INT DEFAULT 0
+    `);
+
+    // 8. Applications table updates
+    await query(`
+      ALTER TABLE applications 
+      ADD COLUMN IF NOT EXISTS commission_released BOOLEAN DEFAULT FALSE
+    `);
+
+    // 9. Products table updates and slug generation
+    await query(`
+      ALTER TABLE products 
+      ADD COLUMN IF NOT EXISTS slug VARCHAR(255)
+    `);
+    
+    // Check if unique index is already created, if not create it
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_products_slug ON products(slug) WHERE slug IS NOT NULL
+    `);
+
+    // Generate slugs for existing products based on name
+    await query(`
+      UPDATE products 
+      SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) 
+      WHERE slug IS NULL;
+    `);
+
+    // 10. Referral Clicks table creation
+    await query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id           UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        referral_code        VARCHAR(50) NOT NULL,
+        ip_address           VARCHAR(45),
+        user_agent           TEXT,
+        source               VARCHAR(50) DEFAULT 'direct',
+        campaign             VARCHAR(100),
+        clicked_at           TIMESTAMPTZ DEFAULT NOW(),
+        converted            BOOLEAN DEFAULT FALSE,
+        converted_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        converted_at         TIMESTAMPTZ
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_referral_clicks_partner ON referral_clicks(partner_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_referral_clicks_code ON referral_clicks(referral_code)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_referral_clicks_converted ON referral_clicks(converted)`);
+
+    // 11. Reports Views
+    await query(`
+      CREATE OR REPLACE VIEW daily_wallet_summary AS
+      SELECT 
+        partner_id,
+        created_at::date AS summary_date,
+        SUM(credit) AS total_credit,
+        SUM(debit) AS total_debit,
+        COUNT(*) AS transaction_count
+      FROM wallet_ledger
+      GROUP BY partner_id, created_at::date;
+    `);
+
+    await query(`
+      CREATE OR REPLACE VIEW daily_application_summary AS
+      SELECT 
+        partner_id,
+        created_at::date AS summary_date,
+        status,
+        COUNT(*) AS application_count,
+        SUM(COALESCE(loan_amount, 0)) AS total_loan_amount,
+        SUM(COALESCE(commission_amount, 0)) AS total_commission_amount
+      FROM applications
+      GROUP BY partner_id, created_at::date, status;
+    `);
+
+    await query(`
+      CREATE OR REPLACE VIEW partner_monthly_summary AS
+      SELECT 
+        partner_id,
+        DATE_TRUNC('month', created_at)::date AS summary_month,
+        SUM(credit) AS monthly_earned,
+        SUM(debit) AS monthly_withdrawn
+      FROM wallet_ledger
+      WHERE status = 'completed'
+      GROUP BY partner_id, DATE_TRUNC('month', created_at)::date;
+    `);
+
+    logger.info('Production Readiness & Referral Clicks Updates (Task 11) completed successfully.');
+  } catch (task11Err) {
+    logger.error('Failed to run Production Readiness & Referral Clicks Updates (Task 11):', task11Err);
+    throw task11Err;
   }
 
   logger.info('✅ All migrations completed successfully');
