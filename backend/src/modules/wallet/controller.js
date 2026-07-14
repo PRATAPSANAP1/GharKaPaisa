@@ -164,6 +164,8 @@ const getWalletDashboard = async (req, res, next) => {
       LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
       WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) AND wl.credit > 0
       GROUP BY p.category
+    `, [partnerId, userId]);
+
     return success(res, {
       wallet,
       history,
