@@ -75,7 +75,7 @@ const getMe = async (req, res, next) => {
         FROM users u
         LEFT JOIN partner_profiles ap ON ap.user_id = u.id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
-        LEFT JOIN wallets w ON w.partner_id = ap.id
+        LEFT JOIN partner_wallets w ON w.partner_id = ap.id
         WHERE u.id = $1
       `, [req.user.id]);
 

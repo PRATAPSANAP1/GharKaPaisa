@@ -1795,15 +1795,9 @@ const migrate = async () => {
       );
     `);
 
-    // 6. Create backwards compatibility views for SELECT queries (only if they don't already exist as tables)
-    await query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallets' AND table_type = 'BASE TABLE') THEN
-          CREATE OR REPLACE VIEW wallets AS SELECT * FROM partner_wallets;
-        END IF;
-      END $$;
-    `);
+    // 6. Clean up legacy wallets view/table to enforce partner_wallets schema
+    await query(`DROP VIEW IF EXISTS wallets CASCADE`);
+    await query(`DROP TABLE IF EXISTS wallets CASCADE`);
 
     await query(`
       DO $$

@@ -214,7 +214,7 @@ const getDashboardStats = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
         FROM applications WHERE partner_id = $1
       `, [PartnerId]),
-      query(`SELECT * FROM wallets WHERE partner_id = $1`, [PartnerId]),
+      query(`SELECT * FROM partner_wallets WHERE partner_id = $1`, [PartnerId]),
       query(`
         SELECT a.app_number, a.status, a.commission_amount, a.created_at,
           c.full_name as customer_name,

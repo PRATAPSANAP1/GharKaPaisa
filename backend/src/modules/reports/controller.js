@@ -43,7 +43,7 @@ const getOverview = async (req, res, next) => {
           COALESCE(SUM(total_withdrawn), 0) as total_withdrawn,
           COALESCE(SUM(hold_balance), 0) as total_pending,
           COALESCE(SUM(available_balance), 0) as total_available
-        FROM wallets
+        FROM partner_wallets
         ${partnerScopeWallet}
       `),
       query(`
@@ -229,7 +229,7 @@ const exportPartnersReport = async (req, res, next) => {
         COALESCE(w.total_withdrawn, 0) as total_withdrawn
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN wallets w ON w.partner_id = ap.id
+      LEFT JOIN partner_wallets w ON w.partner_id = ap.id
       ORDER BY u.created_at DESC
     `);
 

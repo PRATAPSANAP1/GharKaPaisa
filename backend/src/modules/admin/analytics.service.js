@@ -42,7 +42,7 @@ const getAdminDashboard = async (adminId) => {
 
 const getPartnerDashboard = async (partnerId) => {
   const { rows: [wallet] } = await query(`
-    SELECT available_balance, hold_balance, total_earned FROM wallets WHERE partner_id = $1
+    SELECT available_balance, hold_balance, total_earned FROM partner_wallets WHERE partner_id = $1
   `, [partnerId]);
 
   const { rows: [leadStats] } = await query(`
