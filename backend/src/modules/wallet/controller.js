@@ -108,18 +108,21 @@ const getTransactions = async (req, res, next) => {
                  'Customer Applicant'
                ) as customer_name, 
                COALESCE(
-                 p.name, 
-                 ld.product_name, 
-                 SUBSTRING(wl.description FROM 'Product: ([A-Za-z0-9 ]+)'), 
-                 'General Financial Commission'
-               ) as product_name, 
-               b.short_code as bank_code
-        FROM wallet_ledger wl
-        LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
-        LEFT JOIN customers c ON c.id = a.customer_id
-        LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
-        LEFT JOIN products p ON p.id = a.product_id OR p.id = ld.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
+                  p.name, 
+                  p2.name,
+                  ld.product_name, 
+                  SUBSTRING(wl.description FROM 'Product: ([A-Za-z0-9 ]+)'), 
+                  'General Financial Commission'
+                ) as product_name, 
+                COALESCE(b.short_code, b2.short_code) as bank_code
+         FROM wallet_ledger wl
+         LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
+         LEFT JOIN customers c ON c.id = a.customer_id
+         LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
+         LEFT JOIN products p ON p.id = a.product_id
+         LEFT JOIN products p2 ON p2.id = ld.product_id
+         LEFT JOIN banks b ON b.id = p.bank_id
+         LEFT JOIN banks b2 ON b2.id = p2.bank_id
         ${where}
         ORDER BY wl.created_at DESC
         LIMIT $${idx++} OFFSET $${idx++}
