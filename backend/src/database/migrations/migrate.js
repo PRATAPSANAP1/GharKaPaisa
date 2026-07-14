@@ -1711,20 +1711,29 @@ const migrate = async () => {
       );
     `);
 
-    // 6. Create backwards compatibility views for SELECT queries
+    // 6. Create backwards compatibility views for SELECT queries (only if they don't already exist as tables)
     await query(`
-      CREATE OR REPLACE VIEW wallets AS 
-      SELECT * FROM partner_wallets;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wallets' AND table_type = 'BASE TABLE') THEN
+          CREATE OR REPLACE VIEW wallets AS SELECT * FROM partner_wallets;
+        END IF;
+      END $$;
     `);
 
     await query(`
-      CREATE OR REPLACE VIEW withdrawal_requests AS 
-      SELECT 
-        id, wallet_id, partner_id, amount, status, 
-        bank_name, account_number, ifsc_code, utr as utr_number, 
-        processed_by, processed_at, rejection_reason, admin_note, 
-        created_at, updated_at 
-      FROM wallet_withdrawals;
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'withdrawal_requests' AND table_type = 'BASE TABLE') THEN
+          CREATE OR REPLACE VIEW withdrawal_requests AS
+          SELECT
+            id, wallet_id, partner_id, amount, status,
+            bank_name, account_number, ifsc_code, utr as utr_number,
+            processed_by, processed_at, rejection_reason, admin_note,
+            created_at, updated_at
+          FROM wallet_withdrawals;
+        END IF;
+      END $$;
     `);
 
     logger.info('Wallet & Razorpay Payout System Alignment Migrations completed successfully.');
