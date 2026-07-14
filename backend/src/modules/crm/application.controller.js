@@ -338,7 +338,7 @@ const getFilteredNotes = async (applicationId, userRole) => {
   }
 
   const { rows } = await query(`
-    SELECT n.*, u.first_name || ' ' || COALESCE(u.last_name, '') as writer_name, u.role as writer_role
+    SELECT n.*, u.full_name as writer_name, u.role as writer_role
     FROM application_notes n
     JOIN users u ON u.id = n.user_id
     WHERE n.application_id = $1 ${visibilityClause}
