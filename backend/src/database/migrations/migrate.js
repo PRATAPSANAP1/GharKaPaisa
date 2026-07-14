@@ -1694,6 +1694,17 @@ const migrate = async () => {
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_reference VARCHAR(100);
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS failure_reason TEXT;
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS utr VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS remarks TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS processed_by UUID REFERENCES users(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS admin_note TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+    `);
+    await query(`DROP TRIGGER IF EXISTS set_updated_at ON wallet_withdrawals`);
+    await query(`
+      CREATE TRIGGER set_updated_at BEFORE UPDATE ON wallet_withdrawals
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at()
     `);
 
     // Migrate existing data if needed (checking if columns exist to prevent errors)

@@ -6,6 +6,13 @@ const { logAction } = require('../admin/audit.service.js');
 const { encrypt, decrypt } = require('../../utils/helpers/crypto');
 const logger = require('../../config/logger');
 const crypto = require('crypto');
+const {
+  WITHDRAWAL_MIN_AMOUNT,
+  WITHDRAWAL_MAX_AMOUNT,
+  WITHDRAWAL_DAILY_LIMIT,
+  WITHDRAWAL_WEEKLY_LIMIT,
+  WITHDRAWAL_DUPLICATE_WINDOW_MINUTES
+} = require('./constants.js');
 
 // GET /wallet / GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
@@ -111,7 +118,7 @@ const getTransactions = async (req, res, next) => {
         LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
-        LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id OR p.id = ld.product_id
+        LEFT JOIN products p ON p.id = a.product_id OR p.id = ld.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
         ORDER BY wl.created_at DESC
@@ -161,7 +168,7 @@ const getWalletDashboard = async (req, res, next) => {
         COALESCE(SUM(wl.credit), 0) as total_earned
       FROM wallet_ledger wl
       LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
-      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      LEFT JOIN products p ON p.id = a.product_id
       WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) AND wl.credit > 0
       GROUP BY p.category
     `, [partnerId, userId]);
@@ -322,14 +329,18 @@ const requestWithdrawal = async (req, res, next) => {
   try {
     const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     if (!PartnerId) return error(res, 'Partner ID is required');
-    const { amount } = req.body;
+    const { amount, remarks } = req.body;
 
     const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount < 100) {
+    if (isNaN(parsedAmount) || parsedAmount < WITHDRAWAL_MIN_AMOUNT) {
       return error(res, 'Minimum withdrawal amount is ₹100');
     }
-    if (parsedAmount > 50000) {
+    if (parsedAmount > WITHDRAWAL_MAX_AMOUNT) {
       return error(res, 'Maximum single withdrawal limit is ₹50,000 per request');
+    }
+
+    if ((req.user?.role || '').toUpperCase() === 'PARTNER' && !req.withdrawalOtpVerified) {
+      return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
     }
 
     await client.query('BEGIN');
@@ -348,12 +359,25 @@ const requestWithdrawal = async (req, res, next) => {
     }
 
     const { rows: pending } = await client.query(
-      `SELECT id FROM wallet_withdrawals WHERE partner_id = $1 AND status = 'pending'`, [PartnerId]
+      `SELECT id FROM wallet_withdrawals WHERE partner_id = $1 AND status = 'pending' FOR UPDATE`, [PartnerId]
     );
     if (pending.length) {
       await client.query('ROLLBACK');
       return error(res, 'A withdrawal request is already pending');
     }
+
+    const { rows: [limits] } = await client.query(`
+      SELECT COALESCE(SUM(amount) FILTER (WHERE requested_at >= date_trunc('day', NOW())), 0) AS daily_total,
+             COALESCE(SUM(amount) FILTER (WHERE requested_at >= date_trunc('week', NOW())), 0) AS weekly_total
+      FROM wallet_withdrawals WHERE partner_id=$1 AND status NOT IN ('rejected','failed','cancelled')
+    `, [PartnerId]);
+    if (Number(limits.daily_total) + parsedAmount > WITHDRAWAL_DAILY_LIMIT) { await client.query('ROLLBACK'); return error(res, `Daily withdrawal limit is ₹${WITHDRAWAL_DAILY_LIMIT.toLocaleString('en-IN')}`); }
+    if (Number(limits.weekly_total) + parsedAmount > WITHDRAWAL_WEEKLY_LIMIT) { await client.query('ROLLBACK'); return error(res, `Weekly withdrawal limit is ₹${WITHDRAWAL_WEEKLY_LIMIT.toLocaleString('en-IN')}`); }
+    const { rows: duplicate } = await client.query(`
+      SELECT id FROM wallet_withdrawals WHERE partner_id=$1 AND amount=$2 AND requested_at > NOW() - ($3 * INTERVAL '1 minute')
+      AND status NOT IN ('failed','rejected','cancelled') FOR UPDATE
+    `, [PartnerId, parsedAmount, WITHDRAWAL_DUPLICATE_WINDOW_MINUTES]);
+    if (duplicate.length) { await client.query('ROLLBACK'); return error(res, 'A similar withdrawal was already requested recently. Please wait before trying again.'); }
 
     // Check Partner KYC Status
     const { rows: [partnerProfile] } = await client.query(
@@ -376,9 +400,10 @@ const requestWithdrawal = async (req, res, next) => {
 
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
-      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id)
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING id
-    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null]);
+      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks)
+      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8) RETURNING id
+    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null, String(remarks || '').trim() || null]);
+    await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'pending',$2,$3)`, [wr.id, String(remarks || '').trim() || 'Withdrawal requested', req.user?.id || null]);
 
     await debitAvailable(PartnerId, parsedAmount, {
       reference_type: 'withdrawal',
@@ -388,9 +413,11 @@ const requestWithdrawal = async (req, res, next) => {
     }, client);
 
     await client.query('COMMIT');
+    await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, remarks: String(remarks || '').trim() || null });
     return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
+    if (err.code === '23505') return error(res, 'A withdrawal request is already pending');
     next(err);
   } finally {
     try { client.release(); } catch (_) {}
@@ -416,7 +443,7 @@ const listWithdrawals = async (req, res, next) => {
         JOIN users u ON u.id = ap.user_id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         WHERE wr.status IN ('pending', 'approved', 'processing', 'failed')
-        ORDER BY wr.created_at ASC
+        ORDER BY wr.requested_at ASC
         LIMIT $1 OFFSET $2
       `;
       params = [limit, offset];
@@ -429,7 +456,7 @@ const listWithdrawals = async (req, res, next) => {
         JOIN users u ON u.id = ap.user_id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         WHERE wr.status IN ('processed', 'transferred')
-        ORDER BY wr.created_at DESC
+        ORDER BY wr.requested_at DESC
         LIMIT $1 OFFSET $2
       `;
       params = [limit, offset];
@@ -442,7 +469,7 @@ const listWithdrawals = async (req, res, next) => {
         JOIN users u ON u.id = ap.user_id
         LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
         WHERE wr.status = $1
-        ORDER BY wr.created_at DESC
+        ORDER BY wr.requested_at DESC
         LIMIT $2 OFFSET $3
       `;
       params = [status, limit, offset];
@@ -695,7 +722,7 @@ const listPartnerWithdrawals = async (req, res, next) => {
       query(`
         SELECT * FROM wallet_withdrawals 
         WHERE partner_id = $1 
-        ORDER BY created_at DESC 
+        ORDER BY requested_at DESC 
         LIMIT $2 OFFSET $3
       `, [partnerId, limit, offset])
     ]);
@@ -736,7 +763,7 @@ const exportStatementPDF = async (req, res, next) => {
       SELECT wl.*, a.app_number, p.name as product_name
       FROM wallet_ledger wl
       LEFT JOIN applications a ON a.id = wl.application_id
-      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      LEFT JOIN products p ON p.id = a.product_id
       ${where}
       ORDER BY wl.created_at DESC
     `, values);
@@ -810,7 +837,7 @@ const exportStatementExcel = async (req, res, next) => {
       SELECT wl.*, a.app_number, p.name as product_name
       FROM wallet_ledger wl
       LEFT JOIN applications a ON a.id = wl.application_id
-      LEFT JOIN products p ON p.id = a.product_id OR p.id = wl.product_id
+      LEFT JOIN products p ON p.id = a.product_id
       ${where}
       ORDER BY wl.created_at DESC
     `, values);
@@ -902,12 +929,14 @@ const sendWithdrawalOTP = async (req, res, next) => {
       await sendOtpEmail(targetEmail, otp);
     } catch (emailErr) {
       logger.error('Failed to send withdrawal OTP email:', emailErr.message);
+      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [`withdrawal:${partnerId}`]);
+      return error(res, 'Could not deliver the withdrawal verification code. Please try again.', 502);
     }
 
-    logger.info(`Withdrawal OTP generated for partner ${partnerId}: ${otp}`);
+    logger.info(`Withdrawal OTP sent for partner ${partnerId}`);
 
     const maskedEmail = targetEmail.includes('@') ? targetEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : targetEmail;
-    return success(res, { email_sent_to: maskedEmail, dev_otp: process.env.NODE_ENV !== 'production' ? otp : undefined }, `OTP sent to ${maskedEmail}`);
+    return success(res, { email_sent_to: maskedEmail }, `OTP sent to ${maskedEmail}`);
   } catch (err) {
     next(err);
   }
@@ -940,6 +969,7 @@ const verifyWithdrawalOTP = async (req, res, next) => {
     await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
 
     // Now proceed with the actual withdrawal
+    req.withdrawalOtpVerified = true;
     return requestWithdrawal(req, res, next);
   } catch (err) {
     next(err);
@@ -971,6 +1001,7 @@ const cancelWithdrawal = async (req, res, next) => {
     await client.query(
       `UPDATE wallet_withdrawals SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [id]
     );
+    await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'cancelled',$2,$3)`, [id, 'Cancelled by partner', req.user?.id || null]);
 
     // Reject linked ledger entries
     await client.query(`
@@ -982,6 +1013,7 @@ const cancelWithdrawal = async (req, res, next) => {
     await syncWalletBalance(partnerId, client);
 
     await client.query('COMMIT');
+    await logAction(req, 'CANCEL_WITHDRAWAL', id, { partner_id: partnerId, amount: wr.amount });
     return success(res, {}, `Withdrawal of ₹${wr.amount} cancelled. Balance has been restored.`);
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -1041,6 +1073,7 @@ const retryWithdrawal = async (req, res, next) => {
       INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id)
       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING id
     `, [wallet.id, partnerId, amount, failedWr.bank_name, failedWr.account_number, failedWr.ifsc_code, failedWr.bank_account_id]);
+    await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'pending',$2,$3)`, [newWr.id, `Retry of withdrawal ${id}`, req.user?.id || null]);
 
     const { debitAvailable } = require('./service');
     await debitAvailable(partnerId, amount, {
@@ -1051,6 +1084,7 @@ const retryWithdrawal = async (req, res, next) => {
     }, client);
 
     await client.query('COMMIT');
+    await logAction(req, 'RETRY_WITHDRAWAL', newWr.id, { previous_withdrawal_id: id, partner_id: partnerId, amount });
     return success(res, { withdrawal_id: newWr.id }, 'Withdrawal request retried and submitted successfully.');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -1185,6 +1219,7 @@ const addSecondaryBankDetail = async (req, res, next) => {
       INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
       VALUES ($1, $2, $3, NULL, $4)
     `, [partnerId, newBank.id, userId, JSON.stringify({ bank_name, ifsc_code, account_holder_name, upi_id })]);
+    await logAction(req, 'ADD_SECONDARY_BANK_DETAILS', newBank.id, { partner_id: partnerId, bank_name, upi_id });
 
     return success(res, { id: newBank.id }, 'Secondary bank account added successfully');
   } catch (err) {
@@ -1208,6 +1243,7 @@ const setPrimaryBank = async (req, res, next) => {
     // Set all to non-primary, then set selected to primary
     await query(`UPDATE partner_bank_details SET is_primary = false WHERE partner_id = $1`, [partnerId]);
     await query(`UPDATE partner_bank_details SET is_primary = true WHERE id = $1`, [bank_id]);
+    await logAction(req, 'SET_PRIMARY_BANK_DETAILS', bank_id, { partner_id: partnerId });
 
     return success(res, {}, 'Primary bank account updated');
   } catch (err) {
@@ -1238,6 +1274,7 @@ const verifyBankPennyDrop = async (req, res, next) => {
       INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
       VALUES ($1, $2, $3, $4, $5)
     `, [partnerId, bank_id, req.user?.id, JSON.stringify({ is_verified: false }), JSON.stringify({ is_verified: true, verification_method: 'penny_drop' })]);
+    await logAction(req, 'VERIFY_BANK_PENNY_DROP', bank_id, { partner_id: partnerId });
 
     return success(res, {
       verified: true,
