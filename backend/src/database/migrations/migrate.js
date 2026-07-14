@@ -563,6 +563,14 @@ const migrate = async () => {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS device_id VARCHAR(255)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS device_name VARCHAR(255)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS browser VARCHAR(255)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS country VARCHAR(100)`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMPTZ DEFAULT NOW()`);
 
   // ── Leads ─────────────────────────────────────────────────────
   await query(`
