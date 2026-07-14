@@ -273,6 +273,9 @@ const migrate = async () => {
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='agent_id') THEN
         ALTER TABLE wallets RENAME COLUMN agent_id TO partner_id;
       END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='partner_wallets' AND column_name='agent_id') THEN
+        ALTER TABLE partner_wallets RENAME COLUMN agent_id TO partner_id;
+      END IF;
     END $$;
   `);
 
@@ -440,11 +443,14 @@ const migrate = async () => {
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='pending_amount') THEN
         ALTER TABLE wallets RENAME COLUMN pending_amount TO hold_balance;
       END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='partner_wallets' AND column_name='pending_amount') THEN
+        ALTER TABLE partner_wallets RENAME COLUMN pending_amount TO hold_balance;
+      END IF;
     END $$;
   `);
 
   await query(`
-    CREATE TABLE IF NOT EXISTS wallets (
+    CREATE TABLE IF NOT EXISTS partner_wallets (
       id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       partner_id          UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
       total_earned      DECIMAL(15,2) DEFAULT 0,
@@ -468,7 +474,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS wallet_transactions (
       id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      wallet_id      UUID NOT NULL REFERENCES wallets(id),
+      wallet_id      UUID NOT NULL REFERENCES partner_wallets(id),
       partner_id     UUID REFERENCES partner_profiles(id),
       application_id UUID REFERENCES applications(id),
       type           VARCHAR(20) NOT NULL,
@@ -511,7 +517,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS withdrawal_requests (
       id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      wallet_id       UUID NOT NULL REFERENCES wallets(id),
+      wallet_id       UUID NOT NULL REFERENCES partner_wallets(id),
       partner_id        UUID NOT NULL REFERENCES partner_profiles(id),
       amount          DECIMAL(12,2) NOT NULL,
       status          VARCHAR(20) DEFAULT 'pending',
@@ -626,7 +632,7 @@ const migrate = async () => {
   await query(`
     CREATE TABLE IF NOT EXISTS wallet_audit_logs (
       id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-      wallet_id              UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+      wallet_id              UUID NOT NULL REFERENCES partner_wallets(id) ON DELETE CASCADE,
       action                 VARCHAR(50) NOT NULL,
       old_available_balance  DECIMAL(15,2),
       new_available_balance  DECIMAL(15,2),
@@ -659,10 +665,10 @@ const migrate = async () => {
     $$ LANGUAGE plpgsql;
   `);
 
-  await query(`DROP TRIGGER IF EXISTS audit_wallet_trigger ON wallets`);
+  await query(`DROP TRIGGER IF EXISTS audit_wallet_trigger ON partner_wallets`);
   await query(`
     CREATE TRIGGER audit_wallet_trigger
-    AFTER INSERT OR UPDATE OR DELETE ON wallets
+    AFTER INSERT OR UPDATE OR DELETE ON partner_wallets
     FOR EACH ROW EXECUTE FUNCTION log_wallet_changes()
   `);
 
@@ -1076,7 +1082,7 @@ const migrate = async () => {
     `);
 
     await query(`
-      ALTER TABLE wallets 
+      ALTER TABLE partner_wallets 
       ADD COLUMN IF NOT EXISTS personal_earnings DECIMAL(15,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS team_earnings DECIMAL(15,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS referral_bonus DECIMAL(15,2) DEFAULT 0,
@@ -1149,7 +1155,7 @@ const migrate = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_ledger (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        wallet_id UUID NOT NULL REFERENCES wallets(id),
+        wallet_id UUID NOT NULL REFERENCES partner_wallets(id),
         partner_id UUID NOT NULL REFERENCES partner_profiles(id),
         application_id UUID REFERENCES applications(id),
         transaction_type ledger_transaction_type NOT NULL,
@@ -1307,7 +1313,7 @@ const migrate = async () => {
 
     // 1. Wallets table balance columns
     await query(`
-      ALTER TABLE wallets 
+      ALTER TABLE partner_wallets 
       ADD COLUMN IF NOT EXISTS pending_balance DECIMAL(15,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS withdrawn_balance DECIMAL(15,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS override_balance DECIMAL(15,2) DEFAULT 0
