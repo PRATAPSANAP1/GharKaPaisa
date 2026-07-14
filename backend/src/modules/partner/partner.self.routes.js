@@ -15,6 +15,11 @@ const kycUpload = upload.fields([
 
 const { requirePartner, requireApprovedPartner } = require('../../middleware/authentication/auth.middleware.js');
 
+// Public validation routes (No jwtAuth required)
+router.post('/validate-pan', partnerCtrl.validatePan);
+router.post('/validate-aadhaar', partnerCtrl.validateAadhaar);
+router.post('/validate-gst', partnerCtrl.validateGst);
+
 // All routes require authenticated Firebase token
 router.use(jwtAuth);
 

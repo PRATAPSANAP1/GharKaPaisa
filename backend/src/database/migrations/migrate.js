@@ -2115,6 +2115,96 @@ const migrate = async () => {
     throw task12Err;
   }
 
+  // ── Registration Validation & Business Rules Updates (Task 13) ──
+  try {
+    logger.info('Running Registration Validation & Business Rules Updates (Task 13)...');
+
+    // 1. Add fields to partner_profiles
+    await query(`
+      ALTER TABLE partner_profiles 
+        ADD COLUMN IF NOT EXISTS pan_number VARCHAR(10) UNIQUE,
+        ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(12) UNIQUE,
+        ADD COLUMN IF NOT EXISTS can_create_team BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS rank VARCHAR(50) DEFAULT 'Silver';
+    `);
+
+    // 2. Create referral_campaigns table
+    await query(`
+      CREATE TABLE IF NOT EXISTS referral_campaigns (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        campaign_name VARCHAR(255) NOT NULL,
+        campaign_code VARCHAR(100) UNIQUE NOT NULL,
+        description   TEXT,
+        start_date    TIMESTAMPTZ NOT NULL,
+        end_date      TIMESTAMPTZ NOT NULL,
+        status        VARCHAR(50) DEFAULT 'ACTIVE',
+        target        INT DEFAULT 0,
+        bonus_type    VARCHAR(50),
+        bonus_amount  DECIMAL(15,2) DEFAULT 0.00,
+        created_by    UUID REFERENCES users(id),
+        created_at    TIMESTAMPTZ DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 3. Create registration_logs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS registration_logs (
+        id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        email              VARCHAR(255),
+        mobile             VARCHAR(15),
+        referral_code      VARCHAR(50),
+        parent_partner_id  UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        status             VARCHAR(50),
+        failure_reason     TEXT,
+        ip_address         VARCHAR(45),
+        device             VARCHAR(255),
+        browser            VARCHAR(255),
+        created_at         TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 4. Create invitation_history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS invitation_history (
+        id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id       UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        invite_type      VARCHAR(50),
+        recipient_name   VARCHAR(255),
+        recipient_email  VARCHAR(255),
+        recipient_mobile VARCHAR(15),
+        referral_code    VARCHAR(50),
+        status           VARCHAR(50) DEFAULT 'PENDING',
+        sent_at          TIMESTAMPTZ DEFAULT NOW(),
+        opened_at        TIMESTAMPTZ,
+        registered_at    TIMESTAMPTZ,
+        expired_at       TIMESTAMPTZ
+      );
+    `);
+
+    // 5. Create blacklist table
+    await query(`
+      CREATE TABLE IF NOT EXISTS blacklist (
+        id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        type       VARCHAR(50),
+        value      VARCHAR(255) UNIQUE NOT NULL,
+        reason     TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 6. Alter referral_clicks to add campaign_id
+    await query(`
+      ALTER TABLE referral_clicks 
+        ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES referral_campaigns(id) ON DELETE SET NULL;
+    `);
+
+    logger.info('Registration Validation & Business Rules Updates (Task 13) completed successfully.');
+  } catch (task13Err) {
+    logger.error('Failed to run Registration Validation & Business Rules Updates (Task 13):', task13Err);
+    throw task13Err;
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

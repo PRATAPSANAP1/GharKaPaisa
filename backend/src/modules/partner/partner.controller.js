@@ -2042,6 +2042,119 @@ const recalculateTeamMetrics = async (parentPartnerId, existingClient = null) =>
   }
 };
 
+// Validate PAN Format, Uniqueness, and Blacklist
+const validatePan = async (req, res, next) => {
+  try {
+    const { pan_number } = req.body;
+    if (!pan_number) {
+      return error(res, 'PAN number required', 400);
+    }
+    const cleanPan = pan_number.trim().toUpperCase();
+
+    // format validation
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(cleanPan)) {
+      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Invalid PAN number format' });
+    }
+
+    // blacklist check
+    const { rows: blacklisted } = await query('SELECT 1 FROM blacklist WHERE type = \'PAN\' AND value = $1', [cleanPan]);
+    if (blacklisted.length > 0) {
+      return res.status(200).json({ success: true, valid: false, exists: false, message: 'PAN is blacklisted' });
+    }
+
+    // uniqueness check
+    const { rows: existing } = await query('SELECT id FROM partner_profiles WHERE pan_number = $1', [cleanPan]);
+    if (existing.length > 0) {
+      return res.status(200).json({ success: true, valid: true, exists: true, message: 'PAN already registered. Please contact support.' });
+    }
+
+    return res.status(200).json({ success: true, valid: true, exists: false });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Validate Aadhaar Format, Uniqueness, and Blacklist
+const validateAadhaar = async (req, res, next) => {
+  try {
+    const { aadhaar_number } = req.body;
+    if (!aadhaar_number) {
+      return error(res, 'Aadhaar number required', 400);
+    }
+    const cleanAadhaar = aadhaar_number.trim();
+
+    // format validation (12 numeric digits)
+    const aadhaarRegex = /^\d{12}$/;
+    if (!aadhaarRegex.test(cleanAadhaar)) {
+      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Aadhaar number must be exactly 12 numeric digits' });
+    }
+
+    // blacklist check
+    const { rows: blacklisted } = await query('SELECT 1 FROM blacklist WHERE type = \'AADHAAR\' AND value = $1', [cleanAadhaar]);
+    if (blacklisted.length > 0) {
+      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Aadhaar is blacklisted' });
+    }
+
+    // uniqueness check
+    const { rows: existing } = await query('SELECT id FROM partner_profiles WHERE aadhaar_number = $1', [cleanAadhaar]);
+    if (existing.length > 0) {
+      return res.status(200).json({ success: true, valid: true, exists: true, message: 'Aadhaar already registered.' });
+    }
+
+    return res.status(200).json({ success: true, valid: true, exists: false });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Validate GST Format and State Code consistency
+const validateGst = async (req, res, next) => {
+  try {
+    const { gst_number, state } = req.body;
+    if (!gst_number) {
+      return error(res, 'GST number required', 400);
+    }
+    const cleanGst = gst_number.trim().toUpperCase();
+
+    // format validation
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!gstRegex.test(cleanGst)) {
+      return res.status(200).json({ success: true, valid: false, message: 'Invalid GSTIN format' });
+    }
+
+    if (state) {
+      // Indian GST State Codes Map
+      const gstStateCodes = {
+        '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
+        '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+        '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+        '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+        '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+        '25': 'Daman & Diu', '26': 'Dadra & Nagar Haveli', '27': 'Maharashtra', '28': 'Andhra Pradesh',
+        '29': 'Karnataka', '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu',
+        '34': 'Puducherry', '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh',
+        '38': 'Ladakh'
+      };
+
+      const code = cleanGst.substring(0, 2);
+      const mappedState = gstStateCodes[code];
+
+      if (!mappedState || mappedState.toLowerCase() !== state.trim().toLowerCase()) {
+        return res.status(200).json({ 
+          success: true, 
+          valid: false, 
+          message: `GST state code '${code}' does not match the selected state '${state}'.` 
+        });
+      }
+    }
+
+    return res.status(200).json({ success: true, valid: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.bulkPartnerAction = bulkPartnerAction;
 module.exports.updatePartnerStatus = updatePartnerStatus;
 module.exports.resetPartnerPassword = resetPartnerPassword;
@@ -2049,4 +2162,7 @@ module.exports.impersonatePartner = impersonatePartner;
 module.exports.updatePartnerKYCStatus = updatePartnerKYCStatus;
 module.exports.getSelfOnboarding = getSelfOnboarding;
 module.exports.recalculateTeamMetrics = recalculateTeamMetrics;
+module.exports.validatePan = validatePan;
+module.exports.validateAadhaar = validateAadhaar;
+module.exports.validateGst = validateGst;
 

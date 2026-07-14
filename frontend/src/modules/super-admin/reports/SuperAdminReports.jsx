@@ -1,35 +1,4 @@
 import React, { useState, useEffect } from 'react';
-  // Tabs: 'analytics' or 'commissions'
-  const [activeTab, setActiveTab] = useState("analytics");
-
-  // Privacy Toggle & Export States
-  const [privacyMode, setPrivacyMode] = useState(false);
-  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
-  const [exportDates, setExportDates] = useState({
-    from_date: "",
-    to_date: ""
-  });
-  const [loadingExport, setLoadingExport] = useState(false);
-  const [loadingExportPartners, setLoadingExportPartners] = useState(false);
-
-  const handleExportPartners = async () => {
-    setLoadingExportPartners(true);
-    try {
-      const res = await api.get("/reports/partners-export");
-      if (res.data?.success) {
-        const { partners, summary } = res.data.data;
-        downloadPartnersCSV(partners, summary);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to export partners report.");
-    } finally {
-      setLoadingExportPartners(false);
-    }
-  };
-
-  const downloadPartnersCSV = (partners, summary) => {
-    if (!partners || partners.length === 0) {
-      alert("No partner profiles found to export.");
       return;
     }
 
@@ -649,6 +618,8 @@ import React, { useState, useEffect } from 'react';
             </div>
           )}
         </div>
+      ) : activeTab === "referrals" ? (
+        <ReferralAnalyticsView />
       ) : (
         /* Commission Configuration settings View */
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>

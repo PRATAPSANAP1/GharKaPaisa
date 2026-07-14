@@ -539,8 +539,67 @@ const register = async (req, res, next) => {
 
     const client = await getClient();
     let committed = false;
+    let parentPartnerId = null;
+    let invite = [];
+    let Partner = null;
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+    const userAgent = req.headers['user-agent'] || '';
+    const device = req.headers['x-device-type'] || 'Unknown';
+    const browser = req.headers['x-browser'] || 'Unknown';
+
+    const panVal = (req.body.pan || req.body.pan_number || '').trim().toUpperCase();
+    const aadhaarVal = (req.body.aadhaar || req.body.aadhaar_number || '').trim();
+
+    const logRegistrationAttempt = async (status, failureReason, parentId = null) => {
+      try {
+        await query(`
+          INSERT INTO registration_logs (email, mobile, referral_code, parent_partner_id, status, failure_reason, ip_address, device, browser)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [email, mobile, referral_code || null, parentId || parentPartnerId, status, failureReason || null, ip, device, browser]);
+      } catch (logErr) {
+        logger.error('Failed to log registration attempt:', logErr.message);
+      }
+    };
+
     try {
       await client.query('BEGIN');
+
+      // 1. Blacklist Check
+      const { rows: blacklisted } = await client.query(`
+        SELECT type, value FROM blacklist 
+        WHERE (type = 'EMAIL' AND LOWER(value) = LOWER($1))
+           OR (type = 'MOBILE' AND value = $2)
+           OR (type = 'PAN' AND LOWER(value) = LOWER($3))
+           OR (type = 'AADHAAR' AND value = $4)
+      `, [email, mobile, panVal, aadhaarVal]);
+
+      if (blacklisted.length > 0) {
+        await client.query('ROLLBACK');
+        const reason = `Registration blocked by blacklist (matched ${blacklisted[0].type})`;
+        await logRegistrationAttempt('FAILED', reason);
+        return error(res, reason, 403);
+      }
+
+      // 2. Duplicate Checks
+      if (panVal) {
+        const { rows: dupPan } = await client.query('SELECT id FROM partner_profiles WHERE pan_number = $1', [panVal]);
+        if (dupPan.length > 0) {
+          await client.query('ROLLBACK');
+          const reason = 'PAN already registered. Please contact support.';
+          await logRegistrationAttempt('FAILED', reason);
+          return error(res, reason, 409);
+        }
+      }
+      if (aadhaarVal) {
+        const { rows: dupAadhaar } = await client.query('SELECT id FROM partner_profiles WHERE aadhaar_number = $1', [aadhaarVal]);
+        if (dupAadhaar.length > 0) {
+          await client.query('ROLLBACK');
+          const reason = 'Aadhaar already registered.';
+          await logRegistrationAttempt('FAILED', reason);
+          return error(res, reason, 409);
+        }
+      }
 
       // Check if user exists
       const { rows: existingUser } = await client.query(
@@ -550,7 +609,9 @@ const register = async (req, res, next) => {
 
       if (existingUser.length) {
         await client.query('ROLLBACK');
-        return error(res, 'User with this email or mobile already exists', 409);
+        const reason = 'User with this email or mobile already exists';
+        await logRegistrationAttempt('FAILED', reason);
+        return error(res, reason, 409);
       }
 
       // Hash password if provided (for backward compat); otherwise set null
@@ -579,17 +640,17 @@ const register = async (req, res, next) => {
         await client.query(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
       }
 
-      let parentPartnerId = null;
       let parentTeamLevel = 0;
       let referralClickRecord = null;
+      let resolvedCampaignId = null;
 
       const referralSession = req.cookies?.referral_session || null;
 
       if (role === 'PARTNER') {
-        // 1. Try to find the referral click by session_id first
+        // 4. Try to find the referral click by session_id first
         if (referralSession) {
           const { rows: [click] } = await client.query(`
-            SELECT id, partner_id, referral_code FROM referral_clicks 
+            SELECT id, partner_id, referral_code, campaign_id FROM referral_clicks 
             WHERE session_id = $1 LIMIT 1
           `, [referralSession]);
           if (click) {
@@ -597,12 +658,12 @@ const register = async (req, res, next) => {
           }
         }
 
-        // 2. Fall back to finding click by referral_code and registrant IP if no session cookie matched
+        // 5. Fall back to finding click by referral_code and registrant IP if no session cookie matched
         const effectiveCode = referralClickRecord ? referralClickRecord.referral_code : referral_code;
         if (!referralClickRecord && effectiveCode) {
-          const registrantIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+          const registrantIp = ip;
           const { rows: [click] } = await client.query(`
-            SELECT id, partner_id, referral_code FROM referral_clicks 
+            SELECT id, partner_id, referral_code, campaign_id FROM referral_clicks 
             WHERE referral_code = $1 AND visitor_ip = $2 AND status = 'CLICKED'
             ORDER BY clicked_at DESC LIMIT 1
           `, [effectiveCode, registrantIp]);
@@ -611,21 +672,92 @@ const register = async (req, res, next) => {
           }
         }
 
-        // 3. Resolve parent partner details
-        const codeToResolve = referralClickRecord ? referralClickRecord.referral_code : referral_code;
-        if (codeToResolve) {
-          const { rows: [parentPartner] } = await client.query(`
-            SELECT id, team_level, allow_team_creation, team_status FROM partner_profiles 
-            WHERE partner_code = $1 OR id::text = $1 OR user_id::text = $1
-          `, [codeToResolve]);
-          if (parentPartner) {
-            if (parentPartner.allow_team_creation === false || parentPartner.team_status === 'INACTIVE') {
+        // 6. Campaign validation check
+        if (referralClickRecord && referralClickRecord.campaign_id) {
+          const { rows: [campaign] } = await client.query(`
+            SELECT id, status, start_date, end_date FROM referral_campaigns 
+            WHERE id = $1
+          `, [referralClickRecord.campaign_id]);
+          if (campaign) {
+            if (campaign.status !== 'ACTIVE' || new Date() < new Date(campaign.start_date) || new Date() > new Date(campaign.end_date)) {
               await client.query('ROLLBACK');
-              return error(res, 'The referring partner is currently not accepting new team members.', 403);
+              const reason = 'Referral campaign is inactive or expired.';
+              await logRegistrationAttempt('FAILED', reason);
+              return error(res, reason, 400);
             }
-            parentPartnerId = parentPartner.id;
-            parentTeamLevel = parseInt(parentPartner.team_level || 1);
+            resolvedCampaignId = campaign.id;
           }
+        }
+
+        // 7. Resolve parent partner details and enforce team/rank constraints
+        const codeToResolve = referralClickRecord ? referralClickRecord.referral_code : referral_code;
+        if (!codeToResolve) {
+          await client.query('ROLLBACK');
+          const reason = 'Referral code is required for registration.';
+          await logRegistrationAttempt('FAILED', reason);
+          return error(res, reason, 400);
+        }
+
+        const { rows: [parentPartner] } = await client.query(`
+          SELECT id, team_level, allow_team_creation, team_status, rank, can_create_team FROM partner_profiles 
+          WHERE partner_code = $1 OR id::text = $1 OR user_id::text = $1
+        `, [codeToResolve]);
+
+        if (parentPartner) {
+          // Parent status check
+          if (parentPartner.team_status !== 'ACTIVE') {
+            await client.query('ROLLBACK');
+            const reason = 'Parent partner is inactive or suspended.';
+            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
+            return error(res, reason, 403);
+          }
+          // Team permission check
+          if (parentPartner.allow_team_creation === false || parentPartner.can_create_team === false) {
+            await client.query('ROLLBACK');
+            const reason = 'The referring partner is currently not accepting new team members.';
+            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
+            return error(res, reason, 403);
+          }
+          // Rank check
+          const parentRank = parentPartner.rank || 'Silver';
+          const { rows: [{ count: currentTeamSize }] } = await client.query(`
+            SELECT COUNT(*)::int AS count FROM partner_team_relationships 
+            WHERE parent_partner_id = $1 AND level = 1
+          `, [parentPartner.id]);
+
+          let limit = 50;
+          if (parentRank === 'Gold') limit = 200;
+          if (parentRank === 'Diamond') limit = 999999999; // Unlimited
+
+          if (currentTeamSize >= limit) {
+            await client.query('ROLLBACK');
+            const reason = 'Registration blocked after team size limit.';
+            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
+            return error(res, reason, 403);
+          }
+
+          parentPartnerId = parentPartner.id;
+          parentTeamLevel = parseInt(parentPartner.team_level || 1);
+        } else {
+          await client.query('ROLLBACK');
+          const reason = 'Invalid Referral Code';
+          await logRegistrationAttempt('FAILED', reason);
+          return error(res, reason, 400);
+        }
+
+        // 8. Invitation History and Referral Expiry Check
+        const { rows: inviteRows } = await client.query(`
+          SELECT id, expired_at FROM invitation_history 
+          WHERE (LOWER(recipient_email) = LOWER($1) OR recipient_mobile = $2) AND status = 'PENDING'
+          ORDER BY sent_at DESC LIMIT 1
+        `, [email, mobile]);
+        invite = inviteRows;
+
+        if (invite.length > 0 && invite[0].expired_at && new Date(invite[0].expired_at) < new Date()) {
+          await client.query('ROLLBACK');
+          const reason = 'Referral expired.';
+          await logRegistrationAttempt('FAILED', reason, parentPartnerId);
+          return error(res, reason, 400);
         }
       }
 
@@ -637,18 +769,19 @@ const register = async (req, res, next) => {
         PartnerCode = generatePartnerCode(parseInt(nextval));
 
         // Create Partner profile
-        const { rows: [Partner] } = await client.query(`
+        const { rows: [insertedPartner] } = await client.query(`
           INSERT INTO partner_profiles (
             user_id, partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
-            parent_partner_id, team_level, team_joined_at, kyc_status
+            parent_partner_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'pending') RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'pending', $13, $14) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
           business_location || '', company_name, company_type, gst_number || null, pincode || null,
-          parentPartnerId, parentTeamLevel + 1
+          parentPartnerId, parentTeamLevel + 1, panVal, aadhaarVal
         ]);
+        Partner = insertedPartner;
 
         // Update referral clicks conversion status
         if (referralClickRecord) {
@@ -710,6 +843,26 @@ const register = async (req, res, next) => {
         await client.query(`
           INSERT INTO partner_wallets (partner_id) VALUES ($1)
         `, [Partner.id]);
+
+        if (role === 'PARTNER') {
+          // Initialize onboarding milestones progress
+          await client.query(`
+            INSERT INTO partner_onboarding (partner_id, profile_completed, progress_percentage)
+            VALUES ($1, true, 16.67)
+          `, [Partner.id]);
+
+          // Update invitation status
+          if (invite && invite.length > 0) {
+            await client.query(`
+              UPDATE invitation_history 
+              SET status = 'REGISTERED', registered_at = NOW() 
+              WHERE id = $1
+            `, [invite[0].id]);
+          }
+        }
+
+        // Log success
+        await logRegistrationAttempt('SUCCESS', null, parentPartnerId);
       }
 
       await client.query('COMMIT');
