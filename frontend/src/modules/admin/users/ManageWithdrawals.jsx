@@ -29,7 +29,7 @@ export default function ManageWithdrawals() {
     setLoading(true);
     setErr("");
     try {
-      const res = await api.get("/wallet/withdrawals", {
+      const res = await api.get("/wallet/admin/withdrawals", {
         params: {
           page,
           limit: 20,

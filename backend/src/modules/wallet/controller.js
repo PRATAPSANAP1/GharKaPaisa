@@ -1089,24 +1089,31 @@ const getWithdrawalDetail = async (req, res, next) => {
 };
 
 
-// ── Bank Details: Get All (Primary + Secondary) ──────────────────────
+// ── Bank Details: Get All Partners Bank Accounts (Admin / Super Admin) ──
 const getAllBankDetails = async (req, res, next) => {
   try {
-    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
-    if (!partnerId && req.user) {
-      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (p) partnerId = p.id;
-      else partnerId = req.user.id;
-    }
-
-    if (!partnerId) return success(res, []);
-
     const { rows } = await query(`
-      SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified, is_primary, created_at, updated_at
-      FROM partner_bank_details
-      WHERE partner_id = $1
-      ORDER BY is_primary DESC, created_at ASC
-    `, [partnerId]);
+      SELECT
+        pp.id as partner_id,
+        pp.partner_code,
+        pp.first_name,
+        pp.last_name,
+        u.email,
+        u.mobile,
+        bd.id,
+        bd.account_holder_name,
+        bd.bank_name,
+        bd.account_number,
+        bd.ifsc_code,
+        bd.upi_id,
+        bd.is_verified,
+        bd.is_primary,
+        bd.created_at
+      FROM partner_bank_details bd
+      JOIN partner_profiles pp ON bd.partner_id = pp.id
+      JOIN users u ON pp.user_id = u.id
+      ORDER BY pp.created_at DESC
+    `);
 
     // Decrypt account numbers
     const processed = rows.map(r => {
@@ -1118,6 +1125,9 @@ const getAllBankDetails = async (req, res, next) => {
 
     return success(res, processed);
   } catch (err) {
+    next(err);
+  }
+};
     next(err);
   }
 };

@@ -6,6 +6,11 @@ const { withdrawalRules, validate } = require('../../middleware/validation/valid
 
 router.use(authenticate, syncUser);
 
+// Admin endpoints
+router.get('/admin/withdrawals', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.listWithdrawals);
+router.get('/bank-details/all', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getAllBankDetails);
+router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
+
 // Partner self-endpoints (no ID needed in URL)
 router.get('/', requireApprovedPartner, walletCtrl.getWallet);
 router.get('/dashboard', requireApprovedPartner, walletCtrl.getWalletDashboard);
@@ -17,27 +22,16 @@ router.get('/commission-summary', requireApprovedPartner, walletCtrl.getCommissi
 router.get('/statement/pdf', requireApprovedPartner, walletCtrl.exportStatementPDF);
 router.get('/statement/excel', requireApprovedPartner, walletCtrl.exportStatementExcel);
 
-// OTP & Withdrawals
+// OTP & Withdrawals (Partner)
 router.post('/withdraw/otp/send', requireApprovedPartner, walletCtrl.sendWithdrawalOTP);
 router.post('/withdraw/otp/verify', requireApprovedPartner, walletCtrl.verifyWithdrawalOTP);
 router.post('/withdraw', requireApprovedPartner, withdrawalRules, validate, walletCtrl.requestWithdrawal);
-
-// Polymorphic Withdrawals Listing (Dispatches based on User Role: Admin vs Partner)
-router.get('/withdrawals', requireApprovedPartner, (req, res, next) => {
-  const role = (req.user?.role || '').toUpperCase();
-  if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-    return walletCtrl.listWithdrawals(req, res, next);
-  }
-  return walletCtrl.listPartnerWithdrawals(req, res, next);
-});
-
-router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
+router.get('/withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
 router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);
 router.get('/withdrawals/:id', requireApprovedPartner, walletCtrl.getWithdrawalDetail);
 
-// Bank details management (Sub-routes placed first to prevent path matching conflicts)
-router.get('/bank-details/all', requireApprovedPartner, walletCtrl.getAllBankDetails);
+// Bank details management (Partner)
 router.get('/bank-details/history', requireApprovedPartner, walletCtrl.getBankEditHistory);
 router.post('/bank-details/secondary', requireApprovedPartner, walletCtrl.addSecondaryBankDetail);
 router.post('/bank-details/primary', requireApprovedPartner, walletCtrl.setPrimaryBank);
