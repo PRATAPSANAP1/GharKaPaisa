@@ -1763,6 +1763,47 @@ const migrate = async () => {
       ALTER TABLE kyc_documents ADD COLUMN IF NOT EXISTS ocr_data JSONB
     `);
 
+    // 7. Support Tickets, Marketing Materials, and Partner Training Progress Tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id    UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        subject       VARCHAR(255) NOT NULL,
+        description   TEXT NOT NULL,
+        category      VARCHAR(100) NOT NULL,
+        priority      VARCHAR(50) DEFAULT 'medium',
+        status        VARCHAR(50) DEFAULT 'open',
+        replies       JSONB DEFAULT '[]',
+        created_at    TIMESTAMPTZ DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_support_tickets_partner ON support_tickets(partner_id)`);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS marketing_materials (
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title         VARCHAR(255) NOT NULL,
+        description   TEXT,
+        category      VARCHAR(100) NOT NULL,
+        file_url      VARCHAR(500) NOT NULL,
+        thumbnail_url VARCHAR(500),
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // Seed dummy marketing materials if empty
+    const { rows: existingMaterials } = await query(`SELECT id FROM marketing_materials LIMIT 1`);
+    if (existingMaterials.length === 0) {
+      await query(`
+        INSERT INTO marketing_materials (title, description, category, file_url, thumbnail_url)
+        VALUES 
+          ('GharKaPaisa Poster', 'High-res promotional poster for credit card referrals.', 'banners', 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800', 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200'),
+          ('Social Media Banner', 'Optimal dimensions for Instagram/Facebook posts.', 'social_media', 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800', 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=200'),
+          ('Referral Campaign Leaflet', 'Print-ready trifold leaflet details.', 'leaflets', 'https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=800', 'https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=200')
+      `);
+    }
+
     logger.info('GharKaPaisa Enhancements (V2 Features) Migrations completed successfully.');
   } catch (err) {
     logger.error('Failed to run GharKaPaisa Enhancements (V2 Features) Migrations:', err);

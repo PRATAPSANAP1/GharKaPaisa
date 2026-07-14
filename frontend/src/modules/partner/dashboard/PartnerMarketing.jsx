@@ -1,35 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import { 
   MdCampaign, MdDownload, MdShare, MdImage, 
   MdOutlineOndemandVideo, MdOutlineMenuBook
 } from 'react-icons/md';
 
-const MATERIALS = [
-  { id: 'm1', title: 'HDFC Millennia WhatsApp Flyer', category: 'Credit Cards', type: 'Image', resolution: '1080x1080', url: '#' },
-  { id: 'm2', title: 'SBI SimplyCLICK Insta Story', category: 'Credit Cards', type: 'Image', resolution: '1080x1920', url: '#' },
-  { id: 'm3', title: 'Instant Personal Loan Banner', category: 'Loans', type: 'Image', resolution: '1200x628', url: '#' },
-  { id: 'm4', title: 'Why Choose GharKaPaisa (PDF)', category: 'Brochure', type: 'Document', resolution: 'A4', url: '#' },
-  { id: 'm5', title: 'Partner Recruitment Video', category: 'Recruitment', type: 'Video', resolution: '1080p', url: '#' },
-  { id: 'm6', title: 'Business Loan Fest Flyer', category: 'Loans', type: 'Image', resolution: '1080x1080', url: '#' },
-];
-
 export default function PartnerMarketing() {
   const { C } = useTheme();
   const S = makeS(C);
   
+  const [materials, setMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   
-  const categories = ['All', 'Credit Cards', 'Loans', 'Brochure', 'Recruitment'];
+  const categories = ['All', 'banners', 'social_media', 'leaflets'];
 
-  const filteredMaterials = filter === 'All' ? MATERIALS : MATERIALS.filter(m => m.category === filter);
+  const fetchMaterials = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/marketing/materials');
+      if (res.data?.success) {
+        setMaterials(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load marketing materials', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const getIcon = (type) => {
-    switch(type) {
-      case 'Image': return <MdImage size={40} style={{ color: C.primary }} />;
-      case 'Video': return <MdOutlineOndemandVideo size={40} style={{ color: C.red }} />;
-      case 'Document': return <MdOutlineMenuBook size={40} style={{ color: C.gold }} />;
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
+
+  const filteredMaterials = filter === 'All' ? materials : materials.filter(m => m.category === filter);
+
+  const getIcon = (category) => {
+    switch(category) {
+      case 'banners': return <MdImage size={40} style={{ color: C.primary }} />;
+      case 'social_media': return <MdOutlineOndemandVideo size={40} style={{ color: C.red }} />;
+      case 'leaflets': return <MdOutlineMenuBook size={40} style={{ color: C.gold }} />;
       default: return <MdImage size={40} style={{ color: C.textLight }} />;
+    }
+  };
+
+  const handleDownload = (fileUrl, title) => {
+    // Open the direct marketing file URL in a new tab
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    link.download = title;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleShare = (item) => {
+    if (navigator.share) {
+      navigator.share({
+        title: item.title,
+        text: item.description,
+        url: item.file_url,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(item.file_url);
+      alert('Asset link copied to clipboard!');
     }
   };
 
@@ -94,67 +130,95 @@ export default function PartnerMarketing() {
               ...(filter === cat ? {} : { border: `1px solid ${C.border}` })
             }}
           >
-            {cat}
+            {cat === 'social_media' ? 'Social Media' : cat.charAt(0).toUpperCase() + cat.slice(1)}
           </button>
         ))}
       </div>
 
       {/* Content Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
-        {filteredMaterials.map((item) => (
-          <div key={item.id} style={{
-            ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden',
-            display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease'
-          }}>
-            
-            {/* Preview Area */}
-            <div style={{
-              height: '140px', background: C.bgSecondary, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', position: 'relative'
-            }}>
-              <div style={{
-                position: 'absolute', inset: 0, opacity: 0.05,
-                backgroundImage: `radial-gradient(${C.text} 1px, transparent 1px)`,
-                backgroundSize: '10px 10px'
-              }} />
-              {getIcon(item.type)}
-            </div>
-
-            {/* Details */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <span style={{
-                ...S.tag(C.primary), alignSelf: 'flex-start',
-                padding: '2px 8px', fontSize: '9px', marginBottom: '8px'
-              }}>
-                {item.category}
-              </span>
-              <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {item.title}
-              </h3>
-              <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>{item.type} • {item.resolution}</p>
-
-              <div style={{
-                display: 'flex', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
-              }}>
-                <button style={{
-                  flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
-                  padding: '8px', background: C.bgSecondary, color: C.textMid,
-                  borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
-                }}>
-                  <MdShare size={16} /> Share
-                </button>
-                <button style={{
-                  flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
-                  padding: '8px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-                  color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
-                }}>
-                  <MdDownload size={16} /> Get
-                </button>
-              </div>
-            </div>
-
+        {loading ? (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px', color: C.textLight }}>
+            Loading marketing assets...
           </div>
-        ))}
+        ) : filteredMaterials.length === 0 ? (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px', color: C.textLight }}>
+            No marketing materials available in this category.
+          </div>
+        ) : (
+          filteredMaterials.map((item) => (
+            <div key={item.id} style={{
+              ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden',
+              display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease'
+            }}>
+              
+              {/* Preview Area */}
+              <div style={{
+                height: '140px', background: C.bgSecondary, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', position: 'relative'
+              }}>
+                {item.thumbnail_url ? (
+                  <img 
+                    src={item.thumbnail_url} 
+                    alt={item.title} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                ) : (
+                  <>
+                    <div style={{
+                      position: 'absolute', inset: 0, opacity: 0.05,
+                      backgroundImage: `radial-gradient(${C.text} 1px, transparent 1px)`,
+                      backgroundSize: '10px 10px'
+                    }} />
+                    {getIcon(item.category)}
+                  </>
+                )}
+              </div>
+
+              {/* Details */}
+              <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <span style={{
+                  ...S.tag(C.primary), alignSelf: 'flex-start',
+                  padding: '2px 8px', fontSize: '9px', marginBottom: '8px'
+                }}>
+                  {item.category === 'social_media' ? 'Social Media' : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                </span>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>
+                  {item.description || 'Official Referrals Banner'}
+                </p>
+
+                <div style={{
+                  display: 'flex', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
+                }}>
+                  <button 
+                    onClick={() => handleShare(item)}
+                    style={{
+                      flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
+                      padding: '8px', background: C.bgSecondary, color: C.textMid,
+                      borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    <MdShare size={16} /> Share
+                  </button>
+                  <button 
+                    onClick={() => handleDownload(item.file_url, item.title)}
+                    style={{
+                      flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px',
+                      padding: '8px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                      color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    <MdDownload size={16} /> Get
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          ))
+        )}
       </div>
 
     </div>

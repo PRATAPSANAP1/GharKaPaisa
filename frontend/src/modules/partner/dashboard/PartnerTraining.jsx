@@ -74,37 +74,41 @@ export default function PartnerTraining() {
       {/* Left Column: Player & Active Content */}
       <div style={{ flex: 2, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* Video Player Placeholder */}
+        {/* Video Player or Document Reader */}
         <div style={{
           background: '#000', borderRadius: '16px', aspectRatio: '16/9',
           position: 'relative', overflow: 'hidden', display: 'flex',
           alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-          border: `1px solid ${C.border}`, cursor: 'pointer'
+          border: `1px solid ${C.border}`
         }}>
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)'
-          }} />
-          
-          {activeModule.type === 'Video' ? (
-            <div style={{
-              width: 64, height: 64, background: C.primary, color: '#fff',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 0 24px ${C.primary}50`, zIndex: 10
-            }}>
-              <MdPlayArrow size={32} style={{ marginLeft: '4px' }} />
+          {activeModule.video_url ? (
+            <video 
+              key={activeModule.id}
+              src={activeModule.video_url} 
+              controls 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              onEnded={handleComplete}
+            />
+          ) : activeModule.pdf_url ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#fff', zIndex: 5 }}>
+              <MdOutlineMenuBook size={64} style={{ color: C.gold, marginBottom: '16px' }} />
+              <p style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600 }}>This training module is a Document study guide.</p>
+              <a 
+                href={activeModule.pdf_url} 
+                target="_blank" 
+                rel="noreferrer" 
+                style={{ ...S.btn('primary'), textDecoration: 'none', display: 'inline-block', padding: '10px 20px', borderRadius: '10px' }}
+              >
+                Open Document Guide
+              </a>
             </div>
           ) : (
-            <div style={{
-              width: 64, height: 64, background: 'rgba(255, 255, 255, 0.1)', color: '#fff',
-              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backdropFilter: 'blur(4px)', zIndex: 10, border: '1px solid rgba(255,255,255,0.2)'
-            }}>
-              <MdOutlineMenuBook size={32} />
+            <div style={{ color: '#fff', textAlign: 'center' }}>
+              No media available for this module.
             </div>
           )}
 
-          <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', zIndex: 10 }}>
+          <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', zIndex: 10, pointerEvents: 'none' }}>
             <span style={{
               padding: '4px 10px', background: C.primary, color: '#fff',
               fontSize: '9px', fontWeight: 700, uppercase: 'true', letterSpacing: '0.5px',

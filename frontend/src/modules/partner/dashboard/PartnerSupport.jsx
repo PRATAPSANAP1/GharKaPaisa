@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import { 
   MdSupportAgent, MdAdd, MdSearch, 
   MdCheckCircle, MdPendingActions, MdClose, MdSend,
   MdOutlineForum
 } from 'react-icons/md';
 
-const MOCK_TICKETS = [
-  { id: 'TKT-1029', subject: 'Commission not credited for Lead #APP-592', status: 'open', priority: 'high', date: '2026-06-22', messages: [{ sender: 'partner', text: 'Hi, the lead was disbursed 3 days ago but wallet is not updated.' }, { sender: 'support', text: 'We are checking with the accounts team. Please allow 24 hours.' }] },
-  { id: 'TKT-1015', subject: 'Unable to download ID Card', status: 'closed', priority: 'low', date: '2026-06-15', messages: [{ sender: 'partner', text: 'Where can I find my ID card?' }, { sender: 'support', text: 'It is available in the Document Vault section now.' }] },
-  { id: 'TKT-0988', subject: 'Change bank account details', status: 'resolved', priority: 'medium', date: '2026-06-02', messages: [{ sender: 'partner', text: 'I want to change my payout bank to ICICI.' }, { sender: 'support', text: 'Bank details updated successfully as requested.' }] },
-];
-
 export default function PartnerSupport() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -23,16 +20,96 @@ export default function PartnerSupport() {
   const [replyText, setReplyText] = useState('');
   const [width, setWidth] = useState(window.innerWidth);
 
+  // New ticket state
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Commission & Payouts');
+  const [priority, setPriority] = useState('medium');
+
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/support/tickets');
+      if (res.data?.success) {
+        setTickets(res.data.data);
+        if (selectedTicket) {
+          const updated = res.data.data.find(t => t.id === selectedTicket.id);
+          if (updated) setSelectedTicket(updated);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load tickets', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    fetchTickets();
     const handleResize = () => setWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleCreateTicket = async (e) => {
+    e.preventDefault();
+    if (!subject.trim() || !description.trim()) return;
+    try {
+      const res = await api.post('/support/tickets', {
+        subject: subject.trim(),
+        description: description.trim(),
+        category,
+        priority
+      });
+      if (res.data?.success) {
+        alert('Support ticket created successfully!');
+        setIsNewTicketModalOpen(false);
+        setSubject('');
+        setDescription('');
+        fetchTickets();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create support ticket');
+    }
+  };
+
+  const handleSendReply = async (e) => {
+    if (e) e.preventDefault();
+    if (!replyText.trim() || !selectedTicket) return;
+    try {
+      const res = await api.post(`/support/tickets/${selectedTicket.id}/reply`, {
+        message: replyText.trim()
+      });
+      if (res.data?.success) {
+        setReplyText('');
+        setSelectedTicket(res.data.data);
+        fetchTickets();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send reply');
+    }
+  };
+
+  const handleMarkResolved = async () => {
+    if (!selectedTicket || !window.confirm('Mark this ticket as resolved?')) return;
+    try {
+      const res = await api.patch(`/support/tickets/${selectedTicket.id}/status`, {
+        status: 'resolved'
+      });
+      if (res.data?.success) {
+        setSelectedTicket(res.data.data);
+        fetchTickets();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to mark ticket as resolved');
+    }
+  };
+
   const isMobile = width < 992;
 
-  const filteredTickets = MOCK_TICKETS.filter(t => {
-    const matchSearch = t.subject.toLowerCase().includes(searchTerm.toLowerCase()) || t.id.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredTickets = tickets.filter(t => {
+    const ticketIdStr = `TKT-${t.id.substring(0, 8)}`.toLowerCase();
+    const matchSearch = t.subject.toLowerCase().includes(searchTerm.toLowerCase()) || ticketIdStr.includes(searchTerm.toLowerCase());
     const matchTab = activeTab === 'all' || t.status === activeTab || (activeTab === 'resolved' && t.status === 'closed');
     return matchSearch && matchTab;
   });
@@ -40,6 +117,7 @@ export default function PartnerSupport() {
   const getStatusColor = (status) => {
     switch(status) {
       case 'open': return C.gold;
+      case 'in_progress': return C.primary;
       case 'resolved':
       case 'closed': return C.green;
       default: return C.textLight;
@@ -140,7 +218,11 @@ export default function PartnerSupport() {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {filteredTickets.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
+              Loading tickets...
+            </div>
+          ) : filteredTickets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
               <MdOutlineForum size={36} style={{ color: C.border, marginBottom: '8px' }} />
               <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>No tickets found.</p>
@@ -148,6 +230,7 @@ export default function PartnerSupport() {
           ) : (
             filteredTickets.map(tkt => {
               const isSelected = selectedTicket?.id === tkt.id;
+              const formattedId = `TKT-${tkt.id.substring(0, 8).toUpperCase()}`;
               return (
                 <div 
                   key={tkt.id}
@@ -160,13 +243,15 @@ export default function PartnerSupport() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: C.textLight }}>{tkt.id}</span>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: C.textLight }}>{formattedId}</span>
                     <span style={S.tag(getStatusColor(tkt.status))}>{tkt.status}</span>
                   </div>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: C.text, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {tkt.subject}
                   </h4>
-                  <p style={{ fontSize: '11px', color: C.textLight, margin: '8px 0 0', fontWeight: 500 }}>{tkt.date}</p>
+                  <p style={{ fontSize: '11px', color: C.textLight, margin: '8px 0 0', fontWeight: 500 }}>
+                    {new Date(tkt.created_at).toLocaleDateString('en-IN')}
+                  </p>
                 </div>
               );
             })
@@ -190,17 +275,22 @@ export default function PartnerSupport() {
                   <span style={S.tag(getStatusColor(selectedTicket.status))}>{selectedTicket.status}</span>
                 </div>
                 <p style={{ fontSize: '12px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0 0' }}>
-                  {selectedTicket.id} • Created on {selectedTicket.date}
+                  {`TKT-${selectedTicket.id.substring(0, 8).toUpperCase()}`} • Created on {new Date(selectedTicket.created_at).toLocaleString('en-IN')}
                 </p>
               </div>
-              <button style={{
-                background: C.card, border: `1px solid ${C.border}`, color: C.green,
-                width: 36, height: 36, borderRadius: '10px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-              }}>
-                <MdCheckCircle size={20} title="Mark as Resolved" />
-              </button>
+              {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
+                <button 
+                  onClick={handleMarkResolved}
+                  style={{
+                    background: C.card, border: `1px solid ${C.border}`, color: C.green,
+                    width: 36, height: 36, borderRadius: '10px', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <MdCheckCircle size={20} title="Mark as Resolved" />
+                </button>
+              )}
             </div>
 
             {/* Chat Thread */}
@@ -208,7 +298,26 @@ export default function PartnerSupport() {
               flex: 1, overflowY: 'auto', padding: '20px',
               background: C.bgSecondary, display: 'flex', flexDirection: 'column', gap: '20px'
             }}>
-              {selectedTicket.messages.map((msg, idx) => {
+              {/* Original ticket request message */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>
+                  You
+                </span>
+                <div style={{
+                  padding: '12px 16px', borderRadius: '16px', maxWidth: '80%',
+                  fontSize: '13px', lineHeight: 1.5,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                  background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                  color: '#fff',
+                  borderTopRightRadius: '2px',
+                  borderTopLeftRadius: '16px',
+                }}>
+                  {selectedTicket.description}
+                </div>
+              </div>
+
+              {/* Replies */}
+              {(selectedTicket.replies || []).map((msg, idx) => {
                 const isPartner = msg.sender === 'partner';
                 return (
                   <div key={idx} style={{
@@ -228,7 +337,7 @@ export default function PartnerSupport() {
                       borderTopRightRadius: isPartner ? '2px' : '16px',
                       borderTopLeftRadius: isPartner ? '16px' : '2px',
                     }}>
-                      {msg.text}
+                      {msg.message}
                     </div>
                   </div>
                 );
@@ -238,7 +347,7 @@ export default function PartnerSupport() {
             {/* Reply Input Box */}
             {selectedTicket.status !== 'closed' && selectedTicket.status !== 'resolved' ? (
               <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.card, flexShrink: 0 }}>
-                <div style={{ position: 'relative' }}>
+                <form onSubmit={handleSendReply} style={{ position: 'relative' }}>
                   <textarea 
                     rows="2"
                     placeholder="Type your reply here..."
@@ -247,6 +356,7 @@ export default function PartnerSupport() {
                     style={{ ...S.input, paddingRight: '52px', resize: 'none', borderRadius: '12px' }}
                   />
                   <button 
+                    type="submit"
                     disabled={!replyText.trim()}
                     style={{
                       position: 'absolute', right: '10px', bottom: '10px',
@@ -258,7 +368,7 @@ export default function PartnerSupport() {
                   >
                     <MdSend size={18} />
                   </button>
-                </div>
+                </form>
               </div>
             ) : (
               <div style={{
@@ -296,7 +406,7 @@ export default function PartnerSupport() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
-          <div style={{
+          <form onSubmit={handleCreateTicket} style={{
             background: C.card, borderRadius: '20px', width: '100%', maxWidth: '440px',
             overflow: 'hidden', border: `1px solid ${C.border}`,
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column'
@@ -307,6 +417,7 @@ export default function PartnerSupport() {
             }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Create New Ticket</h3>
               <button 
+                type="button"
                 onClick={() => setIsNewTicketModalOpen(false)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -320,9 +431,11 @@ export default function PartnerSupport() {
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={S.label}>Category *</label>
-                <select style={{
-                  ...S.input, appearance: 'auto', backgroundImage: 'none'
-                }}>
+                <select 
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  style={{ ...S.input, appearance: 'auto', backgroundImage: 'none' }}
+                >
                   <option>Commission & Payouts</option>
                   <option>Lead Status & Tracking</option>
                   <option>KYC & Profile Update</option>
@@ -333,12 +446,26 @@ export default function PartnerSupport() {
 
               <div>
                 <label style={S.label}>Subject *</label>
-                <input type="text" placeholder="Brief summary of the issue" style={S.input} />
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Brief summary of the issue" 
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  style={S.input} 
+                />
               </div>
 
               <div>
                 <label style={S.label}>Description *</label>
-                <textarea rows="3" placeholder="Provide details about your issue..." style={{ ...S.input, resize: 'none' }} />
+                <textarea 
+                  rows="3" 
+                  required
+                  placeholder="Provide details about your issue..." 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  style={{ ...S.input, resize: 'none' }} 
+                />
               </div>
             </div>
 
@@ -347,6 +474,7 @@ export default function PartnerSupport() {
               background: C.bgSecondary, display: 'flex', gap: '10px'
             }}>
               <button 
+                type="button"
                 onClick={() => setIsNewTicketModalOpen(false)}
                 style={{
                   ...S.btn('outline'), flex: 1, padding: '10px', fontSize: '14px', borderRadius: '10px'
@@ -355,7 +483,7 @@ export default function PartnerSupport() {
                 Cancel
               </button>
               <button 
-                onClick={() => setIsNewTicketModalOpen(false)}
+                type="submit"
                 style={{
                   ...S.btn('primary'), flex: 2, padding: '10px', fontSize: '14px', border: 'none', borderRadius: '10px'
                 }}
@@ -363,7 +491,7 @@ export default function PartnerSupport() {
                 Submit Ticket
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

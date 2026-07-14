@@ -109,11 +109,61 @@ const verifyPayment = async (req, res) => {
 
     logger.info(`Razorpay payment verified successfully: payment_id ${razorpay_payment_id}, order_id ${razorpay_order_id}`);
 
+    // Fetch order details from Razorpay to get the actual amount securely
+    const razorpay = getRazorpayInstance();
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+    const amount = parseFloat((order.amount / 100).toFixed(2)); // Convert paise to INR
+
+    // Resolve partner ID
+    const { query } = require('../../config/database');
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+
+    if (partnerId) {
+      const { rows: [wallet] } = await query(`
+        SELECT id FROM partner_wallets WHERE partner_id = $1
+      `, [partnerId]);
+
+      if (wallet) {
+        // Credit the available balance
+        await query(`
+          UPDATE partner_wallets SET
+            available_balance = available_balance + $1,
+            total_earned = total_earned + $1,
+            last_updated = NOW()
+          WHERE id = $2
+        `, [amount, wallet.id]);
+
+        // Insert into wallet_transactions
+        await query(`
+          INSERT INTO wallet_transactions (
+            wallet_id, partner_id, type, amount, status, description, reference_type, reference_id, processed_at
+          ) VALUES ($1, $2, 'TOPUP', $3, 'success', $4, 'razorpay_payout', $5, NOW())
+        `, [wallet.id, partnerId, amount, `Wallet top-up via Razorpay: ${razorpay_payment_id}`, razorpay_payment_id]);
+
+        // Insert into wallet_ledger
+        await query(`
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, transaction_type, credit, debit, balance_after_transaction, description, reference_number, created_at
+          )
+          SELECT 
+            $1, $2, 'ADJUSTMENT'::ledger_transaction_type, $3, 0, available_balance, $4, $5, NOW()
+          FROM partner_wallets WHERE id = $1
+        `, [wallet.id, partnerId, amount, `Wallet top-up via Razorpay: ${razorpay_payment_id}`, razorpay_payment_id]);
+
+        logger.info(`Credited partner ${partnerId} wallet with TOPUP of INR ${amount}`);
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'Payment verified successfully.',
+      message: 'Payment verified and wallet credited successfully.',
       payment_id: razorpay_payment_id,
-      order_id: razorpay_order_id
+      order_id: razorpay_order_id,
+      amount
     });
   } catch (error) {
     logger.error('Razorpay Payment Verification Error:', error);

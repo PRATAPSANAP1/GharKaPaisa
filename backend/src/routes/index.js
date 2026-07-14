@@ -13,6 +13,8 @@ const notificationRoute                     = require('../modules/notifications/
 const reportRoute                           = require('../modules/reports/route.js');
 const bankRoute                             = require('../modules/banks/route.js');
 const { cmsRouter, serviceRouter, serviceCatalogRouter } = require('../modules/cms/route.js');
+const supportRoute                          = require('../modules/support/support.routes.js');
+const marketingRoute                        = require('../modules/marketing/marketing.routes.js');
 const redirectCtrl = require('../modules/products/link-management.controller.js');
 const analyticsRoute = require('../modules/analytics/route.js');
 
@@ -45,6 +47,8 @@ router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/leads',            leadRouter);
 router.use('/card-applications',cardApplicationRouter);
+router.use('/support/tickets',   supportRoute);
+router.use('/marketing/materials', marketingRoute);
 
 // Dynamic Product Redirect & Analytics Routes
 router.get('/redirect/:productId', redirectCtrl.handleRedirect);
