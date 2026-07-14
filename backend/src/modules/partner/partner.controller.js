@@ -1709,11 +1709,6 @@ module.exports = {
   uploadSelfie,
   simulateOCR,
   simulateFaceMatch,
-  bulkPartnerAction,
-  updatePartnerStatus,
-  resetPartnerPassword,
-  impersonatePartner,
-  updatePartnerKYCStatus
 };
 
 // ── Bulk Partner Action ──────────────────────────────────────────────
