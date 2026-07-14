@@ -10,7 +10,11 @@ const logger = require('../../config/logger');
 const listProducts = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { category, bank_id, is_active, search, commission_enabled, featured, status } = req.query;
+    const { 
+      category, bank_id, is_active, search, commission_enabled, featured, status,
+      trending, min_salary, max_salary, min_age, max_age, min_cibil,
+      occupation, employment_type, city, joining_fee_type, sort_by
+    } = req.query;
 
     let where = 'WHERE 1=1';
     const values = [];
@@ -37,15 +41,43 @@ const listProducts = async (req, res, next) => {
       where += ` AND p.featured = $${idx++}`;
       values.push(featured === 'true' || featured === true);
     }
+    if (trending) {
+      where += ` AND p.trending = $${idx++}`;
+      values.push(trending === 'true' || trending === true);
+    }
     if (status) {
       where += ` AND p.status = $${idx++}`;
       values.push(status);
     }
     if (search) { 
-      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx})`; 
+      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx} OR p.rewards ILIKE $${idx} OR p.cashback ILIKE $${idx})`; 
       values.push(`%${search}%`); 
       idx++; 
     }
+
+    // Advanced eligibility filters
+    if (min_salary) {
+      where += ` AND (p.min_income IS NULL OR p.min_income <= $${idx++})`;
+      values.push(parseFloat(min_salary));
+    }
+    if (min_age) {
+      where += ` AND (p.min_age IS NULL OR p.min_age <= $${idx++})`;
+      values.push(parseInt(min_age));
+    }
+    if (max_age) {
+      where += ` AND (p.max_age IS NULL OR p.max_age >= $${idx++})`;
+      values.push(parseInt(max_age));
+    }
+    if (joining_fee_type === 'free') {
+      where += ` AND (p.joining_fee IS NULL OR LOWER(p.joining_fee) IN ('0', 'free', 'nil', 'waived'))`;
+    }
+
+    // Sort options
+    let orderBy = 'ORDER BY p.display_order ASC, p.commission_value DESC';
+    if (sort_by === 'commission_high') orderBy = 'ORDER BY p.commission_value DESC';
+    if (sort_by === 'commission_low') orderBy = 'ORDER BY p.commission_value ASC';
+    if (sort_by === 'newest') orderBy = 'ORDER BY p.created_at DESC';
+    if (sort_by === 'popular') orderBy = 'ORDER BY p.approval_rate DESC, p.commission_value DESC';
 
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id ${where}`, values),
@@ -53,7 +85,7 @@ const listProducts = async (req, res, next) => {
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id
         ${where}
-        ORDER BY p.display_order ASC, p.commission_value DESC
+        ${orderBy}
         LIMIT $${idx} OFFSET $${idx + 1}
       `, [...values, limit, offset]),
     ]);
@@ -93,14 +125,14 @@ const getProduct = async (req, res, next) => {
     let product;
     if (isUUID) {
       const { rows } = await query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
       `, [idOrSlug]);
       product = rows[0];
     } else {
       // Direct lookup by slug first
       const { rows } = await query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
         FROM products p JOIN banks b ON b.id = p.bank_id 
         WHERE LOWER(p.slug) = LOWER($1) AND p.is_active = true
         LIMIT 1
@@ -110,7 +142,7 @@ const getProduct = async (req, res, next) => {
       // Fallback to name-similarity matching
       if (!product) {
         const { rows: allActive } = await query(`
-          SELECT p.*, b.name as bank_name, b.short_code as bank_code
+          SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
           FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
         `);
         product = allActive.find(p => {
@@ -122,6 +154,40 @@ const getProduct = async (req, res, next) => {
     }
 
     if (!product) return notFound(res);
+
+    // Fetch sub-entities in parallel
+    const [faqsRes, videosRes, docsRes, offersRes, ratingsRes, featuresRes] = await Promise.all([
+      query(`SELECT id, question, answer, display_order FROM product_faq WHERE product_id = $1 AND is_active = true ORDER BY display_order`, [product.id]),
+      query(`SELECT id, title, youtube_url, video_url, thumbnail_url, duration, display_order FROM product_videos WHERE product_id = $1 AND is_active = true ORDER BY display_order`, [product.id]),
+      query(`SELECT id, title, document_type, file_url, file_size, display_order FROM product_documents WHERE product_id = $1 AND is_active = true ORDER BY display_order`, [product.id]),
+      query(`SELECT id, title, description, offer_type, discount_value, badge_text, banner_url, start_date, end_date FROM product_offers WHERE product_id = $1 AND is_active = true AND NOW() BETWEEN start_date AND end_date ORDER BY start_date DESC`, [product.id]),
+      query(`SELECT COALESCE(AVG(rating), 0) as avg_rating, COUNT(*) as total_reviews FROM product_ratings WHERE product_id = $1`, [product.id]),
+      query(`SELECT id, title, description, icon, display_order FROM product_features WHERE product_id = $1 ORDER BY display_order`, [product.id])
+    ]);
+
+    product.faqs = faqsRes.rows;
+    product.videos = videosRes.rows;
+    product.documents = docsRes.rows;
+    product.active_offers = offersRes.rows;
+    product.avg_rating = parseFloat(ratingsRes.rows[0].avg_rating).toFixed(1);
+    product.total_reviews = parseInt(ratingsRes.rows[0].total_reviews);
+    product.structured_features = featuresRes.rows;
+
+    // Check if partner has bookmarked this product
+    if (req.partner?.id) {
+      const { rows: [bm] } = await query(
+        `SELECT id FROM partner_saved_products WHERE partner_id = $1 AND product_id = $2`,
+        [req.partner.id, product.id]
+      );
+      product.is_bookmarked = !!bm;
+    }
+
+    // Auto-track product view (fire and forget)
+    const viewIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip;
+    const viewUa = req.headers['user-agent'];
+    const { trackProductView } = require('./engagement.controller.js');
+    trackProductView(product.id, req.partner?.id || null, viewIp, viewUa).catch(() => {});
+
     return success(res, product);
   } catch (err) {
     next(err);

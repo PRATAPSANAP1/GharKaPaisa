@@ -2339,6 +2339,197 @@ const migrate = async () => {
     throw task13Err;
   }
 
+  // ── Product Lifecycle Management (Task 14) ──
+  try {
+    logger.info('Running Product Lifecycle Management Schema Migration (Task 14)...');
+
+    // 1. Alter products table with new columns
+    await query(`
+      ALTER TABLE products 
+        ADD COLUMN IF NOT EXISTS joining_fee VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS interest_rate VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS rewards TEXT,
+        ADD COLUMN IF NOT EXISTS cashback TEXT,
+        ADD COLUMN IF NOT EXISTS lounge_access TEXT,
+        ADD COLUMN IF NOT EXISTS fuel_surcharge TEXT,
+        ADD COLUMN IF NOT EXISTS travel_benefits TEXT,
+        ADD COLUMN IF NOT EXISTS company_margin DECIMAL(12,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS hold_days INT DEFAULT 7,
+        ADD COLUMN IF NOT EXISTS approval_rate INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS trending BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS internal_notes TEXT;
+    `);
+
+    // 2. Product Features (structured, separate from JSONB)
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_features (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        icon VARCHAR(100),
+        display_order INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_features_product ON product_features(product_id);
+    `);
+
+    // 3. Product Documents / Brochures
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        document_type VARCHAR(50) DEFAULT 'brochure',
+        file_url VARCHAR(500) NOT NULL,
+        file_size INT,
+        display_order INT DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_docs_product ON product_documents(product_id);
+    `);
+
+    // 4. Product FAQs
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_faq (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        question TEXT NOT NULL,
+        answer TEXT NOT NULL,
+        display_order INT DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_faq_product ON product_faq(product_id);
+    `);
+
+    // 5. Product Videos
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_videos (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        youtube_url VARCHAR(500),
+        video_url VARCHAR(500),
+        thumbnail_url VARCHAR(500),
+        duration VARCHAR(20),
+        display_order INT DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_videos_product ON product_videos(product_id);
+    `);
+
+    // 6. Product Offers
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_offers (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        offer_type VARCHAR(50) DEFAULT 'discount',
+        discount_value DECIMAL(12,2) DEFAULT 0,
+        start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        end_date TIMESTAMPTZ NOT NULL,
+        badge_text VARCHAR(100),
+        banner_url VARCHAR(500),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_offers_product ON product_offers(product_id);
+      CREATE INDEX IF NOT EXISTS idx_prod_offers_active ON product_offers(is_active, start_date, end_date);
+    `);
+
+    // 7. Product Ratings
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_ratings (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        feedback TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_product_rating UNIQUE(product_id, partner_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_ratings_product ON product_ratings(product_id);
+    `);
+
+    // 8. Product Share Logs
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_share_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        share_method VARCHAR(50) NOT NULL,
+        customer_contact VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_share_partner ON product_share_logs(partner_id);
+    `);
+
+    // 9. Partner Saved/Bookmarked Products
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_saved_products (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_partner_bookmark UNIQUE(partner_id, product_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_saved_partner ON partner_saved_products(partner_id);
+    `);
+
+    // 10. Partner Recently Viewed Products
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_recent_products (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        last_viewed_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_partner_recent UNIQUE(partner_id, product_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_recent_partner ON partner_recent_products(partner_id);
+    `);
+
+    // 11. Product Views (analytics)
+    await query(`
+      CREATE TABLE IF NOT EXISTS product_views (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        viewer_ip VARCHAR(45),
+        user_agent TEXT,
+        viewed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prod_views_product ON product_views(product_id);
+      CREATE INDEX IF NOT EXISTS idx_prod_views_date ON product_views(viewed_at);
+    `);
+
+    // 12. Partner Preferences (for recommendation engine)
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_preferences (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        preferred_categories JSONB DEFAULT '[]',
+        preferred_banks JSONB DEFAULT '[]',
+        preferred_commission_type VARCHAR(20),
+        min_commission DECIMAL(12,2) DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    logger.info('Product Lifecycle Management Schema Migration (Task 14) completed successfully.');
+  } catch (task14Err) {
+    logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
+    throw task14Err;
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

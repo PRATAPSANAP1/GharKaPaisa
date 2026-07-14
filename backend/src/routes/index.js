@@ -24,6 +24,8 @@ const locationRoute                         = require('../modules/location/locat
 const walletCtrl = require('../modules/wallet/controller.js');
 const partnerCtrl = require('../modules/partner/partner.controller.js');
 
+const customerRoute = require('../modules/customer/customer.routes.js');
+
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 router.use('/payment', paymentRoute);
@@ -48,6 +50,7 @@ router.use('/cms/sections',     cmsRouter);
 router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/leads',            leadRouter);
+router.use('/customers',        customerRoute);
 router.use('/card-applications',cardApplicationRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);

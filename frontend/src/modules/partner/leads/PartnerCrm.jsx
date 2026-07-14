@@ -8,8 +8,14 @@ import {
   MdLocationOn, MdHistory, MdOutlineWhatsapp,
   MdAddBox, MdCreditCard, MdEdit, MdDelete,
   MdFileUpload, MdNoteAdd, MdAlarm, MdTag,
-  MdFileDownload, MdWarning, MdClose, MdCheckCircle
+  MdFileDownload, MdWarning, MdClose, MdCheckCircle,
+  MdViewModule, MdViewList, MdMergeType, MdTrendingUp,
+  MdPeople, MdVerifiedUser, MdAccountBalanceWallet, MdFilterList
 } from 'react-icons/md';
+
+import CustomerCard from './components/CustomerCard';
+import Customer360ProfileModal from './components/Customer360ProfileModal';
+import CustomerMergeModal from './components/CustomerMergeModal';
 
 const CUSTOMER_TAGS = ['All', 'VIP', 'High Salary', 'Self-Employed', 'Hot Lead', 'Follow Up', 'Re-Engaged'];
 
@@ -23,20 +29,30 @@ export default function PartnerCrm() {
   const isLoading = usePartnerStore((state) => state.isLoading);
   const createCustomer = usePartnerStore((state) => state.createCustomer);
 
-  // Filters & State
+  // Dashboard Metrics state
+  const [metrics, setMetrics] = useState({
+    total_customers: 0,
+    new_customers: 0,
+    interested_customers: 0,
+    total_applications: 0,
+    approved_applications: 0,
+    rejected_applications: 0,
+    conversion_rate: 0,
+    revenue_generated: 0
+  });
+
+  // Filters & View Mode
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [width, setWidth] = useState(window.innerWidth);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
 
-  // Modals & Forms
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDocUploadModal, setShowDocUploadModal] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
-  const [showRecommendModal, setShowRecommendModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [active360CustomerId, setActive360CustomerId] = useState(null);
 
-  // Add/Edit Customer Form State
+  // Add Customer Form
   const [custForm, setCustForm] = useState({
     fullName: '',
     mobile: '',
@@ -53,31 +69,20 @@ export default function PartnerCrm() {
   const [formLoading, setFormLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
-  // Customer Notes & Timeline
-  const [customerNotes, setCustomerNotes] = useState([]);
-  const [newNote, setNewNote] = useState('');
-  const [loadingNotes, setLoadingNotes] = useState(false);
-
-  // Reminder State
-  const [reminderDate, setReminderDate] = useState('');
-  const [reminderNote, setReminderNote] = useState('');
-
-  // Recommend Product Modal states
-  const [productList, setProductList] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [recLoading, setRecLoading] = useState(false);
-  const [recError, setRecError] = useState('');
-
-  // Document Upload State
-  const [docFile, setDocFile] = useState(null);
-  const [docType, setDocType] = useState('aadhaar');
-  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const loadDashboardMetrics = async () => {
+    try {
+      const res = await api.get('/customers/dashboard/metrics');
+      if (res.data?.success) {
+        setMetrics(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load CRM metrics:', err);
+    }
+  };
 
   useEffect(() => {
     fetchCustomers();
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    loadDashboardMetrics();
   }, [fetchCustomers]);
 
   // Duplicate Check on Mobile / PAN Input
@@ -85,13 +90,12 @@ export default function PartnerCrm() {
     setCustForm(prev => {
       const updated = { ...prev, [field]: val };
       
-      // Real-time duplicate check
       if (field === 'mobile' || field === 'panNumber') {
         const found = (customers || []).find(c => 
           (val && c.mobile === val.trim()) || 
           (val && c.pan_number && c.pan_number.toUpperCase() === val.trim().toUpperCase())
         );
-        if (found && (!selectedCustomer || found.id !== selectedCustomer.id)) {
+        if (found) {
           setDuplicateWarning(`⚠️ Duplicate Warning: A customer with this ${field.toUpperCase()} already exists (${found.full_name}).`);
         } else {
           setDuplicateWarning('');
@@ -101,528 +105,367 @@ export default function PartnerCrm() {
     });
   };
 
-  const loadCustomerNotes = async (cust) => {
-    if (!cust) return;
-    setLoadingNotes(true);
-    try {
-      const res = await api.get(`/customers/${cust.id}/notes`);
-      if (res.data?.success) {
-        setCustomerNotes(res.data.data || []);
-      } else {
-        setCustomerNotes([]);
-      }
-    } catch (_) {
-      setCustomerNotes([
-        { id: '1', note: 'Customer called inquiring about HDFC LTF Credit Card', created_at: new Date(Date.now() - 86400000).toISOString() },
-        { id: '2', note: 'Document link shared via WhatsApp', created_at: new Date().toISOString() }
-      ]);
-    } finally {
-      setLoadingNotes(false);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedCustomer) {
-      loadCustomerNotes(selectedCustomer);
-    }
-  }, [selectedCustomer]);
-
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!custForm.fullName.trim()) return setFormError('Full Name is required.');
-    if (!custForm.mobile.trim() || custForm.mobile.trim().length < 10) return setFormError('Valid 10-digit mobile required.');
-
     setFormError('');
+
+    if (!custForm.fullName.trim()) return setFormError('Customer Full Name is required');
+    if (!custForm.mobile.trim() || custForm.mobile.trim().length < 10) return setFormError('Valid 10-digit Mobile Number is required');
+
     setFormLoading(true);
     try {
-      await createCustomer({
-        fullName: custForm.fullName.trim(),
-        mobile: custForm.mobile.trim(),
-        email: custForm.email.trim() || null,
-        panNumber: custForm.panNumber.trim() || null,
-        city: custForm.city.trim() || null,
-        state: custForm.state.trim() || null,
-        pincode: custForm.pincode.trim() || null,
-        tag: custForm.tag
-      });
+      const payload = {
+        full_name: custForm.fullName,
+        mobile: custForm.mobile,
+        email: custForm.email || undefined,
+        pan_number: custForm.panNumber || undefined,
+        city: custForm.city || undefined,
+        state: custForm.state || undefined,
+        pincode: custForm.pincode || undefined,
+        employment_type: custForm.employmentType.toLowerCase(),
+        monthly_income: custForm.monthlyIncome ? parseFloat(custForm.monthlyIncome) : undefined,
+        tags: custForm.tag ? [custForm.tag] : []
+      };
 
-      const freshCustomers = usePartnerStore.getState().customers;
-      if (freshCustomers && freshCustomers.length > 0) {
-        const justAdded = freshCustomers.find(c => c.mobile === custForm.mobile.trim());
-        if (justAdded) setSelectedCustomer(justAdded);
+      const res = await api.post('/customers', payload);
+      if (res.data?.success) {
+        alert('Customer Profile Created Successfully!');
+        setShowAddModal(false);
+        setCustForm({
+          fullName: '', mobile: '', email: '', panNumber: '',
+          city: '', state: '', pincode: '', employmentType: 'Salaried',
+          monthlyIncome: '', tag: 'Hot Lead'
+        });
+        fetchCustomers();
+        loadDashboardMetrics();
       }
-
-      setShowAddModal(false);
-      resetForm();
     } catch (err) {
-      setFormError(err.message || 'Failed to add customer.');
+      if (err.response?.data?.is_duplicate) {
+        setDuplicateWarning(`⚠️ ${err.response.data.message}`);
+      } else {
+        setFormError(err.response?.data?.message || 'Failed to create customer');
+      }
     } finally {
       setFormLoading(false);
     }
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedCustomer) return;
-    setFormLoading(true);
-    try {
-      await api.put(`/customers/${selectedCustomer.id}`, custForm);
-      await fetchCustomers();
-      const refreshed = usePartnerStore.getState().customers.find(c => c.id === selectedCustomer.id);
-      if (refreshed) setSelectedCustomer(refreshed);
-      setShowEditModal(false);
-      alert('Customer details updated successfully!');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update customer.');
-    } finally {
-      setFormLoading(false);
+  // Filter Logic
+  const filteredCustomers = (customers || []).filter(c => {
+    const matchesSearch = !searchTerm || (
+      c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.mobile?.includes(searchTerm) ||
+      c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.pan_number?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const matchesStatus = !statusFilter || c.pipeline_status === statusFilter;
+    
+    let matchesTag = true;
+    if (selectedTag !== 'All') {
+      if (Array.isArray(c.tags)) {
+        matchesTag = c.tags.some(t => (t.name || t) === selectedTag);
+      } else {
+        matchesTag = c.tag === selectedTag;
+      }
     }
-  };
 
-  const handleDeleteCustomer = async (cust) => {
-    if (!window.confirm(`Are you sure you want to delete ${cust.full_name}? This action cannot be undone.`)) return;
-    try {
-      await api.delete(`/customers/${cust.id}`);
-      await fetchCustomers();
-      setSelectedCustomer(null);
-      alert('Customer deleted successfully.');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete customer.');
-    }
-  };
-
-  const handleAddNoteSubmit = async (e) => {
-    e.preventDefault();
-    if (!newNote.trim() || !selectedCustomer) return;
-    try {
-      await api.post(`/customers/${selectedCustomer.id}/notes`, { note: newNote });
-      setCustomerNotes(prev => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
-      setNewNote('');
-    } catch (_) {
-      setCustomerNotes(prev => [{ id: Date.now().toString(), note: newNote, created_at: new Date().toISOString() }, ...prev]);
-      setNewNote('');
-    }
-  };
-
-  const handleSetReminder = async (e) => {
-    e.preventDefault();
-    if (!reminderDate || !selectedCustomer) return;
-    try {
-      await api.post(`/customers/${selectedCustomer.id}/reminders`, {
-        reminder_at: reminderDate,
-        note: reminderNote
-      });
-      alert(`Follow-up reminder set for ${new Date(reminderDate).toLocaleString('en-IN')}`);
-      setShowReminderModal(false);
-      setReminderNote('');
-    } catch (_) {
-      alert(`Follow-up reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
-      setShowReminderModal(false);
-      setReminderNote('');
-    }
-  };
-
-  const handleCustomerDocUpload = async (e) => {
-    e.preventDefault();
-    if (!docFile || !selectedCustomer) return alert('Please select a file to upload.');
-    setUploadingDoc(true);
-    try {
-      const formData = new FormData();
-      formData.append('document', docFile);
-      formData.append('doc_type', docType);
-      await api.post(`/customers/${selectedCustomer.id}/documents`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      alert('Customer document uploaded successfully!');
-      setShowDocUploadModal(false);
-      setDocFile(null);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Document uploaded successfully to customer vault.');
-      setShowDocUploadModal(false);
-      setDocFile(null);
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (!customers || !customers.length) return alert('No customers to export');
-    const headers = ['Full Name', 'Mobile', 'Email', 'PAN', 'City', 'State', 'Pincode', 'Total Applications'];
-    const rows = customers.map(c => [
-      c.full_name, c.mobile, c.email || 'N/A', c.pan_number || 'N/A',
-      c.city || 'N/A', c.state || 'N/A', c.pincode || 'N/A', c.application_count || 0
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
-    const link = document.createElement('a');
-    link.href = encodeURI(csvContent);
-    link.download = `customer_export_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const resetForm = () => {
-    setCustForm({
-      fullName: '', mobile: '', email: '', panNumber: '',
-      city: '', state: '', pincode: '', employmentType: 'Salaried',
-      monthlyIncome: '', tag: 'Hot Lead'
-    });
-    setDuplicateWarning('');
-    setFormError('');
-  };
-
-  const openEditModal = (cust) => {
-    setSelectedCustomer(cust);
-    setCustForm({
-      fullName: cust.full_name || '',
-      mobile: cust.mobile || '',
-      email: cust.email || '',
-      panNumber: cust.pan_number || '',
-      city: cust.city || '',
-      state: cust.state || '',
-      pincode: cust.pincode || '',
-      employmentType: cust.employment_type || 'Salaried',
-      monthlyIncome: cust.monthly_income || '',
-      tag: cust.tag || 'Hot Lead'
-    });
-    setShowEditModal(true);
-  };
-
-  const isMobile = width < 992;
-
-  const filteredCustomers = (customers || []).filter((c) => {
-    const matchesSearch = c.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || c.mobile?.includes(searchTerm);
-    const matchesTag = selectedTag === 'All' || c.tag === selectedTag || (selectedTag === 'VIP' && c.application_count > 2);
-    return matchesSearch && matchesTag;
+    return matchesSearch && matchesStatus && matchesTag;
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", paddingBottom: '40px' }}>
       
-      {/* Upper Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      {/* Page Title & Actions Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Customer Relationship Hub</h1>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Manage customer profiles, store document vaults, schedule follow-ups & track product history.</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <MdPeople style={{ color: C.indigo }} /> 360° Customer Relationship Management
+          </h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
+            Customer-first financial lead pipelines, full 360° profile tabs, automated activity timeline, and instant multi-channel communications.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
-            onClick={handleExportCSV}
-            style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => setShowMergeModal(true)}
+            style={{ ...S.btn('outline'), display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
           >
-            <MdFileDownload size={18} style={{ color: C.green }} /> Export CSV
+            <MdMergeType style={{ fontSize: '18px', color: C.teal }} />
+            <span>Merge Duplicates</span>
           </button>
+
           <button
-            onClick={() => { resetForm(); setShowAddModal(true); }}
-            style={{ ...S.btn('primary'), padding: '10px 20px', borderRadius: '12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            onClick={() => setShowAddModal(true)}
+            style={{ ...S.btn('primary'), display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)', padding: '10px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)' }}
           >
-            <MdAddBox size={18} /> Add Customer
+            <MdAddBox style={{ fontSize: '20px' }} />
+            <span>Add New Customer</span>
           </button>
         </div>
       </div>
 
-      {/* Customer Tag Pills Filter */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+      {/* ── CUSTOMER DASHBOARD KPI SUMMARY MATRIX ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Total Customers</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{(metrics.total_customers || customers.length || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '11px', color: C.indigo, marginTop: '2px' }}>Registered in CRM</div>
+        </div>
+
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>New Leads</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.blue, marginTop: '4px' }}>{metrics.new_customers || 0}</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Added recently</div>
+        </div>
+
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Interested</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.purple, marginTop: '4px' }}>{metrics.interested_customers || 0}</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Product shortlisted</div>
+        </div>
+
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Applications</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.teal, marginTop: '4px' }}>{metrics.total_applications || 0}</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>In bank verification</div>
+        </div>
+
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Approved</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{metrics.approved_applications || 0}</div>
+          <div style={{ fontSize: '11px', color: C.green, marginTop: '2px' }}>Success rate: {metrics.conversion_rate || 0}%</div>
+        </div>
+
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Revenue Generated</div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>₹{(metrics.revenue_generated || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Total payouts</div>
+        </div>
+      </div>
+
+      {/* Search, Tag Filter, & View Mode Switcher */}
+      <div style={{ ...S.card, padding: '16px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', flex: 1, minWidth: '280px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '18px' }} />
+            <input
+              style={{ ...S.input, paddingLeft: '38px' }}
+              placeholder="Search by name, phone, email, PAN, city..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <select style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All Pipeline Statuses</option>
+            <option value="new">New Lead</option>
+            <option value="interested">Interested</option>
+            <option value="documents_pending">Docs Pending</option>
+            <option value="lead_created">Lead Created</option>
+            <option value="application_submitted">Application Submitted</option>
+            <option value="bank_verification">Bank Verification</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '4px', borderRadius: '10px' }}>
+          <button
+            onClick={() => setViewMode('cards')}
+            style={{
+              padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700,
+              background: viewMode === 'cards' ? C.card : 'transparent',
+              color: viewMode === 'cards' ? C.text : C.textLight
+            }}
+          >
+            <MdViewModule style={{ fontSize: '16px' }} /> CRM Cards
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            style={{
+              padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700,
+              background: viewMode === 'table' ? C.card : 'transparent',
+              color: viewMode === 'table' ? C.text : C.textLight
+            }}
+          >
+            <MdViewList style={{ fontSize: '16px' }} /> Data List
+          </button>
+        </div>
+      </div>
+
+      {/* Tag Chips List */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
         {CUSTOMER_TAGS.map(tag => (
           <button
             key={tag}
             onClick={() => setSelectedTag(tag)}
             style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: selectedTag === tag ? C.teal : C.bgSecondary,
-              color: selectedTag === tag ? '#fff' : C.textLight,
-              transition: 'all 0.15s ease'
+              padding: '6px 14px', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              background: selectedTag === tag ? C.indigo : C.bgSecondary,
+              color: selectedTag === tag ? '#FFF' : C.textLight
             }}
           >
-            {tag}
+            {tag === 'All' ? 'All Customers' : `#${tag}`}
           </button>
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '24px', height: isMobile ? 'auto' : 'calc(100vh - 200px)' }}>
-        
-        {/* Customer List Sidebar */}
-        <div style={{ width: isMobile ? '100%' : '340px', background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', height: isMobile ? '400px' : '100%', overflow: 'hidden', flexShrink: 0 }}>
-          <div style={{ padding: '16px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ position: 'relative' }}>
-              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
-              <input
-                type="text"
-                placeholder={t("Search by name or mobile...")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ ...S.input, paddingLeft: '36px', paddingTop: '8px', paddingBottom: '8px', fontSize: '13px' }}
-              />
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {isLoading ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading customer registry...</div>
-            ) : filteredCustomers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
-                <MdPerson size={36} style={{ color: C.border, marginBottom: '8px' }} />
-                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0 }}>No matching customers.</p>
-              </div>
-            ) : (
-              filteredCustomers.map((cust) => {
-                const isSelected = selectedCustomer?.id === cust.id;
-                return (
-                  <div
-                    key={cust.id}
-                    onClick={() => setSelectedCustomer(cust)}
-                    style={{
-                      padding: '12px 14px', borderRadius: '12px', cursor: 'pointer',
-                      border: `1px solid ${isSelected ? C.teal : C.border}`,
-                      background: isSelected ? `linear-gradient(135deg, ${C.teal}, ${C.teal}DD)` : C.card,
-                      color: isSelected ? '#fff' : C.text,
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{cust.full_name}</h4>
-                      {cust.tag && (
-                        <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: isSelected ? 'rgba(255,255,255,0.25)' : `${C.primary}15`, color: isSelected ? '#fff' : C.primary }}>
-                          {cust.tag}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '12px', opacity: isSelected ? 0.9 : 0.7 }}>
-                      <span><MdPhone size={12} /> {cust.mobile}</span>
-                      <span>{cust.application_count || 0} Apps</span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+      {/* ── MAIN CONTENT: CRM CARDS GRID VS TABLE VIEW ── */}
+      {isLoading ? (
+        <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>Loading customer records...</div>
+      ) : filteredCustomers.length === 0 ? (
+        <div style={{ ...S.card, padding: '60px', textAlign: 'center', color: C.textLight }}>
+          No customer records match your filter criteria. Click <strong>Add New Customer</strong> to create a lead profile.
         </div>
-
-        {/* Selected Customer Detailed Workspace */}
-        <div style={{ flex: 1, minWidth: 0, background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, overflowY: 'auto', height: isMobile ? 'auto' : '100%', padding: '28px', position: 'relative' }}>
-          {selectedCustomer ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
-              {/* Header Action Controls */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: 52, height: 52, background: `${C.teal}15`, color: C.teal, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MdPerson size={28} />
-                  </div>
-                  <div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedCustomer.full_name}</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '12px', color: C.textLight }}>{selectedCustomer.city ? `${selectedCustomer.city}, ${selectedCustomer.state || ''}` : 'No location specified'}</span>
-                      {selectedCustomer.tag && <span style={{ fontSize: '10px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px' }}>{selectedCustomer.tag}</span>}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button onClick={() => openEditModal(selectedCustomer)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MdEdit size={14} /> Edit
-                  </button>
-                  <button onClick={() => setShowDocUploadModal(true)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MdFileUpload size={14} /> Vault Docs
-                  </button>
-                  <button onClick={() => setShowReminderModal(true)} style={{ ...S.btn('outline'), fontSize: '12px', padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MdAlarm size={14} /> Reminder
-                  </button>
-                  <button onClick={() => window.open(`https://wa.me/91${selectedCustomer.mobile}`, '_blank')} style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MdOutlineWhatsapp size={14} /> WhatsApp
-                  </button>
-                  <button onClick={() => handleDeleteCustomer(selectedCustomer)} style={{ background: 'transparent', border: `1px solid ${C.red}`, color: C.red, borderRadius: '8px', fontSize: '12px', fontWeight: 700, padding: '6px 12px', cursor: 'pointer' }}>
-                    <MdDelete size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid: Information & Applications */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-                <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Personal Profile</h3>
-                  <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                    <div>Mobile: <strong>{selectedCustomer.mobile}</strong></div>
-                    <div>Email: <strong>{selectedCustomer.email || '—'}</strong></div>
-                    <div>PAN Number: <strong style={{ fontFamily: 'monospace' }}>{selectedCustomer.pan_number || '—'}</strong></div>
-                    <div>Pincode: <strong>{selectedCustomer.pincode || '—'}</strong></div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: '13px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Applications History</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {(selectedCustomer.applications || []).length === 0 ? (
-                      <div style={{ fontSize: '12px', color: C.textLight, padding: '12px', background: C.bgSecondary, borderRadius: '8px' }}>No active applications logged for this customer yet.</div>
-                    ) : (
-                      selectedCustomer.applications.map(app => (
-                        <div key={app.id || app.app_number} style={{ padding: '10px 14px', background: C.bgSecondary, borderRadius: '8px', fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <strong>{app.product_name}</strong>
-                            <div style={{ color: C.textLight, fontSize: '11px' }}>App: #{app.app_number}</div>
-                          </div>
-                          <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: `${C.teal}15`, color: C.teal }}>
-                            {app.status}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes & Activity Log Section */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '12px' }}>Customer Notes & Activity Timeline</h3>
-                
-                <form onSubmit={handleAddNoteSubmit} style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                  <input
-                    type="text"
-                    placeholder="Add a new note or call summary..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    style={{ ...S.input, flex: 1, padding: '8px 12px', fontSize: '13px' }}
-                  />
-                  <button type="submit" style={{ ...S.btn('primary'), padding: '8px 16px', borderRadius: '8px', fontSize: '12px' }}>
-                    Save Note
-                  </button>
-                </form>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {customerNotes.map(n => (
-                    <div key={n.id} style={{ padding: '12px 14px', background: C.bgSecondary, borderRadius: '8px', fontSize: '12.5px', color: C.text }}>
-                      <div>{n.note}</div>
-                      <div style={{ fontSize: '10px', color: C.textLight, marginTop: '4px' }}>{new Date(n.created_at).toLocaleString('en-IN')}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', height: '100%', textAlign: 'center' }}>
-              <MdPerson size={48} style={{ color: C.border, marginBottom: '12px' }} />
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Select a Customer</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, marginTop: '4px' }}>Choose a customer from the left sidebar to inspect details, log notes & view vaults.</p>
-            </div>
-          )}
+      ) : viewMode === 'cards' ? (
+        /* CRM Cards Grid */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+          {filteredCustomers.map(cust => (
+            <CustomerCard
+              key={cust.id}
+              customer={cust}
+              onOpenProfile={(c) => setActive360CustomerId(c.id)}
+              C={C}
+              S={S}
+            />
+          ))}
         </div>
-      </div>
+      ) : (
+        /* Table View */
+        <div style={{ ...S.card, padding: 0, overflow: 'hidden', borderRadius: '16px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textLight, fontSize: '11px' }}>
+                <th style={{ padding: '12px 16px' }}>Customer Name</th>
+                <th style={{ padding: '12px 16px' }}>Mobile & Email</th>
+                <th style={{ padding: '12px 16px' }}>Location</th>
+                <th style={{ padding: '12px 16px' }}>Pipeline Status</th>
+                <th style={{ padding: '12px 16px' }}>Assigned Partner</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody style={{ color: C.text }}>
+              {filteredCustomers.map(cust => (
+                <tr key={cust.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '12px 16px', fontWeight: 700 }}>{cust.full_name}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div>{cust.mobile}</div>
+                    <div style={{ fontSize: '11px', color: C.textLight }}>{cust.email || '—'}</div>
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>{cust.city || 'N/A'}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.teal }}>
+                      {(cust.pipeline_status || 'new').replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : 'Direct'}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <button
+                      onClick={() => setActive360CustomerId(cust.id)}
+                      style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
+                    >
+                      Open 360° Profile
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* ═══ MODAL 1: ADD / EDIT CUSTOMER MODAL ═══ */}
-      {(showAddModal || showEditModal) && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '500px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>{showAddModal ? 'Create Customer Record' : 'Edit Customer Record'}</h3>
-              <button onClick={() => { setShowAddModal(false); setShowEditModal(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+      {/* 360° CUSTOMER PROFILE MODAL */}
+      {active360CustomerId && (
+        <Customer360ProfileModal
+          customerId={active360CustomerId}
+          onClose={() => setActive360CustomerId(null)}
+          onRefresh={() => { fetchCustomers(); loadDashboardMetrics(); }}
+        />
+      )}
+
+      {/* MERGE DUPLICATES MODAL */}
+      {showMergeModal && (
+        <CustomerMergeModal
+          customers={customers}
+          onClose={() => setShowMergeModal(false)}
+          onMerged={() => { fetchCustomers(); loadDashboardMetrics(); }}
+        />
+      )}
+
+      {/* ADD NEW CUSTOMER MODAL */}
+      {showAddModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '540px', background: C.card, borderRadius: '20px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Add New Customer Profile</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '20px' }}>✕</button>
             </div>
 
             {duplicateWarning && (
-              <div style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}30`, padding: '10px 12px', borderRadius: '8px', color: C.gold, fontSize: '12px', marginBottom: '12px' }}>
+              <div style={{ padding: '12px', background: 'rgba(245,158,11,0.1)', border: '1px solid #F59E0B', borderRadius: '10px', color: '#D97706', fontSize: '12.5px', marginBottom: '14px' }}>
                 {duplicateWarning}
               </div>
             )}
 
-            {formError && <div style={{ color: C.red, fontSize: '12px', marginBottom: '12px' }}>{formError}</div>}
+            {formError && (
+              <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid #EF4444', borderRadius: '10px', color: '#DC2626', fontSize: '12.5px', marginBottom: '14px' }}>
+                {formError}
+              </div>
+            )}
 
-            <form onSubmit={showAddModal ? handleAddSubmit : handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={S.label}>Full Name *</label>
-                <input type="text" style={S.input} value={custForm.fullName} onChange={e => handleFormInputChange('fullName', e.target.value)} required />
+                <input style={S.input} placeholder="e.g. Rahul Sharma" value={custForm.fullName} onChange={(e) => handleFormInputChange('fullName', e.target.value)} />
               </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={S.label}>Mobile Number *</label>
-                  <input type="tel" maxLength={10} style={S.input} value={custForm.mobile} onChange={e => handleFormInputChange('mobile', e.target.value)} required />
+                  <input style={S.input} placeholder="98XXXXXXXX" value={custForm.mobile} onChange={(e) => handleFormInputChange('mobile', e.target.value)} />
                 </div>
                 <div>
                   <label style={S.label}>Email Address</label>
-                  <input type="email" style={S.input} value={custForm.email} onChange={e => handleFormInputChange('email', e.target.value)} />
+                  <input style={S.input} placeholder="rahul@gmail.com" value={custForm.email} onChange={(e) => handleFormInputChange('email', e.target.value)} />
                 </div>
               </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>PAN Card Number</label>
-                  <input type="text" maxLength={10} style={{ ...S.input, fontFamily: 'monospace' }} value={custForm.panNumber} onChange={e => handleFormInputChange('panNumber', e.target.value.toUpperCase())} />
+                  <label style={S.label}>PAN Number</label>
+                  <input style={S.input} placeholder="ABCDE1234F" value={custForm.panNumber} onChange={(e) => handleFormInputChange('panNumber', e.target.value)} />
                 </div>
-                <div>
-                  <label style={S.label}>Customer Tag</label>
-                  <select style={S.input} value={custForm.tag} onChange={e => setCustForm({ ...custForm, tag: e.target.value })}>
-                    {CUSTOMER_TAGS.filter(t => t !== 'All').map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={S.label}>City</label>
-                  <input type="text" style={S.input} value={custForm.city} onChange={e => setCustForm({ ...custForm, city: e.target.value })} />
+                  <input style={S.input} placeholder="Pune" value={custForm.city} onChange={(e) => handleFormInputChange('city', e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Employment Type</label>
+                  <select style={S.input} value={custForm.employmentType} onChange={(e) => handleFormInputChange('employmentType', e.target.value)}>
+                    <option value="Salaried">Salaried</option>
+                    <option value="Self-Employed">Self-Employed</option>
+                    <option value="Business">Business</option>
+                  </select>
                 </div>
                 <div>
-                  <label style={S.label}>State</label>
-                  <input type="text" style={S.input} value={custForm.state} onChange={e => setCustForm({ ...custForm, state: e.target.value })} />
-                </div>
-                <div>
-                  <label style={S.label}>Pincode</label>
-                  <input type="text" maxLength={6} style={S.input} value={custForm.pincode} onChange={e => setCustForm({ ...custForm, pincode: e.target.value })} />
+                  <label style={S.label}>Monthly Income (₹)</label>
+                  <input style={S.input} placeholder="70000" value={custForm.monthlyIncome} onChange={(e) => handleFormInputChange('monthlyIncome', e.target.value)} />
                 </div>
               </div>
-              <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px', opacity: formLoading ? 0.6 : 1 }}>
-                {formLoading ? 'Saving...' : showAddModal ? 'Save Customer' : 'Update Customer'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* ═══ MODAL 2: CUSTOMER DOCUMENT UPLOADER ═══ */}
-      {showDocUploadModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Upload Customer Document</h3>
-              <button onClick={() => setShowDocUploadModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
-            </div>
-            <form onSubmit={handleCustomerDocUpload} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={S.label}>Document Type</label>
-                <select style={S.input} value={docType} onChange={e => setDocType(e.target.value)}>
-                  <option value="aadhaar">Aadhaar Card</option>
-                  <option value="pan">PAN Card</option>
-                  <option value="bank_statement">Bank Statement</option>
-                  <option value="salary_slip">Salary Slip</option>
-                </select>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>Cancel</button>
+                <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), padding: '10px 20px', background: C.indigo }}>
+                  {formLoading ? 'Creating Profile...' : 'Save Customer Profile'}
+                </button>
               </div>
-              <div>
-                <label style={S.label}>Choose File (PDF/Image)</label>
-                <input type="file" onChange={e => setDocFile(e.target.files[0])} style={S.input} required />
-              </div>
-              <button type="submit" disabled={uploadingDoc} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
-                {uploadingDoc ? 'Uploading...' : 'Save to Vault'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ MODAL 3: SET REMINDER ═══ */}
-      {showReminderModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Schedule Follow-up Reminder</h3>
-              <button onClick={() => setShowReminderModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
-            </div>
-            <form onSubmit={handleSetReminder} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={S.label}>Reminder Date & Time</label>
-                <input type="datetime-local" style={S.input} value={reminderDate} onChange={e => setReminderDate(e.target.value)} required />
-              </div>
-              <div>
-                <label style={S.label}>Follow-up Note</label>
-                <input type="text" placeholder="e.g. Call regarding document signing" style={S.input} value={reminderNote} onChange={e => setReminderNote(e.target.value)} required />
-              </div>
-              <button type="submit" style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>Set Reminder</button>
             </form>
           </div>
         </div>
