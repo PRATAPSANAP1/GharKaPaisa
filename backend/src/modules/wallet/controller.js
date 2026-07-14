@@ -1089,41 +1089,68 @@ const getWithdrawalDetail = async (req, res, next) => {
 };
 
 
-// ── Bank Details: Get All Partners Bank Accounts (Admin / Super Admin) ──
+// ── Bank Details: Get All Bank Accounts (Universal Admin & Partner Handler) ──
 const getAllBankDetails = async (req, res, next) => {
   try {
-    const { rows } = await query(`
-      SELECT
-        pp.id as partner_id,
-        pp.partner_code,
-        pp.first_name,
-        pp.last_name,
-        u.email,
-        u.mobile,
-        bd.id,
-        bd.account_holder_name,
-        bd.bank_name,
-        bd.account_number,
-        bd.ifsc_code,
-        bd.upi_id,
-        bd.is_verified,
-        bd.is_primary,
-        bd.created_at
-      FROM partner_bank_details bd
-      JOIN partner_profiles pp ON bd.partner_id = pp.id
-      JOIN users u ON pp.user_id = u.id
-      ORDER BY pp.created_at DESC
-    `);
+    const role = (req.user?.role || '').toUpperCase();
 
-    // Decrypt account numbers
-    const processed = rows.map(r => {
-      if (r.account_number && r.account_number.includes(':')) {
-        try { r.account_number = decrypt(r.account_number); } catch (_) {}
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') {
+      const { rows } = await query(`
+        SELECT
+          pp.id as partner_id,
+          pp.partner_code,
+          pp.first_name,
+          pp.last_name,
+          u.email,
+          u.mobile,
+          bd.id,
+          bd.account_holder_name,
+          bd.bank_name,
+          bd.account_number,
+          bd.ifsc_code,
+          bd.upi_id,
+          bd.is_verified,
+          bd.is_primary,
+          bd.created_at
+        FROM partner_bank_details bd
+        JOIN partner_profiles pp ON bd.partner_id = pp.id
+        JOIN users u ON pp.user_id = u.id
+        ORDER BY pp.created_at DESC
+      `);
+
+      const processed = rows.map(r => {
+        if (r.account_number && r.account_number.includes(':')) {
+          try { r.account_number = decrypt(r.account_number); } catch (_) {}
+        }
+        return r;
+      });
+
+      return success(res, processed);
+    } else {
+      let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
+      if (!partnerId && req.user) {
+        const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+        if (p) partnerId = p.id;
       }
-      return r;
-    });
 
-    return success(res, processed);
+      if (!partnerId) return success(res, []);
+
+      const { rows } = await query(`
+        SELECT id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, is_verified, is_primary, created_at, updated_at
+        FROM partner_bank_details
+        WHERE partner_id = $1
+        ORDER BY is_primary DESC, created_at ASC
+      `, [partnerId]);
+
+      const processed = rows.map(r => {
+        if (r.account_number && r.account_number.includes(':')) {
+          try { r.account_number = decrypt(r.account_number); } catch (_) {}
+        }
+        return r;
+      });
+
+      return success(res, processed);
+    }
   } catch (err) {
     next(err);
   }
