@@ -1708,5 +1708,184 @@ module.exports = {
   uploadProfilePhoto,
   uploadSelfie,
   simulateOCR,
-  simulateFaceMatch
+  simulateFaceMatch,
+  bulkPartnerAction,
+  updatePartnerStatus,
+  resetPartnerPassword,
+  impersonatePartner,
+  updatePartnerKYCStatus
 };
+
+// ── Bulk Partner Action ──────────────────────────────────────────────
+const bulkPartnerAction = async (req, res, next) => {
+  try {
+    const { partner_ids, action, reason } = req.body;
+    if (!Array.isArray(partner_ids) || partner_ids.length === 0 || !action) {
+      return error(res, 'partner_ids array and action are required', 400);
+    }
+
+    let targetKycStatus = null;
+    let targetUserStatus = null;
+
+    if (action === 'approve') {
+      targetKycStatus = 'approved';
+      targetUserStatus = 'active';
+    } else if (action === 'suspend') {
+      targetUserStatus = 'suspended';
+    } else if (action === 'activate') {
+      targetUserStatus = 'active';
+    } else if (action === 'reject') {
+      targetKycStatus = 'rejected';
+    }
+
+    if (targetKycStatus) {
+      await query(
+        `UPDATE partner_profiles SET kyc_status = $1, rejection_reason = $2, updated_at = NOW() WHERE id = ANY($3::uuid[])`,
+        [targetKycStatus, reason || null, partner_ids]
+      );
+      if (targetKycStatus === 'approved') {
+        for (const pid of partner_ids) {
+          await ensureWallet(pid);
+        }
+      }
+    }
+
+    if (targetUserStatus) {
+      await query(
+        `UPDATE users SET status = $1::user_status, updated_at = NOW()
+         FROM partner_profiles ap WHERE ap.user_id = users.id AND ap.id = ANY($2::uuid[])`,
+        [targetUserStatus, partner_ids]
+      );
+      await query(
+        `UPDATE partner_profiles SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`,
+        [targetUserStatus, partner_ids]
+      );
+    }
+
+    await logAction(req, 'BULK_PARTNER_ACTION', null, { action, count: partner_ids.length, reason });
+
+    return success(res, { count: partner_ids.length }, `Bulk ${action} executed successfully on ${partner_ids.length} partner(s)`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Update Single Partner Status ─────────────────────────────────────
+const updatePartnerStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) return error(res, 'Status is required', 400);
+
+    const { rows: [partner] } = await query(
+      `SELECT ap.id, ap.user_id FROM partner_profiles ap WHERE ap.id = $1 OR ap.user_id::text = $1`,
+      [id]
+    );
+    if (!partner) return error(res, 'Partner profile not found', 404);
+
+    await query(`UPDATE partner_profiles SET status = $1, updated_at = NOW() WHERE id = $2`, [status, partner.id]);
+    await query(`UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`, [status, partner.user_id]);
+
+    await logAction(req, 'UPDATE_PARTNER_STATUS', partner.id, { status });
+
+    return success(res, { partner_id: partner.id, status }, `Partner status updated to ${status}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Reset Partner Password ──────────────────────────────────────────
+const resetPartnerPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { new_password } = req.body;
+    if (!new_password || new_password.length < 6) {
+      return error(res, 'Password must be at least 6 characters', 400);
+    }
+
+    const { rows: [partner] } = await query(
+      `SELECT ap.id, ap.user_id, u.email FROM partner_profiles ap JOIN users u ON u.id = ap.user_id WHERE ap.id = $1 OR ap.user_id::text = $1`,
+      [id]
+    );
+    if (!partner) return error(res, 'Partner profile not found', 404);
+
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(new_password, salt);
+
+    await query(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, [passwordHash, partner.user_id]);
+
+    await logAction(req, 'RESET_PARTNER_PASSWORD', partner.id, { email: partner.email });
+
+    return success(res, { partner_id: partner.id }, `Partner password reset successfully`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Impersonate Partner Login ─────────────────────────────────────────
+const impersonatePartner = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [partner] } = await query(
+      `SELECT ap.id as partner_id, u.id as user_id, u.email, u.mobile, u.role, ap.partner_code
+       FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
+       WHERE ap.id = $1 OR ap.user_id::text = $1 OR ap.partner_code ILIKE $1`,
+      [id]
+    );
+    if (!partner) return error(res, 'Partner profile not found', 404);
+
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../../config/jwt.js');
+
+    const payload = {
+      id: partner.user_id,
+      email: partner.email,
+      phone: partner.mobile,
+      role: 'PARTNER',
+      partner_id: partner.partner_id,
+      impersonated_by: req.user.id
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
+
+    await logAction(req, 'IMPERSONATE_PARTNER', partner.partner_id, { partner_code: partner.partner_code });
+
+    return success(res, { token, user: payload }, `Impersonation token generated for ${partner.partner_code}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Direct KYC Status Update ─────────────────────────────────────────
+const updatePartnerKYCStatus = async (req, res, next) => {
+  try {
+    const partnerId = req.params.PartnerId || req.params.id || req.body.partnerId;
+    const { status, reason } = req.body;
+    if (!partnerId || !status) return error(res, 'Partner ID and status are required', 400);
+
+    const { rows: [partner] } = await query(`SELECT id, user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
+    if (!partner) return error(res, 'Partner profile not found', 404);
+
+    await query(
+      `UPDATE partner_profiles SET kyc_status = $1, rejection_reason = $2, updated_at = NOW() WHERE id = $3`,
+      [status, reason || null, partner.id]
+    );
+
+    if (status === 'approved') {
+      await ensureWallet(partner.id);
+    }
+
+    await logAction(req, 'UPDATE_PARTNER_KYC_STATUS', partner.id, { status, reason });
+
+    return success(res, { partner_id: partner.id, kyc_status: status }, `Partner KYC status updated to ${status}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.bulkPartnerAction = bulkPartnerAction;
+module.exports.updatePartnerStatus = updatePartnerStatus;
+module.exports.resetPartnerPassword = resetPartnerPassword;
+module.exports.impersonatePartner = impersonatePartner;
+module.exports.updatePartnerKYCStatus = updatePartnerKYCStatus;

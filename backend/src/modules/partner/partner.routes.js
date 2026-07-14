@@ -42,6 +42,7 @@ router.get('/:PartnerId/dashboard', selfOrAdmin('PartnerId'), ctrl.getDashboardS
 // Admin only — partner management
 router.get('/', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.listPartners);
 router.patch('/:PartnerId/approve', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.approvePartner);
+router.patch('/:PartnerId/kyc-status', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.updatePartnerKYCStatus);
 
 // Super Admin / Admin team network routes
 router.get('/network/all', authorize('ADMIN', 'SUPER_ADMIN'), ctrl.getWholeNetwork);

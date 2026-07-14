@@ -17,6 +17,10 @@ router.use(jwtAuth);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
 router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.listPartners);
+router.post('/partners/bulk-action', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.bulkPartnerAction);
+router.patch('/partners/:id/status', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.updatePartnerStatus);
+router.post('/partners/:id/reset-password', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.resetPartnerPassword);
+router.post('/partners/:id/impersonate', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.impersonatePartner);
 
 // ── POST /admin/approve-kyc ──────────────────────────────────────────────────
 router.post('/approve-kyc', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.approvePartnerKYC);
