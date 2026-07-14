@@ -2090,7 +2090,7 @@ const migrate = async () => {
         first_lead_completed BOOLEAN DEFAULT FALSE,
         first_application_completed BOOLEAN DEFAULT FALSE,
         progress_percentage INT DEFAULT 0,
-        completed_at TIMESTAMPTZ NULLABLE,
+        completed_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -2113,6 +2113,140 @@ const migrate = async () => {
   } catch (task12Err) {
     logger.error('Failed to run Partner Onboarding & Team Metrics Schema Migration (Task 12):', task12Err);
     throw task12Err;
+  }
+
+  // ── 360 Customer Module Architecture Schema Migration (Task 13) ──
+  try {
+    logger.info('Running 360 Customer Module Architecture Schema Migration (Task 13)...');
+
+    // 1. Customers table extensions
+    await query(`
+      ALTER TABLE customers
+        ADD COLUMN IF NOT EXISTS pipeline_status VARCHAR(50) DEFAULT 'new',
+        ADD COLUMN IF NOT EXISTS status_reason TEXT,
+        ADD COLUMN IF NOT EXISTS alternate_mobile VARCHAR(15),
+        ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS nominee_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS nominee_relation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS product_interests JSONB DEFAULT '[]',
+        ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS is_merged BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS merged_into_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+    `);
+
+    // 2. Customer Notes
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_notes (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        note TEXT NOT NULL,
+        visibility VARCHAR(20) DEFAULT 'public',
+        is_pinned BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_notes_customer ON customer_notes(customer_id);
+    `);
+
+    // 3. Customer Documents
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        document_type VARCHAR(50) NOT NULL,
+        file_url VARCHAR(1000) NOT NULL,
+        s3_key VARCHAR(500),
+        status VARCHAR(50) DEFAULT 'pending',
+        verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        uploaded_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_docs_customer ON customer_documents(customer_id);
+    `);
+
+    // 4. Customer Timeline
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_timeline (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        event_type VARCHAR(100) NOT NULL,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT,
+        reference_type VARCHAR(50),
+        reference_id UUID,
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_timeline_customer ON customer_timeline(customer_id);
+    `);
+
+    // 5. Customer Followups
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_followups (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        followup_date TIMESTAMPTZ NOT NULL,
+        priority VARCHAR(20) DEFAULT 'medium',
+        status VARCHAR(20) DEFAULT 'pending',
+        remarks TEXT,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_followups_customer ON customer_followups(customer_id);
+    `);
+
+    // 6. Customer Tags
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_tags (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        tag_name VARCHAR(50) NOT NULL,
+        tag_color VARCHAR(20) DEFAULT '#3B82F6',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_cust_tag UNIQUE(customer_id, tag_name)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_tags_customer ON customer_tags(customer_id);
+    `);
+
+    // 7. Customer Activity Logs
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_activity_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        activity_type VARCHAR(100) NOT NULL,
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        reference_type VARCHAR(50),
+        reference_id UUID,
+        ip_address VARCHAR(45),
+        device VARCHAR(100),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_activity_customer ON customer_activity_logs(customer_id);
+    `);
+
+    // 8. Customer Communications
+    await query(`
+      CREATE TABLE IF NOT EXISTS customer_communications (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        template_id UUID REFERENCES notification_templates(id) ON DELETE SET NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'sent',
+        sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        sent_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cust_comm_customer ON customer_communications(customer_id);
+    `);
+
+    logger.info('360 Customer Module Architecture Schema Migration (Task 13) completed successfully.');
+  } catch (task13Err) {
+    logger.error('Failed to run 360 Customer Module Architecture Schema Migration (Task 13):', task13Err);
+    throw task13Err;
   }
 
   // ── Registration Validation & Business Rules Updates (Task 13) ──
