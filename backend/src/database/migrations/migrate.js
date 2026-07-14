@@ -1673,12 +1673,30 @@ const migrate = async () => {
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS utr VARCHAR(100);
     `);
 
-    // Migrate existing data if needed
-    await query(`
-      UPDATE wallet_withdrawals 
-      SET utr = utr_number 
-      WHERE utr IS NULL AND utr_number IS NOT NULL;
+    // Migrate existing data if needed (checking if columns exist to prevent errors)
+    const { rows: utrNumCol } = await query(`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name='wallet_withdrawals' AND column_name='utr_number'
     `);
+    if (utrNumCol.length > 0) {
+      await query(`
+        UPDATE wallet_withdrawals 
+        SET utr = utr_number 
+        WHERE utr IS NULL AND utr_number IS NOT NULL
+      `);
+    }
+
+    const { rows: txnRefCol } = await query(`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name='wallet_withdrawals' AND column_name='transaction_reference'
+    `);
+    if (txnRefCol.length > 0) {
+      await query(`
+        UPDATE wallet_withdrawals 
+        SET utr = transaction_reference 
+        WHERE utr IS NULL AND transaction_reference IS NOT NULL
+      `);
+    }
 
     // 5. Create payout_logs table
     await query(`
