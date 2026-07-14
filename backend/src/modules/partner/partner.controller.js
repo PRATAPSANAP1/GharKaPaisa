@@ -645,7 +645,7 @@ const listPartnerCustomers = async (req, res, next) => {
                 l.status::text,
                 p.name AS product_name,
                 COALESCE(b.name, 'Partner Lead') AS bank_name,
-                COALESCE(b.short_code, p.bank_code, 'LEAD') AS bank_code,
+                COALESCE(b.short_code, 'LEAD') AS bank_code,
                 p.commission_value AS commission_amount,
                 l.created_at
               FROM leads l
