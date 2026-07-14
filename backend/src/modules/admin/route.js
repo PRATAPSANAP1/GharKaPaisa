@@ -48,6 +48,8 @@ router.post('/withdrawal/approve', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl
 
 // ── POST /admin/withdrawal/reject ────────────────────────────────────────────
 router.post('/withdrawal/reject', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectWithdrawalController);
+router.get('/withdrawals', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), walletCtrl.listWithdrawals);
+router.get('/bank-details/all', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), walletCtrl.getAllBankDetails);
 
 // ── POST /admin/wallet/adjust ────────────────────────────────────────────────
 router.post('/wallet/adjust', roleCheck('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);

@@ -37,6 +37,8 @@ router.get('/commission-rules', ctrl.getCommissionRules);
 // Wallet Management & Settlements
 router.get('/wallet/overview', walletCtrl.getWalletOverview);
 router.get('/wallet/ledger', walletCtrl.getWalletLedger);
+router.get('/wallet/withdrawals', walletCtrl.listWithdrawals);
+router.get('/wallet/bank-details/all', walletCtrl.getAllBankDetails);
 router.post('/wallet/approve', walletCtrl.approveWithdrawalController);
 router.post('/wallet/reject', walletCtrl.rejectWithdrawalController);
 router.post('/wallet/manual-credit', walletCtrl.walletManualCredit);
