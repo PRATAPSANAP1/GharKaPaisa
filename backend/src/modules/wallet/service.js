@@ -693,10 +693,32 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
 
 // Get full wallet summary for a Partner
 const getWalletSummary = async (partnerId) => {
-  const { rows: [wallet] } = await query(`
+  // Resolve actual partner profile ID if user_id was passed
+  const { rows: [partner] } = await query(
+    `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1`,
+    [partnerId]
+  );
+  if (!partner) return null;
+
+  const actualPartnerId = partner.id;
+
+  let { rows: [wallet] } = await query(`
     SELECT id, partner_id, total_earned, total_withdrawn, hold_balance, available_balance, pending_balance, withdrawn_balance, override_balance, locked_balance, last_updated
     FROM partner_wallets WHERE partner_id = $1
-  `, [partnerId]);
+  `, [actualPartnerId]);
+
+  if (!wallet) {
+    await query(`
+      INSERT INTO partner_wallets (partner_id) VALUES ($1)
+      ON CONFLICT (partner_id) DO NOTHING
+    `, [actualPartnerId]);
+
+    const retry = await query(`
+      SELECT id, partner_id, total_earned, total_withdrawn, hold_balance, available_balance, pending_balance, withdrawn_balance, override_balance, locked_balance, last_updated
+      FROM partner_wallets WHERE partner_id = $1
+    `, [actualPartnerId]);
+    wallet = retry.rows[0];
+  }
   return wallet;
 };
 
