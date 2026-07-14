@@ -626,7 +626,7 @@ const listPartnerCustomers = async (req, res, next) => {
               SELECT 
                 a.id,
                 a.app_number,
-                a.status,
+                a.status::text,
                 p.name AS product_name,
                 b.name AS bank_name,
                 b.short_code AS bank_code,
@@ -642,7 +642,7 @@ const listPartnerCustomers = async (req, res, next) => {
               SELECT
                 l.id,
                 CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) AS app_number,
-                l.status,
+                l.status::text,
                 p.name AS product_name,
                 COALESCE(b.name, 'Partner Lead') AS bank_name,
                 COALESCE(b.short_code, p.bank_code, 'LEAD') AS bank_code,
