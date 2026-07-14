@@ -19,13 +19,8 @@ router.put('/bank-details', requireApprovedPartner, walletCtrl.saveBankDetails);
 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
-router.get('/withdrawals', requireApprovedPartnerOrAdmin, (req, res, next) => {
-  const role = (req.user?.role || '').toUpperCase();
-  if (role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'EMPLOYEE') {
-    return walletCtrl.listWithdrawals(req, res, next);
-  }
-  return walletCtrl.listPartnerWithdrawals(req, res, next);
-});
+router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
+router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
 router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);

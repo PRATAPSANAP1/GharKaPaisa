@@ -236,7 +236,7 @@ const PartnerWallet = () => {
   const fetchWithdrawals = async () => {
     setLoadingWithdrawals(true);
     try {
-      const res = await api.get('/wallet/withdrawals');
+      const res = await api.get('/wallet/my-withdrawals');
       if (res.data?.success) {
         setWithdrawals(res.data.data || []);
       }
