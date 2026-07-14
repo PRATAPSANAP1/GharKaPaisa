@@ -1671,6 +1671,27 @@ const migrate = async () => {
       ALTER TABLE partner_wallets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
+    // Fix wallet_ledger FK constraint if it references old 'wallets' table or view instead of 'partner_wallets'
+    await query(`
+      DO $$
+      DECLARE
+        ref_table TEXT;
+      BEGIN
+        SELECT ccu.table_name INTO ref_table
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+        WHERE tc.table_name = 'wallet_ledger' AND tc.constraint_type = 'FOREIGN KEY'
+          AND tc.constraint_name = 'wallet_ledger_wallet_id_fkey';
+
+        IF ref_table IS NOT NULL AND ref_table <> 'partner_wallets' THEN
+          ALTER TABLE wallet_ledger DROP CONSTRAINT wallet_ledger_wallet_id_fkey;
+          ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_wallet_id_fkey
+            FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id);
+          RAISE NOTICE 'Fixed wallet_ledger FK to point to partner_wallets';
+        END IF;
+      END $$;
+    `);
+
     // 3. Rename withdrawal_requests table to wallet_withdrawals
     await query(`
       DO $$

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdSecurity, MdSettings, MdHistory, MdNotifications, 
@@ -172,13 +172,13 @@ export default function SettingsPage() {
   // Change Email / Change Mobile States
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [emailOtp, setEmailOtp] = useState('');
+  const [emailOtp, setEmailOtp] = useState({ old: '', new: '' });
   const [emailStep, setEmailStep] = useState(1); // 1 = input, 2 = verify otp
   const [emailLoading, setEmailLoading] = useState(false);
 
   const [showMobileModal, setShowMobileModal] = useState(false);
   const [newMobile, setNewMobile] = useState('');
-  const [mobileOtp, setMobileOtp] = useState('');
+  const [mobileOtp, setMobileOtp] = useState({ old: '', new: '' });
   const [mobileStep, setMobileStep] = useState(1);
   const [mobileLoading, setMobileLoading] = useState(false);
 
@@ -190,9 +190,9 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Security module states
-  const [loginHistory] = useState(generateLoginHistory);
-  const [devices, setDevices] = useState(generateDevices);
-  const [sessions] = useState(generateSessions);
+  const [loginHistory, setLoginHistory] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [sessions, setSessions] = useState({ active: [], expired: [] });
   const [backupCodes, setBackupCodes] = useState(generateBackupCodes);
   const [twoFaOtp, setTwoFaOtp] = useState(false);
   const [twoFaTotp, setTwoFaTotp] = useState(false);
@@ -202,11 +202,28 @@ export default function SettingsPage() {
 
   const totpSecret = 'JBSWY3DPEHPK3PXP';
 
-  const handlePasswordSubmit = (e) => {
+  const loadSecurityData = async () => {
+    try {
+      const [historyResponse, devicesResponse] = await Promise.all([api.get('/auth/login-history'), api.get('/auth/devices')]);
+      const iconFor = (name = '') => /iphone|android/i.test(name) ? MdPhoneAndroid : /ipad|tablet/i.test(name) ? MdTabletMac : /mac/i.test(name) ? MdLaptopMac : MdComputer;
+      const history = historyResponse.data.data || [];
+      const deviceRows = devicesResponse.data.data || [];
+      setLoginHistory(history.map(row => ({ ...row, time: row.login_time, ip: row.ip_address || 'Unknown', location: [row.city, row.country].filter(Boolean).join(', ') || 'Unknown location', icon: iconFor(row.device) })));
+      setDevices(deviceRows.map(row => ({ ...row, name: row.device_name || 'Unknown device', lastActive: formatTimeAgo(row.last_used_at), ip: row.ip_address || 'Unknown', location: [row.city, row.country].filter(Boolean).join(', ') || 'Unknown location', isCurrent: row.is_current, isTrusted: !row.revoked, icon: iconFor(row.device_name) })));
+      setSessions({ active: deviceRows.filter(row => !row.revoked && new Date(row.expires_at) > new Date()).map(row => ({ id: row.id, device: row.device_name || 'Unknown device', browser: row.browser, startedAt: row.created_at, expiresAt: row.expires_at, isCurrent: row.is_current })), expired: [] });
+    } catch (err) { console.error('Unable to load security data', err); }
+  };
+
+  useEffect(() => { loadSecurityData(); }, []);
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (password.new !== password.confirm) return alert('New passwords do not match.');
-    alert('Password updated successfully!');
-    setPassword({ old: '', new: '', confirm: '' });
+    try {
+      await api.post('/auth/change-password', { oldPassword: password.old, newPassword: password.new });
+      alert('Password updated successfully. You have been signed out of all devices for security.');
+      setPassword({ old: '', new: '', confirm: '' });
+    } catch (err) { alert(err.response?.data?.message || 'Unable to update password.'); }
   };
 
   const handleMpinSubmit = (e) => {
@@ -222,12 +239,11 @@ export default function SettingsPage() {
     if (!newEmail || !newEmail.includes('@')) return alert('Please enter a valid email address.');
     setEmailLoading(true);
     try {
-      await api.post('/partner/profile/change-email/request', { new_email: newEmail });
+      await api.post('/auth/change-email/request', { newEmail });
       setEmailStep(2);
       alert(`OTP verification code sent to ${newEmail}`);
-    } catch (_) {
-      setEmailStep(2);
-      alert(`[Simulation] OTP verification code sent to ${newEmail}`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Unable to send verification codes.');
     } finally {
       setEmailLoading(false);
     }
@@ -235,23 +251,18 @@ export default function SettingsPage() {
 
   const handleVerifyEmailOtp = async (e) => {
     e.preventDefault();
-    if (!emailOtp || emailOtp.length < 4) return alert('Please enter 6-digit OTP code.');
+    if (emailOtp.old.length !== 6 || emailOtp.new.length !== 6) return alert('Enter both 6-digit verification codes.');
     setEmailLoading(true);
     try {
-      await api.post('/partner/profile/change-email/verify', { new_email: newEmail, otp: emailOtp });
+      await api.post('/auth/change-email', { oldOtp: emailOtp.old, newOtp: emailOtp.new });
       updateUser({ email: newEmail });
       alert('Primary account email updated successfully!');
       setShowEmailModal(false);
       setEmailStep(1);
       setNewEmail('');
-      setEmailOtp('');
-    } catch (_) {
-      updateUser({ email: newEmail });
-      alert('Primary account email updated successfully!');
-      setShowEmailModal(false);
-      setEmailStep(1);
-      setNewEmail('');
-      setEmailOtp('');
+      setEmailOtp({ old: '', new: '' });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Both verification codes are required.');
     } finally {
       setEmailLoading(false);
     }
@@ -263,12 +274,11 @@ export default function SettingsPage() {
     if (!newMobile || newMobile.length < 10) return alert('Please enter a valid 10-digit mobile number.');
     setMobileLoading(true);
     try {
-      await api.post('/partner/profile/change-mobile/request', { new_mobile: newMobile });
+      await api.post('/auth/change-mobile/request', { newMobile });
       setMobileStep(2);
       alert(`OTP verification code sent via SMS to +91 ${newMobile}`);
-    } catch (_) {
-      setMobileStep(2);
-      alert(`[Simulation] OTP verification code sent via SMS to +91 ${newMobile}`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Unable to send verification codes.');
     } finally {
       setMobileLoading(false);
     }
@@ -276,23 +286,18 @@ export default function SettingsPage() {
 
   const handleVerifyMobileOtp = async (e) => {
     e.preventDefault();
-    if (!mobileOtp || mobileOtp.length < 4) return alert('Please enter 6-digit OTP code.');
+    if (mobileOtp.old.length !== 6 || mobileOtp.new.length !== 6) return alert('Enter both 6-digit verification codes.');
     setMobileLoading(true);
     try {
-      await api.post('/partner/profile/change-mobile/verify', { new_mobile: newMobile, otp: mobileOtp });
+      await api.post('/auth/change-mobile', { oldOtp: mobileOtp.old, newOtp: mobileOtp.new });
       updateUser({ mobile: newMobile });
       alert('Primary account mobile number updated successfully!');
       setShowMobileModal(false);
       setMobileStep(1);
       setNewMobile('');
-      setMobileOtp('');
-    } catch (_) {
-      updateUser({ mobile: newMobile });
-      alert('Primary account mobile number updated successfully!');
-      setShowMobileModal(false);
-      setMobileStep(1);
-      setNewMobile('');
-      setMobileOtp('');
+      setMobileOtp({ old: '', new: '' });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Both verification codes are required.');
     } finally {
       setMobileLoading(false);
     }
@@ -324,14 +329,15 @@ export default function SettingsPage() {
     alert(`[Developer Bypass] KYC Status locally overridden to: ${nextStatus.toUpperCase()}. All sections are now ${nextStatus === 'approved' ? 'UNLOCKED' : 'LOCKED'}.`);
   };
 
-  const handleLogoutOthers = () => {
-    setDevices(prev => prev.filter(d => d.isCurrent));
-    setShowLogoutModal(false);
-    alert('All other devices have been logged out successfully.');
+  const handleLogoutOthers = async () => {
+    try { await api.post('/auth/logout-all'); await loadSecurityData(); alert('All other devices have been logged out successfully.'); }
+    catch (err) { alert(err.response?.data?.message || 'Unable to log out other devices.'); }
+    finally { setShowLogoutModal(false); }
   };
 
-  const toggleTrusted = (deviceId) => {
-    setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, isTrusted: !d.isTrusted } : d));
+  const toggleTrusted = async (deviceId) => {
+    if (!window.confirm('Log out this device?')) return;
+    try { await api.delete(`/auth/device/${deviceId}`); await loadSecurityData(); } catch (err) { alert(err.response?.data?.message || 'Unable to log out device.'); }
   };
 
   const copyCode = (code) => {
@@ -789,8 +795,9 @@ export default function SettingsPage() {
               </form>
             ) : (
               <form onSubmit={handleVerifyEmailOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>Enter 6-digit OTP code sent to <strong>{newEmail}</strong>:</p>
-                <input type="text" maxLength={6} required value={emailOtp} onChange={e => setEmailOtp(e.target.value)} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="123456" />
+                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>Enter the codes sent to both email addresses:</p>
+                <input type="text" maxLength={6} required value={emailOtp.old} onChange={e => setEmailOtp({ ...emailOtp, old: e.target.value.replace(/\D/g, '') })} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="Current email code" />
+                <input type="text" maxLength={6} required value={emailOtp.new} onChange={e => setEmailOtp({ ...emailOtp, new: e.target.value.replace(/\D/g, '') })} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="New email code" />
                 <button type="submit" disabled={emailLoading} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
                   {emailLoading ? 'Verifying OTP...' : 'Verify OTP & Update Email'}
                 </button>
@@ -825,8 +832,9 @@ export default function SettingsPage() {
               </form>
             ) : (
               <form onSubmit={handleVerifyMobileOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>Enter 6-digit OTP code sent via SMS to <strong>+91 {newMobile}</strong>:</p>
-                <input type="text" maxLength={6} required value={mobileOtp} onChange={e => setMobileOtp(e.target.value)} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="123456" />
+                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>Enter the codes sent to your current and new mobile numbers:</p>
+                <input type="text" maxLength={6} required value={mobileOtp.old} onChange={e => setMobileOtp({ ...mobileOtp, old: e.target.value.replace(/\D/g, '') })} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="Current mobile code" />
+                <input type="text" maxLength={6} required value={mobileOtp.new} onChange={e => setMobileOtp({ ...mobileOtp, new: e.target.value.replace(/\D/g, '') })} style={{ ...S.input, textAlign: 'center', fontFamily: 'monospace', fontSize: '20px', letterSpacing: '6px' }} placeholder="New mobile code" />
                 <button type="submit" disabled={mobileLoading} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
                   {mobileLoading ? 'Verifying OTP...' : 'Verify OTP & Update Mobile'}
                 </button>

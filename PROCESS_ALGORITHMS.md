@@ -995,45 +995,41 @@ sequenceDiagram
 
 **Purpose**: Generate secure JWT tokens for user authentication
 
-**Input**: User object (id, email, role, status)
+**Input**: User object (id, email, mobile, role, status)
 **Output**: Access token (15 min expiry), Refresh token (30 day expiry)
 
 **Algorithm**:
 ```
 FUNCTION generateJWTToken(user):
-    // Step 1: Prepare token payload
+    // Step 1: Prepare token payload (actual implementation)
     payload = {
-        user_id: user.id,
+        id: user.id,
         email: user.email,
-        role: user.role,
-        status: user.status,
-        iat: current_timestamp,
-        exp: current_timestamp + 900  // 15 minutes
+        phone: user.mobile,
+        role: user.role
     }
     
-    // Step 2: Generate access token
+    // Step 2: Generate access token with 15-minute expiry
     access_token = jwt.sign(
         payload,
         process.env.JWT_SECRET,
-        { algorithm: 'HS256' }
+        { expiresIn: '15m' }  // 15 minutes
     )
     
-    // Step 3: Generate refresh token payload
-    refresh_payload = {
-        user_id: user.id,
-        type: 'refresh',
-        iat: current_timestamp,
-        exp: current_timestamp + 2592000  // 30 days
-    }
-    
-    // Step 4: Generate refresh token
+    // Step 3: Generate refresh token with 30-day expiry
     refresh_token = jwt.sign(
-        refresh_payload,
+        {
+            id: user.id,
+            email: user.email,
+            phone: user.mobile,
+            role: user.role,
+            type: 'refresh'
+        },
         process.env.JWT_REFRESH_SECRET,
-        { algorithm: 'HS256' }
+        { expiresIn: '30d' }  // 30 days
     )
     
-    // Step 5: Store refresh token in database
+    // Step 4: Store refresh token in database
     INSERT INTO refresh_tokens (
         user_id,
         token_hash,
@@ -1174,7 +1170,7 @@ END FUNCTION
 
 ### 10.4 Role-Based Access Control Algorithm
 
-**Purpose**: Verify user has required role for accessing a resource
+**Purpose**: Verify user has required role for accessing a resource using middleware-based authorization
 
 **Input**: User object, Required roles array
 **Output**: Boolean (authorized/unauthorized)
@@ -1186,39 +1182,110 @@ FUNCTION checkUserRole(user, required_roles):
     IF user is NULL:
         RETURN false
     
-    // Step 2: Check if user role is in required roles
-    IF user.role IN required_roles:
+    // Step 2: Convert user role to uppercase for comparison
+    user_role = (user.role || '').toUpperCase()
+    
+    // Step 3: Convert required roles to uppercase
+    upper_roles = required_roles.map(r => r.toUpperCase())
+    
+    // Step 4: Check if user role is in required roles
+    IF upper_roles.includes(user_role):
         RETURN true
     
-    // Step 3: Special case: SUPER_ADMIN has access to everything
-    IF user.role == 'SUPER_ADMIN':
+    // Step 5: Special case: SUPER_ADMIN has access to everything
+    IF user_role == 'SUPER_ADMIN':
         RETURN true
-    
-    // Step 4: Check role hierarchy
-    role_hierarchy = {
-        'SUPER_ADMIN': 4,
-        'ADMIN': 3,
-        'EMPLOYEE': 2,
-        'PARTNER': 1
-    }
-    
-    user_level = role_hierarchy[user.role]
-    
-    FOR EACH role IN required_roles:
-        IF role_hierarchy[role] <= user_level:
-            RETURN true
     
     RETURN false
 END FUNCTION
+
+// Middleware-based Authorization Flow
+FUNCTION authorizeMiddleware(...roles):
+    // Step 1: Create middleware function
+    RETURN (request, response, next):
+        // Step 2: Check if user exists in request
+        IF !request.user:
+            RETURN unauthorized(response, "Authentication required")
+        
+        // Step 3: Get user role
+        user_role = (request.user.role || '').toUpperCase()
+        
+        // Step 4: Convert required roles to uppercase
+        upper_roles = roles.map(r => r.toUpperCase())
+        
+        // Step 5: Check authorization
+        IF !upper_roles.includes(user_role):
+            RETURN forbidden(response, "Role '${request.user.role}' is not allowed to access this resource")
+        
+        // Step 6: Allow access
+        next()
+END FUNCTION
+
+// Partner-specific Authorization
+FUNCTION requireApprovedPartner(request, response, next):
+    // Step 1: Check user role
+    user_role = (request.user?.role || '').toUpperCase()
+    
+    // Step 2: Allow admins to bypass
+    IF user_role IN ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE']:
+        RETURN next()
+    
+    // Step 3: Check if partner profile exists
+    IF !request.partner:
+        RETURN forbidden(response, "Partner profile not found")
+    
+    // Step 4: Check KYC approval status
+    IF request.partner.kyc_status != 'approved':
+        request.kycUnapproved = true
+    
+    // Step 5: Allow access (with KYC flag)
+    next()
+END FUNCTION
+
+// Self or Admin Authorization
+FUNCTION selfOrAdmin(param_name = 'id'):
+    RETURN async (request, response, next):
+        // Step 1: Get target ID from params
+        target_id = request.params[param_name]
+        user_role = (request.user.role || '').toUpperCase()
+        
+        // Step 2: Allow admins to bypass
+        IF user_role IN ['ADMIN', 'SUPER_ADMIN']:
+            RETURN next()
+        
+        // Step 3: Check if user is accessing their own data
+        IF request.user.id.toString() == target_id:
+            RETURN next()
+        IF request.user.PartnerId && request.user.PartnerId.toString() == target_id:
+            RETURN next()
+        
+        // Step 4: Check team relationship (parent partner accessing child data)
+        IF request.user.PartnerId:
+            team_relationship = SELECT 1 FROM partner_team_relationships
+            WHERE parent_partner_id = request.user.PartnerId
+            AND child_partner_id = target_id
+            
+            IF team_relationship:
+                RETURN next()
+        
+        // Step 5: Deny access
+        RETURN forbidden(response, "Access denied")
+END FUNCTION
 ```
 
-**Files**: `backend/src/middleware/authorization/role.middleware.js`
+**Files**: `backend/src/middleware/authentication/auth.middleware.js`
+
+**Note**: The system uses middleware-based authorization rather than numeric role hierarchy. Access is determined by specific middleware functions:
+- `authorize(...roles)` - Checks if user has one of the specified roles
+- `requireApprovedPartner` - Checks KYC approval status for partners
+- `requireApprovedPartnerOrAdmin` - Allows admins or approved partners
+- `selfOrAdmin(paramName)` - Allows users to access their own data or admins to access any data
 
 ---
 
 ### 10.5 Partner Approval Check Algorithm
 
-**Purpose**: Verify partner is approved before allowing access
+**Purpose**: Verify partner KYC status before allowing access to partner-specific features
 
 **Input**: Partner profile object
 **Output**: Boolean (approved/unapproved)
@@ -1230,28 +1297,43 @@ FUNCTION checkPartnerApproval(partner_profile):
     IF partner_profile is NULL:
         RETURN false
     
-    // Step 2: Check KYC status
+    // Step 2: Check KYC status (primary approval mechanism)
     IF partner_profile.kyc_status != 'approved':
         RETURN false
     
-    // Step 3: Check if partner is approved by admin
-    IF partner_profile.approved_by is NULL:
-        RETURN false
-    
-    // Step 4: Check approval timestamp
-    IF partner_profile.approved_at is NULL:
-        RETURN false
-    
-    // Step 5: Check user status
-    user = SELECT * FROM users WHERE id = partner_profile.user_id
-    IF user.status != 'active':
+    // Step 3: Check partner status
+    IF partner_profile.status != 'active':
         RETURN false
     
     RETURN true
 END FUNCTION
+
+// Middleware Implementation
+FUNCTION requireApprovedPartner(request, response, next):
+    // Step 1: Get user role
+    user_role = (request.user?.role || '').toUpperCase()
+    
+    // Step 2: Allow admins to bypass partner approval check
+    IF user_role IN ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE']:
+        RETURN next()
+    
+    // Step 3: Check if partner profile exists
+    IF !request.partner:
+        RETURN forbidden(response, "Partner profile not found")
+    
+    // Step 4: Check KYC approval status
+    IF request.partner.kyc_status != 'approved':
+        request.kycUnapproved = true
+        // Note: Some endpoints may allow access with this flag for limited functionality
+    
+    // Step 5: Allow access
+    next()
+END FUNCTION
 ```
 
-**Files**: `backend/src/middleware/authorization/role.middleware.js`
+**Files**: `backend/src/middleware/authentication/auth.middleware.js`
+
+**Note**: Partner approval is primarily controlled through `kyc_status` field in the partner_profiles table, not through `approved_by` and `approved_at` fields. The middleware allows admins to bypass partner approval checks while enforcing KYC approval for partners.
 
 ---
 
@@ -1471,7 +1553,7 @@ END FUNCTION
 
 ### 11.4 MSG91 OTP Verification Algorithm
 
-**Purpose**: Verify MSG91 OTP using MSG91 API
+**Purpose**: Verify MSG91 OTP using MSG91 API with local database fallback
 
 **Input**: Mobile number, OTP
 **Output**: Success/failure status
@@ -1512,13 +1594,58 @@ FUNCTION verifyMSG91OTP(mobile, otp):
             
             RETURN success: true, message: "OTP verified successfully"
         ELSE:
-            RETURN success: false, message: response.message
+            // Fallback to local hash verification if MSG91 fails
+            RETURN verifyLocalOTP(mobile, otp)
     CATCH error:
-        RETURN success: false, message: "Failed to verify OTP"
+        // Fallback to local hash verification on API failure
+        RETURN verifyLocalOTP(mobile, otp)
+END FUNCTION
+
+// Local OTP Verification Fallback
+FUNCTION verifyLocalOTP(mobile, otp):
+    // Step 1: Normalize mobile number
+    IF mobile starts with '+91':
+        mobile = mobile.substring(3)
+    ELSE IF mobile.length == 10:
+        mobile = '91' + mobile
+    
+    // Step 2: Hash OTP with pepper
+    otp_hash = hmac_sha256(otp, process.env.OTP_PEPPER)
+    
+    // Step 3: Check database for matching OTP
+    record = SELECT * FROM otp_verifications
+    WHERE identifier = mobile
+    AND otp_hash = otp_hash
+    AND expires_at > current_timestamp
+    AND verified = false
+    ORDER BY created_at DESC
+    LIMIT 1
+    
+    IF record is NULL:
+        RETURN success: false, message: "Invalid or expired OTP"
+    
+    // Step 4: Check attempts limit
+    IF record.attempts >= 3:
+        RETURN success: false, message: "Maximum OTP attempts exceeded"
+    
+    // Step 5: Increment attempts
+    UPDATE otp_verifications
+    SET attempts = attempts + 1
+    WHERE id = record.id
+    
+    // Step 6: Mark as verified
+    UPDATE otp_verifications
+    SET verified = true,
+        verified_at = current_timestamp
+    WHERE id = record.id
+    
+    RETURN success: true, message: "OTP verified successfully"
 END FUNCTION
 ```
 
-**Files**: `backend/src/services/otp/msg91.service.js`
+**Files**: `backend/src/services/otp/msg91.service.js`, `backend/src/modules/auth/controller.js`
+
+**Note**: The system uses MSG91 API for OTP verification with a local database fallback. OTP hashes are stored in the `otp_verifications` table with HMAC-SHA256 using an OTP pepper. The system supports both MSG91 provider verification and local hash verification as a fallback.
 
 ---
 
@@ -1601,9 +1728,9 @@ END FUNCTION
 
 ### 12.1 Partner Registration Algorithm
 
-**Purpose**: Register new partner with profile and wallet
+**Purpose**: Register new partner with comprehensive initialization including profile, wallet, notification preferences, and referral tracking
 
-**Input**: Registration data (personal, business, bank details)
+**Input**: Registration data (personal, business, bank details, referral code optional)
 **Output**: User object or error
 
 **Algorithm**:
@@ -1619,33 +1746,41 @@ FUNCTION registerPartner(registration_data):
     IF existing_mobile is not NULL:
         RETURN error: "Mobile already registered"
     
-    // Step 3: Hash password
+    // Step 3: Hash password with bcrypt
     password_hash = bcrypt.hash(registration_data.password, 10)
     
-    // Step 4: Start database transaction
+    // Step 4: Validate referral code if provided
+    referrer_partner_id = null
+    IF registration_data.referral_code:
+        referrer = SELECT id FROM partner_profiles 
+        WHERE partner_code = registration_data.referral_code
+        IF referrer:
+            referrer_partner_id = referrer.id
+    
+    // Step 5: Start database transaction
     BEGIN TRANSACTION
     
     TRY:
-        // Step 5: Create user record
+        // Step 6: Create user record
         user_id = INSERT INTO users (
             email: registration_data.email,
             mobile: registration_data.mobile,
             password_hash: password_hash,
             role: 'PARTNER',
-            status: 'pending',
+            status: 'active',
             email_verified: false,
             mobile_verified: false,
-            created_at: current_timestamp,
-            updated_at: current_timestamp
+            created_at: NOW(),
+            updated_at: NOW()
         ) RETURNING id
         
-        // Step 6: Generate partner code using sequence
-        partner_code = NEXTVAL('partner_code_seq')
+        // Step 7: Generate partner code
+        partner_code = 'AG' + String(Math.floor(10000 + Math.random() * 90000))
         
-        // Step 7: Create partner profile
+        // Step 8: Create partner profile with comprehensive fields
         partner_id = INSERT INTO partner_profiles (
             user_id: user_id,
-            partner_code: 'GKP' + pad(partner_code, 6),
+            partner_code: partner_code,
             first_name: registration_data.first_name,
             last_name: registration_data.last_name,
             company_name: registration_data.company_name,
@@ -1655,56 +1790,103 @@ FUNCTION registerPartner(registration_data):
             current_address: registration_data.current_address,
             pincode: registration_data.pincode,
             kyc_status: 'pending',
-            created_at: current_timestamp,
-            updated_at: current_timestamp
+            status: 'active',
+            parent_partner_id: referrer_partner_id,
+            created_at: NOW(),
+            updated_at: NOW()
         ) RETURNING id
         
-        // Step 8: Encrypt bank details
-        encrypted_account = aes256_encrypt(
-            registration_data.account_number,
-            process.env.ENCRYPTION_KEY
+        // Step 9: Initialize notification preferences
+        INSERT INTO notification_preferences (
+            user_id: user_id,
+            email_notifications: true,
+            sms_notifications: true,
+            push_notifications: true,
+            commission_alerts: true,
+            withdrawal_alerts: true,
+            marketing_emails: false,
+            created_at: NOW(),
+            updated_at: NOW()
         )
         
-        // Step 9: Create bank details record
-        INSERT INTO partner_bank_details (
-            partner_id: partner_id,
-            bank_name: registration_data.bank_name,
-            account_holder_name: registration_data.account_holder_name,
-            account_number_encrypted: encrypted_account,
-            ifsc_code: registration_data.ifsc_code,
-            branch_name: registration_data.branch_name,
-            is_verified: false,
-            created_at: current_timestamp
-        )
-        
-        // Step 10: Create wallet
-        INSERT INTO wallets (
+        // Step 10: Create comprehensive wallet with all balance fields
+        INSERT INTO partner_wallets (
             partner_id: partner_id,
             total_earned: 0,
             hold_balance: 0,
             available_balance: 0,
             withdrawn_balance: 0,
-            pending_withdrawal: 0,
-            created_at: current_timestamp,
-            updated_at: current_timestamp
+            pending_balance: 0,
+            personal_earnings: 0,
+            team_earnings: 0,
+            referral_bonus: 0,
+            override_balance: 0,
+            locked_balance: 0,
+            pending_team_commission: 0,
+            last_updated: NOW(),
+            created_at: NOW()
         )
         
-        // Step 11: Commit transaction
+        // Step 11: Process referral if code provided
+        IF referrer_partner_id:
+            // Create referral relationship
+            INSERT INTO partner_team_relationships (
+                parent_partner_id: referrer_partner_id,
+                child_partner_id: partner_id,
+                relationship_type: 'referral',
+                created_at: NOW()
+            )
+            
+            // Log referral bonus for referrer (if applicable)
+            INSERT INTO wallet_ledger (
+                partner_id: referrer_partner_id,
+                transaction_type: 'REFERRAL_BONUS',
+                credit: 100,  // Example referral bonus
+                status: 'completed',
+                description: 'Referral bonus for partner: ' + partner_code,
+                reference_type: 'referral',
+                reference_id: partner_id,
+                created_at: NOW()
+            )
+        
+        // Step 12: Initialize KYC records
+        INSERT INTO partner_kyc (
+            partner_id: partner_id,
+            pan_status: 'not_submitted',
+            aadhaar_status: 'not_submitted',
+            bank_status: 'not_submitted',
+            video_kyc_status: 'not_submitted',
+            overall_status: 'pending',
+            created_at: NOW(),
+            updated_at: NOW()
+        )
+        
+        // Step 13: Commit transaction
         COMMIT TRANSACTION
         
-        // Step 12: Send verification email
+        // Step 14: Send verification email
         sendVerificationEmail(registration_data.email, user_id)
         
-        RETURN success: true, user_id: user_id, partner_id: partner_id
+        // Step 15: Send welcome notification
+        sendNotification(
+            user_id: user_id,
+            type: 'welcome',
+            title: 'Welcome to GharKaPaisa',
+            message: 'Your partner account has been created successfully. Partner Code: ' + partner_code
+        )
+        
+        RETURN success: true, user_id: user_id, partner_id: partner_id, partner_code: partner_code
         
     CATCH error:
-        // Step 13: Rollback on error
+        // Step 16: Rollback on error
         ROLLBACK TRANSACTION
         RETURN error: "Registration failed: " + error.message
 END FUNCTION
 ```
 
-**Files**: `backend/src/modules/auth/controller.js`
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/middleware/authentication/auth.middleware.js`
+
+**Note**: The registration process initializes multiple components: user account, partner profile with referral tracking, notification preferences, comprehensive wallet with all balance fields, KYC records, and referral relationships. The system uses bcrypt for password hashing and creates a unique partner code for each partner.
 
 ---
 
@@ -2119,7 +2301,7 @@ END FUNCTION
 
 ### 13.1 Wallet Creation Algorithm
 
-**Purpose**: Create wallet for new partner
+**Purpose**: Create wallet for new partner with comprehensive balance tracking
 
 **Input**: Partner ID
 **Output**: Wallet ID or error
@@ -2128,37 +2310,112 @@ END FUNCTION
 ```
 FUNCTION createWallet(partner_id):
     // Step 1: Check if wallet already exists
-    existing_wallet = SELECT * FROM wallets WHERE partner_id = partner_id
+    existing_wallet = SELECT * FROM partner_wallets WHERE partner_id = partner_id
     
     IF existing_wallet is not NULL:
         RETURN existing_wallet.id
     
-    // Step 2: Create new wallet
-    wallet_id = INSERT INTO wallets (
+    // Step 2: Create new wallet with comprehensive balance tracking
+    wallet_id = INSERT INTO partner_wallets (
         partner_id: partner_id,
         total_earned: 0,
         hold_balance: 0,
         available_balance: 0,
         withdrawn_balance: 0,
-        pending_withdrawal: 0,
-        created_at: current_timestamp,
-        updated_at: current_timestamp
+        pending_balance: 0,
+        personal_earnings: 0,
+        team_earnings: 0,
+        referral_bonus: 0,
+        override_balance: 0,
+        locked_balance: 0,
+        pending_team_commission: 0,
+        last_updated: current_timestamp,
+        created_at: current_timestamp
     ) RETURNING id
     
     RETURN wallet_id
+END FUNCTION
+
+// Wallet Balance Sync Algorithm
+FUNCTION syncWalletBalance(partner_id):
+    // Step 1: Resolve actual partner profile ID
+    partner = SELECT id, user_id FROM partner_profiles 
+    WHERE id = partner_id OR user_id = partner_id
+    
+    actual_partner_id = partner.id
+    user_id = partner.user_id
+    
+    // Step 2: Calculate completed credits (excluding debits)
+    completed_credits = SELECT 
+        COALESCE(SUM(credit), 0) as total,
+        COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team,
+        COALESCE(SUM(CASE WHEN transaction_type = 'PERSONAL_COMMISSION' THEN credit ELSE 0 END), 0) as personal,
+        COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as referral,
+        COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override
+    FROM wallet_ledger 
+    WHERE (partner_id = actual_partner_id OR partner_id = user_id) 
+    AND status = 'completed'
+    
+    // Step 3: Calculate completed debits (withdrawals settled)
+    completed_debits = SELECT COALESCE(SUM(debit), 0) as total
+    FROM wallet_ledger 
+    WHERE (partner_id = actual_partner_id OR partner_id = user_id) 
+    AND status = 'completed'
+    
+    // Step 4: Calculate hold balance (pending credits)
+    hold_balance = SELECT COALESCE(SUM(credit), 0) as total,
+        COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_pending
+    FROM wallet_ledger 
+    WHERE (partner_id = actual_partner_id OR partner_id = user_id) 
+    AND status = 'pending'
+    
+    // Step 5: Calculate locked balance (pending/approved withdrawals)
+    locked_balance = SELECT COALESCE(SUM(amount), 0) as total
+    FROM wallet_withdrawals
+    WHERE (partner_id = actual_partner_id OR partner_id = user_id) 
+    AND status IN ('pending', 'approved', 'processing')
+    
+    // Step 6: Calculate final balances
+    available_balance = completed_credits.total - completed_debits.total - locked_balance.total
+    total_earned = completed_credits.team + completed_credits.personal + completed_credits.referral + completed_credits.override
+    
+    // Step 7: Update wallet with synced values
+    UPDATE partner_wallets SET
+        available_balance = available_balance,
+        hold_balance = hold_balance.total,
+        total_earned = total_earned,
+        total_withdrawn = completed_debits.total,
+        personal_earnings = completed_credits.personal,
+        team_earnings = completed_credits.team,
+        referral_bonus = completed_credits.referral,
+        pending_team_commission = hold_balance.team_pending,
+        pending_balance = hold_balance.total,
+        withdrawn_balance = completed_debits.total,
+        override_balance = completed_credits.override,
+        locked_balance = locked_balance.total,
+        last_updated = NOW()
+    WHERE partner_id = actual_partner_id
+    
+    RETURN {
+        available_balance: available_balance,
+        hold_balance: hold_balance.total,
+        total_earned: total_earned
+    }
 END FUNCTION
 ```
 
 **Files**: `backend/src/modules/wallet/service.js`
 
+**Note**: The wallet system uses `partner_wallets` table with comprehensive balance tracking including personal earnings, team earnings, referral bonus, override balance, and locked balance for pending withdrawals. The `syncWalletBalance` function recalculates all balances from the `wallet_ledger` table.
+
 ---
 
 ### 13.2 Commission Calculation Algorithm
 
-**Purpose**: Calculate commission for a lead/application
+**Purpose**: Calculate commission for a lead/application using database-configured rules
 
 **Input**: Partner ID, Product ID, Loan amount (if applicable)
-**Output**: Commission amount
+**Output**: Commission breakdown with team split
 
 **Algorithm**:
 ```
@@ -2166,62 +2423,79 @@ FUNCTION calculateCommission(partner_id, product_id, loan_amount):
     // Step 1: Get product details
     product = SELECT * FROM products WHERE id = product_id
     
-    // Step 2: Check for partner-specific commission structure
-    partner_commission = SELECT * FROM commission_structures
+    // Step 2: Load commission settings from database
+    commission_rule = SELECT * FROM commission_rules
     WHERE product_id = product_id
-    AND partner_id = partner_id
-    AND effective_from <= current_timestamp
-    AND (effective_to IS NULL OR effective_to >= current_timestamp)
-    ORDER BY effective_from DESC
+    AND status = 'active'
+    AND (effective_to IS NULL OR effective_to >= NOW())
+    ORDER BY created_at DESC
     LIMIT 1
     
-    // Step 3: Use partner-specific or default commission
-    IF partner_commission is not NULL:
-        commission_structure = partner_commission
+    // Step 3: Fall back to system settings if no rule found
+    IF commission_rule is NULL:
+        settings = SELECT key, value FROM system_settings
+        WHERE key IN ('team_commission_child_pct', 'team_commission_parent_pct')
+        
+        child_percentage = 90  // Default
+        parent_percentage = 10  // Default
+        
+        FOR EACH setting IN settings:
+            IF setting.key == 'team_commission_child_pct':
+                child_percentage = parseFloat(setting.value)
+            IF setting.key == 'team_commission_parent_pct':
+                parent_percentage = parseFloat(setting.value)
     ELSE:
-        commission_structure = SELECT * FROM commission_structures
-        WHERE product_id = product_id
-        AND partner_id IS NULL
-        AND effective_from <= current_timestamp
-        AND (effective_to IS NULL OR effective_to >= current_timestamp)
-        ORDER BY effective_from DESC
-        LIMIT 1
+        child_percentage = parseFloat(commission_rule.partner_percentage)
+        parent_percentage = parseFloat(commission_rule.parent_percentage)
     
-    // Step 4: Calculate commission based on type
-    IF commission_structure.commission_type == 'percentage':
+    // Step 4: Calculate base commission based on product type
+    IF commission_rule AND commission_rule.commission_type == 'percentage':
         IF product.category IN ['personal_loan', 'business_loan', 'home_loan', 
                                'instant_loan', 'used_car_loan', 'education_loan']:
-            // For loans, calculate percentage of loan amount
-            commission = loan_amount * (commission_structure.commission_value / 100)
+            base_commission = loan_amount * (commission_rule.commission_value / 100)
         ELSE:
-            // For cards, use fixed percentage
-            commission = commission_structure.commission_value
+            base_commission = commission_rule.commission_value
+    ELSE IF commission_rule AND commission_rule.commission_type == 'fixed':
+        base_commission = commission_rule.commission_value
     ELSE:
-        // Fixed amount
-        commission = commission_structure.commission_value
+        // Default fallback
+        base_commission = loan_amount * 0.01  // 1% default
     
-    // Step 5: Calculate override commission (if partner has parent)
-    partner_profile = SELECT * FROM partner_profiles WHERE id = partner_id
+    // Step 5: Check for team structure (parent partner)
+    partner_profile = SELECT parent_partner_id, first_name, last_name, partner_code
+    FROM partner_profiles WHERE id = partner_id
     
     IF partner_profile.parent_partner_id is not NULL:
-        override_commission = commission * 0.10  // 10% override
-        direct_commission = commission * 0.80  // 80% direct
-        platform_fee = commission * 0.10  // 10% platform
+        // Split commission between child and parent
+        child_amount = base_commission * (child_percentage / 100)
+        parent_amount = base_commission * (parent_percentage / 100)
+        
+        RETURN {
+            total_commission: base_commission,
+            child_amount: child_amount,
+            parent_amount: parent_amount,
+            child_percentage: child_percentage,
+            parent_percentage: parent_percentage,
+            has_parent: true,
+            parent_partner_id: partner_profile.parent_partner_id
+        }
     ELSE:
-        override_commission = 0
-        direct_commission = commission
-        platform_fee = 0
-    
-    RETURN {
-        direct_commission: direct_commission,
-        override_commission: override_commission,
-        platform_fee: platform_fee,
-        total_commission: commission
-    }
+        // No parent, full commission goes to partner
+        RETURN {
+            total_commission: base_commission,
+            child_amount: base_commission,
+            parent_amount: 0,
+            child_percentage: 100,
+            parent_percentage: 0,
+            has_parent: false,
+            parent_partner_id: null
+        }
 END FUNCTION
 ```
 
-**Files**: `backend/src/modules/partner/commission.service.js`, `backend/src/utils/helpers/helpers.js`
+**Files**: `backend/src/modules/wallet/service.js` (creditCommission function)
+
+**Note**: Commission is configurable via the `commission_rules` table with product-specific rules, or falls back to system settings. The system supports percentage-based and fixed-amount commissions with team parent-child splits.
 
 ---
 
@@ -2448,82 +2722,85 @@ END FUNCTION
 
 ### 13.6 Withdrawal Request Algorithm
 
-**Purpose**: Process withdrawal request from partner
+**Purpose**: Process withdrawal request from partner with OTP verification and bank validation
 
-**Input**: Partner ID, Wallet ID, Amount
+**Input**: Partner ID, Amount, OTP (if required)
 **Output**: Withdrawal request ID or error
 
 **Algorithm**:
 ```
-FUNCTION requestWithdrawal(partner_id, wallet_id, amount):
-    // Step 1: Validate minimum amount
+FUNCTION requestWithdrawal(partner_id, amount, otp = null):
+    // Step 1: Validate amount limits
     IF amount < 100:
         RETURN error: "Minimum withdrawal amount is ₹100"
+    IF amount > 50000:
+        RETURN error: "Maximum single withdrawal limit is ₹50,000"
     
     // Step 2: Start database transaction
     BEGIN TRANSACTION
     
     TRY:
         // Step 3: Lock wallet row
-        wallet = SELECT * FROM wallets
-        WHERE id = wallet_id
-        AND partner_id = partner_id
+        wallet = SELECT * FROM partner_wallets
+        WHERE partner_id = partner_id
         FOR UPDATE
         
-        // Step 4: Check sufficient balance
+        // Step 4: Check sufficient available balance
         IF wallet.available_balance < amount:
-            RETURN error: "Insufficient balance"
+            RETURN error: "Insufficient balance. Available: ₹" + wallet.available_balance
         
         // Step 5: Check for pending withdrawal
-        pending_withdrawal = SELECT * FROM withdrawal_requests
-        WHERE wallet_id = wallet_id
+        pending_withdrawal = SELECT * FROM wallet_withdrawals
+        WHERE partner_id = partner_id
         AND status = 'pending'
         
         IF pending_withdrawal is not NULL:
-            RETURN error: "You have a pending withdrawal request"
+            RETURN error: "A withdrawal request is already pending"
         
-        // Step 6: Get bank details
+        // Step 6: Verify KYC status
+        partner_profile = SELECT kyc_status FROM partner_profiles 
+        WHERE id = partner_id
+        
+        IF partner_profile.kyc_status != 'approved':
+            RETURN error: "KYC Verification is required before requesting withdrawals"
+        
+        // Step 7: Get bank details
         bank_details = SELECT * FROM partner_bank_details
         WHERE partner_id = partner_id
         
-        // Step 7: Update wallet
-        UPDATE wallets
-        SET available_balance = available_balance - amount,
-            pending_withdrawal = pending_withdrawal + amount,
-            last_transaction_at = current_timestamp,
-            updated_at = current_timestamp
-        WHERE id = wallet_id
+        IF bank_details is NULL OR (!bank_details.account_number AND !bank_details.upi_id):
+            RETURN error: "Please register your Bank Account or UPI details before requesting a withdrawal"
         
-        // Step 8: Create withdrawal request
-        withdrawal_id = INSERT INTO withdrawal_requests (
+        // Step 8: Decrypt account number if encrypted
+        account_number = bank_details.account_number
+        IF account_number AND account_number.includes(':'):
+            account_number = decrypt(account_number)
+        
+        // Step 9: Create withdrawal request
+        withdrawal_id = INSERT INTO wallet_withdrawals (
+            wallet_id: wallet.id,
             partner_id: partner_id,
-            wallet_id: wallet_id,
             amount: amount,
-            bank_name: bank_details.bank_name,
-            account_holder_name: bank_details.account_holder_name,
-            account_number: decrypt(bank_details.account_number_encrypted),
+            bank_name: bank_details.bank_name OR 'UPI Settlement',
+            account_number: bank_details.account_number,
             ifsc_code: bank_details.ifsc_code,
-            branch_name: bank_details.branch_name,
             status: 'pending',
-            created_at: current_timestamp
+            bank_account_id: bank_details.id,
+            created_at: NOW()
         ) RETURNING id
         
-        // Step 9: Insert transaction record
-        INSERT INTO wallet_transactions (
-            wallet_id: wallet_id,
-            transaction_type: 'debit',
-            amount: amount,
-            balance_before: wallet.available_balance + amount,
-            balance_after: wallet.available_balance,
-            status: 'pending',
-            remarks: 'Withdrawal request',
-            created_at: current_timestamp
-        )
+        // Step 10: Debit from available balance
+        debitAvailable(partner_id, amount, {
+            reference_type: 'withdrawal',
+            reference_id: withdrawal_id,
+            bank_name: bank_details.bank_name OR 'UPI Settlement',
+            description: 'Withdrawal request for ₹' + amount
+        }, current_transaction_client)
         
-        // Step 10: Commit transaction
+        // Step 11: Commit transaction
         COMMIT TRANSACTION
         
-        // Step 11: Send notification to admins
+        // Step 12: Send notification to admins
         sendBulkNotification(
             roles: ['ADMIN', 'SUPER_ADMIN'],
             type: 'info',
@@ -2537,9 +2814,62 @@ FUNCTION requestWithdrawal(partner_id, wallet_id, amount):
         ROLLBACK TRANSACTION
         RETURN error: "Failed to create withdrawal request"
 END FUNCTION
+
+// Withdrawal OTP Verification Flow
+FUNCTION sendWithdrawalOTP(partner_id, amount):
+    // Step 1: Validate amount
+    IF amount < 100 OR amount > 50000:
+        RETURN error: "Invalid amount"
+    
+    // Step 2: Get partner email
+    partner = SELECT u.email FROM partner_profiles p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.id = partner_id
+    
+    // Step 3: Generate 6-digit OTP
+    otp = generateRandomNumber(100000, 999999)
+    otp_hash = sha256(otp)
+    expires_at = NOW() + 10 minutes
+    
+    // Step 4: Store OTP in database
+    INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+    VALUES ('withdrawal:' + partner_id, otp_hash, expires_at)
+    ON CONFLICT (identity) DO UPDATE SET otp_hash = otp_hash, expires_at = expires_at
+    
+    // Step 5: Send OTP via email
+    sendOtpEmail(partner.email, otp)
+    
+    // Step 6: Return masked email
+    RETURN {
+        email_sent_to: maskEmail(partner.email),
+        dev_otp: otp IF development_mode ELSE null
+    }
+END FUNCTION
+
+FUNCTION verifyWithdrawalOTP(partner_id, otp):
+    // Step 1: Hash OTP
+    otp_hash = sha256(otp)
+    
+    // Step 2: Verify OTP in database
+    record = SELECT * FROM otp_verifications
+    WHERE identity = 'withdrawal:' + partner_id
+    AND otp_hash = otp_hash
+    AND expires_at > NOW()
+    
+    IF record is NULL:
+        RETURN error: "Invalid or expired OTP"
+    
+    // Step 3: Delete used OTP
+    DELETE FROM otp_verifications WHERE id = record.id
+    
+    // Step 4: Proceed with withdrawal
+    RETURN requestWithdrawal(partner_id, amount_from_session)
+END FUNCTION
 ```
 
 **Files**: `backend/src/modules/wallet/controller.js`, `backend/src/modules/wallet/service.js`
+
+**Note**: The withdrawal flow includes OTP verification for security, KYC status validation, bank details verification, and amount limits (₹100-₹50,000). The system uses `debitAvailable` to lock the amount and creates records in both `wallet_withdrawals` and `wallet_ledger` tables.
 
 ---
 
@@ -6049,6 +6379,1499 @@ END FUNCTION
 
 ---
 
+## 20. Security & Session Management Algorithms
+
+### 20.1 Login History Algorithm
+
+**Purpose**: Record every login attempt for security auditing
+
+**Input**: User ID, Device info, IP address, Login status
+**Output**: Login history record ID
+
+**Algorithm**:
+```
+FUNCTION recordLoginHistory(user_id, device_info, ip_address, status):
+    // Step 1: Get geolocation from IP
+    geo_data = getGeoLocationFromIP(ip_address)
+    
+    // Step 2: Extract device and browser information
+    user_agent = device_info.user_agent
+    device_type = detectDeviceType(user_agent)  // mobile, desktop, tablet
+    browser = detectBrowser(user_agent)  // chrome, firefox, safari, etc.
+    os = detectOS(user_agent)  // windows, android, ios, etc.
+    
+    // Step 3: Insert login history record
+    login_history_id = INSERT INTO login_history (
+        user_id: user_id,
+        device: device_type,
+        browser: browser,
+        os: os,
+        ip_address: ip_address,
+        city: geo_data.city,
+        country: geo_data.country,
+        login_time: current_timestamp,
+        logout_time: NULL,
+        status: status,  // success, failed
+        user_agent: user_agent
+    ) RETURNING id
+    
+    // Step 4: Update user's last login info
+    IF status == 'success':
+        UPDATE users SET
+            last_login_at: current_timestamp,
+            last_login_ip: ip_address,
+            last_login_device: device_type
+        WHERE id = user_id
+    
+    RETURN login_history_id
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/middleware/login-tracker.middleware.js`
+
+---
+
+### 20.2 Device Management Algorithm
+
+**Purpose**: Manage user devices for security
+
+**Input**: User ID, Device info, Action (register, logout, list)
+**Output**: Device list or action result
+
+**Algorithm**:
+```
+FUNCTION manageDevice(user_id, device_info, action):
+    // Step 1: Extract device fingerprint
+    device_fingerprint = generateDeviceFingerprint(device_info)
+    
+    SWITCH action:
+        CASE 'register':
+            // Step 2: Check if device already exists
+            existing_device = SELECT * FROM device_sessions 
+                             WHERE user_id = user_id 
+                             AND device_fingerprint = device_fingerprint
+            
+            IF existing_device:
+                // Step 3: Update last used time
+                UPDATE device_sessions SET
+                    last_used_at = current_timestamp,
+                    is_active = true
+                WHERE id = existing_device.id
+                RETURN { device_id: existing_device.id, is_new: false }
+            ELSE:
+                // Step 4: Register new device
+                device_id = INSERT INTO device_sessions (
+                    user_id: user_id,
+                    device_name: device_info.device_name,
+                    device_type: device_info.device_type,
+                    browser: device_info.browser,
+                    os: device_info.os,
+                    device_fingerprint: device_fingerprint,
+                    ip_address: device_info.ip_address,
+                    is_active: true,
+                    is_current: true,
+                    created_at: current_timestamp,
+                    last_used_at: current_timestamp
+                ) RETURNING id
+                
+                // Step 5: Mark other devices as not current
+                UPDATE device_sessions SET is_current = false
+                WHERE user_id = user_id AND id != device_id
+                
+                RETURN { device_id: device_id, is_new: true }
+        
+        CASE 'list':
+            // Step 6: Get all devices for user
+            devices = SELECT * FROM device_sessions 
+                     WHERE user_id = user_id 
+                     ORDER BY last_used_at DESC
+            
+            RETURN {
+                devices: devices.map(d => ({
+                    id: d.id,
+                    device_name: d.device_name,
+                    device_type: d.device_type,
+                    browser: d.browser,
+                    os: d.os,
+                    ip_address: d.ip_address,
+                    is_active: d.is_active,
+                    is_current: d.is_current,
+                    last_used_at: d.last_used_at,
+                    created_at: d.created_at
+                }))
+            }
+        
+        CASE 'logout':
+            // Step 7: Logout specific device
+            device_id = device_info.device_id
+            device = SELECT * FROM device_sessions 
+                    WHERE id = device_id AND user_id = user_id
+            
+            IF device is NULL:
+                RETURN error: "Device not found"
+            
+            // Step 8: Invalidate refresh tokens for this device
+            DELETE FROM refresh_tokens 
+            WHERE user_id = user_id AND device_id = device_id
+            
+            // Step 9: Mark device as inactive
+            UPDATE device_sessions SET
+                is_active = false,
+                logged_out_at = current_timestamp
+            WHERE id = device_id
+            
+            RETURN success: true, message: "Device logged out successfully"
+        
+        CASE 'logout_all':
+            // Step 10: Logout all devices except current
+            current_device = SELECT * FROM device_sessions 
+                            WHERE user_id = user_id AND is_current = true
+            
+            // Step 11: Invalidate all refresh tokens except current
+            DELETE FROM refresh_tokens 
+            WHERE user_id = user_id AND device_id != current_device.id
+            
+            // Step 12: Mark all devices as inactive except current
+            UPDATE device_sessions SET
+                is_active = false,
+                logged_out_at = current_timestamp
+            WHERE user_id = user_id AND id != current_device.id
+            
+            RETURN success: true, message: "All other devices logged out"
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/device.controller.js`, `backend/src/modules/auth/device.service.js`
+
+---
+
+### 20.3 Active Sessions Management Algorithm
+
+**Purpose**: Manage active user sessions
+
+**Input**: User ID, Session info, Action
+**Output**: Session list or action result
+
+**Algorithm**:
+```
+FUNCTION manageActiveSessions(user_id, session_info, action):
+    SWITCH action:
+        CASE 'list':
+            // Step 1: Get all active sessions
+            sessions = SELECT ds.*, rt.expires_at 
+                      FROM device_sessions ds
+                      LEFT JOIN refresh_tokens rt ON ds.id = rt.device_id
+                      WHERE ds.user_id = user_id AND ds.is_active = true
+                      ORDER BY ds.last_used_at DESC
+            
+            RETURN {
+                current_session: sessions.find(s => s.is_current),
+                other_sessions: sessions.filter(s => !s.is_current),
+                total_sessions: sessions.length
+            }
+        
+        CASE 'revoke':
+            // Step 2: Revoke specific session
+            session_id = session_info.session_id
+            
+            // Step 3: Delete refresh token
+            DELETE FROM refresh_tokens 
+            WHERE device_id = session_id AND user_id = user_id
+            
+            // Step 4: Mark device as inactive
+            UPDATE device_sessions SET
+                is_active = false,
+                logged_out_at = current_timestamp
+            WHERE id = session_id AND user_id = user_id
+            
+            RETURN success: true
+        
+        CASE 'revoke_all_others':
+            // Step 5: Get current session
+            current_session = SELECT * FROM device_sessions 
+                             WHERE user_id = user_id AND is_current = true
+            
+            // Step 6: Delete all other refresh tokens
+            DELETE FROM refresh_tokens 
+            WHERE user_id = user_id AND device_id != current_session.id
+            
+            // Step 7: Mark all other devices as inactive
+            UPDATE device_sessions SET
+                is_active = false,
+                logged_out_at = current_timestamp
+            WHERE user_id = user_id AND id != current_session.id
+            
+            RETURN success: true
+        
+        CASE 'extend':
+            // Step 8: Extend session expiry
+            session_id = session_info.session_id
+            new_expiry = current_timestamp + (30 * 24 * 60 * 60)  // 30 days
+            
+            UPDATE refresh_tokens SET
+                expires_at = new_expiry
+            WHERE device_id = session_id AND user_id = user_id
+            
+            UPDATE device_sessions SET
+                last_used_at = current_timestamp
+            WHERE id = session_id AND user_id = user_id
+            
+            RETURN success: true, new_expiry: new_expiry
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/session.service.js`
+
+---
+
+### 20.4 Refresh Token Rotation Algorithm
+
+**Purpose**: Rotate refresh tokens on every refresh for enhanced security
+
+**Input**: Current refresh token, Device ID
+**Output**: New access token and new refresh token
+
+**Algorithm**:
+```
+FUNCTION rotateRefreshToken(current_refresh_token, device_id):
+    // Step 1: Verify current refresh token
+    token_data = verifyJWTToken(current_refresh_token)
+    
+    IF token_data is error:
+        RETURN error: "Invalid refresh token"
+    
+    // Step 2: Get refresh token record from database
+    refresh_record = SELECT * FROM refresh_tokens 
+                    WHERE token_hash = hash(current_refresh_token) 
+                    AND user_id = token_data.user_id
+    
+    IF refresh_record is NULL:
+        RETURN error: "Refresh token not found or already used"
+    
+    // Step 3: Check if token is expired
+    IF refresh_record.expires_at < current_timestamp:
+        DELETE FROM refresh_tokens WHERE id = refresh_record.id
+        RETURN error: "Refresh token expired"
+    
+    // Step 4: Check device match (optional security)
+    IF refresh_record.device_id != device_id:
+        RETURN error: "Device mismatch"
+    
+    // Step 5: Invalidate old refresh token
+    DELETE FROM refresh_tokens WHERE id = refresh_record.id
+    
+    // Step 6: Generate new access token
+    user = SELECT * FROM users WHERE id = token_data.user_id
+    new_access_token = generateJWTToken(user)
+    
+    // Step 7: Generate new refresh token
+    new_refresh_token = generateSecureRandomToken()
+    refresh_token_hash = hash(new_refresh_token)
+    expires_at = current_timestamp + (30 * 24 * 60 * 60)  // 30 days
+    
+    // Step 8: Store new refresh token
+    INSERT INTO refresh_tokens (
+        user_id: user.id,
+        token_hash: refresh_token_hash,
+        device_id: device_id,
+        expires_at: expires_at,
+        created_at: current_timestamp
+    )
+    
+    // Step 9: Update device last used
+    UPDATE device_sessions SET
+        last_used_at = current_timestamp
+    WHERE id = device_id
+    
+    // Step 10: Log token rotation
+    INSERT INTO security_audit_logs (
+        user_id: user.id,
+        action: 'refresh_token_rotated',
+        device_id: device_id,
+        ip_address: getIPAddress(),
+        timestamp: current_timestamp
+    )
+    
+    RETURN {
+        access_token: new_access_token,
+        refresh_token: new_refresh_token,
+        expires_in: 900,  // 15 minutes for access token
+        refresh_expires_in: 30 * 24 * 60 * 60  // 30 days
+    }
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/config/jwt.js`
+
+---
+
+### 20.5 Login Audit Logs Algorithm
+
+**Purpose**: Comprehensive audit logging for all security events
+
+**Input**: User ID, Event type, Event details, IP address
+**Output**: Audit log ID
+
+**Algorithm**:
+```
+FUNCTION logSecurityEvent(user_id, event_type, event_details, ip_address):
+    // Step 1: Determine event category
+    SWITCH event_type:
+        CASE 'login_success':
+            category = 'authentication'
+            severity = 'info'
+        
+        CASE 'login_failed':
+            category = 'authentication'
+            severity = 'warning'
+        
+        CASE 'password_changed':
+            category = 'account'
+            severity = 'info'
+        
+        CASE 'forgot_password':
+            category = 'account'
+            severity = 'info'
+        
+        CASE 'role_changed':
+            category = 'authorization'
+            severity = 'warning'
+        
+        CASE 'logout':
+            category = 'authentication'
+            severity = 'info'
+        
+        CASE 'email_changed':
+            category = 'account'
+            severity = 'warning'
+        
+        CASE 'mobile_changed':
+            category = 'account'
+            severity = 'warning'
+        
+        CASE 'account_locked':
+            category = 'security'
+            severity = 'critical'
+        
+        CASE 'suspicious_activity':
+            category = 'security'
+            severity = 'critical'
+        
+        DEFAULT:
+            category = 'general'
+            severity = 'info'
+    
+    // Step 2: Insert audit log
+    audit_log_id = INSERT INTO security_audit_logs (
+        user_id: user_id,
+        event_type: event_type,
+        category: category,
+        severity: severity,
+        details: JSON.stringify(event_details),
+        ip_address: ip_address,
+        user_agent: event_details.user_agent,
+        device_fingerprint: event_details.device_fingerprint,
+        timestamp: current_timestamp
+    ) RETURNING id
+    
+    // Step 3: Trigger alerts for critical events
+    IF severity == 'critical':
+        triggerSecurityAlert(user_id, event_type, event_details)
+    
+    // Step 4: Update user's failed login count for failed attempts
+    IF event_type == 'login_failed':
+        UPDATE users SET
+            failed_login_attempts = failed_login_attempts + 1,
+            last_failed_login_at = current_timestamp
+        WHERE id = user_id
+    
+    RETURN audit_log_id
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/audit.service.js`
+
+---
+
+### 20.6 Account Lock Algorithm
+
+**Purpose**: Lock account after multiple failed login attempts
+
+**Input**: User ID, Failed attempt count
+**Output**: Lock status
+
+**Algorithm**:
+```
+FUNCTION checkAndLockAccount(user_id):
+    // Step 1: Get user's failed login attempts
+    user = SELECT * FROM users WHERE id = user_id
+    
+    // Step 2: Check if account is already locked
+    IF user.is_locked:
+        // Step 3: Check if lock period has expired
+        IF user.locked_until < current_timestamp:
+            // Step 4: Auto-unlock account
+            UPDATE users SET
+                is_locked = false,
+                locked_until = NULL,
+                failed_login_attempts = 0
+            WHERE id = user_id
+            
+            RETURN { is_locked: false, message: "Account auto-unlocked" }
+        ELSE:
+            // Step 5: Return remaining lock time
+            remaining_minutes = (user.locked_until - current_timestamp) / 60
+            RETURN { 
+                is_locked: true, 
+                message: "Account locked. Try again in " + 
+                        remaining_minutes + " minutes",
+                locked_until: user.locked_until
+            }
+    
+    // Step 6: Check if threshold reached (5 failed attempts)
+    IF user.failed_login_attempts >= 5:
+        // Step 7: Lock account for 30 minutes
+        lock_until = current_timestamp + (30 * 60)
+        
+        UPDATE users SET
+            is_locked = true,
+            locked_until = lock_until,
+            failed_login_attempts = 0
+        WHERE id = user_id
+        
+        // Step 8: Log account lock event
+        logSecurityEvent(user_id, 'account_locked', {
+            reason: 'Too many failed login attempts',
+            attempts: user.failed_login_attempts
+        }, getIPAddress())
+        
+        // Step 9: Send email notification
+        sendAccountLockedEmail(user.email, lock_until)
+        
+        RETURN { 
+            is_locked: true, 
+            message: "Account locked for 30 minutes due to too many failed attempts",
+            locked_until: lock_until
+        }
+    
+    // Step 10: Account not locked
+    RETURN { is_locked: false }
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/modules/auth/audit.service.js`
+
+---
+
+### 20.7 Suspicious Login Detection Algorithm
+
+**Purpose**: Detect and alert on suspicious login activity
+
+**Input**: User ID, Device info, IP address
+**Output**: Suspicious activity flag and alert
+
+**Algorithm**:
+```
+FUNCTION detectSuspiciousLogin(user_id, device_info, ip_address):
+    // Step 1: Get user's login history
+    login_history = SELECT * FROM login_history 
+                   WHERE user_id = user_id 
+                   AND status = 'success'
+                   ORDER BY login_time DESC 
+                   LIMIT 10
+    
+    // Step 2: Get geolocation from IP
+    geo_data = getGeoLocationFromIP(ip_address)
+    
+    // Step 3: Check for new device
+    device_fingerprint = generateDeviceFingerprint(device_info)
+    known_devices = SELECT DISTINCT device_fingerprint 
+                   FROM login_history 
+                   WHERE user_id = user_id
+    
+    is_new_device = !known_devices.includes(device_fingerprint)
+    
+    // Step 4: Check for new country
+    known_countries = login_history.map(l => l.country).filter(c => c)
+    is_new_country = !known_countries.includes(geo_data.country)
+    
+    // Step 5: Check for VPN/proxy
+    is_vpn = detectVPN(ip_address)
+    
+    // Step 6: Check for different browser
+    known_browsers = login_history.map(l => l.browser).filter(b => b)
+    is_different_browser = !known_browsers.includes(device_info.browser)
+    
+    // Step 7: Calculate risk score
+    risk_score = 0
+    risk_factors = []
+    
+    IF is_new_device:
+        risk_score += 30
+        risk_factors.push('new_device')
+    
+    IF is_new_country:
+        risk_score += 40
+        risk_factors.push('new_country')
+    
+    IF is_vpn:
+        risk_score += 20
+        risk_factors.push('vpn_detected')
+    
+    IF is_different_browser:
+        risk_score += 10
+        risk_factors.push('different_browser')
+    
+    // Step 8: Determine if suspicious
+    is_suspicious = risk_score >= 40
+    
+    // Step 9: Log detection
+    INSERT INTO security_alerts (
+        user_id: user_id,
+        risk_score: risk_score,
+        risk_factors: JSON.stringify(risk_factors),
+        ip_address: ip_address,
+        device_fingerprint: device_fingerprint,
+        geo_data: JSON.stringify(geo_data),
+        is_suspicious: is_suspicious,
+        created_at: current_timestamp
+    )
+    
+    // Step 10: Send alert if suspicious
+    IF is_suspicious:
+        user = SELECT * FROM users WHERE id = user_id
+        sendSuspiciousLoginEmail(user.email, {
+            risk_score: risk_score,
+            risk_factors: risk_factors,
+            ip_address: ip_address,
+            location: geo_data.city + ', ' + geo_data.country,
+            device: device_info.device_name,
+            time: current_timestamp
+        })
+        
+        logSecurityEvent(user_id, 'suspicious_activity', {
+            risk_score: risk_score,
+            risk_factors: risk_factors,
+            ip_address: ip_address
+        }, ip_address)
+    
+    RETURN {
+        is_suspicious: is_suspicious,
+        risk_score: risk_score,
+        risk_factors: risk_factors,
+        require_additional_verification: is_suspicious
+    }
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/security.service.js`
+
+---
+
+### 20.8 Email Change Verification Algorithm
+
+**Purpose**: Secure email change with dual OTP verification
+
+**Input**: User ID, Old email, New email, Old OTP, New OTP
+**Output**: Success/failure status
+
+**Algorithm**:
+```
+FUNCTION changeEmailWithVerification(user_id, old_email, new_email, old_otp, new_otp):
+    // Step 1: Verify user's current email
+    user = SELECT * FROM users WHERE id = user_id
+    
+    IF user.email != old_email:
+        RETURN error: "Current email does not match"
+    
+    // Step 2: Verify OTP for old email
+    old_otp_verified = verifyEmailOTP(old_email, old_otp, 'email_change_old')
+    
+    IF !old_otp_verified.success:
+        RETURN error: "Old email OTP verification failed"
+    
+    // Step 3: Check if new email already exists
+    existing_user = SELECT * FROM users WHERE email = new_email
+    
+    IF existing_user:
+        RETURN error: "Email already in use"
+    
+    // Step 4: Verify OTP for new email
+    new_otp_verified = verifyEmailOTP(new_email, new_otp, 'email_change_new')
+    
+    IF !new_otp_verified.success:
+        RETURN error: "New email OTP verification failed"
+    
+    // Step 5: Start transaction
+    BEGIN TRANSACTION
+    
+    TRY:
+        // Step 6: Update user email
+        UPDATE users SET
+            email = new_email,
+            email_verified = true,
+            updated_at = current_timestamp
+        WHERE id = user_id
+        
+        // Step 7: Log email change
+        logSecurityEvent(user_id, 'email_changed', {
+            old_email: old_email,
+            new_email: new_email
+        }, getIPAddress())
+        
+        // Step 8: Send confirmation email to new address
+        sendEmailChangeConfirmation(new_email, old_email)
+        
+        // Step 9: Create notification
+        createNotification(
+            user_id: user_id,
+            type: 'security',
+            title: 'Email Changed',
+            message: 'Your email has been successfully changed from ' + old_email + ' to ' + new_email,
+            action_link: '/profile'
+        )
+        
+        COMMIT TRANSACTION
+        
+        RETURN success: true, message: "Email changed successfully"
+    
+    CATCH error:
+        ROLLBACK TRANSACTION
+        RETURN error: "Failed to change email: " + error.message
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/modules/auth/profile.service.js`
+
+---
+
+### 20.9 Mobile Change Verification Algorithm
+
+**Purpose**: Secure mobile number change with dual OTP verification
+
+**Input**: User ID, Old mobile, New mobile, Old OTP, New OTP
+**Output**: Success/failure status
+
+**Algorithm**:
+```
+FUNCTION changeMobileWithVerification(user_id, old_mobile, new_mobile, old_otp, new_otp):
+    // Step 1: Normalize mobile numbers
+    old_mobile_normalized = normalizeMobileNumber(old_mobile)
+    new_mobile_normalized = normalizeMobileNumber(new_mobile)
+    
+    // Step 2: Verify user's current mobile
+    user = SELECT * FROM users WHERE id = user_id
+    
+    IF user.mobile != old_mobile_normalized:
+        RETURN error: "Current mobile does not match"
+    
+    // Step 3: Verify OTP for old mobile
+    old_otp_verified = verifyMSG91OTP(old_mobile_normalized, old_otp)
+    
+    IF !old_otp_verified.success:
+        RETURN error: "Old mobile OTP verification failed"
+    
+    // Step 4: Check if new mobile already exists
+    existing_user = SELECT * FROM users WHERE mobile = new_mobile_normalized
+    
+    IF existing_user:
+        RETURN error: "Mobile number already in use"
+    
+    // Step 5: Verify OTP for new mobile
+    new_otp_verified = verifyMSG91OTP(new_mobile_normalized, new_otp)
+    
+    IF !new_otp_verified.success:
+        RETURN error: "New mobile OTP verification failed"
+    
+    // Step 6: Start transaction
+    BEGIN TRANSACTION
+    
+    TRY:
+        // Step 7: Update user mobile
+        UPDATE users SET
+            mobile = new_mobile_normalized,
+            mobile_verified = true,
+            updated_at = current_timestamp
+        WHERE id = user_id
+        
+        // Step 8: Update partner profile if exists
+        UPDATE partner_profiles SET
+            mobile = new_mobile_normalized
+        WHERE user_id = user_id
+        
+        // Step 9: Log mobile change
+        logSecurityEvent(user_id, 'mobile_changed', {
+            old_mobile: old_mobile_normalized,
+            new_mobile: new_mobile_normalized
+        }, getIPAddress())
+        
+        // Step 10: Send SMS confirmation to new number
+        sendSMSConfirmation(new_mobile_normalized, 'Your mobile number has been successfully updated')
+        
+        // Step 11: Create notification
+        createNotification(
+            user_id: user_id,
+            type: 'security',
+            title: 'Mobile Changed',
+            message: 'Your mobile number has been successfully changed',
+            action_link: '/profile'
+        )
+        
+        COMMIT TRANSACTION
+        
+        RETURN success: true, message: "Mobile changed successfully"
+    
+    CATCH error:
+        ROLLBACK TRANSACTION
+        RETURN error: "Failed to change mobile: " + error.message
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`, `backend/src/modules/auth/profile.service.js`
+
+---
+
+### 20.10 Password Strength Policy Algorithm
+
+**Purpose**: Enforce strong password policy
+
+**Input**: Password string
+**Output**: Validation result with strength score
+
+**Algorithm**:
+```
+FUNCTION validatePasswordStrength(password):
+    // Step 1: Initialize validation
+    validation = {
+        is_valid: true,
+        strength_score: 0,
+        errors: [],
+        warnings: []
+    }
+    
+    // Step 2: Check minimum length (8 characters)
+    IF password.length < 8:
+        validation.is_valid = false
+        validation.errors.push("Password must be at least 8 characters long")
+    ELSE IF password.length >= 8:
+        validation.strength_score += 20
+    
+    // Step 3: Check for uppercase letter
+    IF !/[A-Z]/.test(password):
+        validation.errors.push("Password must contain at least one uppercase letter")
+    ELSE:
+        validation.strength_score += 20
+    
+    // Step 4: Check for lowercase letter
+    IF !/[a-z]/.test(password):
+        validation.errors.push("Password must contain at least one lowercase letter")
+    ELSE:
+        validation.strength_score += 20
+    
+    // Step 5: Check for number
+    IF !/[0-9]/.test(password):
+        validation.errors.push("Password must contain at least one number")
+    ELSE:
+        validation.strength_score += 20
+    
+    // Step 6: Check for special character
+    IF !/[!@#$%^&*(),.?":{}|<>]/.test(password):
+        validation.errors.push("Password must contain at least one special character")
+    ELSE:
+        validation.strength_score += 20
+    
+    // Step 7: Check for common passwords
+    common_passwords = ['password', '12345678', 'qwerty', 'admin', 'letmein']
+    IF common_passwords.includes(password.toLowerCase()):
+        validation.is_valid = false
+        validation.errors.push("Password is too common")
+    
+    // Step 8: Check for personal information
+    // (Would need user context to check against name, email, etc.)
+    
+    // Step 9: Determine strength label
+    IF validation.strength_score < 40:
+        validation.strength_label = 'Weak'
+    ELSE IF validation.strength_score < 60:
+        validation.strength_label = 'Medium'
+    ELSE IF validation.strength_score < 80:
+        validation.strength_label = 'Strong'
+    ELSE:
+        validation.strength_label = 'Very Strong'
+    
+    // Step 10: Add warnings for improvement
+    IF validation.strength_score < 100:
+        validation.warnings.push("Consider using a longer password for better security")
+    
+    RETURN validation
+END FUNCTION
+```
+
+**Files**: `backend/src/utils/validators/password.validator.js`
+
+---
+
+### 20.11 Password History Algorithm
+
+**Purpose**: Prevent reuse of recent passwords
+
+**Input**: User ID, New password
+**Output**: Validation result
+
+**Algorithm**:
+```
+FUNCTION checkPasswordHistory(user_id, new_password):
+    // Step 1: Hash new password
+    new_password_hash = hashPassword(new_password)
+    
+    // Step 2: Get last 5 password hashes for user
+    password_history = SELECT * FROM password_history 
+                      WHERE user_id = user_id 
+                      ORDER BY created_at DESC 
+                      LIMIT 5
+    
+    // Step 3: Check against history
+    FOR EACH history_record IN password_history:
+        IF history_record.password_hash == new_password_hash:
+            RETURN {
+                is_allowed: false,
+                message: "Cannot reuse a password used in the last 5 changes",
+                last_used: history_record.created_at
+            }
+    
+    // Step 4: Password not in history, allowed
+    RETURN {
+        is_allowed: true,
+        message: "Password is not in recent history"
+    }
+END FUNCTION
+
+FUNCTION recordPasswordHistory(user_id, password_hash):
+    // Step 1: Insert new password history record
+    INSERT INTO password_history (
+        user_id: user_id,
+        password_hash: password_hash,
+        created_at: current_timestamp
+    )
+    
+    // Step 2: Keep only last 5 passwords
+    old_records = SELECT id FROM password_history 
+                 WHERE user_id = user_id 
+                 ORDER BY created_at DESC 
+                 OFFSET 5
+    
+    IF old_records.length > 0:
+        DELETE FROM password_history 
+        WHERE id IN old_records.map(r => r.id)
+    
+    RETURN success: true
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/password.service.js`
+
+---
+
+### 20.12 Remember Me Algorithm
+
+**Purpose**: Implement "Remember Me" functionality with configurable expiry
+
+**Input**: User ID, Remember me option (true/false), Expiry option
+**Output: Refresh token with appropriate expiry
+
+**Algorithm**:
+```
+FUNCTION loginWithRememberMe(user_id, remember_me, expiry_option):
+    // Step 1: Determine refresh token expiry based on option
+    SWITCH expiry_option:
+        CASE '30_days':
+            refresh_expiry = current_timestamp + (30 * 24 * 60 * 60)
+            cookie_max_age = 30 * 24 * 60 * 60  // 30 days
+        
+        CASE '7_days':
+            refresh_expiry = current_timestamp + (7 * 24 * 60 * 60)
+            cookie_max_age = 7 * 24 * 60 * 60  // 7 days
+        
+        CASE 'session':
+            refresh_expiry = current_timestamp + (24 * 60 * 60)  // 24 hours
+            cookie_max_age = null  // Session cookie
+        
+        DEFAULT:
+            refresh_expiry = current_timestamp + (7 * 24 * 60 * 60)  // Default 7 days
+            cookie_max_age = 7 * 24 * 60 * 60
+    
+    // Step 2: If remember me is false, use session-only
+    IF !remember_me:
+        refresh_expiry = current_timestamp + (24 * 60 * 60)  // 24 hours
+        cookie_max_age = null
+    
+    // Step 3: Generate tokens
+    user = SELECT * FROM users WHERE id = user_id
+    access_token = generateJWTToken(user)
+    refresh_token = generateSecureRandomToken()
+    refresh_token_hash = hash(refresh_token)
+    
+    // Step 4: Store refresh token with expiry
+    INSERT INTO refresh_tokens (
+        user_id: user.id,
+        token_hash: refresh_token_hash,
+        device_id: getDeviceID(),
+        expires_at: refresh_expiry,
+        remember_me: remember_me,
+        created_at: current_timestamp
+    )
+    
+    // Step 5: Set cookie options
+    cookie_options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV == 'production',
+        sameSite: 'strict'
+    }
+    
+    IF cookie_max_age:
+        cookie_options.maxAge = cookie_max_age
+    
+    // Step 6: Return tokens and cookie options
+    RETURN {
+        access_token: access_token,
+        refresh_token: refresh_token,
+        cookie_options: cookie_options,
+        refresh_expires_at: refresh_expiry
+    }
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/controller.js`
+
+---
+
+### 20.13 Security Dashboard Algorithm
+
+**Purpose**: Generate security dashboard for partner
+
+**Input**: Partner ID
+**Output**: Security dashboard data
+
+**Algorithm**:
+```
+FUNCTION getSecurityDashboard(user_id):
+    // Step 1: Get user details
+    user = SELECT * FROM users WHERE id = user_id
+    
+    // Step 2: Get last login information
+    last_login = SELECT * FROM login_history 
+                 WHERE user_id = user_id AND status = 'success' 
+                 ORDER BY login_time DESC 
+                 LIMIT 1
+    
+    // Step 3: Get active devices
+    active_devices = SELECT * FROM device_sessions 
+                   WHERE user_id = user_id AND is_active = true
+    
+    // Step 4: Get recent security alerts
+    security_alerts = SELECT * FROM security_alerts 
+                    WHERE user_id = user_id 
+                    ORDER BY created_at DESC 
+                    LIMIT 10
+    
+    // Step 5: Get password last changed date
+    password_history = SELECT created_at FROM password_history 
+                      WHERE user_id = user_id 
+                      ORDER BY created_at DESC 
+                      LIMIT 1
+    
+    // Step 6: Get failed login attempts
+    failed_attempts = SELECT COUNT(*) FROM login_history 
+                     WHERE user_id = user_id AND status = 'failed'
+    
+    // Step 7: Build dashboard data
+    dashboard = {
+        // Step 8: Last login info
+        last_login: last_login ? {
+            time: last_login.login_time,
+            ip_address: last_login.ip_address,
+            device: last_login.device,
+            browser: last_login.browser,
+            location: last_login.city + ', ' + last_login.country
+        } : null,
+        
+        // Step 9: Active devices
+        active_devices: active_devices.map(d => ({
+            device_name: d.device_name,
+            device_type: d.device_type,
+            browser: d.browser,
+            is_current: d.is_current,
+            last_used: d.last_used_at
+        })),
+        total_active_devices: active_devices.length,
+        
+        // Step 10: Security alerts
+        security_alerts: security_alerts.map(a => ({
+            type: a.risk_factors,
+            risk_score: a.risk_score,
+            created_at: a.created_at,
+            is_resolved: a.is_resolved
+        })),
+        unresolved_alerts: security_alerts.filter(a => !a.is_resolved).length,
+        
+        // Step 11: Password info
+        password_last_changed: password_history ? password_history.created_at : null,
+        password_strength: calculatePasswordStrength(user),
+        
+        // Step 12: Account status
+        account_locked: user.is_locked,
+        email_verified: user.email_verified,
+        mobile_verified: user.mobile_verified,
+        
+        // Step 13: Failed attempts
+        failed_login_attempts: user.failed_login_attempts,
+        total_failed_attempts: failed_attempts,
+        
+        // Step 14: Security score
+        security_score: calculateSecurityScore({
+            last_login: last_login,
+            active_devices: active_devices.length,
+            unresolved_alerts: security_alerts.filter(a => !a.is_resolved).length,
+            password_strength: calculatePasswordStrength(user),
+            two_factor_enabled: user.two_factor_enabled
+        })
+    }
+    
+    RETURN dashboard
+END FUNCTION
+```
+
+**Files**: `backend/src/modules/auth/security.service.js`
+
+---
+
+### 20.14 Security API Endpoints
+
+**Purpose**: Define security-related API endpoints
+
+**Algorithm**:
+```
+// Security API Routes
+
+GET /api/v1/auth/login-history
+- Purpose: Get user's login history
+- Authentication: Required
+- Query params: page, limit, start_date, end_date
+- Response: { login_history: [], total: 0, page: 1, limit: 20 }
+
+GET /api/v1/auth/devices
+- Purpose: Get user's registered devices
+- Authentication: Required
+- Response: { devices: [], current_device: {}, total: 0 }
+
+DELETE /api/v1/auth/device/:id
+- Purpose: Logout specific device
+- Authentication: Required
+- Response: { success: true, message: "Device logged out" }
+
+POST /api/v1/auth/logout-all
+- Purpose: Logout all devices except current
+- Authentication: Required
+- Response: { success: true, message: "All devices logged out" }
+
+POST /api/v1/auth/change-email
+- Purpose: Change email with verification
+- Authentication: Required
+- Body: { old_email, new_email, old_otp, new_otp }
+- Response: { success: true, message: "Email changed" }
+
+POST /api/v1/auth/change-mobile
+- Purpose: Change mobile with verification
+- Authentication: Required
+- Body: { old_mobile, new_mobile, old_otp, new_otp }
+- Response: { success: true, message: "Mobile changed" }
+
+POST /api/v1/auth/change-password
+- Purpose: Change password with strength validation
+- Authentication: Required
+- Body: { old_password, new_password }
+- Response: { success: true, message: "Password changed" }
+
+GET /api/v1/auth/security-dashboard
+- Purpose: Get security dashboard
+- Authentication: Required
+- Response: { last_login, active_devices, security_alerts, security_score }
+
+POST /api/v1/auth/send-email-otp
+- Purpose: Send OTP for email verification
+- Authentication: Required
+- Body: { email, type }
+- Response: { success: true, message: "OTP sent" }
+
+POST /api/v1/auth/send-mobile-otp
+- Purpose: Send OTP for mobile verification
+- Authentication: Required
+- Body: { mobile, type }
+- Response: { success: true, message: "OTP sent" }
+
+POST /api/v1/auth/verify-email-otp
+- Purpose: Verify email OTP
+- Authentication: Required
+- Body: { email, otp, type }
+- Response: { success: true, verified: true }
+
+POST /api/v1/auth/verify-mobile-otp
+- Purpose: Verify mobile OTP
+- Authentication: Required
+- Body: { mobile, otp }
+- Response: { success: true, verified: true }
+
+GET /api/v1/auth/sessions
+- Purpose: Get active sessions
+- Authentication: Required
+- Response: { current_session, other_sessions, total: 0 }
+
+DELETE /api/v1/auth/session/:id
+- Purpose: Revoke specific session
+- Authentication: Required
+- Response: { success: true }
+
+POST /api/v1/auth/revoke-all-sessions
+- Purpose: Revoke all other sessions
+- Authentication: Required
+- Response: { success: true }
+```
+
+**Files**: `backend/src/modules/auth/routes.js`
+
+---
+
+### 20.15 Security Database Schema
+
+**Purpose**: Define database tables for security features
+
+**Algorithm**:
+```
+// Security Database Tables
+
+TABLE login_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    device VARCHAR(50),
+    browser VARCHAR(50),
+    os VARCHAR(50),
+    ip_address VARCHAR(45),
+    city VARCHAR(100),
+    country VARCHAR(100),
+    login_time TIMESTAMP NOT NULL,
+    logout_time TIMESTAMP,
+    status VARCHAR(20) NOT NULL,  -- success, failed
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_login_time (login_time),
+    INDEX idx_status (status)
+)
+
+TABLE device_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    device_name VARCHAR(100),
+    device_type VARCHAR(50),  -- mobile, desktop, tablet
+    browser VARCHAR(50),
+    os VARCHAR(50),
+    device_fingerprint VARCHAR(255) UNIQUE,
+    ip_address VARCHAR(45),
+    is_active BOOLEAN DEFAULT true,
+    is_current BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    logged_out_at TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_device_fingerprint (device_fingerprint),
+    INDEX idx_is_active (is_active)
+)
+
+TABLE refresh_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    token_hash VARCHAR(255) NOT NULL,
+    device_id INTEGER REFERENCES device_sessions(id),
+    expires_at TIMESTAMP NOT NULL,
+    remember_me BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_token_hash (token_hash),
+    INDEX idx_expires_at (expires_at)
+)
+
+TABLE password_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+)
+
+TABLE security_audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    event_type VARCHAR(50) NOT NULL,
+    category VARCHAR(50) NOT NULL,  -- authentication, account, authorization, security
+    severity VARCHAR(20) NOT NULL,  -- info, warning, critical
+    details JSONB,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    device_fingerprint VARCHAR(255),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_event_type (event_type),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_severity (severity)
+)
+
+TABLE security_alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    risk_score INTEGER NOT NULL,
+    risk_factors JSONB,
+    ip_address VARCHAR(45),
+    device_fingerprint VARCHAR(255),
+    geo_data JSONB,
+    is_suspicious BOOLEAN DEFAULT false,
+    is_resolved BOOLEAN DEFAULT false,
+    resolved_at TIMESTAMP,
+    resolved_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_suspicious (is_suspicious),
+    INDEX idx_is_resolved (is_resolved),
+    INDEX idx_created_at (created_at)
+)
+
+// Add to users table
+ALTER TABLE users ADD COLUMN is_locked BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN locked_until TIMESTAMP;
+ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN last_failed_login_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(45);
+ALTER TABLE users ADD COLUMN last_login_device VARCHAR(50);
+ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT false;
+```
+
+**Files**: `backend/src/migrations/security_tables.sql`
+
+---
+
+### 20.16 Security Middleware Improvements
+
+**Purpose**: Enhanced JWT middleware with comprehensive checks
+
+**Algorithm**:
+```
+FUNCTION enhancedJWTMiddleware(request, response, next):
+    // Step 1: Extract token from header or cookie
+    token = extractToken(request)
+    
+    IF !token:
+        RETURN error: "No token provided"
+    
+    // Step 2: Verify token validity
+    token_data = verifyJWTToken(token)
+    
+    IF token_data is error:
+        RETURN error: "Invalid token"
+    
+    // Step 3: Get user from database
+    user = SELECT * FROM users WHERE id = token_data.user_id
+    
+    IF user is NULL:
+        RETURN error: "User not found"
+    
+    // Step 4: Check account status
+    IF user.is_locked:
+        IF user.locked_until > current_timestamp:
+            RETURN error: "Account is locked. Try again later"
+        ELSE:
+            // Auto-unlock if lock period expired
+            UPDATE users SET
+                is_locked = false,
+                locked_until = NULL,
+                failed_login_attempts = 0
+            WHERE id = user.id
+    
+    // Step 5: Check email verification (if required)
+    IF !user.email_verified:
+        RETURN error: "Email not verified. Please verify your email"
+    
+    // Step 6: Check mobile verification (if required)
+    IF !user.mobile_verified:
+        RETURN error: "Mobile not verified. Please verify your mobile"
+    
+    // Step 7: Check partner status (if user is partner)
+    partner_profile = SELECT * FROM partner_profiles WHERE user_id = user.id
+    IF partner_profile:
+        IF partner_profile.kyc_status != 'approved':
+            RETURN error: "Partner KYC not approved"
+        
+        IF partner_profile.status != 'active':
+            RETURN error: "Partner account is not active"
+    
+    // Step 8: Check user status
+    IF user.status != 'active':
+        RETURN error: "User account is not active"
+    
+    // Step 9: Check if token is blacklisted (for logout)
+    is_blacklisted = SELECT COUNT(*) FROM blacklisted_tokens 
+                    WHERE token_hash = hash(token)
+    
+    IF is_blacklisted > 0:
+        RETURN error: "Token has been revoked"
+    
+    // Step 10: Update last activity
+    UPDATE users SET
+        last_activity_at = current_timestamp
+    WHERE id = user.id
+    
+    // Step 11: Attach user to request
+    request.user = user
+    request.token_data = token_data
+    
+    // Step 12: Continue to next middleware
+    next()
+END FUNCTION
+```
+
+**Files**: `backend/src/middleware/authentication/auth.middleware.js`
+
+---
+
+### 20.17 Security Frontend Improvements
+
+**Purpose**: Frontend security features and UI components
+
+**Algorithm**:
+```
+// Frontend Security Components
+
+// 1. Login History Page
+FUNCTION renderLoginHistoryPage():
+    // Step 1: Fetch login history from API
+    history = await api.get('/auth/login-history', {
+        params: { page: 1, limit: 20 }
+    })
+    
+    // Step 2: Render table with columns
+    // - Date/Time
+    // - Device
+    // - Browser
+    // - IP Address
+    // - Location
+    // - Status
+    
+    // Step 3: Add filters
+    // - Date range picker
+    // - Status filter (success/failed)
+    // - Device filter
+    
+    // Step 4: Add pagination
+    RETURN <LoginHistoryTable data={history} />
+
+// 2. Device Management Page
+FUNCTION renderDeviceManagementPage():
+    // Step 1: Fetch devices from API
+    devices = await api.get('/auth/devices')
+    
+    // Step 2: Render device cards
+    // - Device name
+    // - Device type icon
+    // - Browser
+    // - Last used
+    // - Current device badge
+    // - Logout button
+    
+    // Step 3: Add "Logout All Devices" button
+    // Step 4: Add confirmation dialog
+    RETURN <DeviceManagement devices={devices} />
+
+// 3. Remember Me Toggle
+FUNCTION renderRememberMeToggle():
+    // Step 1: Add checkbox in login form
+    // Step 2: Add expiry options dropdown
+    // - 30 Days
+    // - 7 Days
+    // - Browser Session
+    
+    // Step 3: Store preference in localStorage
+    RETURN <RememberMeToggle options={['30_days', '7_days', 'session']} />
+
+// 4. Show Password Toggle
+FUNCTION renderShowPasswordToggle():
+    // Step 1: Add eye icon button
+    // Step 2: Toggle input type between password and text
+    // Step 3: Toggle icon between eye and eye-slash
+    RETURN <ShowPasswordToggle />
+
+// 5. Caps Lock Warning
+FUNCTION renderCapsLockWarning():
+    // Step 1: Listen for caps lock key events
+    // Step 2: Show warning when caps lock is on
+    // Step 3: Hide warning when caps lock is off
+    RETURN <CapsLockWarning />
+
+// 6. Password Strength Meter
+FUNCTION renderPasswordStrengthMeter(password):
+    // Step 1: Calculate strength score
+    strength = validatePasswordStrength(password)
+    
+    // Step 2: Render progress bar with color
+    // - Red: Weak (< 40)
+    // - Yellow: Medium (40-60)
+    // - Green: Strong (60-80)
+    // - Dark Green: Very Strong (> 80)
+    
+    // Step 3: Show strength label
+    // Step 4: Show requirements checklist
+    RETURN <PasswordStrengthMeter strength={strength} />
+
+// 7. Recent Login Information
+FUNCTION renderRecentLoginInfo():
+    // Step 1: Fetch last login from API
+    last_login = await api.get('/auth/security-dashboard')
+    
+    // Step 2: Display on login page
+    // - "Last login: [date] from [device] at [location]"
+    // - Show IP address
+    // - Add "This wasn't me" link
+    
+    // Step 3: If "This wasn't me" clicked
+    // - Trigger security alert
+    // - Offer to logout all devices
+    RETURN <RecentLoginInfo data={last_login} />
+
+// 8. Security Dashboard
+FUNCTION renderSecurityDashboard():
+    // Step 1: Fetch security data from API
+    security_data = await api.get('/auth/security-dashboard')
+    
+    // Step 2: Render sections
+    // - Security score (circular progress)
+    // - Last login card
+    // - Active devices list
+    // - Security alerts list
+    // - Password strength
+    // - Account status badges
+    
+    // Step 3: Add action buttons
+    // - Change password
+    // - Manage devices
+    // - View login history
+    // - Enable 2FA
+    
+    RETURN <SecurityDashboard data={security_data} />
+```
+
+**Files**: `frontend/src/components/security/LoginHistory.jsx`, `frontend/src/components/security/DeviceManagement.jsx`, `frontend/src/components/security/PasswordStrengthMeter.jsx`
+
+---
+
 ## Summary
 
 This document provides comprehensive algorithms for all major processes and features in the GharKaPaisa platform:
@@ -6063,6 +7886,7 @@ This document provides comprehensive algorithms for all major processes and feat
 8. **Reporting & Analytics**: Dashboard analytics, comprehensive reports, monthly trends
 9. **Security & Infrastructure**: Rate limiting, encryption, S3 operations, email sending, graceful shutdown, health checks
 10. **Frontend & Mobile**: API client with token refresh, theme switching, language switching, mobile WebView handling
+11. **Security & Session Management**: Login history, device management, active sessions, refresh token rotation, audit logs, account lock, suspicious login detection, email/mobile change verification, password strength policy, password history, remember me, security dashboard
 
 Each algorithm includes:
 - Clear purpose statement
@@ -6073,7 +7897,7 @@ Each algorithm includes:
 - External service integrations
 - Audit logging where applicable
 
-**Total Algorithms Documented**: 50+ comprehensive process algorithms covering all features of the GharKaPaisa platform.
+**Total Algorithms Documented**: 70+ comprehensive process algorithms covering all features of the GharKaPaisa platform.
 
 ---
 

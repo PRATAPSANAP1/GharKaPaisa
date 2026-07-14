@@ -816,5 +816,6 @@ module.exports = {
   processWithdrawal,
   getWalletSummary,
   releaseMaturedCommissions,
-  adminAdjustWallet
+  adminAdjustWallet,
+  syncWalletBalance
 };

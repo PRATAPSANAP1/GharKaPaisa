@@ -22,6 +22,13 @@ const api = axios.create({
 let inMemoryAccessToken = null;
 let activeRequests = 0;
 
+const getDeviceId = () => {
+  const key = 'gkp_device_id';
+  let id = localStorage.getItem(key);
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); }
+  return id;
+};
+
 const showLoader = () => {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent("loader", { detail: true }));
@@ -63,6 +70,7 @@ api.interceptors.request.use((config) => {
   showLoader();
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['X-Device-Id'] = getDeviceId();
   return config;
 }, (err) => {
   activeRequests--;

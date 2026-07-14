@@ -29,7 +29,7 @@ const runWalletEngineMigrations = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_ledger (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        wallet_id UUID NOT NULL REFERENCES wallets(id),
+        wallet_id UUID NOT NULL REFERENCES partner_wallets(id),
         partner_id UUID NOT NULL REFERENCES partner_profiles(id),
         application_id UUID REFERENCES applications(id),
         transaction_type ledger_transaction_type NOT NULL,

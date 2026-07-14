@@ -37,6 +37,15 @@ router.post('/refresh',                  loginLimiter,          ctrl.refresh);
 // ── Protected Auth Routes ───────────────────────────────────────────────────────
 router.get('/me', jwtAuth, ctrl.getMe);
 router.post('/logout', jwtAuth, ctrl.logout);
+router.get('/login-history', jwtAuth, ctrl.loginHistory);
+router.get('/devices', jwtAuth, ctrl.devices);
+router.get('/security-dashboard', jwtAuth, ctrl.securityDashboard);
+router.delete('/device/:id', jwtAuth, ctrl.removeDevice);
+router.post('/logout-all', jwtAuth, ctrl.logoutAll);
+router.post('/change-email/request', jwtAuth, ctrl.changeEmailRequest);
+router.post('/change-email', jwtAuth, ctrl.changeEmail);
+router.post('/change-mobile/request', jwtAuth, ctrl.changeMobileRequest);
+router.post('/change-mobile', jwtAuth, ctrl.changeMobile);
 
 // Admin-only route to set role
 router.put('/admin/set-role', loginLimiter, jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.setRole);

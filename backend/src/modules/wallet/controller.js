@@ -167,7 +167,7 @@ const getWalletDashboard = async (req, res, next) => {
     // Top Product commission categories
     const { rows: categories } = await query(`
       SELECT 
-        COALESCE(p.category, 'General Commission') as category,
+        COALESCE(p.category::text, 'General Commission') as category,
         COALESCE(SUM(wl.credit), 0) as total_earned
       FROM wallet_ledger wl
       LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number

@@ -10,6 +10,7 @@ const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../../servic
 const { encrypt, decrypt } = require('../../utils/helpers/crypto');
 const { JWT_SECRET, OTP_PEPPER } = require('../../config/jwt.js');
 const { normalizeIndianMobile, verifyAccessToken, sendSmsOtp } = require('../../services/otp/msg91.service.js');
+const security = require('./security.service.js');
 
 const maskEmail = (email) => {
   const at = email.indexOf('@');
@@ -32,12 +33,12 @@ const buildVerificationLink = (token) => {
 
 const isProd = process.env.NODE_ENV === 'production';
 
-const setRefreshTokenCookie = (res, token) => {
+const setRefreshTokenCookie = (res, token, rememberMe = true) => {
   const cookieOptions = {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : undefined
   };
 
   if (process.env.COOKIE_DOMAIN) {
@@ -127,18 +128,21 @@ const lookupUser = async (req, res, next) => {
 };
 
 // Helper to generate and hash refresh token in db
-const generateAndSaveRefreshToken = async (userId) => {
+const generateAndSaveRefreshToken = async (userId, req, rememberMe = true) => {
   const refreshToken = crypto.randomBytes(40).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days expiry
+  const expiresAt = new Date(Date.now() + (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000);
+  const context = security.clientContext(req);
 
   await query(`
-    INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-    VALUES ($1, $2, $3)
-  `, [userId, tokenHash, expiresAt]);
+    INSERT INTO refresh_tokens (user_id, token_hash, expires_at, device_id, device_name, browser, ip_address, city, country)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  `, [userId, tokenHash, expiresAt, context.deviceId, context.device, context.browser, context.ip, context.city, context.country]);
 
   return refreshToken;
 };
+
+const isLocked = (user) => user?.locked_until && new Date(user.locked_until) > new Date();
 
 // ── POST /auth/send-otp ──────────────────────────────────────────────────────────
 // Sends a 6-digit OTP to the user's registered email via AWS SES.
@@ -323,7 +327,8 @@ const login = async (req, res, next) => {
     }
     const { rows: [user] } = await query(userQuery, queryParams);
 
-    if (!user) return error(res, 'No account found with this email or mobile', 401);
+    if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this email or mobile', 401); }
+    if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
 
     if (!user.email_verified) {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
@@ -339,6 +344,7 @@ const login = async (req, res, next) => {
     `, [identity, otpHash]);
 
     if (!record) {
+      await security.recordFailedLogin(user, req, 'invalid_otp');
       return error(res, 'Invalid or expired OTP code', 400);
     }
     await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
@@ -358,7 +364,11 @@ const login = async (req, res, next) => {
     );
 
     // Generate Refresh Token
-    const refreshToken = await generateAndSaveRefreshToken(user.id);
+    const refreshToken = await generateAndSaveRefreshToken(user.id, req, req.body.rememberMe !== false);
+    await security.resetFailures(user.id);
+    await security.detectSuspiciousLogin(user.id, req);
+    await security.loginRecord(user.id, req, 'success');
+    await security.audit(user.id, 'login_success', req);
 
     // Fetch KYC status for partner users
     let kycStatus = null;
@@ -378,7 +388,7 @@ const login = async (req, res, next) => {
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
@@ -406,7 +416,8 @@ const loginWithMsg91 = async (req, res, next) => {
     }
     const { rows: [user] } = await query(userQuery, queryParams);
 
-    if (!user) return error(res, 'No account found with this mobile number', 401);
+    if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this mobile number', 401); }
+    if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
@@ -414,6 +425,7 @@ const loginWithMsg91 = async (req, res, next) => {
       await verifyAccessToken({ accessToken, expectedMobile: mobile });
     } catch (msg91Err) {
       logger.warn(`[MSG91] Mobile token verification failed for ${mobile}: ${msg91Err.message}`);
+      await security.recordFailedLogin(user, req, 'invalid_sms_token');
       return error(res, 'Invalid or expired SMS verification token', 401);
     }
 
@@ -433,7 +445,11 @@ const loginWithMsg91 = async (req, res, next) => {
       JWT_SECRET,
       { expiresIn: '15m' }
     );
-    const refreshToken = await generateAndSaveRefreshToken(user.id);
+    const refreshToken = await generateAndSaveRefreshToken(user.id, req, req.body.rememberMe !== false);
+    await security.resetFailures(user.id);
+    await security.detectSuspiciousLogin(user.id, req);
+    await security.loginRecord(user.id, req, 'success');
+    await security.audit(user.id, 'login_success', req);
 
     // Fetch KYC status for partner users
     let kycStatus = null;
@@ -453,7 +469,7 @@ const loginWithMsg91 = async (req, res, next) => {
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
     return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
@@ -482,7 +498,7 @@ const refresh = async (req, res, next) => {
     }
 
     // Revoke the old refresh token (Rotation)
-    await query(`UPDATE refresh_tokens SET revoked = true WHERE id = $1`, [tokenRecord.id]);
+    await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW(), last_used_at = NOW() WHERE id = $1`, [tokenRecord.id]);
 
     // Generate new tokens
     const newToken = jwt.sign(
@@ -491,9 +507,9 @@ const refresh = async (req, res, next) => {
       { expiresIn: '15m' }
     );
 
-    const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id);
+    const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id, req, tokenRecord.expires_at - new Date() > 8 * 24 * 60 * 60 * 1000);
 
-    setRefreshTokenCookie(res, newRefreshToken);
+    setRefreshTokenCookie(res, newRefreshToken, tokenRecord.expires_at - new Date() > 8 * 24 * 60 * 60 * 1000);
     return res.json({
       success: true,
       token: newToken,
@@ -721,12 +737,13 @@ const loginPassword = async (req, res, next) => {
     }
     const { rows: [user] } = await query(userQuery, queryParams);
 
-    if (!user) return error(res, 'No account found with this email or mobile', 401);
+    if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this email or mobile', 401); }
+    if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
 
     if (!user.password_hash) return error(res, 'Password login not enabled for this account', 401);
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return error(res, 'Invalid credentials', 401);
+    if (!valid) { await security.recordFailedLogin(user, req, 'invalid_password'); return error(res, 'Invalid credentials', 401); }
 
     if (!user.email_verified) {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
@@ -742,7 +759,11 @@ const loginPassword = async (req, res, next) => {
     );
 
     // Generate Refresh Token
-    const refreshToken = await generateAndSaveRefreshToken(user.id);
+    const refreshToken = await generateAndSaveRefreshToken(user.id, req, req.body.rememberMe !== false);
+    await security.resetFailures(user.id);
+    await security.detectSuspiciousLogin(user.id, req);
+    await security.loginRecord(user.id, req, 'success');
+    await security.audit(user.id, 'login_success', req);
 
     // Fetch KYC status for partner users
     let kycStatus = null;
@@ -762,7 +783,7 @@ const loginPassword = async (req, res, next) => {
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
-    setRefreshTokenCookie(res, refreshToken);
+    setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
@@ -852,16 +873,16 @@ const resetPassword = async (req, res, next) => {
     const { token, password } = req.body;
     if (!token || !password) return error(res, 'Token and new password required', 400);
 
-    const { rows: [user] } = await query(`SELECT id, reset_token_expires_at FROM users WHERE reset_token = $1`, [token]);
+    const { rows: [user] } = await query(`SELECT id, password_hash, reset_token_expires_at FROM users WHERE reset_token = $1`, [token]);
     if (!user) return error(res, 'Invalid or expired token', 400);
     if (user.reset_token_expires_at && new Date() > new Date(user.reset_token_expires_at)) {
       return error(res, 'Reset token has expired', 400);
     }
 
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    await query(`UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL WHERE id = $2`, [passwordHash, user.id]);
+    await security.savePassword(user.id, password, user.password_hash);
+    await query(`UPDATE users SET reset_token = NULL, reset_token_expires_at = NULL WHERE id = $1`, [user.id]);
+    await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() WHERE user_id = $1`, [user.id]);
+    await security.audit(user.id, 'password_reset', req);
 
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
@@ -1032,13 +1053,9 @@ const updatePasswordWithOtp = async (req, res, next) => {
     await query(`DELETE FROM otp_verifications WHERE id = $1`, [record.id]);
 
     // Hash new password
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    // Update user password and clear must_change_password
-    await query(`
-      UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2
-    `, [passwordHash, req.user.id]);
+    const { rows: [user] } = await query(`SELECT password_hash FROM users WHERE id=$1`, [req.user.id]);
+    await security.savePassword(req.user.id, newPassword, user?.password_hash, true);
+    await security.audit(req.user.id, 'password_changed', req);
 
     return success(res, {}, 'Password updated successfully');
   } catch (err) {
@@ -1048,12 +1065,12 @@ const updatePasswordWithOtp = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { fullName, mobile } = req.body;
+    const { fullName } = req.body;
     if (!fullName) return error(res, 'Full Name is required', 400);
 
     await query(
-      `UPDATE users SET full_name = $1, mobile = $2, updated_at = NOW() WHERE id = $3`,
-      [fullName, mobile || null, req.user.id]
+      `UPDATE users SET full_name = $1, updated_at = NOW() WHERE id = $2`,
+      [fullName, req.user.id]
     );
 
     // Fetch updated user
@@ -1089,19 +1106,100 @@ const changePassword = async (req, res, next) => {
       return error(res, 'Invalid old password', 400);
     }
 
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(newPassword, salt);
-
-    await query(
-      `UPDATE users SET password_hash = $1 WHERE id = $2`,
-      [passwordHash, req.user.id]
-    );
+    await security.savePassword(req.user.id, newPassword, user.password_hash);
+    await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() WHERE user_id = $1`, [req.user.id]);
+    await security.audit(req.user.id, 'password_changed', req);
 
     return success(res, {}, 'Password updated successfully');
   } catch (err) {
     next(err);
   }
 };
+
+const loginHistory = async (req, res, next) => {
+  try {
+    const { rows } = await query(`SELECT id, device, browser, ip_address::text, city, country, login_time, logout_time, status, failure_reason FROM login_history WHERE user_id=$1 ORDER BY login_time DESC LIMIT 100`, [req.user.id]);
+    return success(res, rows, 'Login history retrieved');
+  } catch (err) { next(err); }
+};
+
+const devices = async (req, res, next) => {
+  try {
+    const context = security.clientContext(req);
+    const { rows } = await query(`SELECT id, device_id, device_name, browser, ip_address::text, city, country, created_at, last_used_at, expires_at, revoked, device_id=$2 AS is_current FROM refresh_tokens WHERE user_id=$1 ORDER BY last_used_at DESC`, [req.user.id, context.deviceId]);
+    return success(res, rows, 'Devices retrieved');
+  } catch (err) { next(err); }
+};
+
+const removeDevice = async (req, res, next) => {
+  try {
+    const { rowCount } = await query(`UPDATE refresh_tokens SET revoked=true, revoked_at=NOW() WHERE id=$1 AND user_id=$2 AND revoked=false`, [req.params.id, req.user.id]);
+    if (!rowCount) return error(res, 'Active device session not found', 404);
+    await security.audit(req.user.id, 'device_logged_out', req, { deviceSessionId: req.params.id });
+    return success(res, {}, 'Device logged out');
+  } catch (err) { next(err); }
+};
+
+const logoutAll = async (req, res, next) => {
+  try {
+    const token = req.cookies.refreshToken || req.body.refreshToken;
+    const hash = token ? crypto.createHash('sha256').update(token).digest('hex') : null;
+    const { rowCount } = await query(`UPDATE refresh_tokens SET revoked=true, revoked_at=NOW() WHERE user_id=$1 AND revoked=false ${hash ? 'AND token_hash <> $2' : ''}`, hash ? [req.user.id, hash] : [req.user.id]);
+    await security.audit(req.user.id, 'logout_other_devices', req, { revokedSessions: rowCount });
+    return success(res, { revokedSessions: rowCount }, 'Other sessions logged out');
+  } catch (err) { next(err); }
+};
+
+const securityDashboard = async (req, res, next) => {
+  try {
+    const [{ rows: [lastLogin] }, { rows: [deviceCount] }, { rows: alerts }, { rows: [passwordChange] }] = await Promise.all([
+      query(`SELECT device,browser,ip_address::text,city,country,login_time FROM login_history WHERE user_id=$1 AND status='success' ORDER BY login_time DESC LIMIT 1`, [req.user.id]),
+      query(`SELECT COUNT(*)::int AS count FROM refresh_tokens WHERE user_id=$1 AND revoked=false AND expires_at>NOW()`, [req.user.id]),
+      query(`SELECT id,type,message,metadata,created_at,read_at FROM security_alerts WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [req.user.id]),
+      query(`SELECT created_at FROM audit_logs WHERE user_id=$1 AND action IN ('password_changed','password_reset') ORDER BY created_at DESC LIMIT 1`, [req.user.id])
+    ]);
+    return success(res, { lastLogin: lastLogin || null, activeDevices: deviceCount.count, passwordChangedAt: passwordChange?.created_at || null, alerts }, 'Security dashboard retrieved');
+  } catch (err) { next(err); }
+};
+
+const createIdentityChallenge = async (req, res, type) => {
+  const newValue = normalizeIdentity(req.body[type === 'email' ? 'newEmail' : 'newMobile']);
+  const oldValue = type === 'email' ? req.user.email : req.user.mobile;
+  if (!newValue || newValue === oldValue) return error(res, `A different valid ${type} is required`, 400);
+  const field = type === 'email' ? 'email' : 'mobile';
+  const { rows: [exists] } = await query(`SELECT id FROM users WHERE ${field}=$1`, [newValue]);
+  if (exists) return error(res, `That ${type} is already in use`, 409);
+  const oldOtp = String(crypto.randomInt(100000, 1000000)); const newOtp = String(crypto.randomInt(100000, 1000000));
+  const hash = (value) => crypto.createHmac('sha256', OTP_PEPPER).update(value).digest('hex');
+  await query(`DELETE FROM identity_change_challenges WHERE user_id=$1 AND type=$2 AND verified_at IS NULL`, [req.user.id, type]);
+  await query(`INSERT INTO identity_change_challenges (user_id,type,new_value,old_otp_hash,new_otp_hash,expires_at) VALUES ($1,$2,$3,$4,$5,NOW()+INTERVAL '10 minutes')`, [req.user.id, type, newValue, hash(oldOtp), hash(newOtp)]);
+  if (type === 'email') {
+    await Promise.all([sendOtpEmail(oldValue, oldOtp), sendOtpEmail(newValue, newOtp)]);
+  } else {
+    await Promise.all([sendSmsOtp(oldValue, oldOtp), sendSmsOtp(newValue, newOtp)]);
+  }
+  await security.audit(req.user.id, `change_${type}_requested`, req);
+  return success(res, {}, `Verification codes sent to your old and new ${type}`);
+};
+
+const changeEmailRequest = (req, res, next) => createIdentityChallenge(req, res, 'email').catch(next);
+const changeMobileRequest = (req, res, next) => createIdentityChallenge(req, res, 'mobile').catch(next);
+const verifyIdentityChallenge = async (req, res, next, type) => {
+  try {
+    const { oldOtp, newOtp } = req.body;
+    if (!oldOtp || !newOtp) return error(res, 'Both old and new verification codes are required', 400);
+    const { rows: [challenge] } = await query(`SELECT * FROM identity_change_challenges WHERE user_id=$1 AND type=$2 AND verified_at IS NULL AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1`, [req.user.id, type]);
+    const hash = (value) => crypto.createHmac('sha256', OTP_PEPPER).update(String(value)).digest('hex');
+    if (!challenge || hash(oldOtp) !== challenge.old_otp_hash || hash(newOtp) !== challenge.new_otp_hash) return error(res, 'Invalid or expired verification code', 400);
+    const column = type === 'email' ? 'email' : 'mobile';
+    await query(`UPDATE users SET ${column}=$1, updated_at=NOW() WHERE id=$2`, [challenge.new_value, req.user.id]);
+    await query(`UPDATE identity_change_challenges SET verified_at=NOW() WHERE id=$1`, [challenge.id]);
+    await security.audit(req.user.id, `change_${type}_completed`, req);
+    return success(res, { [column]: challenge.new_value }, `${type} updated successfully`);
+  } catch (err) { next(err); }
+};
+const changeEmail = (req, res, next) => verifyIdentityChallenge(req, res, next, 'email');
+const changeMobile = (req, res, next) => verifyIdentityChallenge(req, res, next, 'mobile');
 
 module.exports = {
   getMe,
@@ -1123,5 +1221,14 @@ module.exports = {
   refresh,
   updatePasswordWithOtp,
   updateProfile,
-  changePassword
+  changePassword,
+  loginHistory,
+  devices,
+  removeDevice,
+  logoutAll,
+  securityDashboard,
+  changeEmailRequest,
+  changeEmail,
+  changeMobileRequest,
+  changeMobile
 };

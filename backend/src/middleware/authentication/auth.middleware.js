@@ -51,6 +51,7 @@ const syncUser = async (req, res, next) => {
 
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
     if (user.status === 'blocked') return forbidden(res, 'Account blocked. Contact support.');
+    if (!user.email_verified) return forbidden(res, 'Email verification is required to access this account.');
 
     req.dbUser = { ...user };
     
