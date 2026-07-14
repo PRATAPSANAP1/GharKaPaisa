@@ -110,7 +110,7 @@ const listLeads = async (req, res, next) => {
 
     const dataQuery = `
       SELECT l.*, 
-        p.name as product_name, p.commission_value as product_commission, p.bank_code as product_bank_code,
+        p.name as product_name, p.commission_value as product_commission, COALESCE(b.short_code, b.name) as product_bank_code,
         ap.first_name as partner_first_name, ap.last_name as partner_last_name, ap.partner_code,
         ap.kyc_status as partner_kyc_status, ap.cancel_cheque_url as partner_cancel_cheque_url,
         COALESCE(c.email, l.email) as customer_email, 
@@ -129,6 +129,7 @@ const listLeads = async (req, res, next) => {
         pbd.is_verified as partner_bank_is_verified
       FROM leads l
       JOIN products p ON p.id = l.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
       JOIN partner_profiles ap ON ap.id = l.partner_id
       LEFT JOIN customers c ON c.mobile = l.mobile
       LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
@@ -310,8 +311,67 @@ const updateLeadStatus = async (req, res, next) => {
   }
 };
 
+// Bulk Assign Leads to Partner
+const bulkAssignLeads = async (req, res, next) => {
+  try {
+    const { lead_ids, assigned_partner_id } = req.body;
+    if (!Array.isArray(lead_ids) || lead_ids.length === 0 || !assigned_partner_id) {
+      return error(res, 'lead_ids array and assigned_partner_id are required', 400);
+    }
+
+    // Resolve partner profile
+    const { rows: [partner] } = await query(`
+      SELECT id, partner_code, first_name, last_name FROM partner_profiles
+      WHERE id::text = $1 OR partner_code ILIKE $1 OR user_id::text = $1
+    `, [assigned_partner_id]);
+
+    if (!partner) {
+      return error(res, 'Target partner profile not found', 404);
+    }
+
+    const { rowCount } = await query(`
+      UPDATE leads
+      SET partner_id = $1, updated_at = NOW()
+      WHERE id = ANY($2::uuid[])
+    `, [partner.id, lead_ids]);
+
+    await logAction(req, 'BULK_ASSIGN_LEADS', partner.id, { lead_ids, count: rowCount });
+
+    return success(res, { assigned_count: rowCount, partner_code: partner.partner_code }, `Bulk assigned ${rowCount} lead(s) successfully to ${partner.first_name} (${partner.partner_code})`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Add Lead Follow-Up Reminder
+const addLeadFollowUp = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { follow_up_at, note } = req.body;
+    if (!follow_up_at) {
+      return error(res, 'follow_up_at timestamp is required', 400);
+    }
+
+    const { rows: [lead] } = await query(`SELECT id, customer_name FROM leads WHERE id = $1`, [id]);
+    if (!lead) return notFound(res, 'Lead not found');
+
+    const { rows: [followup] } = await query(`
+      INSERT INTO lead_followups (lead_id, scheduled_by, follow_up_at, note)
+      VALUES ($1, $2, $3, $4) RETURNING *
+    `, [id, req.user.id, new Date(follow_up_at), note || null]);
+
+    await logAction(req, 'ADD_LEAD_FOLLOWUP', id, { follow_up_at, note });
+
+    return created(res, followup, `Follow-up reminder set for ${lead.customer_name}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createLead,
   listLeads,
-  updateLeadStatus
+  updateLeadStatus,
+  bulkAssignLeads,
+  addLeadFollowUp
 };

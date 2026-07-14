@@ -8,8 +8,14 @@ const { requireApprovedPartner, requireApprovedPartnerOrAdmin } = require('../..
 // List leads (accessible to Partner, Admin, Super Admin)
 router.get('/', jwtAuth, requireApprovedPartnerOrAdmin, ctrl.listLeads);
 
+// Bulk assign leads to partner (accessible to Admin/Super Admin)
+router.post('/bulk-assign', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.bulkAssignLeads);
+
 // Create a new lead (accessible to Partner only)
 router.post('/', jwtAuth, requireApprovedPartner, ctrl.createLead);
+
+// Schedule follow-up reminder
+router.post('/:id/follow-ups', jwtAuth, requireApprovedPartnerOrAdmin, ctrl.addLeadFollowUp);
 
 // Update lead status (accessible to Admin/Super Admin only)
 router.patch('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateLeadStatus);

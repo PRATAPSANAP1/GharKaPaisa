@@ -573,8 +573,18 @@ const migrate = async () => {
   `);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
-  await query(`CREATE INDEX IF NOT EXISTS idx_leads_product ON leads(product_id)`);
-
+  // ── Lead Followups ─────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS lead_followups (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      lead_id       UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+      scheduled_by  UUID NOT NULL REFERENCES users(id),
+      follow_up_at  TIMESTAMPTZ NOT NULL,
+      note          TEXT,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_lead_followups_lead ON lead_followups(lead_id)`);
 
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_mobile ON customers(mobile)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_customers_pan ON customers(pan_number)`);
