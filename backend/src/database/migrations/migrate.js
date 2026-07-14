@@ -658,9 +658,11 @@ const migrate = async () => {
 
       IF ref_table IS NOT NULL AND ref_table <> 'partner_wallets' THEN
         ALTER TABLE wallet_audit_logs DROP CONSTRAINT wallet_audit_logs_wallet_id_fkey;
+        -- Remove orphaned audit rows whose wallet_id doesn't exist in partner_wallets
+        DELETE FROM wallet_audit_logs WHERE wallet_id NOT IN (SELECT id FROM partner_wallets);
         ALTER TABLE wallet_audit_logs ADD CONSTRAINT wallet_audit_logs_wallet_id_fkey
           FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id) ON DELETE CASCADE;
-        RAISE NOTICE 'Fixed wallet_audit_logs FK to point to partner_wallets';
+        RAISE NOTICE 'Fixed wallet_audit_logs FK to point to partner_wallets (orphaned rows cleaned)';
       END IF;
     END $$;
   `);
