@@ -1155,9 +1155,6 @@ const getAllBankDetails = async (req, res, next) => {
     next(err);
   }
 };
-    next(err);
-  }
-};
 
 // ── Bank Details: Add Secondary ──────────────────────────────────────
 const addSecondaryBankDetail = async (req, res, next) => {
