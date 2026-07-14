@@ -225,9 +225,9 @@ const getApplicationsDashboard = async (req, res, next) => {
         COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
         COALESCE(SUM(commission_amount) FILTER (WHERE commission_status = 'processed'), 0) as total_earnings
       FROM (
-        SELECT a.id, a.partner_id, a.status, a.commission_status, a.commission_amount, a.created_at FROM applications a
+        SELECT a.id, a.partner_id, a.status::text, a.commission_status::text, a.commission_amount, a.created_at FROM applications a
         UNION ALL
-        SELECT l.id, l.partner_id, l.status, 'pending' as commission_status, p.commission_value as commission_amount, l.created_at
+        SELECT l.id, l.partner_id, l.status::text, 'pending'::text as commission_status, p.commission_value as commission_amount, l.created_at
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
@@ -243,13 +243,13 @@ const getApplicationsDashboard = async (req, res, next) => {
       SELECT combined.id, combined.app_number, combined.status, combined.commission_amount, combined.commission_status, combined.created_at,
              combined.customer_name, combined.product_name
       FROM (
-        SELECT a.id, a.app_number, a.status, a.commission_amount, a.commission_status, a.created_at, a.partner_id,
+        SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.commission_status::text, a.created_at, a.partner_id,
                COALESCE(c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM applications a
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status, p.commission_value as commission_amount, 'pending' as commission_status, l.created_at, l.partner_id,
+        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id,
                COALESCE(c.full_name, l.customer_name) as customer_name, p.name as product_name
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
@@ -686,11 +686,11 @@ const listApplications = async (req, res, next) => {
         SELECT 
           a.id,
           a.app_number,
-          a.status,
+          a.status::text,
           a.loan_amount,
           a.approved_amount,
           a.commission_amount,
-          a.commission_status,
+          a.commission_status::text,
           a.created_at,
           a.updated_at,
           a.bank_ref_number,
@@ -727,11 +727,11 @@ const listApplications = async (req, res, next) => {
         SELECT 
           l.id,
           CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number,
-          l.status,
+          l.status::text,
           NULL::numeric as loan_amount,
           NULL::numeric as approved_amount,
           p.commission_value as commission_amount,
-          'pending' as commission_status,
+          'pending'::text as commission_status,
           l.created_at,
           l.updated_at,
           NULL as bank_ref_number,
@@ -774,12 +774,12 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile
+        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile
         FROM applications a
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
