@@ -285,7 +285,7 @@ const getTimeline = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { rows } = await query(`
-      SELECT at.*, u.first_name || ' ' || COALESCE(u.last_name, '') as performed_by_name
+      SELECT at.*, u.full_name as performed_by_name
       FROM application_timeline at
       LEFT JOIN users u ON u.id = at.performed_by
       WHERE at.application_id = $1
