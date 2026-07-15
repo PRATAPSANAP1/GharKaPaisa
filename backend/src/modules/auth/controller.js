@@ -937,6 +937,7 @@ const register = async (req, res, next) => {
 // ── POST /auth/login-password ─────────────────────────────────────────────────
 const loginPassword = async (req, res, next) => {
   try {
+    console.log("LOGIN PASSWORD API HIT", { identity: req.body?.identity });
     const { identity, password } = req.body;
     if (!identity || !password) return error(res, 'Identity and password required', 400);
 
