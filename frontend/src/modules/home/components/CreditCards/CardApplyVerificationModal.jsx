@@ -605,14 +605,16 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         .otp-slot {
           width: 3rem;
           height: 3.8rem;
-          transition: transform 0.3s ease-in-out, opacity 0.3s ease;
-          will-change: transform;
+          transition: transform 0.3s ease-in-out, opacity 0.3s ease, width 0.3s ease-in-out, height 0.3s ease-in-out;
+          will-change: transform, width, height;
         }
         .otp-slot.stacked {
           position: absolute;
           left: 50%;
           top: 50%;
           transform: translate(-50%, -50%);
+          width: 50px;
+          height: 50px;
         }
         .otp-shell {
           position: relative;
@@ -621,7 +623,10 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           border-radius: 1.15rem;
           border: 2px solid transparent;
           box-shadow: none;
-          transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease;
+          transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease, border-radius 0.3s ease-in-out;
+        }
+        .otp-slot.stacked .otp-shell {
+          border-radius: 50%;
         }
         .otp-shell.placed {
           border-color: var(--otp-primary);
@@ -699,7 +704,10 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           outline: none;
           caret-color: var(--otp-primary);
           box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.05);
-          transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease;
+          transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease, border-radius 0.3s ease-in-out;
+        }
+        .otp-slot.stacked .otp-input {
+          border-radius: 50%;
         }
         .otp-input:focus {
           background: var(--otp-card-bg);
@@ -723,11 +731,11 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           inset: 0;
           display: grid;
           place-items: center;
-          font-size: 1.95rem;
+          font-size: 1.5rem;
           font-weight: 900;
           pointer-events: none;
-          width: 3rem;
-          height: 3rem;
+          width: 100%;
+          height: 100%;
           margin: auto;
           animation: icon-pop 0.48s ease;
         }
