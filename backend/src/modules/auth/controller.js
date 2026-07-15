@@ -482,8 +482,8 @@ const refresh = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
     if (!refreshToken) {
-      res.clearCookie('refreshToken', cookieOptions);
-      return error(res, 'Refresh token required', 401);
+      clearRefreshTokenCookie(res);
+      return error(res, 'No token provided', 401);
     }
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -497,7 +497,7 @@ const refresh = async (req, res, next) => {
     `, [tokenHash]);
 
     if (!tokenRecord) {
-      res.clearCookie('refreshToken', cookieOptions);
+      clearRefreshTokenCookie(res);
       return error(res, 'Invalid or expired refresh token', 401);
     }
 
@@ -516,8 +516,7 @@ const refresh = async (req, res, next) => {
     setRefreshTokenCookie(res, newRefreshToken, tokenRecord.expires_at - new Date() > 8 * 24 * 60 * 60 * 1000);
     return res.json({
       success: true,
-      token: newToken,
-      refreshToken: newRefreshToken
+      token: newToken
     });
   } catch (err) {
     next(err);

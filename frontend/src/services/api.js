@@ -207,9 +207,20 @@ export function clearSession() {
   clearAccessToken();
 
   try {
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false, hasInitialized: true });
+    useAuthStore.setState({ user: null, token: null, isAuthenticated: false, isPartner: false, kycStatus: null });
   } catch (e) {
     console.warn("Zustand session clear sync error:", e);
+  }
+  
+  // Only redirect if NOT already on a public page
+  if (typeof window !== 'undefined') {
+    const publicPaths = ['/login', '/register', '/', '/verify-email', '/reset-password', '/contact', '/terms-and-conditions', '/privacy-policy'];
+    const currentPath = window.location.pathname;
+    const isPublicPath = publicPaths.some(p => currentPath === p || currentPath.startsWith('/product/') || currentPath.startsWith('/card-benefits/'));
+    
+    if (!isPublicPath) {
+      window.location.href = '/login';
+    }
   }
 }
 
