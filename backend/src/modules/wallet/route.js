@@ -15,8 +15,8 @@ router.post('/bank-details/primary', requireApprovedPartner, walletCtrl.setPrima
 router.post('/bank-details/verify/penny-drop', requireApprovedPartner, walletCtrl.verifyBankPennyDrop);
 router.post('/bank-details/verify/upi', requireApprovedPartner, walletCtrl.verifyBankUPI);
 router.get('/bank-details', requireApprovedPartnerOrAdmin, walletCtrl.getBankDetails);
-router.post('/bank-details', requireApprovedPartner, validateBankDetails, walletCtrl.saveBankDetails);
-router.put('/bank-details', requireApprovedPartner, validateBankDetails, walletCtrl.saveBankDetails);
+router.post('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, walletCtrl.saveBankDetails);
+router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, walletCtrl.saveBankDetails);
 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
