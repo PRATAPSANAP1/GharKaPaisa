@@ -4,7 +4,7 @@
  * Features:
  *  - Injects Authorization header from in-memory / sessionStorage on every request
  *  - Auto-refreshes access token on 401 using Refresh Token Rotation (RTR)
- *  - Clears session and redirects/reloads to login on refresh failure
+ *  - Clears session and updates Zustand state on refresh failure (without hard page reload loops)
  */
 import axios from 'axios';
 import { useAuthStore } from '../app/store/authStore';
@@ -40,7 +40,6 @@ const hideLoader = () => {
     window.dispatchEvent(new CustomEvent("loader", { detail: false }));
   }
 };
-
 
 export function setAccessToken(token) {
   inMemoryAccessToken = token;
@@ -111,7 +110,7 @@ api.interceptors.response.use(
     const originalRequest = err.config;
 
     // Timeout error handling
-    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+    if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
       return Promise.reject({ 
         message: 'Request timed out. Check your connection.', 
         isTimeout: true 
@@ -128,8 +127,9 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized and attempt token refresh
     if (err.response.status === 401 && !originalRequest._retry) {
+      const requestUrl = originalRequest.url || '';
       // Don't try to refresh if the request is to login or refresh itself
-      if (originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/auth/refresh')) {
+      if (requestUrl.includes('/auth/login') || requestUrl.includes('/auth/refresh') || requestUrl.includes('auth/refresh')) {
         return Promise.reject(err);
       }
 
@@ -165,6 +165,8 @@ api.interceptors.response.use(
           
           return api(originalRequest);
         } else {
+          processQueue(new Error('Refresh returned unsuccessful response'), null);
+          isRefreshing = false;
           clearSession();
           return Promise.reject(err);
         }
@@ -191,7 +193,7 @@ export function saveSession({ access_token, user }) {
   
   // Update Zustand Store
   try {
-    useAuthStore.setState({ user, token: access_token, isAuthenticated: true });
+    useAuthStore.setState({ user, token: access_token, isAuthenticated: true, hasInitialized: true });
   } catch (e) {
     console.warn("Zustand session save sync error:", e);
   }
@@ -206,13 +208,9 @@ export function clearSession() {
   clearAccessToken();
 
   try {
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+    useAuthStore.setState({ user: null, token: null, isAuthenticated: false, hasInitialized: true });
   } catch (e) {
     console.warn("Zustand session clear sync error:", e);
-  }
-
-  if (typeof window !== 'undefined') {
-    window.location.href = '/';
   }
 }
 

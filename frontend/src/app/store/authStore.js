@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { getApiV1Url } from '../../config/api';
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
   isInitializing: true,
+  hasInitialized: false,
   
   login: (userData, tokenData) => {
     try {
@@ -19,7 +20,7 @@ export const useAuthStore = create((set) => ({
       setAccessToken(tokenData);
     }).catch(e => console.warn('Failed to set access token on login:', e));
 
-    set({ user: userData, token: tokenData, isAuthenticated: true });
+    set({ user: userData, token: tokenData, isAuthenticated: true, hasInitialized: true });
   },
   
   logout: () => {
@@ -29,7 +30,7 @@ export const useAuthStore = create((set) => ({
       console.warn('Failed to remove login flag:', e);
     }
 
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, token: null, isAuthenticated: false, hasInitialized: true });
     
     // Clear access token in api instance
     import('../../services/api').then(({ clearAccessToken }) => {
@@ -52,6 +53,13 @@ export const useAuthStore = create((set) => ({
   }),
 
   initializeAuth: async () => {
+    // Prevent multiple initializations per app lifecycle
+    if (get().hasInitialized && !get().isInitializing) {
+      return;
+    }
+
+    set({ hasInitialized: true });
+
     try {
       if (typeof window !== 'undefined' && localStorage.getItem('gkp_logged_in') !== 'true') {
         set({ isInitializing: false });
@@ -76,20 +84,20 @@ export const useAuthStore = create((set) => ({
           const { setAccessToken } = await import('../../services/api');
           setAccessToken(token);
           set({ user: userRes.data.user, token, isAuthenticated: true });
+          return;
         }
       }
+
+      // If response was not successful, treat as failed refresh
+      throw new Error(response.data?.message || 'Refresh returned unsuccessful response');
     } catch (err) {
-      if (err?.response?.status !== 401 && err?.response?.status !== 400) {
-        console.warn('Silent refresh failed on startup:', err);
-      }
+      console.warn('Auth initialization / silent refresh failed:', err?.response?.data?.message || err.message);
       
-      // Clean login flag if the session is explicitly invalid or expired
-      if (err?.response?.status === 401 || err?.response?.status === 400) {
-        try {
-          localStorage.removeItem('gkp_logged_in');
-        } catch (e) {
-          console.warn('Failed to remove login flag on auth initialization failure:', e);
-        }
+      // ALWAYS clear gkp_logged_in flag on any refresh failure to immediately break infinite loop
+      try {
+        localStorage.removeItem('gkp_logged_in');
+      } catch (e) {
+        console.warn('Failed to remove login flag on auth initialization failure:', e);
       }
 
       // Clean session state

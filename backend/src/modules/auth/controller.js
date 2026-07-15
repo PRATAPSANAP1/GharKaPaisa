@@ -481,7 +481,10 @@ const loginWithMsg91 = async (req, res, next) => {
 const refresh = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
-    if (!refreshToken) return error(res, 'Refresh token required', 401);
+    if (!refreshToken) {
+      res.clearCookie('refreshToken', cookieOptions);
+      return error(res, 'Refresh token required', 401);
+    }
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
@@ -494,6 +497,7 @@ const refresh = async (req, res, next) => {
     `, [tokenHash]);
 
     if (!tokenRecord) {
+      res.clearCookie('refreshToken', cookieOptions);
       return error(res, 'Invalid or expired refresh token', 401);
     }
 

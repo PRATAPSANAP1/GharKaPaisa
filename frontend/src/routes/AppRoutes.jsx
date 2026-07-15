@@ -35,7 +35,6 @@ import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
 
 // Admin Pages
-// AppRoutes Configuration
 import AdminDashboard from '../modules/admin/dashboard/AdminDashboard';
 import AdminLogin from '../modules/authentication/login/AdminLogin';
 import ManageApplications from '../modules/admin/reports/ManageApplications';
@@ -81,11 +80,11 @@ import PartnerReports from '../modules/partner/dashboard/PartnerReports';
 import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
 
 const AppRoutes = () => {
-  const { isInitializing, initializeAuth } = useAuthStore();
+  const isInitializing = useAuthStore((state) => state.isInitializing);
 
   React.useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    useAuthStore.getState().initializeAuth();
+  }, []);
 
   if (isInitializing) {
     return (
@@ -141,116 +140,85 @@ const AppRoutes = () => {
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
-        {/* Services Routes - Protected */}
-        <Route path="/money-transfer" element={<ProtectedRoute><MoneyTransfer /></ProtectedRoute>} />
-        <Route path="/recharge" element={<ProtectedRoute><Recharge /></ProtectedRoute>} />
-        <Route path="/electricity" element={<ProtectedRoute><Electricity /></ProtectedRoute>} />
-        <Route path="/loan-repay" element={<ProtectedRoute><LoanRepay /></ProtectedRoute>} />
-        <Route path="/fastag" element={<ProtectedRoute><Fastag /></ProtectedRoute>} />
-        
-        {/* Travel Bookings - mapped to Coming Soon for now */}
-        <Route path="/travel-transit/bus-booking" element={<ComingSoon />} />
-        <Route path="/travel-transit/train-booking" element={<ComingSoon />} />
-        <Route path="/travel-transit/hotel-booking" element={<ComingSoon />} />
+        {/* Dynamic CMS Service Pages */}
+        <Route path="/cms/money-transfer" element={<MoneyTransfer />} />
+        <Route path="/cms/recharge" element={<Recharge />} />
+        <Route path="/cms/electricity" element={<Electricity />} />
+        <Route path="/cms/loan-repay" element={<LoanRepay />} />
+        <Route path="/cms/fastag" element={<Fastag />} />
+        <Route path="/cms/coming-soon" element={<ComingSoon />} />
 
-        {/* Product Lead Generation */}
-        <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/product/:id/apply" element={<ApplyForm />} />
-        <Route path="/card-benefits/:id" element={<CardBenefitsPage />} />
+        {/* Lead Gen Flow */}
+        <Route path="/product/:slug" element={<ProductDetails />} />
+        <Route path="/product/:slug/apply" element={<ApplyForm />} />
+        <Route path="/card-benefits/:bankId/:cardId" element={<CardBenefitsPage />} />
       </Route>
 
-      {/* Partner Routes */}
-      <Route 
-        path="/partner" 
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={['PARTNER']}>
-              <PartnerLayout />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<PartnerDashboard />} />
-        <Route path="products" element={<PartnerProducts />} />
-        <Route path="applications" element={<PartnerApplications />} />
-        <Route path="customers" element={<PartnerCrm />} />
-        <Route path="wallet" element={<PartnerWallet />} />
-        <Route path="team-network" element={<PartnerTeam />} />
-        <Route path="reports" element={<PartnerReports />} />
-        <Route path="marketing" element={<PartnerMarketing />} />
-        <Route path="training" element={<PartnerTraining />} />
-        <Route path="notifications" element={<NotificationCenter />} />
-        <Route path="support" element={<PartnerSupport />} />
-        <Route path="kyc-centre" element={<PartnerKyc />} />
-        <Route path="profile" element={<PartnerProfile />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="travel" element={<TravelUtilitiesPage />} />
-        <Route path="vault" element={<PartnerVault />} />
-
-        {/* Legacy Support & Aliases */}
-        <Route path="marketplace" element={<Navigate to="../products" replace />} />
-        <Route path="credit-center" element={<Navigate to="../products" replace />} />
-        <Route path="leads" element={<Navigate to="../applications" replace />} />
-        <Route path="crm" element={<Navigate to="../customers" replace />} />
-        <Route path="referral" element={<Navigate to="../team-network" replace />} />
-        <Route path="kyc" element={<Navigate to="../kyc-centre" replace />} />
+      {/* Partner Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<RoleRoute allowedRoles={['PARTNER']} />}>
+          <Route element={<PartnerLayout />}>
+            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/applications" element={<PartnerApplications />} />
+            <Route path="/partner/wallet" element={<PartnerWallet />} />
+            <Route path="/partner/profile" element={<PartnerProfile />} />
+            <Route path="/partner/products" element={<PartnerProducts />} />
+            <Route path="/partner/travel-utilities" element={<TravelUtilitiesPage />} />
+            <Route path="/partner/kyc" element={<PartnerKyc />} />
+            <Route path="/partner/kyc-centre" element={<PartnerKyc />} />
+            <Route path="/partner/team" element={<PartnerTeam />} />
+            <Route path="/partner/leads" element={<PartnerCrm />} />
+            <Route path="/partner/crm" element={<PartnerCrm />} />
+            <Route path="/partner/support" element={<PartnerSupport />} />
+            <Route path="/partner/vault" element={<PartnerVault />} />
+            <Route path="/partner/marketing" element={<PartnerMarketing />} />
+            <Route path="/partner/training" element={<PartnerTraining />} />
+            <Route path="/partner/reports" element={<PartnerReports />} />
+            <Route path="/partner/notifications" element={<PartnerNotifications />} />
+            <Route path="/partner/settings" element={<SettingsPage />} />
+          </Route>
+        </Route>
       </Route>
 
-      {/* Admin Routes */}
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={['ADMIN']}>
-              <AdminLayout />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="partners" element={<ManagePartners />} />
-        <Route path="applications" element={<ManageApplications />} />
-        <Route path="leads" element={<ManageLeads />} />
-        <Route path="withdrawals" element={<ManageWithdrawals />} />
+      {/* Admin Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/applications" element={<ManageApplications />} />
+            <Route path="/admin/partners" element={<ManagePartners />} />
+            <Route path="/admin/withdrawals" element={<ManageWithdrawals />} />
+            <Route path="/admin/leads" element={<ManageLeads />} />
+          </Route>
+        </Route>
       </Route>
 
-      {/* SuperAdmin Routes */}
-      <Route 
-        path="/superadmin" 
-        element={
-          <ProtectedRoute>
-            <RoleRoute allowedRoles={['SUPER_ADMIN']}>
-              <SuperAdminLayout />
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<SuperAdminDashboard />} />
-        <Route path="reports" element={<SuperAdminReports />} />
-        <Route path="audit-logs" element={<AuditLogs />} />
-        <Route path="partners" element={<ManagePartners />} />
-        <Route path="leads" element={<ManageLeads />} />
-        <Route path="direct-leads" element={<ManageDirectLeads />} />
-        <Route path="banners" element={<ManageBanners />} />
-        <Route path="products" element={<ManageProducts />} />
-        <Route path="product-links" element={<ManageProductLinks />} />
-        <Route path="banks" element={<ManageBanks />} />
-        <Route path="sections" element={<ManageSections />} />
-        <Route path="services" element={<ManageServices />} />
-        <Route path="commissions" element={<ManageCommissions />} />
-        <Route path="commission-rules" element={<ManageCommissionRules />} />
-        <Route path="wallet" element={<ManageWallet />} />
-        <Route path="applications" element={<SuperAdminManageApplications />} />
-        <Route path="notifications" element={<NotificationCenter />} />
-        <Route path="announcements" element={<ManageAnnouncements />} />
-        <Route path="profile" element={<AdminProfilePage />} />
-        <Route path="settings" element={<SettingsPage />} />
+      {/* Super Admin Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>
+          <Route element={<SuperAdminLayout />}>
+            <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin/reports" element={<SuperAdminReports />} />
+            <Route path="/super-admin/audit" element={<AuditLogs />} />
+            <Route path="/super-admin/banners" element={<ManageBanners />} />
+            <Route path="/super-admin/products" element={<ManageProducts />} />
+            <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
+            <Route path="/super-admin/banks" element={<ManageBanks />} />
+            <Route path="/super-admin/sections" element={<ManageSections />} />
+            <Route path="/super-admin/services" element={<ManageServices />} />
+            <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
+            <Route path="/super-admin/commissions" element={<ManageCommissions />} />
+            <Route path="/super-admin/commission-rules" element={<ManageCommissionRules />} />
+            <Route path="/super-admin/wallet" element={<ManageWallet />} />
+            <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
+            <Route path="/super-admin/notifications" element={<NotificationCenter />} />
+            <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
+            <Route path="/super-admin/profile" element={<AdminProfilePage />} />
+          </Route>
+        </Route>
       </Route>
 
-      {/* Fallback */}
+      {/* Catch-all Redirect */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
