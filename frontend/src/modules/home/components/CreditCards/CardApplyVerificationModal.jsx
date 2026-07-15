@@ -566,47 +566,23 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                   : "Verification failed"}
             </div>
 
-            {/* Actions / Simulators */}
-            <div className="action-row" style={{ marginTop: '1.5rem', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  if (status === "idle") {
-                    setOtpDigits(["1", "2", "3", "4", "5", "6"]);
-                  }
-                }}
-                style={{ fontSize: '11px', padding: '6px 12px' }}
-              >
-                Simulate Success
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={() => {
-                  if (status === "idle") {
-                    setOtpDigits(["1", "1", "1", "1", "1", "1"]);
-                  }
-                }}
-                style={{ fontSize: '11px', padding: '6px 12px', border: '1px solid rgba(255,145,0,0.2)' }}
-              >
-                Simulate Fail
-              </button>
-              <button 
-                type="button" 
-                className="btn" 
-                onClick={resetOtp}
-                style={{ fontSize: '11px', padding: '6px 12px' }}
-              >
-                Reset
-              </button>
-            </div>
+
           </div>
         )}
 
       </div>
 
       <style>{`
+        :root {
+          --otp-card-bg: ${C.card || '#ffffff'};
+          --otp-input-bg: ${C.bgSecondary || '#f1f5f9'};
+          --otp-text: ${C.text || '#1e293b'};
+          --otp-text-light: ${C.textLight || '#64748b'};
+          --otp-border: ${C.border || '#e2e8f0'};
+          --otp-primary: ${C.teal || '#0ea5e9'};
+          --otp-success: ${C.green || '#1bbb6b'};
+          --otp-danger: ${C.red || '#ef4444'};
+        }
         .otp-card-inner {
           width: 100%;
           text-align: center;
@@ -616,7 +592,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           display: flex;
           justify-content: center;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.65rem;
           min-height: 4.5rem;
           margin: 2rem 0 1.5rem;
         }
@@ -627,8 +603,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           align-items: center;
         }
         .otp-slot {
-          width: 3.45rem;
-          height: 4.35rem;
+          width: 3rem;
+          height: 3.8rem;
           transition: transform 0.3s ease-in-out, opacity 0.3s ease;
           will-change: transform;
         }
@@ -648,16 +624,16 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease;
         }
         .otp-shell.placed {
-          border-color: #ff9100;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 145, 0, 0.12);
+          border-color: var(--otp-primary);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--otp-border);
         }
         .otp-shell.placed.success {
-          border-color: #1bbb6b;
-          box-shadow: 0 0 50px rgba(62, 234, 46, 0.4);
+          border-color: var(--otp-success);
+          box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);
         }
         .otp-shell.placed.fail {
-          border-color: #ef4444;
-          box-shadow: 0 0 50px rgba(241, 21, 21, 0.4);
+          border-color: var(--otp-danger);
+          box-shadow: 0 0 50px rgba(239, 68, 68, 0.3);
         }
         .otp-shell::before {
           content: "";
@@ -665,7 +641,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           inset: 0;
           padding: 2px;
           border-radius: inherit;
-          background: #4a3d30;
+          background: var(--otp-border);
           -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
           -webkit-mask-composite: xor;
           mask-composite: exclude;
@@ -676,8 +652,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         .otp-shell.border-drawing::before {
           background: conic-gradient(
             from 315deg,
-            #ff9100 var(--progress, 0%),
-            #3e3327 var(--progress, 0%)
+            var(--otp-primary) var(--progress, 0%),
+            var(--otp-border) var(--progress, 0%)
           );
         }
         .otp-slot.top-card.stacked .otp-shell::before {
@@ -702,12 +678,12 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           }
         }
         .otp-shell.success::before {
-          background: #1bbb6b;
-          box-shadow: 0 0 0 6px rgba(27, 187, 107, 0.18), 0 22px 44px rgba(27, 187, 107, 0.28), 0 10px 24px rgba(27, 187, 107, 0.2);
+          background: var(--otp-success);
+          box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.18), 0 22px 44px rgba(34, 197, 94, 0.28);
         }
         .otp-shell.fail::before {
-          background: #ef4444;
-          box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16), 0 22px 44px rgba(239, 68, 68, 0.26), 0 10px 24px rgba(239, 68, 68, 0.18);
+          background: var(--otp-danger);
+          box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16), 0 22px 44px rgba(239, 68, 68, 0.26);
         }
         .otp-input {
           position: relative;
@@ -715,19 +691,19 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           height: 100%;
           border: 2px solid transparent;
           border-radius: 1.15rem;
-          background: #1c1c1c;
-          color: #fff6ec;
+          background: var(--otp-input-bg);
+          color: var(--otp-text);
           text-align: center;
-          font-size: 1.8rem;
+          font-size: 1.6rem;
           font-weight: 700;
           outline: none;
-          caret-color: #ff9100;
-          box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+          caret-color: var(--otp-primary);
+          box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.05);
           transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease;
         }
         .otp-input:focus {
-          background: #242424;
-          box-shadow: 0 0 0 4px rgba(255, 145, 0, 0.18), inset 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+          background: var(--otp-card-bg);
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), inset 0 4px 10px rgba(0, 0, 0, 0.05);
         }
         .otp-input:disabled {
           cursor: default;
@@ -738,45 +714,43 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         }
         .otp-slot.stacked.back-card .otp-input {
           opacity: 0.88;
-          background: #171717;
         }
         .otp-input.stack-shadow {
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
         }
         .otp-result-icon {
           position: absolute;
           inset: 0;
           display: grid;
           place-items: center;
-          font-size: 2.15rem;
+          font-size: 1.95rem;
           font-weight: 900;
           pointer-events: none;
-          width: 3.2rem;
-          height: 3.2rem;
+          width: 3rem;
+          height: 3rem;
           margin: auto;
           animation: icon-pop 0.48s ease;
-          text-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
         }
         .otp-result-icon.success {
-          color: #1bbb6b;
-          text-shadow: 0 0 18px rgba(27, 187, 107, 0.35), 0 0 28px rgba(27, 187, 107, 0.2);
+          color: var(--otp-success);
+          text-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
         }
         .otp-result-icon.fail {
-          color: #ef4444;
-          text-shadow: 0 0 18px rgba(239, 68, 68, 0.35), 0 0 28px rgba(239, 68, 68, 0.2);
+          color: var(--otp-danger);
+          text-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
         }
         .resend-area {
           display: flex;
           justify-content: center;
           gap: 0.3rem;
           align-items: center;
-          color: #beaf9d;
+          color: var(--otp-text-light);
           font-size: 0.95rem;
         }
         .resend-link {
           border: 0;
           background: transparent;
-          color: #ff9100;
+          color: var(--otp-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
@@ -784,35 +758,8 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         .info-note {
           min-height: 1.25rem;
           margin-top: 0.55rem;
-          color: #93806f;
+          color: var(--otp-text-light);
           font-size: 0.86rem;
-        }
-        .action-row {
-          display: flex;
-          justify-content: center;
-          flex-wrap: wrap;
-          gap: 0.8rem;
-          margin-top: 1.7rem;
-        }
-        .btn {
-          border: 1px solid transparent;
-          border-radius: 999px;
-          padding: 0.68rem 1.35rem;
-          background: #272727;
-          color: #f5eadf;
-          cursor: pointer;
-          transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-        }
-        .btn:hover {
-          transform: translateY(-1px);
-        }
-        .btn-primary {
-          background: #ff9100;
-          color: #1c1206;
-        }
-        .btn-outline {
-          background: transparent;
-          border-color: #4a3827;
         }
         @keyframes icon-pop {
           0% {
@@ -829,14 +776,14 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             gap: 0.5rem;
           }
           .otp-slot {
-            width: 2.8rem;
-            height: 3.7rem;
+            width: 2.6rem;
+            height: 3.3rem;
           }
           .otp-input {
-            font-size: 1.45rem;
+            font-size: 1.4rem;
           }
           .otp-result-icon {
-            font-size: 1.7rem;
+            font-size: 1.6rem;
           }
         }
         @keyframes spin {
