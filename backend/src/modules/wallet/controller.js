@@ -429,6 +429,9 @@ const requestWithdrawal = async (req, res, next) => {
 // GET /wallet/withdrawals (Admin — list all pending)
 const listWithdrawals = async (req, res, next) => {
   try {
+    if (req.user?.role === 'PARTNER') {
+      return listPartnerWithdrawals(req, res, next);
+    }
     const { page, limit, offset } = getPaginationParams(req.query);
     const { status = 'pending' } = req.query;
 
