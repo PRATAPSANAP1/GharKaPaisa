@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import {
   FaWallet, FaUniversity, FaHandHoldingUsd, FaShieldAlt,
-  FaChartPie, FaEllipsisH, FaPlane, FaBolt, FaSearch,
+  FaChartPie, FaEllipsisH, FaPlane, FaBolt,
   FaMobileAlt, FaTint, FaFire, FaPhone, FaTag, FaTv,
   FaQrcode, FaExchangeAlt, FaCreditCard, FaUser,
   FaHome, FaBriefcase, FaBuilding, FaGraduationCap, FaCoins,
@@ -349,7 +349,6 @@ const SkeletonGrid = ({ C }) => (
 export default function QuickAccessSection() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
   const [ready, setReady] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [isMobile, setIsMobile] = useState(false);
@@ -368,41 +367,13 @@ export default function QuickAccessSection() {
     return () => clearTimeout(t);
   }, []);
 
-  const filteredData = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return serviceCatalog;
-
-    const filtered = serviceCatalog.services.filter((s) => {
-      const matchLabel = s.label.toLowerCase().includes(query);
-      const cat = serviceCatalog.categories.find((c) => c.id === s.category);
-      const matchCategory = cat?.name.toLowerCase().includes(query);
-      return matchLabel || matchCategory;
-    });
-
-    return { ...serviceCatalog, services: filtered };
-  }, [searchQuery]);
-
   const groupedServices = useMemo(() => {
     const groups = {};
-    filteredData.categories.forEach((cat) => {
-      groups[cat.id] = filteredData.services.filter((s) => s.category === cat.id);
+    serviceCatalog.categories.forEach((cat) => {
+      groups[cat.id] = serviceCatalog.services.filter((s) => s.category === cat.id);
     });
     return groups;
-  }, [filteredData]);
-
-  // Auto-expand searched categories on mobile
-  useEffect(() => {
-    if (searchQuery.trim() && isMobile) {
-      const autoExpanded = {};
-      filteredData.categories.forEach((cat) => {
-        const catServices = groupedServices[cat.id] || [];
-        if (catServices.length > 0) {
-          autoExpanded[cat.id] = true;
-        }
-      });
-      setExpandedCategories(autoExpanded);
-    }
-  }, [searchQuery, isMobile, filteredData.categories, groupedServices]);
+  }, []);
 
   const toggleCategory = useCallback((categoryId) => {
     setExpandedCategories((prev) => ({
@@ -441,52 +412,14 @@ export default function QuickAccessSection() {
             fontWeight: 500,
           }}>Access all GharKaPaisa services from one place</p>
         </div>
-
-        <div style={{
-          position: 'relative', minWidth: '220px', flex: isMobile ? '1 1 100%' : '0 1 300px',
-        }}>
-          <FaSearch style={{
-            position: 'absolute', top: '50%', left: '14px',
-            transform: 'translateY(-50%)',
-            color: C.textLight || '#64748B', fontSize: '13px',
-          }} />
-          <input
-            type="text"
-            placeholder="Search services..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%', padding: '10px 14px 10px 36px',
-              borderRadius: '12px', border: `1px solid ${C.border || '#E2E8F0'}`,
-              background: C.bgSecondary || '#FFFFFF', color: C.text || '#111827',
-              fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif',
-              outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = C.primary || '#6366F1';
-              e.target.style.boxShadow = `0 0 0 3px ${(C.primary || '#6366F1')}20`;
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = C.border || '#E2E8F0';
-              e.target.style.boxShadow = 'none';
-            }}
-          />
-        </div>
       </div>
 
       {/* Content */}
       {!ready ? (
         <SkeletonGrid C={C} />
-      ) : filteredData.services.length === 0 ? (
-        <div style={{
-          padding: '40px 20px', textAlign: 'center',
-          color: C.textLight || '#64748B', fontSize: '14px', fontWeight: 600,
-        }}>
-          No services found for "{searchQuery}"
-        </div>
       ) : isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {filteredData.categories.map((category) => {
+          {serviceCatalog.categories.map((category) => {
             const catServices = groupedServices[category.id] || [];
             if (catServices.length === 0) return null;
             return (
@@ -505,7 +438,7 @@ export default function QuickAccessSection() {
       ) : (
         <AnimatePresence mode="wait">
           <div>
-            {filteredData.categories.map((category) => {
+            {serviceCatalog.categories.map((category) => {
               const catServices = groupedServices[category.id] || [];
               if (catServices.length === 0) return null;
               return (
