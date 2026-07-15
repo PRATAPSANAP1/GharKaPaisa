@@ -1366,17 +1366,94 @@ const handleRazorpayWebhook = async (req, res, next) => {
     }
 
     const { event, payload } = req.body;
-    if (!payload || !payload.payout || !payload.payout.entity) {
+    if (!payload) {
+      return success(res, {}, 'No payload found in webhook');
+    }
+
+    await client.query('BEGIN');
+
+    // ── Handle Payment Captured Webhook Event (Deposit / Wallet Topup) ───────
+    if (event === 'payment.captured') {
+      if (!payload.payment || !payload.payment.entity) {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'No payment entity found in webhook');
+      }
+
+      const payment = payload.payment.entity;
+      const paymentId = payment.id;
+      const amount = parseFloat((payment.amount / 100).toFixed(2));
+      const partnerId = payment.notes?.partner_id;
+
+      if (!partnerId) {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'No partner_id found in payment notes');
+      }
+
+      // Check if already processed to prevent double-crediting
+      const { rows: [existingTx] } = await client.query(
+        `SELECT id FROM wallet_transactions WHERE reference_id = $1`,
+        [paymentId]
+      );
+
+      if (existingTx) {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'Payment already processed and credited');
+      }
+
+      // Fetch partner's wallet
+      const { rows: [wallet] } = await client.query(
+        `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+        [partnerId]
+      );
+
+      if (!wallet) {
+        await client.query('ROLLBACK');
+        return success(res, {}, 'Wallet not found for partner');
+      }
+
+      // Credit wallet
+      await client.query(`
+        UPDATE partner_wallets SET
+          available_balance = available_balance + $1,
+          total_earned = total_earned + $1,
+          last_updated = NOW()
+        WHERE id = $2
+      `, [amount, wallet.id]);
+
+      // Insert transaction record
+      await client.query(`
+        INSERT INTO wallet_transactions (
+          wallet_id, partner_id, type, amount, status, description, reference_type, reference_id, processed_at
+        ) VALUES ($1, $2, 'TOPUP', $3, 'success', $4, 'razorpay_payout', $5, NOW())
+      `, [wallet.id, partnerId, amount, `Wallet top-up via Razorpay Webhook: ${paymentId}`, paymentId]);
+
+      // Insert into wallet_ledger
+      await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, balance_after_transaction, description, reference_number, created_at
+        )
+        SELECT 
+          $1, $2, 'ADJUSTMENT'::ledger_transaction_type, $3, 0, available_balance, $4, $5, NOW()
+        FROM partner_wallets WHERE id = $1
+      `, [wallet.id, partnerId, amount, `Wallet top-up via Razorpay Webhook: ${paymentId}`, paymentId]);
+
+      await client.query('COMMIT');
+      logger.info(`Credited partner ${partnerId} wallet via webhook with TOPUP of INR ${amount}`);
+      return success(res, {}, 'Payment processed and wallet credited');
+    }
+
+    // ── Handle Payout Webhook Events (Withdrawal Processed/Failed) ────────────
+    if (!payload.payout || !payload.payout.entity) {
+      await client.query('ROLLBACK');
       return success(res, {}, 'Ignored non-payout event');
     }
 
     const payout = payload.payout.entity;
     const withdrawalId = payout.reference_id; // WD reference ID
     if (!withdrawalId) {
+      await client.query('ROLLBACK');
       return success(res, {}, 'No reference ID found in payout');
     }
-
-    await client.query('BEGIN');
 
     // Lock withdrawal row
     const { rows: [wr] } = await client.query(
