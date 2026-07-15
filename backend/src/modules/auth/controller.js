@@ -998,7 +998,24 @@ const loginPassword = async (req, res, next) => {
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
-    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({
+      success: true,
+      token,
+      redirect: redirectUrl,
+      user: {
+        id:         user.id,
+        email:      user.email,
+        mobile:     user.mobile,
+        role:       user.role,
+        status:     user.status,
+        first_name: user.first_name,
+        last_name:  user.last_name,
+      },
+      partner: kycStatus !== null ? {
+        kyc_status:       kycStatus,
+        rejection_reason: rejectionReason,
+      } : null,
+    });
   } catch (err) {
     next(err);
   }
