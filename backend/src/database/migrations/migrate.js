@@ -2699,20 +2699,20 @@ const migrate = async () => {
     // 4. Referral Campaigns Table
     await query(`
       CREATE TABLE IF NOT EXISTS referral_campaigns (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
-        campaign_name VARCHAR(255) NOT NULL,
-        platform VARCHAR(100) DEFAULT 'WhatsApp',
-        start_date DATE DEFAULT CURRENT_DATE,
-        end_date DATE,
-        budget DECIMAL(15,2) DEFAULT 0.00,
-        clicks INT DEFAULT 0,
-        registrations INT DEFAULT 0,
-        conversions INT DEFAULT 0,
-        commission DECIMAL(15,2) DEFAULT 0.00,
-        roi DECIMAL(10,2) DEFAULT 0.00,
-        created_at TIMESTAMPTZ DEFAULT NOW()
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4()
       );
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS campaign_name VARCHAR(255);
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS platform VARCHAR(100) DEFAULT 'WhatsApp';
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT CURRENT_DATE;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS end_date DATE;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS budget DECIMAL(15,2) DEFAULT 0.00;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS clicks INT DEFAULT 0;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS registrations INT DEFAULT 0;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS conversions INT DEFAULT 0;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS commission DECIMAL(15,2) DEFAULT 0.00;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS roi DECIMAL(10,2) DEFAULT 0.00;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
       CREATE INDEX IF NOT EXISTS idx_ref_campaigns_partner ON referral_campaigns(partner_id);
     `);
 
@@ -2960,20 +2960,20 @@ const migrate = async () => {
     // 2. Create referral_campaigns table
     await query(`
       CREATE TABLE IF NOT EXISTS referral_campaigns (
-        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        campaign_name VARCHAR(255) NOT NULL,
-        campaign_code VARCHAR(100) UNIQUE NOT NULL,
-        description   TEXT,
-        start_date    TIMESTAMPTZ NOT NULL,
-        end_date      TIMESTAMPTZ NOT NULL,
-        status        VARCHAR(50) DEFAULT 'ACTIVE',
-        target        INT DEFAULT 0,
-        bonus_type    VARCHAR(50),
-        bonus_amount  DECIMAL(15,2) DEFAULT 0.00,
-        created_by    UUID REFERENCES users(id),
-        created_at    TIMESTAMPTZ DEFAULT NOW(),
-        updated_at    TIMESTAMPTZ DEFAULT NOW()
+        id            UUID PRIMARY KEY DEFAULT uuid_generate_v4()
       );
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS campaign_name VARCHAR(255);
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS campaign_code VARCHAR(100) UNIQUE;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS description TEXT;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS target INT DEFAULT 0;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS bonus_type VARCHAR(50);
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(15,2) DEFAULT 0.00;
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE referral_campaigns ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 3. Create registration_logs table
