@@ -18,7 +18,21 @@ const listMarketingMaterials = async (req, res, next) => {
 // Create marketing material (Admin only)
 const createMarketingMaterial = async (req, res, next) => {
   try {
-    const { title, description, category, file_url, thumbnail_url } = req.body;
+    const { uploadToS3 } = require('../../services/aws/s3.service.js');
+    const { title, description, category } = req.body;
+    let { file_url, thumbnail_url } = req.body;
+
+    if (req.files) {
+      if (req.files.file && req.files.file[0]) {
+        const fileResult = await uploadToS3(req.files.file[0].buffer, req.files.file[0].originalname, 'marketing');
+        file_url = fileResult.url;
+      }
+      if (req.files.thumbnail && req.files.thumbnail[0]) {
+        const thumbResult = await uploadToS3(req.files.thumbnail[0].buffer, req.files.thumbnail[0].originalname, 'marketing/thumbnails');
+        thumbnail_url = thumbResult.url;
+      }
+    }
+
     if (!title || !category || !file_url) {
       return error(res, 'Title, category, and file_url are required', 400);
     }
