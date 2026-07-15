@@ -98,7 +98,62 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     );
   };
 
-  const handleVerifyOtp = async () => {
+  const [status, setStatus] = useState("idle");
+  const [borderProgress, setBorderProgress] = useState(0);
+  const [showPlacementStyles, setShowPlacementStyles] = useState(false);
+
+  useEffect(() => {
+    if (status !== "idle") {
+      setShowPlacementStyles(false);
+      const timer = window.setTimeout(() => setShowPlacementStyles(true), 900);
+      return () => window.clearTimeout(timer);
+    }
+    setShowPlacementStyles(false);
+  }, [status]);
+
+  useEffect(() => {
+    const isComplete = otpDigits.every((digit) => digit !== "");
+
+    if (!isComplete || status !== "idle") {
+      if (!isComplete) {
+        setBorderProgress(0);
+      }
+      return;
+    }
+
+    let progress = 0;
+    const interval = window.setInterval(() => {
+      progress += 1; // 100 steps over 1000ms = 1s total
+      if (progress >= 100) {
+        progress = 100;
+        window.clearInterval(interval);
+        verifyCompletedOtp();
+      }
+      setBorderProgress(progress);
+    }, 10);
+
+    return () => window.clearInterval(interval);
+  }, [otpDigits, status]);
+
+  const resetOtp = () => {
+    setStatus("idle");
+    setOtpDigits(["", "", "", "", "", ""]);
+    setBorderProgress(0);
+    setErrorMsg("");
+    window.setTimeout(() => {
+      otpRefs[0].current?.focus();
+    }, 40);
+  };
+
+  const handleResolvedEdit = () => {
+    if (status !== "idle") {
+      resetOtp();
+      return true;
+    }
+    return false;
+  };
+
+  const verifyCompletedOtp = async () => {
     const fullOtp = otpDigits.join("");
     if (fullOtp.length < 6) {
       return setErrorMsg("Please enter the 6-digit OTP.");
@@ -109,13 +164,13 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
     if (typeof window.verifyOtp !== 'function') {
       setLoading(false);
+      setStatus("fail");
       return setErrorMsg("OTP provider is not loaded.");
     }
 
     window.verifyOtp(
       fullOtp,
       async (data) => {
-        // OTP Verified successfully! Call backend API to record direct card application
         try {
           const payload = {
             customerName: customerName.trim(),
@@ -134,31 +189,36 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
           const result = await response.json();
           if (result.success) {
-            // Successfully saved lead. Now redirect visitor to bank application page
-            const applyLink = getBankApplyLink(card.cardName, card.bankId);
-            if (applyLink) {
-              window.location.href = applyLink;
-            } else {
-              console.warn("No specific bank link resolved for", card.cardName);
-            }
-            onClose();
+            setStatus("success");
+            setTimeout(() => {
+              const applyLink = getBankApplyLink(card.cardName, card.bankId);
+              if (applyLink) {
+                window.location.href = applyLink;
+              } else {
+                console.warn("No specific bank link resolved for", card.cardName);
+              }
+              onClose();
+            }, 1500);
           } else {
+            setStatus("fail");
             setErrorMsg(result.message || "Failed to record your application details.");
           }
         } catch (apiErr) {
           console.error(apiErr);
-          setErrorMsg("Connection error while submitting application. Redirecting anyway...");
-          // Fallback redirect even if backend saving fails temporarily
-          const applyLink = getBankApplyLink(card.cardName, card.bankId);
-          if (applyLink) {
-            window.location.href = applyLink;
-          }
-          onClose();
+          setStatus("success");
+          setTimeout(() => {
+            const applyLink = getBankApplyLink(card.cardName, card.bankId);
+            if (applyLink) {
+              window.location.href = applyLink;
+            }
+            onClose();
+          }, 1500);
         } finally {
           setLoading(false);
         }
       },
       (error) => {
+        setStatus("fail");
         const errMsg = typeof error === 'string' ? error : (error?.message || "Incorrect OTP. Please try again.");
         setErrorMsg(errMsg);
         setLoading(false);
@@ -166,46 +226,58 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     );
   };
 
-  // Handle OTP digit changes
   const handleOtpChange = (index, value) => {
-    if (isNaN(value)) return;
+    if (handleResolvedEdit()) {
+      return;
+    }
+    const digit = value.replace(/\D/g, "").slice(0, 1);
     const newDigits = [...otpDigits];
-    newDigits[index] = value.substring(value.length - 1);
+    newDigits[index] = digit;
     setOtpDigits(newDigits);
 
-    // Auto-focus next box
-    if (value && index < 5) {
-      otpRefs[index + 1].current.focus();
+    if (digit && index < 5) {
+      otpRefs[index + 1].current?.focus();
     }
   };
 
-  // Handle Backspace navigation
   const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
-      otpRefs[index - 1].current.focus();
+    if (e.key !== "Backspace") {
+      return;
+    }
+    e.preventDefault();
+    if (handleResolvedEdit()) {
+      return;
+    }
+    if (otpDigits[index]) {
+      const newDigits = [...otpDigits];
+      newDigits[index] = "";
+      setOtpDigits(newDigits);
+      return;
+    }
+    if (index > 0) {
+      otpRefs[index - 1].current?.focus();
+      const newDigits = [...otpDigits];
+      newDigits[index - 1] = "";
+      setOtpDigits(newDigits);
     }
   };
 
-  // Handle Paste
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").trim().substring(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
-
-    const newDigits = [...otpDigits];
-    for (let i = 0; i < pastedData.length; i++) {
-      newDigits[i] = pastedData[i];
-      if (otpRefs[i] && otpRefs[i].current) {
-        otpRefs[i].current.value = pastedData[i];
-      }
+    if (handleResolvedEdit()) {
+      return;
     }
+    const pastedData = e.clipboardData.getData("text").trim().substring(0, 6);
+    const digits = pastedData.replace(/\D/g, "").slice(0, 6).split("");
+    const newDigits = ["", "", "", "", "", ""];
+
+    digits.forEach((digit, idx) => {
+      newDigits[idx] = digit;
+    });
     setOtpDigits(newDigits);
 
-    // Focus last filled box
-    const focusIdx = Math.min(pastedData.length, 5);
-    if (otpRefs[focusIdx] && otpRefs[focusIdx].current) {
-      otpRefs[focusIdx].current.focus();
-    }
+    const focusIdx = digits.length >= 6 ? 5 : Math.max(digits.length, 0);
+    otpRefs[focusIdx].current?.focus();
   };
 
   return (
@@ -416,108 +488,118 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
 
         {/* STEP 2: Enter OTP in 6 boxes */}
         {step === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "13px", color: C.textLight || "#64748b" }}>
-                SMS OTP sent to <span style={{ fontWeight: 700, color: C.text }}>+91 {mobile}</span>
-              </div>
+          <div className="otp-card-inner">
+            <div className="otp-header" style={{ marginBottom: "1rem" }}>
+              <p style={{ color: C.textLight || '#64748b', fontSize: '13px' }}>
+                We've sent a 6-digit code to <span style={{ fontWeight: 700, color: C.text }}>+91 {mobile}</span>
+              </p>
             </div>
 
-            {/* 6 Digit Input Fields */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "10px" }} onPaste={handleOtpPaste}>
-              {otpDigits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={otpRefs[idx]}
-                  type="text"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  style={{
-                    width: "48px",
-                    height: "52px",
-                    borderRadius: "12px",
-                    border: `2px solid ${digit ? (C.teal || '#0ea5e9') : (C.border || '#e2e8f0')}`,
-                    background: C.bgSecondary || "#f8fafc",
-                    color: C.text || "#1e293b",
-                    fontSize: "20px",
-                    fontWeight: 800,
-                    textAlign: "center",
-                    outline: "none",
-                    transition: "all 0.15s"
-                  }}
-                />
-              ))}
-            </div>
+            <div className={`otp-input-group ${status !== "idle" ? "stacked" : ""}`} onPaste={handleOtpPaste}>
+              {otpDigits.map((digit, index) => {
+                const isTopCard = index === 0;
+                const isBorderAnimating = status === "idle" && borderProgress > 0;
+                const stackOffset = status === "idle" ? "translate(0, 0)" : 
+                  isTopCard 
+                    ? "translate(-50%, -50%) scale(1.05)" 
+                    : `translate(calc(-50% + ${(6 - 1 - index) * 1.5}px), calc(-50% + ${(6 - 1 - index) * 1.5}px)) scale(${0.98 - (6 - 1 - index) * 0.02})`;
 
-            {/* Resend and Actions */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
-              <div style={{ fontSize: "12px" }}>
-                {otpTimer > 0 ? (
-                  <span style={{ color: C.textLight || "#64748b" }}>
-                    Resend code in <span style={{ fontWeight: 700 }}>{otpTimer}s</span>
-                  </span>
-                ) : (
-                  <button
-                    onClick={handleResendOtp}
-                    disabled={loading}
+                return (
+                  <div
+                    key={index}
+                    className={`otp-slot ${status !== "idle" ? "stacked" : ""} ${isTopCard ? "top-card" : "back-card"}`}
                     style={{
-                      background: "none",
-                      border: "none",
-                      color: C.teal || '#0ea5e9',
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: "12px"
+                      zIndex: 6 - index,
+                      transform: stackOffset,
+                      transitionDelay: status !== "idle" ? `${index * 60}ms` : "0ms",
                     }}
                   >
-                    Resend OTP Code
-                  </button>
-                )}
-              </div>
+                    <div
+                      className={`otp-shell ${isBorderAnimating ? "border-drawing" : ""} ${status} ${showPlacementStyles ? "placed" : ""}`}
+                      style={
+                        isBorderAnimating
+                          ? { "--progress": `${borderProgress}%` }
+                          : undefined
+                      }
+                    >
+                      <input
+                        ref={otpRefs[index]}
+                        className={`otp-input ${status !== "idle" && !isTopCard ? "stack-shadow" : ""}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(event) => handleOtpChange(index, event.target.value)}
+                        onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                        disabled={status !== "idle"}
+                        aria-label={`OTP digit ${index + 1}`}
+                      />
+                      {status !== "idle" && isTopCard ? (
+                        <span className={`otp-result-icon ${status} ${showPlacementStyles ? "placed" : ""}`} aria-hidden="true">
+                          {status === "success" ? "✓" : status === "fail" ? "✕" : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
-                <button
-                  onClick={() => setStep(1)}
-                  style={{
-                    flex: 1,
-                    background: "none",
-                    border: `1.5px solid ${C.border || '#e2e8f0'}`,
-                    color: C.textMid || "#475569",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: "pointer"
-                  }}
-                >
-                  Back
+            <div className="resend-area" style={{ marginTop: '1.25rem' }}>
+              <span>Didn't receive the code?</span>
+              {otpTimer > 0 ? (
+                <span style={{ fontWeight: 700, color: C.textLight || '#64748b', marginLeft: '4px' }}>{otpTimer}s</span>
+              ) : (
+                <button type="button" className="resend-link" onClick={handleResendOtp}>
+                  Resend
                 </button>
-                
-                <button
-                  onClick={handleVerifyOtp}
-                  disabled={loading}
-                  style={{
-                    flex: 2,
-                    background: C.teal || '#0ea5e9',
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "12px",
-                    padding: "12px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px"
-                  }}
-                >
-                  {loading ? (
-                    <div style={{ width: "16px", height: "16px", border: "2.5px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                  ) : "Verify & Redirect"}
-                </button>
-              </div>
+              )}
+            </div>
+
+            <div className="info-note" style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+              {status === "idle"
+                ? borderProgress > 0 && borderProgress < 100
+                  ? "Drawing border, then verifying..."
+                  : "Enter code - auto verify"
+                : status === "success"
+                  ? "Verified successfully"
+                  : "Verification failed"}
+            </div>
+
+            {/* Actions / Simulators */}
+            <div className="action-row" style={{ marginTop: '1.5rem', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  if (status === "idle") {
+                    setOtpDigits(["1", "2", "3", "4", "5", "6"]);
+                  }
+                }}
+                style={{ fontSize: '11px', padding: '6px 12px' }}
+              >
+                Simulate Success
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => {
+                  if (status === "idle") {
+                    setOtpDigits(["1", "1", "1", "1", "1", "1"]);
+                  }
+                }}
+                style={{ fontSize: '11px', padding: '6px 12px', border: '1px solid rgba(255,145,0,0.2)' }}
+              >
+                Simulate Fail
+              </button>
+              <button 
+                type="button" 
+                className="btn" 
+                onClick={resetOtp}
+                style={{ fontSize: '11px', padding: '6px 12px' }}
+              >
+                Reset
+              </button>
             </div>
           </div>
         )}
@@ -525,6 +607,238 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       </div>
 
       <style>{`
+        .otp-card-inner {
+          width: 100%;
+          text-align: center;
+        }
+        .otp-input-group {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.75rem;
+          min-height: 4.5rem;
+          margin: 2rem 0 1.5rem;
+        }
+        .otp-input-group.stacked {
+          min-height: 5.8rem;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .otp-slot {
+          width: 3.45rem;
+          height: 4.35rem;
+          transition: transform 0.3s ease-in-out, opacity 0.3s ease;
+          will-change: transform;
+        }
+        .otp-slot.stacked {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+        }
+        .otp-shell {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 1.15rem;
+          border: 2px solid transparent;
+          box-shadow: none;
+          transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease;
+        }
+        .otp-shell.placed {
+          border-color: #ff9100;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 145, 0, 0.12);
+        }
+        .otp-shell.placed.success {
+          border-color: #1bbb6b;
+          box-shadow: 0 0 50px rgba(62, 234, 46, 0.4);
+        }
+        .otp-shell.placed.fail {
+          border-color: #ef4444;
+          box-shadow: 0 0 50px rgba(241, 21, 21, 0.4);
+        }
+        .otp-shell::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          padding: 2px;
+          border-radius: inherit;
+          background: #4a3d30;
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          transition: background 1s ease-in-out, box-shadow 1s ease-in-out, transform 1s ease-in-out;
+          z-index: 2;
+        }
+        .otp-shell.border-drawing::before {
+          background: conic-gradient(
+            from 315deg,
+            #ff9100 var(--progress, 0%),
+            #3e3327 var(--progress, 0%)
+          );
+        }
+        .otp-slot.top-card.stacked .otp-shell::before {
+          background: transparent;
+        }
+        .otp-slot.top-card.stacked .otp-shell.placed {
+          box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.25);
+          animation: stack-glow 1s ease-in-out;
+        }
+        @keyframes stack-glow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+            transform: scale(0.8);
+          }
+          50% {
+            box-shadow: 0 0 12px 6px rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+          }
+          100% {
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.25);
+            transform: scale(1.05);
+          }
+        }
+        .otp-shell.success::before {
+          background: #1bbb6b;
+          box-shadow: 0 0 0 6px rgba(27, 187, 107, 0.18), 0 22px 44px rgba(27, 187, 107, 0.28), 0 10px 24px rgba(27, 187, 107, 0.2);
+        }
+        .otp-shell.fail::before {
+          background: #ef4444;
+          box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16), 0 22px 44px rgba(239, 68, 68, 0.26), 0 10px 24px rgba(239, 68, 68, 0.18);
+        }
+        .otp-input {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border: 2px solid transparent;
+          border-radius: 1.15rem;
+          background: #1c1c1c;
+          color: #fff6ec;
+          text-align: center;
+          font-size: 1.8rem;
+          font-weight: 700;
+          outline: none;
+          caret-color: #ff9100;
+          box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+          transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease;
+        }
+        .otp-input:focus {
+          background: #242424;
+          box-shadow: 0 0 0 4px rgba(255, 145, 0, 0.18), inset 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+        .otp-input:disabled {
+          cursor: default;
+        }
+        .otp-slot.stacked.back-card .otp-input,
+        .otp-slot.stacked .otp-input {
+          color: transparent;
+        }
+        .otp-slot.stacked.back-card .otp-input {
+          opacity: 0.88;
+          background: #171717;
+        }
+        .otp-input.stack-shadow {
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.26);
+        }
+        .otp-result-icon {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          font-size: 2.15rem;
+          font-weight: 900;
+          pointer-events: none;
+          width: 3.2rem;
+          height: 3.2rem;
+          margin: auto;
+          animation: icon-pop 0.48s ease;
+          text-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+        }
+        .otp-result-icon.success {
+          color: #1bbb6b;
+          text-shadow: 0 0 18px rgba(27, 187, 107, 0.35), 0 0 28px rgba(27, 187, 107, 0.2);
+        }
+        .otp-result-icon.fail {
+          color: #ef4444;
+          text-shadow: 0 0 18px rgba(239, 68, 68, 0.35), 0 0 28px rgba(239, 68, 68, 0.2);
+        }
+        .resend-area {
+          display: flex;
+          justify-content: center;
+          gap: 0.3rem;
+          align-items: center;
+          color: #beaf9d;
+          font-size: 0.95rem;
+        }
+        .resend-link {
+          border: 0;
+          background: transparent;
+          color: #ff9100;
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .info-note {
+          min-height: 1.25rem;
+          margin-top: 0.55rem;
+          color: #93806f;
+          font-size: 0.86rem;
+        }
+        .action-row {
+          display: flex;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 0.8rem;
+          margin-top: 1.7rem;
+        }
+        .btn {
+          border: 1px solid transparent;
+          border-radius: 999px;
+          padding: 0.68rem 1.35rem;
+          background: #272727;
+          color: #f5eadf;
+          cursor: pointer;
+          transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        }
+        .btn:hover {
+          transform: translateY(-1px);
+        }
+        .btn-primary {
+          background: #ff9100;
+          color: #1c1206;
+        }
+        .btn-outline {
+          background: transparent;
+          border-color: #4a3827;
+        }
+        @keyframes icon-pop {
+          0% {
+            transform: scale(0.55);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        @media (max-width: 520px) {
+          .otp-input-group {
+            gap: 0.5rem;
+          }
+          .otp-slot {
+            width: 2.8rem;
+            height: 3.7rem;
+          }
+          .otp-input {
+            font-size: 1.45rem;
+          }
+          .otp-result-icon {
+            font-size: 1.7rem;
+          }
+        }
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
