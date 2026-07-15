@@ -41,6 +41,9 @@ export default function PartnerDashboard({ partner }) {
   const [notifications, setNotifications] = useState([]);
   const [allLeads, setAllLeads] = useState([]);
   const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
@@ -54,7 +57,7 @@ export default function PartnerDashboard({ partner }) {
     const fetchAllDashboardData = async () => {
       setLoading(true);
       try {
-        const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes, prodRes] = await Promise.all([
+        const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes, prodRes, svcRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
           api.get('/wallet').catch(() => null),
           api.get('/partner/team-dashboard').catch(() => null),
@@ -62,7 +65,8 @@ export default function PartnerDashboard({ partner }) {
           api.get('/banners').catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
           api.get('/leads', { params: { limit: 100 } }).catch(() => null),
-          api.get('/products', { params: { is_active: 'true', limit: 100 } }).catch(() => null)
+          api.get('/products', { params: { is_active: 'true', limit: 100 } }).catch(() => null),
+          api.get('/service-catalog').catch(() => null)
         ]);
 
         if (dashRes?.data?.success) setDashboardData(dashRes.data.data);
@@ -72,6 +76,7 @@ export default function PartnerDashboard({ partner }) {
         if (bannerRes?.data?.success) setBanners(bannerRes.data.data || []);
         if (leadsRes?.data?.success) setAllLeads(leadsRes.data.data || []);
         if (prodRes?.data?.success) setProducts(prodRes.data.data || []);
+        if (svcRes?.data?.success) setServices(svcRes.data.data || []);
 
         if (notifRes?.data?.success) {
           setNotifications(notifRes.data.data.notifications || []);
@@ -199,6 +204,55 @@ export default function PartnerDashboard({ partner }) {
     const trackingLink = `${window.location.origin}/redirect/${prod.category}?id=${prod.id}&partner=${partnerCode}`;
     navigator.clipboard.writeText(trackingLink);
     alert(`Tracking link for ${prod.name} copied to clipboard!`);
+  };
+
+  const getServiceCategory = (service) => {
+    const route = (service.route || '').toLowerCase();
+    const name = (service.name || '').toLowerCase();
+
+    if (route.includes('travel') || name.includes('flight') || name.includes('train') || name.includes('bus') || name.includes('hotel')) {
+      return 'Travel';
+    }
+    if (route.includes('loan') || name.includes('loan')) {
+      return 'Loans';
+    }
+    if (route.includes('recharge') || route.includes('electricity') || route.includes('fastag') || name.includes('recharge') || name.includes('electricity')) {
+      return 'Utilities';
+    }
+    return 'Others';
+  };
+
+  const getServiceIcon = (icon) => {
+    if (!icon) return '🛠️';
+    return typeof icon === 'string' ? icon : '🛠️';
+  };
+
+  const handleServiceSearch = (value) => {
+    setServiceSearch(value);
+    setSelectedServiceCategory('All');
+  };
+
+  const serviceCategories = ['All', ...Array.from(new Set(services.map(getServiceCategory)))];
+
+  const filteredServices = services
+    .filter((service) => {
+      if (selectedServiceCategory !== 'All' && getServiceCategory(service) !== selectedServiceCategory) {
+        return false;
+      }
+      const query = serviceSearch.trim().toLowerCase();
+      if (!query) return true;
+      return (service.name || '').toLowerCase().includes(query) || (service.route || '').toLowerCase().includes(query);
+    })
+    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
+  const handleServiceTileClick = async (service) => {
+    if (service.status !== 'active') return;
+    try {
+      await api.post(`/service-catalog/${service.id}/click`);
+    } catch (err) {
+      console.warn('Service click tracking failed:', err);
+    }
+    navigate(service.route);
   };
 
   // Get active products for Campaigns list
@@ -703,7 +757,7 @@ export default function PartnerDashboard({ partner }) {
       {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
         
-        {/* Quick Actions (takes more width) */}
+        {/* Quick Access Launchpad */}
         <div style={{
           flex: "1.2",
           minWidth: "300px",
@@ -713,35 +767,110 @@ export default function PartnerDashboard({ partner }) {
           border: `1.5px solid ${C.border}`,
           boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
         }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.quickActions', 'Quick Actions')}</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "12px" }}>
-            {[
-              { label: t('dashboard.actions.applyProduct', 'Apply Product'), icon: MdStorefront, color: "#3B82F6", route: "/partner/products" },
-              { label: t('dashboard.actions.addCustomer', 'Add Customer'), icon: MdPeople, color: "#10B981", route: "/partner/crm" },
-              { label: t('dashboard.actions.checkStatus', 'Check Status'), icon: MdTimeline, color: "#F59E0B", route: "/partner/applications" },
-              { label: t('dashboard.actions.myWallet', 'My Wallet'), icon: MdAccountBalanceWallet, color: "#3B82F6", route: "/partner/wallet" },
-              { label: t('dashboard.actions.training', 'Training'), icon: MdSchool, color: "#EC4899", route: "/partner/training" },
-              { label: t('dashboard.actions.marketingTools', 'Marketing Tools'), icon: MdCampaign, color: "#D97706", route: "/partner/marketing" }
-            ].map((act, idx) => (
-              <div 
-                key={idx}
-                onClick={() => navigate(act.route)}
-                style={{
-                  border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 10px",
-                  textAlign: "center", cursor: "pointer", display: "flex", flexDirection: "column",
-                  alignItems: "center", gap: "8px", background: C.card, transition: "transform 0.15s"
-                }}
-                className="hover-scale"
-              >
-                <div style={{
-                  width: "36px", height: "36px", borderRadius: "50%", background: `${act.color}15`,
-                  color: act.color, display: "flex", alignItems: "center", justifyContent: "center"
-                }}>
-                  <act.icon size={20} />
-                </div>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: C.textMid }}>{act.label}</span>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "16px", marginBottom: "18px" }}>
+            <div>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.quickAccess', 'Quick Access')}</h3>
+              <p style={{ fontSize: "12px", color: C.textLight, margin: "8px 0 0" }}>{t('dashboard.quickAccessSubtitle', 'Launch the services you need directly from your dashboard')}</p>
+            </div>
+            <div style={{ flex: "1 1 220px", minWidth: "220px" }}>
+              <div style={{ position: "relative" }}>
+                <MdSearch size={18} style={{ position: "absolute", top: 12, left: 12, color: C.textLight }} />
+                <input
+                  value={serviceSearch}
+                  onChange={(e) => handleServiceSearch(e.target.value)}
+                  placeholder={t('dashboard.quickAccessSearch', 'Search services...')}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px 10px 36px",
+                    borderRadius: "12px",
+                    border: `1px solid ${C.border}`,
+                    background: C.bgSecondary,
+                    color: C.text,
+                    fontSize: "13px"
+                  }}
+                />
               </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "18px" }}>
+            {serviceCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedServiceCategory(category)}
+                style={{
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "8px 14px",
+                  borderRadius: "999px",
+                  background: selectedServiceCategory === category ? C.primary : C.bgSecondary,
+                  color: selectedServiceCategory === category ? "#ffffff" : C.text,
+                  fontSize: "12px",
+                  fontWeight: 700
+                }}
+              >
+                {category}
+              </button>
             ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
+            {filteredServices.length === 0 ? (
+              <div style={{ gridColumn: "1 / -1", padding: "28px 16px", color: C.textLight, textAlign: "center", borderRadius: "16px", background: C.bgSecondary }}>
+                {t('dashboard.noQuickAccessServices', 'No quick access services found. Try another search or category.')}
+              </div>
+            ) : filteredServices.map((service) => {
+              const isDisabled = service.status !== 'active';
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => handleServiceTileClick(service)}
+                  disabled={isDisabled}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    padding: "18px",
+                    minHeight: "140px",
+                    width: "100%",
+                    borderRadius: "18px",
+                    border: `1px solid ${C.border}`,
+                    background: isDisabled ? C.bgSecondary : C.card,
+                    color: C.text,
+                    textAlign: "left",
+                    cursor: isDisabled ? "not-allowed" : "pointer",
+                    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                    boxShadow: isDisabled ? "none" : "0 10px 24px rgba(0,0,0,0.04)"
+                  }}
+                  className={isDisabled ? undefined : 'hover-scale'}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "42px", height: "42px", borderRadius: "14px", background: `${C.primary}12`, fontSize: "20px" }}>
+                    {getServiceIcon(service.icon)}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{service.name}</span>
+                    <span style={{ fontSize: "11px", color: C.textLight, wordBreak: "break-word" }}>{service.route}</span>
+                  </div>
+                  <span style={{
+                    alignSelf: "stretch",
+                    display: "inline-flex",
+                    justifyContent: "center",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    background: isDisabled ? `${C.red}10` : `${C.green}10`,
+                    color: isDisabled ? C.red : C.green
+                  }}>
+                    {isDisabled ? t('dashboard.comingSoon', 'Coming Soon') : t('dashboard.launch', 'Launch')}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
