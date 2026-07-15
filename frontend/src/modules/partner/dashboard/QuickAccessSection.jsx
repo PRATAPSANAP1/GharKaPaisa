@@ -12,19 +12,20 @@ import {
   FaExclamationTriangle, FaClock, FaPiggyBank, FaCalendarAlt,
   FaUmbrella, FaGift, FaSubway, FaBus, FaHotel, FaUmbrellaBeach,
   FaPassport, FaCouch, FaTaxi, FaWifi, FaCity,
-  FaChartBar, FaCalendar
+  FaChartBar, FaCalendar,
+  FaChevronDown, FaChevronRight
 } from 'react-icons/fa';
 
 /* ── Catalog Data ────────────────────────────────────────────────── */
 const serviceCatalog = {
   categories: [
-    { id: 'money', name: 'Money Transfer & Payments', icon: FaWallet, color: '#4338CA' },
-    { id: 'banks', name: 'Popular Credit Card Banks', icon: FaUniversity, color: '#4338CA' },
-    { id: 'loans', name: 'Loans', icon: FaHandHoldingUsd, color: '#4338CA' },
-    { id: 'insurance', name: 'Insurance', icon: FaShieldAlt, color: '#4338CA' },
-    { id: 'invest', name: 'Accounts & Investments', icon: FaChartPie, color: '#4338CA' },
-    { id: 'other', name: 'Other Services', icon: FaEllipsisH, color: '#4338CA' },
-    { id: 'travel', name: 'Travel & Bookings', icon: FaPlane, color: '#4338CA' },
+    { id: 'money', name: 'Money Transfer & Payments', icon: FaWallet, color: '#4f46e5' },
+    { id: 'banks', name: 'Popular Credit Card Banks', icon: FaUniversity, color: '#0ea5e9' },
+    { id: 'loans', name: 'Loans', icon: FaHandHoldingUsd, color: '#10b981' },
+    { id: 'insurance', name: 'Insurance', icon: FaShieldAlt, color: '#f59e0b' },
+    { id: 'invest', name: 'Accounts & Investments', icon: FaChartPie, color: '#8b5cf6' },
+    { id: 'other', name: 'Other Services', icon: FaEllipsisH, color: '#ec4899' },
+    { id: 'travel', name: 'Travel & Bookings', icon: FaPlane, color: '#f43f5e' },
   ],
   services: [
     // Money Transfer & Payments
@@ -88,7 +89,7 @@ const serviceCatalog = {
   ]
 };
 
-/* ── Service Card ────────────────────────────────────────────────── */
+/* ── Desktop Service Card ────────────────────────────────────────── */
 const ServiceCard = ({ service, onClick, C, isDark }) => {
   const Icon = service.icon;
 
@@ -103,25 +104,25 @@ const ServiceCard = ({ service, onClick, C, isDark }) => {
         gap: '10px',
         height: '48px',
         padding: '0 14px',
-        background: '#FFFFFF',
+        background: C.card || '#FFFFFF',
         borderRadius: '14px',
-        border: '1px solid #E5E7EB',
-        boxShadow: '0 4px 20px rgba(15,23,42,0.06)',
+        border: `1px solid ${C.border || '#E5E7EB'}`,
+        boxShadow: '0 4px 20px rgba(15,23,42,0.03)',
         cursor: 'pointer',
         fontSize: '13px',
         fontWeight: 600,
-        color: '#111827',
+        color: C.text || '#111827',
         whiteSpace: 'nowrap',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
+        transition: 'all 0.2s ease',
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#6366F1';
-        e.currentTarget.style.boxShadow = '0 10px 25px rgba(99,102,241,0.15)';
+        e.currentTarget.style.borderColor = C.primary || '#6366F1';
+        e.currentTarget.style.boxShadow = `0 10px 25px ${(C.primary || '#6366F1')}20`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#E5E7EB';
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(15,23,42,0.06)';
+        e.currentTarget.style.borderColor = C.border || '#E5E7EB';
+        e.currentTarget.style.boxShadow = '0 4px 20px rgba(15,23,42,0.03)';
       }}
     >
       <span style={{
@@ -137,7 +138,7 @@ const ServiceCard = ({ service, onClick, C, isDark }) => {
   );
 };
 
-/* ── Category Section ────────────────────────────────────────────── */
+/* ── Desktop Category Section ────────────────────────────────────── */
 const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
   const Icon = category.icon;
   if (services.length === 0) return null;
@@ -156,7 +157,7 @@ const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
         <Icon style={{ fontSize: '17px', color: category.color }} />
         <h3 style={{
           fontSize: '15px', fontWeight: 700,
-          color: category.color, margin: 0,
+          color: C.text || category.color, margin: 0,
         }}>{category.name}</h3>
       </div>
 
@@ -179,7 +180,147 @@ const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
   );
 };
 
-/* ── Skeleton ────────────────────────────────────────────────────── */
+/* ── Mobile Service Item ─────────────────────────────────────────── */
+const ServiceCardMobile = ({ service, onClick, C }) => {
+  const Icon = service.icon;
+
+  return (
+    <motion.button
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onClick(service)}
+      aria-label={`Open ${service.label} service`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        padding: '14px 16px',
+        background: C.bgSecondary || '#F8FAFC',
+        borderRadius: '12px',
+        border: `1.5px solid ${C.border || '#E5E7EB'}`,
+        cursor: 'pointer',
+        textAlign: 'left',
+        outline: 'none',
+        transition: 'all 0.2s ease',
+        minHeight: '52px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <span style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '32px', height: '32px', borderRadius: '8px',
+          background: `${service.color}14`, color: service.color,
+          fontSize: '15px', flexShrink: 0,
+        }}>
+          <Icon />
+        </span>
+        <span style={{
+          fontSize: '14px',
+          fontWeight: 600,
+          color: C.text || '#111827',
+        }}>{service.label}</span>
+      </div>
+      <FaChevronRight style={{ fontSize: '11px', color: C.textLight || '#94A3B8' }} />
+    </motion.button>
+  );
+};
+
+/* ── Mobile Category Section (Accordion) ─────────────────────────── */
+const CategorySectionMobile = ({ category, services, onServiceClick, isExpanded, onToggle, C }) => {
+  const Icon = category.icon;
+  if (services.length === 0) return null;
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onToggle();
+    }
+  };
+
+  return (
+    <div style={{
+      borderBottom: `1.5px solid ${C.border || '#E5E7EB'}`,
+      overflow: 'hidden',
+    }}>
+      <button
+        onClick={onToggle}
+        onKeyDown={handleKeyDown}
+        aria-expanded={isExpanded}
+        aria-controls={`qa-group-${category.id}`}
+        aria-label={`${category.name} section`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          padding: '16px 8px',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          outline: 'none',
+          textAlign: 'left',
+          minHeight: '54px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: `${category.color}12`, color: category.color,
+            fontSize: '16px',
+          }}>
+            <Icon />
+          </span>
+          <span style={{
+            fontSize: '15px',
+            fontWeight: 700,
+            color: C.text || '#111827',
+          }}>{category.name}</span>
+        </div>
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: 'flex', alignItems: 'center', color: C.textLight || '#6B7280' }}
+        >
+          <FaChevronDown style={{ fontSize: '14px' }} />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            id={`qa-group-${category.id}`}
+            role="region"
+            aria-label={`${category.name} services`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              padding: '4px 8px 16px',
+            }}>
+              {services.map((service) => (
+                <ServiceCardMobile
+                  key={service.id}
+                  service={service}
+                  onClick={onServiceClick}
+                  C={C}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+/* ── Skeleton loader ────────────────────────────────────────────── */
 const SkeletonGrid = ({ C }) => (
   <div style={{
     display: 'grid',
@@ -189,8 +330,8 @@ const SkeletonGrid = ({ C }) => (
     {Array.from({ length: 12 }).map((_, i) => (
       <div key={i} style={{
         height: '48px', borderRadius: '14px',
-        background: C.bgSecondary,
-        border: `1px solid ${C.border}`,
+        background: C.bgSecondary || '#F8FAFC',
+        border: `1px solid ${C.border || '#E5E7EB'}`,
         animation: 'qa-shimmer 1.2s infinite',
       }} />
     ))}
@@ -204,12 +345,23 @@ const SkeletonGrid = ({ C }) => (
   </div>
 );
 
-/* ── Main: Quick Access Section ──────────────────────────────────── */
+/* ── Main Export component ───────────────────────────────────────── */
 export default function QuickAccessSection() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [ready, setReady] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 200);
@@ -238,6 +390,27 @@ export default function QuickAccessSection() {
     return groups;
   }, [filteredData]);
 
+  // Auto-expand searched categories on mobile
+  useEffect(() => {
+    if (searchQuery.trim() && isMobile) {
+      const autoExpanded = {};
+      filteredData.categories.forEach((cat) => {
+        const catServices = groupedServices[cat.id] || [];
+        if (catServices.length > 0) {
+          autoExpanded[cat.id] = true;
+        }
+      });
+      setExpandedCategories(autoExpanded);
+    }
+  }, [searchQuery, isMobile, filteredData.categories, groupedServices]);
+
+  const toggleCategory = useCallback((categoryId) => {
+    setExpandedCategories((prev) => ({
+      ...prev,
+      [categoryId]: !prev[categoryId],
+    }));
+  }, []);
+
   const handleServiceClick = useCallback((service) => {
     if (service.route) {
       navigate(service.route);
@@ -246,11 +419,12 @@ export default function QuickAccessSection() {
 
   return (
     <div style={{
-      background: '#FFFFFF',
+      background: C.card || '#FFFFFF',
       borderRadius: '18px',
-      padding: '24px',
-      border: '1px solid #EEF2FF',
-      boxShadow: '0 4px 20px rgba(15,23,42,0.06)',
+      padding: isMobile ? '16px' : '24px',
+      border: `1px solid ${C.border || '#EEF2FF'}`,
+      boxShadow: '0 4px 20px rgba(15,23,42,0.05)',
+      fontFamily: 'Inter, system-ui, sans-serif',
     }}>
       {/* Header */}
       <div style={{
@@ -260,21 +434,21 @@ export default function QuickAccessSection() {
       }}>
         <div>
           <h3 style={{
-            fontSize: '18px', fontWeight: 800, color: '#4338CA', margin: 0,
+            fontSize: '18px', fontWeight: 800, color: C.primary || '#4338CA', margin: 0,
           }}>Quick Access</h3>
           <p style={{
-            fontSize: '13px', color: '#6B7280', margin: '4px 0 0',
+            fontSize: '13px', color: C.textLight || '#6B7280', margin: '4px 0 0',
             fontWeight: 500,
           }}>Access all GharKaPaisa services from one place</p>
         </div>
 
         <div style={{
-          position: 'relative', minWidth: '220px', flex: '0 1 300px',
+          position: 'relative', minWidth: '220px', flex: isMobile ? '1 1 100%' : '0 1 300px',
         }}>
           <FaSearch style={{
             position: 'absolute', top: '50%', left: '14px',
             transform: 'translateY(-50%)',
-            color: '#64748B', fontSize: '13px',
+            color: C.textLight || '#64748B', fontSize: '13px',
           }} />
           <input
             type="text"
@@ -283,17 +457,17 @@ export default function QuickAccessSection() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%', padding: '10px 14px 10px 36px',
-              borderRadius: '12px', border: '1px solid #E2E8F0',
-              background: '#FFFFFF', color: '#111827',
+              borderRadius: '12px', border: `1px solid ${C.border || '#E2E8F0'}`,
+              background: C.bgSecondary || '#FFFFFF', color: C.text || '#111827',
               fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif',
               outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
             }}
             onFocus={(e) => {
-              e.target.style.borderColor = '#6366F1';
-              e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+              e.target.style.borderColor = C.primary || '#6366F1';
+              e.target.style.boxShadow = `0 0 0 3px ${(C.primary || '#6366F1')}20`;
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = '#E2E8F0';
+              e.target.style.borderColor = C.border || '#E2E8F0';
               e.target.style.boxShadow = 'none';
             }}
           />
@@ -306,9 +480,27 @@ export default function QuickAccessSection() {
       ) : filteredData.services.length === 0 ? (
         <div style={{
           padding: '40px 20px', textAlign: 'center',
-          color: C.textLight, fontSize: '14px', fontWeight: 600,
+          color: C.textLight || '#64748B', fontSize: '14px', fontWeight: 600,
         }}>
           No services found for "{searchQuery}"
+        </div>
+      ) : isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {filteredData.categories.map((category) => {
+            const catServices = groupedServices[category.id] || [];
+            if (catServices.length === 0) return null;
+            return (
+              <CategorySectionMobile
+                key={category.id}
+                category={category}
+                services={catServices}
+                onServiceClick={handleServiceClick}
+                isExpanded={!!expandedCategories[category.id]}
+                onToggle={() => toggleCategory(category.id)}
+                C={C}
+              />
+            );
+          })}
         </div>
       ) : (
         <AnimatePresence mode="wait">
