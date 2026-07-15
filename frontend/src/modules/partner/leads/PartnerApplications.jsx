@@ -334,20 +334,20 @@ export default function PartnerApplications() {
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Lead & Application Operations</h1>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Manage customer application pipelines, bulk update statuses, assign team leads & track commissions.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('partnerApplications.title', 'Lead & Application Operations')}</h1>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t('partnerApplications.subtitle', 'Manage customer application pipelines, bulk update statuses, assign team leads & track commissions.')}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {selectedAppIds.length > 0 && (
             <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MdDoneAll size={18} /> Bulk Update ({selectedAppIds.length})
+              <MdDoneAll size={18} /> {t('partnerApplications.bulkUpdate', 'Bulk Update')} ({selectedAppIds.length})
             </button>
           )}
           <button onClick={() => setShowImportModal(true)} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdFileUpload size={18} /> Import CSV
+            <MdFileUpload size={18} /> {t('partnerApplications.importCsv', 'Import CSV')}
           </button>
           <button onClick={handleExportCSV} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdFileDownload size={18} style={{ color: C.green }} /> Export CSV
+            <MdFileDownload size={18} style={{ color: C.green }} /> {t('partnerApplications.exportCsv', 'Export CSV')}
           </button>
         </div>
       </div>
@@ -355,19 +355,19 @@ export default function PartnerApplications() {
       {/* Lead Analytics Funnel Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.primary}` }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Total Leads</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.totalLeads', 'Total Leads')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.total_applications || applications.length}</div>
         </div>
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.gold}` }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Under Verification</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.underVerification', 'Under Verification')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length}</div>
         </div>
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.green}` }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Approved & Disbursed</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.approvedDisbursed', 'Approved & Disbursed')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length}</div>
         </div>
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.red}` }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Rejected</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.rejected', 'Rejected')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length}</div>
         </div>
       </div>
@@ -378,7 +378,7 @@ export default function PartnerApplications() {
           <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
           <input
             type="text"
-            placeholder="Search customer, app #, or bank..."
+            placeholder={t('partnerApplications.searchPlaceholder', 'Search customer, app #, or bank...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ ...S.input, paddingLeft: '36px', paddingTop: '8px', paddingBottom: '8px', fontSize: '13px' }}
@@ -386,7 +386,7 @@ export default function PartnerApplications() {
         </div>
 
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '150px', fontSize: '13px' }}>
-          <option value="">All App Statuses</option>
+          <option value="">{t('partnerApplications.allAppStatuses', 'All App Statuses')}</option>
           <option value="submitted">Applied</option>
           <option value="under_review">Under Review</option>
           <option value="approved">Approved</option>
@@ -395,18 +395,18 @@ export default function PartnerApplications() {
         </select>
 
         <select value={commFilter} onChange={(e) => setCommFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '160px', fontSize: '13px' }}>
-          <option value="">All Commission Status</option>
-          <option value="pending">Pending Hold</option>
-          <option value="credited">Released / Credited</option>
+          <option value="">{t('partnerApplications.allCommissionStatus', 'All Commission Status')}</option>
+          <option value="pending">{t('partnerApplications.pendingHold', 'Pending Hold')}</option>
+          <option value="credited">{t('partnerApplications.releasedCredited', 'Released / Credited')}</option>
         </select>
       </div>
 
       {/* Applications List Table */}
       <div style={{ ...S.card, borderRadius: '16px', overflow: 'hidden' }}>
         {isLoading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>Loading application records...</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t('common.loading', 'Loading application records...')}</div>
         ) : applications.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>No applications matched your filter options.</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t('common.noData', 'No applications matched your filter options.')}</div>
         ) : (
           isMobile ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px' }}>
@@ -469,15 +469,15 @@ export default function PartnerApplications() {
                   {/* Actions row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title="Assign Lead" style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-                        <MdAssignmentInd size={16} /> Assign
+                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                        <MdAssignmentInd size={16} /> {t('partnerApplications.assign', 'Assign')}
                       </button>
-                      <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title="Set Reminder" style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-                        <MdAlarm size={16} /> Reminder
+                      <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title={t('partnerApplications.reminder', 'Reminder')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                        <MdAlarm size={16} /> {t('partnerApplications.reminder', 'Reminder')}
                       </button>
                     </div>
                     <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('primary'), padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
-                      {isExpanded ? "Hide Details" : "Details"}
+                      {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
                     </button>
                   </div>
 
@@ -486,7 +486,7 @@ export default function PartnerApplications() {
                     <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       {/* Stage Pipeline */}
                       <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Interactive Lead Stage Tracker</h4>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.interactiveStageTracker', 'Interactive Lead Stage Tracker')}</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                           {STAGES.map(st => (
                             <div key={st.id} style={{ padding: '8px', borderRadius: '6px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '11px', fontWeight: 700 }}>
@@ -498,7 +498,7 @@ export default function PartnerApplications() {
 
                       {/* Documents */}
                       <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>Application Documents</h4>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>{t('partnerApplications.appDocuments', 'Application Documents')}</h4>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
                             <label key={doc} style={{ padding: '6px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -511,10 +511,10 @@ export default function PartnerApplications() {
 
                       {/* Notes */}
                       <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>Add Activity Note</h4>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>{t('partnerApplications.addActivityNote', 'Add Activity Note')}</h4>
                         <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '6px' }}>
-                          <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '11px' }} />
-                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 10px', borderRadius: '6px', fontSize: '11px' }}>Save</button>
+                          <input type="text" placeholder={t('partnerApplications.addRemark', 'Add remark...')} value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '11px' }} />
+                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 10px', borderRadius: '6px', fontSize: '11px' }}>{t('partnerApplications.save', 'Save')}</button>
                         </form>
                       </div>
                     </div>
@@ -532,12 +532,12 @@ export default function PartnerApplications() {
                   <th style={{ padding: '12px 16px', width: '36px' }}>
                     <input type="checkbox" onChange={handleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
                   </th>
-                  <th style={{ padding: '12px 16px' }}>Application</th>
-                  <th style={{ padding: '12px 16px' }}>Customer Info</th>
-                  <th style={{ padding: '12px 16px' }}>Product & Bank</th>
-                  <th style={{ padding: '12px 16px' }}>Lead Stage</th>
-                  <th style={{ padding: '12px 16px' }}>Commission</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thApplication', 'Application')}</th>
+                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thCustomerInfo', 'Customer Info')}</th>
+                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thProductBank', 'Product & Bank')}</th>
+                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thLeadStage', 'Lead Stage')}</th>
+                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thCommission', 'Commission')}</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>{t('partnerApplications.thActions', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -579,14 +579,14 @@ export default function PartnerApplications() {
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title="Assign Lead" style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
+                            <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
                               <MdAssignmentInd size={16} />
                             </button>
-                            <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title="Set Reminder" style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
+                            <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title={t('partnerApplications.reminder', 'Reminder')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
                               <MdAlarm size={16} />
                             </button>
                             <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
-                              {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} Details
+                              {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
                             </button>
                           </div>
                         </td>
@@ -600,7 +600,7 @@ export default function PartnerApplications() {
                               
                               {/* Stage Pipeline Progress Bar */}
                               <div>
-                                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Interactive Lead Stage Tracker</h4>
+                                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>{t('partnerApplications.interactiveStageTracker', 'Interactive Lead Stage Tracker')}</h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
                                   {STAGES.map(st => (
                                     <div key={st.id} style={{ padding: '10px', borderRadius: '8px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
@@ -613,7 +613,7 @@ export default function PartnerApplications() {
                               {/* Documents & Timeline Grid */}
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                                 <div>
-                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Application Documents</h4>
+                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.appDocuments', 'Application Documents')}</h4>
                                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                     {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
                                       <label key={doc} style={{ padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -625,10 +625,10 @@ export default function PartnerApplications() {
                                 </div>
 
                                 <div>
-                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Add Activity Note</h4>
+                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.addActivityNote', 'Add Activity Note')}</h4>
                                   <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '8px' }}>
-                                    <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '12px' }} />
-                                    <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px' }}>Save</button>
+                                    <input type="text" placeholder={t('partnerApplications.addRemark', 'Add remark...')} value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '12px' }} />
+                                    <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px' }}>{t('partnerApplications.save', 'Save')}</button>
                                   </form>
                                 </div>
                               </div>
