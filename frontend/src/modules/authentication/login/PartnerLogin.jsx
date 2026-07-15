@@ -886,6 +886,31 @@ export default function PartnerLogin() {
                           ? "Verified successfully"
                           : "Verification failed"}
                     </div>
+
+                    {status === "fail" && (
+                      <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={resetOtp}
+                          style={{
+                            padding: '8px 24px',
+                            borderRadius: '999px',
+                            background: C.primary || '#2563EB',
+                            color: '#ffffff',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                            transition: 'transform 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
