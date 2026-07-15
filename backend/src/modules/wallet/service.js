@@ -506,18 +506,43 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
 
 // Release commission helper wrapper for matured releases scheduler
 const releaseCommission = async (partnerId, walletId, txnId, amount) => {
-  const meta = {
-    txn_id: txnId,
-    reference_type: 'commission_release',
-    reference_id: txnId
-  };
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
 
-  await releaseHold(partnerId, amount, meta);
+    // 1. Lock the wallet_ledger row and check status to prevent concurrent releases
+    const { rows: [txn] } = await client.query(
+      `SELECT status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      [txnId]
+    );
 
-  await query(`
-    UPDATE applications SET commission_status = 'approved' 
-    WHERE id = (SELECT application_id FROM wallet_ledger WHERE id = $1)
-  `, [txnId]);
+    if (!txn || txn.status !== 'pending') {
+      await client.query('ROLLBACK');
+      logger.info(`Commission transaction ${txnId} is already processed or not found.`);
+      return;
+    }
+
+    const meta = {
+      txn_id: txnId,
+      reference_type: 'commission_release',
+      reference_id: txnId
+    };
+
+    // Pass the active transaction client to releaseHold to execute within transaction
+    await releaseHold(partnerId, amount, meta, client);
+
+    await client.query(`
+      UPDATE applications SET commission_status = 'approved' 
+      WHERE id = (SELECT application_id FROM wallet_ledger WHERE id = $1)
+    `, [txnId]);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    try { client.release(); } catch (_) {}
+  }
 };
 
 // Process withdrawal request
