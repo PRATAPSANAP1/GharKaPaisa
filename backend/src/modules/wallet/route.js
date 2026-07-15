@@ -21,10 +21,6 @@ router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
-
-// Withdrawals Routing (Admin & Polymorphic Partner Handlers)
-router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
-router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
@@ -50,6 +46,11 @@ router.get('/statement/excel', requireApprovedPartnerOrAdmin, walletCtrl.exportS
 router.post('/withdraw/otp/send', withdrawalOtpLimiter, requireApprovedPartnerOrAdmin, walletCtrl.sendWithdrawalOTP);
 router.post('/withdraw/otp/verify', requireApprovedPartnerOrAdmin, walletCtrl.verifyWithdrawalOTP);
 router.post('/withdraw', requireApprovedPartnerOrAdmin, validateWithdrawalAmount, withdrawalRules, validate, walletCtrl.requestWithdrawal);
+
+// Parameterized Partner ID Routes (placed at the end to prevent route conflicts)
+router.get('/:PartnerId', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getWallet);
+router.get('/:PartnerId/transactions', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getTransactions);
+router.get('/:PartnerId/case-summary', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getCaseSummary);
 router.post('/:PartnerId/withdraw', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 module.exports = router;
