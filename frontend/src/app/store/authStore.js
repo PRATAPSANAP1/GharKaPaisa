@@ -91,7 +91,11 @@ export const useAuthStore = create((set, get) => ({
       // If response was not successful, treat as failed refresh
       throw new Error(response.data?.message || 'Refresh returned unsuccessful response');
     } catch (err) {
-      console.warn('Auth initialization / silent refresh failed:', err?.response?.data?.message || err.message);
+      const isSilent401 = err?.response?.status === 401 && 
+        (err?.response?.data?.message === 'No token provided' || err?.response?.data?.message === 'Unauthorized' || err?.message === 'No token provided');
+      if (!isSilent401) {
+        console.warn('Auth initialization / silent refresh failed:', err?.response?.data?.message || err.message);
+      }
       
       // ALWAYS clear gkp_logged_in flag on any refresh failure to immediately break infinite loop
       try {
