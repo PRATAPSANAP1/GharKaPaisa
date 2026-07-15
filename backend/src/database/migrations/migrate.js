@@ -1714,9 +1714,19 @@ const migrate = async () => {
     await query(`
       DO $$
       BEGIN
-        IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallets') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'partner_wallets') THEN
-          ALTER TABLE wallets RENAME TO partner_wallets;
-          RAISE NOTICE 'Renamed table wallets to partner_wallets';
+        IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallets') THEN
+          IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'partner_wallets') THEN
+            IF (SELECT COUNT(*) FROM partner_wallets) = 0 THEN
+              DROP TABLE partner_wallets CASCADE;
+              ALTER TABLE wallets RENAME TO partner_wallets;
+              RAISE NOTICE 'Dropped empty partner_wallets and renamed wallets to partner_wallets';
+            ELSE
+              RAISE NOTICE 'Both wallets and partner_wallets contain records. Manual merge needed.';
+            END IF;
+          ELSE
+            ALTER TABLE wallets RENAME TO partner_wallets;
+            RAISE NOTICE 'Renamed table wallets to partner_wallets';
+          END IF;
         END IF;
       END $$;
     `);
@@ -2028,6 +2038,20 @@ const migrate = async () => {
       ADD COLUMN IF NOT EXISTS quiz_score DECIMAL(5,2),
       ADD COLUMN IF NOT EXISTS certificate_url VARCHAR(500),
       ADD COLUMN IF NOT EXISTS attempt_count INT DEFAULT 1
+    `);
+
+    // Ensure unique constraint exists for upserts
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint 
+          WHERE conname = 'partner_training_progress_partner_id_training_id_key' 
+             OR conname = 'unique_partner_training'
+        ) THEN
+          ALTER TABLE partner_training_progress ADD CONSTRAINT unique_partner_training UNIQUE (partner_id, training_id);
+        END IF;
+      END $$;
     `);
 
     // 7. Marketing Materials table updates
