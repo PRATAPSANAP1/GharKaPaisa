@@ -41,11 +41,21 @@ const createOrder = async (req, res) => {
       });
     }
 
+    const { query } = require('../../config/database');
+    let partnerId = req.partner?.id || req.user?.PartnerId || req.user?.partner_id;
+    if (!partnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+
     const razorpay = getRazorpayInstance();
     const options = {
       amount: amountInPaise,
       currency: currency.toUpperCase(),
-      receipt: receipt || `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+      receipt: receipt || `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      notes: {
+        partner_id: partnerId || null
+      }
     };
 
     const order = await razorpay.orders.create(options);
