@@ -102,7 +102,7 @@ export default function PartnerKyc() {
 
         if (data.video) {
           try {
-            const viewRes = await api.get('/partner/kyc/documents/video/view');
+            const viewRes = await api.get('/kyc/documents/video/view');
             if (viewRes.data?.success && viewRes.data?.data?.url) {
               setVideoPlayUrl(viewRes.data.data.url);
             }
@@ -433,7 +433,7 @@ export default function PartnerKyc() {
       return;
     }
     try {
-      const res = await api.get(`/partner/kyc/documents/${docId}/view`);
+      const res = await api.get(`/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
         window.open(res.data.data.url, '_blank');
       } else {
