@@ -458,8 +458,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/applications')}
           style={{
-            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
+            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -467,12 +467,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{getLeadsTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.totalApps', 'Total Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{kpiTotalApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: `${C.primary}15`, color: C.primary,
+            width: "44px", height: "44px", borderRadius: "12px", background: "#F5F3FF", color: "#7C3AED",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdDescription size={22} />
@@ -483,8 +483,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/applications?status=approved')}
           style={{
-            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
+            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -492,12 +492,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{getApprovedTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{kpiApprovedApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: `${C.green}15`, color: C.green,
+            width: "44px", height: "44px", borderRadius: "12px", background: "#ECFDF5", color: "#22C55E",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdCheckCircle size={22} />
@@ -508,8 +508,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/wallet')}
           style={{
-            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
+            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -517,12 +517,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: C.green, marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{totalEarned}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: `${C.gold}15`, color: C.gold,
+            width: "44px", height: "44px", borderRadius: "12px", background: "#EEF2FF", color: "#6366F1",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
@@ -533,8 +533,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/wallet')}
           style={{
-            background: C.card, borderRadius: "16px", padding: "20px", border: `1.5px solid ${C.border}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
+            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -542,12 +542,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{walletBalance}</div>
+            <div style={{ fontSize: "11px", color: "#64748B", marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: `${C.primary}15`, color: C.primary,
+            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#2563EB",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
@@ -619,94 +619,6 @@ export default function PartnerDashboard({ partner }) {
             )}
           </div>
         </div>
-
-        {/* Team Performance (100% Dynamic) */}
-        <div style={{
-          flex: "1",
-          minWidth: "260px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between"
-        }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.teamPerformance', 'Team Performance')}</h3>
-          
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
-            <div>
-              <div style={{ display: "flex", gap: "24px" }}>
-                <div>
-                  <div style={{ fontSize: "22px", fontWeight: 800, color: C.text }}>
-                    {teamDashboard?.total_team_members || 0}
-                  </div>
-                  <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.totalMembers', 'Total Members')}</span>
-                </div>
-                <div>
-                  <div style={{ fontSize: "22px", fontWeight: 800, color: C.green }}>
-                    {teamDashboard?.active_team_members || 0}
-                  </div>
-                  <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.activeMembers', 'Active Members')}</span>
-                </div>
-              </div>
-            </div>
-            <div style={{
-              width: "48px", height: "48px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary,
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
-              <MdGroup size={24} />
-            </div>
-          </div>
-
-          <button 
-            onClick={() => navigate("/partner/team")}
-            style={{
-              background: "none", border: "none", color: C.primary, fontSize: "13px", fontWeight: 800,
-              cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", padding: 0, marginTop: "16px"
-            }}
-          >
-            {t('dashboard.manageTeam', 'Manage Team')} <MdChevronRight size={16} />
-          </button>
-        </div>
-
-        {/* Monthly Target (100% Dynamic) */}
-        <div style={{
-          flex: "1",
-          minWidth: "260px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between"
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.monthlyTarget', 'Monthly Target')}</h3>
-            <div style={{
-              width: "36px", height: "36px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary,
-              display: "flex", alignItems: "center", justifyContent: "center"
-            }}>
-              <MdCampaign size={18} />
-            </div>
-          </div>
-
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: C.text }}>₹{currentEarnings.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
-            <span style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.ofTargetAchieved', 'of ₹{{target}} target achieved', { target: targetGoal.toLocaleString("en-IN", { maximumFractionDigits: 0 }) })}</span>
-            
-            <div style={{ marginTop: "16px" }}>
-              <div style={{ height: "6px", background: C.bgSecondary, borderRadius: "10px", overflow: "hidden", marginBottom: "6px" }}>
-                <div style={{ width: `${targetPercent}%`, height: "100%", background: C.primary, borderRadius: "10px" }} />
-              </div>
-              <span style={{ fontSize: "11px", color: C.primary, fontWeight: 700 }}>{t('dashboard.percentCompleted', '{{percent}}% completed', { percent: targetPercent })}</span>
-            </div>
-          </div>
-        </div>
-
       </div>
 
     </div>

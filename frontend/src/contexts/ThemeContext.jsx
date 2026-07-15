@@ -12,27 +12,27 @@ const BRAND = {
 
 // ── Light Theme ────────────────────────────────────────────────────────────────
 export const LIGHT = {
-  bg:          BRAND.bgLight,
-  bgSecondary: "#EEF3FB",
-  card:        "#FFFFFF",
-  sidebar:     BRAND.blueDark,
+  bg:          "#F8FAFC",   // Page Background
+  bgSecondary: "#EEF2FF",   // Purple Light
+  card:        "#FFFFFF",   // Card Background
+  sidebar:     "#0F172A",   // Sidebar Background
   sidebarText: "#FFFFFF",
-  text:        BRAND.dark,
-  textMid:     "#4A5568",
-  textLight:   "#8D99AE",
-  primary:     BRAND.blue,
-  primaryDark: BRAND.blueDark,
-  green:       BRAND.green,
-  greenLight:  BRAND.greenLight,
-  red:         "#E63946",
-  gold:        "#F59E0B",
-  border:      "#E2E8F0",
+  text:        "#111827",   // Text Primary
+  textMid:     "#64748B",   // Text Secondary
+  textLight:   "#94A3B8",   // Light Text / Inactive Menu Icon
+  primary:     "#4F46E5",   // Primary (Indigo)
+  primaryDark: "#3730A3",   // Darker Indigo
+  green:       "#22C55E",   // Success
+  greenLight:  "#ECFDF5",   // Green Light
+  red:         "#EF4444",   // Danger
+  gold:        "#F59E0B",   // Warning
+  border:      "#E5E7EB",   // Border
   inputBg:     "#FFFFFF",
-  teal:        BRAND.blue,
-  tealDim:     BRAND.blueDark,
-  navy:        BRAND.blueDark,
-  navyMid:     "#1C3A5A",
-  tealGlow:    `${BRAND.blue}25`,
+  teal:        "#4F46E5",
+  tealDim:     "#7C3AED",   // Secondary (Purple)
+  navy:        "#0F172A",
+  navyMid:     "#1E293B",   // Sidebar Hover
+  tealGlow:    "rgba(79, 70, 229, 0.15)",
   amber:       "#F59E0B",
 };
 
