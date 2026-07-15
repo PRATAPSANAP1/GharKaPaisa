@@ -31,6 +31,16 @@ export default function PartnerApplications() {
   const [statusFilter, setStatusFilter] = useState('');
   const [commFilter, setCommFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Detail components state
   const [timelines, setTimelines] = useState({});
@@ -398,6 +408,123 @@ export default function PartnerApplications() {
         ) : applications.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>No applications matched your filter options.</div>
         ) : (
+          isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px' }}>
+            {applications.map((app) => {
+              const isExpanded = expandedId === app.id;
+              const isSelected = selectedAppIds.includes(app.id);
+              const stepNum = getStepProgress(app.status);
+
+              return (
+                <div 
+                  key={app.id} 
+                  style={{ 
+                    background: C.card, 
+                    border: `1.5px solid ${isSelected ? C.primary : C.border}`, 
+                    borderRadius: '16px', 
+                    padding: '16px',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}
+                >
+                  {/* Header line */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
+                      <span style={{ fontWeight: 800, color: C.text, fontSize: '14px' }}>#{app.app_number}</span>
+                    </div>
+                    <span style={S.tag(getStatusColor(app.status))}>
+                      {app.status?.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Date and product */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: C.textLight }}>Created On:</span>
+                      <span style={{ fontWeight: 600, color: C.text }}>{new Date(app.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: C.textLight }}>Customer:</span>
+                      <span style={{ fontWeight: 700, color: C.text }}>{app.customer_name}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: C.textLight }}>Mobile:</span>
+                      <span style={{ color: C.textMid }}><MdPhone size={11} /> {app.customer_mobile}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: C.textLight }}>Product:</span>
+                      <span style={{ fontWeight: 600, color: C.text }}>{app.product_name} ({app.bank_name || app.bank_code})</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: C.textLight }}>Commission:</span>
+                      <span style={{ fontWeight: 800, color: app.commission_amount > 0 ? C.green : C.textMid }}>
+                        ₹{app.commission_amount || 0} ({app.commission_status || 'pending'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title="Assign Lead" style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                        <MdAssignmentInd size={16} /> Assign
+                      </button>
+                      <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title="Set Reminder" style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                        <MdAlarm size={16} /> Reminder
+                      </button>
+                    </div>
+                    <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('primary'), padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
+                      {isExpanded ? "Hide Details" : "Details"}
+                    </button>
+                  </div>
+
+                  {/* Expanded sub-panel */}
+                  {isExpanded && (
+                    <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Stage Pipeline */}
+                      <div>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Interactive Lead Stage Tracker</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {STAGES.map(st => (
+                            <div key={st.id} style={{ padding: '8px', borderRadius: '6px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '11px', fontWeight: 700 }}>
+                              {st.step}. {st.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Documents */}
+                      <div>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>Application Documents</h4>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
+                            <label key={doc} style={{ padding: '6px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <MdCloudUpload size={14} color={C.primary} /> Upload {doc.replace('_', ' ')}
+                              <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, app.id, doc)} />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>Add Activity Note</h4>
+                        <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '6px' }}>
+                          <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '11px' }} />
+                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 10px', borderRadius: '6px', fontSize: '11px' }}>Save</button>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              );
+            })}
+          </div>
+        ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
@@ -474,9 +601,9 @@ export default function PartnerApplications() {
                               {/* Stage Pipeline Progress Bar */}
                               <div>
                                 <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>Interactive Lead Stage Tracker</h4>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
                                   {STAGES.map(st => (
-                                    <div key={st.id} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
+                                    <div key={st.id} style={{ padding: '10px', borderRadius: '8px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
                                       Step {st.step}: {st.label}
                                     </div>
                                   ))}
@@ -484,7 +611,7 @@ export default function PartnerApplications() {
                               </div>
 
                               {/* Documents & Timeline Grid */}
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                                 <div>
                                   <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>Application Documents</h4>
                                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -516,7 +643,8 @@ export default function PartnerApplications() {
               </tbody>
             </table>
           </div>
-        )}
+        )
+      )}
       </div>
 
       {/* ═══ MODAL 1: BULK UPDATE STATUS ═══ */}
