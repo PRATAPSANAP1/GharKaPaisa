@@ -3257,6 +3257,11 @@ const migrate = async () => {
     `);
 
     logger.info('Product Lifecycle Management Schema Migration (Task 14) completed successfully.');
+    
+    // Run Wallet Engine Migrations
+    const runWalletEngineMigrations = require('./migrate_wallet_engine');
+    await runWalletEngineMigrations();
+    
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
     throw task14Err;

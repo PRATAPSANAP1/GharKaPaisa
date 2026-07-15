@@ -446,29 +446,29 @@ export default function PartnerProducts() {
         ) : (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
-            gap: '16px'
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: isMobile ? '10px' : '16px'
           }}>
             {filteredProducts.map((product) => (
               <div key={product.id} style={{
                 ...S.card,
-                padding: isMobile ? '16px' : '20px',
+                padding: isMobile ? '12px' : '20px',
                 borderRadius: '16px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
+                gap: isMobile ? '10px' : '14px',
                 transition: 'all 0.2s ease'
               }}>
                 <div>
                   {/* Category Tag & Bank Code Row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
-                    <span style={{ ...S.tag(C.primary), fontSize: '10px', padding: '4px 8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '8px' : '12px', gap: '4px', flexWrap: 'wrap' }}>
+                    <span style={{ ...S.tag(C.primary), fontSize: isMobile ? '8.5px' : '10px', padding: isMobile ? '2px 6px' : '4px 8px' }}>
                       {product.category?.replace(/_/g, ' ') || 'Finance'}
                     </span>
                     <span style={{
-                      fontSize: '10.5px', fontWeight: 700, color: C.textMid,
-                      background: C.bgSecondary, padding: '4px 8px', borderRadius: '6px',
+                      fontSize: isMobile ? '9px' : '10.5px', fontWeight: 700, color: C.textMid,
+                      background: C.bgSecondary, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px',
                       textTransform: 'uppercase', letterSpacing: '0.5px'
                     }}>
                       {product.bank_code || 'BANK'}
@@ -476,10 +476,10 @@ export default function PartnerProducts() {
                   </div>
 
                   {/* Product Logo & Info Header */}
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
                     <div style={{
-                      width: isMobile ? 48 : 56,
-                      height: isMobile ? 48 : 56,
+                      width: isMobile ? 38 : 56,
+                      height: isMobile ? 38 : 56,
                       flexShrink: 0,
                       background: C.bgSecondary,
                       borderRadius: '12px',
@@ -490,40 +490,19 @@ export default function PartnerProducts() {
                       overflow: 'hidden'
                     }}>
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                       ) : (
-                        <MdLocalOffer style={{ color: C.textLight, fontSize: '22px' }} />
+                        <MdLocalOffer style={{ color: C.textLight, fontSize: isMobile ? '18px' : '22px' }} />
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{ fontSize: isMobile ? '15px' : '16px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.3 }}>{product.name}</h3>
-                      <p style={{ fontSize: '12px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
-                        {product.description || 'No specific details provided for this product.'}
-                      </p>
+                      <h3 style={{ fontSize: isMobile ? '13px' : '16px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.3 }}>{product.name}</h3>
+                      {!isMobile && (
+                        <p style={{ fontSize: '12px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                          {product.description || 'No specific details provided for this product.'}
+                        </p>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Highlights Bar */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-                    margin: '14px 0 0', padding: '10px 8px', background: C.bgSecondary,
-                    borderRadius: '12px', border: `1px solid ${C.border}`
-                  }}>
-                    {[
-                      { icon: MdCheckCircle, label: 'Approval', val: '82%' },
-                      { icon: MdAccessTime, label: 'Time', val: '2 Days' },
-                      { icon: MdInfoOutline, label: 'CIBIL', val: '750+' },
-                    ].map((h, i) => (
-                      <React.Fragment key={h.label}>
-                        {i > 0 && <div style={{ width: 1, height: 24, background: C.border }} />}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                          <span style={{ fontSize: '9.5px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <h.icon size={11} /> {h.label}
-                          </span>
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginTop: '2px' }}>{h.val}</span>
-                        </div>
-                      </React.Fragment>
-                    ))}
                   </div>
                 </div>
 
@@ -539,13 +518,13 @@ export default function PartnerProducts() {
                   marginTop: 'auto'
                 }}>
                   {/* Payout Tag */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t("Your Payout")}</span>
-                    <span style={{ fontSize: '19px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}</span>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'baseline', gap: '2px' }}>
+                    <span style={{ fontSize: isMobile ? '9px' : '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t("Your Payout")}</span>
+                    <span style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}</span>
                   </div>
 
                   {/* Buttons */}
-                  <div style={{ display: 'flex', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
+                  <div style={{ display: 'flex', gap: '4px', width: isMobile ? '100%' : 'auto', flexDirection: isMobile ? 'column' : 'row' }}>
                     {(product.public_url || product.partner_url) && (
                       <button
                         onClick={() => handleCopyLink(product)}
@@ -553,37 +532,37 @@ export default function PartnerProducts() {
                         style={{
                           ...S.btn('outline'),
                           flex: isMobile ? 1 : 'none',
-                          padding: '8px 10px',
-                          fontSize: '11.5px',
-                          borderRadius: '10px',
+                          padding: isMobile ? '6px 8px' : '8px 10px',
+                          fontSize: isMobile ? '10.5px' : '11.5px',
+                          borderRadius: '8px',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '4px'
+                          gap: '3px'
                         }}
                       >
-                        <MdShare size={14} /> Link
+                        <MdShare size={12} /> Link
                       </button>
                     )}
                     <button
                       onClick={() => handleApply(product)}
                       style={{
                         ...S.btn('primary'),
-                        flex: isMobile ? 2 : 'none',
-                        padding: '8px 16px',
-                        fontSize: '12.5px',
+                        flex: isMobile ? 1 : 'none',
+                        padding: isMobile ? '6px 10px' : '8px 16px',
+                        fontSize: isMobile ? '11px' : '12.5px',
                         border: 'none',
-                        borderRadius: '10px',
+                        borderRadius: '8px',
                         cursor: 'pointer',
                         fontWeight: 700,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '4px'
+                        gap: '3px'
                       }}
                     >
-                      Apply Now <MdChevronRight size={16} />
+                      {isMobile ? "Apply" : "Apply Now"} <MdChevronRight size={14} />
                     </button>
                   </div>
                 </div>

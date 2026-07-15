@@ -75,6 +75,18 @@ const runWalletEngineMigrations = async () => {
       )
     `);
 
+    // 5. Wallet Withdrawal Events Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_withdrawal_events (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        withdrawal_id UUID NOT NULL REFERENCES wallet_withdrawals(id) ON DELETE CASCADE,
+        status VARCHAR(50) NOT NULL,
+        remarks TEXT,
+        changed_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     logger.info('Wallet Engine database migrations completed successfully.');
   } catch (err) {
     logger.error('Error during wallet engine migrations:', err);
