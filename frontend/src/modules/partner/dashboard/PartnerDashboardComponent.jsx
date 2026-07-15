@@ -555,148 +555,15 @@ export default function PartnerDashboard({ partner }) {
         </div>
 
       </div>
+      {/* ──── QUICK ACCESS SECTION ──── */}
+      <QuickAccessSection />
 
-      {/* ──── MIDDLE SECTION (3 COLUMNS) ──── */}
+      {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        
-        {/* Column 1: Active Campaigns & Payout Boosts (100% Dynamic) */}
+
+        {/* Recent Applications (100% Dynamic) */}
         <div style={{
           flex: "1.2",
-          minWidth: "300px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column"
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.activeCampaigns', 'Active Campaigns')}</h3>
-            <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, background: `${C.primary}15`, padding: "2px 8px", borderRadius: "4px" }}>{t('dashboard.liveOffers', 'LIVE OFFERS')}</span>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
-            {activeCampaignsList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: C.textLight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1 }}>
-                <MdCampaign size={36} style={{ color: C.textLight, marginBottom: "8px" }} />
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>{t('dashboard.noActiveOffers', 'No active offers')}</div>
-                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>{t('dashboard.checkBackLaterCampaigns', 'Check back later for active campaigns.')}</p>
-              </div>
-            ) : (
-              activeCampaignsList.map((camp, idx) => {
-                const logo = getBankLogoForProduct(camp.name);
-                const payoutValText = camp.commission_type === 'percentage' 
-                  ? `${parseFloat(camp.commission_value)}% Commission` 
-                  : `₹${parseFloat(camp.commission_value).toLocaleString("en-IN")} Payout`;
-                return (
-                  <div key={idx} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "12px", borderRadius: "12px", border: `1px solid ${C.border}`,
-                    background: C.bgSecondary
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {logo ? (
-                        <img src={logo} alt="" style={{ height: "24px", width: "24px", objectFit: "contain" }} />
-                      ) : (
-                        <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: `${C.primary}15`, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 800 }}>🏦</div>
-                      )}
-                      <div>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{camp.name}</div>
-                        <span style={{ fontSize: "11px", color: C.green, fontWeight: 700 }}>{payoutValText}</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => handleCopyCampaignLink(camp)}
-                      style={{
-                        background: C.card, color: C.primary, border: `1px solid ${C.border}`,
-                        padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, cursor: "pointer"
-                      }}
-                    >
-                      {t('dashboard.shareLink', 'Share Link')}
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Column 2: Application Status (Donut Chart) */}
-        <div style={{
-          flex: "1",
-          minWidth: "280px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between"
-        }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 16px" }}>{t('dashboard.appStatus', 'Application Status')}</h3>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "20px", justifyContent: "center", flex: 1 }}>
-            
-            {/* Pure CSS Donut Chart */}
-            <div style={{
-              width: "110px",
-              height: "110px",
-              borderRadius: "50%",
-              background: kpiTotalApps > 0 
-                ? `conic-gradient(${C.green} 0deg ${deg1}deg, ${C.primary} ${deg1}deg ${deg2}deg, ${C.red} ${deg2}deg ${deg3}deg, #8B5CF6 ${deg3}deg 360deg)`
-                : C.bgSecondary,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative"
-            }}>
-              <div style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                background: C.card,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <span style={{ fontSize: "18px", fontWeight: 800, color: C.text }}>{kpiTotalApps}</span>
-                <span style={{ fontSize: "10px", color: C.textLight, fontWeight: 600 }}>{t('dashboard.total', 'Total')}</span>
-              </div>
-            </div>
-
-            {/* Labels */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.green }} />
-                <span style={{ color: C.textLight }}>{t('dashboard.approved', 'Approved')}</span>
-                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiApprovedApps} ({approvedPct}%)</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.primary }} />
-                <span style={{ color: C.textLight }}>{t('dashboard.review', 'Review')}</span>
-                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiPendingApps} ({pendingPct}%)</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.red }} />
-                <span style={{ color: C.textLight }}>{t('dashboard.rejected', 'Rejected')}</span>
-                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiRejectedApps} ({rejectedPct}%)</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#8B5CF6" }} />
-                <span style={{ color: C.textLight }}>{t('dashboard.disbursed', 'Disbursed')}</span>
-                <span style={{ color: C.text, marginLeft: "auto" }}>{kpiDisbursedApps} ({disbursedPct}%)</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Column 3: Recent Applications (100% Dynamic) */}
-        <div style={{
-          flex: "1",
           minWidth: "280px",
           background: C.card,
           borderRadius: "20px",
@@ -752,14 +619,6 @@ export default function PartnerDashboard({ partner }) {
             )}
           </div>
         </div>
-
-      </div>
-
-      {/* ──── QUICK ACCESS SECTION ──── */}
-      <QuickAccessSection />
-
-      {/* ──── BOTTOM SECTION (2 COLUMNS) ──── */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
 
         {/* Team Performance (100% Dynamic) */}
         <div style={{
