@@ -27,38 +27,50 @@ const partnerCtrl = require('../modules/partner/partner.controller.js');
 const customerRoute = require('../modules/customer/customer.routes.js');
 const teamRoutes    = require('../modules/team/team.routes.js');
 
+// ── Webhooks & Public Actions ──────────────────────────────────
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
-router.use('/payment', paymentRoute);
-router.use('/location', locationRoute);
-router.use('/', teamRoutes);
 
-router.use('/auth',             authRoute);
-router.use('/Partners',         partnerRouter);
-router.use('/partner',          partnerSelfRouter);
-router.use('/admin',            adminRoute);
-router.use('/superadmin',       superadminRouter);
-router.use('/banners',          bannerRoute);
-router.use('/settings',         settingsRouter);
-router.use('/applications',     applicationRouter);
-router.use('/wallet',           walletRoute);
+// ── Public Homepage & Catalog Content (No auth required) ────────
 router.use('/products',         productRoute);
-router.use('/notifications',    notificationRoute);
-router.use('/reports',          reportRoute);
-router.use('/kyc',              kycRouter);
-router.use('/banks',            bankRoute);
+router.use('/banners',          bannerRoute);
 router.use('/cms/sections',     cmsRouter);
 router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
+router.use('/settings',         settingsRouter);
+
+// ── Redirects & Analytics ──────────────────────────────────────
+router.get('/redirect/:productId', redirectCtrl.handleRedirect);
+router.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
+router.use('/analytics', analyticsRoute);
+
+// ── Auth Endpoints ─────────────────────────────────────────────
+router.use('/auth',             authRoute);
+
+// ── Location & Payment ─────────────────────────────────────────
+router.use('/payment', paymentRoute);
+router.use('/location', locationRoute);
+
+// ── Partner Scopes ─────────────────────────────────────────────
+router.use('/partner',          partnerSelfRouter);
+router.use('/Partners',         partnerRouter);
+router.use('/kyc',              kycRouter);
+
+// ── Admin / CRM / Operational Scopes ───────────────────────────
+router.use('/admin',            adminRoute);
+router.use('/superadmin',       superadminRouter);
+router.use('/applications',     applicationRouter);
+router.use('/wallet',           walletRoute);
+router.use('/notifications',    notificationRoute);
+router.use('/reports',          reportRoute);
+router.use('/banks',            bankRoute);
 router.use('/leads',            leadRouter);
 router.use('/customers',        customerRoute);
 router.use('/card-applications',cardApplicationRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 
-// Dynamic Product Redirect & Analytics Routes
-router.get('/redirect/:productId', redirectCtrl.handleRedirect);
-router.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
-router.use('/analytics', analyticsRoute);
+// ── Fallback Catch-all Router for Team & Referrals (Root level) ──
+router.use('/', teamRoutes);
 
 module.exports = router;
