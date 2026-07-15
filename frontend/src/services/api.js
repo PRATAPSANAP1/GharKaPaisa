@@ -7,7 +7,6 @@
  *  - Clears session and updates Zustand state on refresh failure (without hard page reload loops)
  */
 import axios from 'axios';
-import { useAuthStore } from '../app/store/authStore';
 import { getApiV1Url } from '../config/api';
 
 const BASE_URL = getApiV1Url();
@@ -21,6 +20,7 @@ const api = axios.create({
 
 let inMemoryAccessToken = null;
 let activeRequests = 0;
+let authFailureHandler = null;
 
 const getDeviceId = () => {
   const key = 'gkp_device_id';
@@ -41,13 +41,12 @@ const hideLoader = () => {
   }
 };
 
+export function registerAuthFailureHandler(handler) {
+  authFailureHandler = handler;
+}
+
 export function setAccessToken(token) {
   inMemoryAccessToken = token;
-  try {
-    useAuthStore.setState({ token, isAuthenticated: !!token });
-  } catch (e) {
-    console.warn("Zustand sync error:", e);
-  }
 }
 
 export function getAccessToken() {
@@ -56,11 +55,6 @@ export function getAccessToken() {
 
 export function clearAccessToken() {
   inMemoryAccessToken = null;
-  try {
-    useAuthStore.setState({ token: null, isAuthenticated: false });
-  } catch (e) {
-    console.warn("Zustand sync error:", e);
-  }
 }
 
 // ── Request: attach access token ──────────────────────────────────────────────
@@ -172,7 +166,10 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        clearSession();
+        // Only clear session on actual 401 authentication failures, not network/timeout issues
+        if (refreshError?.response?.status === 401) {
+          clearSession();
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -182,61 +179,14 @@ api.interceptors.response.use(
 );
 
 // ── Session helpers ────────────────────────────────────────────────────────────
-export function saveSession({ access_token, user }) {
-  try {
-    localStorage.setItem('gkp_logged_in', 'true');
-  } catch (e) {
-    console.warn("Failed to set login flag:", e);
-  }
-  setAccessToken(access_token);
-  
-  // Update Zustand Store
-  try {
-    useAuthStore.setState({ user, token: access_token, isAuthenticated: true, hasInitialized: true });
-  } catch (e) {
-    console.warn("Zustand session save sync error:", e);
-  }
-}
-
 export function clearSession() {
-  try {
-    localStorage.removeItem('gkp_logged_in');
-  } catch (e) {
-    console.warn("Failed to remove login flag:", e);
-  }
   clearAccessToken();
-
-  try {
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false, isPartner: false, kycStatus: null });
-  } catch (e) {
-    console.warn("Zustand session clear sync error:", e);
-  }
-  
-  // Only redirect if NOT already on a public page
-  if (typeof window !== 'undefined') {
-    const publicPaths = ['/login', '/register', '/', '/verify-email', '/reset-password', '/contact', '/terms-and-conditions', '/privacy-policy'];
-    const currentPath = window.location.pathname;
-    const isPublicPath = publicPaths.some(p => currentPath === p || currentPath.startsWith('/product/') || currentPath.startsWith('/card-benefits/'));
-    
-    if (!isPublicPath) {
-      window.location.href = '/login';
+  if (authFailureHandler) {
+    try {
+      authFailureHandler();
+    } catch (e) {
+      console.warn("Auth failure handler failed:", e);
     }
-  }
-}
-
-export function getStoredUser() {
-  try {
-    return useAuthStore.getState().user;
-  } catch {
-    return null;
-  }
-}
-
-export function isAuthenticated() {
-  try {
-    return useAuthStore.getState().isAuthenticated;
-  } catch {
-    return !!inMemoryAccessToken;
   }
 }
 

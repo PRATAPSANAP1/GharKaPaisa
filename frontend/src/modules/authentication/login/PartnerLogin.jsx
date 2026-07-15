@@ -378,7 +378,7 @@ export default function PartnerLogin() {
                 }
 
                 loginRes = await loginWithMsg91(form.identity.trim(), tokenVal);
-                const profile = await getMe(true);
+                const profile = await getMe();
                 loginStore(profile, loginRes.idToken);
 
                 const from = location.state?.from?.pathname;
@@ -386,7 +386,7 @@ export default function PartnerLogin() {
                 // Redirect rejected KYC partners to KYC page
                 const kycRedirect = loginRes.kyc_status === 'rejected' ? '/partner/kyc' : null;
                 const dest = kycRedirect || from || loginRes.redirect ||
-                  (role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+                  (role === 'SUPER_ADMIN' ? '/super-admin/dashboard' :
                    role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               } catch (errVal) {
@@ -416,7 +416,7 @@ export default function PartnerLogin() {
         loginRes = await loginWithPassword(form.identity.trim(), form.password);
       }
 
-      const profile = await getMe(true);
+      const profile = await getMe();
       loginStore(profile, loginRes.idToken);
       
       // Redirect rejected KYC partners to KYC page
@@ -426,11 +426,13 @@ export default function PartnerLogin() {
         if (loginRes.redirect.startsWith('http')) {
           window.location.href = loginRes.redirect;
         } else {
-          navigate(location.state?.from?.pathname || loginRes.redirect);
+          // Normalize superadmin redirect if it comes from the backend without a hyphen
+          const targetRedirect = loginRes.redirect === '/superadmin/dashboard' ? '/super-admin/dashboard' : loginRes.redirect;
+          navigate(location.state?.from?.pathname || targetRedirect);
         }
       } else {
         const role = profile.role?.toUpperCase();
-        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/superadmin/dashboard');
+        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/dashboard');
         else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       }

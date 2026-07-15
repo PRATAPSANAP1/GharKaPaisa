@@ -4,44 +4,7 @@
  * All login is via email OTP. No password-based authentication.
  * OTP is sent to the user's registered email via AWS SES.
  */
-import api, { saveSession, clearSession, setAccessToken, getAccessToken } from './api';
-
-// ── Profile cache ──────────────────────────────────────────────────────────
-let cachedUser    = null;
-let lastFetched   = 0;
-const CACHE_MS    = 5 * 60 * 1000;
-
-// ── Sync session with backend profile ─────────────────────────────
-export const syncSession = async () => {
-  try {
-    const { data } = await api.get('/auth/me');
-    if (data.success && data.user) {
-      const p = data.user;
-      const currentToken = getAccessToken();
-      saveSession({
-        access_token: currentToken,
-        user: {
-          id:           p.id,
-          email:        p.email        || '',
-          mobile:       p.mobile       || '',
-          role:         p.role         || 'PARTNER',
-          status:       p.status       || 'pending',
-          first_name:   p.first_name   || '',
-          last_name:    p.last_name    || '',
-          Partner_code: p.partner_code || p.Partner_code || '',
-          Partner_id:   p.partner_id   || p.Partner_id   || '',
-          kyc_status:   p.kyc_status   || 'pending',
-        },
-      });
-    }
-  } catch (err) {
-    if (err?.response?.status !== 401) {
-      console.warn('Backend /auth/me error:', err?.response?.status);
-    } else {
-      clearSession();
-    }
-  }
-};
+import api, { setAccessToken, getAccessToken } from './api';
 
 // ── OTP — SEND (via email) ─────────────────────────────────────────────
 // Sends OTP to the user's registered email address.
@@ -197,20 +160,10 @@ export async function resendVerificationEmail(email) {
 }
 
 // ── GET ME ──────────────────────────────────────────────────────────────────
-export async function getMe(force = false) {
-  if (!force && cachedUser && Date.now() - lastFetched < CACHE_MS) {
-    return cachedUser;
-  }
+export async function getMe() {
   const { data } = await api.get('/auth/me');
   if (data.success && data.user) {
-    cachedUser = data.user;
-    lastFetched = Date.now();
-    return cachedUser;
+    return data.user;
   }
   throw new Error(data.message || 'Failed to fetch profile');
-}
-
-export function clearProfileCache() {
-  cachedUser = null;
-  lastFetched = 0;
 }

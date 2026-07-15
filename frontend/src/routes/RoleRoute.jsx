@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../app/store/authStore';
 
 const RoleRoute = ({ children, allowedRoles }) => {
@@ -10,7 +10,7 @@ const RoleRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  return children ? children : <Outlet />;
 };
 
 export default RoleRoute;
