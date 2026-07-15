@@ -106,25 +106,43 @@ const authorize = (...roles) => {
   };
 };
 
-const requirePartner = (req, res, next) => {
-  const role = (req.user?.role || '').toUpperCase();
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
-  if (!req.partner && req.user) {
-    req.partner = { id: req.user.id, kyc_status: 'approved' };
+const requirePartner = async (req, res, next) => {
+  try {
+    const role = (req.user?.role || '').toUpperCase();
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+    if (!req.partner && req.user) {
+      const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) {
+        req.partner = p;
+      } else {
+        req.partner = { id: req.user.id, kyc_status: 'approved' };
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
   }
-  next();
 };
 
-const requireApprovedPartner = (req, res, next) => {
-  const role = (req.user?.role || '').toUpperCase();
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
-  if (!req.partner && req.user) {
-    req.partner = { id: req.user.id, kyc_status: 'approved' };
+const requireApprovedPartner = async (req, res, next) => {
+  try {
+    const role = (req.user?.role || '').toUpperCase();
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+    if (!req.partner && req.user) {
+      const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) {
+        req.partner = p;
+      } else {
+        req.partner = { id: req.user.id, kyc_status: 'approved' };
+      }
+    }
+    if (req.partner && req.partner.kyc_status !== 'approved') {
+      req.kycUnapproved = true;
+    }
+    next();
+  } catch (err) {
+    next(err);
   }
-  if (req.partner && req.partner.kyc_status !== 'approved') {
-    req.kycUnapproved = true;
-  }
-  next();
 };
 
 const requireApprovedPartnerOrAdmin = (req, res, next) => {
