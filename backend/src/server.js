@@ -85,7 +85,7 @@ app.use(cors({
     callback(new Error(`CORS policy: origin ${origin} is not allowed`));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'X-Requested-With', 'Accept'],
   credentials: true,
 }));
 
