@@ -8,10 +8,11 @@ const roleCheck = require('../../middleware/authorization/role.middleware.js');
 router.get('/', serviceCatalogCtrl.listServices);
 router.post('/:id/click', serviceCatalogCtrl.trackClick);
 
-// Protected Admin routes
-router.use(jwtAuth, roleCheck('SUPER_ADMIN', 'ADMIN'));
-router.post('/', serviceCatalogCtrl.createService);
-router.put('/:id', serviceCatalogCtrl.updateService);
-router.delete('/:id', serviceCatalogCtrl.deleteService);
+// Protected Admin routes (require auth + role)
+const adminAuth = [jwtAuth, roleCheck('SUPER_ADMIN', 'ADMIN')];
+
+router.post('/', adminAuth, serviceCatalogCtrl.createService);
+router.put('/:id', adminAuth, serviceCatalogCtrl.updateService);
+router.delete('/:id', adminAuth, serviceCatalogCtrl.deleteService);
 
 module.exports = router;

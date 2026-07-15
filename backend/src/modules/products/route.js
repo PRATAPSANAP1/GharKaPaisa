@@ -33,51 +33,50 @@ router.get('/:id', optionalAuth, productCtrl.getProduct);
 
 // ═══════════════════════════════════════════════════════════════════
 // Protected Routes (auth required)
-// ═══════════════════════════════════════════════════════════════════
-router.use(authenticate, syncUser);
+const auth = [authenticate, syncUser];
 const { upload } = require('../../services/aws/s3.service.js');
 
 // ── Partner Engagement Endpoints ─────────────────────────────────
-router.post('/bookmark', engagementCtrl.bookmarkProduct);
-router.get('/bookmarks', engagementCtrl.getBookmarks);
-router.get('/recent', engagementCtrl.getRecentlyViewed);
-router.post('/compare', engagementCtrl.compareProducts);
-router.post('/share', engagementCtrl.shareProduct);
-router.post('/check-eligibility', engagementCtrl.checkEligibility);
-router.get('/recommendations', engagementCtrl.getRecommendations);
+router.post('/bookmark', auth, engagementCtrl.bookmarkProduct);
+router.get('/bookmarks', auth, engagementCtrl.getBookmarks);
+router.get('/recent', auth, engagementCtrl.getRecentlyViewed);
+router.post('/compare', auth, engagementCtrl.compareProducts);
+router.post('/share', auth, engagementCtrl.shareProduct);
+router.post('/check-eligibility', auth, engagementCtrl.checkEligibility);
+router.get('/recommendations', auth, engagementCtrl.getRecommendations);
 
 // ── Partner Ratings ──────────────────────────────────────────────
-router.post('/:id/ratings', subEntityCtrl.submitProductRating);
+router.post('/:id/ratings', auth, subEntityCtrl.submitProductRating);
 
 // ── Admin/Super Admin Product Management ─────────────────────────
-router.get('/analytics/clicks', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.getClickAnalytics);
-router.post('/create', authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);
-router.post('/', authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);
-router.get('/:id/application-settings', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.getApplicationSettings);
-router.put('/:id/application-settings', authorize('ADMIN', 'SUPER_ADMIN'), applicationSettingsRules, validate, productCtrl.upsertApplicationSettings);
-router.delete('/:id/application-settings', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteApplicationSettings);
-router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.updateProduct);
-router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
-router.post('/commission', authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
+router.get('/analytics/clicks', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.getClickAnalytics);
+router.post('/create', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);
+router.post('/', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);
+router.get('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.getApplicationSettings);
+router.put('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'), applicationSettingsRules, validate, productCtrl.upsertApplicationSettings);
+router.delete('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteApplicationSettings);
+router.put('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.updateProduct);
+router.delete('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
+router.post('/commission', auth, authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
 // ── Admin Sub-Entity CRUD ────────────────────────────────────────
 // FAQs
-router.post('/:id/faqs', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductFaq);
-router.delete('/:id/faqs/:faqId', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductFaq);
+router.post('/:id/faqs', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductFaq);
+router.delete('/:id/faqs/:faqId', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductFaq);
 
 // Videos
-router.post('/:id/videos', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductVideo);
-router.delete('/:id/videos/:videoId', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductVideo);
+router.post('/:id/videos', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductVideo);
+router.delete('/:id/videos/:videoId', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductVideo);
 
 // Documents
-router.post('/:id/documents', authorize('ADMIN', 'SUPER_ADMIN'), upload.single('document'), subEntityCtrl.uploadProductDocument);
-router.delete('/:id/documents/:docId', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductDocument);
+router.post('/:id/documents', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('document'), subEntityCtrl.uploadProductDocument);
+router.delete('/:id/documents/:docId', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductDocument);
 
 // Offers
-router.post('/:id/offers', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductOffer);
-router.delete('/:id/offers/:offerId', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductOffer);
+router.post('/:id/offers', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.upsertProductOffer);
+router.delete('/:id/offers/:offerId', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.deleteProductOffer);
 
 // Analytics (Admin only)
-router.get('/:id/analytics', authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.getProductAnalytics);
+router.get('/:id/analytics', auth, authorize('ADMIN', 'SUPER_ADMIN'), subEntityCtrl.getProductAnalytics);
 
 module.exports = router;
