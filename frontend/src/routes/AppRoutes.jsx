@@ -167,8 +167,10 @@ const AppRoutes = () => {
             <Route path="/partner/kyc" element={<PartnerKyc />} />
             <Route path="/partner/kyc-centre" element={<PartnerKyc />} />
             <Route path="/partner/team" element={<PartnerTeam />} />
+            <Route path="/partner/team-network" element={<PartnerTeam />} />
             <Route path="/partner/leads" element={<PartnerCrm />} />
             <Route path="/partner/crm" element={<PartnerCrm />} />
+            <Route path="/partner/customers" element={<PartnerCrm />} />
             <Route path="/partner/support" element={<PartnerSupport />} />
             <Route path="/partner/vault" element={<PartnerVault />} />
             <Route path="/partner/marketing" element={<PartnerMarketing />} />
