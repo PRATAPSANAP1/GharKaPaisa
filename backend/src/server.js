@@ -66,10 +66,6 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
-    // Whitelist in non-production environments
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
     // Allow requests from local loopback (localhost or 127.0.0.1 on any port) for local testing
     try {
       const hostname = new URL(origin).hostname;
@@ -111,39 +107,43 @@ app.use((req, res, next) => {
 app.use(globalLimiter);
 
 // ── Body Parsing ───────────────────────────────────────────────
-// ── Body Parsing ───────────────────────────────────────────────
 // Capture raw text for JSON payloads to handle malformed inputs
 app.use(express.text({ type: 'application/json', limit: '50kb' }));
 
 // Middleware to clean and parse malformed JSON bodies
 app.use((req, res, next) => {
   if (req.is('application/json') && typeof req.body === 'string') {
-    let cleaned = req.body.trim();
-
-    // Remove leading/trailing backslashes that wrap the JSON
-    if (cleaned.startsWith('\\{') && cleaned.endsWith('\\}')) {
-      cleaned = cleaned.slice(1, -1);
-    }
-
-    // Replace escaped quotes with actual quotes
-    cleaned = cleaned.replace(/\\"/g, '"');
-
-    // Ensure object braces
-    if (!cleaned.startsWith('{')) cleaned = `{${cleaned}`;
-    if (!cleaned.endsWith('}')) cleaned = `${cleaned}}`;
-
+    const raw = req.body;
     try {
-      req.body = JSON.parse(cleaned);
-    } catch (err) {
-      // If parsing still fails, leave body as empty object
-      req.body = {};
+      // Try parsing standard JSON first to avoid corrupting valid payloads
+      req.body = JSON.parse(raw);
+    } catch (parseErr) {
+      let cleaned = raw.trim();
+
+      // Remove leading/trailing backslashes that wrap the JSON
+      if (cleaned.startsWith('\\{') && cleaned.endsWith('\\}')) {
+        cleaned = cleaned.slice(1, -1);
+      }
+
+      // Replace escaped quotes with actual quotes
+      cleaned = cleaned.replace(/\\"/g, '"');
+
+      // Ensure object braces
+      if (!cleaned.startsWith('{')) cleaned = `{${cleaned}`;
+      if (!cleaned.endsWith('}')) cleaned = `${cleaned}}`;
+
+      try {
+        req.body = JSON.parse(cleaned);
+      } catch (cleanErr) {
+        // If parsing still fails, leave body as empty object
+        req.body = {};
+      }
     }
   }
   next();
 });
 
-// Parse well‑formed JSON and URL‑encoded bodies
-app.use(express.json({ limit: '50kb' }));
+// Parse URL‑encoded bodies and cookies
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 app.use(cookieParser());
 
