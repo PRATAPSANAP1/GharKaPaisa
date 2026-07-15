@@ -848,12 +848,6 @@ const register = async (req, res, next) => {
         `, [Partner.id]);
 
         if (role === 'PARTNER') {
-          // Initialize onboarding milestones progress
-          await client.query(`
-            INSERT INTO partner_onboarding (partner_id, profile_completed, progress_percentage)
-            VALUES ($1, true, 16.67)
-          `, [Partner.id]);
-
           // Update invitation status
           if (invite && invite.length > 0) {
             await client.query(`
@@ -873,9 +867,7 @@ const register = async (req, res, next) => {
 
       if (Partner && Partner.id) {
         try {
-          const { syncOnboardingProgress } = require('../partner/onboarding.service.js');
           const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
-          await syncOnboardingProgress(Partner.id);
           if (parentPartnerId) {
             await recalculateTeamMetrics(parentPartnerId);
           }

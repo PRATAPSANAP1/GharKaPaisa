@@ -834,13 +834,6 @@ const completeTrainingModule = async (req, res, next) => {
       DO UPDATE SET progress = 100, completed = true, completed_at = NOW(), updated_at = NOW()
     `, [partnerId, moduleId]);
 
-    try {
-      const { syncOnboardingProgress } = require('./onboarding.service.js');
-      await syncOnboardingProgress(partnerId);
-    } catch (syncErr) {
-      logger.error('Failed to sync onboarding on training module complete:', syncErr.message);
-    }
-
     return success(res, { message: 'Module marked as completed successfully' });
   } catch (err) {
     next(err);
@@ -1972,20 +1965,6 @@ const updatePartnerKYCStatus = async (req, res, next) => {
   }
 };
 
-// ── Self Onboarding Status ──────────────────────────────────────────
-const getSelfOnboarding = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id || (req.user ? req.user.id : null);
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { syncOnboardingProgress } = require('./onboarding.service.js');
-    const onboarding = await syncOnboardingProgress(partnerId);
-    return success(res, onboarding, 'Onboarding progress status retrieved successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
 // ── Team Metrics Automation Helper ────────────────────────────────────
 const recalculateTeamMetrics = async (parentPartnerId, existingClient = null) => {
   if (!parentPartnerId) return;
@@ -2160,7 +2139,6 @@ module.exports.updatePartnerStatus = updatePartnerStatus;
 module.exports.resetPartnerPassword = resetPartnerPassword;
 module.exports.impersonatePartner = impersonatePartner;
 module.exports.updatePartnerKYCStatus = updatePartnerKYCStatus;
-module.exports.getSelfOnboarding = getSelfOnboarding;
 module.exports.recalculateTeamMetrics = recalculateTeamMetrics;
 module.exports.validatePan = validatePan;
 module.exports.validateAadhaar = validateAadhaar;

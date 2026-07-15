@@ -2154,23 +2154,6 @@ const migrate = async () => {
     logger.info('Running Partner Onboarding & Team Metrics Schema Migration (Task 12)...');
 
     await query(`
-      CREATE TABLE IF NOT EXISTS partner_onboarding (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        partner_id UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
-        profile_completed BOOLEAN DEFAULT FALSE,
-        kyc_completed BOOLEAN DEFAULT FALSE,
-        bank_completed BOOLEAN DEFAULT FALSE,
-        training_completed BOOLEAN DEFAULT FALSE,
-        first_lead_completed BOOLEAN DEFAULT FALSE,
-        first_application_completed BOOLEAN DEFAULT FALSE,
-        progress_percentage INT DEFAULT 0,
-        completed_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-
-    await query(`
       ALTER TABLE partner_profiles 
         ADD COLUMN IF NOT EXISTS active_children INT DEFAULT 0,
         ADD COLUMN IF NOT EXISTS inactive_children INT DEFAULT 0,

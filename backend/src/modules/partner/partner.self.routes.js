@@ -34,7 +34,6 @@ router.post('/kyc/upload-video', requirePartner, uploadVideo.single('video'), pa
 router.post('/kyc/submit', requirePartner, partnerCtrl.submitKyc);
 router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
-router.get('/onboarding', requirePartner, partnerCtrl.getSelfOnboarding);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.post('/profile/photo', requirePartner, upload.single('photo'), partnerCtrl.uploadProfilePhoto);
 router.post('/kyc/upload-selfie', requirePartner, upload.single('selfie'), partnerCtrl.uploadSelfie);

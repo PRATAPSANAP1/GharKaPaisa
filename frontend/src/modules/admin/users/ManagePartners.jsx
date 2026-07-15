@@ -306,15 +306,15 @@ export default function ManagePartners() {
         </form>
       </div>
 
-      {/* Table 1: New Onboarding Requests */}
+      {/* Table 1: Pending KYC Requests */}
       <div style={{ ...S.card, padding: 0, borderRadius: "16px", overflow: "hidden", marginBottom: "24px" }}>
         <div style={{ padding: "16px 24px", background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>📋 Pending KYC & Onboarding Requests ({totalNew})</h3>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>📋 Pending KYC Requests ({totalNew})</h3>
         </div>
         {loadingNew ? (
           <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>Loading requests...</div>
         ) : partnersNew.length === 0 ? (
-          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>No pending onboarding requests found.</div>
+          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>No pending KYC requests found.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>

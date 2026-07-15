@@ -111,9 +111,7 @@ const submitApplication = async (req, res, next) => {
     await client.query('COMMIT');
 
     try {
-      const { syncOnboardingProgress } = require('../partner/onboarding.service.js');
       const { recalculateTeamMetrics } = require('../partner/partner.controller.js');
-      await syncOnboardingProgress(PartnerId);
       if (parentPartnerId) {
         await recalculateTeamMetrics(parentPartnerId);
       }

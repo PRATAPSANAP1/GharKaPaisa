@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
@@ -10,7 +9,6 @@ export default function PartnerDashboard() {
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
   const profile = usePartnerStore((state) => state.profile);
   const { C } = useTheme();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(!profile);
 
   useEffect(() => {
@@ -33,12 +31,6 @@ export default function PartnerDashboard() {
     init();
   }, [fetchProfile]);
 
-  const handleTabChange = (tab) => {
-    if (tab === 'wallet') {
-      navigate('/partner/wallet');
-    }
-  };
-
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "300px", gap: "12px" }}>
@@ -56,6 +48,6 @@ export default function PartnerDashboard() {
   }
 
   return (
-    <StyledDashboard partner={profile} onTabChange={handleTabChange} />
+    <StyledDashboard partner={profile} />
   );
 }

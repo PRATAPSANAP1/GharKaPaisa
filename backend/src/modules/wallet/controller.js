@@ -1315,6 +1315,7 @@ const verifyBankUPI = async (req, res, next) => {
       INSERT INTO bank_details_history (partner_id, bank_details_id, changed_by, old_data, new_data)
       VALUES ($1, $2, $3, $4, $5)
     `, [partnerId, bank_id, req.user?.id, JSON.stringify({ is_verified: false }), JSON.stringify({ is_verified: true, verification_method: 'upi' })]);
+    await logAction(req, 'VERIFY_BANK_UPI', bank_id, { partner_id: partnerId });
 
     return success(res, {
       verified: true,
