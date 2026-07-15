@@ -6,19 +6,19 @@ const { authenticate, syncUser, requireApprovedPartner } = require('../../middle
 // Public Referral Endpoints (No authentication required)
 router.post('/referral/click', teamCtrl.handleReferralClick);
 
-// Helper array for authenticated routes
-const authMiddlewares = [authenticate, syncUser, requireApprovedPartner];
+// Authenticated Team & Referral Routes
+const authenticated = [authenticate, syncUser, requireApprovedPartner];
 
 // Referral System
-router.get('/referral/qr', authMiddlewares, teamCtrl.handleGetReferralQR);
-router.get('/referral/analytics', authMiddlewares, teamCtrl.handleGetReferralAnalytics);
+router.get('/referral/qr', authenticated, teamCtrl.handleGetReferralQR);
+router.get('/referral/analytics', authenticated, teamCtrl.handleGetReferralAnalytics);
 
 // Team Dashboard & Tree Hierarchy
-router.get('/team/dashboard', authMiddlewares, teamCtrl.handleGetTeamDashboard);
-router.get('/team/tree', authMiddlewares, teamCtrl.handleGetTeamTree);
-router.get('/team/list', authMiddlewares, teamCtrl.handleGetTeamList);
-router.get('/team/activity', authMiddlewares, teamCtrl.handleGetTeamActivity);
-router.get('/team/:id', authMiddlewares, teamCtrl.handleGetChildDetail);
-router.patch('/team/settings', authMiddlewares, teamCtrl.handleUpdateTeamSettings);
+router.get('/team/dashboard', authenticated, teamCtrl.handleGetTeamDashboard);
+router.get('/team/tree', authenticated, teamCtrl.handleGetTeamTree);
+router.get('/team/list', authenticated, teamCtrl.handleGetTeamList);
+router.get('/team/activity', authenticated, teamCtrl.handleGetTeamActivity);
+router.get('/team/:id', authenticated, teamCtrl.handleGetChildDetail);
+router.patch('/team/settings', authenticated, teamCtrl.handleUpdateTeamSettings);
 
 module.exports = router;

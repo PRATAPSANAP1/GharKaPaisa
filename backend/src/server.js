@@ -202,7 +202,7 @@ app.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
 
 // ── Public Unauthenticated Endpoints ───────────────────────────
 const partnerCtrl = require('./modules/partner/partner.controller.js');
-const walletCtrl  = require('./modules/wallet/controller.js');
+const walletCtrl = require('./modules/wallet/controller.js');
 const paymentCtrl = require('./modules/payment/payment.controller.js');
 app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
