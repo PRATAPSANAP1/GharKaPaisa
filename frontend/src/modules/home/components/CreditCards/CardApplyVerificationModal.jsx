@@ -563,7 +563,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                   : "Enter code - auto verify"
                 : status === "success"
                   ? "Verified successfully"
-                  : "Verification failed"}
+                  : ""}
             </div>
 
             {status === "fail" && (
@@ -754,7 +754,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           inset: 0;
           display: grid;
           place-items: center;
-          font-size: 1.5rem;
+          font-size: 2.1rem;
           font-weight: 900;
           pointer-events: none;
           width: 100%;

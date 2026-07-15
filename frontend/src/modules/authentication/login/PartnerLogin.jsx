@@ -884,7 +884,7 @@ export default function PartnerLogin() {
                           : "Enter code - auto verify"
                         : status === "success"
                           ? "Verified successfully"
-                          : "Verification failed"}
+                          : ""}
                     </div>
 
                     {status === "fail" && (
@@ -1432,7 +1432,7 @@ export default function PartnerLogin() {
           inset: 0;
           display: grid;
           place-items: center;
-          font-size: 1.5rem;
+          font-size: 2.1rem;
           font-weight: 900;
           pointer-events: none;
           width: 100%;
