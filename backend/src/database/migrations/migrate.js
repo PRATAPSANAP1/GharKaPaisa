@@ -159,6 +159,8 @@ const migrate = async () => {
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ`);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`);
 
   // Table to track emails pre-verified via registration OTP
   await query(`
@@ -624,6 +626,54 @@ const migrate = async () => {
   await query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS role VARCHAR(50)`);
   await query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)`);
+
+  // ── Login History ──────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS login_history (
+      id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id        UUID REFERENCES users(id) ON DELETE CASCADE,
+      device         VARCHAR(255),
+      browser        VARCHAR(255),
+      ip_address     VARCHAR(45),
+      city           VARCHAR(100),
+      country        VARCHAR(100),
+      login_time     TIMESTAMPTZ DEFAULT NOW(),
+      logout_time    TIMESTAMPTZ,
+      status         VARCHAR(20) NOT NULL,
+      failure_reason VARCHAR(255),
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_login_history_user ON login_history(user_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_login_history_status ON login_history(status)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_login_history_time ON login_history(login_time DESC)`);
+
+  // ── Security Alerts ─────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS security_alerts (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+      type       VARCHAR(50) NOT NULL,
+      message    TEXT NOT NULL,
+      metadata   JSONB,
+      read_at    TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_user ON security_alerts(user_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_security_alerts_created_at ON security_alerts(created_at DESC)`);
+
+  // ── Password History ────────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS password_history (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id       UUID REFERENCES users(id) ON DELETE CASCADE,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_password_history_user ON password_history(user_id)`);
+
 
   // ── Wallet Audit Logs ─────────────────────────────────────────
   await query(`
