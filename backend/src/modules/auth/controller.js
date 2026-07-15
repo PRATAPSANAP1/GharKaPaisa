@@ -389,7 +389,7 @@ const login = async (req, res, next) => {
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
-    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -471,7 +471,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
-    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -999,7 +999,7 @@ const loginPassword = async (req, res, next) => {
                         '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
-    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
