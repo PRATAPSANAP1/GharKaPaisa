@@ -597,26 +597,90 @@ const PartnerWallet = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
-      
-      {/* Upper header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>{t("Partner Wallet Hub")}</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{t("Real-time balance tracking, commission ledger, bank verification & payout management.")}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={() => { 
-              fetchDashboard(); 
-              if(activeTab === 'ledger') fetchTransactions(); 
-              if(activeTab === 'withdrawals') fetchWithdrawals();
-              if(activeTab === 'breakup') fetchCommissionSummary();
+      {/* Top Wallet Summary Cards Matrix */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+        
+        {/* Primary Available Balance Card with Withdraw CTA */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0F766E 0%, #14B8A6 100%)',
+          borderRadius: '20px',
+          padding: '24px',
+          color: '#FFFFFF',
+          boxShadow: '0 10px 25px rgba(20, 184, 166, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          justify: 'space-between',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.9 }}>
+              Available Balance (Withdrawal Ready)
+            </div>
+            <div style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px' }}>
+              ₹{parseFloat(availableBal).toLocaleString('en-IN')}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              if (parseFloat(availableBal) < 100) return alert('Minimum withdrawal amount is ₹100');
+              setWithdrawAmount(availableBal.toString());
+              setShowOtpModal(true);
             }}
-            style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justify: 'center',
+              gap: '8px',
+              background: '#FFFFFF',
+              color: '#0F766E',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              marginTop: '16px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              transition: 'transform 0.2s ease'
+            }}
           >
-            <MdRefresh size={16} /> Refresh
+            <span>Withdraw Funds</span>
+            <MdArrowForward size={18} />
           </button>
         </div>
+
+        {/* Held Balance Card */}
+        <div style={{ ...S.card, padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>
+              Held Balance (7-Day Hold)
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: C.gold, marginTop: '8px' }}>
+              ₹{parseFloat(pendingBal).toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', color: C.textLight, marginTop: '12px' }}>
+            Auto-matures to Available Balance in 7 days
+          </div>
+        </div>
+
+        {/* Total Earned Card */}
+        <div style={{ ...S.card, padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>
+              Lifetime Total Earned
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: C.green, marginTop: '8px' }}>
+              ₹{parseFloat(lifetimeEarn).toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', color: C.textLight, marginTop: '12px' }}>
+            Total Withdrawn: ₹{parseFloat(totalWithdrawnVal).toLocaleString('en-IN')}
+          </div>
+        </div>
+
       </div>
 
       {/* Modern 5 Navigation Tabs */}

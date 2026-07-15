@@ -9,6 +9,7 @@ const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js')
 const roleCheck = require('../../middleware/authorization/role.middleware.js');
 const {
   loginLimiter,
+  refreshLimiter,
   sendOtpLimiter,
   verifyOtpLimiter,
   registerLimiter,
@@ -32,7 +33,7 @@ router.post('/forgot-mobile',            forgotPasswordLimiter, ctrl.forgotMobil
 router.post('/reset-password',           forgotPasswordLimiter, ctrl.resetPassword);
 router.post('/verify-email',             verifyOtpLimiter,      ctrl.verifyEmail);
 router.post('/resend-verification',      sendOtpLimiter,        ctrl.resendVerificationEmail);
-router.post('/refresh',                  loginLimiter,          ctrl.refresh);
+router.post('/refresh',                  refreshLimiter,        ctrl.refresh);
 
 // ── Protected Auth Routes ───────────────────────────────────────────────────────
 router.get('/me', jwtAuth, ctrl.getMe);

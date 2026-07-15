@@ -1499,6 +1499,70 @@ const handleRazorpayWebhook = async (req, res, next) => {
   }
 };
 
+// GET /wallet/analytics — Dashboard Analytics payload
+const getWalletAnalyticsController = async (req, res, next) => {
+  try {
+    let partnerId = req.partner?.id || req.params.PartnerId;
+    if (!partnerId && req.user?.id) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows: [w] } = await query(`SELECT * FROM partner_wallets WHERE partner_id = $1`, [partnerId]);
+    const { rows: [m] } = await query(`
+      SELECT 
+        COALESCE(SUM(credit) FILTER (WHERE transaction_type = 'REFERRAL_BONUS'), 0) as referral_earnings,
+        COALESCE(SUM(credit) FILTER (WHERE transaction_type LIKE '%BONUS%'), 0) as bonus_earnings,
+        COALESCE(SUM(credit) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) as monthly_earnings
+      FROM wallet_ledger
+      WHERE partner_id = $1 AND status = 'completed'
+    `, [partnerId]);
+
+    return success(res, {
+      available_balance: parseFloat(w?.available_balance || 0),
+      held_balance: parseFloat(w?.hold_balance || 0),
+      total_earned: parseFloat(w?.total_earned || 0),
+      total_withdrawn: parseFloat(w?.total_withdrawn || 0),
+      monthly_earnings: parseFloat(m?.monthly_earnings || 0),
+      referral_earnings: parseFloat(m?.referral_earnings || 0),
+      bonus_earnings: parseFloat(m?.bonus_earnings || 0)
+    }, 'Wallet analytics loaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/reconciliation — System reconciliation report
+const getWalletReconciliationController = async (req, res, next) => {
+  try {
+    const { processWalletReconciliationDailyJob } = require('./service.js');
+    const result = await processWalletReconciliationDailyJob();
+    return success(res, result, 'Wallet reconciliation audit executed successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/statement — CSV/Excel Statement Data
+const getWalletStatementController = async (req, res, next) => {
+  try {
+    let partnerId = req.partner?.id || req.params.PartnerId;
+    if (!partnerId && req.user?.id) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) partnerId = p.id;
+    }
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { from_date, to_date } = req.query;
+    const { generateWalletStatementData } = require('./service.js');
+    const statement = await generateWalletStatementData(partnerId, from_date, to_date);
+    return success(res, statement, 'Statement data generated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getWallet,
   getTransactions,
@@ -1535,5 +1599,8 @@ module.exports = {
   setPrimaryBank,
   verifyBankPennyDrop,
   verifyBankUPI,
-  getBankEditHistory
+  getBankEditHistory,
+  getWalletAnalyticsController,
+  getWalletReconciliationController,
+  getWalletStatementController
 };

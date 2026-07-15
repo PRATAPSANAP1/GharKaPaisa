@@ -247,6 +247,25 @@ const startServer = async () => {
       ║  Base URL: /api/v1 (behind reverse proxy) ║
       ╚════════════════════════════════════════╝
       `);
+      // Initialize 7-Day Hold Automated Release Scheduler timer (checks every hour)
+      setInterval(async () => {
+        try {
+          const { processAutomatedCommissionReleaseScheduler } = require('./modules/wallet/service.js');
+          await processAutomatedCommissionReleaseScheduler();
+        } catch (err) {
+          logger.error('Automated Commission Release Scheduler timer error:', err.message);
+        }
+      }, 60 * 60 * 1000);
+
+      // Initialize Daily Reminder Engine timer (runs once every 24 hours)
+      setInterval(async () => {
+        try {
+          const { processDailyReminderEngine } = require('./modules/notifications/service.js');
+          await processDailyReminderEngine();
+        } catch (err) {
+          logger.error('Daily Reminder Engine timer error:', err.message);
+        }
+      }, 24 * 60 * 60 * 1000);
     });
   } catch (err) {
     logger.error('Failed to start server due to database connectivity issue:', err);

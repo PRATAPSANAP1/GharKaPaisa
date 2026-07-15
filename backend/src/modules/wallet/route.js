@@ -21,6 +21,10 @@ router.put('/bank-details', requireApprovedPartner, validateBankDetails, walletC
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
+
+// Withdrawals Routing (Admin & Polymorphic Partner Handlers)
+router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
+router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
@@ -31,8 +35,12 @@ router.get('/withdrawals/:id', requireApprovedPartnerOrAdmin, walletCtrl.getWith
 router.get('/', requireApprovedPartnerOrAdmin, walletCtrl.getWallet);
 router.get('/dashboard', requireApprovedPartnerOrAdmin, walletCtrl.getWalletDashboard);
 router.get('/balance', requireApprovedPartnerOrAdmin, walletCtrl.getWallet);
+router.get('/ledger', requireApprovedPartnerOrAdmin, walletCtrl.getWalletLedger);
 router.get('/transactions', requireApprovedPartnerOrAdmin, walletCtrl.getTransactions);
 router.get('/commission-summary', requireApprovedPartnerOrAdmin, walletCtrl.getCommissionSummary);
+router.get('/analytics', requireApprovedPartnerOrAdmin, walletCtrl.getWalletAnalyticsController);
+router.get('/reconciliation', requireApprovedPartnerOrAdmin, walletCtrl.getWalletReconciliationController);
+router.get('/statement', requireApprovedPartnerOrAdmin, walletCtrl.getWalletStatementController);
 
 // Statement Export
 router.get('/statement/pdf', requireApprovedPartnerOrAdmin, walletCtrl.exportStatementPDF);
@@ -42,13 +50,6 @@ router.get('/statement/excel', requireApprovedPartnerOrAdmin, walletCtrl.exportS
 router.post('/withdraw/otp/send', withdrawalOtpLimiter, requireApprovedPartnerOrAdmin, walletCtrl.sendWithdrawalOTP);
 router.post('/withdraw/otp/verify', requireApprovedPartnerOrAdmin, walletCtrl.verifyWithdrawalOTP);
 router.post('/withdraw', requireApprovedPartnerOrAdmin, validateWithdrawalAmount, withdrawalRules, validate, walletCtrl.requestWithdrawal);
-
-router.get('/reports', requireApprovedPartnerOrAdmin, walletCtrl.getWalletReports);
-
-// Partner self or admin (with ID)
-router.get('/:PartnerId', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getWallet);
-router.get('/:PartnerId/transactions', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getTransactions);
-router.get('/:PartnerId/case-summary', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, walletCtrl.getCaseSummary);
 router.post('/:PartnerId/withdraw', selfOrAdmin('PartnerId'), requireApprovedPartnerOrAdmin, withdrawalRules, validate, walletCtrl.requestWithdrawal);
 
 module.exports = router;

@@ -25,11 +25,13 @@ const walletCtrl = require('../modules/wallet/controller.js');
 const partnerCtrl = require('../modules/partner/partner.controller.js');
 
 const customerRoute = require('../modules/customer/customer.routes.js');
+const teamRoutes    = require('../modules/team/team.routes.js');
 
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 router.use('/payment', paymentRoute);
 router.use('/location', locationRoute);
+router.use('/', teamRoutes);
 
 router.use('/auth',             authRoute);
 router.use('/Partners',         partnerRouter);

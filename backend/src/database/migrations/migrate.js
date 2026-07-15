@@ -2249,6 +2249,651 @@ const migrate = async () => {
     throw task13Err;
   }
 
+  // ── Enterprise Lead Management Architecture Migration (Task 14) ──
+  try {
+    logger.info('Running Enterprise Lead Management Architecture Migration (Task 14)...');
+
+    // 1. Extend leads table
+    await query(`
+      ALTER TABLE leads
+        ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'partner',
+        ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium',
+        ADD COLUMN IF NOT EXISTS pipeline_stage VARCHAR(50) DEFAULT 'created',
+        ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+        ADD COLUMN IF NOT EXISTS sla_status VARCHAR(20) DEFAULT 'on_track',
+        ADD COLUMN IF NOT EXISTS expected_completion_at TIMESTAMPTZ;
+    `);
+
+    // 2. Lead Documents
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_documents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        document_type VARCHAR(50) NOT NULL,
+        file_url VARCHAR(1000) NOT NULL,
+        s3_key VARCHAR(500),
+        verification_status VARCHAR(50) DEFAULT 'pending',
+        uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        uploaded_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_docs_lead ON lead_documents(lead_id);
+    `);
+
+    // 3. Lead Timeline
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_timeline (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        reference_type VARCHAR(50),
+        reference_id UUID,
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_timeline_lead ON lead_timeline(lead_id);
+    `);
+
+    // 4. Lead Notes (Visibility: partner | admin | operations | private)
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_notes (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        role VARCHAR(50),
+        note TEXT NOT NULL,
+        visibility VARCHAR(20) DEFAULT 'partner',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_notes_lead ON lead_notes(lead_id);
+    `);
+
+    // 5. Lead Assignments
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_assignments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        assigned_to UUID REFERENCES users(id) ON DELETE CASCADE,
+        team VARCHAR(50) DEFAULT 'operations',
+        assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        assigned_at TIMESTAMPTZ DEFAULT NOW(),
+        status VARCHAR(20) DEFAULT 'active'
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_assignments_lead ON lead_assignments(lead_id);
+    `);
+
+    // 6. Lead Activity Logs
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_activity_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        activity_type VARCHAR(100) NOT NULL,
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        reference_type VARCHAR(50),
+        reference_id UUID,
+        ip_address VARCHAR(45),
+        device VARCHAR(100),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_activity_lead ON lead_activity_logs(lead_id);
+    `);
+
+    // 7. Lead Status History
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_status_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        old_status VARCHAR(50),
+        new_status VARCHAR(50) NOT NULL,
+        changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_history_lead ON lead_status_history(lead_id);
+    `);
+
+    // 8. Lead Verification Checklist
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_checklist (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        item VARCHAR(100) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        verified_at TIMESTAMPTZ,
+        CONSTRAINT unique_lead_check_item UNIQUE(lead_id, item)
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_check_lead ON lead_checklist(lead_id);
+    `);
+
+    // 9. Lead SLA Engine Tracker
+    await query(`
+      CREATE TABLE IF NOT EXISTS lead_sla (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        stage_name VARCHAR(50) NOT NULL,
+        started_at TIMESTAMPTZ DEFAULT NOW(),
+        expected_time_hours INT DEFAULT 48,
+        completed_at TIMESTAMPTZ,
+        is_overdue BOOLEAN DEFAULT FALSE,
+        delay_minutes INT DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_lead_sla_lead ON lead_sla(lead_id);
+    `);
+
+    // 10. Bank Executive Assignments
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_assignments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+        executive_name VARCHAR(255) NOT NULL,
+        mobile VARCHAR(15),
+        email VARCHAR(255),
+        assigned_at TIMESTAMPTZ DEFAULT NOW(),
+        status VARCHAR(20) DEFAULT 'assigned'
+      );
+      CREATE INDEX IF NOT EXISTS idx_bank_assign_lead ON bank_assignments(lead_id);
+    `);
+
+    logger.info('Enterprise Lead Management Architecture Migration (Task 14) completed successfully.');
+  } catch (task14Err) {
+    logger.error('Failed to run Enterprise Lead Management Architecture Migration (Task 14):', task14Err);
+    throw task14Err;
+  }
+
+  // ── Wallet & Commission Engine Migration (Task 15) ──
+  try {
+    logger.info('Running Wallet & Commission Engine Migration (Task 15)...');
+
+    // 1. Partner Wallets Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_wallets (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        available_balance DECIMAL(15,2) DEFAULT 0.00,
+        hold_balance DECIMAL(15,2) DEFAULT 0.00,
+        bonus_balance DECIMAL(15,2) DEFAULT 0.00,
+        total_earned DECIMAL(15,2) DEFAULT 0.00,
+        total_withdrawn DECIMAL(15,2) DEFAULT 0.00,
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_partner_wallets_partner ON partner_wallets(partner_id);
+    `);
+
+    // 2. Wallet Ledger Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_ledger (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        transaction_type VARCHAR(50) NOT NULL,
+        credit DECIMAL(15,2) DEFAULT 0.00,
+        debit DECIMAL(15,2) DEFAULT 0.00,
+        balance_after DECIMAL(15,2) DEFAULT 0.00,
+        reference_number VARCHAR(100),
+        description TEXT,
+        product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+        lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+        application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+        customer_name VARCHAR(255),
+        hold_until TIMESTAMPTZ,
+        status VARCHAR(20) DEFAULT 'completed',
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_ledger_partner ON wallet_ledger(partner_id);
+    `);
+
+    // 3. Wallet Transactions Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        wallet_id UUID REFERENCES partner_wallets(id) ON DELETE CASCADE,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+        type VARCHAR(20) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        status VARCHAR(20) DEFAULT 'completed',
+        description TEXT,
+        reference_number VARCHAR(100),
+        release_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_txns_partner ON wallet_transactions(partner_id);
+    `);
+
+    // 4. Wallet Withdrawals Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_withdrawals (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        bank_detail_id UUID REFERENCES partner_bank_details(id) ON DELETE SET NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        status VARCHAR(30) DEFAULT 'pending',
+        otp_code VARCHAR(10),
+        otp_expires_at TIMESTAMPTZ,
+        utr_number VARCHAR(100),
+        bank_reference VARCHAR(100),
+        transfer_id VARCHAR(100),
+        transferred_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        transferred_at TIMESTAMPTZ,
+        settlement_date TIMESTAMPTZ,
+        rejection_reason TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_withdrawals_partner ON wallet_withdrawals(partner_id);
+    `);
+
+    // 5. Commission Rules Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS commission_rules (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        commission_type VARCHAR(20) DEFAULT 'fixed',
+        commission_value DECIMAL(15,2) DEFAULT 0.00,
+        parent_override_type VARCHAR(20) DEFAULT 'fixed',
+        parent_override_value DECIMAL(15,2) DEFAULT 0.00,
+        effective_from DATE DEFAULT CURRENT_DATE,
+        effective_to DATE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_comm_rules_product ON commission_rules(product_id);
+    `);
+
+    // 6. Commission Release Jobs Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS commission_release_jobs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        ledger_id UUID REFERENCES wallet_ledger(id) ON DELETE CASCADE,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL,
+        release_date TIMESTAMPTZ NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        processed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_comm_release_jobs_date ON commission_release_jobs(release_date, status);
+    `);
+
+    // 7. Withdrawal Audit Logs Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS withdrawal_audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        withdrawal_id UUID NOT NULL REFERENCES wallet_withdrawals(id) ON DELETE CASCADE,
+        action VARCHAR(50) NOT NULL,
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        old_status VARCHAR(30),
+        new_status VARCHAR(30),
+        remarks TEXT,
+        ip_address VARCHAR(45),
+        device VARCHAR(100),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_withdrawal_audit_w ON withdrawal_audit_logs(withdrawal_id);
+    `);
+
+    // 8. Wallet Reconciliation Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_reconciliation (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        reconciliation_date DATE DEFAULT CURRENT_DATE,
+        wallet_balance DECIMAL(15,2) DEFAULT 0.00,
+        ledger_balance DECIMAL(15,2) DEFAULT 0.00,
+        discrepancy DECIMAL(15,2) DEFAULT 0.00,
+        status VARCHAR(20) DEFAULT 'matched',
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_recon_partner ON wallet_reconciliation(partner_id);
+    `);
+
+    // 9. Wallet Bonus Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_bonus (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        bonus_type VARCHAR(50) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        status VARCHAR(20) DEFAULT 'completed',
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_bonus_partner ON wallet_bonus(partner_id);
+    `);
+
+    // 10. Wallet Adjustments Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS wallet_adjustments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        reason TEXT NOT NULL,
+        adjusted_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_wallet_adj_partner ON wallet_adjustments(partner_id);
+    `);
+
+    logger.info('Wallet & Commission Engine Migration (Task 15) completed successfully.');
+  } catch (task15Err) {
+    logger.error('Failed to run Wallet & Commission Engine Migration (Task 15):', task15Err);
+    throw task15Err;
+  }
+
+  // ── Team & Referral Management System Migration (Task 16) ──
+  try {
+    logger.info('Running Team & Referral Management System Migration (Task 16)...');
+
+    // 1. Extend partner_profiles table
+    await query(`
+      ALTER TABLE partner_profiles
+        ADD COLUMN IF NOT EXISTS children_count INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS direct_team_count INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS active_team_count INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS last_team_join TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS team_enabled BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS referral_enabled BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS referral_message TEXT DEFAULT 'Join my team on GharKaPaisa and earn highest financial commission payouts!',
+        ADD COLUMN IF NOT EXISTS referral_banner VARCHAR(500);
+    `);
+
+    // 2. Referral Clicks Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        referral_code VARCHAR(50) NOT NULL,
+        campaign VARCHAR(100) DEFAULT 'direct',
+        source VARCHAR(100) DEFAULT 'web',
+        ip_address VARCHAR(45),
+        browser VARCHAR(100),
+        device VARCHAR(100),
+        country VARCHAR(100),
+        state VARCHAR(100),
+        city VARCHAR(100),
+        referrer VARCHAR(1000),
+        landing_url VARCHAR(1000),
+        clicked_at TIMESTAMPTZ DEFAULT NOW(),
+        registered BOOLEAN DEFAULT FALSE,
+        registration_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        converted BOOLEAN DEFAULT FALSE,
+        application_created BOOLEAN DEFAULT FALSE,
+        commission_generated BOOLEAN DEFAULT FALSE
+      );
+      CREATE INDEX IF NOT EXISTS idx_ref_clicks_code ON referral_clicks(referral_code);
+      CREATE INDEX IF NOT EXISTS idx_ref_clicks_partner ON referral_clicks(partner_id);
+    `);
+
+    // 3. Invitation History Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS invitation_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        method VARCHAR(50) NOT NULL,
+        recipient VARCHAR(255),
+        sent_time TIMESTAMPTZ DEFAULT NOW(),
+        opened_time TIMESTAMPTZ,
+        registered BOOLEAN DEFAULT FALSE,
+        status VARCHAR(20) DEFAULT 'sent'
+      );
+      CREATE INDEX IF NOT EXISTS idx_inv_history_partner ON invitation_history(partner_id);
+    `);
+
+    // 4. Referral Campaigns Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS referral_campaigns (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        campaign_name VARCHAR(255) NOT NULL,
+        platform VARCHAR(100) DEFAULT 'WhatsApp',
+        start_date DATE DEFAULT CURRENT_DATE,
+        end_date DATE,
+        budget DECIMAL(15,2) DEFAULT 0.00,
+        clicks INT DEFAULT 0,
+        registrations INT DEFAULT 0,
+        conversions INT DEFAULT 0,
+        commission DECIMAL(15,2) DEFAULT 0.00,
+        roi DECIMAL(10,2) DEFAULT 0.00,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_ref_campaigns_partner ON referral_campaigns(partner_id);
+    `);
+
+    // 5. Team Activity Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS team_activity (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        activity_type VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_act_partner ON team_activity(partner_id);
+    `);
+
+    // 6. Team Commissions Overrides Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS team_commissions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+        commission_amount DECIMAL(15,2) DEFAULT 0.00,
+        level INT DEFAULT 1,
+        released BOOLEAN DEFAULT FALSE,
+        status VARCHAR(20) DEFAULT 'pending',
+        released_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_comm_parent ON team_commissions(parent_partner_id);
+    `);
+
+    // 7. Team Goals Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS team_goals (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        goal_title VARCHAR(255) NOT NULL,
+        target_count INT DEFAULT 10,
+        current_count INT DEFAULT 0,
+        reward_amount DECIMAL(15,2) DEFAULT 0.00,
+        status VARCHAR(20) DEFAULT 'in_progress',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_goals_partner ON team_goals(partner_id);
+    `);
+
+    // 8. Team Notifications Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS team_notifications (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_team_notif_partner ON team_notifications(partner_id);
+    `);
+
+    logger.info('Team & Referral Management System Migration (Task 16) completed successfully.');
+  } catch (task16Err) {
+    logger.error('Failed to run Team & Referral Management System Migration (Task 16):', task16Err);
+    throw task16Err;
+  }
+
+  // ── Reports Module Architecture Migration (Task 17) ──
+  try {
+    logger.info('Running Reports Module Architecture Migration (Task 17)...');
+
+    // 1. Report Cache Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS report_cache (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        report_type VARCHAR(100) NOT NULL,
+        filter_hash VARCHAR(64) NOT NULL,
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        generated_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL,
+        report_json JSONB NOT NULL,
+        status VARCHAR(20) DEFAULT 'ready',
+        CONSTRAINT unique_report_cache UNIQUE(report_type, filter_hash, partner_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_report_cache_lookup ON report_cache(report_type, filter_hash, partner_id);
+    `);
+
+    // 2. Report Exports Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS report_exports (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        report_type VARCHAR(100) NOT NULL,
+        format VARCHAR(20) NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        storage_path TEXT,
+        generated_at TIMESTAMPTZ DEFAULT NOW(),
+        downloaded_at TIMESTAMPTZ,
+        status VARCHAR(20) DEFAULT 'completed'
+      );
+      CREATE INDEX IF NOT EXISTS idx_report_exports_partner ON report_exports(partner_id);
+    `);
+
+    // 3. Scheduled Reports Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS scheduled_reports (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        report_type VARCHAR(100) NOT NULL,
+        frequency VARCHAR(20) DEFAULT 'monthly',
+        recipient_email VARCHAR(255) NOT NULL,
+        next_run TIMESTAMPTZ,
+        last_run TIMESTAMPTZ,
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_sched_reports_partner ON scheduled_reports(partner_id);
+    `);
+
+    logger.info('Reports Module Architecture Migration (Task 17) completed successfully.');
+  } catch (task17Err) {
+    logger.error('Failed to run Reports Module Architecture Migration (Task 17):', task17Err);
+    throw task17Err;
+  }
+
+  // ── Notification & Activity System Migration (Task 18) ──
+  try {
+    logger.info('Running Notification & Activity System Migration (Task 18)...');
+
+    // 1. Extend notifications table schema
+    await query(`
+      ALTER TABLE notifications
+        ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        ADD COLUMN IF NOT EXISTS action_url TEXT,
+        ADD COLUMN IF NOT EXISTS reference_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS reference_id UUID,
+        ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+    `);
+
+    // 2. Notification Preferences Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        email_enabled BOOLEAN DEFAULT TRUE,
+        sms_enabled BOOLEAN DEFAULT TRUE,
+        browser_enabled BOOLEAN DEFAULT TRUE,
+        push_enabled BOOLEAN DEFAULT TRUE,
+        wallet_notifications BOOLEAN DEFAULT TRUE,
+        commission_notifications BOOLEAN DEFAULT TRUE,
+        application_notifications BOOLEAN DEFAULT TRUE,
+        marketing_notifications BOOLEAN DEFAULT TRUE,
+        system_notifications BOOLEAN DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 3. Activity Logs Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        activity_type VARCHAR(100) NOT NULL,
+        module VARCHAR(100) DEFAULT 'system',
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        reference_id UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_act_logs_partner ON activity_logs(partner_id);
+    `);
+
+    // 4. Audit Logs Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        role VARCHAR(50),
+        module VARCHAR(100) NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        old_data JSONB,
+        new_data JSONB,
+        ip VARCHAR(45),
+        device VARCHAR(100),
+        browser VARCHAR(100),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+    `);
+
+    // 5. Broadcast Notifications Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS broadcast_notifications (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        target VARCHAR(50) DEFAULT 'all',
+        priority VARCHAR(20) DEFAULT 'information',
+        scheduled_at TIMESTAMPTZ,
+        expires_at TIMESTAMPTZ,
+        status VARCHAR(20) DEFAULT 'active',
+        created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 6. Login Activity Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS login_activity (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ip_address VARCHAR(45),
+        device VARCHAR(100),
+        browser VARCHAR(100),
+        location VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'success',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_login_act_user ON login_activity(user_id);
+    `);
+
+    logger.info('Notification & Activity System Migration (Task 18) completed successfully.');
+  } catch (task18Err) {
+    logger.error('Failed to run Notification & Activity System Migration (Task 18):', task18Err);
+    throw task18Err;
+  }
+
   // ── Registration Validation & Business Rules Updates (Task 13) ──
   try {
     logger.info('Running Registration Validation & Business Rules Updates (Task 13)...');

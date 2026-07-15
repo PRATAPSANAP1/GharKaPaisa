@@ -352,6 +352,38 @@ const getNotificationReports = async (req, res, next) => {
   }
 };
 
+const getActivityLogsController = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id;
+    if (!partnerId) return error(res, 'Partner profile required', 400);
+
+    const { rows } = await query(`
+      SELECT * FROM activity_logs
+      WHERE partner_id = $1
+      ORDER BY created_at DESC LIMIT 100
+    `, [partnerId]);
+
+    return success(res, rows, 'Activity timeline loaded');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAuditLogsController = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT a.*, u.email, u.role as user_role
+      FROM audit_logs a
+      LEFT JOIN users u ON u.id = a.user_id
+      ORDER BY a.created_at DESC LIMIT 100
+    `);
+
+    return success(res, rows, 'Audit logs loaded');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   handleSSEStream,
   getNotifications,
@@ -366,5 +398,7 @@ module.exports = {
   updateAnnouncement,
   deleteAnnouncement,
   broadcastNotification,
-  getNotificationReports
+  getNotificationReports,
+  getActivityLogsController,
+  getAuditLogsController
 };

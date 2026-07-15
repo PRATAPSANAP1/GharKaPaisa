@@ -67,6 +67,15 @@ const forgotPasswordLimiter = rateLimit({
   message: { success: false, message: 'Too many password reset requests. Please wait 30 minutes.' }
 });
 
+// Refresh token — 100 attempts per 15 min (independent of loginLimiter)
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many refresh attempts. Please try again later.' }
+});
+
 // Legacy alias — kept so any existing imports don't break
 const authLimiter = loginLimiter;
 const emailActionLimiter = sendOtpLimiter;
@@ -74,6 +83,7 @@ const emailActionLimiter = sendOtpLimiter;
 module.exports = {
   globalLimiter,
   loginLimiter,
+  refreshLimiter,
   sendOtpLimiter,
   verifyOtpLimiter,
   registerLimiter,

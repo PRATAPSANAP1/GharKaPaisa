@@ -365,6 +365,105 @@ const getCustomersReport = async (req, res, next) => {
   }
 };
 
+const reportService = require('./report.service.js');
+
+const getDashboardReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getDashboardReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getApplicationsReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getApplicationsReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getCustomersReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getCustomersReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getWalletReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getWalletReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getCommissionReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getCommissionReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getTeamReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getTeamReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getWithdrawalsReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getWithdrawalsReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getProductsReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getProductsReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getBanksReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
+    const data = await reportService.getBanksReport(partnerId, req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const getRevenueReportController = async (req, res, next) => {
+  try {
+    const data = await reportService.getRevenueReport(req.query);
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+
+const postReportExportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.body.partner_id || null);
+    const { report_type = 'dashboard', format = 'csv' } = req.body;
+    const result = await reportService.generateReportExport(partnerId, report_type, format, req.body);
+    return success(res, result, 'Report export generated successfully');
+  } catch (err) { next(err); }
+};
+
+const postScheduleReportController = async (req, res, next) => {
+  try {
+    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.body.partner_id || null);
+    const { report_type, frequency = 'monthly', recipient_email } = req.body;
+    const result = await reportService.createScheduledReport(partnerId, report_type, frequency, recipient_email || req.user.email);
+    return success(res, result, 'Report schedule created successfully');
+  } catch (err) { next(err); }
+};
+
 module.exports = { 
   getApplicationsReport,
   getCustomersReport, 
@@ -374,5 +473,17 @@ module.exports = {
   monthlyTrend, 
   exportPayoutsReport, 
   exportPartnersReport,
-  getApplicationClickReport
+  getApplicationClickReport,
+  getDashboardReportController,
+  getApplicationsReportController,
+  getCustomersReportController,
+  getWalletReportController,
+  getCommissionReportController,
+  getTeamReportController,
+  getWithdrawalsReportController,
+  getProductsReportController,
+  getBanksReportController,
+  getRevenueReportController,
+  postReportExportController,
+  postScheduleReportController
 };

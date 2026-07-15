@@ -4,41 +4,52 @@ import api from "../../../services/api";
 import {
   MdNotifications, MdCheckCircle, MdDeleteSweep,
   MdArrowBack, MdAccessTime, MdInfoOutline,
-  MdTune, MdArchive, MdMarkAsUnread, MdClose, MdEmail, MdPhoneAndroid, MdSms
+  MdTune, MdArchive, MdMarkAsUnread, MdClose, MdEmail, MdPhoneAndroid, MdSms,
+  MdTimeline, MdCategory, MdPriorityHigh, MdSettings
 } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-
-const CATEGORIES = ['All', 'Payouts', 'Applications', 'Team Network', 'System Alerts'];
 
 export default function PartnerNotifications() {
   const { C } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
 
+  const [activeViewTab, setActiveViewTab] = useState('notifications'); // notifications, activity, preferences
   const [notifications, setNotifications] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Filters & Tabs
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [filterMode, setFilterMode] = useState('all'); // 'all', 'unread', 'archived'
+  // Category & Priority Filters
+  const [selectedCategory, setSelectedCategory] = useState('all'); // all, applications, wallet, commission, withdrawal, kyc, customers, products, team, system
+  const [selectedPriority, setSelectedPriority] = useState('all'); // all, urgent, important, information
+  const [statusFilter, setStatusFilter] = useState('all'); // all, unread, read, archived
 
-  // Preferences Modal
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  // Preferences
   const [prefs, setPrefs] = useState({
-    push: true,
-    email: true,
-    sms: false,
-    payout_alerts: true,
-    lead_alerts: true,
-    team_alerts: true
+    email_enabled: true,
+    sms_enabled: true,
+    browser_enabled: true,
+    push_enabled: true,
+    wallet_notifications: true,
+    commission_notifications: true,
+    application_notifications: true,
+    marketing_notifications: true,
+    system_notifications: true
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
 
+  // Fetch Notifications List
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/notifications", { params: { limit: 100 } });
+      const res = await api.get("/notifications", {
+        params: {
+          category: selectedCategory !== 'all' ? selectedCategory : undefined,
+          priority: selectedPriority !== 'all' ? selectedPriority : undefined,
+          unread_only: statusFilter === 'unread' ? 'true' : undefined
+        }
+      });
       if (res.data?.success) {
         setNotifications(res.data.data.notifications || []);
         setUnreadCount(res.data.data.unread_count || 0);
@@ -50,16 +61,71 @@ export default function PartnerNotifications() {
     }
   };
 
+  // Fetch Activity Log Timeline
+  const fetchActivityLogs = async () => {
+    try {
+      const res = await api.get("/notifications/activity");
+      if (res.data?.success) {
+        setActivityLogs(res.data.data || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch activity logs", e);
+    }
+  };
+
+  // Fetch Preferences
+  const fetchPreferences = async () => {
+    try {
+      const res = await api.get("/notifications/preferences");
+      if (res.data?.success && res.data.data) {
+        setPrefs(prev => ({ ...prev, ...res.data.data }));
+      }
+    } catch (e) {
+      console.error("Failed to fetch preferences", e);
+    }
+  };
+
+  // Persistent SSE Stream Listener
   useEffect(() => {
     fetchNotifications();
-  }, []);
+    fetchPreferences();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    let eventSource = null;
+    try {
+      const streamUrl = `/api/v1/notifications/stream?token=${token}`;
+      eventSource = new EventSource(streamUrl);
+
+      eventSource.onmessage = (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.type === 'notification' && payload.data) {
+            setNotifications(prev => [payload.data, ...prev]);
+            if (payload.unread_count !== undefined) setUnreadCount(payload.unread_count);
+          }
+        } catch (_) {}
+      };
+    } catch (err) {
+      console.error('SSE Stream init error:', err);
+    }
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [selectedCategory, selectedPriority, statusFilter]);
+
+  useEffect(() => {
+    if (activeViewTab === 'activity') fetchActivityLogs();
+  }, [activeViewTab]);
 
   const handleMarkAllRead = async () => {
     try {
-      const res = await api.patch("/notifications/read-all");
+      const res = await api.post("/notifications/read-all");
       if (res.data?.success) {
         setUnreadCount(0);
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true, status: 'read' })));
       }
     } catch (e) {
       console.error("Failed to mark all as read", e);
@@ -68,18 +134,14 @@ export default function PartnerNotifications() {
 
   const handleMarkRead = async (id) => {
     try {
-      const res = await api.patch(`/notifications/${id}/read`);
+      const res = await api.post("/notifications/read", { notification_ids: [id] });
       if (res.data?.success) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true, status: 'read' } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (e) {
       console.error("Failed to mark notification as read", e);
     }
-  };
-
-  const handleArchiveNotification = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_archived: true } : n));
   };
 
   const handleSavePreferences = async (e) => {
@@ -88,223 +150,225 @@ export default function PartnerNotifications() {
     try {
       await api.put('/notifications/preferences', prefs);
       alert('Notification preferences updated successfully!');
-      setShowPreferencesModal(false);
     } catch (err) {
-      alert('Notification preferences saved!');
-      setShowPreferencesModal(false);
+      alert('Preferences updated!');
     } finally {
       setSavingPrefs(false);
     }
   };
 
-  const filteredNotifications = notifications.filter(item => {
-    // Mode filter
-    if (filterMode === 'unread' && item.is_read) return false;
-    if (filterMode === 'archived' && !item.is_archived) return false;
-    if (filterMode !== 'archived' && item.is_archived) return false;
+  const getCategoryColor = (cat) => {
+    switch (cat?.toLowerCase()) {
+      case 'wallet': return '#10B981';
+      case 'commission': return '#2563EB';
+      case 'withdrawal': return '#F59E0B';
+      case 'kyc': return '#8B5CF6';
+      case 'applications': return '#0F766E';
+      default: return '#6B7280';
+    }
+  };
 
-    // Category filter
-    if (activeCategory === 'Payouts') return item.type?.toLowerCase().includes('wallet') || item.message?.toLowerCase().includes('payout') || item.message?.toLowerCase().includes('commission');
-    if (activeCategory === 'Applications') return item.type?.toLowerCase().includes('app') || item.message?.toLowerCase().includes('lead');
-    if (activeCategory === 'Team Network') return item.type?.toLowerCase().includes('team') || item.message?.toLowerCase().includes('referral');
-    if (activeCategory === 'System Alerts') return item.type?.toLowerCase().includes('system');
-
-    return true;
-  });
+  const getPriorityColor = (prio) => {
+    switch (prio?.toLowerCase()) {
+      case 'urgent': return '#EF4444';
+      case 'important': return '#F59E0B';
+      default: return '#3B82F6';
+    }
+  };
 
   return (
-    <div style={{ maxWidth: "880px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "40px" }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* Header */}
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => navigate(-1)} style={{ padding: "8px", background: C.bgSecondary, border: `1.5px solid ${C.border}`, borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
-            <MdArrowBack size={18} style={{ color: C.text }} />
-          </button>
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: C.text, margin: 0 }}>Notifications Hub</h2>
-            <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0" }}>Stay updated on lead approvals, commission credits, team onboarding & system alerts.</p>
-          </div>
+      {/* Header Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>Notification Center & Live Stream</span>
+            {unreadCount > 0 && (
+              <span style={{ background: C.red, color: '#FFF', fontSize: '12px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
+                {unreadCount} Unread
+              </span>
+            )}
+          </h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Real-time SSE event bus streaming, partner activity timeline & notification settings.</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
-            onClick={() => setShowPreferencesModal(true)}
-            style={{
-              display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px",
-              background: C.bgSecondary, border: `1.5px solid ${C.border}`, color: C.text,
-              borderRadius: "10px", fontWeight: 700, fontSize: "12px", cursor: "pointer"
-            }}
+            onClick={handleMarkAllRead}
+            style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
-            <MdTune size={16} /> Notification Preferences
+            <MdCheckCircle size={16} /> Mark All as Read
           </button>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              style={{
-                display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px",
-                background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, color: "#fff",
-                border: "none", borderRadius: "10px", fontWeight: 700, fontSize: "12px", cursor: "pointer"
-              }}
-            >
-              <MdCheckCircle size={16} /> Mark All Read ({unreadCount})
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Category Pills & Read/Unread Filters */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        {/* Categories */}
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
-          {CATEGORIES.map(cat => (
+      {/* Main Tabs */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, paddingBottom: '2px' }}>
+        {[
+          { id: 'notifications', label: 'Notifications Stream', icon: MdNotifications },
+          { id: 'activity', label: 'Activity Timeline', icon: MdTimeline },
+          { id: 'preferences', label: 'Notification Settings', icon: MdSettings },
+        ].map(t => {
+          const Icon = t.icon;
+          const active = activeViewTab === t.id;
+          return (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
+              key={t.id}
+              onClick={() => setActiveViewTab(t.id)}
               style={{
-                padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer',
-                background: activeCategory === cat ? C.teal : C.bgSecondary,
-                color: activeCategory === cat ? '#fff' : C.textLight
+                background: 'transparent',
+                border: 'none',
+                borderBottom: active ? `3px solid ${C.teal}` : '3px solid transparent',
+                color: active ? C.teal : C.textLight,
+                padding: '10px 18px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              {cat}
+              <Icon size={18} /> {t.label}
             </button>
-          ))}
-        </div>
-
-        {/* Read / Unread / Archived Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '4px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-          {['all', 'unread', 'archived'].map(mode => (
-            <button
-              key={mode}
-              onClick={() => setFilterMode(mode)}
-              style={{
-                padding: '4px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, border: 'none', cursor: 'pointer',
-                background: filterMode === mode ? C.card : 'transparent',
-                color: filterMode === mode ? C.text : C.textLight,
-                textTransform: 'capitalize'
-              }}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Notifications List Card */}
-      <div style={{ ...S.card, padding: "20px", borderRadius: "16px", minHeight: "300px" }}>
-        {loading ? (
-          <div style={{ padding: "60px 0", textAlign: "center", color: C.textLight, fontSize: "13px" }}>
-            <span style={{ width: "24px", height: "24px", borderRadius: "50%", border: `3px solid ${C.border}`, borderTopColor: C.primary, animation: "spin 0.8s linear infinite", display: "inline-block", marginBottom: "12px" }} />
-            <div>Loading notifications feed...</div>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
-          <div style={{ padding: "80px 0", textAlign: "center" }}>
-            <MdNotifications size={36} style={{ color: C.border, marginBottom: '8px' }} />
-            <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>Inbox empty in this section</h3>
-            <p style={{ fontSize: "12px", color: C.textLight, margin: 0 }}>No alerts matching the selected category filter.</p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {filteredNotifications.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  padding: "16px", borderRadius: "12px",
-                  background: item.is_read ? C.card : `${C.primary}08`,
-                  border: `1.5px solid ${item.is_read ? C.border : `${C.primary}30`}`,
-                  borderLeft: `4px solid ${item.is_read ? C.border : C.primary}`,
-                  display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px"
-                }}
-              >
-                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                  <div style={{ marginTop: "2px", color: item.is_read ? C.textLight : C.primary }}>
-                    <MdInfoOutline size={20} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: "0 0 4px", fontSize: "13px", fontWeight: 800, color: C.text }}>
-                      {item.title || "GKP System Notification"}
-                    </h4>
-                    <p style={{ margin: "0 0 8px", fontSize: "12.5px", color: C.textMid, lineHeight: 1.4 }}>
-                      {item.message}
-                    </p>
-                    <span style={{ fontSize: "10px", color: C.textLight, display: "flex", alignItems: "center", gap: "4px" }}>
-                      <MdAccessTime size={12} /> {new Date(item.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
+      {/* VIEW 1: NOTIFICATIONS STREAM WITH CATEGORY & PRIORITY BADGES */}
+      {activeViewTab === 'notifications' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Category & Filter Pill Controls */}
+          <div style={{ ...S.card, padding: '14px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <select style={{ ...S.input, width: 'auto' }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+              <option value="all">All Categories</option>
+              <option value="applications">Applications</option>
+              <option value="wallet">Wallet</option>
+              <option value="commission">Commission</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="kyc">KYC</option>
+              <option value="system">System</option>
+            </select>
 
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  {!item.is_read && (
-                    <button onClick={() => handleMarkRead(item.id)} title="Mark Read" style={{ background: 'none', border: 'none', color: C.primary, cursor: 'pointer', padding: '4px' }}>
-                      <MdCheckCircle size={18} />
+            <select style={{ ...S.input, width: 'auto' }} value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
+              <option value="all">All Priorities</option>
+              <option value="urgent">🔴 Urgent</option>
+              <option value="important">🟠 Important</option>
+              <option value="information">🔵 Information</option>
+            </select>
+
+            <select style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All Statuses</option>
+              <option value="unread">Unread Only</option>
+            </select>
+          </div>
+
+          {/* Notification List Stream */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {loading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>Loading notifications...</div>
+            ) : notifications.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No notifications match criteria.</div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => !n.is_read && handleMarkRead(n.id)}
+                  style={{
+                    ...S.card,
+                    padding: '16px',
+                    borderRadius: '14px',
+                    borderLeft: `5px solid ${getCategoryColor(n.category)}`,
+                    background: n.is_read ? C.card : C.bgSecondary,
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ background: getCategoryColor(n.category), color: '#FFF', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                        {n.category || 'System'}
+                      </span>
+
+                      {n.priority && (
+                        <span style={{ background: getPriorityColor(n.priority), color: '#FFF', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                          {n.priority}
+                        </span>
+                      )}
+
+                      {!n.is_read && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: C.red }} />}
+                    </div>
+
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{n.title}</div>
+                    <div style={{ fontSize: '12.5px', color: C.textLight, marginTop: '4px' }}>{n.message}</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>{new Date(n.created_at).toLocaleString()}</div>
+                  </div>
+
+                  {!n.is_read && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                      style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderRadius: '6px' }}
+                    >
+                      Mark Read
                     </button>
                   )}
-                  <button onClick={() => handleArchiveNotification(item.id)} title="Archive Alert" style={{ background: 'none', border: 'none', color: C.textLight, cursor: 'pointer', padding: '4px' }}>
-                    <MdArchive size={18} />
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ═══ PREFERENCES MODAL ═══ */}
-      {showPreferencesModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '480px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Notification Preferences</h3>
-              <button onClick={() => setShowPreferencesModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
-            </div>
-
-            <form onSubmit={handleSavePreferences} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: 0 }}>Delivery Channels</h4>
-                
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MdPhoneAndroid /> Push Notifications</span>
-                  <input type="checkbox" checked={prefs.push} onChange={e => setPrefs({ ...prefs, push: e.target.checked })} />
-                </label>
-
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MdEmail /> Email Statements & Alerts</span>
-                  <input type="checkbox" checked={prefs.email} onChange={e => setPrefs({ ...prefs, email: e.target.checked })} />
-                </label>
-
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MdSms /> SMS Payout Notifications</span>
-                  <input type="checkbox" checked={prefs.sms} onChange={e => setPrefs({ ...prefs, sms: e.target.checked })} />
-                </label>
-              </div>
-
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: 0 }}>Alert Topics</h4>
-
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span>Wallet Payout & Commission Credited</span>
-                  <input type="checkbox" checked={prefs.payout_alerts} onChange={e => setPrefs({ ...prefs, payout_alerts: e.target.checked })} />
-                </label>
-
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span>Lead Stage Progression (Approved/Disbursed)</span>
-                  <input type="checkbox" checked={prefs.lead_alerts} onChange={e => setPrefs({ ...prefs, lead_alerts: e.target.checked })} />
-                </label>
-
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600 }}>
-                  <span>Sub-Partner Registrations & Team Overrides</span>
-                  <input type="checkbox" checked={prefs.team_alerts} onChange={e => setPrefs({ ...prefs, team_alerts: e.target.checked })} />
-                </label>
-              </div>
-
-              <button type="submit" disabled={savingPrefs} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
-                {savingPrefs ? 'Saving Preferences...' : 'Save Preferences'}
-              </button>
-            </form>
+              ))
+            )}
           </div>
         </div>
+      )}
+
+      {/* VIEW 2: PARTNER ACTIVITY LOG TIMELINE */}
+      {activeViewTab === 'activity' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {activityLogs.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No activity timeline logs recorded yet.</div>
+          ) : (
+            activityLogs.map((act) => (
+              <div key={act.id} style={{ ...S.card, padding: '16px', display: 'flex', gap: '14px', alignItems: 'center' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: C.teal }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{act.title}</div>
+                  <div style={{ fontSize: '12.5px', color: C.textLight, marginTop: '2px' }}>{act.description}</div>
+                </div>
+                <div style={{ fontSize: '11px', color: C.textLight }}>{new Date(act.created_at).toLocaleString()}</div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* VIEW 3: NOTIFICATION PREFERENCES MATRIX */}
+      {activeViewTab === 'preferences' && (
+        <form onSubmit={handleSavePreferences} style={{ ...S.card, padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Notification Channels & Module Preferences</h3>
+
+          {[
+            { id: 'email_enabled', label: 'Email Notifications' },
+            { id: 'sms_enabled', label: 'SMS Notifications' },
+            { id: 'browser_enabled', label: 'Browser Push Notifications' },
+            { id: 'wallet_notifications', label: 'Wallet & Withdrawal Alerts' },
+            { id: 'commission_notifications', label: 'Commission Payout Alerts' },
+            { id: 'application_notifications', label: 'Application Lifecycle Updates' },
+          ].map(item => (
+            <label key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: 700, color: C.text, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span>{item.label}</span>
+              <input
+                type="checkbox"
+                checked={Boolean(prefs[item.id])}
+                onChange={(e) => setPrefs({ ...prefs, [item.id]: e.target.checked })}
+              />
+            </label>
+          ))}
+
+          <button type="submit" disabled={savingPrefs} style={{ ...S.btn('primary'), alignSelf: 'flex-start', padding: '10px 20px', marginTop: '10px' }}>
+            {savingPrefs ? 'Saving Settings...' : 'Save Preferences'}
+          </button>
+        </form>
       )}
 
     </div>

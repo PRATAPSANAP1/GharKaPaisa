@@ -82,6 +82,16 @@ export const useAuthStore = create((set) => ({
       if (err?.response?.status !== 401 && err?.response?.status !== 400) {
         console.warn('Silent refresh failed on startup:', err);
       }
+      
+      // Clean login flag if the session is explicitly invalid or expired
+      if (err?.response?.status === 401 || err?.response?.status === 400) {
+        try {
+          localStorage.removeItem('gkp_logged_in');
+        } catch (e) {
+          console.warn('Failed to remove login flag on auth initialization failure:', e);
+        }
+      }
+
       // Clean session state
       const { clearAccessToken } = await import('../../services/api');
       clearAccessToken();

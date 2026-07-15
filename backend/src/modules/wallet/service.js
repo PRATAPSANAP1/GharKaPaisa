@@ -835,7 +835,7 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
       wallet.id, partnerId, 
       txnType === 'credit' ? amount : 0, 
       txnType === 'debit' ? amount : 0, 
-      description || 'Manual Adjustment', 
+          description || 'Manual Adjustment', 
       processedBy
     ]);
 
@@ -860,6 +860,295 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
   }
 };
 
+/**
+ * Create Immutable Ledger Entry & Update Partner Wallet Atomically
+ */
+const createImmutableLedgerEntry = async (partnerId, data, clientParam = null) => {
+  const client = clientParam || await getClient();
+  const isOuterClient = Boolean(clientParam);
+
+  try {
+    if (!isOuterClient) await client.query('BEGIN');
+
+    await ensureWallet(partnerId, client);
+
+    const {
+      transaction_type, credit = 0, debit = 0, reference_number = null,
+      description = '', product_id = null, lead_id = null, application_id = null,
+      customer_name = null, hold_days = 7, remarks = null
+    } = data;
+
+    const numCredit = parseFloat(credit || 0);
+    const numDebit = parseFloat(debit || 0);
+
+    // Read current balances
+    const { rows: [w] } = await client.query(
+      `SELECT * FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+      [partnerId]
+    );
+
+    const currentAvail = parseFloat(w?.available_balance || 0);
+    const currentHold = parseFloat(w?.hold_balance || 0);
+    const currentEarned = parseFloat(w?.total_earned || 0);
+
+    let newAvail = currentAvail;
+    let newHold = currentHold;
+    let newEarned = currentEarned;
+    let balanceAfter = currentAvail;
+
+    // Calculate hold timestamp if credit hold
+    let holdUntil = null;
+    if (numCredit > 0 && hold_days > 0) {
+      holdUntil = new Date(Date.now() + hold_days * 24 * 60 * 60 * 1000);
+      newHold += numCredit;
+      newEarned += numCredit;
+      balanceAfter = currentAvail;
+    } else if (numCredit > 0) {
+      newAvail += numCredit;
+      newEarned += numCredit;
+      balanceAfter = newAvail;
+    }
+
+    if (numDebit > 0) {
+      newAvail -= numDebit;
+      balanceAfter = newAvail;
+    }
+
+    // 1. Create Immutable Ledger Row
+    const { rows: [ledger] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        partner_id, transaction_type, credit, debit, balance_after,
+        reference_number, description, product_id, lead_id, application_id,
+        customer_name, hold_until, status, remarks
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'completed',$13)
+      RETURNING *
+    `, [
+      partnerId, transaction_type, numCredit, numDebit, balanceAfter,
+      reference_number, description, product_id, lead_id, application_id,
+      customer_name, holdUntil, remarks
+    ]);
+
+    // 2. Atomically Update Wallet Totals
+    await client.query(`
+      UPDATE partner_wallets
+      SET available_balance = $1, hold_balance = $2, total_earned = $3, updated_at = NOW()
+      WHERE partner_id = $4
+    `, [newAvail, newHold, newEarned, partnerId]);
+
+    // 3. Create release job tracker if held credit
+    if (holdUntil) {
+      await client.query(`
+        INSERT INTO commission_release_jobs (ledger_id, partner_id, amount, release_date, status)
+        VALUES ($1, $2, $3, $4, 'pending')
+      `, [ledger.id, partnerId, numCredit, holdUntil]);
+    }
+
+    if (!isOuterClient) await client.query('COMMIT');
+    return ledger;
+  } catch (err) {
+    if (!isOuterClient) await client.query('ROLLBACK');
+    logger.error(`Failed to create immutable ledger entry for partner ${partnerId}:`, err);
+    throw err;
+  } finally {
+    if (!isOuterClient) client.release();
+  }
+};
+
+/**
+ * Automated 7-Day Hold Release Scheduler (No Manual Release Required)
+ */
+const processAutomatedCommissionReleaseScheduler = async () => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // Find all matured release jobs
+    const { rows: jobs } = await client.query(`
+      SELECT crj.*, wl.reference_number, wl.description
+      FROM commission_release_jobs crj
+      JOIN wallet_ledger wl ON wl.id = crj.ledger_id
+      WHERE crj.status = 'pending' AND crj.release_date <= NOW()
+      FOR UPDATE OF crj
+    `);
+
+    if (jobs.length === 0) {
+      await client.query('COMMIT');
+      return { processed_count: 0 };
+    }
+
+    logger.info(`Automated Release Scheduler: Processing ${jobs.length} matured commission holds...`);
+
+    for (const job of jobs) {
+      const amount = parseFloat(job.amount);
+
+      // Move held balance to available balance
+      await client.query(`
+        UPDATE partner_wallets
+        SET hold_balance = GREATEST(0, hold_balance - $1),
+            available_balance = available_balance + $1,
+            updated_at = NOW()
+        WHERE partner_id = $2
+      `, [amount, job.partner_id]);
+
+      // Update release job status
+      await client.query(`
+        UPDATE commission_release_jobs
+        SET status = 'released', processed_at = NOW()
+        WHERE id = $1
+      `, [job.id]);
+
+      // Log release transaction in wallet_ledger
+      await client.query(`
+        INSERT INTO wallet_ledger (
+          partner_id, transaction_type, credit, debit, balance_after,
+          reference_number, description, status, remarks
+        ) VALUES (
+          $1, 'COMMISSION_RELEASED', $2, 0,
+          (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
+          $3, $4, 'completed', 'Automated 7-day hold maturation release'
+        )
+      `, [job.partner_id, amount, job.reference_number, `7-Day Hold Released: ${job.description}`]);
+
+      // Notify partner
+      await notify.partner(
+        job.partner_id,
+        '💰 Commission Released to Wallet',
+        `₹${amount.toLocaleString()} has matured from 7-day hold and is now available for withdrawal!`,
+        { type: 'COMMISSION_RELEASED', amount }
+      ).catch(() => null);
+    }
+
+    await client.query('COMMIT');
+    logger.info(`Automated Release Scheduler completed for ${jobs.length} payouts.`);
+    return { processed_count: jobs.length };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('Failed to run automated commission release scheduler:', err);
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Send Withdrawal OTP
+ */
+const sendWithdrawalOTP = async (partnerId, amount) => {
+  const crypto = require('crypto');
+  const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await query(`
+    INSERT INTO wallet_withdrawals (partner_id, amount, status, otp_code, otp_expires_at)
+    VALUES ($1, $2, 'otp_pending', $3, $4)
+  `, [partnerId, amount, otpCode, expiresAt]);
+
+  logger.info(`Withdrawal OTP for partner ${partnerId}: ${otpCode}`);
+
+  // Auto notification
+  await notify.partner(
+    partnerId,
+    '🔐 Withdrawal Security OTP',
+    `Your OTP for ₹${amount.toLocaleString()} payout request is: ${otpCode}. Valid for 10 minutes.`,
+    { type: 'WITHDRAWAL_OTP', otp: otpCode }
+  ).catch(() => null);
+
+  return { otp_sent: true, expires_in_seconds: 600, mock_otp: otpCode };
+};
+
+/**
+ * Verify Withdrawal OTP
+ */
+const verifyWithdrawalOTP = async (partnerId, otpCode) => {
+  const { rows: [reqRow] } = await query(`
+    SELECT * FROM wallet_withdrawals
+    WHERE partner_id = $1 AND status = 'otp_pending' AND otp_code = $2 AND otp_expires_at >= NOW()
+    ORDER BY created_at DESC LIMIT 1
+  `, [partnerId, otpCode]);
+
+  if (!reqRow) {
+    throw new Error('Invalid or expired OTP code');
+  }
+
+  return reqRow;
+};
+
+/**
+ * Process Daily Wallet Reconciliation
+ */
+const processWalletReconciliationDailyJob = async () => {
+  const { rows: partners } = await query(`SELECT id FROM partner_profiles WHERE status = 'active'`);
+  let totalReconciled = 0;
+  let discrepanciesCount = 0;
+
+  for (const p of partners) {
+    const { rows: [w] } = await query(`SELECT available_balance, hold_balance FROM partner_wallets WHERE partner_id = $1`, [p.id]);
+    const { rows: [l] } = await query(`
+      SELECT 
+        COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as ledger_tot
+      FROM wallet_ledger 
+      WHERE partner_id = $1 AND status = 'completed'
+    `, [p.id]);
+
+    const walletBal = parseFloat(w?.available_balance || 0) + parseFloat(w?.hold_balance || 0);
+    const ledgerBal = parseFloat(l?.ledger_tot || 0);
+    const diff = Math.abs(walletBal - ledgerBal);
+
+    const isMatch = diff < 0.01;
+    await query(`
+      INSERT INTO wallet_reconciliation (partner_id, wallet_balance, ledger_balance, discrepancy, status, notes)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [p.id, walletBal, ledgerBal, diff, isMatch ? 'matched' : 'mismatch', isMatch ? 'Daily audit verified' : 'Discrepancy detected']);
+
+    totalReconciled++;
+    if (!isMatch) discrepanciesCount++;
+  }
+
+  return { total_reconciled: totalReconciled, discrepancies: discrepanciesCount };
+};
+
+/**
+ * Generate Statement Data
+ */
+const generateWalletStatementData = async (partnerId, fromDate = null, toDate = null) => {
+  let where = `WHERE partner_id = $1 AND status = 'completed'`;
+  const values = [partnerId];
+  let idx = 2;
+
+  if (fromDate) {
+    where += ` AND created_at >= $${idx++}`;
+    values.push(fromDate);
+  }
+  if (toDate) {
+    where += ` AND created_at <= $${idx++}`;
+    values.push(toDate + ' 23:59:59');
+  }
+
+  const { rows: txns } = await query(`SELECT * FROM wallet_ledger ${where} ORDER BY created_at ASC`, values);
+
+  let creditTotal = 0;
+  let debitTotal = 0;
+  txns.forEach(t => {
+    creditTotal += parseFloat(t.credit || 0);
+    debitTotal += parseFloat(t.debit || 0);
+  });
+
+  const { rows: [w] } = await query(`SELECT available_balance, hold_balance, total_earned, total_withdrawn FROM partner_wallets WHERE partner_id = $1`, [partnerId]);
+
+  return {
+    partner_id: partnerId,
+    period: { from_date: fromDate || 'Beginning', to_date: toDate || 'Present' },
+    opening_balance: 0.00,
+    credit_total: creditTotal,
+    debit_total: debitTotal,
+    closing_balance: parseFloat(w?.available_balance || 0),
+    held_balance: parseFloat(w?.hold_balance || 0),
+    total_earned: parseFloat(w?.total_earned || 0),
+    total_withdrawn: parseFloat(w?.total_withdrawn || 0),
+    transactions: txns
+  };
+};
+
 module.exports = {
   ensureWallet,
   creditHold,
@@ -871,5 +1160,11 @@ module.exports = {
   getWalletSummary,
   releaseMaturedCommissions,
   adminAdjustWallet,
-  syncWalletBalance
+  syncWalletBalance,
+  createImmutableLedgerEntry,
+  processAutomatedCommissionReleaseScheduler,
+  sendWithdrawalOTP,
+  verifyWithdrawalOTP,
+  processWalletReconciliationDailyJob,
+  generateWalletStatementData
 };

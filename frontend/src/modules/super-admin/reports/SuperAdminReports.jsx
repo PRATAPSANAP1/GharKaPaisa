@@ -1,4 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import api from "../../../services/api";
+import { useTheme, makeS } from "../../../contexts/ThemeContext";
+import { Icons } from "../../../components/Icon/PartnerIcons";
+
+export default function SuperAdminReports() {
+  const { C } = useTheme();
+  const S = makeS(C);
+
+  // Tabs: 'analytics' or 'commissions'
+  const [activeTab, setActiveTab] = useState("analytics");
+
+  // Privacy Toggle & Export States
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
+  const [exportDates, setExportDates] = useState({
+    from_date: "",
+    to_date: ""
+  });
+  const [loadingExport, setLoadingExport] = useState(false);
+  const [loadingExportPartners, setLoadingExportPartners] = useState(false);
+
+  const handleExportPartners = async () => {
+    setLoadingExportPartners(true);
+    try {
+      const res = await api.get("/reports/partners-export");
+      if (res.data?.success) {
+        const { partners, summary } = res.data.data;
+        downloadPartnersCSV(partners, summary);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to export partners report.");
+    } finally {
+      setLoadingExportPartners(false);
+    }
+  };
+
+  const downloadPartnersCSV = (partners, summary) => {
+    if (!partners || partners.length === 0) {
+      alert("No partner profiles found to export.");
       return;
     }
 
