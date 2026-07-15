@@ -88,6 +88,22 @@ const uploadVideo = multer({
   limits: { fileSize: MAX_VIDEO_SIZE },
 });
 
+const genericFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const FORBIDDEN_EXTS = ['.exe', '.bat', '.js', '.zip', '.rar', '.sh'];
+
+  if (FORBIDDEN_EXTS.includes(ext)) {
+    return cb(new Error('Forbidden file type detected'), false);
+  }
+  cb(null, true);
+};
+
+const uploadGeneric = multer({
+  storage,
+  fileFilter: genericFileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+});
+
 // Upload a buffer to S3
 const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
   let ext = path.extname(originalName).toLowerCase();
@@ -125,4 +141,4 @@ const deleteFromS3 = async (key) => {
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
+module.exports = { upload, uploadVideo, uploadGeneric, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
