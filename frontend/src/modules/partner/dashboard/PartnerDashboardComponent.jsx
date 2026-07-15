@@ -24,9 +24,8 @@ import yesLogo from "../../home/components/banks/yes_bank.png";
 import idfcLogo from "../../home/components/banks/idfc_first_bank.png";
 import bobLogo from "../../home/components/banks/bank_of_baroda.png";
 
-import OnboardingProgressCard from "./OnboardingProgressCard";
 
-export default function PartnerDashboard({ partner, onTabChange }) {
+export default function PartnerDashboard({ partner }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
@@ -57,7 +56,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
       try {
         const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes, prodRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
-          api.get(`/wallet/${partnerId}`).catch(() => null),
+          api.get('/wallet').catch(() => null),
           api.get('/partner/team-dashboard').catch(() => null),
           api.get('/partner/training').catch(() => null),
           api.get('/banners').catch(() => null),
@@ -183,15 +182,6 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   const currentEarnings = parseFloat(w.total_earned || 0);
   const targetPercent = targetGoal > 0 ? Math.min(100, Math.round((currentEarnings / targetGoal) * 100)) : 0;
 
-  // dynamic profile completion score
-  const getProfileCompletion = () => {
-    let score = 30; // base score
-    if (partner?.pan_number) score += 20;
-    if (partner?.kyc_status === 'approved') score += 30;
-    if (partner?.bank_name) score += 20;
-    return score;
-  };
-
   const handleCopyPartnerCode = () => {
     if (!partnerCode) {
       alert("Partner profile code not found.");
@@ -203,7 +193,7 @@ export default function PartnerDashboard({ partner, onTabChange }) {
 
   const handleCopyCampaignLink = (prod) => {
     if (!partnerCode) {
-      alert("Partner profile code not found. Make sure you are fully onboarded.");
+      alert("Partner profile code not found.");
       return;
     }
     const trackingLink = `${window.location.origin}/redirect/${prod.category}?id=${prod.id}&partner=${partnerCode}`;
@@ -283,9 +273,6 @@ export default function PartnerDashboard({ partner, onTabChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
-      {/* ──── ONBOARDING PROGRESS CARD ──── */}
-      <OnboardingProgressCard onTabChange={onTabChange} C={C} />
-
       {/* ──── STATUS / KYC WARNING BANNERS ──── */}
       {kycStatus !== 'approved' && (
         <div style={{

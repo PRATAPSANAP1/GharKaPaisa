@@ -383,9 +383,7 @@ export default function PartnerLogin() {
 
                 const from = location.state?.from?.pathname;
                 const role = profile.role?.toUpperCase();
-                // Redirect rejected KYC partners to KYC page
-                const kycRedirect = loginRes.kyc_status === 'rejected' ? '/partner/kyc' : null;
-                const dest = kycRedirect || from || loginRes.redirect ||
+                const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/dashboard' :
                    role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
@@ -418,11 +416,8 @@ export default function PartnerLogin() {
 
       const profile = await getMe();
       loginStore(profile, loginRes.idToken);
-      
-      // Redirect rejected KYC partners to KYC page
-      if (loginRes.kyc_status === 'rejected' && profile.role?.toUpperCase() === 'PARTNER') {
-        navigate('/partner/kyc');
-      } else if (loginRes.redirect) {
+
+      if (loginRes.redirect) {
         if (loginRes.redirect.startsWith('http')) {
           window.location.href = loginRes.redirect;
         } else {
@@ -478,7 +473,7 @@ export default function PartnerLogin() {
       <div style={{ position: "absolute", width: "400px", height: "400px", borderRadius: "50%", background: "rgba(37, 99, 235, 0.04)", filter: "blur(80px)", top: "-120px", left: "-120px", pointerEvents: "none" }} />
       <div style={{ position: "absolute", width: "350px", height: "350px", borderRadius: "50%", background: "rgba(46, 144, 250, 0.05)", filter: "blur(80px)", bottom: "-80px", right: "-120px", pointerEvents: "none" }} />
 
-      <div className="onboarding-container">
+      <div className="login-container">
 
         {/* ── Direct Login Layout ──────────────────────────────────── */}
         <div className="login-step2-layout">
@@ -1084,7 +1079,7 @@ export default function PartnerLogin() {
           to { transform: translateY(0); opacity: 1; }
         }
         
-        .onboarding-container {
+        .login-container {
           max-width: 420px;
           width: 100%;
           height: 100%;
@@ -1157,7 +1152,7 @@ export default function PartnerLogin() {
         }
         
         @media (min-width: 992px) {
-          .onboarding-container {
+          .login-container {
             max-width: 860px;
             max-height: 560px;
           }

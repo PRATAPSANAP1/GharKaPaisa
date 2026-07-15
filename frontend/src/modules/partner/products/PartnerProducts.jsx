@@ -42,7 +42,7 @@ export default function PartnerProducts() {
 
   const handleCopyLink = (product) => {
     if (!partnerCode) {
-      alert("Partner profile code not found. Make sure you are fully onboarded.");
+      alert("Partner profile code not found.");
       return;
     }
     const trackingLink = `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;

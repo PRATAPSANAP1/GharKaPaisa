@@ -189,16 +189,6 @@ export default function PartnerProfile() {
                 KYC: {profile.kyc_status}
               </span>
             </div>
-            {/* Completion Percentage Progress Bar */}
-            <div style={{ maxWidth: '260px', marginTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 'bold', color: C.textMid, marginBottom: '4px' }}>
-                <span>Profile Completion</span>
-                <span>{profile.profile_completion_percent || 0}%</span>
-              </div>
-              <div style={{ width: '100%', height: '6px', background: C.border, borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${profile.profile_completion_percent || 0}%`, height: '100%', background: `linear-gradient(90deg, ${C.primary}, ${C.primaryDark})`, borderRadius: '3px', transition: 'width 0.5s ease-in-out' }} />
-              </div>
-            </div>
           </div>
 
           {/* Edit button */}

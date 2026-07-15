@@ -108,9 +108,12 @@ export default function PartnerLayout() {
       }
     }
     
-    // If rejected, allow only specific subpaths and redirect to kyc-centre:
+    // If rejected, allow the dashboard and core self-service pages without forcing a redirect
     if (accountStatus === 'rejected') {
       const allowedPathsRejected = [
+        '/partner',
+        '/partner/',
+        '/partner/dashboard',
         '/partner/kyc-centre',
         '/partner/profile',
         '/partner/settings',
@@ -119,7 +122,7 @@ export default function PartnerLayout() {
       ];
       const isAllowed = allowedPathsRejected.some(p => currentPath === p);
       if (!isAllowed) {
-        navigate('/partner/kyc-centre');
+        navigate('/partner/dashboard');
       }
     }
   }, [accountStatus, location.pathname, navigate, logout]);
@@ -719,7 +722,6 @@ export default function PartnerLayout() {
 
 // ── DESKTOP HEADER COMPONENT ─────────────────────────────────
 function DesktopHeader({ C, user, navigate, t, i18n }) {
-  const partnerId = user?.partner_id || user?.Partner_id || user?.PartnerId;
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -730,9 +732,8 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
 
   useEffect(() => {
     const fetchWallet = async () => {
-      if (!partnerId) return;
       try {
-        const res = await api.get(`/wallet/${partnerId}`);
+        const res = await api.get('/wallet');
         if (res.data?.success) {
           const bal = res.data.data.available_balance || 0;
           setWalletBalance(`₹${parseFloat(bal).toLocaleString("en-IN")}`);
