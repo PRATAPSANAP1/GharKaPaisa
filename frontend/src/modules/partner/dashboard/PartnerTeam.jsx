@@ -59,7 +59,7 @@ export default function PartnerTeam() {
     try {
       const [dashRes, anaRes] = await Promise.all([
         api.get('/team/dashboard'),
-        api.get('/referral/analytics')
+        api.get('/team/referral/analytics')
       ]);
       if (dashRes.data?.success) setDashboardData(dashRes.data.data);
       if (anaRes.data?.success) setAnalyticsData(anaRes.data.data);
@@ -136,7 +136,7 @@ export default function PartnerTeam() {
     setShowQrModal(true);
     setLoadingQr(true);
     try {
-      const res = await api.get('/referral/qr');
+      const res = await api.get('/team/referral/qr');
       if (res.data?.success) setQrResult(res.data.data);
     } catch (err) {
       alert('Failed to generate QR Code');

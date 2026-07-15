@@ -70,7 +70,7 @@ router.use('/card-applications',cardApplicationRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 
-// ── Fallback Catch-all Router for Team & Referrals (Root level) ──
-router.use('/', teamRoutes);
+// ── Team & Referrals Routes ──
+router.use('/team', teamRoutes);
 
 module.exports = router;
