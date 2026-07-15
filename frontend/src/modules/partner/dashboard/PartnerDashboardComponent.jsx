@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
 import api from "../../../services/api";
+import QuickAccessSection from './QuickAccessSection';
 import {
   MdDashboard, MdStorefront, MdLeaderboard, MdPeople,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
@@ -754,125 +755,11 @@ export default function PartnerDashboard({ partner }) {
 
       </div>
 
-      {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
+      {/* ──── QUICK ACCESS SECTION ──── */}
+      <QuickAccessSection />
+
+      {/* ──── BOTTOM SECTION (2 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        
-        {/* Quick Access Launchpad */}
-        <div style={{
-          flex: "1.2",
-          minWidth: "300px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-        }}>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "16px", marginBottom: "18px" }}>
-            <div>
-              <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.quickAccess', 'Quick Access')}</h3>
-              <p style={{ fontSize: "12px", color: C.textLight, margin: "8px 0 0" }}>{t('dashboard.quickAccessSubtitle', 'Launch the services you need directly from your dashboard')}</p>
-            </div>
-            <div style={{ flex: "1 1 220px", minWidth: "220px" }}>
-              <div style={{ position: "relative" }}>
-                <MdSearch size={18} style={{ position: "absolute", top: 12, left: 12, color: C.textLight }} />
-                <input
-                  value={serviceSearch}
-                  onChange={(e) => handleServiceSearch(e.target.value)}
-                  placeholder={t('dashboard.quickAccessSearch', 'Search services...')}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px 10px 36px",
-                    borderRadius: "12px",
-                    border: `1px solid ${C.border}`,
-                    background: C.bgSecondary,
-                    color: C.text,
-                    fontSize: "13px"
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "18px" }}>
-            {serviceCategories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => setSelectedServiceCategory(category)}
-                style={{
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px 14px",
-                  borderRadius: "999px",
-                  background: selectedServiceCategory === category ? C.primary : C.bgSecondary,
-                  color: selectedServiceCategory === category ? "#ffffff" : C.text,
-                  fontSize: "12px",
-                  fontWeight: 700
-                }}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
-            {filteredServices.length === 0 ? (
-              <div style={{ gridColumn: "1 / -1", padding: "28px 16px", color: C.textLight, textAlign: "center", borderRadius: "16px", background: C.bgSecondary }}>
-                {t('dashboard.noQuickAccessServices', 'No quick access services found. Try another search or category.')}
-              </div>
-            ) : filteredServices.map((service) => {
-              const isDisabled = service.status !== 'active';
-              return (
-                <button
-                  key={service.id}
-                  type="button"
-                  onClick={() => handleServiceTileClick(service)}
-                  disabled={isDisabled}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: "10px",
-                    padding: "18px",
-                    minHeight: "140px",
-                    width: "100%",
-                    borderRadius: "18px",
-                    border: `1px solid ${C.border}`,
-                    background: isDisabled ? C.bgSecondary : C.card,
-                    color: C.text,
-                    textAlign: "left",
-                    cursor: isDisabled ? "not-allowed" : "pointer",
-                    transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                    boxShadow: isDisabled ? "none" : "0 10px 24px rgba(0,0,0,0.04)"
-                  }}
-                  className={isDisabled ? undefined : 'hover-scale'}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "42px", height: "42px", borderRadius: "14px", background: `${C.primary}12`, fontSize: "20px" }}>
-                    {getServiceIcon(service.icon)}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
-                    <span style={{ fontSize: "14px", fontWeight: 800, color: C.text }}>{service.name}</span>
-                    <span style={{ fontSize: "11px", color: C.textLight, wordBreak: "break-word" }}>{service.route}</span>
-                  </div>
-                  <span style={{
-                    alignSelf: "stretch",
-                    display: "inline-flex",
-                    justifyContent: "center",
-                    padding: "6px 10px",
-                    borderRadius: "999px",
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    background: isDisabled ? `${C.red}10` : `${C.green}10`,
-                    color: isDisabled ? C.red : C.green
-                  }}>
-                    {isDisabled ? t('dashboard.comingSoon', 'Coming Soon') : t('dashboard.launch', 'Launch')}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Team Performance (100% Dynamic) */}
         <div style={{
