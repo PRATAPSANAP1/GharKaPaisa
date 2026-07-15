@@ -69,7 +69,6 @@ api.interceptors.request.use((config) => {
   showLoader();
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  config.headers['X-Device-Id'] = getDeviceId();
   return config;
 }, (err) => {
   activeRequests--;
