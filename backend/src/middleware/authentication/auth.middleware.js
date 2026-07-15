@@ -15,8 +15,10 @@ const { JWT_SECRET } = require('../../config/jwt.js');
 const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1] || req.query.token;
+    console.log(`[authenticate] ${req.method} ${req.originalUrl} — token present: ${!!token}`);
 
     if (!token) {
+      console.log(`[authenticate] BLOCKED — no token for ${req.method} ${req.originalUrl}`);
       return unauthorized(res, 'No token provided');
     }
 
@@ -178,7 +180,11 @@ const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
 const optionalAuth = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return next();
+    console.log('[optionalAuth] token present:', !!token);
+    if (!token) {
+      console.log('[optionalAuth] No token, proceeding without auth');
+      return next();
+    }
 
     const decodedToken = jwt.verify(token, JWT_SECRET);
     req.user = {
@@ -206,8 +212,9 @@ const optionalAuth = async (req, res, next) => {
       }
     }
   } catch (err) {
-    // Ignore and proceed
+    console.log('[optionalAuth] Error caught, proceeding:', err.message);
   }
+  console.log('[optionalAuth] Calling next()');
   next();
 };
 
