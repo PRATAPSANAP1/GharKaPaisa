@@ -111,6 +111,10 @@ export default function PartnerLogin() {
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const verifyingRef = useRef(false);
 
+  const [status, setStatus] = useState("idle");
+  const [borderProgress, setBorderProgress] = useState(0);
+  const [showPlacementStyles, setShowPlacementStyles] = useState(false);
+
   // Forgot Mobile / Forgot Password modal states
   const [showForgotMobileModal, setShowForgotMobileModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
@@ -167,66 +171,214 @@ export default function PartnerLogin() {
     setForm(f => ({ ...f, otp: otpDigits.join("") }));
   }, [otpDigits]);
 
-  // Auto-submit when all 6 digits are filled
   useEffect(() => {
-    const code = otpDigits.join("");
-    if (code.length === 6 && otpSent && method === "otp" && !loading.login) {
-      handleSubmit(null, code);
+    if (status !== "idle") {
+      setShowPlacementStyles(false);
+      const timer = window.setTimeout(() => setShowPlacementStyles(true), 900);
+      return () => window.clearTimeout(timer);
     }
-  }, [otpDigits]); // eslint-disable-line react-hooks/exhaustive-deps
+    setShowPlacementStyles(false);
+  }, [status]);
 
-  // Web OTP API — auto-fill from SMS on Android Chrome
   useEffect(() => {
-    if (!otpSent || !('OTPCredential' in window)) return;
-    const ac = new AbortController();
-    navigator.credentials.get({ otp: { transport: ['sms'] }, signal: ac.signal })
-      .then(credential => {
-        if (credential?.code) {
-          const digits = credential.code.replace(/\D/g, '').slice(0, 6).split('');
-          const filled = [...digits, ...Array(6 - digits.length).fill('')];
-          setOtpDigits(filled);
-        }
-      })
-      .catch(() => {});
-    return () => ac.abort();
-  }, [otpSent]);
+    const isComplete = otpDigits.every((digit) => digit !== "");
 
-  const handleRoleSelect = (roleName) => {
-    setSelectedRole(roleName);
-    localStorage.setItem("gkp_last_role", roleName);
+    if (!isComplete || status !== "idle" || !otpSent) {
+      if (!isComplete) {
+        setBorderProgress(0);
+      }
+      return;
+    }
+
+    let progress = 0;
+    const interval = window.setInterval(() => {
+      progress += 1; // 100 steps over 1000ms = 1s total
+      if (progress >= 100) {
+        progress = 100;
+        window.clearInterval(interval);
+        submitOtpLogin();
+      }
+      setBorderProgress(progress);
+    }, 10);
+
+    return () => window.clearInterval(interval);
+  }, [otpDigits, status, otpSent]);
+
+  const resetOtp = () => {
+    setStatus("idle");
+    setOtpDigits(["", "", "", "", "", ""]);
+    setBorderProgress(0);
+    setErr("");
+    window.setTimeout(() => {
+      otpInputs.current[0]?.focus();
+    }, 40);
+  };
+
+  const handleResolvedEdit = () => {
+    if (status !== "idle") {
+      resetOtp();
+      return true;
+    }
+    return false;
+  };
+
+  const submitOtpLogin = async () => {
+    const finalOtp = otpDigits.join("");
+    if (!finalOtp || finalOtp.length < 6) {
+      setStatus("fail");
+      setErr(t('partner.errors.enterOtpCode', 'Please enter the 6-digit OTP.'));
+      return;
+    }
+
+    setErr("");
+    setLoading(l => ({ ...l, login: true }));
+
+    try {
+      let loginRes;
+      const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
+
+      // ── Mobile MSG91 verify flow ──
+      if (isMobile) {
+        if (typeof window.verifyOtp !== 'function') {
+          setStatus("fail");
+          throw new Error("MSG91 service is temporarily unavailable. Please refresh the page.");
+        }
+
+        let verifyDone = false;
+        const verifyTimeout = setTimeout(() => {
+          if (!verifyDone) {
+            verifyDone = true;
+            setStatus("fail");
+            setErr(t("partner.errors.verificationTimeout", "Verification timed out. Please try again."));
+            setLoading(l => ({ ...l, login: false }));
+          }
+        }, 15000);
+
+        window.verifyOtp(
+          finalOtp,
+          async (verifyData) => {
+            if (verifyDone) return;
+            verifyDone = true;
+            clearTimeout(verifyTimeout);
+            try {
+              const tokenVal = verifyData?.message || verifyData?.accessToken || verifyData?.['access-token'] || (typeof verifyData === 'string' ? verifyData : verifyData?.data);
+              if (!tokenVal) {
+                throw new Error("Could not retrieve verification token from MSG91.");
+              }
+
+              loginRes = await loginWithMsg91(form.identity.trim(), tokenVal);
+              const profile = await getMe();
+              loginStore(profile, loginRes.idToken);
+
+              setStatus("success");
+
+              setTimeout(() => {
+                const from = location.state?.from?.pathname;
+                const role = profile.role?.toUpperCase();
+                const dest = from || loginRes.redirect ||
+                  (role === 'SUPER_ADMIN' ? '/super-admin/dashboard' :
+                   role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
+                window.location.href = dest;
+              }, 1500);
+            } catch (errVal) {
+              setStatus("fail");
+              setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
+              setLoading(l => ({ ...l, login: false }));
+            }
+          },
+          (errResponse) => {
+            if (verifyDone) return;
+            verifyDone = true;
+            clearTimeout(verifyTimeout);
+            setStatus("fail");
+            setErr(errResponse?.message || t("partner.errors.invalidOtpEntered", "Invalid OTP code entered."));
+            setLoading(l => ({ ...l, login: false }));
+          }
+        );
+        return;
+      }
+
+      // ── Email AWS SES verification flow ──
+      loginRes = await loginWithOtp(form.identity.trim(), finalOtp);
+      const profile = await getMe();
+      loginStore(profile, loginRes.idToken);
+
+      setStatus("success");
+
+      setTimeout(() => {
+        if (loginRes.redirect) {
+          if (loginRes.redirect.startsWith('http')) {
+            window.location.href = loginRes.redirect;
+          } else {
+            const targetRedirect = loginRes.redirect === '/superadmin/dashboard' ? '/super-admin/dashboard' : loginRes.redirect;
+            navigate(location.state?.from?.pathname || targetRedirect);
+          }
+        } else {
+          const role = profile.role?.toUpperCase();
+          if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/dashboard');
+          else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+          else navigate(location.state?.from?.pathname || '/partner/dashboard');
+        }
+      }, 1500);
+    } catch (e) {
+      setStatus("fail");
+      setErr(e.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
+      setLoading(l => ({ ...l, login: false }));
+    }
   };
 
   const handleOtpDigitChange = (value, index) => {
-    const cleanVal = value.replace(/\D/g, "").slice(-1);
+    if (handleResolvedEdit()) {
+      return;
+    }
+    const digit = value.replace(/\D/g, "").slice(0, 1);
     const newDigits = [...otpDigits];
-    newDigits[index] = cleanVal;
+    newDigits[index] = digit;
     setOtpDigits(newDigits);
-    if (cleanVal && index < 5) otpInputs.current[index + 1]?.focus();
+
+    if (digit && index < 5) {
+      otpInputs.current[index + 1]?.focus();
+    }
   };
 
   const handleOtpKeyDown = (e, index) => {
-    if (e.key === "Backspace") {
-      if (!otpDigits[index] && index > 0) {
-        const newDigits = [...otpDigits];
-        newDigits[index - 1] = "";
-        setOtpDigits(newDigits);
-        otpInputs.current[index - 1]?.focus();
-      } else {
-        const newDigits = [...otpDigits];
-        newDigits[index] = "";
-        setOtpDigits(newDigits);
-      }
+    if (e.key !== "Backspace") {
+      return;
+    }
+    e.preventDefault();
+    if (handleResolvedEdit()) {
+      return;
+    }
+    if (otpDigits[index]) {
+      const newDigits = [...otpDigits];
+      newDigits[index] = "";
+      setOtpDigits(newDigits);
+      return;
+    }
+    if (index > 0) {
+      otpInputs.current[index - 1]?.focus();
+      const newDigits = [...otpDigits];
+      newDigits[index - 1] = "";
+      setOtpDigits(newDigits);
     }
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (!pasted) return;
+    if (handleResolvedEdit()) {
+      return;
+    }
+    const pastedData = e.clipboardData.getData("text").trim().substring(0, 6);
+    const digits = pastedData.replace(/\D/g, "").slice(0, 6).split("");
     const newDigits = ["", "", "", "", "", ""];
-    pasted.split("").forEach((d, i) => { newDigits[i] = d; });
+
+    digits.forEach((digit, idx) => {
+      newDigits[idx] = digit;
+    });
     setOtpDigits(newDigits);
-    otpInputs.current[Math.min(pasted.length, 5)]?.focus();
+
+    const focusIdx = digits.length >= 6 ? 5 : Math.max(digits.length, 0);
+    otpInputs.current[focusIdx]?.focus();
   };
 
   // ── Send OTP ─────────────────────────────────────────────────────────────────
@@ -609,24 +761,25 @@ export default function PartnerLogin() {
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", textAlign: "left" }}>
                 
                 {/* Email or Mobile Number Input */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label id="label-login-identity" style={S.label}>{t("login.emailOrMobile", "Email or Mobile Number")}</label>
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>
-                      {/^[6-9]\d{9}$/.test(form.identity.trim()) ? <Icons.phone size={14} /> : <Icons.mail size={14} />}
-                    </span>
-                    <input
-                      type="text"
-                      value={form.identity}
-                      onChange={e => setForm(f => ({ ...f, identity: e.target.value }))}
-                      placeholder={t("login.identityPlaceholder", "Enter email or mobile number")}
-                      style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
-                      onFocus={e => (e.target.style.border = focusBorder)}
-                      onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
-                      disabled={method === "otp" && otpSent}
-                    />
+                {!(method === "otp" && otpSent) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label id="label-login-identity" style={S.label}>{t("login.emailOrMobile", "Email or Mobile Number")}</label>
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>
+                        {/^[6-9]\d{9}$/.test(form.identity.trim()) ? <Icons.phone size={14} /> : <Icons.mail size={14} />}
+                      </span>
+                      <input
+                        type="text"
+                        value={form.identity}
+                        onChange={e => setForm(f => ({ ...f, identity: e.target.value }))}
+                        placeholder={t("login.identityPlaceholder", "Enter email or mobile number")}
+                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
+                        onFocus={e => (e.target.style.border = focusBorder)}
+                        onBlur={e => (e.target.style.border = `1.5px solid ${C.border}`)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* ── Password Field Render (DEFAULT) ── */}
                 {method === "password" && (
@@ -654,134 +807,157 @@ export default function PartnerLogin() {
                 )}
 
                 {/* ── OTP Fields Render (ALTERNATIVE) ── */}
-                {method === "otp" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <label id="label-login-otp" style={S.label}>{t("login.enterOtpLabel", "Enter 6-Digit OTP")}</label>
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      
-                      {/* 6 OTP Inputs */}
-                      <div style={{ display: "flex", gap: "4px", flex: 1 }}>
-                        {otpDigits.map((digit, i) => (
-                          <input
-                            key={i}
-                            ref={el => otpInputs.current[i] = el}
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete={i === 0 ? "one-time-code" : "off"}
-                            pattern="[0-9]*"
-                            maxLength={1}
-                            value={digit}
-                            onChange={e => handleOtpDigitChange(e.target.value, i)}
-                            onKeyDown={e => handleOtpKeyDown(e, i)}
-                            onPaste={i === 0 ? handleOtpPaste : undefined}
-                            style={{
-                              width: "100%",
-                              height: "36px",
-                              borderRadius: "8px",
-                              border: `1.5px solid ${digit ? "#2563EB" : C.border}`,
-                              background: C.inputBg,
-                              color: C.text,
-                              fontSize: "15px",
-                              fontWeight: 800,
-                              textAlign: "center",
-                              outline: "none"
-                            }}
-                          />
-                        ))}
-                      </div>
+                {method === "otp" && otpSent && (
+                  <div className="otp-card-inner" style={{ width: "100%" }}>
+                    <div className="otp-header" style={{ marginBottom: "1rem" }}>
+                      <label style={S.label}>{t("login.enterOtpLabel", "Enter 6-Digit OTP")}</label>
+                      <p style={{ color: C.textLight, fontSize: '12px', margin: '4px 0 0' }}>
+                        We've sent a code to <span style={{ fontWeight: 700, color: C.text }}>{form.identity}</span>
+                      </p>
+                    </div>
 
-                      {/* Send OTP button */}
-                      <button
-                        id="btn-login-send-otp"
-                        type="button"
-                        onClick={handleSendOtp}
-                        disabled={loading.otp || (otpSent && timer > 0)}
-                        style={{
-                          background: otpSent ? "rgba(37, 99, 235, 0.08)" : "#2563EB",
-                          color: otpSent ? "#2563EB" : "#FFFFFF",
-                          border: otpSent ? "1px solid #2563EB" : "none",
-                          borderRadius: "10px",
-                          padding: "0 12px",
-                          height: "36px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          cursor: (loading.otp || (otpSent && timer > 0)) ? "not-allowed" : "pointer",
-                          opacity: (loading.otp || (otpSent && timer > 0)) ? 0.7 : 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px"
-                        }}
-                      >
-                        {loading.otp ? t("login.otpSending", "Sending...") : otpSent ? (timer > 0 ? `${t("login.otpResend", "Resend")} (${timer}s)` : t("login.otpResend", "Resend")) : t("login.otpSend", "Send OTP")}
-                      </button>
+                    <div className={`otp-input-group ${status !== "idle" ? "stacked" : ""}`} onPaste={handleOtpPaste}>
+                      {otpDigits.map((digit, index) => {
+                        const isTopCard = index === 0;
+                        const isBorderAnimating = status === "idle" && borderProgress > 0;
+                        const stackOffset = status === "idle" ? "translate(0, 0)" : 
+                          isTopCard 
+                            ? "translate(-50%, -50%) scale(1.05)" 
+                            : `translate(calc(-50% + ${(6 - 1 - index) * 1.5}px), calc(-50% + ${(6 - 1 - index) * 1.5}px)) scale(${0.98 - (6 - 1 - index) * 0.02})`;
+
+                        return (
+                          <div
+                            key={index}
+                            className={`otp-slot ${status !== "idle" ? "stacked" : ""} ${isTopCard ? "top-card" : "back-card"}`}
+                            style={{
+                              zIndex: 6 - index,
+                              transform: stackOffset,
+                              transitionDelay: status !== "idle" ? `${index * 60}ms` : "0ms",
+                            }}
+                          >
+                            <div
+                              className={`otp-shell ${isBorderAnimating ? "border-drawing" : ""} ${status} ${showPlacementStyles ? "placed" : ""}`}
+                              style={
+                                isBorderAnimating
+                                  ? { "--progress": `${borderProgress}%` }
+                                  : undefined
+                              }
+                            >
+                              <input
+                                ref={el => otpInputs.current[index] = el}
+                                className={`otp-input ${status !== "idle" && !isTopCard ? "stack-shadow" : ""}`}
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(event) => handleOtpDigitChange(event.target.value, index)}
+                                onKeyDown={(event) => handleOtpKeyDown(event, index)}
+                                disabled={status !== "idle"}
+                                aria-label={`OTP digit ${index + 1}`}
+                              />
+                              {status !== "idle" && isTopCard ? (
+                                <span className={`otp-result-icon ${status} ${showPlacementStyles ? "placed" : ""}`} aria-hidden="true">
+                                  {status === "success" ? "✓" : status === "fail" ? "✕" : ""}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="resend-area" style={{ marginTop: '1.25rem' }}>
+                      <span>Didn't receive the code?</span>
+                      {timer > 0 ? (
+                        <span style={{ fontWeight: 700, color: C.textLight, marginLeft: '4px' }}>{timer}s</span>
+                      ) : (
+                        <button type="button" className="resend-link" onClick={handleSendOtp} disabled={loading.otp}>
+                          {loading.otp ? t("login.otpSending", "Sending...") : t("login.otpResend", "Resend")}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="info-note" style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+                      {status === "idle"
+                        ? borderProgress > 0 && borderProgress < 100
+                          ? "Drawing border, then verifying..."
+                          : "Enter code - auto verify"
+                        : status === "success"
+                          ? "Verified successfully"
+                          : "Verification failed"}
                     </div>
                   </div>
                 )}
 
                 {/* Remember & Links Row */}
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "11px", marginTop: "2px" }}>
-                  {method === "otp" ? (
-                    <span 
-                      id="link-forgot-mobile" 
-                      onClick={() => setShowForgotMobileModal(true)}
-                      style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
-                    >
-                      {t("login.forgotMobile", "Forgot Mobile Number?")}
-                    </span>
-                  ) : (
-                    <span 
-                      id="link-forgot-password"
-                      onClick={() => setShowForgotPasswordModal(true)}
-                      style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
-                    >
-                      {t("login.forgotPassword", "Forgot Password?")}
-                    </span>
-                  )}
-                </div>
+                {!(method === "otp" && otpSent) && (
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", fontSize: "11px", marginTop: "2px" }}>
+                    {method === "otp" ? (
+                      <span 
+                        id="link-forgot-mobile" 
+                        onClick={() => setShowForgotMobileModal(true)}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        {t("login.forgotMobile", "Forgot Mobile Number?")}
+                      </span>
+                    ) : (
+                      <span 
+                        id="link-forgot-password"
+                        onClick={() => setShowForgotPasswordModal(true)}
+                        style={{ color: "#2563EB", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        {t("login.forgotPassword", "Forgot Password?")}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Primary Secure Submit Button */}
-                <button
-                  id="btn-login-submit"
-                  type="submit"
-                  disabled={loading.login}
-                  style={{
-                    background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
-                    color: "#FFFFFF",
-                    border: "none",
-                    borderRadius: "14px",
-                    padding: "12px 16px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    width: "100%",
-                    cursor: loading.login ? "not-allowed" : "pointer",
-                    opacity: loading.login ? 0.8 : 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    marginTop: "6px",
-                    boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
-                  }}
-                >
-                  {loading.login ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{
-                        width: "12px", height: "12px", borderRadius: "50%",
-                        border: "2px solid rgba(255,255,255,0.4)",
-                        borderTop: "2px solid #fff",
-                        animation: "spin 0.7s linear infinite"
-                      }} />
-                      {t("login.verifying", "Verifying...")}
-                    </span>
-                  ) : (
-                    <>
-                      <Icons.Lock size={14} color="#FFFFFF" />
-                      <span id="label-login-secure">
-                        {method === "password" ? t("login.loginWithPasswordSubmit", "Login to Account") : t("login.loginWithOtpSubmit", "Verify & Login")}
+                {!(method === "otp" && otpSent) && (
+                  <button
+                    id="btn-login-submit"
+                    type={method === "password" ? "submit" : "button"}
+                    onClick={method === "otp" ? handleSendOtp : undefined}
+                    disabled={method === "password" ? loading.login : loading.otp}
+                    style={{
+                      background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "14px",
+                      padding: "12px 16px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      width: "100%",
+                      cursor: (method === "password" ? loading.login : loading.otp) ? "not-allowed" : "pointer",
+                      opacity: (method === "password" ? loading.login : loading.otp) ? 0.8 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      marginTop: "6px",
+                      boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)"
+                    }}
+                  >
+                    {(method === "password" ? loading.login : loading.otp) ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{
+                          width: "12px", height: "12px", borderRadius: "50%",
+                          border: "2px solid rgba(255,255,255,0.4)",
+                          borderTop: "2px solid #fff",
+                          animation: "spin 0.7s linear infinite"
+                        }} />
+                        {method === "password" ? t("login.verifying", "Verifying...") : t("login.otpSending", "Sending...")}
                       </span>
-                    </>
-                  )}
-                </button>
+                    ) : (
+                      <>
+                        <Icons.Lock size={14} color="#FFFFFF" />
+                        <span id="label-login-secure">
+                          {method === "password" ? t("login.loginWithPasswordSubmit", "Login to Account") : t("login.otpSend", "Send OTP")}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
               </form>
 
             </div>
@@ -1073,6 +1249,220 @@ export default function PartnerLogin() {
       )}
 
       <style>{`
+        :root {
+          --otp-card-bg: ${C.card || '#ffffff'};
+          --otp-input-bg: ${C.bgSecondary || '#f1f5f9'};
+          --otp-text: ${C.text || '#1e293b'};
+          --otp-text-light: ${C.textLight || '#64748b'};
+          --otp-border: ${C.border || '#e2e8f0'};
+          --otp-primary: ${C.teal || '#0ea5e9'};
+          --otp-success: ${C.green || '#1bbb6b'};
+          --otp-danger: ${C.red || '#ef4444'};
+        }
+        .otp-card-inner {
+          width: 100%;
+          text-align: center;
+        }
+        .otp-input-group {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.65rem;
+          min-height: 4.5rem;
+          margin: 2rem 0 1.5rem;
+        }
+        .otp-input-group.stacked {
+          min-height: 5.8rem;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .otp-slot {
+          width: 3rem;
+          height: 3.8rem;
+          transition: transform 0.3s ease-in-out, opacity 0.3s ease;
+          will-change: transform;
+        }
+        .otp-slot.stacked {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+        }
+        .otp-shell {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 1.15rem;
+          border: 2px solid transparent;
+          box-shadow: none;
+          transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease;
+        }
+        .otp-shell.placed {
+          border-color: var(--otp-primary);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--otp-border);
+        }
+        .otp-shell.placed.success {
+          border-color: var(--otp-success);
+          box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);
+        }
+        .otp-shell.placed.fail {
+          border-color: var(--otp-danger);
+          box-shadow: 0 0 50px rgba(239, 68, 68, 0.3);
+        }
+        .otp-shell::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          padding: 2px;
+          border-radius: inherit;
+          background: var(--otp-border);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          transition: background 1s ease-in-out, box-shadow 1s ease-in-out, transform 1s ease-in-out;
+          z-index: 2;
+        }
+        .otp-shell.border-drawing::before {
+          background: conic-gradient(
+            from 315deg,
+            var(--otp-primary) var(--progress, 0%),
+            var(--otp-border) var(--progress, 0%)
+          );
+        }
+        .otp-slot.top-card.stacked .otp-shell::before {
+          background: transparent;
+        }
+        .otp-slot.top-card.stacked .otp-shell.placed {
+          box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.25);
+          animation: stack-glow 1s ease-in-out;
+        }
+        @keyframes stack-glow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+            transform: scale(0.8);
+          }
+          50% {
+            box-shadow: 0 0 12px 6px rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+          }
+          100% {
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.25);
+            transform: scale(1.05);
+          }
+        }
+        .otp-shell.success::before {
+          background: var(--otp-success);
+          box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.18), 0 22px 44px rgba(34, 197, 94, 0.28);
+        }
+        .otp-shell.fail::before {
+          background: var(--otp-danger);
+          box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16), 0 22px 44px rgba(239, 68, 68, 0.26);
+        }
+        .otp-input {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border: 2px solid transparent;
+          border-radius: 1.15rem;
+          background: var(--otp-input-bg);
+          color: var(--otp-text);
+          text-align: center;
+          font-size: 1.6rem;
+          font-weight: 700;
+          outline: none;
+          caret-color: var(--otp-primary);
+          box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.05);
+          transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease;
+        }
+        .otp-input:focus {
+          background: var(--otp-card-bg);
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), inset 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .otp-input:disabled {
+          cursor: default;
+        }
+        .otp-slot.stacked.back-card .otp-input,
+        .otp-slot.stacked .otp-input {
+          color: transparent;
+        }
+        .otp-slot.stacked.back-card .otp-input {
+          opacity: 0.88;
+        }
+        .otp-input.stack-shadow {
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+        .otp-result-icon {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          font-size: 1.95rem;
+          font-weight: 900;
+          pointer-events: none;
+          width: 3rem;
+          height: 3rem;
+          margin: auto;
+          animation: icon-pop 0.48s ease;
+        }
+        .otp-result-icon.success {
+          color: var(--otp-success);
+          text-shadow: 0 0 18px rgba(34, 197, 94, 0.35);
+        }
+        .otp-result-icon.fail {
+          color: var(--otp-danger);
+          text-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
+        }
+        .resend-area {
+          display: flex;
+          justify-content: center;
+          gap: 0.3rem;
+          align-items: center;
+          color: var(--otp-text-light);
+          font-size: 0.95rem;
+        }
+        .resend-link {
+          border: 0;
+          background: transparent;
+          color: var(--otp-primary);
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .info-note {
+          min-height: 1.25rem;
+          margin-top: 0.55rem;
+          color: var(--otp-text-light);
+          font-size: 0.86rem;
+        }
+        @keyframes icon-pop {
+          0% {
+            transform: scale(0.55);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        @media (max-width: 520px) {
+          .otp-input-group {
+            gap: 0.5rem;
+          }
+          .otp-slot {
+            width: 2.6rem;
+            height: 3.3rem;
+          }
+          .otp-input {
+            font-size: 1.4rem;
+          }
+          .otp-result-icon {
+            font-size: 1.6rem;
+          }
+        }
+
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn {
           from { transform: translateY(-20px); opacity: 0; }
