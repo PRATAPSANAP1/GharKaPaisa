@@ -416,46 +416,15 @@ export default function PartnerProducts() {
       margin: '0 auto',
       boxSizing: 'border-box'
     }}>
-      {/* ─── PAGE HEADER & HIGHLIGHT BANNER ROW ─── */}
+      {/* ─── PAGE HEADER ROW ─── */}
       <div style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: isMobile ? 'flex-start' : 'center',
-        gap: '16px',
         width: '100%',
         borderBottom: `1.5px solid ${C.border}`,
-        paddingBottom: '20px'
+        paddingBottom: '16px'
       }}>
-        {/* Title */}
-        <div>
-          <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, color: C.text, margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
-            Products Marketplace
-          </h1>
-          <p style={{ fontSize: '14px', fontWeight: 550, color: C.textLight, margin: 0 }}>
-            Explore and promote financial products with the best offers for your customers.
-          </p>
-        </div>
-
-        {/* Highlight Banner */}
-        <div style={{
-          background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-          borderRadius: '16px',
-          padding: '16px 20px',
-          color: '#fff',
-          boxShadow: isDark ? 'none' : `0 8px 20px ${C.primary}20`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          maxWidth: isMobile ? '100%' : '380px',
-          boxSizing: 'border-box'
-        }}>
-          <span style={{ fontSize: '28px' }}>⭐</span>
-          <div>
-            <div style={{ fontSize: '13.5px', fontWeight: 800 }}>Best Commission + High Approval</div>
-            <div style={{ fontSize: '11.5px', opacity: 0.9, marginTop: '2px', fontWeight: 600 }}>Earn more with top performing products</div>
-          </div>
-        </div>
+        <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
+          Products Marketplace
+        </h1>
       </div>
 
       {/* ─── MAIN SIDEBAR + GRID CONTAINER ─── */}
@@ -792,34 +761,6 @@ export default function PartnerProducts() {
                         </span>
                       </div>
 
-                      {/* Marketing Pills */}
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                        {badges.map(b => (
-                          <span key={b} style={{
-                            fontSize: '10.5px',
-                            fontWeight: 750,
-                            background: b === 'High Commission' ? `${C.green}15` : `${C.primary}12`,
-                            color: b === 'High Commission' ? C.green : C.primary,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            border: b === 'High Commission' ? `1px solid ${C.green}30` : `1px solid ${C.primary}20`
-                          }}>
-                            {b}
-                          </span>
-                        ))}
-                        <span style={{
-                          fontSize: '10.5px',
-                          fontWeight: 750,
-                          background: `${C.gold}15`,
-                          color: C.gold,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: `1px solid ${C.gold}30`
-                        }}>
-                          🔥 {approvalRate}% Approved
-                        </span>
-                      </div>
-
                       {/* Product Logo & Info Header */}
                       <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '14px' }}>
                         <div style={{
@@ -850,25 +791,9 @@ export default function PartnerProducts() {
                       </div>
 
                       {/* Description */}
-                      <p style={{ fontSize: '13.5px', fontWeight: 500, color: C.textMid, margin: '0 0 12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                      <p style={{ fontSize: '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
                         {product.description || 'Access pre-approved partner terms and competitive payouts directly.'}
                       </p>
-
-                      {/* Eligibility Summary section */}
-                      <div style={{
-                        background: C.bgSecondary,
-                        borderRadius: '10px',
-                        padding: '10px 12px',
-                        fontSize: '12px',
-                        color: C.textLight,
-                        fontWeight: 600,
-                        border: `1px solid ${C.border}`,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px'
-                      }}>
-                        <div>🎯 <span style={{ color: C.textMid }}>Eligibility:</span> {eligibilityCriteria}</div>
-                      </div>
                     </div>
 
                     {/* Footer Action Bar */}
