@@ -24,6 +24,34 @@ const CATEGORIES = [
 
 const BANKS = ['All Banks', 'HDFC', 'SBI', 'Axis', 'ICICI', 'BOB', 'IndusInd', 'AU Small Finance', 'IDFC'];
 
+const getCategoryEmoji = (cat) => {
+  const c = cat?.toLowerCase() || '';
+  if (c.includes('card')) return '💳';
+  if (c.includes('loan')) return '🏦';
+  if (c.includes('insurance')) return '🛡';
+  if (c.includes('savings')) return '🏛';
+  if (c.includes('fastag')) return '🚗';
+  if (c.includes('demat')) return '📈';
+  return '💰';
+};
+
+const getMarketingBadges = (p) => {
+  const val = parseFloat(p.commission_value || 0);
+  const cat = p.category?.toLowerCase() || '';
+  const badges = [];
+  if (val >= 1200) badges.push('High Commission');
+  if (cat.includes('card')) {
+    if (p.name.toLowerCase().includes('pixel') || p.name.toLowerCase().includes('zone')) {
+      badges.push('Lifetime Free');
+    } else {
+      badges.push('Co Branded');
+    }
+  }
+  if (cat.includes('loan')) badges.push('Instant Loan');
+  if (badges.length === 0) badges.push('Trending');
+  return badges.slice(0, 2);
+};
+
 export default function PartnerProducts() {
   const { t } = useTranslation();
   const { C } = useTheme();
@@ -55,10 +83,20 @@ export default function PartnerProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Filters
+  // Filters & Sorting & Pagination
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeBank, setActiveBank] = useState("All Banks");
+  const [sortBy, setSortBy] = useState("featured");
+  const [minCommission, setMinCommission] = useState(0);
+  const [minApproval, setMinApproval] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const cardsPerPage = 6;
+
+  // Reset pagination when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeCategory, activeBank, sortBy, minCommission, minApproval]);
 
   // Lead modal/form state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -146,24 +184,76 @@ export default function PartnerProducts() {
     }
   };
 
+  // Get simulated approval rate for a product
+  const getApprovalRate = (p) => {
+    return p.approval_rate || (p.id ? (p.id.charCodeAt(0) % 20) + 78 : 85);
+  };
+
   // Filter Logic
   const filteredProducts = products.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                        p.description?.toLowerCase().includes(search.toLowerCase());
+    const approvalRate = getApprovalRate(p);
+    
+    // Deep Search: by Name, Bank Code, Category, Commission, Eligibility
+    const details = getCardDetails(p.id || p.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), p.name);
+    const eligibilityText = details.eligibility?.criteria || '';
+    
+    const query = search.toLowerCase();
+    const matchSearch = !query || 
+                        p.name.toLowerCase().includes(query) || 
+                        p.bank_code?.toLowerCase().includes(query) ||
+                        p.category?.toLowerCase().includes(query) ||
+                        p.commission_value?.toString().includes(query) ||
+                        eligibilityText.toLowerCase().includes(query);
+                        
     const matchCategory = activeCategory === 'all' || p.category === activeCategory;
     const matchBank = activeBank === 'All Banks' || p.bank_code === activeBank || p.name.includes(activeBank);
     
-    return matchSearch && matchCategory && matchBank;
+    // Commission Filter
+    const matchCommission = parseFloat(p.commission_value || 0) >= minCommission;
+    
+    // Approval % Filter
+    const matchApproval = approvalRate >= minApproval;
+    
+    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval;
   });
+
+  // Sort Logic
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    if (sortBy === 'highest_commission') {
+      return parseFloat(b.commission_value || 0) - parseFloat(a.commission_value || 0);
+    }
+    if (sortBy === 'newest') {
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    }
+    if (sortBy === 'highest_approval') {
+      return getApprovalRate(b) - getApprovalRate(a);
+    }
+    if (sortBy === 'a_z') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'popular') {
+      const popA = a.id ? a.id.charCodeAt(0) % 100 : 50;
+      const popB = b.id ? b.id.charCodeAt(0) % 100 : 50;
+      return popB - popA;
+    }
+    // Default: featured
+    return (b.id || '').localeCompare(a.id || '');
+  });
+
+  // Pagination Logic
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = sortedProducts.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = Math.ceil(sortedProducts.length / cardsPerPage);
 
   const sectionLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' };
 
   // Helper to render filter options block
   const renderFilterContent = () => (
-    <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 style={{ fontWeight: 700, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '15px' }}>
-          <MdFilterList /> Filter Market
+    <div style={{ ...S.card, padding: '24px', borderRadius: '20px', background: C.card, border: `1.5px solid ${C.border}`, boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.04)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '18px' }}>
+          <MdFilterList size={20} style={{ color: C.primary }} /> Filter Products
         </h3>
         {isMobile && (
           <button 
@@ -177,7 +267,7 @@ export default function PartnerProducts() {
 
       {/* Categories */}
       <p style={sectionLabel}>{t("Categories")}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
         {CATEGORIES.map(cat => {
           const isActive = activeCategory === cat.id;
           return (
@@ -186,11 +276,12 @@ export default function PartnerProducts() {
               onClick={() => { setActiveCategory(cat.id); if (isMobile) setShowMobileFilter(false); }}
               style={{
                 textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
-                fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                transition: 'all 0.2s ease',
                 background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
                 color: isActive ? '#fff' : C.textMid,
               }}
+              className={isActive ? "" : "hover-bg-button"}
             >
               {cat.label}
             </button>
@@ -201,16 +292,19 @@ export default function PartnerProducts() {
       <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
       {/* Banks */}
-      <p style={sectionLabel}>{t("Filter by Bank")}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
+      <p style={sectionLabel}>{t("Banks")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
         {BANKS.map(bank => {
           const isActive = activeBank === bank;
           return (
             <label key={bank} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px', cursor: 'pointer', borderRadius: '8px',
-              background: isActive ? `${C.primary}08` : 'transparent'
-            }}>
+              padding: '8px 12px', cursor: 'pointer', borderRadius: '10px',
+              background: isActive ? `${C.primary}10` : 'transparent',
+              transition: 'background 0.2s'
+            }}
+            className="hover-bg-button"
+            >
               <div style={{
                 width: 16, height: 16, borderRadius: '4px',
                 border: `1.5px solid ${isActive ? C.primary : C.border}`,
@@ -220,7 +314,7 @@ export default function PartnerProducts() {
               }}>
                 {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
               </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
+              <span style={{ fontSize: '13.5px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
               <input 
                 type="radio" 
                 name="bankFilter" 
@@ -236,58 +330,165 @@ export default function PartnerProducts() {
 
       <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
-      {/* Quick Features */}
-      <p style={sectionLabel}>{t("Quick Features")}</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-        {[
-          { label: 'High Approval', color: C.green },
-          { label: 'Lifetime Free', color: C.gold },
-          { label: 'Highest Payout', color: C.primary }
-        ].map(f => (
-          <span key={f.label} style={{
-            ...S.tag(f.color), padding: '6px 10px', fontSize: '11px', cursor: 'pointer'
-          }}>
-            {f.label}
-          </span>
-        ))}
+      {/* Commission */}
+      <p style={sectionLabel}>{t("Commission")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+        {[0, 500, 1000, 1500].map(val => {
+          const isActive = minCommission === val;
+          return (
+            <button
+              key={val}
+              onClick={() => { setMinCommission(val); if (isMobile) setShowMobileFilter(false); }}
+              style={{
+                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                background: isActive ? `${C.primary}15` : 'transparent',
+                color: isActive ? C.primary : C.textMid,
+              }}
+              className={isActive ? "" : "hover-bg-button"}
+            >
+              {val === 0 ? 'Any Payout' : `₹${val}+`}
+            </button>
+          );
+        })}
       </div>
+
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+
+      {/* Approval Rate */}
+      <p style={sectionLabel}>{t("Approval %")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+        {[0, 80, 90].map(val => {
+          const isActive = minApproval === val;
+          return (
+            <button
+              key={val}
+              onClick={() => { setMinApproval(val); if (isMobile) setShowMobileFilter(false); }}
+              style={{
+                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                background: isActive ? `${C.primary}15` : 'transparent',
+                color: isActive ? C.primary : C.textMid,
+              }}
+              className={isActive ? "" : "hover-bg-button"}
+            >
+              {val === 0 ? 'Any Approval %' : `${val}%+`}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+
+      {/* Reset filters */}
+      <button
+        onClick={() => {
+          setActiveCategory('all');
+          setActiveBank('All Banks');
+          setMinCommission(0);
+          setMinApproval(0);
+          setSearch('');
+          setSortBy('featured');
+          if (isMobile) setShowMobileFilter(false);
+        }}
+        style={{
+          width: '100%', padding: '12px', borderRadius: '10px',
+          background: 'none', border: `1.5px solid ${C.border}`,
+          color: C.red, fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+          transition: 'all 0.15s ease'
+        }}
+        className="hover-bg-button-danger"
+      >
+        Reset Filters
+      </button>
     </div>
   );
 
   return (
     <div style={{
+      padding: isMobile ? '16px 12px' : '24px 20px',
       display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
-      gap: '20px',
+      flexDirection: 'column',
+      gap: '24px',
       maxWidth: '1280px',
       margin: '0 auto',
-      paddingBottom: isMobile ? '80px' : '40px',
       boxSizing: 'border-box'
     }}>
-      
-      {/* ═══ DESKTOP SIDEBAR FILTERS ═══ */}
-      {!isMobile && (
-        <aside style={{ width: '240px', flexShrink: 0, position: 'sticky', top: '94px', alignSelf: 'start', zIndex: 10 }}>
-          {renderFilterContent()}
-        </aside>
-      )}
+      {/* ─── PAGE HEADER & HIGHLIGHT BANNER ROW ─── */}
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        gap: '16px',
+        width: '100%',
+        borderBottom: `1.5px solid ${C.border}`,
+        paddingBottom: '20px'
+      }}>
+        {/* Title */}
+        <div>
+          <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, color: C.text, margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
+            Products Marketplace
+          </h1>
+          <p style={{ fontSize: '14px', fontWeight: 550, color: C.textLight, margin: 0 }}>
+            Explore and promote financial products with the best offers for your customers.
+          </p>
+        </div>
 
-      {/* ═══ MOBILE FILTER MODAL / DRAWER ═══ */}
-      {isMobile && showMobileFilter && (
+        {/* Highlight Banner */}
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 999,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', justifyContent: 'flex-end'
+          background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+          borderRadius: '16px',
+          padding: '16px 20px',
+          color: '#fff',
+          boxShadow: isDark ? 'none' : `0 8px 20px ${C.primary}20`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          maxWidth: isMobile ? '100%' : '380px',
+          boxSizing: 'border-box'
         }}>
-          <div style={{
-            width: '85%', maxWidth: '320px', height: '100%',
-            background: C.card, overflowY: 'auto', padding: '16px',
-            boxShadow: '-10px 0 30px rgba(0,0,0,0.2)'
-          }}>
-            {renderFilterContent()}
+          <span style={{ fontSize: '28px' }}>⭐</span>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: 800 }}>Best Commission + High Approval</div>
+            <div style={{ fontSize: '11.5px', opacity: 0.9, marginTop: '2px', fontWeight: 600 }}>Earn more with top performing products</div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ─── MAIN SIDEBAR + GRID CONTAINER ─── */}
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '24px',
+        width: '100%'
+      }}>
+        
+        {/* ═══ DESKTOP SIDEBAR FILTERS ═══ */}
+        {!isMobile && (
+          <aside style={{ width: '240px', flexShrink: 0, position: 'sticky', top: '94px', alignSelf: 'start', zIndex: 10 }}>
+            {renderFilterContent()}
+          </aside>
+        )}
+
+        {/* ═══ MOBILE FILTER MODAL / DRAWER ═══ */}
+        {isMobile && showMobileFilter && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            display: 'flex', justifyContent: 'flex-end'
+          }}>
+            <div style={{
+              width: '85%', maxWidth: '320px', height: '100%',
+              background: C.card, overflowY: 'auto', padding: '16px',
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.2)'
+            }}>
+              {renderFilterContent()}
+            </div>
+          </div>
+        )}
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -298,39 +499,63 @@ export default function PartnerProducts() {
           display: 'flex', flexDirection: 'column', gap: '12px'
         }}>
           {/* Search bar row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ position: 'relative', flex: 1, width: '100%' }}>
               <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
               <input 
                 type="text" 
-                placeholder={t("Search products, cards, loans...")} 
+                placeholder={t("🔍 Search products, cards, loans, insurance...")} 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ ...S.input, paddingLeft: '38px', height: '42px', fontSize: '13px' }}
               />
             </div>
-            {isMobile && (
-              <button
-                onClick={() => setShowMobileFilter(true)}
+            
+            <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto', alignSelf: 'stretch' }}>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  background: `${C.primary}12`,
-                  border: `1.5px solid ${C.primary}30`,
-                  color: C.primary,
-                  borderRadius: '10px',
-                  padding: '0 12px',
+                  ...S.input,
+                  width: isMobile ? '100%' : '180px',
                   height: '42px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 700,
-                  fontSize: '12px',
+                  fontSize: '13px',
+                  fontWeight: 650,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap'
+                  padding: '0 12px'
                 }}
               >
-                <MdFilterList size={18} /> Filters
-              </button>
-            )}
+                <option value="featured">Featured</option>
+                <option value="highest_commission">Highest Commission</option>
+                <option value="newest">Newest</option>
+                <option value="highest_approval">Highest Approval</option>
+                <option value="a_z">A-Z</option>
+                <option value="popular">Popular</option>
+              </select>
+
+              {isMobile && (
+                <button
+                  onClick={() => setShowMobileFilter(true)}
+                  style={{
+                    background: `${C.primary}12`,
+                    border: `1.5px solid ${C.primary}30`,
+                    color: C.primary,
+                    borderRadius: '10px',
+                    padding: '0 16px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <MdFilterList size={18} /> Filters
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Mobile Horizontal X-Scrolling Filter Chips */}
@@ -417,9 +642,16 @@ export default function PartnerProducts() {
             <span>
               Showing <strong style={{ color: C.text }}>{filteredProducts.length}</strong> Products
             </span>
-            {(activeCategory !== 'all' || activeBank !== 'All Banks' || search) && (
+            {(activeCategory !== 'all' || activeBank !== 'All Banks' || minCommission !== 0 || minApproval !== 0 || search) && (
               <button
-                onClick={() => { setActiveCategory('all'); setActiveBank('All Banks'); setSearch(''); }}
+                onClick={() => {
+                  setActiveCategory('all');
+                  setActiveBank('All Banks');
+                  setMinCommission(0);
+                  setMinApproval(0);
+                  setSearch('');
+                  setSortBy('featured');
+                }}
                 style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '11px' }}
               >
                 Reset Filters
@@ -438,12 +670,40 @@ export default function PartnerProducts() {
         )}
 
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
-            <span style={{
-              width: 32, height: 32, borderRadius: '50%',
-              border: `3px solid ${C.border}`, borderTopColor: C.primary,
-              animation: 'spin .8s linear infinite', display: 'inline-block'
-            }} />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '24px'
+          }}>
+            {[1, 2, 3, 4, 5, 6].map(idx => (
+              <div key={idx} style={{
+                ...S.card,
+                padding: '24px',
+                borderRadius: '16px',
+                border: `1.5px solid ${C.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                minHeight: '280px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ width: '60px', height: '18px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                  <div style={{ width: '50px', height: '18px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: C.border, opacity: 0.5 }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ width: '80%', height: '16px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                    <div style={{ width: '40%', height: '12px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '12px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                  <div style={{ width: '90%', height: '12px', borderRadius: '4px', background: C.border, opacity: 0.5 }} />
+                </div>
+                <div style={{ height: '40px', borderRadius: '8px', background: C.border, opacity: 0.5 }} />
+              </div>
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div style={{
@@ -466,165 +726,332 @@ export default function PartnerProducts() {
             </button>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: isMobile ? '10px' : '16px'
-          }}>
-            {filteredProducts.map((product) => {
-              const isSelectedForCompare = compareList.some(p => p.id === product.id);
-              return (
-                <div key={product.id} style={{
-                  ...S.card,
-                  padding: isMobile ? '12px' : '20px',
-                  borderRadius: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: isMobile ? '10px' : '14px',
-                  transition: 'all 0.2s ease',
-                  border: isSelectedForCompare ? `2px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                  boxShadow: isSelectedForCompare ? `0 10px 25px ${C.primary}15` : 'none'
-                }}>
-                  <div>
-                    {/* Category Tag & Bank Code Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '8px' : '12px', gap: '4px', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        <span style={{ ...S.tag(C.primary), fontSize: isMobile ? '8.5px' : '10px', padding: isMobile ? '2px 6px' : '4px 8px' }}>
-                          {product.category?.replace(/_/g, ' ') || 'Finance'}
-                        </span>
-                        {isSelectedForCompare && (
-                          <span style={{
-                            fontSize: isMobile ? '8.5px' : '9.5px', fontWeight: 800, color: '#fff',
-                            background: C.green, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px'
-                          }}>
-                            ✓ Selected
-                          </span>
-                        )}
-                      </div>
-                      <span style={{
-                        fontSize: isMobile ? '9px' : '10.5px', fontWeight: 700, color: C.textMid,
-                        background: C.bgSecondary, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px',
-                        textTransform: 'uppercase', letterSpacing: '0.5px'
-                      }}>
-                        {product.bank_code || 'BANK'}
-                      </span>
-                    </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '24px'
+            }}>
+              {currentCards.map((product) => {
+                const isSelectedForCompare = compareList.some(p => p.id === product.id);
+                const approvalRate = getApprovalRate(product);
+                const cardDetails = getCardDetails(product.id || product.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), product.name);
+                const eligibilityCriteria = cardDetails.eligibility?.criteria || 'Min Age: 21 | Income details apply';
+                const badges = getMarketingBadges(product);
+                const emoji = getCategoryEmoji(product.category);
 
-                  {/* Product Logo & Info Header */}
-                  <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
-                    <div style={{
-                      width: isMobile ? 38 : 56,
-                      height: isMobile ? 38 : 56,
-                      flexShrink: 0,
-                      background: C.bgSecondary,
-                      borderRadius: '12px',
-                      border: `1px solid ${C.border}`,
+                return (
+                  <div 
+                    key={product.id} 
+                    className="gkp-product-card"
+                    style={{
+                      ...S.card,
+                      padding: '24px',
+                      borderRadius: '20px',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden'
-                    }}>
-                      {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
-                      ) : (
-                        <MdLocalOffer style={{ color: C.textLight, fontSize: isMobile ? '18px' : '22px' }} />
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{ fontSize: isMobile ? '13px' : '16px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.3 }}>{product.name}</h3>
-                      {!isMobile && (
-                        <p style={{ fontSize: '12px', color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
-                          {product.description || 'No specific details provided for this product.'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '16px',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: isSelectedForCompare ? `2.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                      boxShadow: isSelectedForCompare ? `0 12px 28px ${C.primary}20` : (isDark ? 'none' : '0 4px 15px rgba(0,0,0,0.02)'),
+                      background: C.card
+                    }}
+                  >
+                    <div>
+                      {/* Top Badges Row */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '6px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{
+                            ...S.tag(C.primary),
+                            fontSize: '11px',
+                            fontWeight: 750,
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            {product.category?.replace(/_/g, ' ') || 'Finance'}
+                          </span>
+                          {isSelectedForCompare && (
+                            <span style={{
+                              fontSize: '11px', fontWeight: 800, color: '#fff',
+                              background: C.green, padding: '4px 10px', borderRadius: '8px'
+                            }}>
+                              ✓ Compare
+                            </span>
+                          )}
+                        </div>
+                        <span style={{
+                          fontSize: '11px', fontWeight: 700, color: C.textMid,
+                          background: C.bgSecondary, padding: '4px 10px', borderRadius: '8px',
+                          textTransform: 'uppercase', letterSpacing: '0.5px',
+                          border: `1px solid ${C.border}`
+                        }}>
+                          {product.bank_code || 'BANK'}
+                        </span>
+                      </div>
 
-                {/* Footer Action Bar */}
-                <div style={{
-                  borderTop: `1px solid ${C.border}`,
-                  paddingTop: '12px',
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  gap: isMobile ? '10px' : '8px',
-                  justifyContent: 'space-between',
-                  alignItems: isMobile ? 'stretch' : 'center',
-                  marginTop: 'auto'
-                }}>
-                  {/* Payout Tag */}
-                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'baseline', gap: '2px' }}>
-                    <span style={{ fontSize: isMobile ? '9px' : '10px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t("Your Payout")}</span>
-                    <span style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 800, color: C.green }}>₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}</span>
-                  </div>
+                      {/* Marketing Pills */}
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                        {badges.map(b => (
+                          <span key={b} style={{
+                            fontSize: '10.5px',
+                            fontWeight: 750,
+                            background: b === 'High Commission' ? `${C.green}15` : `${C.primary}12`,
+                            color: b === 'High Commission' ? C.green : C.primary,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            border: b === 'High Commission' ? `1px solid ${C.green}30` : `1px solid ${C.primary}20`
+                          }}>
+                            {b}
+                          </span>
+                        ))}
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: 750,
+                          background: `${C.gold}15`,
+                          color: C.gold,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          border: `1px solid ${C.gold}30`
+                        }}>
+                          🔥 {approvalRate}% Approved
+                        </span>
+                      </div>
 
-                  {/* Buttons */}
-                  <div style={{ display: 'flex', gap: '4px', width: isMobile ? '100%' : 'auto', flexDirection: isMobile ? 'column' : 'row' }}>
-                    {(product.public_url || product.partner_url) && (
-                      <button
-                        onClick={() => handleCopyLink(product)}
-                        type="button"
-                        style={{
-                          ...S.btn('outline'),
-                          flex: isMobile ? 1 : 'none',
-                          padding: isMobile ? '6px 8px' : '8px 10px',
-                          fontSize: isMobile ? '10.5px' : '11.5px',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
+                      {/* Product Logo & Info Header */}
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '14px' }}>
+                        <div style={{
+                          width: 58,
+                          height: 58,
+                          flexShrink: 0,
+                          background: C.bgSecondary,
+                          borderRadius: '14px',
+                          border: `1.5px solid ${C.border}`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        <MdShare size={12} /> Link
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleApply(product)}
-                      style={{
-                        ...S.btn('primary'),
-                        flex: isMobile ? 1 : 'none',
-                        padding: isMobile ? '6px 10px' : '8px 16px',
-                        fontSize: isMobile ? '11px' : '12.5px',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: 700,
+                          overflow: 'hidden',
+                          fontSize: '28px',
+                          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+                        }}>
+                          {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+                          ) : (
+                            emoji
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.25 }}>
+                            {product.name}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <p style={{ fontSize: '13.5px', fontWeight: 500, color: C.textMid, margin: '0 0 12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                        {product.description || 'Access pre-approved partner terms and competitive payouts directly.'}
+                      </p>
+
+                      {/* Eligibility Summary section */}
+                      <div style={{
+                        background: C.bgSecondary,
+                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        fontSize: '12px',
+                        color: C.textLight,
+                        fontWeight: 600,
+                        border: `1px solid ${C.border}`,
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      {isMobile ? "Apply" : "Apply Now"} <MdChevronRight size={14} />
-                    </button>
-                    <button
-                      onClick={() => setShowBenefitsProduct(product)}
-                      type="button"
-                      style={{
-                        ...S.btn('outline'),
-                        borderColor: C.primary,
-                        color: C.primary,
-                        flex: isMobile ? 1 : 'none',
-                        padding: isMobile ? '6px 8px' : '8px 10px',
-                        fontSize: isMobile ? '10.5px' : '11.5px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '3px',
-                        fontWeight: 700
-                      }}
-                    >
-                      Benefits
-                    </button>
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <div>🎯 <span style={{ color: C.textMid }}>Eligibility:</span> {eligibilityCriteria}</div>
+                      </div>
+                    </div>
+
+                    {/* Footer Action Bar */}
+                    <div style={{
+                      borderTop: `1px solid ${C.border}`,
+                      paddingTop: '14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      marginTop: 'auto'
+                    }}>
+                      {/* Payout & Commission Row */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Partner Payout
+                        </span>
+                        <span style={{ fontSize: '28px', fontWeight: 800, color: C.green }}>
+                          ₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+
+                      {/* Buttons Row */}
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        {(product.public_url || product.partner_url) && (
+                          <button
+                            onClick={() => handleCopyLink(product)}
+                            type="button"
+                            style={{
+                              ...S.btn('outline'),
+                              flex: 1,
+                              padding: '10px 8px',
+                              fontSize: '12.5px',
+                              borderRadius: '10px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              fontWeight: 700
+                            }}
+                          >
+                            <MdShare size={14} /> Link
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={() => handleToggleCompare(product)}
+                          type="button"
+                          style={{
+                            ...S.btn(isSelectedForCompare ? 'primary' : 'outline'),
+                            flex: 1,
+                            padding: '10px 8px',
+                            fontSize: '12.5px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            fontWeight: 700,
+                            borderColor: isSelectedForCompare ? 'transparent' : C.primary,
+                            color: isSelectedForCompare ? '#fff' : C.primary
+                          }}
+                        >
+                          Compare
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <button
+                          onClick={() => setShowBenefitsProduct(product)}
+                          type="button"
+                          style={{
+                            ...S.btn('outline'),
+                            borderColor: C.border,
+                            color: C.textMid,
+                            flex: 1,
+                            padding: '11px 12px',
+                            fontSize: '13px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            fontWeight: 700
+                          }}
+                          className="hover-bg-button"
+                        >
+                          Benefits
+                        </button>
+                        
+                        <button
+                          onClick={() => handleApply(product)}
+                          style={{
+                            background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+                            color: '#fff',
+                            border: 'none',
+                            flex: 1.5,
+                            padding: '11px 12px',
+                            fontSize: '13px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            boxShadow: isDark ? 'none' : `0 4px 12px ${C.primary}20`
+                          }}
+                          className="hover-scale-button"
+                        >
+                          Apply Now <MdChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px',
+                marginTop: '24px',
+                paddingBottom: '20px'
+              }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    ...S.btn('outline'),
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.4 : 1,
+                    fontSize: '14px',
+                    fontWeight: 700
+                  }}
+                >
+                  &lt;
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      ...S.btn(currentPage === page ? 'primary' : 'outline'),
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 750,
+                      boxShadow: currentPage === page && !isDark ? `0 4px 10px ${C.primary}30` : 'none'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    ...S.btn('outline'),
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === totalPages ? 0.4 : 1,
+                    fontSize: '14px',
+                    fontWeight: 700
+                  }}
+                >
+                  &gt;
+                </button>
               </div>
-            )})}
+            )}
           </div>
         )}
       </main>
@@ -1140,7 +1567,47 @@ export default function PartnerProducts() {
         </div>
       )}
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .gkp-product-card {
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .gkp-product-card:hover {
+          transform: translateY(-6px) !important;
+          box-shadow: ${isDark ? '0 10px 30px rgba(249, 115, 22, 0.15)' : '0 20px 40px rgba(99, 102, 241, 0.15)'} !important;
+          border-color: ${C.primary} !important;
+        }
+        .hover-bg-button {
+          transition: background-color 0.2s ease, color 0.2s ease !important;
+        }
+        .hover-bg-button:hover {
+          background-color: ${C.bgSecondary} !important;
+        }
+        .hover-bg-button-danger {
+          transition: all 0.2s ease !important;
+        }
+        .hover-bg-button-danger:hover {
+          background-color: ${C.red}12 !important;
+          border-color: ${C.red}40 !important;
+        }
+        .hover-scale-button {
+          transition: all 0.2s ease !important;
+        }
+        .hover-scale-button:hover {
+          transform: scale(1.02);
+          box-shadow: ${isDark ? 'none' : `0 6px 20px ${C.primary}30`} !important;
+        }
+        .hover-scale-button:active {
+          transform: scale(0.98);
+        }
+        .hover-scale-button svg {
+          transition: transform 0.2s ease;
+        }
+        .hover-scale-button:hover svg {
+          transform: translateX(3px);
+        }
+      `}</style>
+      </div>
     </div>
   );
 }
