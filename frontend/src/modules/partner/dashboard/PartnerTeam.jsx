@@ -12,6 +12,7 @@ import {
 } from 'react-icons/md';
 import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
+import { FiUsers, FiUserCheck, FiUserPlus } from 'react-icons/fi';
 
 export default function PartnerTeam() {
   const { C } = useTheme();
@@ -195,28 +196,98 @@ export default function PartnerTeam() {
         </div>
       </div>
 
-      {/* Minimalist Summary Matrix */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Total Team Members</div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardData?.total_team || 0}</div>
-        </div>
+      {/* Redesigned Summary Cards Grid */}
+      {(() => {
+        const diff = (dashboardData?.today_joins || 0) - (dashboardData?.yesterday_joins || 0);
+        const diffText = diff >= 0 ? `+${diff} vs yesterday` : `${diff} vs yesterday`;
+        const isThemeDark = C.bg === '#000000';
 
-        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Today's New Joins</div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: C.teal, marginTop: '4px' }}>{dashboardData?.today_joins || 0}</div>
-        </div>
+        const cards = [
+          {
+            title: 'Total Team Members',
+            value: dashboardData?.total_team || 0,
+            subtitle: `+${dashboardData?.month_joins || 0} this month`,
+            icon: <FiUsers size={20} />,
+            color: C.primary,
+            bg: isThemeDark ? `${C.primary}12` : '#EEF2FF',
+            iconColor: C.primary
+          },
+          {
+            title: 'Active Team Partners',
+            value: dashboardData?.active_partners || 0,
+            subtitle: `${dashboardData?.active_rate || 0}% Active Rate`,
+            icon: <FiUserCheck size={20} />,
+            color: C.green,
+            bg: isThemeDark ? `${C.green}12` : '#ECFDF5',
+            iconColor: C.green
+          },
+          {
+            title: "Today's New Joins",
+            value: dashboardData?.today_joins || 0,
+            subtitle: diffText,
+            icon: <FiUserPlus size={20} />,
+            color: C.teal,
+            bg: isThemeDark ? `${C.teal}12` : '#F0FDF4',
+            iconColor: C.teal
+          },
+          {
+            title: 'Team Override Earnings',
+            value: `₹${parseFloat(dashboardData?.team_earnings || 0).toLocaleString('en-IN')}`,
+            subtitle: `+₹${parseFloat(dashboardData?.month_earnings || 0).toLocaleString('en-IN')} this month`,
+            icon: <MdMonetizationOn size={22} />,
+            color: C.gold,
+            bg: isThemeDark ? `${C.gold}12` : '#FFFBEB',
+            iconColor: C.gold
+          }
+        ];
 
-        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Active Team Partners</div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{dashboardData?.active_partners || 0}</div>
-        </div>
-
-        <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Total Team Override Earnings</div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: C.gold, marginTop: '4px' }}>₹{parseFloat(dashboardData?.team_earnings || 0).toLocaleString('en-IN')}</div>
-        </div>
-      </div>
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            {cards.map((card, idx) => (
+              <div 
+                key={idx} 
+                className="gkp-team-kpi-card"
+                style={{
+                  ...S.card,
+                  padding: '24px',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '140px',
+                  boxShadow: isThemeDark ? 'none' : '0 10px 25px rgba(0,0,0,0.02)',
+                  border: `1.5px solid ${C.border}`,
+                  transition: 'all 0.25s ease',
+                  background: C.card
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 750, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {card.title}
+                    </span>
+                    <span style={{ fontSize: '32px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
+                      {card.value}
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '12px',
+                    background: card.bg, color: card.iconColor,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    {card.icon}
+                  </div>
+                </div>
+                
+                <div style={{ fontSize: '12px', fontWeight: 650, color: card.color, marginTop: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {card.subtitle}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Referral Analytics Conversion Funnel Widget */}
       <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
@@ -522,6 +593,16 @@ export default function PartnerTeam() {
         </div>
       )}
 
+      <style>{`
+        .gkp-team-kpi-card {
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .gkp-team-kpi-card:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: ${C.bg === '#000000' ? 'none' : '0 12px 30px rgba(0,0,0,0.06)'} !important;
+          border-color: ${C.primary}50 !important;
+        }
+      `}</style>
     </div>
   );
 }
