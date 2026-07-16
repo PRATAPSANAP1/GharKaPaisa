@@ -56,12 +56,33 @@ export default function PartnerLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [walletBalance, setWalletBalance] = useState("₹0");
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const fetchWallet = async () => {
+    try {
+      const res = await api.get('/wallet');
+      if (res.data?.success) {
+        const bal = res.data.data.available_balance || 0;
+        setWalletBalance(`₹${parseFloat(bal).toLocaleString("en-IN")}`);
+      }
+    } catch (e) {
+      console.error("Failed to load header wallet", e);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchWallet();
+    }
+  }, [user?.id]);
 
   // Fetch latest profile on layout mount to sync with backend status changes
   useEffect(() => {
@@ -142,7 +163,7 @@ export default function PartnerLayout() {
   });
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
   // ── Color Constants ─────────────────────────────────
@@ -162,7 +183,7 @@ export default function PartnerLayout() {
       <ForcePasswordChangeModal isOpen={user?.must_change_password} />
 
       {/* ──── DESKTOP SIDEBAR ──── */}
-      {!isMobile && (
+      {!isMobile && sidebarOpen && (
         <aside style={{
           width: '280px',
           background: SIDEBAR_BG,
@@ -182,7 +203,7 @@ export default function PartnerLayout() {
             gap: '12px',
           }}>
             <img src={logo} alt="Logo" style={{ height: '32px' }} />
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>{t('partnerLayout.panelTitle', 'Partner Panel')}</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.primary, margin: 0 }}>{t('partnerLayout.panelTitle', 'Partner Panel')}</h2>
           </div>
 
           {/* Nav Items */}
@@ -209,8 +230,8 @@ export default function PartnerLayout() {
                     fontSize: '14px',
                     fontWeight: 600,
                     color: isActive ? '#fff' : C.text,
-                    background: isActive ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'transparent',
-                    boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
+                    boxShadow: isActive ? `0 4px 14px ${C.primary}35` : 'none',
                     textDecoration: 'none',
                     transition: 'all 0.2s',
                     marginBottom: '4px',
@@ -314,40 +335,6 @@ export default function PartnerLayout() {
         </aside>
       )}
 
-      {/* ──── MOBILE TOP HEADER ──── */}
-      {isMobile && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '56px',
-          background: C.card,
-          borderBottom: `1px solid ${C.border}`,
-          zIndex: 30,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-        }}>
-          <button
-            id="partner-mobile-hamburger"
-            onClick={() => setMobileMenuOpen(true)}
-            style={{
-              padding: '8px',
-              background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <MdMenu size={24} style={{ color: SIDEBAR_TEXT }} />
-          </button>
-          <img src={logo} alt="Logo" style={{ height: '28px' }} />
-        </div>
-      )}
 
       {/* ──── MOBILE FULLSCREEN MENU ──── */}
       {isMobile && (
@@ -372,7 +359,7 @@ export default function PartnerLayout() {
             padding: '0 16px',
             flexShrink: 0,
           }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: BRAND, margin: 0 }}>All Modules</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.primary, margin: 0 }}>All Modules</h2>
             <button
               onClick={() => setMobileMenuOpen(false)}
               style={{
@@ -409,13 +396,13 @@ export default function PartnerLayout() {
                     fontWeight: 700,
                     fontSize: '15px',
                     color: isActive ? '#fff' : C.text,
-                    background: isActive ? BRAND : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
-                    boxShadow: isActive ? `0 4px 12px ${BRAND}40` : 'none',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
+                    boxShadow: isActive ? `0 4px 12px ${C.primary}35` : 'none',
                     textDecoration: 'none',
                     marginBottom: '8px',
                   }}
                 >
-                  <Icon size={22} style={{ color: isActive ? '#fff' : BRAND }} />
+                  <Icon size={22} style={{ color: isActive ? '#fff' : C.primary }} />
                   {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
                 </NavLink>
               );
@@ -502,15 +489,20 @@ export default function PartnerLayout() {
         background: MAIN_BG,
         position: 'relative',
       }}>
-        {!isMobile && (
-          <DesktopHeader
-            C={C}
-            user={user}
-            navigate={navigate}
-            t={t}
-            i18n={i18n}
-          />
-        )}
+        <PartnerHeader
+          C={C}
+          user={user}
+          navigate={navigate}
+          t={t}
+          isMobile={isMobile}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+          handleLogout={handleLogout}
+          walletBalance={walletBalance}
+          profileDropdownOpen={profileDropdownOpen}
+          setProfileDropdownOpen={setProfileDropdownOpen}
+        />
         {/* Status Banners */}
         {accountStatus === 'inactive' && (
           <div style={{
@@ -673,11 +665,11 @@ export default function PartnerLayout() {
                     textDecoration: 'none',
                   }}
                 >
-                  <Icon size={24} style={{ color: isActive ? BRAND : '#94A3B8' }} />
+                  <Icon size={24} style={{ color: isActive ? C.primary : '#94A3B8' }} />
                   <span style={{
                     fontSize: '10px',
                     fontWeight: 700,
-                    color: isActive ? BRAND : '#94A3B8',
+                    color: isActive ? C.primary : '#94A3B8',
                   }}>
                     {t('partnerLayout.' + nav.id, nav.label)}
                   </span>
@@ -720,340 +712,116 @@ export default function PartnerLayout() {
   );
 }
 
-// ── DESKTOP HEADER COMPONENT ─────────────────────────────────
-function DesktopHeader({ C, user, navigate, t, i18n }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState({ products: [], applications: [], customers: [] });
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  const [walletBalance, setWalletBalance] = useState("₹0");
-
-  useEffect(() => {
-    const fetchWallet = async () => {
-      try {
-        const res = await api.get('/wallet');
-        if (res.data?.success) {
-          const bal = res.data.data.available_balance || 0;
-          setWalletBalance(`₹${parseFloat(bal).toLocaleString("en-IN")}`);
-        }
-      } catch (e) {
-        console.error("Failed to load header wallet", e);
-      }
-    };
-
-    const fetchNotifications = async () => {
-      try {
-        const res = await api.get("/notifications", { params: { limit: 5 } });
-        if (res.data?.success) {
-          setNotifications(res.data.data.notifications || []);
-          setUnreadCount(res.data.data.unread_count || 0);
-        }
-      } catch (e) {
-        console.error("Failed to load header notifications", e);
-      }
-    };
-
-    fetchWallet();
-    fetchNotifications();
-
-    const eventSource = new EventSource(`${getApiV1Url()}/notifications/stream?token=${getAccessToken()}`);
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === 'notification') {
-          setNotifications(prev => [message.data, ...prev.slice(0, 4)]);
-          setUnreadCount(message.unread_count);
-          if (message.data.category === 'wallet' || message.data.category === 'applications') {
-            fetchWallet();
-          }
-        } else if (message.type === 'announcement') {
-          alert(`📢 Announcement: ${message.data.title}\n\n${message.data.description}`);
-        }
-      } catch (err) {
-        console.error('SSE Message parsing failed', err);
-      }
-    };
-
-    eventSource.onerror = (err) => {
-      console.warn('SSE stream error, closing', err);
-      eventSource.close();
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults({ products: [], applications: [], customers: [] });
-      return;
-    }
-
-    const performSearch = async () => {
-      try {
-        const [prodRes, appRes] = await Promise.all([
-          api.get('/products', { params: { is_active: 'true', limit: 50, search: searchQuery } }).catch(() => null),
-          api.get('/leads', { params: { limit: 50, search: searchQuery } }).catch(() => null)
-        ]);
-
-        const products = prodRes?.data?.success ? prodRes.data.data.slice(0, 3) : [];
-        const leads = appRes?.data?.success ? appRes.data.data.slice(0, 5) : [];
-
-        setSearchResults({
-          products,
-          applications: leads,
-          customers: leads.filter((item, index, self) => 
-            self.findIndex(t => t.customer_name === item.customer_name) === index
-          ).slice(0, 3)
-        });
-      } catch (e) {
-        console.error("Global search failed", e);
-      }
-    };
-
-    const delayDebounce = setTimeout(() => {
-      performSearch();
-    }, 300);
-
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.patch("/notifications/read-all");
-      setUnreadCount(0);
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
+// ── RESPONSIVE NAV BAR HEADER COMPONENT ──────────────────────
+function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen }) {
   return (
     <header style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      height: '70px',
+      height: isMobile ? '56px' : '70px',
       background: C.card,
       borderBottom: `1px solid ${C.border}`,
-      padding: '0 24px',
-      position: 'sticky',
+      padding: isMobile ? '0 16px' : '0 24px',
+      position: isMobile ? 'fixed' : 'sticky',
       top: 0,
-      zIndex: 20,
+      left: 0,
+      right: 0,
+      zIndex: 30,
       boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-      flexShrink: 0
+      flexShrink: 0,
+      boxSizing: 'border-box',
+      width: '100%'
     }}>
-      {/* Search Input */}
-      <div style={{ position: 'relative', width: '380px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', background: C.bgSecondary, borderRadius: '10px', padding: '0 12px', border: `1.5px solid ${C.border}` }}>
-          <MdSearch size={20} style={{ color: SIDEBAR_TEXT }} />
-          <input
-            type="text"
-            placeholder={t('partnerLayout.searchPlaceholder', 'Search Customer, Application, Product...')}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setShowSearchDropdown(true);
-            }}
-            onFocus={() => setShowSearchDropdown(true)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              padding: '10px 8px',
-              fontSize: '13px',
-              color: C.text,
-              width: '100%',
-              fontWeight: 600
-            }}
-          />
-          {searchQuery && (
-            <button onClick={() => { setSearchQuery(""); setShowSearchDropdown(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, padding: '4px' }}>✕</button>
-          )}
-        </div>
-
-        {/* Results Overlay */}
-        {showSearchDropdown && searchQuery && (
-          <div style={{
-            position: 'absolute',
-            top: '48px',
-            left: 0,
-            right: 0,
-            background: C.card,
-            border: `1px solid ${C.border}`,
-            borderRadius: '12px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            maxHeight: '400px',
-            overflowY: 'auto',
-            zIndex: 100,
-            padding: '12px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `1px solid ${C.border}50`, paddingBottom: '4px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Search Results</span>
-              <button onClick={() => setShowSearchDropdown(false)} style={{ background: 'none', border: 'none', fontSize: '11px', color: C.primary, fontWeight: 700, cursor: 'pointer' }}>Close</button>
-            </div>
-
-            {searchResults.products.length > 0 && (
-              <div style={{ marginBottom: '12px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: '4px 0' }}>Products</p>
-                {searchResults.products.map(p => (
-                  <div key={p.id} onClick={() => { navigate("/partner/products"); setShowSearchDropdown(false); }} style={{ padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.15s' }} className="hover-item">
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>{p.name}</span>
-                    <span style={{ fontSize: '10px', background: `${C.primary}12`, color: C.primary, padding: '2px 6px', borderRadius: '4px' }}>{p.bank_code}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.applications.length > 0 && (
-              <div style={{ marginBottom: '12px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 800, color: C.gold, textTransform: 'uppercase', margin: '4px 0' }}>Applications / Leads</p>
-                {searchResults.applications.map(a => (
-                  <div key={a.id} onClick={() => { navigate("/partner/applications"); setShowSearchDropdown(false); }} style={{ padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: '0.15s' }} className="hover-item">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>{a.customer_name}</span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: a.status === 'approved' ? C.green : C.gold }}>{a.status.toUpperCase()}</span>
-                    </div>
-                    <span style={{ fontSize: '10px', color: C.textLight }}>{a.product_name || "Finance Lead"}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.customers.length > 0 && (
-              <div>
-                <p style={{ fontSize: '10px', fontWeight: 800, color: C.green, textTransform: 'uppercase', margin: '4px 0' }}>Customers</p>
-                {searchResults.customers.map(c => (
-                  <div key={c.id} onClick={() => { navigate("/partner/customers"); setShowSearchDropdown(false); }} style={{ padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.15s' }} className="hover-item">
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>{c.customer_name}</span>
-                    <span style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>{c.mobile}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.products.length === 0 && searchResults.applications.length === 0 && (
-              <div style={{ padding: '16px 0', textAlign: 'center', fontSize: '12px', color: C.textLight }}>No matching results found.</div>
-            )}
-          </div>
-        )}
+      {/* Left side: Hamburger + Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
+        <button
+          onClick={() => isMobile ? setMobileMenuOpen(true) : setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle navigation menu"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: C.text,
+            outline: 'none',
+            transition: 'background-color 0.2s'
+          }}
+          className="hover-bg-button"
+        >
+          <MdMenu size={24} />
+        </button>
+        <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? '26px' : '32px', objectFit: 'contain' }} />
       </div>
 
-      {/* Right Strip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        
+      {/* Right side: Wallet + Profile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '20px' }}>
         {/* Wallet Balance */}
         <div 
           onClick={() => navigate("/partner/wallet")}
+          aria-label={`Wallet balance: ${walletBalance}`}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate("/partner/wallet");
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             background: `${C.green}12`,
             border: `1.5px solid ${C.green}30`,
-            padding: '6px 14px',
+            padding: isMobile ? '4px 10px' : '6px 14px',
             borderRadius: '10px',
             cursor: 'pointer',
-            transition: '0.15s'
+            transition: 'all 0.2s ease',
+            outline: 'none'
           }}
+          className="hover-scale"
         >
-          <span style={{ fontSize: '14px' }}>💳</span>
-          <div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('partnerLayout.balance', 'Balance')}</div>
+          <span style={{ fontSize: isMobile ? '16px' : '18px', color: C.green }}>💳</span>
+          <div style={{ display: isMobile ? 'none' : 'block' }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {t('partnerLayout.balance', 'Balance')}
+            </div>
             <div style={{ fontSize: '13px', fontWeight: 800, color: C.green }}>{walletBalance}</div>
           </div>
-        </div>
-
-        {/* Notifications Icon */}
-        <div style={{ position: 'relative' }}>
-          <button 
-            onClick={() => navigate("/partner/notifications")}
-            style={{
-              background: C.bgSecondary,
-              border: `1.5px solid ${C.border}`,
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              position: 'relative',
-              outline: 'none'
-            }}
-          >
-            <MdNotifications size={20} style={{ color: C.text }} />
-            {unreadCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                background: C.red,
-                color: '#fff',
-                fontSize: '9px',
-                fontWeight: 900,
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(239,68,68,0.4)'
-              }}>
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {showNotificationDropdown && (
-            <div style={{
-              position: 'absolute',
-              top: '48px',
-              right: 0,
-              width: '320px',
-              background: C.card,
-              border: `1px solid ${C.border}`,
-              borderRadius: '12px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-              zIndex: 100,
-              padding: '12px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: `1px solid ${C.border}50`, paddingBottom: '6px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>Notifications</span>
-                {unreadCount > 0 && (
-                  <button onClick={handleMarkAllRead} style={{ background: 'none', border: 'none', fontSize: '11px', color: C.primary, fontWeight: 700, cursor: 'pointer' }}>Mark all read</button>
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', marginBottom: '10px' }}>
-                {notifications.length === 0 ? (
-                  <div style={{ padding: '20px 0', textAlign: 'center', fontSize: '12px', color: C.textLight }}>No notifications yet.</div>
-                ) : (
-                  notifications.map(n => (
-                    <div key={n.id} style={{ padding: '8px', borderRadius: '8px', background: n.is_read ? 'transparent' : `${C.primary}08`, borderLeft: n.is_read ? 'none' : `3px solid ${C.primary}` }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: C.text, fontWeight: n.is_read ? 500 : 700 }}>{n.title || n.message}</p>
-                      <span style={{ fontSize: '9px', color: C.textLight }}>{new Date(n.created_at).toLocaleDateString()}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div style={{ borderTop: `1px solid ${C.border}50`, paddingTop: '8px', display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => { navigate("/partner/notifications"); setShowNotificationDropdown(false); }} style={{ background: 'none', border: 'none', fontSize: '12px', color: C.primary, fontWeight: 700, cursor: 'pointer' }}>View All</button>
-              </div>
-            </div>
+          {isMobile && (
+            <span style={{ fontSize: '12px', fontWeight: 800, color: C.green }}>{walletBalance}</span>
           )}
         </div>
 
-        {/* Profile Card */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderLeft: `1px solid ${C.border}`, paddingLeft: '20px' }}>
-          <div 
-            onClick={() => navigate("/partner/profile")}
+        {/* Profile Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+            aria-expanded={profileDropdownOpen}
+            aria-haspopup="menu"
+            aria-label="Profile actions menu"
             style={{
-              width: '38px',
-              height: '38px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: isMobile ? '6px' : '10px',
+              padding: '6px',
+              borderRadius: '20px',
+              outline: 'none',
+              transition: 'background-color 0.2s'
+            }}
+            className="hover-bg-button"
+          >
+            <div style={{
+              width: isMobile ? '32px' : '36px',
+              height: isMobile ? '32px' : '36px',
               borderRadius: '50%',
               background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
               color: '#fff',
@@ -1061,18 +829,85 @@ function DesktopHeader({ C, user, navigate, t, i18n }) {
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            {user?.name?.[0]?.toUpperCase() || 'P'}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || t('partnerLayout.partner', 'Partner')}</div>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.partner_code || user?.Partner_code || "GKP000"}</div>
-          </div>
-        </div>
+              fontSize: isMobile ? '12px' : '14px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+            }}>
+              {user?.name?.[0]?.toUpperCase() || 'P'}
+            </div>
+            {!isMobile && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || t('partnerLayout.partner', 'Partner')}</div>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.partner_code || user?.Partner_code || "GKP000"}</div>
+              </div>
+            )}
+            <span style={{ fontSize: '9px', color: C.textLight }}>▼</span>
+          </button>
 
+          {profileDropdownOpen && (
+            <div style={{
+              position: 'absolute',
+              top: isMobile ? '40px' : '46px',
+              right: 0,
+              width: '160px',
+              background: C.card,
+              border: `1.5px solid ${C.border}`,
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              zIndex: 100,
+              padding: '6px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2px',
+              boxSizing: 'border-box'
+            }}>
+              <button
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  navigate('/partner/profile');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: C.text,
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s'
+                }}
+                className="dropdown-item-hover"
+              >
+                👤 Profile Settings
+              </button>
+              <button
+                id="partner-dropdown-logout-btn"
+                onClick={() => {
+                  setProfileDropdownOpen(false);
+                  handleLogout();
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: C.red || '#EF4444',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s'
+                }}
+                className="dropdown-item-hover-danger"
+              >
+                🚪 Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

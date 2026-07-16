@@ -10,6 +10,7 @@ import {
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
   MdAccessTime, MdInfoOutline, MdClose, MdShare, MdChevronRight 
 } from 'react-icons/md';
+import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
@@ -65,6 +66,27 @@ export default function PartnerProducts() {
   const [mobile, setMobile] = useState("");
   const [city, setCity] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Benefits & Compare state
+  const [showBenefitsProduct, setShowBenefitsProduct] = useState(null);
+  const [compareList, setCompareList] = useState([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [loadingCompare, setLoadingCompare] = useState(false);
+
+  const handleToggleCompare = (product) => {
+    setCompareList(prev => {
+      const exists = prev.find(p => p.id === product.id);
+      if (exists) {
+        return prev.filter(p => p.id !== product.id);
+      } else {
+        if (prev.length >= 2) {
+          alert("You can select up to 2 products to compare.");
+          return prev;
+        }
+        return [...prev, product];
+      }
+    });
+  };
 
   const fetchProducts = async () => {
     try {
@@ -449,31 +471,45 @@ export default function PartnerProducts() {
             gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: isMobile ? '10px' : '16px'
           }}>
-            {filteredProducts.map((product) => (
-              <div key={product.id} style={{
-                ...S.card,
-                padding: isMobile ? '12px' : '20px',
-                borderRadius: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: isMobile ? '10px' : '14px',
-                transition: 'all 0.2s ease'
-              }}>
-                <div>
-                  {/* Category Tag & Bank Code Row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '8px' : '12px', gap: '4px', flexWrap: 'wrap' }}>
-                    <span style={{ ...S.tag(C.primary), fontSize: isMobile ? '8.5px' : '10px', padding: isMobile ? '2px 6px' : '4px 8px' }}>
-                      {product.category?.replace(/_/g, ' ') || 'Finance'}
-                    </span>
-                    <span style={{
-                      fontSize: isMobile ? '9px' : '10.5px', fontWeight: 700, color: C.textMid,
-                      background: C.bgSecondary, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px',
-                      textTransform: 'uppercase', letterSpacing: '0.5px'
-                    }}>
-                      {product.bank_code || 'BANK'}
-                    </span>
-                  </div>
+            {filteredProducts.map((product) => {
+              const isSelectedForCompare = compareList.some(p => p.id === product.id);
+              return (
+                <div key={product.id} style={{
+                  ...S.card,
+                  padding: isMobile ? '12px' : '20px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: isMobile ? '10px' : '14px',
+                  transition: 'all 0.2s ease',
+                  border: isSelectedForCompare ? `2px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  boxShadow: isSelectedForCompare ? `0 10px 25px ${C.primary}15` : 'none'
+                }}>
+                  <div>
+                    {/* Category Tag & Bank Code Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '8px' : '12px', gap: '4px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ ...S.tag(C.primary), fontSize: isMobile ? '8.5px' : '10px', padding: isMobile ? '2px 6px' : '4px 8px' }}>
+                          {product.category?.replace(/_/g, ' ') || 'Finance'}
+                        </span>
+                        {isSelectedForCompare && (
+                          <span style={{
+                            fontSize: isMobile ? '8.5px' : '9.5px', fontWeight: 800, color: '#fff',
+                            background: C.green, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px'
+                          }}>
+                            ✓ Selected
+                          </span>
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: isMobile ? '9px' : '10.5px', fontWeight: 700, color: C.textMid,
+                        background: C.bgSecondary, padding: isMobile ? '2px 6px' : '4px 8px', borderRadius: '6px',
+                        textTransform: 'uppercase', letterSpacing: '0.5px'
+                      }}>
+                        {product.bank_code || 'BANK'}
+                      </span>
+                    </div>
 
                   {/* Product Logo & Info Header */}
                   <div style={{ display: 'flex', gap: isMobile ? '8px' : '12px', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
@@ -564,10 +600,31 @@ export default function PartnerProducts() {
                     >
                       {isMobile ? "Apply" : "Apply Now"} <MdChevronRight size={14} />
                     </button>
+                    <button
+                      onClick={() => setShowBenefitsProduct(product)}
+                      type="button"
+                      style={{
+                        ...S.btn('outline'),
+                        borderColor: C.primary,
+                        color: C.primary,
+                        flex: isMobile ? 1 : 'none',
+                        padding: isMobile ? '6px 8px' : '8px 10px',
+                        fontSize: isMobile ? '10.5px' : '11.5px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px',
+                        fontWeight: 700
+                      }}
+                    >
+                      Benefits
+                    </button>
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </main>
@@ -673,6 +730,412 @@ export default function PartnerProducts() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ BENEFITS MODAL ═══ */}
+      {showBenefitsProduct && (() => {
+        const cardDetails = getCardDetails(
+          showBenefitsProduct.id || showBenefitsProduct.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          showBenefitsProduct.name
+        );
+        const { features, eligibility, howItWorks, termsAndConditions } = cardDetails;
+        
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+          }}>
+            <div style={{
+              background: C.card, width: '100%', maxWidth: '520px',
+              borderRadius: '20px', overflow: 'hidden', border: `1px solid ${C.border}`,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative',
+              maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+            }}>
+              <button
+                onClick={() => setShowBenefitsProduct(null)}
+                style={{
+                  position: 'absolute', top: '16px', right: '16px', zIndex: 10,
+                  width: '32px', height: '32px', borderRadius: '50%', background: C.bgSecondary,
+                  border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: C.textMid, fontSize: '16px', fontWeight: 700
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
+                  {showBenefitsProduct.name} Benefits
+                </h3>
+                <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>
+                  Bank: <strong style={{ color: C.text }}>{showBenefitsProduct.bank_code}</strong> | Category: <strong style={{ color: C.text }}>{showBenefitsProduct.category?.replace(/_/g, ' ')}</strong>
+                </p>
+              </div>
+
+              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Features & Highlights */}
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: '0 0 10px 0', letterSpacing: '0.5px' }}>
+                    Key Features
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {features && features.map((f, idx) => (
+                      <li key={idx} style={{ fontSize: '13.5px', color: C.text, lineHeight: 1.4 }}>{f}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Eligibility Criteria */}
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: '0 0 10px 0', letterSpacing: '0.5px' }}>
+                    Eligibility Criteria
+                  </h4>
+                  <p style={{ fontSize: '13.5px', color: C.text, margin: 0, lineHeight: 1.4 }}>
+                    {eligibility?.criteria || 'Stable income required. Minimum age 21 years.'}
+                  </p>
+                </div>
+
+                {/* Documents Required */}
+                {eligibility?.documentsRequired && eligibility.documentsRequired.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: '0 0 10px 0', letterSpacing: '0.5px' }}>
+                      Documents Required
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {eligibility.documentsRequired.map((doc, idx) => (
+                        <span key={idx} style={{
+                          fontSize: '11.5px', fontWeight: 600, color: C.textMid, background: C.bgSecondary,
+                          padding: '4px 10px', borderRadius: '6px', border: `1px solid ${C.border}`
+                        }}>
+                          {doc}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* How it Works */}
+                {howItWorks && howItWorks.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: '0 0 10px 0', letterSpacing: '0.5px' }}>
+                      How It Works
+                    </h4>
+                    <ol style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {howItWorks.map((step, idx) => (
+                        <li key={idx} style={{ fontSize: '13px', color: C.text, lineHeight: 1.4 }}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {/* Terms and Conditions */}
+                {termsAndConditions && (
+                  <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                      Terms &amp; Conditions
+                    </span>
+                    <p style={{ fontSize: '12px', color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+                      {termsAndConditions}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '10px', background: C.bgSecondary }}>
+                <button
+                  onClick={() => {
+                    handleToggleCompare(showBenefitsProduct);
+                    setShowBenefitsProduct(null);
+                  }}
+                  style={{
+                    ...S.btn(compareList.some(p => p.id === showBenefitsProduct.id) ? 'outline' : 'primary'),
+                    flex: 1, padding: '12px', fontSize: '13px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  {compareList.some(p => p.id === showBenefitsProduct.id) ? '✓ Selected for Compare' : 'Add to Compare'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBenefitsProduct(null);
+                    handleApply(showBenefitsProduct);
+                  }}
+                  style={{
+                    ...S.btn('primary'),
+                    background: C.green,
+                    borderColor: C.green,
+                    flex: 1, padding: '12px', fontSize: '13px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  Apply Now
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══ FLOATING COMPARE BAR ═══ */}
+      {compareList.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: isMobile ? '64px' : '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '90%',
+          maxWidth: '600px',
+          background: C.card,
+          border: `2px solid ${C.primary}`,
+          borderRadius: '16px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+          padding: '12px 18px',
+          zIndex: 900,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: C.primary, whiteSpace: 'nowrap', display: isMobile ? 'none' : 'inline' }}>
+              Compare ({compareList.length}/2):
+            </span>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+              {compareList.map(prod => (
+                <div key={prod.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  padding: '4px 10px', borderRadius: '8px', flexShrink: 0
+                }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: C.text, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: isMobile ? '100px' : '150px' }}>
+                    {prod.name}
+                  </span>
+                  <button
+                    onClick={() => handleToggleCompare(prod)}
+                    style={{ background: 'none', border: 'none', color: C.textLight, cursor: 'pointer', fontWeight: 900, fontSize: '11px', padding: '2px' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {compareList.length === 1 && (
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  background: 'transparent', border: `1px dashed ${C.border}`,
+                  padding: '4px 10px', borderRadius: '8px', color: C.textLight, fontSize: '11.5px', fontWeight: 600, whiteSpace: 'nowrap'
+                }}>
+                  + Add second product
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            <button
+              onClick={() => {
+                setLoadingCompare(true);
+                setShowCompareModal(true);
+                setTimeout(() => {
+                  setLoadingCompare(false);
+                }, 800);
+              }}
+              disabled={compareList.length < 2}
+              style={{
+                ...S.btn('primary'),
+                padding: '8px 16px',
+                fontSize: '12px',
+                borderRadius: '10px',
+                fontWeight: 750,
+                cursor: compareList.length < 2 ? 'not-allowed' : 'pointer',
+                opacity: compareList.length < 2 ? 0.5 : 1
+              }}
+            >
+              Compare
+            </button>
+            <button
+              onClick={() => setCompareList([])}
+              style={{
+                ...S.btn('outline'),
+                padding: '8px 12px',
+                fontSize: '12px',
+                borderRadius: '10px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ COMPARISON SIDE-BY-SIDE MODAL ═══ */}
+      {showCompareModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1001,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, width: '100%', maxWidth: '800px',
+            borderRadius: '24px', overflow: 'hidden', border: `1.5px solid ${C.border}`,
+            boxShadow: '0 25px 70px rgba(0,0,0,0.3)', position: 'relative',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column'
+          }}>
+            <button
+              onClick={() => setShowCompareModal(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px', zIndex: 10,
+                width: '32px', height: '32px', borderRadius: '50%', background: C.bgSecondary,
+                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', color: C.textMid, fontSize: '16px', fontWeight: 700
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
+                Product Comparison
+              </h3>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>
+                Comparing selected finance options side-by-side
+              </p>
+            </div>
+
+            {loadingCompare ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '60px 0' }}>
+                <span style={{
+                  width: 38, height: 38, borderRadius: '50%',
+                  border: `3px solid ${C.border}`, borderTopColor: C.primary,
+                  animation: 'spin .8s linear infinite', display: 'inline-block'
+                }} />
+                <div style={{ fontSize: '14px', fontWeight: 700, color: C.textMid }}>Analyzing features and rates...</div>
+              </div>
+            ) : (() => {
+              const p1 = compareList[0];
+              const p2 = compareList[1];
+              if (!p1 || !p2) return null;
+
+              const c1Details = getCardDetails(p1.id || p1.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), p1.name);
+              const c2Details = getCardDetails(p2.id || p2.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), p2.name);
+
+              return (
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px', color: C.text }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '25%', padding: '12px', borderBottom: `2px solid ${C.border}`, textAlign: 'left' }}>Parameter</th>
+                        <th style={{ width: '37.5%', padding: '12px', borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.primary, fontWeight: 800 }}>
+                          {p1.name}
+                        </th>
+                        <th style={{ width: '37.5%', padding: '12px', borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.primary, fontWeight: 800 }}>
+                          {p2.name}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Payout */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 800, color: C.textLight }}>Your Payout</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 800, color: C.green, fontSize: '15px' }}>
+                          ₹{parseFloat(p1.commission_value || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 800, color: C.green, fontSize: '15px' }}>
+                          ₹{parseFloat(p2.commission_value || 0).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                      {/* Bank Code */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.textLight }}>Partner Bank</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{p1.bank_code || 'BANK'}</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{p2.bank_code || 'BANK'}</td>
+                      </tr>
+                      {/* Category */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.textLight }}>Category</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, textTransform: 'capitalize' }}>
+                          {p1.category?.replace(/_/g, ' ') || 'Finance'}
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, textTransform: 'capitalize' }}>
+                          {p2.category?.replace(/_/g, ' ') || 'Finance'}
+                        </td>
+                      </tr>
+                      {/* Key Features */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.textLight }}>Key Features</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {c1Details.features.map((f, idx) => <li key={idx}>{f}</li>)}
+                          </ul>
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {c2Details.features.map((f, idx) => <li key={idx}>{f}</li>)}
+                          </ul>
+                        </td>
+                      </tr>
+                      {/* Eligibility */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.textLight }}>Eligibility</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          {c1Details.eligibility.criteria}
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          {c2Details.eligibility.criteria}
+                        </td>
+                      </tr>
+                      {/* Documents Required */}
+                      <tr>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.textLight }}>Documents</td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {c1Details.eligibility.documentsRequired.map((doc, idx) => (
+                              <span key={idx} style={{ fontSize: '10.5px', background: C.bgSecondary, padding: '2px 6px', borderRadius: '4px', border: `1px solid ${C.border}` }}>
+                                {doc}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: `1px solid ${C.border}`, verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {c2Details.eligibility.documentsRequired.map((doc, idx) => (
+                              <span key={idx} style={{ fontSize: '10.5px', background: C.bgSecondary, padding: '2px 6px', borderRadius: '4px', border: `1px solid ${C.border}` }}>
+                                {doc}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'flex-end', gap: '10px', background: C.bgSecondary }}>
+              <button
+                onClick={() => {
+                  setShowCompareModal(false);
+                  setCompareList([]);
+                }}
+                style={{
+                  ...S.btn('outline'), padding: '10px 20px', fontSize: '13px', borderRadius: '10px', cursor: 'pointer'
+                }}
+              >
+                Reset Comparison
+              </button>
+              <button
+                onClick={() => setShowCompareModal(false)}
+                style={{
+                  ...S.btn('primary'), padding: '10px 24px', fontSize: '13px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700
+                }}
+              >
+                Close Comparison
+              </button>
+            </div>
           </div>
         </div>
       )}
