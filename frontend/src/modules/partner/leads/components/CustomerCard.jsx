@@ -21,7 +21,13 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
       case 'approved':
       case 'completed':
       case 'commission_generated':
-        return { bg: '#ECFDF5', color: '#059669', label: '🟢 Approved', border: '#10B981' };
+        const isThemeDark = C.bg === "#000000";
+        return {
+          bg: isThemeDark ? `${C.green}15` : '#ECFDF5',
+          color: isThemeDark ? C.green : '#059669',
+          label: isThemeDark ? '🍊 Approved' : '🟢 Approved',
+          border: isThemeDark ? `${C.green}40` : '#10B981'
+        };
       case 'interested':
         return { bg: '#EFF6FF', color: '#2563EB', label: '🔵 Interested', border: '#3B82F6' };
       case 'documents_pending':

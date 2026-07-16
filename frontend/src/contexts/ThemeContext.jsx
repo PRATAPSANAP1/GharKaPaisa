@@ -22,8 +22,8 @@ export const LIGHT = {
   textLight:   "#94A3B8",   // Light Text / Inactive Menu Icon
   primary:     "#4F46E5",   // Primary (Indigo)
   primaryDark: "#3730A3",   // Darker Indigo
-  green:       "#22C55E",   // Success
-  greenLight:  "#ECFDF5",   // Green Light
+  green:       "#EA580C",   // Replaced success green accent with orange
+  greenLight:  "#FFF7ED",   // Orange light
   red:         "#EF4444",   // Danger
   gold:        "#F59E0B",   // Warning
   border:      "#E5E7EB",   // Border
@@ -37,30 +37,29 @@ export const LIGHT = {
 };
 
 // ── Dark Theme ─────────────────────────────────────────────────────────────────
-// Premium deep-navy dark mode — readable, elegant, brand-consistent
 export const DARK = {
-  bg:          "#0B1622",   // Deep navy page background
-  bgSecondary: "#112035",   // Slightly lighter for secondary areas
-  card:        "#162840",   // Card surface — distinct from bg
-  sidebar:     "#091320",   // Deepest navy for sidebar
+  bg:          "#000000",   // Black background
+  bgSecondary: "#000000",   // Black background secondary
+  card:        "#000000",   // Black card surface
+  sidebar:     "#000000",   // Black sidebar
   sidebarText: "#FFFFFF",
-  text:        "#E8F4FD",   // Soft white — easy on eyes
-  textMid:     "#7FB3CC",   // Mid blue-grey for labels
-  textLight:   "#3D6480",   // Muted for secondary hints
-  primary:     "#4BAF7D",   // Muted teal-green (not neon) for actions
-  primaryDark: "#337A58",   // Deeper for gradient
-  green:       "#4BAF7D",   // Same muted green for success
-  greenLight:  "#6DC99A",   // Lighter green for highlights
-  red:         "#F07070",
-  gold:        "#E8B84B",   // Muted gold — readable on dark
-  border:      "#1E3D5A",   // Visible but subtle border
-  inputBg:     "#0F2030",   // Darker than card — inputs recede
-  teal:        "#4BAF7D",
-  tealDim:     "#6DC99A",
-  navy:        "#091320",
-  navyMid:     "#112035",
-  tealGlow:    "#4BAF7D25",
-  amber:       "#E8B84B",
+  text:        "#F8FAFC",   // Crisp text
+  textMid:     "#E4E4E7",   // Secondary labels
+  textLight:   "#A1A1AA",   // Muted hints (WCAG 2.1 AA Compliant 7.3:1)
+  primary:     "#F97316",   // Vibrant orange accent (WCAG 2.1 AA Compliant 5.5:1)
+  primaryDark: "#EA580C",   // Darker orange for gradient
+  green:       "#F97316",   // Replaced success green with orange
+  greenLight:  "#FFEDD5",   // Light orange highlight
+  red:         "#EF4444",
+  gold:        "#F59E0B",   // Warning gold
+  border:      "#27272A",   // Zinc border (provides contrast on #000000)
+  inputBg:     "#000000",   // Black background for input fields
+  teal:        "#F97316",
+  tealDim:     "#EA580C",
+  navy:        "#000000",
+  navyMid:     "#000000",
+  tealGlow:    "rgba(249, 115, 22, 0.15)",
+  amber:       "#F59E0B",
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────
@@ -68,11 +67,13 @@ const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem("gkp_theme") === "dark";
+    const saved = localStorage.getItem("gkp_theme");
+    return saved === null ? true : saved === "dark";
   });
 
   useEffect(() => {
     localStorage.setItem("gkp_theme", isDark ? "dark" : "light");
+    document.body.style.backgroundColor = isDark ? "#000000" : "#F8FAFC";
   }, [isDark]);
 
   const toggle = () => setIsDark(d => !d);

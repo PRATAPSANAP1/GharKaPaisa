@@ -329,7 +329,11 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                           <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px' }}>App No: {app.app_number} | Amount: ₹{parseFloat(app.loan_amount || 0).toLocaleString()}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <span style={{ background: '#ECFDF5', color: '#059669', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800 }}>
+                          <span style={{
+                            background: C.bg === "#000000" ? `${C.green}15` : '#ECFDF5',
+                            color: C.bg === "#000000" ? C.green : '#059669',
+                            padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800
+                          }}>
                             {app.status?.toUpperCase()}
                           </span>
                           <div style={{ fontSize: '12px', color: C.green, fontWeight: 700, marginTop: '6px' }}>
@@ -353,7 +357,14 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, textTransform: 'uppercase' }}>{type.replace('_', ' ')}</div>
                           {doc ? (
                             <div style={{ marginTop: '8px' }}>
-                              <span style={{ fontSize: '11px', background: '#ECFDF5', color: '#059669', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>VERIFIED</span>
+                              <span style={{
+                                fontSize: '11px',
+                                background: C.bg === "#000000" ? `${C.green}15` : '#ECFDF5',
+                                color: C.bg === "#000000" ? C.green : '#059669',
+                                padding: '2px 8px', borderRadius: '4px', fontWeight: 700
+                              }}>
+                                VERIFIED
+                              </span>
                               <div style={{ marginTop: '8px' }}>
                                 <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Preview Doc</a>
                               </div>

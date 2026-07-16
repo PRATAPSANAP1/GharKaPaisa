@@ -44,7 +44,7 @@ import {
 
 const PartnerWallet = () => {
   const { t } = useTranslation();
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
 
@@ -771,33 +771,33 @@ const PartnerWallet = () => {
             
             {/* Card 1: Available Wallet Balance */}
             <div style={{
-              background: '#ECFDF5',
-              border: '1px solid #D1FAE5',
+              background: isDark ? `${C.green}12` : '#ECFDF5',
+              border: isDark ? `1px solid ${C.green}30` : '1px solid #D1FAE5',
               borderRadius: '16px',
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               minHeight: '135px',
-              boxShadow: '0 2px 10px rgba(16, 185, 129, 0.02)'
+              boxShadow: isDark ? 'none' : '0 2px 10px rgba(16, 185, 129, 0.02)'
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '8px',
-                  background: '#D1FAE5', color: '#10B981',
+                  background: isDark ? `${C.green}20` : '#D1FAE5', color: isDark ? C.green : '#10B981',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }}>
                   <MdAccountBalanceWallet size={18} />
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#065F46', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? C.green : '#065F46', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                   Available Wallet Balance
                 </span>
               </div>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#111827', marginTop: '12px' }}>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: isDark ? C.text : '#111827', marginTop: '12px' }}>
                 ₹{parseFloat(availableBal).toLocaleString('en-IN')}
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#047857', marginTop: '8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? C.textLight : '#047857', marginTop: '8px' }}>
                 Ready for bank settlement
               </div>
             </div>
@@ -1022,7 +1022,7 @@ const PartnerWallet = () => {
               </form>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: C.bgSecondary, padding: '12px', borderRadius: '8px', fontSize: '11px', color: C.textLight }}>
                 <div>⏱️ Settlement SLA: 1-2 business days (NEFT/IMPS)</div>
-                <div>🛡️ KYC Lock Status: {kycStatus === 'approved' ? '🟢 Verified & Approved' : '🔴 KYC Required'}</div>
+                <div>🛡️ KYC Lock Status: {kycStatus === 'approved' ? (isDark ? '🍊 Verified & Approved' : '🟢 Verified & Approved') : '🔴 KYC Required'}</div>
               </div>
             </div>
 
@@ -1610,8 +1610,13 @@ const PartnerWallet = () => {
                       )}
 
                       {b.is_verified ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10B981', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                          🟢 Verified
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px',
+                          color: isDark ? C.green : '#10B981',
+                          background: isDark ? `${C.green}15` : '#ECFDF5',
+                          padding: '4px 8px', borderRadius: '6px', fontWeight: 700
+                        }}>
+                          {isDark ? '🍊' : '🟢'} Verified
                         </span>
                       ) : (
                         <>

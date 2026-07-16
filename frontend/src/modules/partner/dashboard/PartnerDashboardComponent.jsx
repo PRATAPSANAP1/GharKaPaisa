@@ -316,8 +316,8 @@ export default function PartnerDashboard({ partner }) {
         product: lead.product_name || "Financial Product",
         amount,
         status,
-        color: status === "Approved" ? "#10B981" : status === "Rejected" ? "#EF4444" : "#3B82F6",
-        bg: status === "Approved" ? "#ECFDF5" : status === "Rejected" ? "#FEE2E2" : "#EFF6FF",
+        color: status === "Approved" ? (isDark ? C.green : "#10B981") : status === "Rejected" ? "#EF4444" : "#3B82F6",
+        bg: status === "Approved" ? (isDark ? `${C.green}15` : "#ECFDF5") : status === "Rejected" ? "#FEE2E2" : "#EFF6FF",
         ...themeColors
       };
     });
@@ -509,8 +509,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/applications')}
           style={{
-            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
-            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
+            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -518,12 +518,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.totalApps', 'Total Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#F5F3FF", color: "#7C3AED",
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#F5F3FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdDescription size={22} />
@@ -534,8 +534,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/applications?status=approved')}
           style={{
-            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
-            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
+            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -543,12 +543,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#ECFDF5", color: "#22C55E",
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#ECFDF5", color: isDark ? C.green : "#22C55E",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdCheckCircle size={22} />
@@ -559,8 +559,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/wallet')}
           style={{
-            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
-            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
+            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -568,12 +568,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#EEF2FF", color: "#6366F1",
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#EEF2FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
@@ -584,8 +584,8 @@ export default function PartnerDashboard({ partner }) {
         <div 
           onClick={() => navigate('/partner/wallet')}
           style={{
-            background: "#FFFFFF", borderRadius: "18px", padding: "20px", border: "1px solid #EEF2FF",
-            boxShadow: "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
+            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
             cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="hover-card-clickable"
@@ -593,12 +593,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#64748B" }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", color: "#64748B", marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
+            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
+            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
           </div>
           <div style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: "#EFF6FF", color: "#2563EB",
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#EFF6FF", color: isDark ? C.green : "#2563EB",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
