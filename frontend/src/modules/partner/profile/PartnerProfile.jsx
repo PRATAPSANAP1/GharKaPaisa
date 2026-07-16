@@ -76,8 +76,51 @@ export default function PartnerProfile() {
     }
   }, [profile]);
 
+  const [errors, setErrors] = useState({});
+
+  const validateField = (name, val) => {
+    let err = '';
+    if (name === 'pincode') {
+      if (val && !/^[1-9][0-9]{5}$/.test(val)) {
+        err = 'Invalid pincode (should be 6 digits)';
+      }
+    } else if (name === 'gst_number') {
+      if (val && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(val)) {
+        err = 'Invalid GST format (e.g. 22AAAAA0000A1Z5)';
+      }
+    } else if (name === 'ifsc_code') {
+      if (val && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(val)) {
+        err = 'Invalid IFSC code (e.g. HDFC0001234)';
+      }
+    } else if (name === 'upi_id') {
+      if (val && !/^[\w.-]+@[\w.-]+$/.test(val)) {
+        err = 'Invalid UPI ID (e.g. username@upi)';
+      }
+    } else if (name === 'nominee_dob') {
+      if (val && new Date(val) > new Date()) {
+        err = 'Date of birth cannot be in the future';
+      }
+    } else if (name === 'emergency_contact_phone') {
+      if (val && !/^[6-9][0-9]{9}$/.test(val)) {
+        err = 'Invalid mobile number (should be 10 digits)';
+      }
+    }
+    setErrors(prev => ({ ...prev, [name]: err }));
+  };
+
+  const handleInputChange = (name, val) => {
+    setEditForm(prev => ({ ...prev, [name]: val }));
+    validateField(name, val);
+  };
+
+  const hasErrors = Object.values(errors).some(err => err !== '');
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (hasErrors) {
+      alert('Please correct all validation errors before saving.');
+      return;
+    }
     setEditLoading(true);
     try {
       await api.put(`/Partners/${profile.id}/profile`, editForm);
@@ -94,6 +137,10 @@ export default function PartnerProfile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Profile photo must be under 2MB');
+      return;
+    }
     const formData = new FormData();
     formData.append('photo', file);
     try {
@@ -104,6 +151,30 @@ export default function PartnerProfile() {
       alert('Profile photo updated successfully!');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to upload photo');
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
+      alert('Only PNG, JPEG and WebP images are allowed');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo must be under 2MB');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('logo', file);
+    try {
+      await api.post('/partner/profile/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      await fetchProfile();
+      alert('Company logo updated successfully!');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to upload logo');
     }
   };
 
@@ -151,8 +222,8 @@ export default function PartnerProfile() {
             }} 
             onClick={() => document.getElementById('avatar-upload-input').click()}
           >
-            {profile.profile_picture_url ? (
-              <img src={profile.profile_picture_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            {profile.profile_photo_url ? (
+              <img src={profile.profile_photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
             ) : (
               <div style={{
                 width: '100%', height: '100%', borderRadius: '50%',
@@ -305,24 +376,50 @@ export default function PartnerProfile() {
           )}
 
           {activeTab === 'professional' && (
-            <div style={sectionCard}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <MdBusinessCenter style={{ color: C.primary }} /> Business Details
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                <div>
-                  <p style={fieldLabel}>{t("Company / Agency Name")}</p>
-                  <p style={fieldValue}>{profile.company_name || 'Individual Freelancer'}</p>
-                </div>
-                <div>
-                  <p style={fieldLabel}>{t("Entity Type")}</p>
-                  <p style={fieldValue}>{profile.company_type || 'Sole Proprietor'}</p>
-                </div>
-                <div>
-                  <p style={fieldLabel}>{t("GST Number")}</p>
-                  <p style={{ ...fieldValue, fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>
-                    {profile.gst_number || 'Not Registered'}
-                  </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={sectionCard}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <MdBusinessCenter style={{ color: C.primary }} /> Business Details
+                </h3>
+                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  {/* Business Logo Section */}
+                  <div style={{
+                    width: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
+                  }}>
+                    <div style={{
+                      width: '90px', height: '90px', borderRadius: '16px', border: `1.5px dashed ${C.border}`,
+                      background: C.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden', cursor: 'pointer', position: 'relative'
+                    }} onClick={() => document.getElementById('logo-upload-input').click()}>
+                      {profile.company_logo_url ? (
+                        <img src={profile.company_logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '4px', color: C.textLight }}>
+                          <MdBusinessCenter size={28} style={{ color: C.textLight }} />
+                          <div style={{ fontSize: '10px', fontWeight: 700, marginTop: '4px' }}>Upload Logo</div>
+                        </div>
+                      )}
+                    </div>
+                    <input type="file" id="logo-upload-input" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                  </div>
+
+                  {/* Business Info Grid */}
+                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px 40px' }}>
+                    <div>
+                      <p style={fieldLabel}>{t("Company / Agency Name")}</p>
+                      <p style={fieldValue}>{profile.company_name || 'Individual Freelancer'}</p>
+                    </div>
+                    <div>
+                      <p style={fieldLabel}>{t("Entity Type")}</p>
+                      <p style={fieldValue}>{profile.company_type || 'Sole Proprietor'}</p>
+                    </div>
+                    <div>
+                      <p style={fieldLabel}>{t("GST Number")}</p>
+                      <p style={{ ...fieldValue, fontFamily: 'monospace', background: C.bgSecondary, padding: '2px 8px', borderRadius: 6, display: 'inline-block' }}>
+                        {profile.gst_number || 'Not Registered'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -426,136 +523,153 @@ export default function PartnerProfile() {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* 1. Personal & Contact Details */}
-              <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                  👤 Personal & Contact Info
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
-                    <input type="text" value={editForm.first_name} onChange={e => setEditForm({...editForm, first_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Last Name")}</label>
-                    <input type="text" value={editForm.last_name} onChange={e => setEditForm({...editForm, last_name: e.target.value})} style={{ ...S.input, padding: '10px' }} required />
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const isKycApproved = profile.kyc_status === 'approved';
+                const isBankVerified = profile.bank_verified === true;
 
-              {/* 2. Business & Tax Info */}
-              <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                  🏢 Business & GST Details
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company / Agency Name")}</label>
-                    <input type="text" value={editForm.company_name} onChange={e => setEditForm({...editForm, company_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Acme Financials" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("GST Number")}</label>
-                    <input type="text" value={editForm.gst_number} onChange={e => setEditForm({...editForm, gst_number: e.target.value.toUpperCase()})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" />
-                  </div>
-                </div>
-              </div>
+                return (
+                  <>
+                    {/* 1. Personal & Contact Details */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                        👤 Personal & Contact Info {isKycApproved && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via approved KYC)</span>}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
+                          <input type="text" value={editForm.first_name} onChange={e => handleInputChange('first_name', e.target.value)} style={{ ...S.input, padding: '10px' }} required disabled={isKycApproved} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Last Name")}</label>
+                          <input type="text" value={editForm.last_name} onChange={e => handleInputChange('last_name', e.target.value)} style={{ ...S.input, padding: '10px' }} required disabled={isKycApproved} />
+                        </div>
+                      </div>
+                    </div>
 
-              {/* 3. Address & Location */}
-              <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                  📍 Residential Address
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Address")}</label>
-                    <input type="text" value={editForm.current_address} onChange={e => setEditForm({...editForm, current_address: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="House/Flat No, Street, Landmark" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
-                    <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="400001" />
-                  </div>
-                </div>
-              </div>
+                    {/* 2. Business & Tax Info */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                        🏢 Business & GST Details {isKycApproved && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via approved KYC)</span>}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company / Agency Name")}</label>
+                          <input type="text" value={editForm.company_name} onChange={e => handleInputChange('company_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Acme Financials" disabled={isKycApproved} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("GST Number")}</label>
+                          <input type="text" value={editForm.gst_number} onChange={e => handleInputChange('gst_number', e.target.value.toUpperCase())} style={{ ...S.input, padding: '10px', fontFamily: 'monospace', borderColor: errors.gst_number ? C.red : C.border }} placeholder="22AAAAA0000A1Z5" disabled={isKycApproved} />
+                          {errors.gst_number && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.gst_number}</span>}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Nominee details form section */}
-              <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                  👤 Nominee Details
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Nominee Name")}</label>
-                    <input type="text" value={editForm.nominee_name} onChange={e => setEditForm({...editForm, nominee_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Nominee Full Name" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Relation")}</label>
-                    <input type="text" value={editForm.nominee_relation} onChange={e => setEditForm({...editForm, nominee_relation: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Spouse, Father" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Date of Birth")}</label>
-                    <input type="date" value={editForm.nominee_dob} onChange={e => setEditForm({...editForm, nominee_dob: e.target.value})} style={{ ...S.input, padding: '10px' }} />
-                  </div>
-                </div>
-              </div>
+                    {/* 3. Address & Location */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                        📍 Residential Address
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Address")}</label>
+                          <input type="text" value={editForm.current_address} onChange={e => handleInputChange('current_address', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="House/Flat No, Street, Landmark" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Pincode")}</label>
+                          <input type="text" value={editForm.pincode} onChange={e => handleInputChange('pincode', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.pincode ? C.red : C.border }} placeholder="400001" />
+                          {errors.pincode && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.pincode}</span>}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Emergency Contact form section */}
-              <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                  🚨 Emergency Contact Info
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Name")}</label>
-                    <input type="text" value={editForm.emergency_contact_name} onChange={e => setEditForm({...editForm, emergency_contact_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Contact Full Name" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Phone")}</label>
-                    <input type="text" value={editForm.emergency_contact_phone} onChange={e => setEditForm({...editForm, emergency_contact_phone: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="Mobile Number" />
-                  </div>
-                </div>
-              </div>
+                    {/* Nominee details form section */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                        👤 Nominee Details
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Nominee Name")}</label>
+                          <input type="text" value={editForm.nominee_name} onChange={e => handleInputChange('nominee_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Nominee Full Name" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Relation")}</label>
+                          <input type="text" value={editForm.nominee_relation} onChange={e => handleInputChange('nominee_relation', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Spouse, Father" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Date of Birth")}</label>
+                          <input type="date" value={editForm.nominee_dob} onChange={e => handleInputChange('nominee_dob', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.nominee_dob ? C.red : C.border }} />
+                          {errors.nominee_dob && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.nominee_dob}</span>}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* 4. Registered Bank Details for Payouts */}
-              <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>
-                  🏦 Bank Account Details (For Payouts & Commission)
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Holder Name")}</label>
-                    <input type="text" value={editForm.account_holder_name} onChange={e => setEditForm({...editForm, account_holder_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="As printed on Passbook/Cheque" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Bank Name")}</label>
-                    <input type="text" value={editForm.bank_name} onChange={e => setEditForm({...editForm, bank_name: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="e.g. HDFC Bank, ICICI Bank" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("IFSC Code")}</label>
-                    <input type="text" value={editForm.ifsc_code} onChange={e => setEditForm({...editForm, ifsc_code: e.target.value.toUpperCase()})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="HDFC0001234" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Number")}</label>
-                    <input type="password" value={editForm.account_number} onChange={e => setEditForm({...editForm, account_number: e.target.value})} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="Account Number" />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("UPI ID (Optional)")}</label>
-                    <input type="text" value={editForm.upi_id} onChange={e => setEditForm({...editForm, upi_id: e.target.value})} style={{ ...S.input, padding: '10px' }} placeholder="username@upi" />
-                  </div>
-                </div>
-              </div>
+                    {/* Emergency Contact form section */}
+                    <div>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
+                        🚨 Emergency Contact Info
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Name")}</label>
+                          <input type="text" value={editForm.emergency_contact_name} onChange={e => handleInputChange('emergency_contact_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Contact Full Name" />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Phone")}</label>
+                          <input type="text" value={editForm.emergency_contact_phone} onChange={e => handleInputChange('emergency_contact_phone', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.emergency_contact_phone ? C.red : C.border }} placeholder="Mobile Number" />
+                          {errors.emergency_contact_phone && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.emergency_contact_phone}</span>}
+                        </div>
+                      </div>
+                    </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button type="button" onClick={() => setIsEditing(false)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px' }}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={editLoading} style={{
-                  ...S.btn('primary'), padding: '10px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
-                  background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, color: '#fff'
-                }}>
-                  {editLoading ? 'Saving Details...' : 'Save Profile & Bank Details'}
-                </button>
-              </div>
+                    {/* 4. Registered Bank Details for Payouts */}
+                    <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>
+                        🏦 Bank Account Details (For Payouts) {isBankVerified && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via verification)</span>}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Holder Name")}</label>
+                          <input type="text" value={editForm.account_holder_name} onChange={e => handleInputChange('account_holder_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="As printed on Passbook/Cheque" disabled={isBankVerified} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Bank Name")}</label>
+                          <input type="text" value={editForm.bank_name} onChange={e => handleInputChange('bank_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="e.g. HDFC Bank, ICICI Bank" disabled={isBankVerified} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("IFSC Code")}</label>
+                          <input type="text" value={editForm.ifsc_code} onChange={e => handleInputChange('ifsc_code', e.target.value.toUpperCase())} style={{ ...S.input, padding: '10px', fontFamily: 'monospace', borderColor: errors.ifsc_code ? C.red : C.border }} placeholder="HDFC0001234" disabled={isBankVerified} />
+                          {errors.ifsc_code && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.ifsc_code}</span>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Number")}</label>
+                          <input type="password" value={editForm.account_number} onChange={e => handleInputChange('account_number', e.target.value)} style={{ ...S.input, padding: '10px', fontFamily: 'monospace' }} placeholder="Account Number" disabled={isBankVerified} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("UPI ID (Optional)")}</label>
+                          <input type="text" value={editForm.upi_id} onChange={e => handleInputChange('upi_id', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.upi_id ? C.red : C.border }} placeholder="username@upi" />
+                          {errors.upi_id && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.upi_id}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                      <button type="button" onClick={() => setIsEditing(false)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px' }}>
+                        Cancel
+                      </button>
+                      <button type="submit" disabled={editLoading || hasErrors} style={{
+                        ...S.btn('primary'), padding: '10px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
+                        background: hasErrors ? C.bgSecondary : `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                        color: hasErrors ? C.textLight : '#fff',
+                        opacity: hasErrors ? 0.6 : 1,
+                        cursor: hasErrors ? 'not-allowed' : 'pointer'
+                      }}>
+                        {editLoading ? 'Saving Details...' : 'Save Profile & Bank Details'}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </form>
           </div>
         </div>

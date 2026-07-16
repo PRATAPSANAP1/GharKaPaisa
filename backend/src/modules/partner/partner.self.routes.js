@@ -36,6 +36,7 @@ router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.post('/profile/photo', requirePartner, upload.single('photo'), partnerCtrl.uploadProfilePhoto);
+router.post('/profile/logo', requirePartner, upload.single('logo'), partnerCtrl.uploadCompanyLogo);
 router.post('/kyc/upload-selfie', requirePartner, upload.single('selfie'), partnerCtrl.uploadSelfie);
 router.post('/kyc/ocr-scan', requirePartner, partnerCtrl.simulateOCR);
 router.post('/kyc/face-match', requirePartner, partnerCtrl.simulateFaceMatch);

@@ -438,7 +438,7 @@ const getSelfProfile = async (req, res, next) => {
     if (Partner.nominee_name && Partner.nominee_relation) completionPoints++;
     if (Partner.emergency_contact_name && Partner.emergency_contact_phone) completionPoints++;
     if (Partner.company_name || Partner.gst_number) completionPoints++;
-    if (Partner.profile_picture_url) completionPoints++;
+    if (Partner.profile_photo_url) completionPoints++;
     const profile_completion_percent = Math.round((completionPoints / totalPoints) * 100);
 
     return success(res, { ...Partner, kyc_documents: kyc, profile_completion_percent });
@@ -1639,10 +1639,34 @@ const uploadProfilePhoto = async (req, res, next) => {
       return error(res, 'Profile photo must be under 2MB', 400);
     }
 
-    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `profiles/${partnerId}`);
-    await query(`UPDATE partner_profiles SET profile_picture_url = $1 WHERE id = $2`, [url, partnerId]);
+    const { url } = await uploadToS3(req.file.buffer, req.file.originalname, `profiles/${partnerId}`);
+    await query(`UPDATE partner_profiles SET profile_photo_url = $1 WHERE id = $2`, [url, partnerId]);
 
-    return success(res, { profile_picture_url: url }, 'Profile photo uploaded successfully');
+    return success(res, { profile_photo_url: url }, 'Profile photo uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/profile/logo (Upload business logo)
+const uploadCompanyLogo = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Logo file is required', 400);
+
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return error(res, 'Only PNG, JPEG and WebP images are allowed', 400);
+    }
+    if (req.file.size > 2 * 1024 * 1024) {
+      return error(res, 'Logo must be under 2MB', 400);
+    }
+
+    const { url } = await uploadToS3(req.file.buffer, req.file.originalname, `logos/${partnerId}`);
+    await query(`UPDATE partner_profiles SET company_logo_url = $1 WHERE id = $2`, [url, partnerId]);
+
+    return success(res, { company_logo_url: url }, 'Company logo uploaded successfully');
   } catch (err) {
     next(err);
   }
@@ -1792,6 +1816,7 @@ module.exports = {
   getKycStatus,
   getKycDetails,
   uploadProfilePhoto,
+  uploadCompanyLogo,
   uploadSelfie,
   simulateOCR,
   simulateFaceMatch,

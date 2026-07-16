@@ -3257,6 +3257,12 @@ const migrate = async () => {
     `);
 
     logger.info('Product Lifecycle Management Schema Migration (Task 14) completed successfully.');
+
+    // 13. Alter partner_profiles to support company logos
+    await query(`
+      ALTER TABLE partner_profiles
+      ADD COLUMN IF NOT EXISTS company_logo_url VARCHAR(500) NULL;
+    `);
     
     // Run Wallet Engine Migrations
     const runWalletEngineMigrations = require('./migrate_wallet_engine');
