@@ -791,9 +791,11 @@ export default function PartnerProducts() {
                       </div>
 
                       {/* Description */}
-                      <p style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
-                        {product.description || 'Access pre-approved partner terms and competitive payouts directly.'}
-                      </p>
+                      {product.description && (
+                        <p style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                          {product.description}
+                        </p>
+                      )}
                     </div>
 
                     {/* Footer Action Bar */}
