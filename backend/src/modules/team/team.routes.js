@@ -14,11 +14,11 @@ router.get('/referral/qr', authenticated, teamCtrl.handleGetReferralQR);
 router.get('/referral/analytics', authenticated, teamCtrl.handleGetReferralAnalytics);
 
 // Team Dashboard & Tree Hierarchy
-router.get('/team/dashboard', authenticated, teamCtrl.handleGetTeamDashboard);
-router.get('/team/tree', authenticated, teamCtrl.handleGetTeamTree);
-router.get('/team/list', authenticated, teamCtrl.handleGetTeamList);
-router.get('/team/activity', authenticated, teamCtrl.handleGetTeamActivity);
-router.get('/team/:id', authenticated, teamCtrl.handleGetChildDetail);
-router.patch('/team/settings', authenticated, teamCtrl.handleUpdateTeamSettings);
+router.get('/dashboard', authenticated, teamCtrl.handleGetTeamDashboard);
+router.get('/tree', authenticated, teamCtrl.handleGetTeamTree);
+router.get('/list', authenticated, teamCtrl.handleGetTeamList);
+router.get('/activity', authenticated, teamCtrl.handleGetTeamActivity);
+router.get('/:id', authenticated, teamCtrl.handleGetChildDetail);
+router.patch('/settings', authenticated, teamCtrl.handleUpdateTeamSettings);
 
 module.exports = router;

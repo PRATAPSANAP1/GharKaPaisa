@@ -75,7 +75,7 @@ const getReferralAnalytics = async (partnerId) => {
   const { rows: [clicksRow] } = await query(`
     SELECT 
       COUNT(*) as total_clicks,
-      COUNT(*) FILTER (WHERE registered = TRUE) as registered_count
+      COUNT(*) FILTER (WHERE converted = TRUE) as registered_count
     FROM referral_clicks
     WHERE partner_id = $1
   `, [partnerId]);

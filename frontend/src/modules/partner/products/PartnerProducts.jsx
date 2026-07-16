@@ -54,7 +54,7 @@ const getMarketingBadges = (p) => {
 
 export default function PartnerProducts() {
   const { t } = useTranslation();
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
   
   const { user } = useAuthStore();
