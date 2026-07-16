@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
@@ -23,6 +24,13 @@ export default function PartnerCrm() {
   const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      setShowAddModal(true);
+    }
+  }, [location.state]);
 
   const fetchCustomers = usePartnerStore((state) => state.fetchCustomers);
   const customers = usePartnerStore((state) => state.customers);

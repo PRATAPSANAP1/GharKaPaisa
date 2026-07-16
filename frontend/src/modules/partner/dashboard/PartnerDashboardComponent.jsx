@@ -325,6 +325,57 @@ export default function PartnerDashboard({ partner }) {
 
   const recentAppsList = getRecentApplications();
 
+  const quickActions = [
+    {
+      id: 'withdraw',
+      label: t('quickActions.withdraw', 'Withdraw'),
+      desc: t('quickActions.withdrawDesc', 'Request settlement to your bank'),
+      icon: MdAccountBalanceWallet,
+      color: '#0D9488',
+      bgLight: '#ECFDF5',
+      bgDark: 'rgba(13, 148, 136, 0.15)',
+      borderColor: 'rgba(13, 148, 136, 0.3)',
+      action: () => navigate('/partner/wallet'),
+      ariaLabel: 'Request wallet withdrawal settlement to bank'
+    },
+    {
+      id: 'apply',
+      label: t('quickActions.applyProduct', 'Apply Product'),
+      desc: t('quickActions.applyDesc', 'Submit a new product lead'),
+      icon: MdStorefront,
+      color: '#7C3AED',
+      bgLight: '#F5F3FF',
+      bgDark: 'rgba(124, 92, 246, 0.15)',
+      borderColor: 'rgba(124, 92, 246, 0.3)',
+      action: () => navigate('/partner/products'),
+      ariaLabel: 'Apply for a financial product or credit card'
+    },
+    {
+      id: 'customer',
+      label: t('quickActions.addCustomer', 'Add Customer'),
+      desc: t('quickActions.addCustomerDesc', 'Register new client profile'),
+      icon: MdPeople,
+      color: '#2563EB',
+      bgLight: '#EFF6FF',
+      bgDark: 'rgba(37, 99, 235, 0.15)',
+      borderColor: 'rgba(37, 99, 235, 0.3)',
+      action: () => navigate('/partner/customers', { state: { openAddModal: true } }),
+      ariaLabel: 'Open CRM modal to add a new customer'
+    },
+    {
+      id: 'invite',
+      label: t('quickActions.invitePartner', 'Invite Partner'),
+      desc: t('quickActions.inviteDesc', 'Grow your network and overrides'),
+      icon: MdGroup,
+      color: '#EA580C',
+      bgLight: '#FFF7ED',
+      bgDark: 'rgba(234, 88, 12, 0.15)',
+      borderColor: 'rgba(234, 88, 12, 0.3)',
+      action: () => navigate('/partner/team-network'),
+      ariaLabel: 'Invite new partners and copy referral links'
+    }
+  ];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
@@ -555,6 +606,93 @@ export default function PartnerDashboard({ partner }) {
         </div>
 
       </div>
+
+      {/* ──── QUICK ACTIONS PANEL ──── */}
+      <div style={{ marginTop: '4px' }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>
+          {t('dashboard.quickActions', 'Quick Actions')}
+        </h3>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "20px"
+        }}>
+          {quickActions.map((act) => {
+            const Icon = act.icon;
+            const cardBg = isDark ? act.bgDark : act.bgLight;
+            const borderCol = isDark ? act.borderColor : '#EEF2FF';
+            const textCol = isDark ? '#FFFFFF' : '#111827';
+            const descCol = isDark ? '#94A3B8' : '#64748B';
+
+            return (
+              <div
+                key={act.id}
+                onClick={act.action}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    act.action();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={act.ariaLabel}
+                style={{
+                  background: isDark ? C.card : '#FFFFFF',
+                  borderRadius: "18px",
+                  padding: "20px",
+                  border: `1.5px solid ${borderCol}`,
+                  boxShadow: "0 4px 20px rgba(15,23,42,0.04)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  outline: 'none'
+                }}
+                className="hover-card-clickable"
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = act.color;
+                  e.currentTarget.style.boxShadow = `0 0 0 3px ${act.color}40`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = borderCol;
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = act.color;
+                  e.currentTarget.style.boxShadow = `0 10px 25px ${act.color}15`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = borderCol;
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
+                }}
+              >
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  background: cardBg,
+                  color: act.color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}>
+                  <Icon size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "14.5px", fontWeight: 800, color: textCol }}>{act.label}</div>
+                  <div style={{ fontSize: "11.5px", fontWeight: 500, color: descCol, marginTop: "3px", lineHeight: 1.3 }}>{act.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ──── QUICK ACCESS SECTION ──── */}
       <QuickAccessSection />
 
