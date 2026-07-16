@@ -698,8 +698,8 @@ export default function PartnerProducts() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '24px'
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: isMobile ? '12px' : '24px'
             }}>
               {currentCards.map((product) => {
                 const isSelectedForCompare = compareList.some(p => p.id === product.id);
@@ -715,12 +715,12 @@ export default function PartnerProducts() {
                     className="gkp-product-card"
                     style={{
                       ...S.card,
-                      padding: '24px',
+                      padding: isMobile ? '14px 12px' : '24px',
                       borderRadius: '20px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: '16px',
+                      gap: isMobile ? '12px' : '16px',
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       border: isSelectedForCompare ? `2.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
                       boxShadow: isSelectedForCompare ? `0 12px 28px ${C.primary}20` : (isDark ? 'none' : '0 4px 15px rgba(0,0,0,0.02)'),
@@ -729,13 +729,13 @@ export default function PartnerProducts() {
                   >
                     <div>
                       {/* Top Badges Row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '6px', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '4px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{
                             ...S.tag(C.primary),
-                            fontSize: '11px',
+                            fontSize: isMobile ? '9.5px' : '11px',
                             fontWeight: 750,
-                            padding: '4px 10px',
+                            padding: isMobile ? '3px 8px' : '4px 10px',
                             borderRadius: '8px',
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px'
@@ -744,16 +744,16 @@ export default function PartnerProducts() {
                           </span>
                           {isSelectedForCompare && (
                             <span style={{
-                              fontSize: '11px', fontWeight: 800, color: '#fff',
-                              background: C.green, padding: '4px 10px', borderRadius: '8px'
+                              fontSize: isMobile ? '9.5px' : '11px', fontWeight: 800, color: '#fff',
+                              background: C.green, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: '8px'
                             }}>
                               ✓ Compare
                             </span>
                           )}
                         </div>
                         <span style={{
-                          fontSize: '11px', fontWeight: 700, color: C.textMid,
-                          background: C.bgSecondary, padding: '4px 10px', borderRadius: '8px',
+                          fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textMid,
+                          background: C.bgSecondary, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: '8px',
                           textTransform: 'uppercase', letterSpacing: '0.5px',
                           border: `1px solid ${C.border}`
                         }}>
@@ -762,10 +762,10 @@ export default function PartnerProducts() {
                       </div>
 
                       {/* Product Logo & Info Header */}
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'center', marginBottom: '14px' }}>
                         <div style={{
-                          width: 58,
-                          height: 58,
+                          width: isMobile ? 44 : 58,
+                          height: isMobile ? 44 : 58,
                           flexShrink: 0,
                           background: C.bgSecondary,
                           borderRadius: '14px',
@@ -774,24 +774,24 @@ export default function PartnerProducts() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           overflow: 'hidden',
-                          fontSize: '28px',
+                          fontSize: isMobile ? '22px' : '28px',
                           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}>
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                           ) : (
                             emoji
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.25 }}>
+                          <h3 style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.25 }}>
                             {product.name}
                           </h3>
                         </div>
                       </div>
 
                       {/* Description */}
-                      <p style={{ fontSize: '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
+                      <p style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
                         {product.description || 'Access pre-approved partner terms and competitive payouts directly.'}
                       </p>
                     </div>
@@ -807,16 +807,16 @@ export default function PartnerProducts() {
                     }}>
                       {/* Payout & Commission Row */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Partner Payout
                         </span>
-                        <span style={{ fontSize: '28px', fontWeight: 800, color: C.green }}>
+                        <span style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: 800, color: C.green }}>
                           ₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
 
                       {/* Buttons Row */}
-                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
                         {(product.public_url || product.partner_url) && (
                           <button
                             onClick={() => handleCopyLink(product)}
@@ -824,8 +824,8 @@ export default function PartnerProducts() {
                             style={{
                               ...S.btn('outline'),
                               flex: 1,
-                              padding: '10px 8px',
-                              fontSize: '12.5px',
+                              padding: isMobile ? '8px 4px' : '10px 8px',
+                              fontSize: isMobile ? '11px' : '12.5px',
                               borderRadius: '10px',
                               cursor: 'pointer',
                               display: 'flex',
@@ -835,7 +835,7 @@ export default function PartnerProducts() {
                               fontWeight: 700
                             }}
                           >
-                            <MdShare size={14} /> Link
+                            <MdShare size={isMobile ? 12 : 14} /> Link
                           </button>
                         )}
                         
@@ -845,8 +845,8 @@ export default function PartnerProducts() {
                           style={{
                             ...S.btn(isSelectedForCompare ? 'primary' : 'outline'),
                             flex: 1,
-                            padding: '10px 8px',
-                            fontSize: '12.5px',
+                            padding: isMobile ? '8px 4px' : '10px 8px',
+                            fontSize: isMobile ? '11px' : '12.5px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -862,7 +862,7 @@ export default function PartnerProducts() {
                         </button>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
                         <button
                           onClick={() => setShowBenefitsProduct(product)}
                           type="button"
@@ -871,8 +871,8 @@ export default function PartnerProducts() {
                             borderColor: C.border,
                             color: C.textMid,
                             flex: 1,
-                            padding: '11px 12px',
-                            fontSize: '13px',
+                            padding: isMobile ? '8px 4px' : '11px 12px',
+                            fontSize: isMobile ? '11.5px' : '13px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -893,8 +893,8 @@ export default function PartnerProducts() {
                             color: '#fff',
                             border: 'none',
                             flex: 1.5,
-                            padding: '11px 12px',
-                            fontSize: '13px',
+                            padding: isMobile ? '8px 4px' : '11px 12px',
+                            fontSize: isMobile ? '11.5px' : '13px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             fontWeight: 800,
@@ -907,7 +907,7 @@ export default function PartnerProducts() {
                           }}
                           className="hover-scale-button"
                         >
-                          Apply Now <MdChevronRight size={16} />
+                          Apply <MdChevronRight size={isMobile ? 14 : 16} />
                         </button>
                       </div>
                     </div>
