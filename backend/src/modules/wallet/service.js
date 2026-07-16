@@ -32,9 +32,9 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
         processed_at = NOW(),
         description = COALESCE($3, description),
         remarks = COALESCE($4, remarks),
-        release_at = CASE WHEN $1 = 'pending' THEN release_at ELSE NULL END
+        release_at = CASE WHEN $6 = 'pending' THEN release_at ELSE NULL END
       WHERE id = $5
-    `, [status, processedBy, description, meta.remarks || null, ledgerTxnId]);
+    `, [status, processedBy, description, meta.remarks || null, ledgerTxnId, status]);
   } else {
     // Determine release_at for pending transactions (default to 7 days)
     let releaseAt = null;
