@@ -17,11 +17,11 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
   const initials = names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   const getStatusBadge = (st) => {
+    const isThemeDark = C.bg === "#000000";
     switch (st?.toLowerCase()) {
       case 'approved':
       case 'completed':
       case 'commission_generated':
-        const isThemeDark = C.bg === "#000000";
         return {
           bg: isThemeDark ? `${C.green}15` : '#ECFDF5',
           color: isThemeDark ? C.green : '#059669',
@@ -29,17 +29,42 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
           border: isThemeDark ? `${C.green}40` : '#10B981'
         };
       case 'interested':
-        return { bg: '#EFF6FF', color: '#2563EB', label: '🔵 Interested', border: '#3B82F6' };
+        return {
+          bg: isThemeDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
+          color: isThemeDark ? '#3B82F6' : '#2563EB',
+          label: '🔵 Interested',
+          border: isThemeDark ? '#3B82F640' : '#3B82F640'
+        };
       case 'documents_pending':
-        return { bg: '#FFFBEB', color: '#D97706', label: '🟡 Docs Pending', border: '#F59E0B' };
+        return {
+          bg: isThemeDark ? 'rgba(245, 158, 11, 0.15)' : '#FFFBEB',
+          color: isThemeDark ? '#F59E0B' : '#D97706',
+          label: '🟡 Docs Pending',
+          border: isThemeDark ? '#F59E0B40' : '#F59E0B40'
+        };
       case 'lead_created':
       case 'application_submitted':
       case 'bank_verification':
-        return { bg: '#F3E8FF', color: '#7E22CE', label: '🟣 Application Processing', border: '#A855F7' };
+        return {
+          bg: isThemeDark ? 'rgba(168, 85, 247, 0.15)' : '#F3E8FF',
+          color: isThemeDark ? '#A855F7' : '#7E22CE',
+          label: '🟣 Processing',
+          border: isThemeDark ? '#A855F740' : '#A855F740'
+        };
       case 'rejected':
-        return { bg: '#FEE2E2', color: '#DC2626', label: '🔴 Rejected', border: '#EF4444' };
+        return {
+          bg: isThemeDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+          color: isThemeDark ? '#EF4444' : '#DC2626',
+          label: '🔴 Rejected',
+          border: isThemeDark ? '#EF444440' : '#EF444440'
+        };
       default:
-        return { bg: '#F1F5F9', color: '#475569', label: '⚪ New Lead', border: '#94A3B8' };
+        return {
+          bg: isThemeDark ? 'rgba(148, 163, 184, 0.15)' : '#F1F5F9',
+          color: isThemeDark ? '#94A3B8' : '#475569',
+          label: '⚪ New Lead',
+          border: isThemeDark ? '#94A3B840' : '#94A3B840'
+        };
     }
   };
 
@@ -61,7 +86,7 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
       padding: '20px',
       display: 'flex',
       flexDirection: 'column',
-      justify: 'space-between',
+      justifyContent: 'space-between',
       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
       transition: 'transform 0.2s ease, box-shadow 0.2s ease',
       cursor: 'pointer'
@@ -181,7 +206,7 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
         paddingTop: '12px',
         borderTop: `1px dashed ${C.border}`,
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div style={{ fontSize: '11px', color: C.textLight }}>
