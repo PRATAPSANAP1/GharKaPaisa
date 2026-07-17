@@ -860,6 +860,21 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
               gap: '2px',
               boxSizing: 'border-box'
             }}>
+              <div style={{
+                padding: '6px 10px 8px 10px',
+                borderBottom: `1.5px solid ${C.border}`,
+                marginBottom: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px'
+              }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {t('partnerLayout.partnerCode', 'Partner Code')}
+                </span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.primary, wordBreak: 'break-all' }}>
+                  {user?.partner_code || user?.Partner_code || "—"}
+                </span>
+              </div>
               <button
                 onClick={() => {
                   setProfileDropdownOpen(false);

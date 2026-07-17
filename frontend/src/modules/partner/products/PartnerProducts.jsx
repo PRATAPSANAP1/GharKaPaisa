@@ -354,9 +354,33 @@ export default function PartnerProducts() {
         })}
       </div>
 
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
+      {/* Approval Rate */}
+      <p style={sectionLabel}>{t("Approval %")}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+        {[0, 80, 90].map(val => {
+          const isActive = minApproval === val;
+          return (
+            <button
+              key={val}
+              onClick={() => { setMinApproval(val); if (isMobile) setShowMobileFilter(false); }}
+              style={{
+                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                background: isActive ? `${C.primary}15` : 'transparent',
+                color: isActive ? C.primary : C.textMid,
+              }}
+              className={isActive ? "" : "hover-bg-button"}
+            >
+              {val === 0 ? 'Any Approval %' : `${val}%+`}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Reset filters */}
+      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
       <button
         onClick={() => {
           setActiveCategory('all');
