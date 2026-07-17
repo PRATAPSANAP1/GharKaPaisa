@@ -666,7 +666,19 @@ const listPartnerCustomers = async (req, res, next) => {
       WHERE a.partner_id = $1 
          OR l.partner_id = $1 
          OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
-      GROUP BY c.id
+      GROUP BY 
+        c.id, 
+        c.full_name, 
+        c.mobile, 
+        c.email, 
+        c.pan_number, 
+        c.aadhaar_last4, 
+        c.city, 
+        c.state, 
+        c.employment_type, 
+        c.monthly_income, 
+        c.employer, 
+        c.created_at
       ORDER BY COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) DESC
     `, [partnerId]);
 
