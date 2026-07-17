@@ -833,7 +833,7 @@ export default function PartnerProducts() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: isMobile ? '12px' : '24px'
             }}>
               {currentCards.map((product) => {
