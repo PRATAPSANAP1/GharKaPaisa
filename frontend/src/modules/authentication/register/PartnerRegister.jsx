@@ -805,16 +805,16 @@ export default function PartnerRegister() {
             {/* Header Text */}
             <div style={{ textAlign: "center", flexShrink: 0, marginBottom: "8px" }}>
               <h1 id="onboarding-welcome-title" style={{ fontSize: "20px", fontWeight: 900, margin: "0 0 4px", color: C.text, lineHeight: 1.2 }}>
-                {t("onboarding.welcomeTo", "Welcome to")}{" "}
+                <span id="label-welcome-to">{t("onboarding.welcomeTo", "Welcome to")}</span>{" "}
                 <span style={{ background: "linear-gradient(135deg, #0D6EFD, #2E90FA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                   GharKaPaisa
                 </span>
               </h1>
               <p id="onboarding-welcome-subtitle" style={{ fontSize: "11px", fontWeight: 700, color: C.textLight || "#64748B", margin: "0 0 6px" }}>
-                {t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}
+                <span id="label-trusted-platform">{t("onboarding.trustedPlatform", "India's Trusted Financial Partner Platform")}</span>
               </p>
               <p id="onboarding-welcome-desc" style={{ fontSize: "11px", lineHeight: 1.4, color: C.textMid || "#475569", margin: 0, padding: "0 8px" }}>
-                {t("onboarding.description", "Start earning by offering Credit Cards, Loans, Insurance and Financial Services to your customers.")}
+                <span id="label-onboarding-desc">{t("onboarding.description", "Start earning by offering Credit Cards, Loans, Insurance and Financial Services to your customers.")}</span>
               </p>
             </div>
 
@@ -1214,7 +1214,7 @@ export default function PartnerRegister() {
               
               {/* Error Box */}
               {err && (
-                <div className="form-full-width" style={{
+                <div id="register-error-message" className="form-full-width" style={{
                   background: `${C.red}12`, border: `1.5px solid ${C.red}30`,
                   borderRadius: "10px", padding: "8px 12px",
                   fontSize: "12px", color: C.red,
@@ -1227,7 +1227,7 @@ export default function PartnerRegister() {
 
               {/* Info Message Box */}
               {infoMsg && (
-                <div className="form-full-width" style={{
+                <div id="register-info-message" className="form-full-width" style={{
                   background: `${C.green}12`, border: `1.5px solid ${C.green}30`,
                   borderRadius: "10px", padding: "8px 12px",
                   fontSize: "12px", color: C.green,
@@ -1298,7 +1298,7 @@ export default function PartnerRegister() {
                         }}
                         disabled={mobileActionDisabled}
                       >
-                        {form.mobilePreVerified ? t("onboarding.otpVerified", "✓ Verified") : mobileOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
+                        <span id="label-send-mobile-otp">{form.mobilePreVerified ? t("onboarding.otpVerified", "✓ Verified") : mobileOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}</span>
                       </button>
                     </div>
                     {fieldErrors.mobile && (
@@ -1347,7 +1347,7 @@ export default function PartnerRegister() {
                             cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
                         >
-                          {mobileVerifyLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}
+                          <span id="label-verify-mobile-otp">{mobileVerifyLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}</span>
                         </button>
                       </div>
                     )}
@@ -1386,7 +1386,7 @@ export default function PartnerRegister() {
                         }}
                         disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
                       >
-                        {form.emailPreVerified ? t("onboarding.otpVerified", "✓ Verified") : emailOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}
+                        <span id="label-send-email-otp">{form.emailPreVerified ? t("onboarding.otpVerified", "✓ Verified") : emailOtpSent ? t("onboarding.otpResend", "Resend") : t("onboarding.otpSend", "Send OTP")}</span>
                       </button>
                     </div>
                     {fieldErrors.email && (
@@ -1435,7 +1435,7 @@ export default function PartnerRegister() {
                             cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer"
                           }}
                         >
-                          {emailOtpLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}
+                          <span id="label-verify-email-otp">{emailOtpLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}</span>
                         </button>
                       </div>
                     )}
@@ -1520,7 +1520,9 @@ export default function PartnerRegister() {
                     <label id="label-partner-type" style={S.label}>{t("onboarding.partnerType", "Partner Type")}</label>
                     <select style={{ ...S.input, paddingVertical: "10px" }} value={form.companyType} onChange={set("companyType")}>
                       {COMPANY_TYPES.map(c => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
+                        <option key={c.value} id={`option-company-type-${c.value}`} value={c.value}>
+                          {t("companyType." + c.value, c.label)}
+                        </option>
                       ))}
                     </select>
                     {fieldErrors.companyType && (
@@ -1663,7 +1665,7 @@ export default function PartnerRegister() {
                     color: C.textMid,
                     lineHeight: 1.4
                   }}>
-                    <strong id="label-note-prefix">{t("onboarding.notePrefix", "Note:")}</strong> {t("onboarding.noteMessage", "Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).")}
+                    <strong id="label-note-prefix">{t("onboarding.notePrefix", "Note:")}</strong> <span id="label-note-message">{t("onboarding.noteMessage", "Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).")}</span>
                   </div>
 
                   {/* Terms Checkbox */}
