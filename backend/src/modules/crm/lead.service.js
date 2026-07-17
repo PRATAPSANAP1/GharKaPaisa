@@ -96,12 +96,11 @@ const triggerAutomaticCommissionPayout = async (leadId, approvedAmount = null, c
     }
 
     // 3. Insert into commission_ledger
-    const releaseDays = 7;
     const { rows: [ledger] } = await client.query(`
       INSERT INTO commission_ledger (
         partner_id, lead_id, product_name, transaction_amount, commission_rate,
-        commission_earned, status, hold_until
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'held', NOW() + INTERVAL '${releaseDays} days')
+        commission_earned, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'Pending Approval')
       RETURNING *
     `, [lead.partner_profile_id, leadId, lead.product_name, loanAmount, commVal, calculatedCommission]);
 
@@ -118,16 +117,16 @@ const triggerAutomaticCommissionPayout = async (leadId, approvedAmount = null, c
     // 5. Record Wallet Transaction Entry
     await client.query(`
       INSERT INTO wallet_transactions (
-        wallet_id, partner_id, lead_id, type, amount, status, description, release_at
+        wallet_id, partner_id, lead_id, type, amount, status, description
       ) VALUES (
         (SELECT id FROM partner_wallets WHERE partner_id = $1),
-        $1, $2, 'credit', $3, 'pending', $4, NOW() + INTERVAL '${releaseDays} days'
+        $1, $2, 'credit', $3, 'Pending Approval', $4
       )
     `, [lead.partner_profile_id, leadId, calculatedCommission, `Hold payout for lead ${lead.customer_name} (${lead.product_name})`]);
 
     // 6. Log Timeline & Activity Stream
     await logLeadTimeline(client, leadId, 'Commission Generated', `₹${calculatedCommission.toLocaleString()} commission credited to partner held balance`, 'commission_ledger', ledger.id, changedBy);
-    await logLeadTimeline(client, leadId, 'Wallet Updated', `₹${calculatedCommission.toLocaleString()} added to partner held balance (Releases in ${releaseDays} days)`, 'wallet', lead.partner_profile_id, changedBy);
+    await logLeadTimeline(client, leadId, 'Wallet Updated', `₹${calculatedCommission.toLocaleString()} added to partner held balance (Pending admin approval)`, 'wallet', lead.partner_profile_id, changedBy);
 
     await client.query('COMMIT');
     logger.info(`Successfully triggered automatic commission payout of ₹${calculatedCommission} for lead ${leadId}`);

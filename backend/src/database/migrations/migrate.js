@@ -3286,6 +3286,45 @@ const migrate = async () => {
     // Run Wallet Engine Migrations
     const runWalletEngineMigrations = require('./migrate_wallet_engine');
     await runWalletEngineMigrations();
+
+    // Task 15: New Commission Flow (Manual approval, drop hold fields, rename statuses)
+    try {
+      logger.info('Running New Commission Flow Schema Migration (Task 15)...');
+      
+      // Update statuses to simplified values
+      await query(`
+        UPDATE wallet_ledger 
+        SET status = CASE 
+          WHEN status IN ('pending', 'held') THEN 'Pending Approval'
+          WHEN status = 'completed' THEN 'Released'
+          WHEN status = 'rejected' THEN 'Rejected'
+          WHEN status IN ('cancelled', 'expired') THEN 'Cancelled'
+          ELSE status
+        END;
+      `);
+      
+      await query(`
+        UPDATE wallet_transactions 
+        SET status = CASE 
+          WHEN status IN ('pending', 'held') THEN 'Pending Approval'
+          WHEN status = 'completed' THEN 'Released'
+          WHEN status = 'rejected' THEN 'Rejected'
+          WHEN status IN ('cancelled', 'expired') THEN 'Cancelled'
+          ELSE status
+        END;
+      `);
+
+      // Drop hold/release columns if they exist
+      await query(`ALTER TABLE wallet_transactions DROP COLUMN IF EXISTS release_at`);
+      await query(`ALTER TABLE wallet_transactions DROP COLUMN IF EXISTS auto_release`);
+      await query(`ALTER TABLE wallet_ledger DROP COLUMN IF EXISTS hold_until`);
+      await query(`ALTER TABLE commission_ledger DROP COLUMN IF EXISTS hold_until`);
+      
+      logger.info('New Commission Flow Schema Migration (Task 15) completed successfully.');
+    } catch (task15Err) {
+      logger.error('Failed to run New Commission Flow Schema Migration (Task 15):', task15Err.message);
+      throw task15Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

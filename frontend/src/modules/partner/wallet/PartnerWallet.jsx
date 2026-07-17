@@ -584,14 +584,16 @@ const PartnerWallet = () => {
   );
 
   // Extract wallet balances safely
-  const availableBal = dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 0;
-  const pendingBal = dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 0;
+  const availableBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 0);
+  const lockedBal = parseFloat(dashboardData?.wallet?.locked_balance ?? dashboardData?.locked_balance ?? 0);
+  const totalWalletBal = availableBal + lockedBal;
+  const pendingBal = parseFloat(dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 0);
   const todayEarn = dashboardData?.today_earnings ?? 0;
   const monthlyEarn = dashboardData?.monthly_earnings ?? 0;
-  const lifetimeEarn = dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 0;
-  const totalWithdrawnVal = dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 0;
-  const overrideComm = dashboardData?.wallet?.override_balance ?? dashboardData?.override_commission ?? 0;
-  const refBonus = dashboardData?.wallet?.referral_bonus ?? dashboardData?.referral_bonus ?? 0;
+  const lifetimeEarn = parseFloat(dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 0);
+  const totalWithdrawnVal = parseFloat(dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 0);
+  const overrideComm = parseFloat(dashboardData?.wallet?.override_balance ?? dashboardData?.override_commission ?? 0);
+  const refBonus = parseFloat(dashboardData?.wallet?.referral_bonus ?? dashboardData?.referral_bonus ?? 0);
   // Chart data colors
   const CHART_COLORS = ['#0F766E', '#1D4ED8', '#B45309', '#701A75', '#0369A1', '#15803D'];
 
@@ -677,8 +679,7 @@ const PartnerWallet = () => {
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A3412', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                HELD BALANCE
-                <span style={{ display: 'block', fontSize: '9px', fontWeight: 600, textTransform: 'capitalize', color: '#C2410C', opacity: 0.85, marginTop: '2px' }}>(7-Day Hold)</span>
+                PENDING COMMISSION APPROVAL
               </div>
               <div style={{ fontSize: '32px', fontWeight: 800, color: '#EA580C', marginTop: '10px' }}>
                 ₹{parseFloat(pendingBal).toLocaleString('en-IN')}
@@ -686,7 +687,7 @@ const PartnerWallet = () => {
             </div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F97316', display: 'inline-block' }} />
-              Auto matures in 7 days
+              Awaiting admin approval
             </div>
           </div>
         </div>
@@ -714,7 +715,7 @@ const PartnerWallet = () => {
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 800, color: '#5B21B6', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                LIFETIME TOTAL EARNED
+                TOTAL EARNINGS
               </div>
               <div style={{ fontSize: '32px', fontWeight: 800, color: '#6D28D9', marginTop: '22px' }}>
                 ₹{parseFloat(lifetimeEarn).toLocaleString('en-IN')}
@@ -769,7 +770,7 @@ const PartnerWallet = () => {
           {/* Real-time KPI Statistics Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             
-            {/* Card 1: Available Wallet Balance */}
+            {/* Card 1: Available Balance */}
             <div style={{
               background: isDark ? `${C.green}12` : '#ECFDF5',
               border: isDark ? `1px solid ${C.green}30` : '1px solid #D1FAE5',
@@ -791,18 +792,18 @@ const PartnerWallet = () => {
                   <MdAccountBalanceWallet size={18} />
                 </div>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: isDark ? C.green : '#065F46', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Available Wallet Balance
+                  Available Balance
                 </span>
               </div>
               <div style={{ fontSize: '26px', fontWeight: 800, color: isDark ? C.text : '#111827', marginTop: '12px' }}>
-                ₹{parseFloat(availableBal).toLocaleString('en-IN')}
+                ₹{parseFloat(totalWalletBal).toLocaleString('en-IN')}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? C.textLight : '#047857', marginTop: '8px' }}>
-                Ready for bank settlement
+                Total balance in wallet
               </div>
             </div>
 
-            {/* Card 2: Held Balance (Pending) */}
+            {/* Card 2: Pending Commission Approval */}
             <div style={{
               background: '#FFF7ED',
               border: '1px solid #FFEDD5',
@@ -824,80 +825,80 @@ const PartnerWallet = () => {
                   <MdLock size={18} />
                 </div>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: '#9A3412', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Held Balance (Pending)
+                  Pending Commission Approval
                 </span>
               </div>
               <div style={{ fontSize: '26px', fontWeight: 800, color: '#111827', marginTop: '12px' }}>
                 ₹{parseFloat(pendingBal).toLocaleString('en-IN')}
               </div>
               <div style={{ fontSize: '11px', fontWeight: 600, color: '#C2410C', marginTop: '8px' }}>
-                Releases in 48h maturity
+                Awaiting admin approval
               </div>
             </div>
 
-            {/* Card 3: Lifetime Ledger Earnings */}
+            {/* Card 3: Withdrawable Balance */}
             <div style={{
-              background: '#1E293B',
-              border: '1px solid #334155',
+              background: '#EFF6FF',
+              border: '1px solid #DBEAFE',
               borderRadius: '16px',
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               minHeight: '135px',
-              boxShadow: '0 2px 10px rgba(30, 41, 59, 0.02)'
+              boxShadow: '0 2px 10px rgba(37, 99, 235, 0.02)'
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '8px',
-                  background: '#334155', color: '#94A3B8',
+                  background: '#DBEAFE', color: '#2563EB',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <MdHistory size={18} />
+                  <MdAccountBalanceWallet size={18} />
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#F1F5F9', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Lifetime Ledger Earnings
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Withdrawable Balance
                 </span>
               </div>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF', marginTop: '12px' }}>
-                ₹{parseFloat(lifetimeEarn).toLocaleString('en-IN')}
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#111827', marginTop: '12px' }}>
+                ₹{parseFloat(availableBal).toLocaleString('en-IN')}
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8', marginTop: '8px' }}>
-                Total gross commission
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#2563EB', marginTop: '8px' }}>
+                Ready for bank settlement
               </div>
             </div>
 
-            {/* Card 4: Team Override Earnings */}
+            {/* Card 4: Total Earnings */}
             <div style={{
-              background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-              border: '1px solid #0284C7',
+              background: '#F5F3FF',
+              border: '1px solid #DDD6FE',
               borderRadius: '16px',
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               minHeight: '135px',
-              boxShadow: '0 2px 10px rgba(2, 132, 199, 0.02)'
+              boxShadow: '0 2px 10px rgba(124, 58, 237, 0.02)'
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.2)', color: '#FFFFFF',
+                  background: '#EDE9FE', color: '#6D28D9',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0
                 }}>
                   <MdTrendingUp size={18} />
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Team Override Earnings
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#5B21B6', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Total Earnings
                 </span>
               </div>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF', marginTop: '12px' }}>
-                ₹{parseFloat(overrideComm).toLocaleString('en-IN')}
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#111827', marginTop: '12px' }}>
+                ₹{parseFloat(lifetimeEarn).toLocaleString('en-IN')}
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#E0F2FE', opacity: 0.9, marginTop: '8px' }}>
-                Overrides from child network
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#7C3AED', marginTop: '8px' }}>
+                Lifetime gross earnings
               </div>
             </div>
 
@@ -1185,11 +1186,12 @@ const PartnerWallet = () => {
               <option value="ADJUSTMENT">{t("Adjustment")}</option>
             </select>
 
-            <select style={{ ...S.input, width: '130px', margin: 0 }} value={txStatus} onChange={e => setTxStatus(e.target.value)}>
+            <select style={{ ...S.input, width: '150px', margin: 0 }} value={txStatus} onChange={e => setTxStatus(e.target.value)}>
               <option value="">{t("All Status")}</option>
-              <option value="completed">{t("Completed")}</option>
-              <option value="pending">{t("Pending")}</option>
-              <option value="rejected">{t("Rejected")}</option>
+              <option value="Released">{t("Released")}</option>
+              <option value="Pending Approval">{t("Pending Approval")}</option>
+              <option value="Rejected">{t("Rejected")}</option>
+              <option value="Cancelled">{t("Cancelled")}</option>
             </select>
 
             <input 
@@ -1273,7 +1275,7 @@ const PartnerWallet = () => {
                             {isCredit ? '+' : '-'}{formatCurrency(net)}
                           </td>
                           <td style={{ padding: '14px 16px', fontSize: '12px', textAlign: 'center' }}>
-                            <span style={{ fontSize: '10.5px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: tx.status === 'completed' ? `${C.green}15` : tx.status === 'pending' ? `${C.gold}15` : `${C.red}15`, color: tx.status === 'completed' ? C.green : tx.status === 'pending' ? C.gold : C.red }}>
+                            <span style={{ fontSize: '10.5px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: tx.status === 'Released' ? `${C.green}15` : tx.status === 'Pending Approval' ? `${C.gold}15` : `${C.red}15`, color: tx.status === 'Released' ? C.green : tx.status === 'Pending Approval' ? C.gold : C.red }}>
                               {tx.status}
                             </span>
                           </td>

@@ -327,18 +327,6 @@ export default function PartnerDashboard({ partner }) {
 
   const quickActions = [
     {
-      id: 'withdraw',
-      label: t('quickActions.withdraw', 'Withdraw'),
-      desc: t('quickActions.withdrawDesc', 'Request settlement to your bank'),
-      icon: MdAccountBalanceWallet,
-      color: '#0D9488',
-      bgLight: '#ECFDF5',
-      bgDark: 'rgba(13, 148, 136, 0.15)',
-      borderColor: 'rgba(13, 148, 136, 0.3)',
-      action: () => navigate('/partner/wallet'),
-      ariaLabel: 'Request wallet withdrawal settlement to bank'
-    },
-    {
       id: 'apply',
       label: t('quickActions.applyProduct', 'Apply Product'),
       desc: t('quickActions.applyDesc', 'Submit a new product lead'),
@@ -503,7 +491,10 @@ export default function PartnerDashboard({ partner }) {
 
 
       {/* ──── KPI CARDS ROW ──── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
+      <div 
+        className="kpi-cards-container"
+        style={{ display: "flex", flexFlow: "row nowrap", gap: "20px", width: "100%" }}
+      >
         
         {/* Total Applications */}
         <div 
@@ -511,18 +502,19 @@ export default function PartnerDashboard({ partner }) {
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
+            flex: 1, minWidth: 0
           }}
-          className="hover-card-clickable"
+          className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
+            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
           </div>
-          <div style={{
+          <div className="kpi-card-icon" style={{
             width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#F5F3FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -536,18 +528,19 @@ export default function PartnerDashboard({ partner }) {
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
+            flex: 1, minWidth: 0
           }}
-          className="hover-card-clickable"
+          className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
+            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
           </div>
-          <div style={{
+          <div className="kpi-card-icon" style={{
             width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#ECFDF5", color: isDark ? C.green : "#22C55E",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -561,18 +554,19 @@ export default function PartnerDashboard({ partner }) {
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
+            flex: 1, minWidth: 0
           }}
-          className="hover-card-clickable"
+          className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
+            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
           </div>
-          <div style={{
+          <div className="kpi-card-icon" style={{
             width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#EEF2FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -586,18 +580,19 @@ export default function PartnerDashboard({ partner }) {
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
+            flex: 1, minWidth: 0
           }}
-          className="hover-card-clickable"
+          className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
-            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
+            <div className="kpi-card-trend" style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
           </div>
-          <div style={{
+          <div className="kpi-card-icon" style={{
             width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#EFF6FF", color: isDark ? C.green : "#2563EB",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
@@ -606,6 +601,9 @@ export default function PartnerDashboard({ partner }) {
         </div>
 
       </div>
+
+      {/* ──── QUICK ACCESS SECTION ──── */}
+      <QuickAccessSection />
 
       {/* ──── QUICK ACTIONS PANEL ──── */}
       <div style={{ marginTop: '4px' }}>
@@ -693,9 +691,6 @@ export default function PartnerDashboard({ partner }) {
         </div>
       </div>
 
-      {/* ──── QUICK ACCESS SECTION ──── */}
-      <QuickAccessSection />
-
       {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
 
@@ -759,6 +754,110 @@ export default function PartnerDashboard({ partner }) {
         </div>
       </div>
 
+      <style>{`
+        /* KPI Cards Responsive Styling */
+        .kpi-cards-container {
+          display: flex !important;
+          flex-flow: row nowrap !important;
+          width: 100% !important;
+        }
+        .kpi-card {
+          flex: 1 1 0px !important;
+          min-width: 0 !important;
+        }
+
+        @media (max-width: 900px) {
+          .kpi-cards-container {
+            gap: 10px !important;
+          }
+          .kpi-card {
+            padding: 12px 10px !important;
+            border-radius: 14px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+            gap: 6px !important;
+          }
+          .kpi-card-icon {
+            align-self: flex-start !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 8px !important;
+            margin-top: 4px !important;
+          }
+          .kpi-card-icon svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .kpi-card-title {
+            font-size: 10.5px !important;
+          }
+          .kpi-card-value {
+            font-size: 18px !important;
+            margin-top: 4px !important;
+          }
+          .kpi-card-trend {
+            font-size: 9.5px !important;
+            margin-top: 4px !important;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .kpi-cards-container {
+            gap: 6px !important;
+          }
+          .kpi-card {
+            padding: 10px 6px !important;
+            border-radius: 10px !important;
+            gap: 4px !important;
+            min-height: 90px !important;
+          }
+          .kpi-card-icon {
+            display: none !important;
+          }
+          .kpi-card-title {
+            font-size: 9px !important;
+            line-height: 1.2 !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            height: 22px !important; /* Ensure alignment */
+          }
+          .kpi-card-value {
+            font-size: 14px !important;
+            margin-top: 2px !important;
+          }
+          .kpi-card-trend {
+            font-size: 8px !important;
+            margin-top: 2px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .kpi-cards-container {
+            gap: 4px !important;
+          }
+          .kpi-card {
+            padding: 8px 4px !important;
+            border-radius: 8px !important;
+            min-height: 80px !important;
+          }
+          .kpi-card-title {
+            font-size: 8px !important;
+            height: 18px !important;
+          }
+          .kpi-card-value {
+            font-size: 12px !important;
+          }
+          .kpi-card-trend {
+            font-size: 7.5px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

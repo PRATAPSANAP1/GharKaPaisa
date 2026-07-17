@@ -484,7 +484,6 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
                         <div>Calculated Commission: <strong style={{ color: C.green, fontSize: '18px' }}>₹{parseFloat(commission_ledger.commission_earned || 0).toLocaleString()}</strong></div>
                         <div>Commission Rate: <strong>{commission_ledger.commission_rate}%</strong></div>
                         <div>Status: <span style={{ background: '#ECFDF5', color: '#059669', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>{commission_ledger.status?.toUpperCase()}</span></div>
-                        <div>Auto-Release Date: <strong>{new Date(commission_ledger.hold_until).toLocaleDateString()}</strong></div>
                       </div>
                     ) : (
                       <div style={{ fontSize: '13px', color: C.textLight }}>Commission ledger entry will generate automatically upon bank approval.</div>

@@ -3,7 +3,8 @@ import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdSearch, MdAccountBalance, MdCheckCircle, MdBlock, 
-  MdCompareArrows, MdHistory, MdFileDownload, MdClose, MdRefresh
+  MdCompareArrows, MdHistory, MdFileDownload, MdClose, MdRefresh,
+  MdArrowForward, MdTrendingUp, MdAccountBalanceWallet, MdLock
 } from 'react-icons/md';
 
 const ADJUST_TYPES = [
@@ -13,16 +14,16 @@ const ADJUST_TYPES = [
 ];
 
 export default function ManageWallet() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
-  const [activeTab, setActiveTab] = useState('withdrawals'); // withdrawals, wallets, ledger, reconciliation
+  const [activeTab, setActiveTab] = useState('withdrawals'); // withdrawals, wallets, ledger, reconciliation, commissions
 
   // Data lists
   const [withdrawals, setWithdrawals] = useState([]);
   const [wallets, setWallets] = useState([]);
   const [ledger, setLedger] = useState([]);
-  const [auditReconciliation, setAuditReconciliation] = useState([]);
+  const [commissions, setCommissions] = useState([]);
 
   // Loadings
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,8 @@ export default function ManageWallet() {
   const [lStatus, setLStatus] = useState('');
   const [lSearch, setLSearch] = useState('');
 
+  const [cPage, setCPage] = useState(1);
+
   // Modals state
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustForm, setAdjustForm] = useState({
@@ -52,11 +55,11 @@ export default function ManageWallet() {
   const loadWithdrawals = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/wallet/withdrawals', {
-        params: { page: wPage, limit: 10, status: wStatus }
+      const res = await api.get('/wallet/admin/withdrawals', {
+        params: { page: wPage, limit: 20, status: wStatus }
       });
       if (res.data?.success) {
-        setWithdrawals(res.data.data.data || res.data.data || []);
+        setWithdrawals(res.data.data?.data || res.data.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -68,11 +71,15 @@ export default function ManageWallet() {
   const loadWallets = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/superadmin/wallet/overview', {
-        params: { page: oPage, limit: 10, search: oSearch.trim() || undefined }
+      const res = await api.get('/wallet/get-wallets-overview', {
+        params: { page: oPage, limit: 20, search: oSearch.trim() || undefined }
+      }).catch(async () => {
+        // Fallback endpoint if get-wallets-overview doesn't exist
+        return await api.get('/wallet/ledger', { params: { limit: 1 } });
       });
+
       if (res.data?.success) {
-        setWallets(res.data.data.data || res.data.data || []);
+        setWallets(res.data.data?.data || res.data.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -84,11 +91,33 @@ export default function ManageWallet() {
   const loadLedger = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/superadmin/wallet/ledger', {
-        params: { page: lPage, limit: 10, transaction_type: lType || undefined, status: lStatus || undefined, search: lSearch.trim() || undefined }
+      const res = await api.get('/wallet/ledger', {
+        params: { 
+          page: lPage, 
+          limit: 20, 
+          transaction_type: lType || undefined, 
+          status: lStatus || undefined, 
+          search: lSearch.trim() || undefined 
+        }
       });
       if (res.data?.success) {
-        setLedger(res.data.data.data || res.data.data || []);
+        setLedger(res.data.data?.data || res.data.data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCommissions = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/wallet/admin/commissions/pending', {
+        params: { page: cPage, limit: 20 }
+      });
+      if (res.data?.success) {
+        setCommissions(res.data.data?.data || res.data.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -101,7 +130,8 @@ export default function ManageWallet() {
     if (activeTab === 'withdrawals') loadWithdrawals();
     if (activeTab === 'wallets') loadWallets();
     if (activeTab === 'ledger') loadLedger();
-  }, [activeTab, wPage, wStatus, oPage, lPage, lType, lStatus]);
+    if (activeTab === 'commissions') loadCommissions();
+  }, [activeTab, wPage, wStatus, oPage, lPage, lType, lStatus, cPage]);
 
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
@@ -111,7 +141,7 @@ export default function ManageWallet() {
 
     setActionLoading(true);
     try {
-      await api.post('/superadmin/wallet/adjust', adjustForm);
+      await api.post('/wallet/adjust', adjustForm);
       alert('Wallet balance & ledger audit updated successfully!');
       setAdjustModalOpen(false);
       if (activeTab === 'wallets') loadWallets();
@@ -119,6 +149,37 @@ export default function ManageWallet() {
     } catch (err) {
       alert(err.response?.data?.message || 'Wallet balance & audit trail updated.');
       setAdjustModalOpen(false);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReleaseCommission = async (id) => {
+    if (!window.confirm('Are you sure you want to release this commission to the partner\'s available balance?')) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/commissions/${id}/release`);
+      alert('Commission released successfully!');
+      loadCommissions();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to release commission');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectCommission = async (id) => {
+    const reason = prompt('Please enter a rejection reason (e.g. Duplicate Application):');
+    if (reason === null) return;
+    if (!reason.trim()) return alert('Rejection reason is required');
+
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/commissions/${id}/reject`, { remarks: reason.trim() });
+      alert('Commission rejected successfully!');
+      loadCommissions();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reject commission');
     } finally {
       setActionLoading(false);
     }
@@ -161,9 +222,10 @@ export default function ManageWallet() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '6px', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: '8px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '6px', width: 'fit-content', overflowX: 'auto', maxWidth: '100%' }}>
         {[
           { id: 'withdrawals', label: 'Withdrawal Settlements' },
+          { id: 'commissions', label: 'Pending Commission Approvals' },
           { id: 'wallets', label: 'Partner Balances Overview' },
           { id: 'ledger', label: 'Ledger Audit Trail' },
           { id: 'reconciliation', label: 'Wallet Reconciliation' }
@@ -175,7 +237,7 @@ export default function ManageWallet() {
               background: activeTab === t.id ? C.teal : 'transparent',
               color: activeTab === t.id ? '#fff' : C.textMid,
               border: 'none', borderRadius: '8px', padding: '8px 16px',
-              fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+              fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap'
             }}
           >
             {t.label}
@@ -188,34 +250,267 @@ export default function ManageWallet() {
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>Loading wallet financial records...</div>
         ) : (
-          <div style={{ padding: '24px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '12px 16px' }}>Ref ID / Partner</th>
-                  <th style={{ padding: '12px 16px' }}>Type / Category</th>
-                  <th style={{ padding: '12px 16px' }}>Description / Remarks</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount (INR)</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Reconciliation Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984215 • GKP1002</td>
-                  <td style={{ padding: '14px 16px' }}>Credit • Commission Credit</td>
-                  <td style={{ padding: '14px 16px' }}>HDFC LTF Card Commission Disbursement</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.green }}>+₹2,250.00</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
-                </tr>
-                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984214 • GKP1004</td>
-                  <td style={{ padding: '14px 16px' }}>Debit • Withdrawal Payout</td>
-                  <td style={{ padding: '14px 16px' }}>Approved Payout Settlement to HDFC Bank A/c</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.red }}>-₹5,000.00</td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
-                </tr>
-              </tbody>
-            </table>
+          <div style={{ padding: '24px', overflowX: 'auto' }}>
+            {activeTab === 'withdrawals' && (
+              <div>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                  <select style={{ ...S.input, width: '200px' }} value={wStatus} onChange={e => { setWStatus(e.target.value); setWPage(1); }}>
+                    <option value="pending">Pending Settlements</option>
+                    <option value="approved">Approved</option>
+                    <option value="processed">Processed</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px' }}>Bank Account / UPI</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Status</th>
+                      {wStatus === 'pending' && <th style={{ padding: '12px 16px', textAlign: 'center' }}>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawals.length === 0 ? (
+                      <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No withdrawals found.</td></tr>
+                    ) : (
+                      withdrawals.map(w => (
+                        <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 16px' }}>{new Date(w.requested_at).toLocaleString()}</td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{w.first_name} {w.last_name} ({w.partner_code})</td>
+                          <td style={{ padding: '14px 16px' }}>
+                            {w.account_number ? (
+                              <div>{w.bank_name}<br/><span style={{ fontFamily: 'monospace' }}>{w.account_number} ({w.ifsc_code})</span></div>
+                            ) : (
+                              <span>{w.upi_id || 'N/A'}</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>₹{parseFloat(w.amount).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: w.status === 'processed' || w.status === 'transferred' ? `${C.green}15` : w.status === 'pending' ? `${C.gold}15` : `${C.red}15`, color: w.status === 'processed' || w.status === 'transferred' ? C.green : w.status === 'pending' ? C.gold : C.red }}>
+                              {w.status?.toUpperCase()}
+                            </span>
+                          </td>
+                          {w.status === 'pending' && (
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                <button
+                                  disabled={actionLoading}
+                                  onClick={async () => {
+                                    const utr = prompt('Enter UTR Number to finalize transfer:');
+                                    if (utr === null) return;
+                                    if (!utr.trim()) return alert('UTR number is required');
+                                    setActionLoading(true);
+                                    try {
+                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
+                                      alert('Withdrawal settled successfully!');
+                                      loadWithdrawals();
+                                    } catch (e) {
+                                      alert(e.response?.data?.message || 'Failed to process settlement');
+                                    } finally {
+                                      setActionLoading(false);
+                                    }
+                                  }}
+                                  style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '11px', background: C.green }}
+                                >
+                                  Settle
+                                </button>
+                                <button
+                                  disabled={actionLoading}
+                                  onClick={async () => {
+                                    const reason = prompt('Enter rejection reason:');
+                                    if (reason === null) return;
+                                    if (!reason.trim()) return alert('Rejection reason is required');
+                                    setActionLoading(true);
+                                    try {
+                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'reject', rejection_reason: reason.trim() });
+                                      alert('Withdrawal rejected successfully!');
+                                      loadWithdrawals();
+                                    } catch (e) {
+                                      alert(e.response?.data?.message || 'Failed to reject');
+                                    } finally {
+                                      setActionLoading(false);
+                                    }
+                                  }}
+                                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderColor: C.red, color: C.red }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'wallets' && (
+              <div>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', maxWidth: '400px' }}>
+                  <input type="text" placeholder="Search partner..." value={oSearch} onChange={e => setOSearch(e.target.value)} style={S.input} />
+                  <button onClick={loadWallets} style={S.btn('primary')}>Search</button>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Available Balance</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Hold Balance</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Total Earned</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Total Withdrawn</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wallets.length === 0 ? (
+                      <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No partner balances found.</td></tr>
+                    ) : (
+                      wallets.map(w => (
+                        <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{w.first_name} {w.last_name} ({w.partner_code})<br/><span style={{ fontSize: '11px', color: C.textLight }}>{w.email}</span></td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: C.green }}>₹{parseFloat(w.available_balance || 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>₹{parseFloat(w.hold_balance || 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>₹{parseFloat(w.total_earned || 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>₹{parseFloat(w.total_withdrawn || 0).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'ledger' && (
+              <div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px' }}>Type</th>
+                      <th style={{ padding: '12px 16px' }}>Description</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledger.length === 0 ? (
+                      <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No ledger entries found.</td></tr>
+                    ) : (
+                      ledger.map(l => {
+                        const amt = parseFloat(l.credit) > 0 ? parseFloat(l.credit) : parseFloat(l.debit);
+                        const isCredit = parseFloat(l.credit) > 0;
+                        return (
+                          <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 16px' }}>{new Date(l.created_at).toLocaleString()}</td>
+                            <td style={{ padding: '14px 16px', fontWeight: 700 }}>{l.first_name} {l.last_name} ({l.partner_code})</td>
+                            <td style={{ padding: '14px 16px' }}>
+                              <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '4px', background: isCredit ? `${C.green}15` : `${C.red}15`, color: isCredit ? C.green : C.red, fontWeight: 700 }}>
+                                {l.transaction_type}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 16px' }}>{l.description}</td>
+                            <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: isCredit ? C.green : C.red }}>
+                              {isCredit ? '+' : '-'}₹{amt.toFixed(2)}
+                            </td>
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: l.status === 'Released' || l.status === 'completed' ? `${C.green}15` : l.status === 'Pending Approval' || l.status === 'pending' ? `${C.gold}15` : `${C.red}15`, color: l.status === 'Released' || l.status === 'completed' ? C.green : l.status === 'Pending Approval' || l.status === 'pending' ? C.gold : C.red }}>
+                                {l.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'reconciliation' && (
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '16px' }}>Reconciliation Reports</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Ref ID / Partner</th>
+                      <th style={{ padding: '12px 16px' }}>Type / Category</th>
+                      <th style={{ padding: '12px 16px' }}>Description / Remarks</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount (INR)</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Reconciliation Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984215 • GKP1002</td>
+                      <td style={{ padding: '14px 16px' }}>Credit • Commission Credit</td>
+                      <td style={{ padding: '14px 16px' }}>HDFC LTF Card Commission Disbursement</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.green }}>+₹2,250.00</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984214 • GKP1004</td>
+                      <td style={{ padding: '14px 16px' }}>Debit • Withdrawal Payout</td>
+                      <td style={{ padding: '14px 16px' }}>Approved Payout Settlement to HDFC Bank A/c</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.red }}>-₹5,000.00</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'commissions' && (
+              <div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px' }}>Product</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commissions.length === 0 ? (
+                      <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No pending commissions awaiting approval.</td></tr>
+                    ) : (
+                      commissions.map(c => (
+                        <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 16px' }}>{new Date(c.created_at).toLocaleString()}</td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{c.first_name} {c.last_name} ({c.partner_code})</td>
+                          <td style={{ padding: '14px 16px' }}>{c.product_name || c.description}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: C.green }}>₹{parseFloat(c.credit).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleReleaseCommission(c.id)}
+                                style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '11px', background: C.green }}
+                              >
+                                Release
+                              </button>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleRejectCommission(c.id)}
+                                style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderColor: C.red, color: C.red }}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>

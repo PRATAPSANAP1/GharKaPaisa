@@ -13,7 +13,7 @@ const ensureWallet = async (partnerId, client = null) => {
 
 // Sync transactions table helper to ensure wallet_transactions replicates wallet_ledger
 const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, applicationId, type, amount, balanceBefore, balanceAfter, status, description, referenceType, referenceId, processedBy, meta = {}) => {
-  const { rows } = await client.query(`SELECT id, release_at FROM wallet_transactions WHERE id = $1`, [ledgerTxnId]);
+  const { rows } = await client.query(`SELECT id FROM wallet_transactions WHERE id = $1`, [ledgerTxnId]);
   
   let tds = parseFloat(meta.tds || 0);
   let gst = parseFloat(meta.gst || 0);
@@ -31,22 +31,15 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
         processed_by = $2,
         processed_at = NOW(),
         description = COALESCE($3, description),
-        remarks = COALESCE($4, remarks),
-        release_at = CASE WHEN CAST($6 AS TEXT) = 'pending' THEN release_at ELSE NULL END
+        remarks = COALESCE($4, remarks)
       WHERE id = $5
-    `, [status, processedBy, description, meta.remarks || null, ledgerTxnId, status]);
+    `, [status, processedBy, description, meta.remarks || null, ledgerTxnId]);
   } else {
-    // Determine release_at for pending transactions (default to 7 days)
-    let releaseAt = null;
-    if (status === 'pending') {
-      releaseAt = meta.release_at ? new Date(meta.release_at) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    }
-
     await client.query(`
       INSERT INTO wallet_transactions (
         id, wallet_id, partner_id, application_id, type, amount, balance_before, balance_after, status, description, reference_type, reference_id, processed_by, processed_at, created_at,
-        product_id, commission_type, gst, tds, net_amount, remarks, release_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), $14, $15, $16, $17, $18, $19, $20)
+        product_id, commission_type, gst, tds, net_amount, remarks
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), $14, $15, $16, $17, $18, $19)
     `, [
       ledgerTxnId,
       walletId,
@@ -66,8 +59,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
       gst,
       tds,
       netAmount,
-      meta.remarks || null,
-      releaseAt
+      meta.remarks || null
     ]);
   }
 };
@@ -87,7 +79,7 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
       COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'completed'
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Released'
   `, [pId, uId]);
   
   // 2. Completed Debits (e.g. withdrawal payouts settled)
@@ -95,7 +87,7 @@ const syncWalletBalance = async (partnerId, client) => {
     SELECT 
       COALESCE(SUM(debit), 0) as completed_debits
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'completed'
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Released'
   `, [pId, uId]);
 
   // 3. Hold Balance = Pending Credits
@@ -104,7 +96,7 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(credit), 0) as hold_bal,
       COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_pending
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'pending'
+    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Pending Approval'
   `, [pId, uId]);
 
   // 4. Locked Balance = Pending/Approved Withdrawal Requests
@@ -226,11 +218,11 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
-      ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending', $8, $9, $10)
+      ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'Pending Approval', $8, $9, $10)
       RETURNING id
     `, [
       wallet.id, resolvedPartnerId, appId, txnType, amount, 
-      meta.description || 'Commission credit on hold', 
+      meta.description || 'Commission credit pending approval', 
       meta.reference_id || appId || null,
       meta.processed_by || null,
       productId,
@@ -246,7 +238,7 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     const balanceBefore = parseFloat(wallet.available_balance || 0);
     const balanceAfter = balanceBefore;
 
-    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, 'pending', meta.description || 'Commission credit on hold', meta.reference_type, meta.reference_id || meta.application_id || null, meta.processed_by || null, {
+    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, 'Pending Approval', meta.description || 'Commission credit pending approval', meta.reference_type, meta.reference_id || meta.application_id || null, meta.processed_by || null, {
       product_id: meta.product_id || null,
       commission_type: commissionType,
       remarks: meta.remarks || null
@@ -255,7 +247,7 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     await syncWalletBalance(resolvedPartnerId, client);
 
     if (isInternalTxn) await client.query('COMMIT');
-    logger.info(`creditHold ₹${amount} (hold) for partner ${resolvedPartnerId}, txn: ${txn.id}`);
+    logger.info(`creditHold ₹${amount} (pending approval) for partner ${resolvedPartnerId}, txn: ${txn.id}`);
     return txn;
   } catch (err) {
     if (isInternalTxn) await client.query('ROLLBACK');
@@ -266,101 +258,7 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
   }
 };
 
-// Release money from Hold Balance to Available Balance (after hold period ends)
-const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) => {
-  const client = existingClient || await getClient();
-  const isInternalTxn = !existingClient;
-  try {
-    if (isInternalTxn) await client.query('BEGIN');
 
-    // Get wallet
-    const { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
-      [partnerId]
-    );
-    if (!wallet) throw new Error('Wallet not found');
-
-    if (meta.txn_id) {
-      // It's a release of an existing ledger entry (pending -> completed)
-      await client.query(`
-        UPDATE wallet_ledger SET status = 'completed', description = COALESCE(description, '') || ' [Released]'
-        WHERE id = $1
-      `, [meta.txn_id]);
-      
-      await syncTransactionTable(client, meta.txn_id, wallet.id, partnerId, null, null, amount, null, null, 'completed', meta.description || 'Hold released', null, null, meta.processed_by || null);
-    } else {
-      // New direct release
-      let txnType = 'PERSONAL_COMMISSION';
-      if (meta.reference_type === 'team_commission') txnType = 'TEAM_COMMISSION';
-      if (meta.reference_type === 'referral_bonus') txnType = 'REFERRAL_BONUS';
-      if (meta.reference_type === 'override_commission') txnType = 'OVERRIDE_COMMISSION';
-
-      let productId = meta.product_id || null;
-      let bankId = meta.bank_id || null;
-      const appId = meta.application_id || null;
-
-      if (appId) {
-        const { rows: [app] } = await client.query(
-          `SELECT product_id, bank_id FROM applications WHERE id = $1`,
-          [appId]
-        );
-        if (app) {
-          productId = app.product_id || productId;
-          bankId = app.bank_id || bankId;
-        }
-      }
-
-      const { rows: [txn] } = await client.query(`
-        INSERT INTO wallet_ledger (
-          wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
-        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'completed', $8, $9, $10)
-        RETURNING id
-      `, [
-        wallet.id, partnerId, appId, txnType, amount, 
-        meta.description || 'Hold released', 
-        meta.reference_id || appId || null,
-        meta.processed_by || null,
-        productId,
-        bankId
-      ]);
-
-      const balanceBefore = parseFloat(wallet.available_balance || 0);
-      const balanceAfter = balanceBefore + amount;
-
-      let commissionType = 'personal';
-      if (meta.reference_type === 'team_commission') commissionType = 'team';
-      if (meta.reference_type === 'referral_bonus') commissionType = 'referral';
-      if (meta.reference_type === 'override_commission') commissionType = 'override';
-
-      await syncTransactionTable(client, txn.id, wallet.id, partnerId, null, txnType, amount, balanceBefore, balanceAfter, 'completed', meta.description || 'Hold released', meta.reference_type, meta.reference_id || null, meta.processed_by || null, {
-        product_id: meta.product_id || null,
-        commission_type: commissionType,
-        remarks: meta.remarks || null
-      });
-    }
-
-    await syncWalletBalance(partnerId, client);
-
-    if (isInternalTxn) await client.query('COMMIT');
-    logger.info(`releaseHold: Released ₹${amount} to available for partner ${partnerId}`);
-
-    // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
-    if (partner) {
-      try {
-        await notify.commissionCredited(partner.user_id, amount);
-      } catch (notifyErr) {
-        logger.error('Release notify failed', { error: notifyErr.message });
-      }
-    }
-  } catch (err) {
-    if (isInternalTxn) await client.query('ROLLBACK');
-    logger.error('releaseHold failed', err.message);
-    throw err;
-  } finally {
-    if (isInternalTxn) client.release();
-  }
-};
 
 // Deduct money from Available Balance (e.g. withdrawal request)
 const debitAvailable = async (partnerId, amount, meta = {}, existingClient = null) => {
@@ -900,73 +798,57 @@ const createImmutableLedgerEntry = async (partnerId, data, clientParam = null) =
     const {
       transaction_type, credit = 0, debit = 0, reference_number = null,
       description = '', product_id = null, lead_id = null, application_id = null,
-      customer_name = null, hold_days = 7, remarks = null
+      customer_name = null, remarks = null
     } = data;
 
     const numCredit = parseFloat(credit || 0);
     const numDebit = parseFloat(debit || 0);
 
     // Read current balances
-    const { rows: [w] } = await client.query(
-      `SELECT * FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+    const { rows: [wallet] } = await client.query(
+      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
       [partnerId]
     );
+    if (!wallet) throw new Error('Wallet not found');
 
-    const currentAvail = parseFloat(w?.available_balance || 0);
-    const currentHold = parseFloat(w?.hold_balance || 0);
-    const currentEarned = parseFloat(w?.total_earned || 0);
-
-    let newAvail = currentAvail;
-    let newHold = currentHold;
-    let newEarned = currentEarned;
-    let balanceAfter = currentAvail;
-
-    // Calculate hold timestamp if credit hold
-    let holdUntil = null;
-    if (numCredit > 0 && hold_days > 0) {
-      holdUntil = new Date(Date.now() + hold_days * 24 * 60 * 60 * 1000);
-      newHold += numCredit;
-      newEarned += numCredit;
-      balanceAfter = currentAvail;
-    } else if (numCredit > 0) {
-      newAvail += numCredit;
-      newEarned += numCredit;
-      balanceAfter = newAvail;
-    }
-
-    if (numDebit > 0) {
-      newAvail -= numDebit;
-      balanceAfter = newAvail;
-    }
+    const status = numCredit > 0 ? 'Pending Approval' : 'Released';
 
     // 1. Create Immutable Ledger Row
     const { rows: [ledger] } = await client.query(`
       INSERT INTO wallet_ledger (
-        partner_id, transaction_type, credit, debit, balance_after,
+        wallet_id, partner_id, transaction_type, credit, debit,
         reference_number, description, product_id, lead_id, application_id,
-        customer_name, hold_until, status, remarks
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'completed',$13)
+        customer_name, status, remarks
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       RETURNING *
     `, [
-      partnerId, transaction_type, numCredit, numDebit, balanceAfter,
+      wallet.id, partnerId, transaction_type, numCredit, numDebit,
       reference_number, description, product_id, lead_id, application_id,
-      customer_name, holdUntil, remarks
+      customer_name, status, remarks
     ]);
 
-    // 2. Atomically Update Wallet Totals
-    await client.query(`
-      UPDATE partner_wallets
-      SET available_balance = $1, hold_balance = $2, total_earned = $3, updated_at = NOW()
-      WHERE partner_id = $4
-    `, [newAvail, newHold, newEarned, partnerId]);
+    // 2. Sync to wallet_transactions
+    let commissionType = 'personal';
+    if (transaction_type === 'TEAM_COMMISSION') commissionType = 'team';
+    if (transaction_type === 'REFERRAL_BONUS') commissionType = 'referral';
+    if (transaction_type === 'OVERRIDE_COMMISSION') commissionType = 'override';
 
-    // 3. Create release job tracker if held credit
-    if (holdUntil) {
-      await client.query(`
-        INSERT INTO commission_release_jobs (ledger_id, partner_id, amount, release_date, status)
-        VALUES ($1, $2, $3, $4, 'pending')
-      `, [ledger.id, partnerId, numCredit, holdUntil]);
-    }
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = numCredit > 0 ? balanceBefore : (balanceBefore - numDebit);
+
+    await syncTransactionTable(
+      client, ledger.id, wallet.id, partnerId, application_id, transaction_type,
+      numCredit > 0 ? numCredit : numDebit, balanceBefore, balanceAfter,
+      status, description, transaction_type === 'TEAM_COMMISSION' ? 'team_commission' : 'commission',
+      reference_number || application_id, null, {
+        product_id,
+        commission_type: commissionType,
+        remarks
+      }
+    );
+
+    // 3. Atomically Update Wallet Totals
+    await syncWalletBalance(partnerId, client);
 
     if (!isOuterClient) await client.query('COMMIT');
     return ledger;
@@ -979,81 +861,7 @@ const createImmutableLedgerEntry = async (partnerId, data, clientParam = null) =
   }
 };
 
-/**
- * Automated 7-Day Hold Release Scheduler (No Manual Release Required)
- */
-const processAutomatedCommissionReleaseScheduler = async () => {
-  const client = await getClient();
-  try {
-    await client.query('BEGIN');
 
-    // Find all matured release jobs
-    const { rows: jobs } = await client.query(`
-      SELECT crj.*, wl.reference_number, wl.description
-      FROM commission_release_jobs crj
-      JOIN wallet_ledger wl ON wl.id = crj.ledger_id
-      WHERE crj.status = 'pending' AND crj.release_date <= NOW()
-      FOR UPDATE OF crj
-    `);
-
-    if (jobs.length === 0) {
-      await client.query('COMMIT');
-      return { processed_count: 0 };
-    }
-
-    logger.info(`Automated Release Scheduler: Processing ${jobs.length} matured commission holds...`);
-
-    for (const job of jobs) {
-      const amount = parseFloat(job.amount);
-
-      // Move held balance to available balance
-      await client.query(`
-        UPDATE partner_wallets
-        SET hold_balance = GREATEST(0, hold_balance - $1),
-            available_balance = available_balance + $1,
-            updated_at = NOW()
-        WHERE partner_id = $2
-      `, [amount, job.partner_id]);
-
-      // Update release job status
-      await client.query(`
-        UPDATE commission_release_jobs
-        SET status = 'released', processed_at = NOW()
-        WHERE id = $1
-      `, [job.id]);
-
-      // Log release transaction in wallet_ledger
-      await client.query(`
-        INSERT INTO wallet_ledger (
-          partner_id, transaction_type, credit, debit, balance_after,
-          reference_number, description, status, remarks
-        ) VALUES (
-          $1, 'COMMISSION_RELEASED', $2, 0,
-          (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
-          $3, $4, 'completed', 'Automated 7-day hold maturation release'
-        )
-      `, [job.partner_id, amount, job.reference_number, `7-Day Hold Released: ${job.description}`]);
-
-      // Notify partner
-      await notify.partner(
-        job.partner_id,
-        '💰 Commission Released to Wallet',
-        `₹${amount.toLocaleString()} has matured from 7-day hold and is now available for withdrawal!`,
-        { type: 'COMMISSION_RELEASED', amount }
-      ).catch(() => null);
-    }
-
-    await client.query('COMMIT');
-    logger.info(`Automated Release Scheduler completed for ${jobs.length} payouts.`);
-    return { processed_count: jobs.length };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    logger.error('Failed to run automated commission release scheduler:', err);
-    throw err;
-  } finally {
-    client.release();
-  }
-};
 
 /**
  * Send Withdrawal OTP
@@ -1180,19 +988,19 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     
     // 1. Get the ledger transaction
     const { rows: [ledgerTxn] } = await client.query(
-      `SELECT id, partner_id, credit, transaction_type, description FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      `SELECT id, partner_id, credit, transaction_type, description, status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
-    if (ledgerTxn.status === 'completed') throw new Error('Commission already released');
-    if (ledgerTxn.status === 'rejected') throw new Error('Commission already rejected');
+    if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
+    if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
     const amount = parseFloat(ledgerTxn.credit || 0);
 
     // 2. Update wallet_ledger
     await client.query(`
       UPDATE wallet_ledger 
-      SET status = 'completed', 
+      SET status = 'Released', 
           description = COALESCE(description, '') || ' [Released by Admin]'
       WHERE id = $1
     `, [transactionId]);
@@ -1208,7 +1016,7 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       amount, 
       null, 
       null, 
-      'completed', 
+      'Released', 
       ledgerTxn.description || 'Commission released by Admin', 
       null, 
       null, 
@@ -1227,6 +1035,14 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     if (partner) {
       try {
         await notify.commissionCredited(partner.user_id, amount);
+        const { createNotification } = require('../notifications/service.js');
+        await createNotification(
+          partner.user_id,
+          'Commission Released',
+          `₹${amount} has been credited to your wallet.`,
+          'success',
+          '/partner/wallet'
+        );
       } catch (notifyErr) {
         logger.error('Release notify failed', { error: notifyErr.message });
       }
@@ -1248,19 +1064,19 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     
     // 1. Get the ledger transaction
     const { rows: [ledgerTxn] } = await client.query(
-      `SELECT id, partner_id, credit, transaction_type, description FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      `SELECT id, partner_id, credit, transaction_type, description, status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
-    if (ledgerTxn.status === 'completed') throw new Error('Commission already released');
-    if (ledgerTxn.status === 'rejected') throw new Error('Commission already rejected');
+    if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
+    if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
     const amount = parseFloat(ledgerTxn.credit || 0);
 
     // 2. Update wallet_ledger
     await client.query(`
       UPDATE wallet_ledger 
-      SET status = 'rejected', 
+      SET status = 'Rejected', 
           description = COALESCE(description, '') || ' [Rejected by Admin]'
       WHERE id = $1
     `, [transactionId]);
@@ -1276,7 +1092,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       amount, 
       null, 
       null, 
-      'rejected', 
+      'Rejected', 
       ledgerTxn.description || 'Commission rejected by Admin', 
       null, 
       null, 
@@ -1297,8 +1113,8 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
         const { createNotification } = require('../notifications/service.js');
         await createNotification(
           partner.user_id,
-          '❌ Commission Hold Rejected',
-          `Commission of ₹${amount} was rejected by Admin: ${remarks || 'No reason specified'}`,
+          'Commission Rejected',
+          `Reason: ${remarks || 'Duplicate Application'}`,
           'danger',
           '/partner/wallet'
         );
@@ -1319,17 +1135,14 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 module.exports = {
   ensureWallet,
   creditHold,
-  releaseHold,
   debitAvailable,
   creditCommission,
   releaseCommission,
   processWithdrawal,
   getWalletSummary,
-  releaseMaturedCommissions,
   adminAdjustWallet,
   syncWalletBalance,
   createImmutableLedgerEntry,
-  processAutomatedCommissionReleaseScheduler,
   sendWithdrawalOTP,
   verifyWithdrawalOTP,
   processWalletReconciliationDailyJob,

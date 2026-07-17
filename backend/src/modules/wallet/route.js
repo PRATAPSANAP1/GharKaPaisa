@@ -23,6 +23,9 @@ router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listW
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
+router.get('/admin/commissions/pending', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getPendingCommissions);
+router.post('/admin/commissions/:transactionId/release', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.releaseCommission);
+router.post('/admin/commissions/:transactionId/reject', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectCommission);
 router.post('/admin/wallet/release/:transactionId', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.releaseCommission);
 router.post('/admin/wallet/reject/:transactionId', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectCommission);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);

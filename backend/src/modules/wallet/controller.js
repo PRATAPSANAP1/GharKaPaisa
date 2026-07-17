@@ -1653,6 +1653,37 @@ const rejectCommission = async (req, res, next) => {
   }
 };
 
+// GET /wallet/commissions/pending — Retrieve list of pending commission approvals
+const getPendingCommissions = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+
+    const [count, data] = await Promise.all([
+      query(`
+        SELECT COUNT(DISTINCT wl.id) as count
+        FROM wallet_ledger wl
+        WHERE wl.status = 'Pending Approval' AND wl.credit > 0
+      `),
+      query(`
+        SELECT wl.id, wl.credit, wl.created_at, wl.status, wl.description,
+               ap.partner_code, ap.first_name, ap.last_name,
+               a.app_number, p.name as product_name
+        FROM wallet_ledger wl
+        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        LEFT JOIN applications a ON a.id = wl.application_id
+        LEFT JOIN products p ON p.id = a.product_id
+        WHERE wl.status = 'Pending Approval' AND wl.credit > 0
+        ORDER BY wl.created_at DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset])
+    ]);
+
+    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /wallet/statement — CSV/Excel Statement Data
 const getWalletStatementController = async (req, res, next) => {
   try {
@@ -1713,5 +1744,6 @@ module.exports = {
   getWalletReconciliationController,
   getWalletStatementController,
   releaseCommission,
-  rejectCommission
+  rejectCommission,
+  getPendingCommissions
 };

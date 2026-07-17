@@ -166,7 +166,7 @@ const getCommissionReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      cl.id, cl.commission_earned, cl.commission_rate, cl.status, cl.hold_until, cl.created_at,
+      cl.id, cl.commission_earned, cl.commission_rate, cl.status, cl.created_at,
       p.name as product_name, a.app_number
     FROM commission_ledger cl
     LEFT JOIN applications a ON a.id = cl.application_id
