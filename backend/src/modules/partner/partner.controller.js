@@ -625,7 +625,7 @@ const listPartnerCustomers = async (req, res, next) => {
         (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
         COALESCE(
           (
-            SELECT json_agg(item ORDER BY item.created_at DESC)
+            SELECT json_agg(row_to_json(item) ORDER BY item.created_at DESC)
             FROM (
               SELECT 
                 a.id,
