@@ -149,7 +149,7 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
     query(`
       SELECT cn.*, u.full_name as author_name, u.role as author_role
       FROM customer_notes cn
-      LEFT JOIN users u ON u.id = COALESCE(cn.user_id, cn.created_by)
+      LEFT JOIN users u ON u.id = cn.user_id
       WHERE cn.customer_id = $1
       ORDER BY cn.is_pinned DESC, cn.created_at DESC
     `, [customerId]),

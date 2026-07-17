@@ -1170,8 +1170,9 @@ const generateWalletStatementData = async (partnerId, fromDate = null, toDate = 
     held_balance: parseFloat(w?.hold_balance || 0),
     total_earned: parseFloat(w?.total_earned || 0),
     total_withdrawn: parseFloat(w?.total_withdrawn || 0),
-    transactions: txns
   };
+};
+
 const manualReleaseCommission = async (transactionId, processedBy, remarks = null) => {
   const client = await getClient();
   try {
