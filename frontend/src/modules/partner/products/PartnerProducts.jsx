@@ -545,60 +545,62 @@ export default function PartnerProducts() {
           ...S.card, padding: isMobile ? '12px 16px' : '14px 20px', borderRadius: '16px',
           display: 'flex', flexDirection: 'column', gap: '12px'
         }}>
-          {/* Top Filter Select Dropdowns Row */}
-          <div style={{ display: 'flex', gap: '10px', width: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
-            <select
-              id="header-select-products"
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-                outline: 'none'
-              }}
-            >
-              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
-              {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  {getCategoryEmoji(cat.id)} {cat.label}
-                </option>
-              ))}
-            </select>
+          {/* Top Filter Select Dropdowns Row (Desktop Only) */}
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <select
+                id="header-select-products"
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
+                  outline: 'none'
+                }}
+              >
+                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
+                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                  <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                    {getCategoryEmoji(cat.id)} {cat.label}
+                  </option>
+                ))}
+              </select>
 
-            <select
-              id="header-select-banks"
-              value={activeBank}
-              onChange={(e) => setActiveBank(e.target.value)}
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
-                outline: 'none'
-              }}
-            >
-              <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-              {BANKS.filter(b => b !== 'All Banks').map(bank => (
-                <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  🏦 {bank}
-                </option>
-              ))}
-            </select>
-          </div>
+              <select
+                id="header-select-banks"
+                value={activeBank}
+                onChange={(e) => setActiveBank(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
+                  outline: 'none'
+                }}
+              >
+                <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
+                {BANKS.filter(b => b !== 'All Banks').map(bank => (
+                  <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                    🏦 {bank}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Search bar row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
