@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import { 
@@ -8,6 +9,7 @@ import {
 } from 'react-icons/md';
 
 export default function PartnerSupport() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -166,8 +168,8 @@ export default function PartnerSupport() {
       <div style={listPaneStyle}>
         <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MdSupportAgent style={{ color: C.primary }} /> Helpdesk
+            <h2 id="partner-support-title" style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MdSupportAgent style={{ color: C.primary }} /> {t("support.title", "Helpdesk")}
             </h2>
             <button 
               onClick={() => setIsNewTicketModalOpen(true)}
@@ -432,15 +434,16 @@ export default function PartnerSupport() {
               <div>
                 <label style={S.label}>Category *</label>
                 <select 
+                  id="partner-support-category-select"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   style={{ ...S.input, appearance: 'auto', backgroundImage: 'none' }}
                 >
-                  <option>Commission & Payouts</option>
-                  <option>Lead Status & Tracking</option>
-                  <option>KYC & Profile Update</option>
-                  <option>Technical Issue</option>
-                  <option>Other</option>
+                  <option value="Commission & Payouts">{t("support.commissionPayouts", "Commission & Payouts")}</option>
+                  <option value="Lead Status & Tracking">{t("support.leadStatusTracking", "Lead Status & Tracking")}</option>
+                  <option value="KYC & Profile Update">{t("support.kycProfileUpdate", "KYC & Profile Update")}</option>
+                  <option value="Technical Issue">{t("support.technicalIssue", "Technical Issue")}</option>
+                  <option value="Other">{t("support.other", "Other")}</option>
                 </select>
               </div>
 

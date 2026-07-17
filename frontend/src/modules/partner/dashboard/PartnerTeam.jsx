@@ -165,33 +165,36 @@ export default function PartnerTeam() {
       {/* Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Team & Referral Management System</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Real-time referral link tracking, conversion funnels, parent override commissions & multi-level tree hierarchy.</p>
+          <h2 id="partner-team-title" style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>{t("team.titleHeader", "Team & Referral Management System")}</h2>
+          <p id="partner-team-desc" style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>{t("team.descHeader", "Real-time referral link tracking, conversion funnels, parent override commissions & multi-level tree hierarchy.")}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
+            id="partner-team-copy-referral"
             onClick={handleCopyLink}
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdContentCopy size={16} />
-            <span>{copied ? 'Copied!' : 'Copy Referral Link'}</span>
+            <span>{copied ? t('team.copied', 'Copied!') : t('team.copyLinkText', 'Copy Referral Link')}</span>
           </button>
 
           <button
+            id="partner-team-share-whatsapp"
             onClick={handleShareWhatsApp}
             style={{ ...S.btn('primary'), background: '#25D366', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdOutlineWhatsapp size={18} />
-            <span>Share WhatsApp</span>
+            <span>{t("team.shareWhatsapp", "Share WhatsApp")}</span>
           </button>
 
           <button
+            id="partner-team-generate-qr"
             onClick={handleOpenQR}
             style={{ ...S.btn('primary'), background: C.teal, display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdOutlineQrCode2 size={18} />
-            <span>Generate QR Code</span>
+            <span>{t("team.generateQr", "Generate QR Code")}</span>
           </button>
         </div>
       </div>

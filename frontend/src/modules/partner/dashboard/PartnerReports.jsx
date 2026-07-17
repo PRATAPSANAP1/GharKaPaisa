@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useAuthStore } from "../../../app/store/authStore";
 import api from "../../../services/api";
@@ -11,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 export default function PartnerReports() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
@@ -74,25 +76,27 @@ export default function PartnerReports() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Reports & Aggregation Engine</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Real-time business performance analytics, MD5 filter caching & multi-format exports.</p>
+          <h2 id="partner-reports-title" style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>{t("reports.title", "Reports & Aggregation Engine")}</h2>
+          <p id="partner-reports-desc" style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>{t("reports.desc", "Real-time business performance analytics, MD5 filter caching & multi-format exports.")}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            id="partner-reports-export-csv"
             onClick={() => handleExport('csv')}
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdCloudDownload size={18} />
-            <span>Export CSV</span>
+            <span>{t("reports.exportCsv", "Export CSV")}</span>
           </button>
 
           <button
+            id="partner-reports-export-excel"
             onClick={() => handleExport('excel')}
             style={{ ...S.btn('primary'), background: C.teal, display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdCloudDownload size={18} />
-            <span>Export Excel</span>
+            <span>{t("reports.exportExcel", "Export Excel")}</span>
           </button>
         </div>
       </div>

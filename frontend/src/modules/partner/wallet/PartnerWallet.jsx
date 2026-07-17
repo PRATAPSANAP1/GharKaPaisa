@@ -649,7 +649,7 @@ const PartnerWallet = () => {
               transition: 'all 0.2s ease'
             }}
           >
-            <span>Withdraw Funds</span>
+            <span id="partner-wallet-withdraw-btn-text">{t("wallet.withdrawFunds", "Withdraw Funds")}</span>
             <MdArrowForward size={16} />
           </button>
         </div>
@@ -1044,7 +1044,7 @@ const PartnerWallet = () => {
                   fontWeight: 600
                 }}>
                   <MdCalendarToday size={14} color="#6B7280" />
-                  <span>This Month</span>
+                  <span id="partner-wallet-this-month-text">{t("wallet.thisMonth", "This Month")}</span>
                 </div>
               </div>
               <div style={{ flex: 1, minHeight: '220px' }}>
@@ -1364,7 +1364,7 @@ const PartnerWallet = () => {
                 <div style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}30`, padding: '12px 16px', borderRadius: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <MdWarning size={20} style={{ color: C.gold, flexShrink: 0 }} />
                   <div style={{ fontSize: '12px', color: C.text }}>
-                    <strong>Duplicate Request Prevention:</strong> You have an active pending withdrawal request. Please wait until it completes or cancel it below before creating another.
+                    <strong id="partner-wallet-dup-prevention-title">{t("wallet.duplicatePrevention", "Duplicate Request Prevention:")}</strong> {t("wallet.dupPreventionDesc", "You have an active pending withdrawal request. Please wait until it completes or cancel it below before creating another.")}
                   </div>
                 </div>
               )}

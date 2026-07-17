@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import api from "../../../services/api";
 import {
@@ -10,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 export default function PartnerNotifications() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
@@ -183,7 +185,7 @@ export default function PartnerNotifications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span>Notification Center & Live Stream</span>
+            <span id="partner-notifications-title">{t("notifications.title", "Notification Center & Live Stream")}</span>
             {unreadCount > 0 && (
               <span style={{ background: C.red, color: '#FFF', fontSize: '12px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
                 {unreadCount} Unread
@@ -241,26 +243,26 @@ export default function PartnerNotifications() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Category & Filter Pill Controls */}
           <div style={{ ...S.card, padding: '14px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <select style={{ ...S.input, width: 'auto' }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-              <option value="all">All Categories</option>
-              <option value="applications">Applications</option>
-              <option value="wallet">Wallet</option>
-              <option value="commission">Commission</option>
-              <option value="withdrawal">Withdrawal</option>
-              <option value="kyc">KYC</option>
-              <option value="system">System</option>
+            <select id="partner-notifications-category" style={{ ...S.input, width: 'auto' }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+              <option value="all">{t("notifications.allCategories", "All Categories")}</option>
+              <option value="applications">{t("notifications.applications", "Applications")}</option>
+              <option value="wallet">{t("notifications.wallet", "Wallet")}</option>
+              <option value="commission">{t("notifications.commission", "Commission")}</option>
+              <option value="withdrawal">{t("notifications.withdrawal", "Withdrawal")}</option>
+              <option value="kyc">{t("notifications.kyc", "KYC")}</option>
+              <option value="system">{t("notifications.system", "System")}</option>
             </select>
 
-            <select style={{ ...S.input, width: 'auto' }} value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
-              <option value="all">All Priorities</option>
-              <option value="urgent">🔴 Urgent</option>
-              <option value="important">🟠 Important</option>
-              <option value="information">🔵 Information</option>
+            <select id="partner-notifications-priority" style={{ ...S.input, width: 'auto' }} value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
+              <option value="all">{t("notifications.allPriorities", "All Priorities")}</option>
+              <option value="urgent">🔴 {t("notifications.urgent", "Urgent")}</option>
+              <option value="important">🟠 {t("notifications.important", "Important")}</option>
+              <option value="information">🔵 {t("notifications.information", "Information")}</option>
             </select>
 
-            <select style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">All Statuses</option>
-              <option value="unread">Unread Only</option>
+            <select id="partner-notifications-status" style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">{t("notifications.allStatuses", "All Statuses")}</option>
+              <option value="unread">{t("notifications.unreadOnly", "Unread Only")}</option>
             </select>
           </div>
 
