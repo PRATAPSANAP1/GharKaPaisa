@@ -708,7 +708,10 @@
     "tip3": "Ensure names match across documents",
     "tip4": "Keep file size under 5MB",
     "dataSafe": "Your Data is Safe",
-    "guidelinesTitle": "KYC Guidelines"
+    "guidelinesTitle": "KYC Guidelines",
+    "videoScript": "My name is {{name}} and my partner code is {{code}}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension.",
+    "recordVideoTitle": "Record Verification Video",
+    "readStatementAloud": "Please read this statement aloud:"
   },
   "status": {
     "active": "Active",

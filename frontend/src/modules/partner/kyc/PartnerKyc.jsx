@@ -1347,7 +1347,7 @@ export default function PartnerKyc() {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>{t("Record Verification Video")}</h3>
+              <h3 id="kyc-video-modal-title" style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>{t("kyc.recordVideoTitle", "Record Verification Video")}</h3>
               <button 
                 onClick={() => { stopCamera(); deleteRecording(); }}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -1363,9 +1363,12 @@ export default function PartnerKyc() {
               padding: isMobile ? '12px' : '16px',
               borderRadius: '8px'
             }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t("Please read this statement aloud:")}</span>
-              <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
-                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.partner_code || user?.Partner_code || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
+              <span id="kyc-video-statement-instruction" style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t("kyc.readStatementAloud", "Please read this statement aloud:")}</span>
+              <p id="kyc-video-script" style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
+                {t("kyc.videoScript", "My name is {{name}} and my partner code is {{code}}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension.", {
+                  name: profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner'),
+                  code: profile?.partner_code || user?.partner_code || user?.Partner_code || 'GKP'
+                })}
               </p>
             </div>
 
