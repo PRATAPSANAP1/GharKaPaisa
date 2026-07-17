@@ -222,7 +222,7 @@ export default function ManageWallet() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '6px', width: 'fit-content', overflowX: 'auto', maxWidth: '100%' }}>
+      <div style={{ display: 'flex', gap: '8px', background: isDark ? '#18181B' : C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '6px', width: 'fit-content', overflowX: 'auto', maxWidth: '100%' }}>
         {[
           { id: 'withdrawals', label: 'Withdrawal Settlements' },
           { id: 'commissions', label: 'Pending Commission Approvals' },
@@ -233,11 +233,13 @@ export default function ManageWallet() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
+            className="tab-btn"
             style={{
               background: activeTab === t.id ? C.teal : 'transparent',
               color: activeTab === t.id ? '#fff' : C.textMid,
               border: 'none', borderRadius: '8px', padding: '8px 16px',
-              fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap'
+              fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
             }}
           >
             {t.label}
@@ -263,7 +265,7 @@ export default function ManageWallet() {
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px' }}>Date</th>
                       <th style={{ padding: '12px 16px' }}>Partner</th>
                       <th style={{ padding: '12px 16px' }}>Bank Account / UPI</th>
@@ -357,7 +359,7 @@ export default function ManageWallet() {
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px' }}>Partner</th>
                       <th style={{ padding: '12px 16px', textAlign: 'right' }}>Available Balance</th>
                       <th style={{ padding: '12px 16px', textAlign: 'right' }}>Hold Balance</th>
@@ -388,7 +390,7 @@ export default function ManageWallet() {
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px' }}>Date</th>
                       <th style={{ padding: '12px 16px' }}>Partner</th>
                       <th style={{ padding: '12px 16px' }}>Type</th>
@@ -436,7 +438,7 @@ export default function ManageWallet() {
                 <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '16px' }}>Reconciliation Reports</h3>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px' }}>Ref ID / Partner</th>
                       <th style={{ padding: '12px 16px' }}>Type / Category</th>
                       <th style={{ padding: '12px 16px' }}>Description / Remarks</th>
@@ -468,7 +470,7 @@ export default function ManageWallet() {
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
                       <th style={{ padding: '12px 16px' }}>Date</th>
                       <th style={{ padding: '12px 16px' }}>Partner</th>
                       <th style={{ padding: '12px 16px' }}>Product</th>
@@ -518,7 +520,7 @@ export default function ManageWallet() {
       {/* ═══ MODAL: MANUAL WALLET ADJUSTMENT ═══ */}
       {adjustModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '460px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+          <div style={{ ...S.card, background: isDark ? '#18181B' : C.card, maxWidth: '460px', width: '100%', padding: '24px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Manual Wallet Adjustment & Correction</h3>
               <button onClick={() => setAdjustModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}>✕</button>
@@ -552,6 +554,35 @@ export default function ManageWallet() {
         </div>
       )}
 
+      <style>{`
+        /* Premium custom scrollbar for dark mode compatibility */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${isDark ? '#0A0A0C' : '#F1F5F9'} !important;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${isDark ? '#27272A' : '#CBD5E1'} !important;
+          border-radius: 4px !important;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${isDark ? '#3F3F46' : '#94A3B8'} !important;
+        }
+
+        /* Prevent select option elements from rendering white-on-white text in dark mode */
+        select option {
+          background-color: ${isDark ? '#18181B' : '#FFFFFF'} !important;
+          color: ${isDark ? '#F8FAFC' : '#111827'} !important;
+        }
+
+        /* Inactive tab button hover background */
+        .tab-btn:hover {
+          background-color: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'} !important;
+          color: ${C.text} !important;
+        }
+      `}</style>
     </div>
   );
 }
