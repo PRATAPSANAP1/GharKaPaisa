@@ -463,30 +463,6 @@ export default function PartnerDashboard({ partner }) {
         <h1 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>
           {t('dashboard.title', 'Partner Dashboard')}
         </h1>
-        {partnerCode && (
-          <div 
-            onClick={handleCopyPartnerCode}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              background: C.primary,
-              borderRadius: "8px",
-              padding: "6px 12px",
-              color: "#FFFFFF",
-              fontSize: "12px",
-              fontWeight: 700,
-              gap: "8px",
-              cursor: "pointer",
-              boxShadow: `0 2px 4px ${C.primary}30`,
-              transition: "transform 0.15s"
-            }}
-            className="hover-scale"
-          >
-            <span>{t('dashboard.partnerCode', 'Partner Code')}</span>
-            <span style={{ background: C.primaryDark, padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase" }}>{partnerCode}</span>
-            <MdContentCopy size={14} />
-          </div>
-        )}
       </div>
 
 
