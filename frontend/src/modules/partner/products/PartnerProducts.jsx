@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
@@ -190,6 +190,25 @@ export default function PartnerProducts() {
     return p.approval_rate || (p.id ? (p.id.charCodeAt(0) % 20) + 78 : 85);
   };
 
+  // Compute banks available for the selected category (dynamic bank list)
+  const banksForCategory = useMemo(() => {
+    const categoryProducts = activeCategory === 'all'
+      ? products
+      : products.filter(p => p.category === activeCategory);
+    const bankSet = new Set();
+    categoryProducts.forEach(p => {
+      if (p.bank_code) bankSet.add(p.bank_code);
+    });
+    return ['All Banks', ...Array.from(bankSet).sort()];
+  }, [products, activeCategory]);
+
+  // Reset bank filter when category changes and selected bank is no longer available
+  useEffect(() => {
+    if (activeBank !== 'All Banks' && !banksForCategory.includes(activeBank)) {
+      setActiveBank('All Banks');
+    }
+  }, [banksForCategory, activeBank]);
+
   // Filter Logic
   const filteredProducts = products.filter(p => {
     const approvalRate = getApprovalRate(p);
@@ -330,7 +349,7 @@ export default function PartnerProducts() {
             }}
           >
             <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-            {BANKS.filter(b => b !== 'All Banks').map(bank => (
+            {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
               <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                 🏦 {bank}
               </option>
@@ -339,74 +358,7 @@ export default function PartnerProducts() {
         </div>
       </div>
 
-      {/* Categories Filter (Active when filterTab === 'products') */}
-      {filterTab === 'products' && (
-        <>
-          <p style={sectionLabel}>{t("Categories")}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-            {CATEGORIES.map(cat => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button 
-                  key={cat.id}
-                  onClick={() => { setActiveCategory(cat.id); if (isMobile) setShowMobileFilter(false); }}
-                  style={{
-                    textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
-                    fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
-                    color: isActive ? '#fff' : C.textMid,
-                  }}
-                  className={isActive ? "" : "hover-bg-button"}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
 
-      {/* Banks Filter (Active when filterTab === 'banks') */}
-      {filterTab === 'banks' && (
-        <>
-          <p style={sectionLabel}>{t("Banks")}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-            {BANKS.map(bank => {
-              const isActive = activeBank === bank;
-              return (
-                <label key={bank} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '8px 12px', cursor: 'pointer', borderRadius: '10px',
-                  background: isActive ? `${C.primary}10` : 'transparent',
-                  transition: 'background 0.2s'
-                }}
-                className="hover-bg-button"
-                >
-                  <div style={{
-                    width: 16, height: 16, borderRadius: '4px',
-                    border: `1.5px solid ${isActive ? C.primary : C.border}`,
-                    background: isActive ? C.primary : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s ease', flexShrink: 0
-                  }}>
-                    {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
-                  </div>
-                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
-                  <input 
-                    type="radio" 
-                    name="bankFilter" 
-                    value={bank}
-                    checked={activeBank === bank}
-                    onChange={(e) => { setActiveBank(e.target.value); if (isMobile) setShowMobileFilter(false); }}
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        </>
-      )}
 
       <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
@@ -593,7 +545,7 @@ export default function PartnerProducts() {
                 }}
               >
                 <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-                {BANKS.filter(b => b !== 'All Banks').map(bank => (
+                {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
                   <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                     🏦 {bank}
                   </option>
@@ -662,82 +614,60 @@ export default function PartnerProducts() {
             </div>
           </div>
 
-          {/* Mobile Horizontal X-Scrolling Filter Chips */}
+          {/* Mobile Select Dropdowns for Product & Bank */}
           {isMobile && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {/* Category X-Scroll */}
-              <div style={{
-                display: 'flex',
-                overflowX: 'auto',
-                gap: '8px',
-                paddingBottom: '2px',
-                WebkitOverflowScrolling: 'touch',
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none'
-              }}>
-                {CATEGORIES.map(cat => {
-                  const isActive = activeCategory === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setActiveCategory(cat.id)}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        padding: '7px 14px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        border: isActive ? 'none' : `1px solid ${C.border}`,
-                        background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : C.bgSecondary,
-                        color: isActive ? '#FFFFFF' : C.textMid,
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        boxShadow: isActive ? '0 2px 8px rgba(13,92,171,0.25)' : 'none'
-                      }}
-                    >
-                      {cat.label}
-                    </button>
-                  );
-                })}
-              </div>
+            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <select
+                id="mobile-select-products"
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
+                  outline: 'none'
+                }}
+              >
+                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
+                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                  <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                    {getCategoryEmoji(cat.id)} {cat.label}
+                  </option>
+                ))}
+              </select>
 
-              {/* Bank X-Scroll */}
-              <div style={{
-                display: 'flex',
-                overflowX: 'auto',
-                gap: '6px',
-                paddingBottom: '4px',
-                WebkitOverflowScrolling: 'touch',
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none'
-              }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, alignSelf: 'center', flexShrink: 0, paddingRight: '2px' }}>
-                  Banks:
-                </span>
-                {BANKS.map(bank => {
-                  const isActive = activeBank === bank;
-                  return (
-                    <button
-                      key={bank}
-                      onClick={() => setActiveBank(bank)}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        padding: '5px 12px',
-                        borderRadius: '16px',
-                        fontSize: '11.5px',
-                        fontWeight: 700,
-                        border: isActive ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
-                        background: isActive ? `${C.teal}15` : C.bgSecondary,
-                        color: isActive ? C.teal : C.textMid,
-                        cursor: 'pointer',
-                        flexShrink: 0
-                      }}
-                    >
-                      {bank}
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                id="mobile-select-banks"
+                value={activeBank}
+                onChange={(e) => setActiveBank(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: '10px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                  background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                  color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
+                  outline: 'none'
+                }}
+              >
+                <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
+                {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
+                  <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                    🏦 {bank}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
