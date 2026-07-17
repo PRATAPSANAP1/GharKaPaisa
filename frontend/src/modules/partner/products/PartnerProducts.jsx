@@ -87,6 +87,7 @@ export default function PartnerProducts() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeBank, setActiveBank] = useState("All Banks");
+  const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
   const [sortBy, setSortBy] = useState("featured");
   const [minCommission, setMinCommission] = useState(0);
   const [minApproval, setMinApproval] = useState(0);
@@ -96,7 +97,7 @@ export default function PartnerProducts() {
   // Reset pagination when any filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, activeCategory, activeBank, sortBy, minCommission, minApproval]);
+  }, [search, activeCategory, activeBank, filterTab, sortBy, minCommission, minApproval]);
 
   // Lead modal/form state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -251,7 +252,7 @@ export default function PartnerProducts() {
   // Helper to render filter options block
   const renderFilterContent = () => (
     <div style={{ ...S.card, padding: '24px', borderRadius: '20px', background: C.card, border: `1.5px solid ${C.border}`, boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.04)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '18px' }}>
           <MdFilterList size={20} style={{ color: C.primary }} /> Filter Products
         </h3>
@@ -265,68 +266,135 @@ export default function PartnerProducts() {
         )}
       </div>
 
-      {/* Categories */}
-      <p style={sectionLabel}>{t("Categories")}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-        {CATEGORIES.map(cat => {
-          const isActive = activeCategory === cat.id;
-          return (
-            <button 
-              key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); if (isMobile) setShowMobileFilter(false); }}
-              style={{
-                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
-                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
-                color: isActive ? '#fff' : C.textMid,
-              }}
-              className={isActive ? "" : "hover-bg-button"}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
+      {/* ─── TWO MAIN FILTER BUTTONS: ALL PRODUCTS & ALL BANKS ─── */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <button
+          type="button"
+          id="filter-btn-all-products"
+          onClick={() => {
+            setFilterTab('products');
+            setActiveCategory('all');
+            setActiveBank('All Banks');
+          }}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '12px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            border: filterTab === 'products' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+            background: filterTab === 'products' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC'),
+            color: filterTab === 'products' ? '#FFFFFF' : C.text,
+            boxShadow: filterTab === 'products' ? `0 4px 12px ${C.primary}35` : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}
+        >
+          <span>🛍️</span> {t("All Products")}
+        </button>
+
+        <button
+          type="button"
+          id="filter-btn-all-banks"
+          onClick={() => {
+            setFilterTab('banks');
+            setActiveCategory('all');
+            setActiveBank('All Banks');
+          }}
+          style={{
+            flex: 1,
+            padding: '10px 8px',
+            borderRadius: '12px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            border: filterTab === 'banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+            background: filterTab === 'banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC'),
+            color: filterTab === 'banks' ? '#FFFFFF' : C.text,
+            boxShadow: filterTab === 'banks' ? `0 4px 12px ${C.primary}35` : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px'
+          }}
+        >
+          <span>🏦</span> {t("All Banks")}
+        </button>
       </div>
 
-      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+      {/* Categories Filter (Active when filterTab === 'products') */}
+      {filterTab === 'products' && (
+        <>
+          <p style={sectionLabel}>{t("Categories")}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+            {CATEGORIES.map(cat => {
+              const isActive = activeCategory === cat.id;
+              return (
+                <button 
+                  key={cat.id}
+                  onClick={() => { setActiveCategory(cat.id); if (isMobile) setShowMobileFilter(false); }}
+                  style={{
+                    textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                    fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
+                    color: isActive ? '#fff' : C.textMid,
+                  }}
+                  className={isActive ? "" : "hover-bg-button"}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
-      {/* Banks */}
-      <p style={sectionLabel}>{t("Banks")}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-        {BANKS.map(bank => {
-          const isActive = activeBank === bank;
-          return (
-            <label key={bank} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '8px 12px', cursor: 'pointer', borderRadius: '10px',
-              background: isActive ? `${C.primary}10` : 'transparent',
-              transition: 'background 0.2s'
-            }}
-            className="hover-bg-button"
-            >
-              <div style={{
-                width: 16, height: 16, borderRadius: '4px',
-                border: `1.5px solid ${isActive ? C.primary : C.border}`,
-                background: isActive ? C.primary : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s ease', flexShrink: 0
-              }}>
-                {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
-              </div>
-              <span style={{ fontSize: '13.5px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
-              <input 
-                type="radio" 
-                name="bankFilter" 
-                value={bank}
-                checked={activeBank === bank}
-                onChange={(e) => { setActiveBank(e.target.value); if (isMobile) setShowMobileFilter(false); }}
-                style={{ display: 'none' }}
-              />
-            </label>
-          );
-        })}
-      </div>
+      {/* Banks Filter (Active when filterTab === 'banks') */}
+      {filterTab === 'banks' && (
+        <>
+          <p style={sectionLabel}>{t("Banks")}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
+            {BANKS.map(bank => {
+              const isActive = activeBank === bank;
+              return (
+                <label key={bank} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 12px', cursor: 'pointer', borderRadius: '10px',
+                  background: isActive ? `${C.primary}10` : 'transparent',
+                  transition: 'background 0.2s'
+                }}
+                className="hover-bg-button"
+                >
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '4px',
+                    border: `1.5px solid ${isActive ? C.primary : C.border}`,
+                    background: isActive ? C.primary : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s ease', flexShrink: 0
+                  }}>
+                    {isActive && <MdCheckCircle style={{ color: '#fff', fontSize: '12px' }} />}
+                  </div>
+                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: isActive ? C.text : C.textMid }}>{bank}</span>
+                  <input 
+                    type="radio" 
+                    name="bankFilter" 
+                    value={bank}
+                    checked={activeBank === bank}
+                    onChange={(e) => { setActiveBank(e.target.value); if (isMobile) setShowMobileFilter(false); }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
 
@@ -465,6 +533,63 @@ export default function PartnerProducts() {
           ...S.card, padding: isMobile ? '12px 16px' : '14px 20px', borderRadius: '16px',
           display: 'flex', flexDirection: 'column', gap: '12px'
         }}>
+          {/* Top Filter Buttons Row */}
+          <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterTab('products');
+                setActiveCategory('all');
+                setActiveBank('All Banks');
+              }}
+              style={{
+                flex: isMobile ? 1 : 'none',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                border: filterTab === 'products' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                background: filterTab === 'products' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC'),
+                color: filterTab === 'products' ? '#FFFFFF' : C.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>🛍️</span> {t("All Products")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilterTab('banks');
+                setActiveCategory('all');
+                setActiveBank('All Banks');
+              }}
+              style={{
+                flex: isMobile ? 1 : 'none',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                border: filterTab === 'banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                background: filterTab === 'banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC'),
+                color: filterTab === 'banks' ? '#FFFFFF' : C.text,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>🏦</span> {t("All Banks")}
+            </button>
+          </div>
+
           {/* Search bar row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
             <div style={{ position: 'relative', flex: 1, width: '100%' }}>
