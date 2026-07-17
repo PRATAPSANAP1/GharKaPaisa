@@ -337,143 +337,169 @@ export default function PartnerLayout() {
 
 
       {/* ──── MOBILE FULLSCREEN MENU ──── */}
+      {/* ──── MOBILE SIDE DRAWER MENU ──── */}
       {isMobile && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: C.card,
           zIndex: 50,
-          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.3s ease',
+          pointerEvents: mobileMenuOpen ? 'auto' : 'none',
           display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
+          justifyContent: 'flex-end',
         }}>
-          {/* Menu Header */}
-          <div style={{
-            height: '56px',
-            borderBottom: `1px solid ${C.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            flexShrink: 0,
-          }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.primary, margin: 0 }}>All Modules</h2>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{
-                padding: '8px',
-                background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
-              <MdClose size={24} style={{ color: SIDEBAR_TEXT }} />
-            </button>
-          </div>
+          {/* Backdrop Overlay */}
+          <div 
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.4)',
+              backdropFilter: 'blur(2px)',
+              opacity: mobileMenuOpen ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: mobileMenuOpen ? 'auto' : 'none',
+            }}
+          />
 
-          {/* Menu Nav Items */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <NavLink
-                  key={item.id}
-                  id={`partner-mobile-nav-${item.id}`}
-                  to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
+          {/* Drawer Menu Panel */}
+          <div style={{
+            position: 'relative',
+            width: '70%',
+            height: '100%',
+            background: C.card,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '-8px 0 30px rgba(0,0,0,0.15)',
+          }}>
+            {/* Menu Header */}
+            <div style={{
+              height: '56px',
+              borderBottom: `1px solid ${C.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 16px',
+              flexShrink: 0,
+            }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.primary, margin: 0 }}>All Modules</h2>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  padding: '8px',
+                  background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <MdClose size={24} style={{ color: SIDEBAR_TEXT }} />
+              </button>
+            </div>
+
+            {/* Menu Nav Items */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+              {filteredNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname.startsWith(item.path);
+                return (
+                  <NavLink
+                    key={item.id}
+                    id={`partner-mobile-nav-${item.id}`}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      color: isActive ? '#fff' : C.text,
+                      background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
+                      boxShadow: isActive ? `0 4px 12px ${C.primary}35` : 'none',
+                      textDecoration: 'none',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <Icon size={22} style={{ color: isActive ? '#fff' : C.primary }} />
+                    {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+                  </NavLink>
+                );
+              })}
+
+              {/* Mobile Footer Controls */}
+              <div style={{
+                paddingTop: '16px',
+                marginTop: '16px',
+                borderTop: `1px solid ${C.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                paddingBottom: '40px',
+              }}>
+                {/* Theme Toggle */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
+                      {isDark ? 'DARK' : 'LIGHT'}
+                    </span>
+                  </div>
+                  <ThemeToggle />
+                </div>
+
+                {/* Language Selector */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
+                    🌐 Language
+                  </div>
+                  <LanguageSwitcher />
+                </div>
+
+                {/* Logout */}
+                <button
+                  id="partner-mobile-logout-button"
+                  onClick={handleLogout}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '14px',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    width: '100%',
                     padding: '12px 16px',
                     borderRadius: '12px',
-                    fontWeight: 700,
+                    background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
+                    color: '#EF4444',
+                    border: 'none',
                     fontSize: '15px',
-                    color: isActive ? '#fff' : C.text,
-                    background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
-                    boxShadow: isActive ? `0 4px 12px ${C.primary}35` : 'none',
-                    textDecoration: 'none',
-                    marginBottom: '8px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
                   }}
                 >
-                  <Icon size={22} style={{ color: isActive ? '#fff' : C.primary }} />
-                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
-                </NavLink>
-              );
-            })}
-
-            {/* Mobile Footer Controls */}
-            <div style={{
-              paddingTop: '16px',
-              marginTop: '16px',
-              borderTop: `1px solid ${C.border}`,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              paddingBottom: '40px',
-            }}>
-              {/* Theme Toggle */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>{isDark ? '🌙' : '☀️'}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
-                    {isDark ? 'DARK' : 'LIGHT'}
-                  </span>
-                </div>
-                <ThemeToggle />
+                  <MdLogout size={22} />
+                  {t('partnerLayout.logout', 'Sign Out')}
+                </button>
               </div>
-
-              {/* Language Selector */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.text, fontSize: '13px', fontWeight: 700 }}>
-                  🌐 Language
-                </div>
-                <LanguageSwitcher />
-              </div>
-
-              {/* Logout */}
-              <button
-                id="partner-mobile-logout-button"
-                onClick={handleLogout}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2',
-                  color: '#EF4444',
-                  border: 'none',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                <MdLogout size={22} />
-                {t('partnerLayout.logout', 'Sign Out')}
-              </button>
             </div>
           </div>
         </div>
