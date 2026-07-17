@@ -189,7 +189,7 @@ export default function PartnerCrm() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MdPeople style={{ color: C.indigo }} /> 360° Customer Relationship Management
+            <MdPeople style={{ color: C.primary }} /> 360° Customer Relationship Management
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
             Customer-first financial lead pipelines, full 360° profile tabs, automated activity timeline, and instant multi-channel communications.
@@ -220,7 +220,7 @@ export default function PartnerCrm() {
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Total Customers</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{(metrics.total_customers || customers.length || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '11px', color: C.indigo, marginTop: '2px' }}>Registered in CRM</div>
+          <div style={{ fontSize: '11px', color: C.primary, marginTop: '2px' }}>Registered in CRM</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
@@ -312,9 +312,23 @@ export default function PartnerCrm() {
             key={tag}
             onClick={() => setSelectedTag(tag)}
             style={{
-              padding: '6px 14px', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              background: selectedTag === tag ? C.indigo : C.bgSecondary,
-              color: selectedTag === tag ? '#FFF' : C.textLight
+              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              background: selectedTag === tag ? C.primary : (C.bgSecondary === '#000000' ? '#18181B' : C.bgSecondary),
+              color: selectedTag === tag ? '#FFF' : C.textLight,
+              transition: 'all 0.2s ease',
+              border: `1px solid ${selectedTag === tag ? C.primary : C.border}`
+            }}
+            onMouseEnter={(e) => {
+              if (selectedTag !== tag) {
+                e.currentTarget.style.borderColor = C.primary;
+                e.currentTarget.style.color = C.text;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedTag !== tag) {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.color = C.textLight;
+              }
             }}
           >
             {tag === 'All' ? 'All Customers' : `#${tag}`}
@@ -470,7 +484,7 @@ export default function PartnerCrm() {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowAddModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>Cancel</button>
-                <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), padding: '10px 20px', background: C.indigo }}>
+                <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), padding: '10px 20px' }}>
                   {formLoading ? 'Creating Profile...' : 'Save Customer Profile'}
                 </button>
               </div>

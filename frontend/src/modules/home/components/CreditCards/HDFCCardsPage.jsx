@@ -402,7 +402,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 style={{ objectFit: "contain" }}
               />
             ) : (
-              <div style={{ fontSize: "24px", color: "#003B8F" }}>
+              <div style={{ fontSize: "24px", color: "var(--text-blue-600)" }}>
                 {fallbackIcon}
               </div>
             )}
@@ -448,7 +448,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           --text-cyan-600: #0891b2;
         }
 
-        .dark-theme {
+        html.dark, body.dark, .dark, .dark-theme {
           --bg-slate-50: #0f172a;
           --bg-white: #1e293b;
           --border-color: #334155;
@@ -537,7 +537,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
         .w-10 { width: 2.5rem; }
         .h-10 { height: 2.5rem; }
         .flex-1 { flex: 1 1 0%; }
-        .bg-\[\#003B8F\] { background-color: #003B8F; }
+        .bg-\[\#003B8F\] { background-color: var(--text-blue-600); }
         .bg-blue-700 { background-color: #1d4ed8; }
         .text-white { color: #ffffff; }
         .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
@@ -547,7 +547,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           transform: translateY(-4px);
         }
         .hover\:bg-\[\#00296B\]:hover {
-          background-color: #00296B;
+          background-color: var(--text-blue-600);
+          opacity: 0.85;
         }
 
         /* Responsive Columns mapping */
@@ -705,9 +706,9 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                   key={idx}
                   onClick={() => setActiveFilter(cat)}
                   style={{
-                    background: isActive ? "#003B8F" : "var(--bg-slate-100)",
+                    background: isActive ? "var(--text-blue-600)" : "var(--bg-slate-100)",
                     color: isActive ? "#fff" : "var(--text-slate-800)",
-                    border: `1px solid ${isActive ? "#003B8F" : "var(--border-color)"}`,
+                    border: `1px solid ${isActive ? "var(--text-blue-600)" : "var(--border-color)"}`,
                     padding: "6px 12px",
                     borderRadius: "20px",
                     fontSize: "12px",
@@ -741,7 +742,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                       color: "var(--text-slate-800)",
                       margin: "0 0 14px 0",
                       paddingBottom: "8px",
-                      borderBottom: "2px solid #003B8F",
+                      borderBottom: "2px solid var(--text-blue-600)",
                       display: "inline-block"
                     }}>
                       {sec.title}
@@ -775,9 +776,9 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                             minHeight: "48px"
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = "#003B8F";
+                            e.currentTarget.style.borderColor = "var(--text-blue-600)";
                             e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,59,143,0.1)";
+                            e.currentTarget.style.boxShadow = "0 4px 12px rgba(37,99,235,0.1)";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.borderColor = "var(--border-color)";
@@ -807,7 +808,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
           <div style={{ marginBottom: isMobile ? "40px" : "0" }}>
 
             {/* Compare Cards box (hooked up to interactive modal) */}
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border">
+            <div className="rounded-2xl p-6 border" style={{ background: "linear-gradient(135deg, var(--bg-blue-50) 0%, var(--bg-cyan-50) 100%)" }}>
               <h3 className="font-semibold text-slate-800">
                 {t('hdfc.findPerfectCard', 'Find the perfect card')}
               </h3>
@@ -818,8 +819,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
 
               <button 
                 onClick={() => setIsCompareOpen(true)}
-                className="mt-4 bg-blue-700 text-white px-5 py-2 rounded-lg"
-                style={{ border: "none", cursor: "pointer", fontWeight: 700 }}
+                className="mt-4 text-white px-5 py-2 rounded-lg"
+                style={{ border: "none", cursor: "pointer", fontWeight: 700, background: "var(--text-blue-600)" }}
               >
                 {t('hdfc.compareBtn', 'Compare Cards')}
               </button>
@@ -944,7 +945,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               style={{
                 marginTop: "20px",
                 width: "100%",
-                background: "#003B8F",
+                background: "var(--text-blue-600)",
                 color: "#ffffff",
                 border: "none",
                 padding: "10px",
@@ -1101,8 +1102,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 style={{
                   flex: "1 1 auto",
                   background: "none",
-                  border: "1px solid #003B8F",
-                  color: "#003B8F",
+                  border: "1px solid var(--text-blue-600)",
+                  color: "var(--text-blue-600)",
                   padding: "10px",
                   borderRadius: "10px",
                   fontSize: "12px",
@@ -1125,8 +1126,8 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 style={{
                   flex: "1 1 auto",
                   background: "none",
-                  border: "1px solid #003B8F",
-                  color: "#003B8F",
+                  border: "1px solid var(--text-blue-600)",
+                  color: "var(--text-blue-600)",
                   padding: "10px",
                   borderRadius: "10px",
                   fontSize: "12px",
@@ -1148,7 +1149,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                 }}
                 style={{
                   flex: "2 1 auto",
-                  background: "#003B8F",
+                  background: "var(--text-blue-600)",
                   color: "#ffffff",
                   border: "none",
                   padding: "10px",
