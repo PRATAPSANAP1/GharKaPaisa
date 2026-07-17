@@ -41,13 +41,25 @@ const query = async (text, params) => {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
     logger.debug(`Query executed in ${duration}ms`, {
-      query: text.substring(0, 80).replace(/\s+/g, ' ')
+      query: text
     });
     return res;
   } catch (err) {
+    console.error("\n================ SQL ERROR ================");
+    console.error("SQL:");
+    console.error(text);
+    console.error("\nParameters:");
+    console.dir(params, { depth: null });
+    console.error("\nPostgres Error:");
+    console.error(err);
+    console.error("===========================================\n");
+
     logger.error('Database query error', {
-      query: text.substring(0, 80).replace(/\s+/g, ' '),
-      error: err.message
+      query: text,
+      error: err.message,
+      detail: err.detail,
+      hint: err.hint,
+      context: err.context
     });
     throw err;
   }
