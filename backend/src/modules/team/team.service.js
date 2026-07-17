@@ -75,7 +75,7 @@ const getReferralAnalytics = async (partnerId) => {
   const { rows: [clicksRow] } = await query(`
     SELECT 
       COUNT(*) as total_clicks,
-      COUNT(*) FILTER (WHERE converted = TRUE) as registered_count
+      COUNT(converted_partner_id) as registered_count
     FROM referral_clicks
     WHERE partner_id = $1
   `, [partnerId]);
@@ -235,17 +235,43 @@ const getTeamDashboardSummary = async (partnerId) => {
     WHERE ptr.parent_partner_id = $1 AND p.created_at >= CURRENT_DATE
   `, [partnerId]);
 
+  const { rows: [yesterdayJoin] } = await query(`
+    SELECT COUNT(*) as count FROM partner_team_relationships ptr
+    JOIN partner_profiles p ON p.id = ptr.child_partner_id
+    WHERE ptr.parent_partner_id = $1 AND p.created_at >= CURRENT_DATE - INTERVAL '1 day' AND p.created_at < CURRENT_DATE
+  `, [partnerId]);
+
+  const { rows: [monthJoin] } = await query(`
+    SELECT COUNT(*) as count FROM partner_team_relationships ptr
+    JOIN partner_profiles p ON p.id = ptr.child_partner_id
+    WHERE ptr.parent_partner_id = $1 AND p.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+  `, [partnerId]);
+
   const { rows: [earn] } = await query(`
     SELECT COALESCE(SUM(commission_amount), 0) as total_team_earnings
     FROM team_commissions
     WHERE parent_partner_id = $1
   `, [partnerId]);
 
+  const { rows: [monthEarn] } = await query(`
+    SELECT COALESCE(SUM(commission_amount), 0) as month_team_earnings
+    FROM team_commissions
+    WHERE parent_partner_id = $1 AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+  `, [partnerId]);
+
+  const totalTeam = parseInt(p?.children_count || 0);
+  const activePartners = parseInt(p?.active_team_count || 0);
+  const activeRate = totalTeam > 0 ? Math.round((activePartners / totalTeam) * 100) : 0;
+
   return {
-    total_team: parseInt(p?.children_count || 0),
+    total_team: totalTeam,
     today_joins: parseInt(todayJoin?.count || 0),
-    active_partners: parseInt(p?.active_team_count || 0),
+    yesterday_joins: parseInt(yesterdayJoin?.count || 0),
+    month_joins: parseInt(monthJoin?.count || 0),
+    active_partners: activePartners,
+    active_rate: activeRate,
     team_earnings: parseFloat(earn?.total_team_earnings || 0),
+    month_earnings: parseFloat(monthEarn?.month_team_earnings || 0),
     last_team_join: p?.last_team_join,
     team_enabled: p?.team_enabled ?? true,
     referral_enabled: p?.referral_enabled ?? true,

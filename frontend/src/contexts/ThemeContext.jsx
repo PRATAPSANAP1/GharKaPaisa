@@ -74,6 +74,13 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     localStorage.setItem("gkp_theme", isDark ? "dark" : "light");
     document.body.style.backgroundColor = isDark ? "#000000" : "#F8FAFC";
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.classList.remove("dark");
+    }
   }, [isDark]);
 
   const toggle = () => setIsDark(d => !d);

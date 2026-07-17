@@ -790,12 +790,11 @@ const register = async (req, res, next) => {
         if (referralClickRecord) {
           await client.query(`
             UPDATE referral_clicks 
-            SET status = 'REGISTERED',
-                registered_at = NOW(),
-                customer_id = $1,
-                converted_partner_id = $2
-            WHERE id = $3
-          `, [user.id, Partner.id, referralClickRecord.id]);
+            SET converted = TRUE,
+                converted_partner_id = $1,
+                converted_at = NOW()
+            WHERE id = $2
+          `, [Partner.id, referralClickRecord.id]);
         }
 
         // Create team relationships recursively

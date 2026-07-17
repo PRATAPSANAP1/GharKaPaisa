@@ -15,7 +15,7 @@
 /* Support dark mode styling classes if active */
 .dark-theme .loading-overlay,
 .dark .loading-overlay {
-  background: rgba(15,23,42,0.85);
+  background: #000000;
 }
 
 .loading-logo {

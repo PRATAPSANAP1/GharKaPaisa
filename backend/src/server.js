@@ -243,17 +243,8 @@ const startServer = async () => {
     const { migrate } = require('./database/migrations/migrate.js');
     await migrate();
 
-    // Start matured commission releases check
-    const { releaseMaturedCommissions } = require('./modules/wallet/service.js');
-    releaseMaturedCommissions().catch(err => logger.error('Startup commission release failed', { error: err.message }));
-    setInterval(() => {
-      releaseMaturedCommissions().catch(err => logger.error('Interval commission release failed', { error: err.message }));
-    }, 15 * 60 * 1000);
-
     // Initialize scheduled CRON jobs
-    const { initCommissionJobs } = require('./jobs/commission.job.js');
     const { initReportJobs } = require('./jobs/report.job.js');
-    initCommissionJobs();
     initReportJobs();
 
     server = app.listen(PORT, () => {

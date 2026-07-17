@@ -365,13 +365,7 @@ const approvePartner = async (req, res, next) => {
         ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
 
-      // Update referral click status to KYC_COMPLETED
-      await client.query(`
-        UPDATE referral_clicks 
-        SET status = 'KYC_COMPLETED',
-            updated_at = NOW()
-        WHERE converted_partner_id = $1 AND status = 'REGISTERED'
-      `, [PartnerId]);
+      // Referral click status update to KYC_COMPLETED omitted
 
       await client.query('COMMIT');
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });

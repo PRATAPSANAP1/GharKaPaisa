@@ -32,7 +32,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
         processed_at = NOW(),
         description = COALESCE($3, description),
         remarks = COALESCE($4, remarks),
-        release_at = CASE WHEN $6 = 'pending' THEN release_at ELSE NULL END
+        release_at = CASE WHEN CAST($6 AS TEXT) = 'pending' THEN release_at ELSE NULL END
       WHERE id = $5
     `, [status, processedBy, description, meta.remarks || null, ledgerTxnId, status]);
   } else {
@@ -1172,6 +1172,147 @@ const generateWalletStatementData = async (partnerId, fromDate = null, toDate = 
     total_withdrawn: parseFloat(w?.total_withdrawn || 0),
     transactions: txns
   };
+const manualReleaseCommission = async (transactionId, processedBy, remarks = null) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Get the ledger transaction
+    const { rows: [ledgerTxn] } = await client.query(
+      `SELECT id, partner_id, credit, transaction_type, description FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      [transactionId]
+    );
+    if (!ledgerTxn) throw new Error('Transaction not found in ledger');
+    if (ledgerTxn.status === 'completed') throw new Error('Commission already released');
+    if (ledgerTxn.status === 'rejected') throw new Error('Commission already rejected');
+
+    const amount = parseFloat(ledgerTxn.credit || 0);
+
+    // 2. Update wallet_ledger
+    await client.query(`
+      UPDATE wallet_ledger 
+      SET status = 'completed', 
+          description = COALESCE(description, '') || ' [Released by Admin]'
+      WHERE id = $1
+    `, [transactionId]);
+
+    // 3. Update wallet_transactions
+    await syncTransactionTable(
+      client, 
+      transactionId, 
+      null, 
+      ledgerTxn.partner_id, 
+      null, 
+      ledgerTxn.transaction_type, 
+      amount, 
+      null, 
+      null, 
+      'completed', 
+      ledgerTxn.description || 'Commission released by Admin', 
+      null, 
+      null, 
+      processedBy, 
+      { remarks }
+    );
+
+    // 4. Sync Wallet Balance
+    await syncWalletBalance(ledgerTxn.partner_id, client);
+
+    await client.query('COMMIT');
+    logger.info(`Commission transaction ${transactionId} manually released by admin ${processedBy}`);
+
+    // 5. Notify Partner
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [ledgerTxn.partner_id]);
+    if (partner) {
+      try {
+        await notify.commissionCredited(partner.user_id, amount);
+      } catch (notifyErr) {
+        logger.error('Release notify failed', { error: notifyErr.message });
+      }
+    }
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('manualReleaseCommission failed:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+const manualRejectCommission = async (transactionId, processedBy, remarks = null) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Get the ledger transaction
+    const { rows: [ledgerTxn] } = await client.query(
+      `SELECT id, partner_id, credit, transaction_type, description FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      [transactionId]
+    );
+    if (!ledgerTxn) throw new Error('Transaction not found in ledger');
+    if (ledgerTxn.status === 'completed') throw new Error('Commission already released');
+    if (ledgerTxn.status === 'rejected') throw new Error('Commission already rejected');
+
+    const amount = parseFloat(ledgerTxn.credit || 0);
+
+    // 2. Update wallet_ledger
+    await client.query(`
+      UPDATE wallet_ledger 
+      SET status = 'rejected', 
+          description = COALESCE(description, '') || ' [Rejected by Admin]'
+      WHERE id = $1
+    `, [transactionId]);
+
+    // 3. Update wallet_transactions
+    await syncTransactionTable(
+      client, 
+      transactionId, 
+      null, 
+      ledgerTxn.partner_id, 
+      null, 
+      ledgerTxn.transaction_type, 
+      amount, 
+      null, 
+      null, 
+      'rejected', 
+      ledgerTxn.description || 'Commission rejected by Admin', 
+      null, 
+      null, 
+      processedBy, 
+      { remarks }
+    );
+
+    // 4. Sync Wallet Balance
+    await syncWalletBalance(ledgerTxn.partner_id, client);
+
+    await client.query('COMMIT');
+    logger.info(`Commission transaction ${transactionId} manually rejected by admin ${processedBy}`);
+
+    // 5. Notify Partner
+    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [ledgerTxn.partner_id]);
+    if (partner) {
+      try {
+        const { createNotification } = require('../notifications/service.js');
+        await createNotification(
+          partner.user_id,
+          '❌ Commission Hold Rejected',
+          `Commission of ₹${amount} was rejected by Admin: ${remarks || 'No reason specified'}`,
+          'danger',
+          '/partner/wallet'
+        );
+      } catch (notifyErr) {
+        logger.error('Reject notify failed', { error: notifyErr.message });
+      }
+    }
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('manualRejectCommission failed:', err.message);
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 module.exports = {
@@ -1191,5 +1332,7 @@ module.exports = {
   sendWithdrawalOTP,
   verifyWithdrawalOTP,
   processWalletReconciliationDailyJob,
-  generateWalletStatementData
+  generateWalletStatementData,
+  manualReleaseCommission,
+  manualRejectCommission
 };

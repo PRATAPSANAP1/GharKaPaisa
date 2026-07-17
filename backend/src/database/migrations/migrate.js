@@ -3263,6 +3263,25 @@ const migrate = async () => {
       ALTER TABLE partner_profiles
       ADD COLUMN IF NOT EXISTS company_logo_url VARCHAR(500) NULL;
     `);
+
+    // 14. Alter referral_clicks to ensure missing tracking columns exist (excluding registered)
+    await query(`
+      ALTER TABLE referral_clicks
+        ADD COLUMN IF NOT EXISTS partner_code VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS session_id VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS visitor_ip VARCHAR(45),
+        ADD COLUMN IF NOT EXISTS device_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS browser VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS os VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_source VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_medium VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS referrer VARCHAR(1000),
+        ADD COLUMN IF NOT EXISTS landing_page VARCHAR(1000),
+        ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'CLICKED',
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS application_id UUID;
+    `);
     
     // Run Wallet Engine Migrations
     const runWalletEngineMigrations = require('./migrate_wallet_engine');

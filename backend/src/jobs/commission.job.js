@@ -37,8 +37,7 @@ const processCommissionReleases = async () => {
 
 // 0 * * * * = Every hour at minute 0
 const initCommissionJobs = () => {
-  cron.schedule('0 * * * *', processCommissionReleases);
-  logger.info('Commission release CRON job scheduled (hourly).');
+  logger.info('Commission release CRON job disabled (releases are now managed manually).');
 };
 
 module.exports = { initCommissionJobs };

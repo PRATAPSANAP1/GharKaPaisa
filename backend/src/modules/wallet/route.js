@@ -23,6 +23,8 @@ router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listW
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
+router.post('/admin/wallet/release/:transactionId', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.releaseCommission);
+router.post('/admin/wallet/reject/:transactionId', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectCommission);
 router.post('/withdrawals/:id/cancel', requireApprovedPartner, walletCtrl.cancelWithdrawal);
 router.post('/withdrawals/:id/retry', requireApprovedPartner, walletCtrl.retryWithdrawal);
 router.get('/withdrawals/:id', requireApprovedPartnerOrAdmin, walletCtrl.getWithdrawalDetail);

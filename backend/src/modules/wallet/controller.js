@@ -1,5 +1,5 @@
 const { query, getClient } = require('../../config/database');
-const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet, syncWalletBalance } = require('./service.js');
+const { processWithdrawal, getWalletSummary, debitAvailable, adminAdjustWallet, syncWalletBalance, manualReleaseCommission, manualRejectCommission } = require('./service.js');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, error, notFound, paginate } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
@@ -1625,6 +1625,34 @@ const getWalletReconciliationController = async (req, res, next) => {
   }
 };
 
+const releaseCommission = async (req, res, next) => {
+  try {
+    const { transactionId } = req.params;
+    const { remarks } = req.body;
+    
+    await manualReleaseCommission(transactionId, req.user.id, remarks);
+    await logAction(req, 'RELEASE_COMMISSION', transactionId, { remarks });
+
+    return success(res, {}, 'Commission released successfully to partner available balance');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const rejectCommission = async (req, res, next) => {
+  try {
+    const { transactionId } = req.params;
+    const { remarks } = req.body;
+    
+    await manualRejectCommission(transactionId, req.user.id, remarks);
+    await logAction(req, 'REJECT_COMMISSION', transactionId, { remarks });
+
+    return success(res, {}, 'Commission hold rejected successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /wallet/statement — CSV/Excel Statement Data
 const getWalletStatementController = async (req, res, next) => {
   try {
@@ -1683,5 +1711,7 @@ module.exports = {
   getBankEditHistory,
   getWalletAnalyticsController,
   getWalletReconciliationController,
-  getWalletStatementController
+  getWalletStatementController,
+  releaseCommission,
+  rejectCommission
 };

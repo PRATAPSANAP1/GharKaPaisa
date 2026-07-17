@@ -8,6 +8,11 @@
   z-index: 99999;
 }
 
+.dark-theme .loader-container,
+.dark .loader-container {
+  background: #000000;
+}
+
 .loader-logo {
   width: 120px;
   height: 120px;
