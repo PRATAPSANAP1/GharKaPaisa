@@ -658,19 +658,20 @@ const PartnerWallet = () => {
 
         {/* Held Balance Card */}
         <div style={{
-          background: '#FFF7ED',
-          border: '1px solid #FFEDD5',
+          background: isDark ? '#000000' : '#FFF7ED',
+          border: isDark ? '1px solid #F97316' : '1px solid #FFEDD5',
           borderRadius: '20px',
           padding: '24px',
           display: 'flex',
           gap: '16px',
           minHeight: '160px',
-          boxShadow: '0 4px 15px rgba(251, 146, 60, 0.04)',
+          boxShadow: isDark ? 'none' : '0 4px 15px rgba(251, 146, 60, 0.04)',
           position: 'relative'
         }}>
           <div style={{
             width: '42px', height: '42px', borderRadius: '12px',
-            background: '#FFEDD5', color: '#EA580C',
+            background: isDark ? 'rgba(249, 115, 22, 0.15)' : '#FFEDD5', 
+            color: isDark ? '#F97316' : '#EA580C',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0
           }}>
@@ -678,14 +679,14 @@ const PartnerWallet = () => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#9A3412', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#F97316' : '#9A3412', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 PENDING COMMISSION APPROVAL
               </div>
-              <div style={{ fontSize: '32px', fontWeight: 800, color: '#EA580C', marginTop: '10px' }}>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#EA580C', marginTop: '10px' }}>
                 ₹{parseFloat(pendingBal).toLocaleString('en-IN')}
               </div>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#A1A1AA' : '#C2410C', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F97316', display: 'inline-block' }} />
               Awaiting admin approval
             </div>
@@ -694,19 +695,20 @@ const PartnerWallet = () => {
 
         {/* Total Earned Card */}
         <div style={{
-          background: '#F5F3FF',
-          border: '1px solid #DDD6FE',
+          background: isDark ? '#000000' : '#F5F3FF',
+          border: isDark ? '1px solid #F97316' : '1px solid #DDD6FE',
           borderRadius: '20px',
           padding: '24px',
           display: 'flex',
           gap: '16px',
           minHeight: '160px',
-          boxShadow: '0 4px 15px rgba(124, 58, 237, 0.04)',
+          boxShadow: isDark ? 'none' : '0 4px 15px rgba(124, 58, 237, 0.04)',
           position: 'relative'
         }}>
           <div style={{
             width: '42px', height: '42px', borderRadius: '12px',
-            background: '#EDE9FE', color: '#6D28D9',
+            background: isDark ? 'rgba(249, 115, 22, 0.15)' : '#EDE9FE', 
+            color: isDark ? '#F97316' : '#6D28D9',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0
           }}>
@@ -714,15 +716,15 @@ const PartnerWallet = () => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#5B21B6', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#F97316' : '#5B21B6', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 TOTAL EARNINGS
               </div>
-              <div style={{ fontSize: '32px', fontWeight: 800, color: '#6D28D9', marginTop: '22px' }}>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#6D28D9', marginTop: '22px' }}>
                 ₹{parseFloat(lifetimeEarn).toLocaleString('en-IN')}
               </div>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8B5CF6', display: 'inline-block' }} />
+            <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#A1A1AA' : '#7C3AED', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isDark ? '#F97316' : '#8B5CF6', display: 'inline-block' }} />
               Total Withdrawn: ₹{parseFloat(totalWithdrawnVal).toLocaleString('en-IN')}
             </div>
           </div>
