@@ -3325,6 +3325,76 @@ const migrate = async () => {
       logger.error('Failed to run New Commission Flow Schema Migration (Task 15):', task15Err.message);
       throw task15Err;
     }
+
+    // Task 16: Customer Document Collection & Application Tracking Workflow
+    try {
+      logger.info('Running Customer Document Workflow Schema Migration (Task 16)...');
+
+      // Add required_documents column to products table
+      await query(`
+        ALTER TABLE products
+        ADD COLUMN IF NOT EXISTS required_documents JSONB DEFAULT '["pan_card", "aadhaar", "income_proof", "salary_slip", "bank_statement", "selfie", "address_proof"]'::jsonb;
+      `);
+
+      // Customer Access Tokens
+      await query(`
+        CREATE TABLE IF NOT EXISTS customer_access_tokens (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+          customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+          token VARCHAR(255) UNIQUE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          is_used BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_cat_token ON customer_access_tokens(token);
+        CREATE INDEX IF NOT EXISTS idx_cat_app ON customer_access_tokens(application_id);
+      `);
+
+      // Application Documents
+      await query(`
+        CREATE TABLE IF NOT EXISTS application_documents (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+          document_type VARCHAR(100) NOT NULL,
+          file_url TEXT NOT NULL,
+          file_name VARCHAR(255) NOT NULL,
+          mime_type VARCHAR(100) NOT NULL,
+          status VARCHAR(50) DEFAULT 'uploaded',
+          uploaded_by_customer BOOLEAN DEFAULT TRUE,
+          uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+          verified_by UUID REFERENCES users(id),
+          verified_at TIMESTAMPTZ,
+          rejection_reason TEXT,
+          version INT DEFAULT 1,
+          is_latest BOOLEAN DEFAULT TRUE
+        );
+        CREATE INDEX IF NOT EXISTS idx_app_docs_app ON application_documents(application_id);
+        CREATE INDEX IF NOT EXISTS idx_app_docs_type ON application_documents(document_type);
+      `);
+
+      // Application Timeline
+      await query(`
+        CREATE TABLE IF NOT EXISTS application_timeline (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+          event_type VARCHAR(100) NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          actor_type VARCHAR(50) DEFAULT 'system',
+          actor_id UUID,
+          metadata JSONB DEFAULT '{}',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_app_timeline_app ON application_timeline(application_id);
+        CREATE INDEX IF NOT EXISTS idx_app_timeline_created ON application_timeline(created_at ASC);
+      `);
+
+      logger.info('Customer Document Workflow Schema Migration (Task 16) completed successfully.');
+    } catch (task16Err) {
+      logger.error('Failed to run Customer Document Workflow Schema Migration (Task 16):', task16Err.message);
+      throw task16Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

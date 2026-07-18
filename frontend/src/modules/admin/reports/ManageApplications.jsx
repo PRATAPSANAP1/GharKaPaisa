@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
+import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+
+  // Verification Modal State
+  const [verifyModalApp, setVerifyModalApp] = useState(null);
 
   // Listing State
   const [apps, setApps] = useState([]);
@@ -219,12 +223,20 @@ export default function ManageApplications() {
                       </span>
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => handleViewDetails(app)}
-                        style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer" }}
-                      >
-                        Edit Status
-                      </button>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                        <button
+                          onClick={() => setVerifyModalApp(app)}
+                          style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Verify Docs
+                        </button>
+                        <button
+                          onClick={() => handleViewDetails(app)}
+                          style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          Edit Status
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -394,6 +406,15 @@ export default function ManageApplications() {
             ) : null}
           </div>
         </div>
+      )}
+
+      {/* Verification Modal */}
+      {verifyModalApp && (
+        <AdminDocumentVerificationModal
+          application={verifyModalApp}
+          onClose={() => setVerifyModalApp(null)}
+          onRefresh={fetchApplications}
+        />
       )}
     </div>
   );

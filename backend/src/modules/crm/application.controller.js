@@ -853,6 +853,12 @@ const getApplication = async (req, res, next) => {
   }
 };
 
+    return success(res, app);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /applications/:id/documents — Upload docs
 const uploadApplicationDoc = async (req, res, next) => {
   try {
@@ -892,6 +898,210 @@ const uploadApplicationDoc = async (req, res, next) => {
   }
 };
 
+// POST /applications/:id/send-link — Send secure upload link to customer
+const sendUploadLink = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { v4: uuidv4 } = require('uuid');
+    const { sendSms } = require('../../services/sms/sms.service');
+    const { sendEmail } = require('../../services/email/email.service');
+
+    const appRes = await query(`
+      SELECT a.*, c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email,
+             p.name as product_name, b.name as bank_name
+      FROM applications a
+      JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN products p ON a.product_id = p.id
+      LEFT JOIN banks b ON p.bank_id = b.id
+      WHERE a.id = $1
+    `, [id]);
+
+    if (appRes.rows.length === 0) return notFound(res, 'Application not found');
+    const app = appRes.rows[0];
+
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+
+    await query(`
+      INSERT INTO customer_access_tokens (application_id, customer_id, token, expires_at)
+      VALUES ($1, $2, $3, $4)
+    `, [id, app.customer_id, token, expiresAt]);
+
+    const baseUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+    const uploadUrl = `${baseUrl}/customer/upload/${token}`;
+
+    await query(`
+      UPDATE applications SET status = 'link_sent', updated_at = NOW() WHERE id = $1
+    `, [id]);
+
+    const smsText = `Dear ${app.customer_name}, please complete your application #${app.app_number} by uploading required documents: ${uploadUrl} - Thanks, GharKaPaisa`;
+    await sendSms(app.customer_mobile, smsText);
+
+    if (app.customer_email) {
+      await sendEmail({
+        to: app.customer_email,
+        subject: `Action Required: Complete Document Upload for Application #${app.app_number}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+            <h2>Complete Your Application - GharKaPaisa</h2>
+            <p>Dear <strong>${app.customer_name}</strong>,</p>
+            <p>Please upload your required documents for your <strong>${app.product_name || 'Loan'}</strong> application with <strong>${app.bank_name || 'Bank'}</strong>.</p>
+            <p style="margin: 24px 0;">
+              <a href="${uploadUrl}" style="background-color: #f97316; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Upload Documents Now</a>
+            </p>
+            <p><small>This secure link will expire in 72 hours.</small></p>
+          </div>
+        `
+      }).catch(err => logger.warn('Email send failed:', err.message));
+    }
+
+    await query(`
+      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, 'link_sent', 'Link Sent', $2, 'admin', $3)
+    `, [id, `Document upload link sent to customer (${app.customer_mobile})`, req.user ? req.user.id : null]);
+
+    return success(res, { token, uploadUrl, expiresAt }, 'Upload link sent to customer successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /applications/:id/documents/:docId/verify — Admin approve or reject document
+const verifyDocument = async (req, res, next) => {
+  try {
+    const { id, docId } = req.params;
+    const { status, rejection_reason } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return error(res, 'Invalid verification status. Must be approved or rejected', 400);
+    }
+
+    const docRes = await query(`
+      SELECT * FROM application_documents WHERE id = $1 AND application_id = $2
+    `, [docId, id]);
+    if (docRes.rows.length === 0) return notFound(res, 'Document not found');
+
+    const doc = docRes.rows[0];
+
+    await query(`
+      UPDATE application_documents 
+      SET status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW()
+      WHERE id = $4
+    `, [status, status === 'rejected' ? (rejection_reason || 'Document verification rejected') : null, req.user ? req.user.id : null, docId]);
+
+    const docLabel = doc.document_type.replace(/_/g, ' ').toUpperCase();
+
+    const eventType = status === 'approved' ? 'document_approved' : 'document_rejected';
+    const title = `${docLabel} ${status.toUpperCase()}`;
+    const desc = status === 'approved'
+      ? `${docLabel} verified and approved by admin`
+      : `${docLabel} rejected. Reason: ${rejection_reason || 'Image blurred / Invalid document'}`;
+
+    await query(`
+      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, $2, $3, $4, 'admin', $5)
+    `, [id, eventType, title, desc, req.user ? req.user.id : null]);
+
+    if (status === 'rejected') {
+      const { sendSms } = require('../../services/sms/sms.service');
+      const appRes = await query(`
+        SELECT a.app_number, c.mobile, c.full_name 
+        FROM applications a JOIN customers c ON a.customer_id = c.id WHERE a.id = $1
+      `, [id]);
+      if (appRes.rows.length > 0) {
+        const cust = appRes.rows[0];
+        const smsMsg = `Dear ${cust.full_name}, your ${docLabel} for App #${cust.app_number} was rejected (${rejection_reason || 'Blurred/Invalid'}). Please re-upload via your secure link. Thanks, GharKaPaisa`;
+        await sendSms(cust.mobile, smsMsg);
+      }
+    }
+
+    return success(res, null, `Document ${status} successfully`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /applications/:id/verification-complete — Admin complete verification
+const markVerificationComplete = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const unapprovedRes = await query(`
+      SELECT id, document_type FROM application_documents 
+      WHERE application_id = $1 AND is_latest = TRUE AND status != 'approved'
+    `, [id]);
+
+    if (unapprovedRes.rows.length > 0) {
+      const pendingTypes = unapprovedRes.rows.map(d => d.document_type.replace(/_/g, ' ').toUpperCase()).join(', ');
+      return error(res, `Cannot complete verification. Unapproved documents remaining: ${pendingTypes}`, 400);
+    }
+
+    await query(`
+      UPDATE applications SET status = 'verification_completed', updated_at = NOW() WHERE id = $1
+    `, [id]);
+
+    await query(`
+      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, 'verification_completed', 'Verification Completed', 'All customer documents verified and approved. Sent to Bank for processing.', 'admin', $2)
+    `, [id, req.user ? req.user.id : null]);
+
+    return success(res, null, 'Application verification completed successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /applications/:id/bank-status — Update bank review / approval status
+const updateBankProcessingStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, bank_ref_number, rejection_reason, approved_amount } = req.body;
+
+    const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed'];
+    if (!validStatuses.includes(status)) {
+      return error(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
+    }
+
+    const appRes = await query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    if (appRes.rows.length === 0) return notFound(res, 'Application not found');
+    const app = appRes.rows[0];
+
+    await query(`
+      UPDATE applications 
+      SET status = $1, bank_ref_number = COALESCE($2, bank_ref_number), 
+          rejection_reason = COALESCE($3, rejection_reason), 
+          approved_amount = COALESCE($4, approved_amount),
+          updated_at = NOW()
+      WHERE id = $5
+    `, [status, bank_ref_number, rejection_reason, approved_amount, id]);
+
+    const titleMap = {
+      under_review: 'Bank Reviewing Application',
+      approved: 'Application Approved by Bank',
+      rejected: 'Application Rejected by Bank',
+      disbursed: 'Loan Disbursed'
+    };
+
+    await query(`
+      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, $2, $3, $4, 'admin', $5)
+    `, [id, status, titleMap[status] || status, `Status updated to ${status}. ${rejection_reason ? 'Reason: ' + rejection_reason : ''}`, req.user ? req.user.id : null]);
+
+    if (status === 'disbursed' && app.commission_amount > 0 && app.partner_id) {
+      try {
+        await creditCommission(app.partner_id, app.commission_amount, app.id);
+        await query(`UPDATE applications SET commission_status = 'approved' WHERE id = $1`, [id]);
+      } catch (commErr) {
+        logger.error('Failed to credit commission on disbursal:', commErr);
+      }
+    }
+
+    return success(res, null, `Application status updated to ${status}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
   submitApplication, 
   submitPublicApplication, 
@@ -908,5 +1118,10 @@ module.exports = {
   rejectApplication,
   reassignApplication,
   manualCommission,
-  updateCommission
+  updateCommission,
+  sendUploadLink,
+  verifyDocument,
+  markVerificationComplete,
+  updateBankProcessingStatus
 };
+

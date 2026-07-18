@@ -33,4 +33,10 @@ router.post('/:id/notes', requireApprovedPartnerOrAdmin, appCtrl.addNote);
 router.get('/:id/documents', requireApprovedPartnerOrAdmin, appCtrl.getDocuments);
 router.post('/:id/documents', requireApprovedPartnerOrAdmin, upload.single('document'), appCtrl.uploadApplicationDoc);
 
+// Customer Document Workflow
+router.post('/:id/send-link', requireApprovedPartnerOrAdmin, appCtrl.sendUploadLink);
+router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);
+router.put('/:id/verification-complete', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.markVerificationComplete);
+router.put('/:id/bank-status', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateBankProcessingStatus);
+
 module.exports = router;

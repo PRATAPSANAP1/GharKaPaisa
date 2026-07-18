@@ -25,6 +25,7 @@ const walletCtrl = require('../modules/wallet/controller.js');
 const partnerCtrl = require('../modules/partner/partner.controller.js');
 
 const customerRoute = require('../modules/customer/customer.routes.js');
+const customerPortalRoute = require('../modules/customer/customer_portal.routes.js');
 const teamRoutes    = require('../modules/team/team.routes.js');
 
 // ── Webhooks & Public Actions ──────────────────────────────────
@@ -38,6 +39,7 @@ router.use('/cms/sections',     cmsRouter);
 router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/settings',         settingsRouter);
+router.use('/customer-portal',  customerPortalRoute);
 
 // ── Redirects & Analytics ──────────────────────────────────────
 router.get('/redirect/:productId', redirectCtrl.handleRedirect);

@@ -20,6 +20,7 @@ import VerifyEmail from '../modules/authentication/register/VerifyEmail';
 import ResetPassword from '../modules/authentication/reset-password/ResetPassword';
 import TermsAndConditions from '../modules/home/TermsAndConditions';
 import PrivacyPolicy from '../modules/home/PrivacyPolicy';
+import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -153,6 +154,10 @@ const AppRoutes = () => {
         <Route path="/product/:slug/apply" element={<ApplyForm />} />
         <Route path="/card-benefits/:bankId/:cardId" element={<CardBenefitsPage />} />
       </Route>
+
+      {/* Customer Secure Upload Portal (Standalone Public Route) */}
+      <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />
+      <Route path="/customer/application/:token" element={<CustomerUploadPortal />} />
 
       {/* Partner Protected Routes */}
       <Route element={<ProtectedRoute />}>
