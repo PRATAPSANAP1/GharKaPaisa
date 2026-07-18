@@ -3395,6 +3395,42 @@ const migrate = async () => {
       logger.error('Failed to run Customer Document Workflow Schema Migration (Task 16):', task16Err.message);
       throw task16Err;
     }
+
+    // Task 17: Enhanced Partner Product Application Form Schema
+    try {
+      logger.info('Running Enhanced Partner Product Application Schema Migration (Task 17)...');
+
+      await addEnumValue('application_status', 'draft');
+      await addEnumValue('application_status', 'link_sent');
+      await addEnumValue('application_status', 'verification_completed');
+
+      await query(`
+        ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'partner_cell',
+        ADD COLUMN IF NOT EXISTS business_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS gst_number VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS trade_license_number VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS country_code VARCHAR(10) DEFAULT '+91',
+        ADD COLUMN IF NOT EXISTS agree_terms BOOLEAN DEFAULT TRUE;
+      `);
+
+      await query(`
+        ALTER TABLE customers
+        ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS business_type VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS gst_number VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS trade_license_number VARCHAR(50);
+      `);
+
+      logger.info('Enhanced Partner Product Application Schema Migration (Task 17) completed successfully.');
+    } catch (task17Err) {
+      logger.error('Failed to run Enhanced Partner Product Application Schema Migration (Task 17):', task17Err.message);
+      throw task17Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

@@ -1102,6 +1102,251 @@ const updateBankProcessingStatus = async (req, res, next) => {
   }
 };
 
+// POST /applications/partner-apply — Submit or save draft application from Partner Panel
+const submitPartnerApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const {
+      product_id,
+      full_name,
+      country_code = '+91',
+      mobile,
+      email,
+      monthly_salary,
+      company_name,
+      pincode,
+      city,
+      state,
+      business_type,
+      gst_number,
+      trade_license_number,
+      process_type = 'partner_cell',
+      agree_terms = true,
+      is_draft = false
+    } = req.body;
+
+    if (!product_id) {
+      await client.query('ROLLBACK');
+      return error(res, 'Product ID is required', 400);
+    }
+
+    let partnerId;
+    if (req.partner?.id) {
+      partnerId = req.partner.id;
+    } else if (req.user?.id) {
+      const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) {
+        partnerId = p.id;
+      } else {
+        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+        const { rows: [newP] } = await client.query(`
+          INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+          VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
+        `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
+        partnerId = newP.id;
+      }
+    }
+
+    if (!partnerId) {
+      await client.query('ROLLBACK');
+      return error(res, 'Partner profile not found', 400);
+    }
+
+    const { rows: [product] } = await client.query(
+      `SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1`,
+      [product_id]
+    );
+    if (!product) {
+      await client.query('ROLLBACK');
+      return error(res, 'Product not found', 404);
+    }
+
+    if (!is_draft) {
+      if (!full_name || full_name.trim().length < 2) {
+        await client.query('ROLLBACK');
+        return error(res, 'Full Name must be at least 2 characters', 400);
+      }
+
+      if (!mobile || !/^[6-9]\d{9}$/.test(String(mobile).trim())) {
+        await client.query('ROLLBACK');
+        return error(res, 'Please provide a valid 10-digit Indian mobile number', 400);
+      }
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+        await client.query('ROLLBACK');
+        return error(res, 'Please provide a valid email address', 400);
+      }
+
+      const salaryNum = parseFloat(monthly_salary || 0);
+      if (isNaN(salaryNum) || salaryNum <= 0) {
+        await client.query('ROLLBACK');
+        return error(res, 'Monthly salary must be a positive number', 400);
+      }
+
+      if (product.min_income && salaryNum < parseFloat(product.min_income)) {
+        await client.query('ROLLBACK');
+        return error(res, `Applicant monthly salary ₹${salaryNum.toLocaleString('en-IN')} is below product minimum required ₹${parseFloat(product.min_income).toLocaleString('en-IN')}`, 400);
+      }
+
+      if (!pincode || !/^\d{6}$/.test(String(pincode).trim())) {
+        await client.query('ROLLBACK');
+        return error(res, 'Please enter a valid 6-digit postal pincode', 400);
+      }
+
+      const validProcesses = ['partner_cell', 'customer_sell', 'punching_process'];
+      if (!validProcesses.includes(process_type)) {
+        await client.query('ROLLBACK');
+        return error(res, 'Invalid Process Assignment selection', 400);
+      }
+
+      if (!agree_terms) {
+        await client.query('ROLLBACK');
+        return error(res, 'You must agree to the Terms & Conditions to submit', 400);
+      }
+    }
+
+    const trimmedMobile = mobile ? String(mobile).trim() : null;
+    const trimmedName = full_name ? String(full_name).trim() : 'Draft Customer';
+    const trimmedEmail = email ? String(email).trim() : null;
+
+    let customerId;
+    if (trimmedMobile) {
+      const { rows: [existingCust] } = await client.query(
+        `SELECT id FROM customers WHERE mobile = $1`, [trimmedMobile]
+      );
+
+      if (existingCust) {
+        customerId = existingCust.id;
+        await client.query(`
+          UPDATE customers SET 
+            full_name = COALESCE($1, full_name), 
+            email = COALESCE($2, email), 
+            monthly_income = COALESCE($3, monthly_income),
+            company_name = COALESCE($4, company_name),
+            business_type = COALESCE($5, business_type),
+            gst_number = COALESCE($6, gst_number),
+            trade_license_number = COALESCE($7, trade_license_number),
+            city = COALESCE($8, city),
+            state = COALESCE($9, state),
+            pincode = COALESCE($10, pincode),
+            updated_at = NOW() 
+          WHERE id = $11
+        `, [
+          trimmedName, trimmedEmail, monthly_salary || null, company_name || null,
+          business_type || null, gst_number || null, trade_license_number || null,
+          city || null, state || null, pincode || null, customerId
+        ]);
+      } else {
+        const { rows: [newCust] } = await client.query(`
+          INSERT INTO customers 
+            (full_name, mobile, email, monthly_income, company_name, business_type, gst_number, trade_license_number, city, state, pincode, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+          RETURNING id
+        `, [
+          trimmedName, trimmedMobile, trimmedEmail, monthly_salary || null, company_name || null,
+          business_type || null, gst_number || null, trade_license_number || null,
+          city || null, state || null, pincode || null, req.user.id
+        ]);
+        customerId = newCust.id;
+      }
+    } else {
+      const { rows: [newCust] } = await client.query(`
+        INSERT INTO customers (full_name, email, created_by)
+        VALUES ($1, $2, $3) RETURNING id
+      `, [trimmedName, trimmedEmail, req.user.id]);
+      customerId = newCust.id;
+    }
+
+    const commission = await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
+
+    const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
+    const date = new Date();
+    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const appNumber = `APP${datePart}${nextval}`;
+
+    const appStatus = is_draft ? 'draft' : 'submitted';
+
+    const { rows: [app] } = await client.query(`
+      INSERT INTO applications
+        (app_number, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
+         status, process_type, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
+      RETURNING *
+    `, [
+      appNumber, customerId, product_id, partnerId, product.bank_id, req.user.id,
+      monthly_salary || 0, commission, appStatus, process_type, business_type || null,
+      gst_number || null, trade_license_number || null, company_name || null,
+      pincode || null, city || null, state || null, country_code, agree_terms,
+    ]);
+
+    await client.query(`
+      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, $2, $3, $4, 'partner', $5)
+    `, [
+      app.id,
+      is_draft ? 'draft_saved' : 'applied',
+      is_draft ? 'Draft Application Saved' : 'Application Submitted',
+      is_draft ? 'Partner saved application draft' : `Application submitted via ${process_type.replace(/_/g, ' ')}`,
+      req.user.id
+    ]);
+
+    await client.query('COMMIT');
+
+    if (!is_draft) {
+      const { sendEmail } = require('../../services/email/email.service');
+      
+      if (trimmedEmail) {
+        sendEmail({
+          to: trimmedEmail,
+          subject: `Application Confirmation - #${appNumber} (${product.name})`,
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+              <h2 style="color: #f97316;">Application Received - GharKaPaisa</h2>
+              <p>Dear <strong>${trimmedName}</strong>,</p>
+              <p>Your application for <strong>${product.name}</strong> with <strong>${product.bank_name || 'Bank'}</strong> has been successfully submitted by your Partner.</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0;">
+                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Application Number</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">#${appNumber}</td></tr>
+                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Product</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${product.name}</td></tr>
+                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Process Assignment</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${process_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
+              </table>
+              <p>Regards,<br><strong>GharKaPaisa Team</strong></p>
+            </div>
+          `
+        }).catch(err => logger.warn('Applicant email trigger failed:', err.message));
+      }
+
+      const partnerEmail = req.user.email;
+      if (partnerEmail) {
+        sendEmail({
+          to: partnerEmail,
+          subject: `New Lead Logged - #${appNumber} (${trimmedName})`,
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+              <h2 style="color: #10b981;">New Lead Application Created</h2>
+              <p>Hello Partner,</p>
+              <p>You have successfully logged a new application for <strong>${trimmedName}</strong>.</p>
+              <ul>
+                <li><strong>App Number:</strong> #${appNumber}</li>
+                <li><strong>Product:</strong> ${product.name}</li>
+                <li><strong>Mobile:</strong> ${country_code} ${trimmedMobile}</li>
+                <li><strong>Process Assignment:</strong> ${process_type.replace(/_/g, ' ').toUpperCase()}</li>
+                <li><strong>Expected Payout:</strong> ₹${parseFloat(commission).toLocaleString('en-IN')}</li>
+              </ul>
+            </div>
+          `
+        }).catch(err => logger.warn('Partner email trigger failed:', err.message));
+      }
+    }
+
+    return success(res, app, is_draft ? 'Draft saved successfully' : 'Application submitted successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  }
+};
+
 module.exports = { 
   submitApplication, 
   submitPublicApplication, 
@@ -1122,6 +1367,7 @@ module.exports = {
   sendUploadLink,
   verifyDocument,
   markVerificationComplete,
-  updateBankProcessingStatus
+  updateBankProcessingStatus,
+  submitPartnerApplication
 };
 
