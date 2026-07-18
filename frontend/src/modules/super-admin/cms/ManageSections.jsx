@@ -10,8 +10,8 @@ import * as FaIcons from "react-icons/fa";
 
 const defaultFallbackSections = {
   money_transfer: {
-    title: "Money Transfer & Payments",
-    subtitle: "Send money instantly or pay utility bills",
+    title: "Recharge & Bills",
+    subtitle: "Recharge mobile & DTH or pay utility bills",
     items: [
       { id: "tomobile", label: "To Mobile", icon: "FaMobileAlt", desc: "Send money instantly", color: "#27ae60" },
       { id: "recharge", label: "Recharge", icon: "FaMobileAlt", desc: "Mobile, DTH, FASTag", color: "#2980b9" },
@@ -24,7 +24,6 @@ const defaultFallbackSections = {
     title: "Attractive Cards & Loans",
     subtitle: "Handpicked financial solutions for your profile",
     items: [
-      { id: "ltf-cards", label: "Lifetime Free Cards", icon: "FaRegCreditCard", desc: "No annual fee forever" },
       { id: "cibil-loans", label: "CIBIL Score Based Loans", icon: "FaUniversity", desc: "Get loan based on score" },
       { id: "hdfc-cc-loan", label: "Loan on Credit Card", icon: "FaLaptopHouse", desc: "Pre-approved credit card loans" },
       { id: "smart-emi", label: "Smart EMI Cards", icon: "FaMoneyCheckAlt", desc: "Convert purchase to EMI" },

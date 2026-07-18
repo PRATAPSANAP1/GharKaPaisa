@@ -19,7 +19,7 @@ import {
 /* ── Catalog Data ────────────────────────────────────────────────── */
 const serviceCatalog = {
   categories: [
-    { id: 'money', name: 'Money Transfer & Payments', icon: FaWallet, color: '#4f46e5' },
+    { id: 'money', name: 'Recharge & Bills', icon: FaWallet, color: '#4f46e5' },
     { id: 'banks', name: 'Popular Credit Card Banks', icon: FaUniversity, color: '#0ea5e9' },
     { id: 'loans', name: 'Loans', icon: FaHandHoldingUsd, color: '#10b981' },
     { id: 'insurance', name: 'Insurance', icon: FaShieldAlt, color: '#f59e0b' },

@@ -46,6 +46,48 @@ export default function PartnerDashboard({ partner }) {
   const [serviceSearch, setServiceSearch] = useState('');
   const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const [activeDashboardCategory, setActiveDashboardCategory] = useState('credit_card');
+
+  // Category Specific Role & Bank Cards Data
+  const creditCardRoleCards = [
+    { title: "Employee", sub: "Role", count: "120", route: "/partner/products?category=credit_card" },
+    { title: "HDFC Cards", sub: "Bank", count: "60139", route: "/partner/products?bank=HDFC" },
+    { title: "SBI Cards", sub: "Bank", count: "9398", route: "/partner/products?bank=SBI" },
+    { title: "ICICI Cards", sub: "Bank", count: "28", route: "/partner/products?bank=ICICI" },
+    { title: "AXIS Cards", sub: "Bank", count: "1676", route: "/partner/products?bank=AXIS" },
+    { title: "INDUSIND Cards", sub: "Bank", count: "2381", route: "/partner/products?bank=INDUSIND" },
+    { title: "IDFC Cards", sub: "Bank", count: "13", route: "/partner/products?bank=IDFC" },
+    { title: "AU Cards", sub: "Bank", count: "15", route: "/partner/products?bank=AU" },
+    { title: "HSBC Cards", sub: "Bank", count: "3", route: "/partner/products?bank=HSBC" },
+    { title: "FEDERAL Cards", sub: "Bank", count: "10", route: "/partner/products?bank=FEDERAL" },
+    { title: "BOB Cards", sub: "Bank", count: "184", route: "/partner/products?bank=BOB" },
+    { title: "YES Cards", sub: "Bank", count: "73", route: "/partner/products?bank=YES" },
+    { title: "KOTAK Cards", sub: "Bank", count: "5", route: "/partner/products?bank=KOTAK" }
+  ];
+
+  const loanRoleCards = [
+    { title: "Loan Officer", sub: "Role", count: "85", route: "/partner/products?category=personal_loan" },
+    { title: "HDFC Personal Loan", sub: "Provider", count: "45210", route: "/partner/products?category=personal_loan" },
+    { title: "SBI Home Loan", sub: "Provider", count: "12450", route: "/partner/products?category=home_loan" },
+    { title: "ICICI Business Loan", sub: "Provider", count: "3890", route: "/partner/products?category=business_loan" },
+    { title: "AXIS Instant Loan", sub: "Provider", count: "8720", route: "/partner/products?category=personal_loan" },
+    { title: "Bajaj Finserv Loan", sub: "Provider", count: "14200", route: "/partner/products?category=personal_loan" },
+    { title: "Tata Capital Loan", sub: "Provider", count: "2150", route: "/partner/products?category=personal_loan" },
+    { title: "IDFC First Loan", sub: "Provider", count: "1840", route: "/partner/products?category=personal_loan" },
+    { title: "L&T Finance", sub: "Provider", count: "950", route: "/partner/products?category=business_loan" }
+  ];
+
+  const insuranceRoleCards = [
+    { title: "Insurance Advisor", sub: "Role", count: "42", route: "/partner/products?category=insurance" },
+    { title: "Health Insurance", sub: "Category", count: "18400", route: "/partner/products?category=insurance" },
+    { title: "Life Insurance", sub: "Category", count: "12350", route: "/partner/products?category=insurance" },
+    { title: "General Insurance", sub: "Category", count: "8900", route: "/partner/products?category=insurance" },
+    { title: "HDFC ERGO", sub: "Provider", count: "15200", route: "/partner/products?category=insurance" },
+    { title: "Star Health", sub: "Provider", count: "9840", route: "/partner/products?category=insurance" },
+    { title: "ICICI Lombard", sub: "Provider", count: "11300", route: "/partner/products?category=insurance" },
+    { title: "Bajaj Allianz", sub: "Provider", count: "6700", route: "/partner/products?category=insurance" },
+    { title: "Niva Bupa", sub: "Provider", count: "4500", route: "/partner/products?category=insurance" }
+  ];
 
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
   const kycStatus = partner?.kyc_status || "pending";
@@ -466,61 +508,203 @@ export default function PartnerDashboard({ partner }) {
       </div>
 
 
-      {/* ──── KPI CARDS ROW ──── */}
+      {/* ──── 4 CATEGORY ACTION BUTTONS & SPECIFIC DASHBOARD VIEW ──── */}
+      <div>
+        {/* Category Buttons Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+          {/* Credit Cards Button */}
+          <button
+            onClick={() => setActiveDashboardCategory('credit_card')}
+            style={{
+              padding: "16px 20px",
+              borderRadius: "16px",
+              border: activeDashboardCategory === 'credit_card' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+              background: activeDashboardCategory === 'credit_card' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
+              color: activeDashboardCategory === 'credit_card' ? C.primary : C.text,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              fontWeight: 800,
+              fontSize: "15px",
+              boxShadow: activeDashboardCategory === 'credit_card' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <MdCreditCard size={22} />
+            <span>Credit Cards</span>
+          </button>
+
+          {/* Loans Button */}
+          <button
+            onClick={() => setActiveDashboardCategory('loans')}
+            style={{
+              padding: "16px 20px",
+              borderRadius: "16px",
+              border: activeDashboardCategory === 'loans' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+              background: activeDashboardCategory === 'loans' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
+              color: activeDashboardCategory === 'loans' ? C.primary : C.text,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              fontWeight: 800,
+              fontSize: "15px",
+              boxShadow: activeDashboardCategory === 'loans' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <MdAccountBalanceWallet size={22} />
+            <span>Loans</span>
+          </button>
+
+          {/* Insurance Button */}
+          <button
+            onClick={() => setActiveDashboardCategory('insurance')}
+            style={{
+              padding: "16px 20px",
+              borderRadius: "16px",
+              border: activeDashboardCategory === 'insurance' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+              background: activeDashboardCategory === 'insurance' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
+              color: activeDashboardCategory === 'insurance' ? C.primary : C.text,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              fontWeight: 800,
+              fontSize: "15px",
+              boxShadow: activeDashboardCategory === 'insurance' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <MdShield size={22} />
+            <span>Insurance</span>
+          </button>
+
+          {/* Add Leads Button */}
+          <button
+            onClick={() => navigate('/partner/products')}
+            style={{
+              padding: "16px 20px",
+              borderRadius: "16px",
+              border: "none",
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: "#FFFFFF",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              fontWeight: 800,
+              fontSize: "15px",
+              boxShadow: `0 4px 16px ${C.primary}40`,
+              transition: "all 0.2s ease"
+            }}
+          >
+            <MdAdd size={22} />
+            <span>Add Leads</span>
+          </button>
+        </div>
+
+        {/* Dynamic Category Cards Grid View */}
+        <div style={{
+          background: C.card,
+          borderRadius: "20px",
+          padding: "24px",
+          border: `1px solid ${C.border}`,
+          boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.04)",
+          marginBottom: "24px"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div>
+              <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0, textTransform: 'capitalize' }}>
+                {activeDashboardCategory === 'credit_card' ? 'Credit Cards Overview' : activeDashboardCategory === 'loans' ? 'Loans Overview' : 'Insurance Overview'}
+              </h3>
+              <p style={{ fontSize: "12px", color: C.textLight, margin: "2px 0 0" }}>
+                Role and bank performance count breakdown
+              </p>
+            </div>
+            <span style={{ fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "20px", background: `${C.primary}15`, color: C.primary }}>
+              Active Category
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" }}>
+            {(activeDashboardCategory === 'credit_card' ? creditCardRoleCards : activeDashboardCategory === 'loans' ? loanRoleCards : insuranceRoleCards).map((card, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: isDark ? C.bgSecondary : "#F8FAFC",
+                  borderRadius: "14px",
+                  padding: "16px",
+                  border: `1px solid ${C.border}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>
+                      {card.sub}
+                    </span>
+                    <button
+                      onClick={() => navigate(card.route)}
+                      style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
+                    >
+                      More info
+                    </button>
+                  </div>
+                  <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
+                    {card.count}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {card.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+
+      {/* ──── TEAM & EARNING METRIC CARDS ──── */}
       <div 
         className="kpi-cards-container"
-        style={{ display: "flex", flexFlow: "row nowrap", gap: "20px", width: "100%" }}
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", width: "100%", marginBottom: "24px" }}
       >
-        
-        {/* Total Applications */}
+        {/* Total Teams */}
         <div 
-          onClick={() => navigate('/partner/applications')}
+          onClick={() => navigate('/partner/team-network')}
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
-            flex: 1, minWidth: 0
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalApps', 'Total Applications')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiTotalApps}</div>
-            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getLeadsTrend()}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Total Teams</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
+              {teamDashboard?.team_members?.length || 15}
+            </div>
+            <span style={{ fontSize: "11px", color: C.green, fontWeight: 700, marginTop: "4px", display: "block" }}>
+              +2 members this month
+            </span>
           </div>
           <div className="kpi-card-icon" style={{
             width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#F5F3FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
-            <MdDescription size={22} />
-          </div>
-        </div>
-
-        {/* Approved Applications */}
-        <div 
-          onClick={() => navigate('/partner/applications?status=approved')}
-          style={{
-            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
-            flex: 1, minWidth: 0
-          }}
-          className="kpi-card hover-card-clickable"
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.approvedApps', 'Approved Applications')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{kpiApprovedApps}</div>
-            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{getApprovedTrend()}</div>
-          </div>
-          <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#ECFDF5", color: isDark ? C.green : "#22C55E",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <MdCheckCircle size={22} />
+            <MdGroup size={22} />
           </div>
         </div>
 
@@ -530,52 +714,86 @@ export default function PartnerDashboard({ partner }) {
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
-            flex: 1, minWidth: 0
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{totalEarned}</div>
-            <div className="kpi-card-trend" style={{ fontSize: "11px", fontWeight: 700, color: isDark ? C.green : "#16A34A", marginTop: "6px" }}>{t('dashboard.calculatedLive', 'Calculated live')}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Total Earnings</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
+              {totalEarned}
+            </div>
+            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
+              Calculated live
+            </span>
           </div>
           <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#EEF2FF", color: C.primary,
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#ECFDF5", color: isDark ? C.green : "#22C55E",
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
             <MdAccountBalanceWallet size={22} />
           </div>
         </div>
 
-        {/* Available Balance */}
+        {/* Today's Earning */}
         <div 
           onClick={() => navigate('/partner/wallet')}
           style={{
             background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease",
-            flex: 1, minWidth: 0
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
           }}
           className="kpi-card hover-card-clickable"
           role="button"
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.availableBalance', 'Available Balance')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>{walletBalance}</div>
-            <div className="kpi-card-trend" style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>{t('dashboard.withdrawAnytime', 'Withdraw anytime')}</div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Today's Earning</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
+              ₹0
+            </div>
+            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
+              Updated today
+            </span>
           </div>
           <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#EFF6FF", color: isDark ? C.green : "#2563EB",
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#EEF2FF", color: C.primary,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}>
-            <MdAccountBalanceWallet size={22} />
+            <MdTrendingUp size={22} />
           </div>
         </div>
 
+        {/* Inactive Team */}
+        <div 
+          onClick={() => navigate('/partner/team-network')}
+          style={{
+            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
+            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
+          }}
+          className="kpi-card hover-card-clickable"
+          role="button"
+          tabIndex={0}
+        >
+          <div>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Inactive Team</span>
+            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.red, marginTop: "6px" }}>
+              {teamDashboard?.inactive_count || 2}
+            </div>
+            <span style={{ fontSize: "11px", color: C.red, fontWeight: 600, marginTop: "4px", display: "block" }}>
+              Action required
+            </span>
+          </div>
+          <div className="kpi-card-icon" style={{
+            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.red}15` : "#FEE2E2", color: C.red,
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <MdCancel size={22} />
+          </div>
+        </div>
       </div>
 
       {/* ──── QUICK ACCESS SECTION ──── */}
