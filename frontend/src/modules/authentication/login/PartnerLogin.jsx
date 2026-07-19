@@ -630,47 +630,111 @@ export default function PartnerLogin() {
         {/* ── Direct Login Layout ──────────────────────────────────── */}
         <div className="login-step2-layout">
           
-          {/* Left side panel (hidden on mobile, secure info on desktop) */}
-          <div className="login-step2-left">
-            <div style={{
-              background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(46, 144, 250, 0.08))",
-              border: `1.5px solid ${C.border}`,
-              borderRadius: "24px",
-              padding: "32px 24px",
-              height: "100%",
-              boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              textAlign: "left"
-            }}>
-              <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start" }} />
-              
-              <div>
-                <div style={{ marginBottom: "16px", display: "inline-flex", padding: "16px", borderRadius: "16px", background: "rgba(37, 99, 235, 0.08)" }}>
-                  <Icons.Lock size={40} color="#2563EB" />
+            {/* Left side panel (hidden on mobile, secure info on desktop) */}
+            <div className="login-step2-left">
+              <div style={{
+                background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(46, 144, 250, 0.08))",
+                border: `1.5px solid ${C.border}`,
+                borderRadius: "24px",
+                padding: "32px 24px",
+                height: "100%",
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                textAlign: "left"
+              }}>
+                <img
+                  src={logoImg}
+                  alt="GharKaPaisa Logo"
+                  title="Click to go to Home Page"
+                  onClick={() => navigate("/")}
+                  style={{ height: "36px", objectFit: "contain", alignSelf: "flex-start", cursor: "pointer" }}
+                />
+                
+                <div>
+                  <div style={{ marginBottom: "16px", display: "inline-flex", padding: "16px", borderRadius: "16px", background: "rgba(37, 99, 235, 0.08)" }}>
+                    <Icons.Lock size={40} color="#2563EB" />
+                  </div>
+                  <h2 id="label-secure-gateway-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.secureGatewayTitle", "Secure Gateway")}</h2>
+                  <p id="label-secure-gateway-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
+                    {t("login.secureGatewayDesc", "Please enter your registered credentials or verify via OTP to access your secure dashboard.")}
+                  </p>
                 </div>
-                <h2 id="label-secure-gateway-title" style={{ fontSize: "22px", fontWeight: 900, margin: "0 0 8px 0", color: C.text }}>{t("login.secureGatewayTitle", "Secure Gateway")}</h2>
-                <p id="label-secure-gateway-desc" style={{ fontSize: "13px", color: C.textMid, lineHeight: 1.5, margin: 0 }}>
-                  {t("login.secureGatewayDesc", "Please enter your registered credentials or verify via OTP to access your secure dashboard.")}
-                </p>
-              </div>
 
-              <div id="label-ssl-banner" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
-                {t("login.sslBannerText", "256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT")}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div id="label-ssl-banner" style={{ fontSize: "11px", color: C.textLight, fontWeight: 700 }}>
+                    {t("login.sslBannerText", "256-BIT SSL ENCRYPTION • VERIFIED ENVIRONMENT")}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/")}
+                    style={{
+                      background: "rgba(37, 99, 235, 0.1)",
+                      color: "#2563EB",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "6px 12px",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    🏠 {t("login.goHome", "Home Page")}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right side login form */}
-          <div className="login-step2-right">
-            {/* Top header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexShrink: 0, width: "100%" }} className="login-step2-header">
-              <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
-                <img src={logoImg} alt="GharKaPaisa Logo" style={{ height: "32px", objectFit: "contain" }} />
+            {/* Right side login form */}
+            <div className="login-step2-right">
+              {/* Top header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexShrink: 0, width: "100%" }} className="login-step2-header">
+                <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
+                  <img
+                    src={logoImg}
+                    alt="GharKaPaisa Logo"
+                    title="Click to go to Home Page"
+                    onClick={() => navigate("/")}
+                    style={{ height: "32px", objectFit: "contain", cursor: "pointer" }}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    id="btn-direct-home"
+                    onClick={() => navigate("/")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      background: isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9",
+                      color: C.text,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: "10px",
+                      padding: "6px 12px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#2563EB";
+                      e.currentTarget.style.color = "#2563EB";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = C.border;
+                      e.currentTarget.style.color = C.text;
+                    }}
+                  >
+                    🏠 {t("login.home", "Home")}
+                  </button>
+                  <LanguageSwitcher />
+                </div>
               </div>
-              <LanguageSwitcher />
-            </div>
 
             {/* Main credentials card container */}
             <div 
@@ -988,7 +1052,7 @@ export default function PartnerLogin() {
             </div>
 
             {/* Bottom Action / Footer */}
-            <div style={{ flexShrink: 0, marginTop: "8px" }}>
+            <div style={{ flexShrink: 0, marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
               <div style={{ textAlign: "center", fontSize: "12.5px", color: C.textLight }}>
                 <span id="label-dont-have-account">{t("login.dontHaveAccount", "Don't have an account?")}</span>{" "}
                 <span 
@@ -999,6 +1063,26 @@ export default function PartnerLogin() {
                   {t("login.becomePartner", "Become a Partner →")}
                 </span>
               </div>
+              <button
+                type="button"
+                id="btn-footer-home"
+                onClick={() => navigate("/")}
+                style={{
+                  background: "transparent",
+                  color: C.textMid,
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#2563EB"}
+                onMouseLeave={(e) => e.currentTarget.style.color = C.textMid}
+              >
+                🏠 {t("login.backToHome", "Back to Home Page")}
+              </button>
             </div>
           </div>
 
