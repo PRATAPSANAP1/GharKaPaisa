@@ -1821,7 +1821,7 @@ export default function Home({ onNavigate }) {
         if (cachedBanks) {
           setDynamicBanks(JSON.parse(cachedBanks));
         } else {
-          const res = await fetch(`${apiBase}/banks?limit=100&status=Active`);
+          const res = await fetch(`${apiBase}/banks/active`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             const mapped = data.data.map(b => {
