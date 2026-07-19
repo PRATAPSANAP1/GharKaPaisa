@@ -853,12 +853,6 @@ const getApplication = async (req, res, next) => {
   }
 };
 
-    return success(res, app);
-  } catch (err) {
-    next(err);
-  }
-};
-
 // POST /applications/:id/documents — Upload docs
 const uploadApplicationDoc = async (req, res, next) => {
   try {
