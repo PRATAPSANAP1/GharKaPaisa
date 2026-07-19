@@ -1853,13 +1853,16 @@ export default function Home({ onNavigate }) {
     
     // Parse /credit-cards/lifetime-free-credit-cards-ltf
     if (path === "/credit-cards/lifetime-free-credit-cards-ltf") {
+      // Use dynamic LTF products if available, fallback to static
+      const dynamicLtf = dynamicProducts.filter(p => (p.category === 'credit_card') && (p.sub_category === 'ltf' || (p.fees_structure && p.fees_structure.annual_fee === '₹0') || (p.annual_fee === '₹0')));
+      const ltfSource = dynamicLtf.length > 0 ? dynamicLtf.map(p => ({ id: p.slug || p.name.toLowerCase().replace(/\s+/g, '-'), name: p.name })) : ltfCards;
       setActiveCategory({
         id: "ltf-detail-page",
         title: "Lifetime Free Credit Cards (LTF)",
         titleKey: "home.ltfCardsTitle",
         parentId: "credit-cards",
-        items: ltfCards.map(card => ({
-          id: card.name.toLowerCase().replace(/\s+/g, "-"),
+        items: ltfSource.map(card => ({
+          id: card.id || card.name.toLowerCase().replace(/\s+/g, "-"),
           label: card.name,
           icon: <FaRegCreditCard />
         }))
@@ -1887,20 +1890,11 @@ export default function Home({ onNavigate }) {
     const cardsMatch = path.match(/^\/credit-cards\/([^/]+)-bank$/);
     if (cardsMatch) {
       const bankId = cardsMatch[1];
-      const bankItem = banksList.find(b => b.id === bankId) || (dynamicBanks && dynamicBanks.find(b => b.id === bankId));
+      const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === bankId)) || banksList.find(b => b.id === bankId);
       if (bankItem) {
         const dbBankProducts = dynamicProducts.filter(p => p.bank_id === bankItem.dbId && p.category === 'credit_card');
         
-        if (bankCardsDetails[bankId]) {
-          setActiveCategory({
-            id: `bank-${bankId}`,
-            title: bankCardsDetails[bankId].title,
-            titleKey: `${bankId}.title`,
-            parentId: "credit-cards",
-            type: "bank-detail",
-            sections: bankCardsDetails[bankId].sections
-          });
-        } else if (dbBankProducts.length > 0) {
+        if (dbBankProducts.length > 0) {
           const dynamicSections = [
             {
               section: "All Credit Cards",
@@ -2241,12 +2235,12 @@ export default function Home({ onNavigate }) {
 
     if (cat.id.startsWith("cobrand-") || cat.id.startsWith("fd-")) {
       const bankId = cat.id.split("-")[1];
-      const bankName = banksList.find(b => b.id === bankId)?.label || "Bank";
+      const bankName = (dynamicBanks && dynamicBanks.find(b => b.id === bankId))?.label || banksList.find(b => b.id === bankId)?.label || "Bank";
       crumbs.push({ 
         label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
         action: () => {
           if (location.pathname === "/credit-cards") {
-            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: dynamicBanks.length > 0 ? dynamicBanks : banksList });
           } else {
             navigate("/credit-cards");
           }
@@ -2262,7 +2256,7 @@ export default function Home({ onNavigate }) {
         label: t('home.breadcrumbs.creditCards', 'Credit Cards'), 
         action: () => {
           if (location.pathname === "/credit-cards") {
-            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+            setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: dynamicBanks.length > 0 ? dynamicBanks : banksList });
           } else {
             navigate("/credit-cards");
           }
@@ -2392,7 +2386,7 @@ export default function Home({ onNavigate }) {
       navigate(`/credit-cards/${bankId}-bank/${type}`);
       return;
     }
-    const bankItem = banksList.find(b => b.id === item.id) || (dynamicBanks && dynamicBanks.find(b => b.id === item.id));
+    const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === item.id)) || banksList.find(b => b.id === item.id);
     if (bankItem) {
       navigate(`/credit-cards/${bankItem.id}-bank`);
       return;
@@ -2434,7 +2428,7 @@ export default function Home({ onNavigate }) {
   };
 
   const handleTrustBankClick = (bankId) => {
-    const bankItem = banksList.find(b => b.id === bankId);
+    const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === bankId)) || banksList.find(b => b.id === bankId);
     if (bankItem) {
       handleItemClick(bankItem);
     }
@@ -2443,7 +2437,7 @@ export default function Home({ onNavigate }) {
   const handleBack = () => {
     if (activeCategory?.parentId === "credit-cards") {
       if (location.pathname === "/credit-cards") {
-        setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+        setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: dynamicBanks.length > 0 ? dynamicBanks : banksList });
       } else {
         navigate("/credit-cards");
       }
@@ -2811,7 +2805,19 @@ export default function Home({ onNavigate }) {
             C={C}
           >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
-              {popularCards.map((card, idx) => (
+              {((() => {
+                const dynamicPopular = dynamicProducts.filter(p => (p.is_active || p.status === 'Active') && (p.visibility?.is_popular || p.popular));
+                if (dynamicPopular.length > 0) {
+                  return dynamicPopular.slice(0, 6).map(p => ({
+                    name: p.name,
+                    bank: p.bank_name || p.bank_code || 'Bank',
+                    benefit: p.description || p.short_description || 'Premium rewards & benefits',
+                    image: p.card_image_url || p.image_url || p.thumbnail_url || p.logo,
+                    slug: p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                  }));
+                }
+                return popularCards;
+              })()).map((card, idx) => (
                 <div key={idx} style={{
                   background: C.bgSecondary, borderRadius: "18px", border: `1px solid ${C.border}`,
                   padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
@@ -2881,7 +2887,7 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
         <Section title={t('sections.popularBanks')} C={C}>
-          <ResponsiveGrid C={C} items={banksList} onSeeMore={() => navigate("/credit-cards")} onItemClick={handleItemClick} />
+          <ResponsiveGrid C={C} items={dynamicBanks.length > 0 ? dynamicBanks : banksList} onSeeMore={() => navigate("/credit-cards")} onItemClick={handleItemClick} />
         </Section>
 
         {/* ── SECTION 5: Loans ── */}
@@ -3013,7 +3019,12 @@ export default function Home({ onNavigate }) {
             WebkitMaskImage: "linear-gradient(to right, transparent, white 10%, white 90%, transparent)"
           }}>
             <div className="bank-ticker-wrap">
-              {[...trustBanks, ...trustBanks].map((bank, idx) => (
+              {(() => {
+                const tickerBanks = dynamicBanks.length > 0
+                  ? dynamicBanks.filter(b => b.image || b.logo_url).map(b => ({ id: b.id, name: b.label || b.name, logo: b.image || b.logo_url }))
+                  : trustBanks;
+                return [...tickerBanks, ...tickerBanks];
+              })().map((bank, idx) => (
                 <div key={`${bank.id}-${idx}`} 
                   onClick={() => handleTrustBankClick(bank.id)}
                   style={{

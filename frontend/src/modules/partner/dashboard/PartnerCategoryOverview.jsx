@@ -6,6 +6,7 @@ import {
   MdCreditCard, MdAccountBalanceWallet, MdShield, MdAdd, 
   MdSearch
 } from 'react-icons/md';
+import api from '../../../services/api';
 
 // Helper function to convert title to slug
 const toSlug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
