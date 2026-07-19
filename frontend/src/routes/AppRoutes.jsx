@@ -85,7 +85,6 @@ import PartnerNotifications from '../modules/partner/dashboard/PartnerNotificati
 import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
 import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
-import ManageBanks from '../modules/super-admin/cms/ManageBanks';
 import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
 
 const AppRoutes = () => {
