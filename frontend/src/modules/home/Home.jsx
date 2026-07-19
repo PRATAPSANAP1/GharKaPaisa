@@ -1706,6 +1706,8 @@ export default function Home({ onNavigate }) {
   const [cmsSections, setCmsSections] = useState([]);
   const [dynamicProducts, setDynamicProducts] = useState([]);
   const [dynamicBanks, setDynamicBanks] = useState([]);
+  const [popularProducts, setPopularProducts] = useState([]);
+  const [dynamicLtfCards, setDynamicLtfCards] = useState([]);
 
   const getSectionItems = (sectionKey, fallbackData) => {
     const cmsSection = cmsSections.find(s => s.key === sectionKey);
@@ -1839,6 +1841,42 @@ export default function Home({ onNavigate }) {
       } catch (err) {
         console.warn("Failed to load active banks:", err);
       }
+
+      // 7) Fetch popular products
+      try {
+        const res = await fetch(`${apiBase}/products?status=Active&is_popular=true&limit=6`);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          const mapped = data.data.map(p => ({
+            name: p.name,
+            bank: p.bank_name || p.bank_code || 'Bank',
+            benefit: p.description || p.short_description || 'Premium rewards & benefits',
+            image: p.card_image_url || p.image_url || p.thumbnail_url || p.logo,
+            slug: p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+          }));
+          setPopularProducts(mapped);
+        }
+      } catch (err) {
+        console.warn("Failed to load popular products:", err);
+      }
+
+      // 8) Fetch LTF products
+      try {
+        const res = await fetch(`${apiBase}/products?status=Active&category=credit_card&sub_category=ltf&limit=20`);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          const mapped = data.data.map(p => ({
+            name: p.name,
+            desc: p.description || p.features || 'Lifetime Free Credit Card',
+            bankName: p.bank_name || 'Partner Bank',
+            bankId: p.bank_code ? p.bank_code.toLowerCase() : 'unknown',
+            image: p.card_image_url || p.logo
+          }));
+          setDynamicLtfCards(mapped);
+        }
+      } catch (err) {
+        console.warn("Failed to load LTF products:", err);
+      }
     };
     fetchBannersSettingsAndCms();
   }, []);
@@ -1853,16 +1891,14 @@ export default function Home({ onNavigate }) {
     
     // Parse /credit-cards/lifetime-free-credit-cards-ltf
     if (path === "/credit-cards/lifetime-free-credit-cards-ltf") {
-      // Use dynamic LTF products if available, fallback to static
-      const dynamicLtf = dynamicProducts.filter(p => (p.category === 'credit_card') && (p.sub_category === 'ltf' || (p.fees_structure && p.fees_structure.annual_fee === '₹0') || (p.annual_fee === '₹0')));
-      const ltfSource = dynamicLtf.length > 0 ? dynamicLtf.map(p => ({ id: p.slug || p.name.toLowerCase().replace(/\s+/g, '-'), name: p.name })) : ltfCards;
+      const ltfSource = dynamicLtfCards.length > 0 ? dynamicLtfCards : ltfCards;
       setActiveCategory({
         id: "ltf-detail-page",
         title: "Lifetime Free Credit Cards (LTF)",
         titleKey: "home.ltfCardsTitle",
         parentId: "credit-cards",
         items: ltfSource.map(card => ({
-          id: card.id || card.name.toLowerCase().replace(/\s+/g, "-"),
+          id: card.id || card.slug || card.name.toLowerCase().replace(/\s+/g, "-"),
           label: card.name,
           icon: <FaRegCreditCard />
         }))
@@ -1919,6 +1955,15 @@ export default function Home({ onNavigate }) {
             parentId: "credit-cards",
             type: "bank-detail",
             sections: dynamicSections
+          });
+        } else if (bankCardsDetails[bankId]) {
+          setActiveCategory({
+            id: `bank-${bankId}`,
+            title: bankCardsDetails[bankId].title,
+            titleKey: `${bankId}.title`,
+            parentId: "credit-cards",
+            type: "bank-detail",
+            sections: bankCardsDetails[bankId].sections
           });
         } else {
           setActiveCategory({
@@ -1997,7 +2042,7 @@ export default function Home({ onNavigate }) {
     } else if (path === "/travel-transit/flight-booking") {
       setActiveCategory({ id: "flight-booking", title: "Travel & Transit Booking", titleKey: "sections.travelTransit", items: [] });
     }
-  }, [location.pathname, dynamicProducts, dynamicBanks]);
+  }, [location.pathname, dynamicProducts, dynamicBanks, dynamicLtfCards]);
 
   const attractiveImages = {
     "ltf-cards": ltfImg,
@@ -2320,41 +2365,44 @@ export default function Home({ onNavigate }) {
     }
 
     if (activeCategory?.id === "ltf-detail-page") {
-      const matchedLtf = ltfCards.find(c => c.name === item.label);
+      const displayLtf = dynamicLtfCards.length > 0 ? dynamicLtfCards : ltfCards;
+      const matchedLtf = displayLtf.find(c => c.name === item.label);
       if (matchedLtf) {
         const nameLower = matchedLtf.name.toLowerCase();
-        let bankId = "unknown";
-        let bankName = "Partner Bank";
-        if (nameLower.includes("hdfc")) {
-          bankId = "hdfc";
-          bankName = "HDFC Bank";
-        } else if (nameLower.includes("axis")) {
-          bankId = "axis";
-          bankName = "Axis Bank";
-        } else if (nameLower.includes("bob") || nameLower.includes("baroda")) {
-          bankId = "bob";
-          bankName = "Bank of Baroda";
-        } else if (nameLower.includes("federal") || nameLower.includes("scapia")) {
-          bankId = "federal";
-          bankName = "Federal Bank";
-        } else if (nameLower.includes("au bank")) {
-          bankId = "au";
-          bankName = "AU Small Finance Bank";
-        } else if (nameLower.includes("idfc")) {
-          bankId = "idfc";
-          bankName = "IDFC First Bank";
-        } else if (nameLower.includes("indusind")) {
-          bankId = "indusind";
-          bankName = "IndusInd Bank";
-        } else if (nameLower.includes("onecard")) {
-          bankId = "onecard";
-          bankName = "OneCard";
-        } else if (nameLower.includes("sbm") || nameLower.includes("uni")) {
-          bankId = "sbm";
-          bankName = "SBM Bank";
-        } else if (nameLower.includes("yes bank") || nameLower.includes("kiwi")) {
-          bankId = "yes";
-          bankName = "Yes Bank";
+        let bankId = matchedLtf.bankId || "unknown";
+        let bankName = matchedLtf.bankName || "Partner Bank";
+        if (bankId === "unknown" || bankId === "partner bank") {
+          if (nameLower.includes("hdfc")) {
+            bankId = "hdfc";
+            bankName = "HDFC Bank";
+          } else if (nameLower.includes("axis")) {
+            bankId = "axis";
+            bankName = "Axis Bank";
+          } else if (nameLower.includes("bob") || nameLower.includes("baroda")) {
+            bankId = "bob";
+            bankName = "Bank of Baroda";
+          } else if (nameLower.includes("federal") || nameLower.includes("scapia")) {
+            bankId = "federal";
+            bankName = "Federal Bank";
+          } else if (nameLower.includes("au bank")) {
+            bankId = "au";
+            bankName = "AU Small Finance Bank";
+          } else if (nameLower.includes("idfc")) {
+            bankId = "idfc";
+            bankName = "IDFC First Bank";
+          } else if (nameLower.includes("indusind")) {
+            bankId = "indusind";
+            bankName = "IndusInd Bank";
+          } else if (nameLower.includes("onecard")) {
+            bankId = "onecard";
+            bankName = "OneCard";
+          } else if (nameLower.includes("sbm") || nameLower.includes("uni")) {
+            bankId = "sbm";
+            bankName = "SBM Bank";
+          } else if (nameLower.includes("yes bank") || nameLower.includes("kiwi")) {
+            bankId = "yes";
+            bankName = "Yes Bank";
+          }
         }
 
         resolveAndApply(matchedLtf.name, {
@@ -2806,6 +2854,9 @@ export default function Home({ onNavigate }) {
           >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
               {((() => {
+                if (popularProducts.length > 0) {
+                  return popularProducts;
+                }
                 const dynamicPopular = dynamicProducts.filter(p => (p.is_active || p.status === 'Active') && (p.visibility?.is_popular || p.popular));
                 if (dynamicPopular.length > 0) {
                   return dynamicPopular.slice(0, 6).map(p => ({

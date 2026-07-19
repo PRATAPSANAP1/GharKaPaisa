@@ -13,7 +13,8 @@ const listProducts = async (req, res, next) => {
     const { 
       category, bank_id, is_active, search, commission_enabled, featured, status,
       trending, min_salary, max_salary, min_age, max_age, min_cibil,
-      occupation, employment_type, city, joining_fee_type, sort_by
+      occupation, employment_type, city, joining_fee_type, sort_by,
+      sub_category, is_popular
     } = req.query;
 
     let where = 'WHERE 1=1';
@@ -48,6 +49,13 @@ const listProducts = async (req, res, next) => {
     if (status) {
       where += ` AND p.status = $${idx++}`;
       values.push(status);
+    }
+    if (sub_category) {
+      where += ` AND p.sub_category = $${idx++}`;
+      values.push(sub_category);
+    }
+    if (is_popular === 'true' || is_popular === true) {
+      where += ` AND (p.visibility->>'is_popular')::boolean = true`;
     }
     if (search) { 
       where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx} OR p.rewards ILIKE $${idx} OR p.cashback ILIKE $${idx})`; 
