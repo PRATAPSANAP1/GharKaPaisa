@@ -227,14 +227,14 @@ const CustomerUploadPortal = () => {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight 600 }}>PARTNER NAME</div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>PARTNER NAME</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <UserCheck size={16} color="#64748b" />
                 {application.partner_name}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight 600 }}>CURRENT STATUS</div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>CURRENT STATUS</div>
               <div style={{ fontSize: '13px', fontWeight: 700, color: '#ea580c', textTransform: 'capitalize' }}>
                 {application.status ? application.status.replace(/_/g, ' ') : 'Verification Pending'}
               </div>
