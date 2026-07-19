@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useActiveBanks } from "../../contexts/BanksContext";
 import { useSearchStore } from "../../app/store/searchStore";
 import { getApiV1Url } from "../../config/api";
 import {
@@ -1705,7 +1706,7 @@ export default function Home({ onNavigate }) {
   const [settings, setSettings] = useState({});
   const [cmsSections, setCmsSections] = useState([]);
   const [dynamicProducts, setDynamicProducts] = useState([]);
-  const [dynamicBanks, setDynamicBanks] = useState([]);
+  const { activeBanks: dynamicBanks } = useActiveBanks();
   const [popularProducts, setPopularProducts] = useState([]);
   const [dynamicLtfCards, setDynamicLtfCards] = useState([]);
 
@@ -1815,32 +1816,7 @@ export default function Home({ onNavigate }) {
         console.warn("Failed to load services:", err);
       }
 
-      // 6) Fetch active banks
-      try {
-        const cachedBanks = sessionStorage.getItem('gkp_banks');
-        if (cachedBanks) {
-          setDynamicBanks(JSON.parse(cachedBanks));
-        } else {
-          const res = await fetch(`${apiBase}/banks/active`);
-          const data = await res.json();
-          if (data && data.success && data.data?.length > 0) {
-            const mapped = data.data.map(b => {
-              const code = (b.short_code || '').toLowerCase();
-              const staticBank = banksList.find(sb => sb.id === code);
-              return {
-                id: code,
-                label: b.name,
-                image: b.logo_url || (staticBank ? staticBank.image : null),
-                dbId: b.id
-              };
-            });
-            setDynamicBanks(mapped);
-            sessionStorage.setItem('gkp_banks', JSON.stringify(mapped));
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to load active banks:", err);
-      }
+
 
       // 7) Fetch popular products
       try {

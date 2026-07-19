@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
   MdCreditCard, MdAccountBalanceWallet, MdShield, MdAdd, 
   MdSearch
@@ -57,6 +58,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const { t } = useTranslation();
+  const { activeBanks } = useActiveBanks();
 
   const [activeCategory, setActiveCategory] = useState(() => {
     if (location.pathname.includes('/partner/loans')) return 'loans';
@@ -67,33 +69,23 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const [dynamicCcCards, setDynamicCcCards] = useState(creditCardRoleCards);
 
   useEffect(() => {
-    const fetchActiveBanks = async () => {
-      try {
-        const res = await api.get('/banks', { params: { status: 'Active', limit: 100 } });
-        if (res.data?.success && res.data?.data && res.data.data.length > 0) {
-          const activeBanks = res.data.data;
-          const mapped = activeBanks.map(b => {
-            const slug = (b.short_code || b.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-            return {
-              title: `${(b.short_code || b.name).toUpperCase()} Cards`,
-              sub: 'Bank',
-              count: b.products_count || '10',
-              availableCards: `${b.products_count || '8'} Credit Card Variants`,
-              commission: 'Up to ₹2,500 / approval',
-              applications: '120 logged',
-              approvalRatio: '88%',
-              slug: slug,
-              logo: b.logo_url
-            };
-          });
-          setDynamicCcCards(mapped);
-        }
-      } catch (err) {
-        console.warn('Using fallback credit card cards in PartnerCategoryOverview');
-      }
-    };
-    fetchActiveBanks();
-  }, []);
+    if (activeBanks && activeBanks.length > 0) {
+      const mapped = activeBanks.map(b => {
+        return {
+          title: `${(b.short_code || b.name).toUpperCase()} Cards`,
+          sub: 'Bank',
+          count: b.products_count || '10',
+          availableCards: `${b.products_count || '8'} Credit Card Variants`,
+          commission: 'Up to ₹2,500 / approval',
+          applications: '120 logged',
+          approvalRatio: '88%',
+          slug: b.slug,
+          logo: b.logo
+        };
+      });
+      setDynamicCcCards(mapped);
+    }
+  }, [activeBanks]);
 
   const [selectedRoleCard, setSelectedRoleCard] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);

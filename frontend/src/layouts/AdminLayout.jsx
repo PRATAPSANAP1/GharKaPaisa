@@ -3,6 +3,7 @@ import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
 import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
+import { useActiveBanks } from '../contexts/BanksContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import api from '../services/api';
@@ -48,26 +49,13 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [banks, setBanks] = useState(DEFAULT_BANKS);
+  const { activeBanks } = useActiveBanks();
+  const banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
   const [openCcMenu, setOpenCcMenu] = useState(false);
   const [openBankSlug, setOpenBankSlug] = useState(null);
   const [openLoansMenu, setOpenLoansMenu] = useState(false);
   const [openInsuranceMenu, setOpenInsuranceMenu] = useState(false);
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
-
-  useEffect(() => {
-    const fetchBanks = async () => {
-      try {
-        const res = await api.get('/banks', { params: { limit: 100 } });
-        if (res.data?.success && res.data?.data && res.data.data.length > 0) {
-          setBanks(res.data.data);
-        }
-      } catch (err) {
-        console.warn('Using default banks list for Admin sidebar');
-      }
-    };
-    fetchBanks();
-  }, []);
 
   const handleLogout = () => {
     logout();

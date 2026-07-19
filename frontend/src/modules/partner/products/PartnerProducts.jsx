@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useActiveBanks } from '../../../contexts/BanksContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
@@ -57,6 +58,7 @@ export default function PartnerProducts() {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
+  const { activeBanks } = useActiveBanks();
   
   const { user } = useAuthStore();
   const partnerCode = user?.partner_code || user?.Partner_code || '';
@@ -297,15 +299,8 @@ export default function PartnerProducts() {
 
   // Compute banks available for the selected category (dynamic bank list)
   const banksForCategory = useMemo(() => {
-    const categoryProducts = activeCategory === 'all'
-      ? products
-      : products.filter(p => p.category === activeCategory);
-    const bankSet = new Set();
-    categoryProducts.forEach(p => {
-      if (p.bank_code) bankSet.add(p.bank_code);
-    });
-    return ['All Banks', ...Array.from(bankSet).sort()];
-  }, [products, activeCategory]);
+    return ['All Banks', ...activeBanks.map(b => b.short_code).filter(Boolean)];
+  }, [activeBanks]);
 
   // Reset bank filter when category changes and selected bank is no longer available
   useEffect(() => {

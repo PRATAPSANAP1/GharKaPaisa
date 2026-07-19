@@ -257,7 +257,7 @@ const getActiveBanks = async (req, res, next) => {
   try {
     const { rows } = await query(`
       SELECT 
-        b.id, b.name, b.short_code, b.logo_url, b.display_order,
+        b.id, b.name as bank_name, b.short_code, b.logo_url as logo, b.display_order,
         COUNT(p.id) FILTER (WHERE p.status = 'Active' OR p.is_active = true)::int as products_count
       FROM banks b
       LEFT JOIN products p ON p.bank_id = b.id

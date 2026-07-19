@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useActiveBanks } from '../../../contexts/BanksContext';
 import {
   FaWallet, FaUniversity, FaHandHoldingUsd, FaShieldAlt,
   FaChartPie, FaEllipsisH, FaPlane, FaBolt,
@@ -349,6 +350,7 @@ const SkeletonGrid = ({ C }) => (
 export default function QuickAccessSection() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
+  const { activeBanks } = useActiveBanks();
   const [ready, setReady] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [isMobile, setIsMobile] = useState(false);
@@ -370,29 +372,20 @@ export default function QuickAccessSection() {
   const [dynamicBankServices, setDynamicBankServices] = useState([]);
 
   useEffect(() => {
-    const fetchActiveBanks = async () => {
-      try {
-        const res = await api.get('/banks', { params: { status: 'Active', limit: 100 } });
-        if (res.data?.success && res.data?.data && res.data.data.length > 0) {
-          const mapped = res.data.data.map(b => {
-            const slug = (b.short_code || b.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-            return {
-              id: slug,
-              category: 'banks',
-              label: b.name,
-              icon: FaUniversity,
-              color: '#4F46E5',
-              route: `/partner/credit-cards/${slug}`
-            };
-          });
-          setDynamicBankServices(mapped);
-        }
-      } catch (err) {
-        console.warn('Using default bank services in QuickAccessSection');
-      }
-    };
-    fetchActiveBanks();
-  }, []);
+    if (activeBanks && activeBanks.length > 0) {
+      const mapped = activeBanks.map(b => {
+        return {
+          id: b.slug,
+          category: 'banks',
+          label: b.name,
+          icon: FaUniversity,
+          color: '#4F46E5',
+          route: `/partner/credit-cards/${b.slug}`
+        };
+      });
+      setDynamicBankServices(mapped);
+    }
+  }, [activeBanks]);
 
   const groupedServices = useMemo(() => {
     const groups = {};

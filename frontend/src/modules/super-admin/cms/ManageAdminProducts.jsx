@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
+import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdContentCopy, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload 
@@ -41,7 +42,7 @@ export default function ManageAdminProducts() {
   const categoryTitle = CATEGORY_MAP[activeCategory] || "Products";
 
   const [products, setProducts] = useState([]);
-  const [banks, setBanks] = useState([]);
+  const { activeBanks: banks } = useActiveBanks();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
@@ -119,18 +120,7 @@ export default function ManageAdminProducts() {
     slug: ""
   });
 
-  // Fetch active banks
-  useEffect(() => {
-    const fetchActiveBanks = async () => {
-      try {
-        const res = await api.get('/banks', { params: { status: 'Active', limit: 100 } });
-        if (res.data?.success) setBanks(res.data.data || []);
-      } catch (err) {
-        console.warn('Failed to load banks for product dropdown');
-      }
-    };
-    fetchActiveBanks();
-  }, []);
+
 
   // Fetch products
   const fetchProducts = async () => {

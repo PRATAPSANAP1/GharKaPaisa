@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
+import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
   MdSearch, MdFilterList, MdAdd, MdModeEdit, MdDelete, MdContentCopy,
   MdStar, MdVisibility, MdAttachMoney, MdSettings, MdCheck, MdClose,
@@ -45,7 +46,7 @@ export default function ManageProducts() {
   const [activeTab, setActiveTab] = useState("all-products"); // all-products, featured, categories, banks
 
   const [products, setProducts] = useState([]);
-  const [banks, setBanks] = useState([]);
+  const { activeBanks: banks } = useActiveBanks();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -149,22 +150,9 @@ export default function ManageProducts() {
     }
   };
 
-  const fetchBanks = async () => {
-    try {
-      const res = await api.get("/banks");
-      if (res.data?.success) setBanks(res.data.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   useEffect(() => {
     fetchProducts();
   }, [page, categoryFilter, bankFilter, commissionFilter, featuredFilter, statusFilter]);
-
-  useEffect(() => {
-    fetchBanks();
-  }, []);
 
   const handleResetFilters = () => {
     setSearch("");

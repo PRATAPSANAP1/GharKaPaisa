@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../../contexts/ThemeContext";
+import { useActiveBanks } from "../../../contexts/BanksContext";
 import { getApiV1Url } from "../../../config/api";
 import { FaChevronRight, FaChevronLeft, FaRegCreditCard, FaLaptopHouse, FaUniversity, FaBuilding, FaCar, FaGraduationCap, FaHeartbeat, FaShieldAlt, FaUmbrella, FaPlane, FaTrain, FaBus, FaHotel, FaStar, FaCheckCircle } from "react-icons/fa";
 import * as FaIcons from "react-icons/fa";
@@ -350,6 +351,7 @@ export function HeroBannerCarousel({ C, navigate }) {
 export function CreditCardsSection({ C, navigate }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+  const { activeBanks } = useActiveBanks();
 
   return (
     <Section 
@@ -359,7 +361,7 @@ export function CreditCardsSection({ C, navigate }) {
       C={C}
     >
       <ResponsiveGrid 
-        items={banksList} 
+        items={activeBanks.length > 0 ? activeBanks : banksList} 
         C={C} 
         onItemClick={(item) => navigate(`/credit-cards/${item.id}-bank`)}
       />
