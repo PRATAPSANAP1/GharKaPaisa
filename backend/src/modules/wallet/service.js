@@ -66,7 +66,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
 
 // Sync Wallet Balance Cache in partner_wallets table
 const syncWalletBalance = async (partnerId, client) => {
-  const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id = $1 OR user_id = $1`, [partnerId]);
+  const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id = $1::uuid OR user_id = $1::uuid`, [partnerId]);
   const pId = p ? p.id : partnerId;
   const uId = p ? p.user_id : partnerId;
 
@@ -79,7 +79,7 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
       COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Released'
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Released'
   `, [pId, uId]);
   
   // 2. Completed Debits (e.g. withdrawal payouts settled)
@@ -87,7 +87,7 @@ const syncWalletBalance = async (partnerId, client) => {
     SELECT 
       COALESCE(SUM(debit), 0) as completed_debits
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Released'
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Released'
   `, [pId, uId]);
 
   // 3. Hold Balance = Pending Credits
@@ -96,7 +96,7 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(credit), 0) as hold_bal,
       COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_pending
     FROM wallet_ledger 
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status = 'Pending Approval'
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Pending Approval'
   `, [pId, uId]);
 
   // 4. Locked Balance = Pending/Approved Withdrawal Requests
@@ -104,7 +104,7 @@ const syncWalletBalance = async (partnerId, client) => {
     SELECT 
       COALESCE(SUM(amount), 0) as locked_bal
     FROM wallet_withdrawals
-    WHERE (partner_id = $1 OR partner_id = $2::uuid) AND status IN ('pending', 'approved', 'processing')
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('pending', 'approved', 'processing')
   `, [pId, uId]);
 
   const cr = creditQuery.rows[0];

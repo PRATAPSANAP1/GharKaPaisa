@@ -237,8 +237,6 @@ const deleteBank = async (req, res, next) => {
     await query('ALTER TABLE applications ALTER COLUMN bank_id DROP NOT NULL').catch(() => {});
     await query('UPDATE applications SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
 
-    await query('UPDATE leads SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
-    await query('UPDATE card_applications SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
     await query('UPDATE bank_card_applications SET bank_id = NULL WHERE bank_id = $1', [id]).catch(() => {});
 
     await query('DELETE FROM banks WHERE id = $1', [id]);

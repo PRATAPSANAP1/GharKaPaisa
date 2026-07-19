@@ -58,6 +58,7 @@ const allowedOrigins = [
   "https://www.gharkapaisa.in",
   "https://admin.gharkapaisa.in",
   "https://ghar-ka-paisa.vercel.app",
+  "https://gharkapaisa.vercel.app",
   ...envOrigins
 ];
 
