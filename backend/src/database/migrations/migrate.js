@@ -3393,6 +3393,14 @@ const migrate = async () => {
           metadata JSONB DEFAULT '{}',
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+        ALTER TABLE application_timeline
+          ADD COLUMN IF NOT EXISTS event_type VARCHAR(100) NULL,
+          ADD COLUMN IF NOT EXISTS title VARCHAR(255) NULL,
+          ADD COLUMN IF NOT EXISTS description TEXT NULL,
+          ADD COLUMN IF NOT EXISTS actor_type VARCHAR(50) DEFAULT 'system',
+          ADD COLUMN IF NOT EXISTS actor_id UUID NULL,
+          ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}',
+          ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
         CREATE INDEX IF NOT EXISTS idx_app_timeline_app ON application_timeline(application_id);
         CREATE INDEX IF NOT EXISTS idx_app_timeline_created ON application_timeline(created_at ASC);
       `);
