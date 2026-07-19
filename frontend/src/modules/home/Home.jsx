@@ -299,7 +299,7 @@ function DynamicProductsList({ categoryKey, C, isMobile }) {
 }
 
 // ── CategoryPage Component ──────────────────────────────────────────
-function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
+function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBanks }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -519,7 +519,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs }) {
             </button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px" }}>
-            {category.items.map((item, idx) => (
+            {((dynamicBanks && dynamicBanks.length > 0) ? dynamicBanks : (category.items || [])).map((item, idx) => (
               <div key={idx}
                 onClick={() => onItemClick && onItemClick(item)}
                 style={{
@@ -1705,6 +1705,7 @@ export default function Home({ onNavigate }) {
   const [settings, setSettings] = useState({});
   const [cmsSections, setCmsSections] = useState([]);
   const [dynamicProducts, setDynamicProducts] = useState([]);
+  const [dynamicBanks, setDynamicBanks] = useState([]);
 
   const getSectionItems = (sectionKey, fallbackData) => {
     const cmsSection = cmsSections.find(s => s.key === sectionKey);
@@ -1811,6 +1812,33 @@ export default function Home({ onNavigate }) {
       } catch (err) {
         console.warn("Failed to load services:", err);
       }
+
+      // 6) Fetch active banks
+      try {
+        const cachedBanks = sessionStorage.getItem('gkp_banks');
+        if (cachedBanks) {
+          setDynamicBanks(JSON.parse(cachedBanks));
+        } else {
+          const res = await fetch(`${apiBase}/banks?limit=100&status=Active`);
+          const data = await res.json();
+          if (data && data.success && data.data?.length > 0) {
+            const mapped = data.data.map(b => {
+              const code = (b.short_code || '').toLowerCase();
+              const staticBank = banksList.find(sb => sb.id === code);
+              return {
+                id: code,
+                label: b.name,
+                image: b.logo_url || (staticBank ? staticBank.image : null),
+                dbId: b.id
+              };
+            });
+            setDynamicBanks(mapped);
+            sessionStorage.setItem('gkp_banks', JSON.stringify(mapped));
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load active banks:", err);
+      }
     };
     fetchBannersSettingsAndCms();
   }, []);
@@ -1859,8 +1887,10 @@ export default function Home({ onNavigate }) {
     const cardsMatch = path.match(/^\/credit-cards\/([^/]+)-bank$/);
     if (cardsMatch) {
       const bankId = cardsMatch[1];
-      const bankItem = banksList.find(b => b.id === bankId);
+      const bankItem = banksList.find(b => b.id === bankId) || (dynamicBanks && dynamicBanks.find(b => b.id === bankId));
       if (bankItem) {
+        const dbBankProducts = dynamicProducts.filter(p => p.bank_id === bankItem.dbId && p.category === 'credit_card');
+        
         if (bankCardsDetails[bankId]) {
           setActiveCategory({
             id: `bank-${bankId}`,
@@ -1869,6 +1899,32 @@ export default function Home({ onNavigate }) {
             parentId: "credit-cards",
             type: "bank-detail",
             sections: bankCardsDetails[bankId].sections
+          });
+        } else if (dbBankProducts.length > 0) {
+          const dynamicSections = [
+            {
+              section: "All Credit Cards",
+              cards: dbBankProducts.map(p => ({
+                id: p.id,
+                name: p.name,
+                desc: p.description || p.features || "Unlock premium reward points, fuel cashback, and dining privileges.",
+                highlights: p.benefits ? p.benefits.split(',').map(s => s.trim()) : ["Zero Joining Fee", "Premium Lounge Access"],
+                link: p.redirect_url || p.apply_url || "",
+                image: p.logo || p.thumbnail_url || null,
+                productId: p.id,
+                isApplyAction: true,
+                bankId: bankId,
+                bankName: bankItem.label
+              }))
+            }
+          ];
+          setActiveCategory({
+            id: `bank-${bankId}`,
+            title: bankItem.label,
+            titleKey: `banks.${bankId}`,
+            parentId: "credit-cards",
+            type: "bank-detail",
+            sections: dynamicSections
           });
         } else {
           setActiveCategory({
@@ -1935,7 +1991,7 @@ export default function Home({ onNavigate }) {
     } else if (path === "/insurance") {
       setActiveCategory({ id: "insurance", title: "Insurance", titleKey: "sections.insurance", items: getSectionItems("insurance", insuranceData) });
     } else if (path === "/credit-cards") {
-      setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: banksList });
+      setActiveCategory({ id: "credit-cards", title: "Credit Cards", titleKey: "home.breadcrumbs.creditCards", items: dynamicBanks.length > 0 ? dynamicBanks : banksList });
     } else if (path === "/services") {
       setActiveCategory({ id: "services", title: "Services", titleKey: "sections.businessServices", items: getSectionItems("recharge", servicesData) });
     } else if (path === "/travel-transit") {
@@ -1947,7 +2003,7 @@ export default function Home({ onNavigate }) {
     } else if (path === "/travel-transit/flight-booking") {
       setActiveCategory({ id: "flight-booking", title: "Travel & Transit Booking", titleKey: "sections.travelTransit", items: [] });
     }
-  }, [location.pathname]);
+  }, [location.pathname, dynamicProducts, dynamicBanks]);
 
   const attractiveImages = {
     "ltf-cards": ltfImg,
@@ -2336,7 +2392,7 @@ export default function Home({ onNavigate }) {
       navigate(`/credit-cards/${bankId}-bank/${type}`);
       return;
     }
-    const bankItem = banksList.find(b => b.id === item.id);
+    const bankItem = banksList.find(b => b.id === item.id) || (dynamicBanks && dynamicBanks.find(b => b.id === item.id));
     if (bankItem) {
       navigate(`/credit-cards/${bankItem.id}-bank`);
       return;
@@ -2435,7 +2491,7 @@ export default function Home({ onNavigate }) {
   if (activeCategory) {
     return (
       <>
-        <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} />
+        <CategoryPage category={activeCategory} onBack={handleBack} onItemClick={handleItemClick} C={C} breadcrumbs={getBreadcrumbs(activeCategory)} dynamicBanks={dynamicBanks} />
         {isMobile && <MobileBottomNav C={C} onNavigate={handleBottomNavClick} activeTab={activeCategory.id || "home"} />}
         {verifyCard && (
           <CardApplyVerificationModal
