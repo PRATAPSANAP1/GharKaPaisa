@@ -327,7 +327,12 @@ export default function PartnerEntityDetail() {
                       <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '10px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
                         {prod.bank_name || prod.bank_code || slug.toUpperCase()}
                       </span>
-                      <h4 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '8px 0 4px' }}>
+                      <h4 
+                        onClick={() => navigate(`/products/${prod.category || 'credit-card'}/${prod.slug || prod.id}`)}
+                        style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '8px 0 4px', cursor: 'pointer' }}
+                        onMouseEnter={(e) => e.target.style.color = C.primary}
+                        onMouseLeave={(e) => e.target.style.color = C.text}
+                      >
                         {prod.name}
                       </h4>
                       <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
@@ -343,16 +348,28 @@ export default function PartnerEntityDetail() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => navigate('/partner/leads/add')}
-                        style={{
-                          padding: '8px 16px', borderRadius: '10px', border: 'none',
-                          background: C.primary, color: '#FFFFFF', fontWeight: 800,
-                          fontSize: '12px', cursor: 'pointer'
-                        }}
-                      >
-                        Apply Now
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => navigate(`/products/${prod.category || 'credit-card'}/${prod.slug || prod.id}`)}
+                          style={{
+                            padding: '8px 12px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                            background: 'transparent', color: C.text, fontWeight: 700,
+                            fontSize: '12px', cursor: 'pointer'
+                          }}
+                        >
+                          Details
+                        </button>
+                        <button
+                          onClick={() => navigate('/partner/leads/add')}
+                          style={{
+                            padding: '8px 16px', borderRadius: '10px', border: 'none',
+                            background: C.primary, color: '#FFFFFF', fontWeight: 800,
+                            fontSize: '12px', cursor: 'pointer'
+                          }}
+                        >
+                          Apply
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

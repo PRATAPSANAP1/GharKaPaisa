@@ -7,6 +7,7 @@ const adminRoute                            = require('../modules/admin/route.js
 const { superadminRouter, settingsRouter }  = require('../modules/super-admin/route.js');
 const bannerRoute                           = require('../modules/banner/route.js');
 const { applicationRouter, leadRouter, cardApplicationRouter, loanApplicationRouter, insuranceApplicationRouter, bankCardApplicationRouter } = require('../modules/crm/route.js');
+const { sbiRouter }                         = require('../modules/sbi-credit-card/route.js');
 const walletRoute                           = require('../modules/wallet/route.js');
 const productRoute                          = require('../modules/products/route.js');
 const notificationRoute                     = require('../modules/notifications/route.js');
@@ -72,6 +73,7 @@ router.use('/card-applications',cardApplicationRouter);
 router.use('/admin/bank-cards', bankCardApplicationRouter);
 router.use('/crm/loan-applications', loanApplicationRouter);
 router.use('/crm/insurance-applications', insuranceApplicationRouter);
+router.use('/sbi-credit-card-applications', sbiRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 

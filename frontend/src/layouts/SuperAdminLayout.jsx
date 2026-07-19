@@ -43,6 +43,40 @@ const SuperAdminLayout = () => {
   // Notifications states
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  const fetchPrivacySetting = async () => {
+    try {
+      const res = await api.get("/settings");
+      if (res.data?.success) {
+        setPrivacyMode(res.data.data.admin_privacy_mode === "on");
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings:", e);
+    }
+  };
+
+  const togglePrivacyMode = async () => {
+    setLoadingPrivacy(true);
+    const newValue = !privacyMode ? "on" : "off";
+    try {
+      const res = await api.post("/settings", { key: "admin_privacy_mode", value: newValue });
+      if (res.data?.success) {
+        setPrivacyMode(!privacyMode);
+        alert(`Admin Privacy Mode has been turned ${newValue === 'on' ? 'ON' : 'OFF'}.`);
+      }
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to update privacy setting.");
+    } finally {
+      setLoadingPrivacy(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrivacySetting();
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -146,14 +180,7 @@ const SuperAdminLayout = () => {
       items: [
         { path: '/super-admin/banks', label: 'Lending Partners', icon: <Icons.wallet size={16} /> },
         { path: '/super-admin/products', label: 'Products', icon: <Icons.investment size={16} /> },
-      ]
-    },
-    {
-      title: "CMS",
-      isCmsGroup: true,
-      items: [
         { path: '/super-admin/product-links', label: 'Product Link Management', icon: <Icons.trending size={16} /> },
-        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
       ]
     },
     {
@@ -161,6 +188,7 @@ const SuperAdminLayout = () => {
       isModifyGroup: true,
       items: [
         { path: '/super-admin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
+        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
       ]
     },
     {
@@ -180,82 +208,8 @@ const SuperAdminLayout = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {categories.map((cat, idx) => {
-          if (cat.isCmsGroup) {
-            const isChildActive = location.pathname.includes('/product-links') || location.pathname.includes('/sections');
-            return (
-              <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
-                <button
-                  type="button"
-                  id="super-admin-cms-group-btn"
-                  onClick={() => setCmsOpen(!cmsOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '10px 16px',
-                    borderRadius: '10px',
-                    background: isChildActive ? `${C.teal}15` : 'transparent',
-                    border: 'none',
-                    color: isChildActive ? C.teal : C.text,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Icons.profile size={16} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>CMS</span>
-                  </div>
-                  <Chevron open={cmsOpen} color={isChildActive ? C.teal : C.textSecondary} />
-                </button>
-
-                {cmsOpen && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    paddingLeft: '24px',
-                    marginTop: '6px',
-                    borderLeft: `1.5px solid ${C.border}`,
-                    marginLeft: '24px',
-                  }}>
-                    {cat.items.map((item) => {
-                      const isActive = location.pathname === item.path;
-                      return (
-                        <NavLink
-                          key={item.path}
-                          to={item.path}
-                          onClick={onLinkClick}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            color: isActive ? C.teal : C.textMid,
-                            background: isActive ? `${C.teal}10` : 'transparent',
-                            textDecoration: 'none',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          }
-
           if (cat.isModifyGroup) {
-            const isChildActive = location.pathname.includes('/banners');
+            const isChildActive = location.pathname.includes('/banners') || location.pathname.includes('/sections');
             return (
               <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
                 <button
@@ -371,29 +325,63 @@ const SuperAdminLayout = () => {
           );
         })}
 
-        {/* Logout Button */}
-        <div style={{ height: "1px", background: C.border, margin: "16px 0" }} />
-        <button
-          onClick={handleLogout}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '10px 16px',
-            borderRadius: '10px',
-            fontSize: '14px',
-            fontWeight: 600,
-            color: C.red,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            width: '100%',
-            textAlign: 'left'
-          }}
-        >
-          <Icons.x size={16} />
-          <span>Logout</span>
-        </button>
+        <div style={{ height: "1px", background: C.border, margin: "12px 0 8px" }} />
+
+        {/* Language Switcher */}
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: '9px', fontWeight: 800, color: C.textLight, letterSpacing: '0.8px' }}>LANGUAGE</label>
+          <select 
+            value={i18n.language} 
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            style={{
+              width: '100%',
+              padding: "8px 12px", borderRadius: "10px",
+              border: `1.5px solid ${C.border}`, background: C.inputBg,
+              color: C.text, fontSize: "12.5px", fontWeight: 700, cursor: "pointer",
+              outline: 'none'
+            }}
+          >
+            <option value="en">English</option>
+            <option value="hi">हिंदी (Hindi)</option>
+            <option value="mr">मराठी (Marathi)</option>
+            <option value="te">తెలుగు (Telugu)</option>
+            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+            <option value="ta">தமிழ் (Tamil)</option>
+            <option value="bn">বাংলা (Bengali)</option>
+            <option value="gu">ગુજરાતી (Gujarati)</option>
+            <option value="or">ଓଡ଼ିଆ (Odia)</option>
+          </select>
+        </div>
+
+        {/* Interface Mode */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', marginTop: '6px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
+          <ThemeToggle />
+        </div>
+
+        {/* Private Mode */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', marginBottom: '10px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>Private Mode</span>
+          <button
+            onClick={togglePrivacyMode}
+            disabled={loadingPrivacy}
+            style={{
+              padding: '5px 12px',
+              borderRadius: '8px',
+              border: `1.5px solid ${privacyMode ? C.red : C.border}`,
+              background: privacyMode ? `${C.red}15` : 'transparent',
+              color: privacyMode ? C.red : C.text,
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              outline: 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            {loadingPrivacy ? '...' : privacyMode ? 'ON' : 'OFF'}
+          </button>
+        </div>
       </div>
     );
   };
@@ -477,9 +465,7 @@ const SuperAdminLayout = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              {/* Theme Toggle Button */}
-              <ThemeToggle />
-
+              
               {/* Notification Button */}
               <button 
                 onClick={() => navigate("/super-admin/notifications")}
@@ -503,29 +489,19 @@ const SuperAdminLayout = () => {
                 )}
               </button>
 
-              {/* Language Switcher */}
-              <select 
-                value={i18n.language} 
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-                style={{
-                  padding: "8px 12px", borderRadius: "10px",
-                  border: `1.5px solid ${C.border}`, background: C.inputBg,
-                  color: C.text, fontSize: "13px", fontWeight: 700, cursor: "pointer"
+              {/* Logged User Info dropdown */}
+              <div 
+                style={{ 
+                  position: 'relative', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px', 
+                  paddingLeft: '12px', 
+                  borderLeft: `1px solid ${C.border}`,
+                  cursor: 'pointer'
                 }}
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
               >
-                <option value="en">English</option>
-                <option value="hi">हिंदी (Hindi)</option>
-                <option value="mr">मराठी (Marathi)</option>
-                <option value="te">తెలుగు (Telugu)</option>
-                <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                <option value="ta">தமிழ் (Tamil)</option>
-                <option value="bn">বাংলা (Bengali)</option>
-                <option value="gu">ગુજરાતી (Gujarati)</option>
-                <option value="or">ଓଡ଼ିଆ (Odia)</option>
-              </select>
-
-              {/* Logged User Info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '12px', borderLeft: `1px solid ${C.border}` }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: C.teal, color: '#fff', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {user?.first_name ? user.first_name[0].toUpperCase() : 'S'}
                 </div>
@@ -537,6 +513,46 @@ const SuperAdminLayout = () => {
                     {user?.email || 'admin@gharkapaisa.com'}
                   </span>
                 </div>
+
+                {showProfileDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '46px',
+                    right: 0,
+                    width: '160px',
+                    background: C.card,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: '10px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    padding: '8px',
+                    zIndex: 100,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: C.red,
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <Icons.logout size={14} />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
             </div>

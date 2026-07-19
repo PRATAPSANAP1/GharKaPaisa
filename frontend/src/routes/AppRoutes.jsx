@@ -156,7 +156,10 @@ const AppRoutes = () => {
         <Route path="/cms/fastag" element={<Fastag />} />
         <Route path="/cms/coming-soon" element={<ComingSoon />} />
 
-        {/* Lead Gen Flow */}
+        {/* Lead Gen & Dynamic Product Details Flow */}
+        <Route path="/products/:category/:slug" element={<ProductDetails />} />
+        <Route path="/products/:slug" element={<ProductDetails />} />
+        <Route path="/product/:category/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/apply" element={<ApplyForm />} />
         <Route path="/card-benefits/:bankId/:cardId" element={<CardBenefitsPage />} />

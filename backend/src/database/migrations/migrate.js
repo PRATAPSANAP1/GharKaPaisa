@@ -3617,6 +3617,80 @@ const migrate = async () => {
       logger.error('Failed to run Dynamic Bank & Product Management Schema Migration (Task 20):', task20Err.message);
       throw task20Err;
     }
+
+    // Task 21: SBI Credit Card Application Module Tables
+    try {
+      logger.info('Running SBI Credit Card Application Schema Migration (Task 21)...');
+
+      await query(`
+        CREATE SEQUENCE IF NOT EXISTS sbi_app_number_seq START 1245;
+
+        CREATE TABLE IF NOT EXISTS sbi_credit_card_applications (
+          id                        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_no            VARCHAR(30) UNIQUE NOT NULL,
+          customer_id               UUID REFERENCES customers(id),
+          partner_id                UUID REFERENCES partner_profiles(id),
+          credit_card_category      VARCHAR(100),
+          customer_name             VARCHAR(255) NOT NULL,
+          customer_mobile           VARCHAR(15) NOT NULL,
+          pan_number                VARCHAR(10) NOT NULL,
+          resident_pincode          VARCHAR(10),
+          process_by                UUID REFERENCES users(id),
+          pan_check_comments        TEXT,
+          qd_executive_name         VARCHAR(255),
+          resident_pin_comments     TEXT,
+          next_qd_date              DATE,
+          dob                       DATE,
+          mother_name               VARCHAR(255),
+          residence_address         TEXT,
+          company_name              VARCHAR(255),
+          designation               VARCHAR(255),
+          email                     VARCHAR(255),
+          official_email            VARCHAR(255),
+          gross_monthly_income      DECIMAL(12,2),
+          resident_pin_comment      TEXT,
+          pan_check_executive       VARCHAR(255),
+          application_code_status   VARCHAR(50),
+          qd_status                 VARCHAR(50),
+          surrogate                 VARCHAR(100),
+          income_status             VARCHAR(50),
+          blaze_status               VARCHAR(50),
+          telco_stage                VARCHAR(50),
+          official_mail_status       VARCHAR(50),
+          vkyc_status                VARCHAR(50),
+          dispatch_stage              VARCHAR(50),
+          final_stage                 VARCHAR(50) DEFAULT 'Customer Details',
+          decline_description        TEXT,
+          decline_code                VARCHAR(50),
+          curable_solved              VARCHAR(50),
+          curable_executive           VARCHAR(255),
+          other_comments               TEXT,
+          created_by                   UUID REFERENCES users(id),
+          updated_by                   UUID REFERENCES users(id),
+          created_at                   TIMESTAMPTZ DEFAULT NOW(),
+          updated_at                   TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS sbi_cc_application_timeline (
+          id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID NOT NULL REFERENCES sbi_credit_card_applications(id) ON DELETE CASCADE,
+          stage          VARCHAR(50) NOT NULL,
+          activity       VARCHAR(100),
+          note           TEXT,
+          changed_by     UUID REFERENCES users(id),
+          created_at     TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sbi_cca_pan ON sbi_credit_card_applications(pan_number);
+        CREATE INDEX IF NOT EXISTS idx_sbi_cca_status ON sbi_credit_card_applications(final_stage);
+        CREATE INDEX IF NOT EXISTS idx_sbi_ccat_app ON sbi_cc_application_timeline(application_id);
+      `);
+
+      logger.info('SBI Credit Card Application Schema Migration (Task 21) completed successfully.');
+    } catch (task21Err) {
+      logger.error('Failed to run SBI Credit Card Application Schema Migration (Task 21):', task21Err.message);
+      throw task21Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

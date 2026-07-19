@@ -377,32 +377,7 @@ export default function ManageProducts() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, gap: "24px" }}>
-        {[
-          { id: "all-products", label: "All Products Master", icon: <MdSettings size={18} /> },
-          { id: "featured", label: "Featured & Display Order", icon: <MdStar size={18} /> },
-          { id: "categories", label: "Product Categories", icon: <MdCategory size={18} /> },
-          { id: "banks", label: "Active Banks & Issuers", icon: <MdBusiness size={18} /> }
-        ].map(tab => {
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); handleResetFilters(); }}
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                padding: "12px 4px", fontSize: "14.5px", fontWeight: active ? 800 : 600,
-                color: active ? C.primary : C.textLight,
-                borderBottom: active ? `2px solid ${C.primary}` : "2px solid transparent",
-                transition: "all 0.2s", display: "flex", alignItems: "center", gap: "6px"
-              }}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <div style={{ height: "4px" }} />
 
       {/* TAB 1: ALL PRODUCTS MASTER */}
       {activeTab === "all-products" && (
@@ -557,109 +532,7 @@ export default function ManageProducts() {
         </div>
       )}
 
-      {/* TAB 2: FEATURED PRODUCTS & PRIORITY DISPLAY ORDER */}
-      {activeTab === "featured" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div style={{ ...S.card, padding: "20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>Pin & Feature Display Priority</h3>
-            <p style={{ fontSize: "12.5px", color: C.textLight, margin: "0 0 20px" }}>Manage pinned priority indicators to control showcase grids order on homepage or partner hub.</p>
 
-            {loading ? (
-              <div>Loading...</div>
-            ) : products.filter(p => p.featured).length === 0 ? (
-              <div style={{ color: C.textLight, textAlign: "center", padding: "20px" }}>No products marked as featured. Go to "All Products" to feature items.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {products.filter(p => p.featured).map((p, idx) => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: "12px", background: C.bgSecondary, border: `1px solid ${C.border}`, padding: "12px 16px", borderRadius: "10px" }}>
-                    <MdDragIndicator size={20} style={{ color: C.textLight }} />
-                    <div style={{ width: "32px", height: "32px", background: "#fff", padding: "4px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src={p.logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>{p.name}</span>
-                      <span style={{ fontSize: "11px", color: C.textLight, marginLeft: "10px" }}>Category: {p.category?.replace(/_/g, " ")}</span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                      <div>
-                        <label style={{ fontSize: "10px", color: C.textLight, display: "block" }}>Display Order Priority</label>
-                        <input 
-                          type="number" 
-                          style={{ ...S.input, width: "80px", padding: "4px 8px", height: "30px", marginTop: "2px" }}
-                          value={p.priority}
-                          onChange={async (e) => {
-                            const val = Number(e.target.value);
-                            try {
-                              await api.put(`/superadmin/products/featured`, { id: p.id, priority: val });
-                              setProducts(products.map(x => x.id === p.id ? { ...x, priority: val } : x));
-                            } catch (e) { console.error(e); }
-                          }}
-                        />
-                      </div>
-
-                      <button 
-                        onClick={() => handleToggleFeatured(p)}
-                        style={{ ...S.btn("outline"), padding: "6px 12px", fontSize: "12px", color: C.red, border: `1px solid ${C.red}30` }}
-                      >
-                        Unfeature
-                      </button>
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: CATEGORIES LIST */}
-      {activeTab === "categories" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px" }}>
-          {PRODUCT_CATEGORIES.map(cat => {
-            const count = products.filter(p => p.category === cat.id).length;
-            return (
-              <div key={cat.id} style={{ ...S.card, padding: "20px", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <span style={{ fontSize: "24px" }}>📁</span>
-                <div>
-                  <h4 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: 0 }}>{cat.label}</h4>
-                  <p style={{ fontSize: "12.5px", color: C.textLight, margin: "4px 0 0" }}>Total Products: {count}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* TAB 4: BANKS LIST */}
-      {activeTab === "banks" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
-          {banks.map(bank => {
-            const count = products.filter(p => p.bank_id === bank.id).length;
-            return (
-              <div key={bank.id} style={{ ...S.card, padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  {bank.logo_url && (
-                    <img src={bank.logo_url} alt="bank" style={{ width: "36px", height: "36px", objectFit: "contain", borderRadius: "6px" }} />
-                  )}
-                  <div>
-                    <h4 style={{ fontSize: "14.5px", fontWeight: 800, color: C.text, margin: 0 }}>{bank.name}</h4>
-                    <span style={{ fontSize: "11px", color: C.textLight }}>Short code: {bank.short_code} | Products: {count}</span>
-                  </div>
-                </div>
-
-                <span style={{
-                  fontSize: "9px", fontWeight: 900, background: bank.status === "Active" ? `${C.green}15` : `${C.border}`,
-                  color: bank.status === "Active" ? C.green : C.textLight, padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase"
-                }}>
-                  {bank.status || "Active"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* ADD/EDIT DETAILS TABBED DRAWER MODAL */}
       {modalOpen && (

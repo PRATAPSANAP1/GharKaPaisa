@@ -165,9 +165,31 @@ const getProduct = async (req, res, next) => {
       query(`SELECT id, title, description, icon, display_order FROM product_features WHERE product_id = $1 ORDER BY display_order`, [product.id])
     ]);
 
+    // Structure normalized sub-keys matching API spec
+    product.bank = {
+      id: product.bank_id,
+      name: product.bank_name,
+      short_code: product.bank_code,
+      logo_url: product.bank_logo
+    };
+
+    product.fees = product.fees_structure || {};
+    product.eligibility = product.eligibility_criteria || {};
+    product.features = (product.features_list && product.features_list.length > 0) 
+      ? product.features_list 
+      : (featuresRes.rows.length > 0 ? featuresRes.rows.map(f => ({ title: f.title, description: f.description, icon: f.icon })) : (Array.isArray(product.features) ? product.features : []));
+    
+    product.benefits = Array.isArray(product.benefits_list) ? product.benefits_list : [];
+    product.documents = Array.isArray(product.required_documents) ? product.required_documents : (docsRes.rows.map(d => d.title || d.document_type));
+    product.compare = product.compare_specs || {};
     product.faqs = faqsRes.rows;
+    product.gallery = [
+      ...(product.banner_url ? [{ id: 'banner', image_url: product.banner_url, image_type: 'Banner' }] : []),
+      ...(product.image_url ? [{ id: 'card', image_url: product.image_url, image_type: 'Card' }] : []),
+      ...offersRes.rows.map(o => ({ id: o.id, image_url: o.banner_url, image_type: 'Offer', title: o.title }))
+    ];
+
     product.videos = videosRes.rows;
-    product.documents = docsRes.rows;
     product.active_offers = offersRes.rows;
     product.avg_rating = parseFloat(ratingsRes.rows[0].avg_rating).toFixed(1);
     product.total_reviews = parseInt(ratingsRes.rows[0].total_reviews);

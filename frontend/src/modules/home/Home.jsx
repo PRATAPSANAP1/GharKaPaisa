@@ -2761,7 +2761,10 @@ export default function Home({ onNavigate }) {
                   padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
                   transition: "all 0.2s ease", cursor: "pointer"
                 }}
-                onClick={() => setSelectedPopularCard(card)}
+                onClick={() => {
+                  const cardSlug = card.slug || card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                  navigate(`/products/credit-card/${cardSlug}`);
+                }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
                 >

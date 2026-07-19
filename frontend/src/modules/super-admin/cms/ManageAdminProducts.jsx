@@ -279,8 +279,16 @@ export default function ManageAdminProducts() {
 
       meta_title: seo.meta_title || "",
       meta_description: seo.meta_description || "",
-      slug: item.slug || ""
+      slug: item.slug || "",
+      faqs: []
     });
+
+    api.get(`/products/${item.id}/faqs`).then(res => {
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setForm(prev => ({ ...prev, faqs: res.data.data }));
+      }
+    }).catch(() => {});
+
     setModalTab("basic");
     setModalOpen(true);
   };
@@ -407,6 +415,20 @@ export default function ManageAdminProducts() {
       }
 
       if (res.data?.success) {
+        const productId = editItem ? editItem.id : res.data.data.id;
+        // Save FAQs if any
+        if (Array.isArray(form.faqs) && form.faqs.length > 0 && productId) {
+          for (const f of form.faqs) {
+            if (f.question && f.answer) {
+              await api.post(`/products/${productId}/faqs`, {
+                faq_id: f.id || undefined,
+                question: f.question,
+                answer: f.answer
+              }).catch(() => {});
+            }
+          }
+        }
+
         alert(editItem ? "Product updated successfully!" : "Product created successfully!");
         setModalOpen(false);
         fetchProducts();
@@ -559,12 +581,15 @@ export default function ManageAdminProducts() {
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', borderBottom: `1px solid ${C.border}`, marginBottom: '20px' }}>
               {[
                 { id: 'basic', label: 'Basic Info' },
+                { id: 'images', label: 'Images & Gallery' },
                 { id: 'fees', label: 'Fees & Charges' },
                 { id: 'eligibility', label: 'Eligibility' },
                 { id: 'commission', label: 'Commission' },
                 { id: 'features', label: 'Features' },
                 { id: 'benefits', label: 'Benefits' },
                 { id: 'documents', label: 'Documents' },
+                { id: 'compare', label: 'Compare Specs' },
+                { id: 'faqs', label: 'FAQs' },
                 { id: 'visibility', label: 'Visibility & SEO' }
               ].map(t => (
                 <button
@@ -739,6 +764,24 @@ export default function ManageAdminProducts() {
                 </div>
               )}
 
+              {/* TAB: IMAGES & GALLERY */}
+              {modalTab === 'images' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={S.label}>Card Image URL</label>
+                    <input type="text" placeholder="https://.../card.png" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Thumbnail URL</label>
+                    <input type="text" placeholder="https://.../thumb.png" value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={S.label}>Banner Image URL</label>
+                    <input type="text" placeholder="https://.../banner.png" value={form.banner_url} onChange={(e) => setForm({ ...form, banner_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                </div>
+              )}
+
               {/* TAB 7: DOCUMENTS */}
               {modalTab === 'documents' && (
                 <div>
@@ -764,6 +807,82 @@ export default function ManageAdminProducts() {
                 </div>
               )}
 
+              {/* TAB: COMPARE SPECS */}
+              {modalTab === 'compare' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={S.label}>Annual Fee</label>
+                    <input type="text" value={form.compare_annual_fee} onChange={(e) => setForm({ ...form, compare_annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Reward Rate</label>
+                    <input type="text" value={form.compare_reward_rate} onChange={(e) => setForm({ ...form, compare_reward_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Lounge Access</label>
+                    <input type="text" value={form.compare_lounge} onChange={(e) => setForm({ ...form, compare_lounge: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Fuel Waiver</label>
+                    <input type="text" value={form.compare_fuel} onChange={(e) => setForm({ ...form, compare_fuel: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Forex Markup</label>
+                    <input type="text" value={form.compare_forex} onChange={(e) => setForm({ ...form, compare_forex: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: FAQS */}
+              {modalTab === 'faqs' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={S.label}>Frequently Asked Questions (Unlimited)</label>
+                  {(form.faqs || []).map((faq, idx) => (
+                    <div key={idx} style={{ background: C.bgSecondary, padding: '12px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Question"
+                        value={faq.question}
+                        onChange={(e) => {
+                          const next = [...(form.faqs || [])];
+                          next[idx].question = e.target.value;
+                          setForm({ ...form, faqs: next });
+                        }}
+                        style={{ ...S.input, height: '38px', fontWeight: 700 }}
+                      />
+                      <textarea
+                        rows={2}
+                        placeholder="Answer"
+                        value={faq.answer}
+                        onChange={(e) => {
+                          const next = [...(form.faqs || [])];
+                          next[idx].answer = e.target.value;
+                          setForm({ ...form, faqs: next });
+                        }}
+                        style={{ ...S.input }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (form.faqs || []).filter((_, i) => i !== idx);
+                          setForm({ ...form, faqs: next });
+                        }}
+                        style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, alignSelf: 'flex-end' }}
+                      >
+                        Remove FAQ
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, faqs: [...(form.faqs || []), { question: '', answer: '' }] })}
+                    style={{ padding: '8px 16px', background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }}
+                  >
+                    + Add Question & Answer
+                  </button>
+                </div>
+              )}
+
               {/* TAB 8: VISIBILITY & SEO */}
               {modalTab === 'visibility' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -779,13 +898,23 @@ export default function ManageAdminProducts() {
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
-                    <span>Featured Product</span>
+                    <span>Featured Product Section</span>
                   </label>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.is_popular} onChange={(e) => setForm({ ...form, is_popular: e.target.checked })} />
-                    <span>Popular Product</span>
+                    <span>Popular Product Section</span>
                   </label>
+
+                  <div>
+                    <label style={S.label}>Meta Title (SEO)</label>
+                    <input type="text" placeholder="SEO Title" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Meta Description (SEO)</label>
+                    <textarea rows={2} placeholder="SEO Meta Description" value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} style={{ ...S.input }} />
+                  </div>
 
                   <div>
                     <label style={S.label}>URL Slug</label>
