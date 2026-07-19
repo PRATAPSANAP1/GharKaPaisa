@@ -212,6 +212,23 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 <span>Credit Cards</span>
               </button>
 
+              {/* Second Sidebar Item: Products (Opens Products Page) */}
+              <button
+                onClick={() => navigate(categoryMeta.route)}
+                style={{
+                  padding: '12px 14px', borderRadius: '14px',
+                  border: `1px solid ${C.border}`,
+                  background: isDark ? C.bgSecondary : '#F8FAFC',
+                  color: C.text,
+                  fontWeight: 800, fontSize: '14px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <MdOpenInNew size={20} color={C.primary} />
+                <span>Products Catalog</span>
+              </button>
+
               <button
                 onClick={() => navigate('/partner/loans')}
                 style={{
@@ -327,24 +344,24 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             </div>
           </div>
 
-          {/* Cards Breakdown Grid View */}
+          {/* Cards Breakdown Grid View (Mobile: 2 cards per row) */}
           <div style={{
             background: C.card,
             borderRadius: "20px",
-            padding: "24px",
+            padding: isMobile ? "16px" : "24px",
             border: `1px solid ${C.border}`,
             boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.04)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <div>
-                <h3 style={{ fontSize: "17px", fontWeight: 800, color: C.text, margin: 0 }}>
+                <h3 style={{ fontSize: isMobile ? "15px" : "17px", fontWeight: 800, color: C.text, margin: 0 }}>
                   Role & Bank Performance Breakdown
                 </h3>
                 <p style={{ fontSize: "12px", color: C.textMid, margin: "2px 0 0" }}>
                   Live metrics, logged applications, and approval ratios
                 </p>
               </div>
-              <span style={{ fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "20px", background: `${C.primary}15`, color: C.primary }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, padding: "4px 10px", borderRadius: "20px", background: `${C.primary}15`, color: C.primary }}>
                 Active View
               </span>
             </div>
@@ -360,14 +377,18 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 </button>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(180px, 1fr))",
+                gap: isMobile ? "10px" : "16px"
+              }}>
                 {filteredCards.map((card, idx) => (
                   <div
                     key={idx}
                     style={{
                       background: isDark ? C.bgSecondary : "#F8FAFC",
                       borderRadius: "14px",
-                      padding: "16px",
+                      padding: isMobile ? "12px" : "16px",
                       border: `1px solid ${C.border}`,
                       display: "flex",
                       flexDirection: "column",

@@ -51,6 +51,26 @@ export default function ManageApplications() {
   });
   const [submittingAction, setSubmittingAction] = useState(false);
 
+  // Create Application / Lead Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [leadCategory, setLeadCategory] = useState('credit_card'); // 'credit_card' | 'loan' | 'insurance'
+  const [submittingLead, setSubmittingLead] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    full_name: '',
+    mobile: '',
+    email: '',
+    pincode: '',
+    partner_id: '',
+    product_name: '',
+    bank_name: '',
+    monthly_salary: '',
+    company_name: '',
+    loan_type: 'Personal Loan',
+    loan_amount: '',
+    insurance_type: 'Health Insurance',
+    coverage_amount: ''
+  });
+
   const fetchApplications = async () => {
     setLoading(true);
     try {
@@ -191,6 +211,51 @@ export default function ManageApplications() {
     }
   };
 
+  const handleCreateLeadSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingLead(true);
+    try {
+      let payload = {
+        category: leadCategory,
+        full_name: createForm.full_name,
+        mobile: createForm.mobile,
+        email: createForm.email,
+        pincode: createForm.pincode,
+        partner_id: createForm.partner_id || undefined,
+      };
+
+      if (leadCategory === 'credit_card') {
+        payload.product_name = createForm.product_name || 'Credit Card Application';
+        payload.bank_name = createForm.bank_name || 'Partner Bank';
+        payload.monthly_salary = parseFloat(createForm.monthly_salary || 0);
+        payload.company_name = createForm.company_name;
+      } else if (leadCategory === 'loan') {
+        payload.product_name = `${createForm.loan_type} Application`;
+        payload.loan_amount = parseFloat(createForm.loan_amount || 0);
+        payload.monthly_salary = parseFloat(createForm.monthly_salary || 0);
+      } else if (leadCategory === 'insurance') {
+        payload.product_name = `${createForm.insurance_type} Policy`;
+        payload.coverage_amount = parseFloat(createForm.coverage_amount || 0);
+      }
+
+      const res = await api.post('/applications', payload);
+      if (res.data?.success || res.status === 201 || res.status === 200) {
+        alert('Application lead created successfully!');
+        setCreateModalOpen(false);
+        setCreateForm({
+          full_name: '', mobile: '', email: '', pincode: '', partner_id: '',
+          product_name: '', bank_name: '', monthly_salary: '', company_name: '',
+          loan_type: 'Personal Loan', loan_amount: '', insurance_type: 'Health Insurance', coverage_amount: ''
+        });
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create application lead');
+    } finally {
+      setSubmittingLead(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (applications.length === 0) return alert('No applications found to export.');
     let csvContent = 'data:text/csv;charset=utf-8,';
@@ -229,9 +294,17 @@ export default function ManageApplications() {
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Customer Applications Queue</h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Review verifications, track documents, log admin notes, and approve partner commission payouts</p>
         </div>
-        <button onClick={handleExportCSV} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <MdFileDownload /> Export Queue
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            onClick={() => setCreateModalOpen(true)} 
+            style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}
+          >
+            <span>➕ Apply Lead (Credit Card / Loan / Insurance)</span>
+          </button>
+          <button onClick={handleExportCSV} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MdFileDownload /> Export Queue
+          </button>
+        </div>
       </div>
 
       {/* Filters Card */}
@@ -623,6 +696,296 @@ export default function ManageApplications() {
                 <button type="button" onClick={() => setActionType(null)} style={S.btn('outline')}>Cancel</button>
                 <button type="submit" disabled={submittingAction} style={S.btn('primary')}>
                   {submittingAction ? 'Processing...' : 'Confirm Action'}
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* ═══ CREATE APPLICATION / LEAD MODAL ═══ */}
+      {createModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, width: '100%', maxWidth: '640px', maxHeight: '90vh',
+            borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', padding: '24px'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>➕ Apply New Lead</h3>
+                <p style={{ fontSize: '12px', color: C.textLight, margin: '2px 0 0' }}>Log customer applications directly for Credit Cards, Loans, or Insurance</p>
+              </div>
+              <button 
+                onClick={() => setCreateModalOpen(false)} 
+                style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Category Selector Tabs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+              <button
+                type="button"
+                onClick={() => setLeadCategory('credit_card')}
+                style={{
+                  padding: '10px', borderRadius: '12px',
+                  border: leadCategory === 'credit_card' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+                  background: leadCategory === 'credit_card' ? `${C.primary}15` : C.bgSecondary,
+                  color: leadCategory === 'credit_card' ? C.primary : C.text,
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                💳 Credit Card
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeadCategory('loan')}
+                style={{
+                  padding: '10px', borderRadius: '12px',
+                  border: leadCategory === 'loan' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+                  background: leadCategory === 'loan' ? `${C.primary}15` : C.bgSecondary,
+                  color: leadCategory === 'loan' ? C.primary : C.text,
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                🏦 Loan
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeadCategory('insurance')}
+                style={{
+                  padding: '10px', borderRadius: '12px',
+                  border: leadCategory === 'insurance' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+                  background: leadCategory === 'insurance' ? `${C.primary}15` : C.bgSecondary,
+                  color: leadCategory === 'insurance' ? C.primary : C.text,
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                🛡️ Insurance
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleCreateLeadSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Customer General Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Customer Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul Sharma"
+                    style={S.input}
+                    value={createForm.full_name}
+                    onChange={e => setCreateForm({ ...createForm, full_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Mobile Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="10-digit mobile"
+                    style={S.input}
+                    value={createForm.mobile}
+                    onChange={e => setCreateForm({ ...createForm, mobile: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="rahul@example.com"
+                    style={S.input}
+                    value={createForm.email}
+                    onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Pincode *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="6-digit pincode"
+                    style={S.input}
+                    value={createForm.pincode}
+                    onChange={e => setCreateForm({ ...createForm, pincode: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>Assign Partner (Optional)</label>
+                <select
+                  style={S.input}
+                  value={createForm.partner_id}
+                  onChange={e => setCreateForm({ ...createForm, partner_id: e.target.value })}
+                >
+                  <option value="">Direct Lead (No Partner assigned)</option>
+                  {partners.map(p => (
+                    <option key={p.id} value={p.Partner_id}>{p.first_name} {p.last_name || ''} ({p.Partner_code})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ── Category Specific Form Fields ── */}
+              
+              {/* CREDIT CARD FIELDS */}
+              {leadCategory === 'credit_card' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Preferred Bank *</label>
+                      <select
+                        style={S.input}
+                        value={createForm.bank_name}
+                        onChange={e => setCreateForm({ ...createForm, bank_name: e.target.value })}
+                      >
+                        <option value="HDFC Bank">HDFC Bank</option>
+                        <option value="SBI Card">SBI Card</option>
+                        <option value="ICICI Bank">ICICI Bank</option>
+                        <option value="Axis Bank">Axis Bank</option>
+                        <option value="IndusInd Bank">IndusInd Bank</option>
+                        <option value="IDFC First Bank">IDFC First Bank</option>
+                        <option value="Kotak Bank">Kotak Bank</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={S.label}>Card Variant / Product</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. HDFC Regalia / Millennia"
+                        style={S.input}
+                        value={createForm.product_name}
+                        onChange={e => setCreateForm({ ...createForm, product_name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Monthly Salary (INR) *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 45000"
+                        style={S.input}
+                        value={createForm.monthly_salary}
+                        onChange={e => setCreateForm({ ...createForm, monthly_salary: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label style={S.label}>Company / Employer Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. TCS / Infosys"
+                        style={S.input}
+                        value={createForm.company_name}
+                        onChange={e => setCreateForm({ ...createForm, company_name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* LOAN FIELDS */}
+              {leadCategory === 'loan' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Loan Type *</label>
+                      <select
+                        style={S.input}
+                        value={createForm.loan_type}
+                        onChange={e => setCreateForm({ ...createForm, loan_type: e.target.value })}
+                      >
+                        <option value="Personal Loan">Personal Loan</option>
+                        <option value="Business Loan">Business Loan</option>
+                        <option value="Home Loan">Home Loan</option>
+                        <option value="Auto Loan">Auto / Vehicle Loan</option>
+                        <option value="Loan against Property">Loan against Property (LAP)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={S.label}>Required Loan Amount (INR) *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 300000"
+                        style={S.input}
+                        value={createForm.loan_amount}
+                        onChange={e => setCreateForm({ ...createForm, loan_amount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Monthly Income / Net Salary (INR) *</label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="e.g. 50000"
+                      style={S.input}
+                      value={createForm.monthly_salary}
+                      onChange={e => setCreateForm({ ...createForm, monthly_salary: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* INSURANCE FIELDS */}
+              {leadCategory === 'insurance' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Insurance Type *</label>
+                      <select
+                        style={S.input}
+                        value={createForm.insurance_type}
+                        onChange={e => setCreateForm({ ...createForm, insurance_type: e.target.value })}
+                      >
+                        <option value="Health Insurance">Health Insurance</option>
+                        <option value="Term Life Insurance">Term Life Insurance</option>
+                        <option value="Motor Insurance">Motor Insurance</option>
+                        <option value="General Insurance">General Insurance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={S.label}>Sum Insured / Coverage Amount (INR) *</label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 500000"
+                        style={S.input}
+                        value={createForm.coverage_amount}
+                        onChange={e => setCreateForm({ ...createForm, coverage_amount: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setCreateModalOpen(false)} style={S.btn('outline')}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={submittingLead} style={S.btn('primary')}>
+                  {submittingLead ? 'Submitting...' : 'Submit Lead'}
                 </button>
               </div>
 
