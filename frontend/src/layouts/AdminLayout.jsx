@@ -263,7 +263,7 @@ const AdminLayout = () => {
 
           {/* 🏦 BANKS MANAGEMENT */}
           <NavLink
-            to="/super-admin/banks"
+            to="/admin/banks"
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
               fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
@@ -294,17 +294,17 @@ const AdminLayout = () => {
 
             {openProductsMenu && (
               <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                <NavLink to="/super-admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
-                <NavLink to="/super-admin/products/loans" style={subLinkStyle}>Loans</NavLink>
-                <NavLink to="/super-admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
-                <NavLink to="/super-admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
-                <NavLink to="/super-admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
-                <NavLink to="/super-admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
-                <NavLink to="/super-admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
-                <NavLink to="/super-admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
-                <NavLink to="/super-admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
-                <NavLink to="/super-admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
-                <NavLink to="/super-admin/products/other" style={subLinkStyle}>Other Products</NavLink>
+                <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
+                <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
+                <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
+                <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
+                <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
+                <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
+                <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
+                <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
+                <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
+                <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
+                <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
               </div>
             )}
           </div>

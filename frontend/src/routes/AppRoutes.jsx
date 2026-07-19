@@ -224,11 +224,10 @@ const AppRoutes = () => {
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
             
-            {/* Dynamic Bank & Product Management */}
-            <Route path="/super-admin/banks" element={<ManageBanks />} />
+            {/* Dynamic Bank & Product Management for Admin */}
             <Route path="/admin/banks" element={<ManageBanks />} />
-            <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
-            <Route path="/super-admin/products" element={<ManageAdminProducts />} />
+            <Route path="/admin/products/:categorySlug" element={<ManageAdminProducts />} />
+            <Route path="/admin/products" element={<ManageAdminProducts />} />
 
             {/* Admin Bank-Wise Credit Card Applications */}
             <Route path="/admin/credit-cards/:bankSlug/:tab" element={<ManageBankCardApplications />} />
@@ -260,7 +259,8 @@ const AppRoutes = () => {
             <Route path="/super-admin/audit" element={<AuditLogs />} />
             <Route path="/super-admin/audit-logs" element={<AuditLogs />} />
             <Route path="/super-admin/banners" element={<ManageBanners />} />
-            <Route path="/super-admin/products" element={<ManageProducts />} />
+            <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
+            <Route path="/super-admin/products" element={<ManageAdminProducts />} />
             <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
             <Route path="/super-admin/banks" element={<ManageBanks />} />
             <Route path="/super-admin/sections" element={<ManageSections />} />
