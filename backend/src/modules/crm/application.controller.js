@@ -131,7 +131,7 @@ const submitPublicApplication = async (req, res, next) => {
   try {
     await client.query('BEGIN');
 
-    const { product_id, customer, loan_amount, notes, partner_code, tracking_id } = req.body;
+    const { product_id, customer, loan_amount, notes, partner_code, tracking_id, process_type, monthly_salary, company_name, pincode } = req.body;
 
     // Validate product
     const { rows: [product] } = await client.query(
@@ -169,20 +169,22 @@ const submitPublicApplication = async (req, res, next) => {
       `SELECT id FROM customers WHERE mobile = $1`, [customer.mobile]
     );
     
+    const salaryVal = parseFloat(monthly_salary || loan_amount || 0);
+
     if (existingCust) {
       customerId = existingCust.id;
       await client.query(`
-        UPDATE customers SET full_name=$1, email=$2, city=$3, updated_at=NOW() WHERE id=$4
-      `, [customer.full_name, customer.email, customer.city, customerId]);
+        UPDATE customers SET full_name=$1, email=$2, city=$3, monthly_income=$4, company_name=$5, pincode=$6, updated_at=NOW() WHERE id=$7
+      `, [customer.full_name, customer.email, customer.city, monthly_salary ? parseFloat(monthly_salary) : null, company_name || null, pincode || null, customerId]);
     } else {
       const { rows: [newCust] } = await client.query(`
-        INSERT INTO customers (full_name, mobile, email, city, created_by)
-        VALUES ($1,$2,$3,$4,$5) RETURNING id
-      `, [customer.full_name, customer.mobile, customer.email, customer.city, sysUserId]);
+        INSERT INTO customers (full_name, mobile, email, city, monthly_income, company_name, pincode, created_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id
+      `, [customer.full_name, customer.mobile, customer.email, customer.city, monthly_salary ? parseFloat(monthly_salary) : null, company_name || null, pincode || null, sysUserId]);
       customerId = newCust.id;
     }
 
-    const commission = await calculatePartnerCommission(product_id, partnerId, loan_amount);
+    const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal);
     
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
@@ -192,11 +194,11 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
         (app_number, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
-         status_history)
+         status_history, process_type, company_name, pincode, city)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'submitted',$11,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$12::text)))
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$12::text)), $13, $14, $15, $16)
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, loan_amount, commission, notes, tracking_id || null, sysUserId.toString()]);
+    `, [appNumber, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', company_name || null, pincode || null, customer.city || null]);
 
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Public direct landing application logged.', sysUserId);
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);

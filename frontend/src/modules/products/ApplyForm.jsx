@@ -12,7 +12,17 @@ export default function ApplyForm() {
   const S = makeS(C);
 
   const [product, setProduct] = useState(null);
-  const [form, setForm] = useState({ full_name: '', mobile: '', email: '', city: '', partner_code: '' });
+  const [form, setForm] = useState({
+    full_name: '',
+    mobile: '',
+    email: '',
+    city: '',
+    partner_code: '',
+    monthly_salary: '',
+    company_name: '',
+    pincode: '',
+    process_type: 'lead_punching'
+  });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -41,7 +51,11 @@ export default function ApplyForm() {
           email: form.email,
           city: form.city
         },
-        partner_code: form.partner_code
+        partner_code: form.partner_code,
+        monthly_salary: form.monthly_salary,
+        company_name: form.company_name,
+        pincode: form.pincode,
+        process_type: form.process_type
       });
       setSuccess(true);
       if (product?.public_url) {
@@ -89,7 +103,7 @@ export default function ApplyForm() {
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div>
-            <label style={S.label}>Full Name</label>
+            <label style={S.label}>Customer Name *</label>
             <input 
               required
               type="text"
@@ -101,7 +115,7 @@ export default function ApplyForm() {
           </div>
 
           <div>
-            <label style={S.label}>Mobile Number</label>
+            <label style={S.label}>Mobile Number *</label>
             <input 
               required
               type="tel"
@@ -114,7 +128,7 @@ export default function ApplyForm() {
           </div>
 
           <div>
-            <label style={S.label}>Email Address</label>
+            <label style={S.label}>Email Address *</label>
             <input 
               required
               type="email"
@@ -126,7 +140,7 @@ export default function ApplyForm() {
           </div>
 
           <div>
-            <label style={S.label}>City</label>
+            <label style={S.label}>City *</label>
             <input 
               required
               type="text"
@@ -135,6 +149,57 @@ export default function ApplyForm() {
               value={form.city}
               onChange={e => setForm({...form, city: e.target.value})}
             />
+          </div>
+
+          <div>
+            <label style={S.label}>Monthly Salary (INR) *</label>
+            <input 
+              required
+              type="number"
+              placeholder="Enter monthly salary"
+              style={S.input}
+              value={form.monthly_salary}
+              onChange={e => setForm({...form, monthly_salary: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label style={S.label}>Company Name *</label>
+            <input 
+              required
+              type="text"
+              placeholder="Enter employer or business name"
+              style={S.input}
+              value={form.company_name}
+              onChange={e => setForm({...form, company_name: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label style={S.label}>Pincode *</label>
+            <input 
+              required
+              type="text"
+              pattern="[0-9]{6}"
+              placeholder="6-digit area pincode"
+              style={S.input}
+              value={form.pincode}
+              onChange={e => setForm({...form, pincode: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label style={S.label}>Process By *</label>
+            <select
+              required
+              style={S.input}
+              value={form.process_type}
+              onChange={e => setForm({...form, process_type: e.target.value})}
+            >
+              <option value="lead_punching">Lead Punching Only</option>
+              <option value="customer_sell">Customer Sell Process</option>
+              <option value="partner_cell">Partner Sell Process</option>
+            </select>
           </div>
 
           <div>
