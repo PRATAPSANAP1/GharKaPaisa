@@ -1851,7 +1851,7 @@ export default function Home({ onNavigate }) {
         if (data && data.success && data.data?.length > 0) {
           const mapped = data.data.map(p => ({
             name: p.name,
-            desc: p.description || p.features || 'Lifetime Free Credit Card',
+            desc: p.description || (Array.isArray(p.features) ? p.features.join(', ') : (typeof p.features === 'string' ? p.features : '')) || 'Lifetime Free Credit Card',
             bankName: p.bank_name || 'Partner Bank',
             bankId: p.bank_code ? p.bank_code.toLowerCase() : 'unknown',
             image: p.card_image_url || p.logo
@@ -1921,7 +1921,7 @@ export default function Home({ onNavigate }) {
               cards: dbBankProducts.map(p => ({
                 id: p.id,
                 name: p.name,
-                desc: p.description || p.features || "Unlock premium reward points, fuel cashback, and dining privileges.",
+                desc: p.description || (Array.isArray(p.features) ? p.features.join(', ') : (typeof p.features === 'string' ? p.features : '')) || "Unlock premium reward points, fuel cashback, and dining privileges.",
                 highlights: p.benefits ? p.benefits.split(',').map(s => s.trim()) : ["Zero Joining Fee", "Premium Lounge Access"],
                 link: p.redirect_url || p.apply_url || "",
                 image: p.logo || p.thumbnail_url || null,
