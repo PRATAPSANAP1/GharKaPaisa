@@ -6,7 +6,7 @@ import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import api from '../services/api';
-import { MdExpandMore, MdChevronRight } from 'react-icons/md';
+import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings } from 'react-icons/md';
 
 const DEFAULT_BANKS = [
   { id: 'hdfc', name: 'HDFC Bank', short_code: 'HDFC' },
@@ -270,7 +270,7 @@ const AdminLayout = () => {
               background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
             })}
           >
-            <Icons.university size={18} />
+            <MdAccountBalance size={18} />
             <span>🏦 Banks</span>
           </NavLink>
 
@@ -286,7 +286,7 @@ const AdminLayout = () => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icons.product size={18} />
+                <MdShoppingBag size={18} />
                 <span>📦 Products</span>
               </div>
               {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
@@ -333,7 +333,7 @@ const AdminLayout = () => {
               background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
             })}
           >
-            <Icons.settings size={18} />
+            <MdSettings size={18} />
             <span>⚙ Settings</span>
           </NavLink>
 
