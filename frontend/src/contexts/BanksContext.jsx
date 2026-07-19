@@ -33,11 +33,13 @@ export function BanksProvider({ children }) {
         const mapped = res.data.data.map(b => {
           const slug = (b.short_code || '').toLowerCase();
           const staticBank = banksList.find(sb => sb.id === slug);
+          const logoUrl = b.logo || b.logo_url || (staticBank ? staticBank.image : null);
+          const labelName = b.bank_name || b.name || '';
           return {
-            id: b.id,
-            name: b.bank_name || b.name || '',
+            id: b.id,               // Database primary key UUID
+            name: labelName,
             short_code: b.short_code || '',
-            logo: b.logo || b.logo_url || (staticBank ? staticBank.image : null),
+            logo: logoUrl,
             slug: slug,
             display_order: b.display_order || 0
           };

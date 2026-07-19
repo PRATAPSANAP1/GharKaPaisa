@@ -1706,7 +1706,15 @@ export default function Home({ onNavigate }) {
   const [settings, setSettings] = useState({});
   const [cmsSections, setCmsSections] = useState([]);
   const [dynamicProducts, setDynamicProducts] = useState([]);
-  const { activeBanks: dynamicBanks } = useActiveBanks();
+  const { activeBanks } = useActiveBanks();
+  const dynamicBanks = React.useMemo(() => {
+    return activeBanks.map(b => ({
+      id: b.slug,
+      label: b.name,
+      image: b.logo,
+      dbId: b.id
+    }));
+  }, [activeBanks]);
   const [popularProducts, setPopularProducts] = useState([]);
   const [dynamicLtfCards, setDynamicLtfCards] = useState([]);
 
