@@ -3503,6 +3503,90 @@ const migrate = async () => {
       logger.error('Failed to run Loans & Insurance Applications Schema Migration (Task 18):', task18Err.message);
       throw task18Err;
     }
+
+    // Task 19: Bank-Wise Credit Card Application Module Tables
+    try {
+      logger.info('Running Bank-Wise Credit Card Application Schema Migration (Task 19)...');
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS bank_card_applications (
+          id                        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_no            VARCHAR(30) UNIQUE NOT NULL,
+          bank_id                   UUID NOT NULL REFERENCES banks(id),
+          customer_id               UUID REFERENCES customers(id),
+          partner_id                UUID REFERENCES partner_profiles(id),
+
+          -- Step 1: Credit Card Application
+          credit_card_category      VARCHAR(100),
+          customer_name             VARCHAR(255) NOT NULL,
+          customer_mobile           VARCHAR(15) NOT NULL,
+          pan_number                VARCHAR(10) NOT NULL,
+          resident_pincode          VARCHAR(10),
+          process_by                UUID REFERENCES users(id),
+          pan_check_comments        TEXT,
+          qd_executive_name         VARCHAR(255),
+          resident_pin_comments     TEXT,
+          next_qd_date              DATE,
+
+          -- Step 2: Credit Card Assist
+          dob                       DATE,
+          mother_name               VARCHAR(255),
+          residence_address         TEXT,
+          company_name              VARCHAR(255),
+          designation               VARCHAR(255),
+          email                     VARCHAR(255),
+          official_email            VARCHAR(255),
+          gross_monthly_income      DECIMAL(12,2),
+          pan_check_executive_name  VARCHAR(255),
+
+          -- Status Information
+          app_code_status           VARCHAR(50),
+          qd_status                 VARCHAR(50),
+          surrogate                 VARCHAR(100),
+          income_status             VARCHAR(50),
+          blaze_status               VARCHAR(50),
+          telco_stage                VARCHAR(50),
+          official_mail_status       VARCHAR(50),
+          vkyc_status                VARCHAR(50),
+          dispatch_stage              VARCHAR(50),
+          final_stage                 VARCHAR(50) DEFAULT 'Customer Details',
+
+          -- Rejection Information
+          decline_description        TEXT,
+          decline_code                VARCHAR(50),
+          curable_solved              VARCHAR(50),
+          curable_executive           VARCHAR(255),
+          other_comments               TEXT,
+
+          not_interested_comment      TEXT,
+          kyc_pending_comment          TEXT,
+
+          created_by                   UUID REFERENCES users(id),
+          updated_by                   UUID REFERENCES users(id),
+          created_at                   TIMESTAMPTZ DEFAULT NOW(),
+          updated_at                   TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bcca_bank ON bank_card_applications(bank_id);
+        CREATE INDEX IF NOT EXISTS idx_bcca_status ON bank_card_applications(final_stage);
+        CREATE INDEX IF NOT EXISTS idx_bcca_pan ON bank_card_applications(pan_number);
+
+        CREATE TABLE IF NOT EXISTS bank_card_application_timeline (
+          id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID NOT NULL REFERENCES bank_card_applications(id) ON DELETE CASCADE,
+          stage          VARCHAR(50) NOT NULL,
+          note           TEXT,
+          changed_by     UUID REFERENCES users(id),
+          created_at     TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_bcat_app ON bank_card_application_timeline(application_id);
+      `);
+
+      logger.info('Bank-Wise Credit Card Application Schema Migration (Task 19) completed successfully.');
+    } catch (task19Err) {
+      logger.error('Failed to run Bank-Wise Credit Card Application Schema Migration (Task 19):', task19Err.message);
+      throw task19Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

@@ -84,6 +84,7 @@ import PartnerReports from '../modules/partner/dashboard/PartnerReports';
 import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
 import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
+import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
 
 const AppRoutes = () => {
   const isInitializing = useAuthStore((state) => state.isInitializing);
@@ -219,6 +220,11 @@ const AppRoutes = () => {
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
             
+            {/* Admin Bank-Wise Credit Card Applications */}
+            <Route path="/admin/credit-cards/:bankSlug/:tab" element={<ManageBankCardApplications />} />
+            <Route path="/admin/credit-cards/:bankSlug" element={<ManageBankCardApplications />} />
+            <Route path="/admin/credit-cards" element={<ManageBankCardApplications />} />
+
             {/* Admin Loans & Insurance Category Extensions */}
             <Route path="/admin/loans/:loanType/:tab" element={<ManageAdminLoans />} />
             <Route path="/admin/loans/:loanType" element={<ManageAdminLoans />} />
