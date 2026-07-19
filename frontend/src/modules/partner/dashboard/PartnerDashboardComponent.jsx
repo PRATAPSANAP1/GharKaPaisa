@@ -25,6 +25,24 @@ import yesLogo from "../../home/components/banks/yes_bank.png";
 import idfcLogo from "../../home/components/banks/idfc_first_bank.png";
 import bobLogo from "../../home/components/banks/bank_of_baroda.png";
 
+// Import banner images
+import ltfBanner from "../../home/components/banner/lifetimefree card.png";
+import loanBanner from "../../home/components/banner/loan.png";
+import insuranceBanner from "../../home/components/banner/insurance.png";
+import emiBanner from "../../home/components/banner/smart emi.png";
+import emiNewBanner from "../../home/components/banner/emi.jpeg";
+import hdfcBanner from "../../home/components/banner/hdfc pixel card.png";
+import offerBanner from "../../home/components/banner/offerbanner.png";
+
+const localBannerMap = {
+  "lifetimefree card.png": ltfBanner,
+  "loan.png": loanBanner,
+  "insurance.png": insuranceBanner,
+  "smart emi.png": emiBanner,
+  "emi.jpeg": emiNewBanner,
+  "hdfc pixel card.png": hdfcBanner,
+  "offerbanner.png": offerBanner
+};
 
 export default function PartnerDashboard({ partner }) {
   const { C, isDark } = useTheme();
@@ -47,6 +65,8 @@ export default function PartnerDashboard({ partner }) {
   const [teamDashboard, setTeamDashboard] = useState(null);
   const [trainingModules, setTrainingModules] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [allLeads, setAllLeads] = useState([]);
   const [products, setProducts] = useState([]);
@@ -143,6 +163,54 @@ export default function PartnerDashboard({ partner }) {
 
     fetchAllDashboardData();
   }, [partnerId]);
+
+  // Auto-rotate banners
+  const bannerSlides = banners.length > 0 ? banners.map(b => ({
+    title: b.title,
+    subtitle: b.subtitle,
+    btnText: b.btn_text || 'Apply Now',
+    bgImage: localBannerMap[b.image_url] || b.image_url,
+    action: () => {
+      const target = b.click_url || "/partner/products";
+      if (target.startsWith("http://") || target.startsWith("https://")) {
+        window.open(target, "_blank");
+      } else {
+        // Redirect to partner route if applicable
+        const route = target.replace("/credit-cards", "/partner/products?category=credit_card").replace("/loans", "/partner/products?category=personal_loan");
+        navigate(route);
+      }
+    }
+  })) : [
+    { 
+      title: t('home.banners.slideOffer.title', 'Special Offer'), 
+      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
+      btnText: t('home.banners.slideOffer.btn', 'View Offers'),
+      bgImage: offerBanner,
+      action: () => navigate("/partner/products")
+    },
+    { 
+      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
+      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
+      btnText: t('home.banners.slide0.btn', 'Explore Now'),
+      bgImage: ltfBanner,
+      action: () => navigate("/partner/products?category=credit_card")
+    },
+    { 
+      title: t('home.banners.slide1.title', 'Personal Loans'), 
+      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
+      btnText: t('home.banners.slide1.btn', 'Apply Now'),
+      bgImage: loanBanner,
+      action: () => navigate("/partner/products?category=personal_loan")
+    }
+  ];
+
+  useEffect(() => {
+    if (isPaused || bannerSlides.length <= 1) return;
+    const interval = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPaused, bannerSlides.length]);
 
   if (loading) {
     return <DashboardSkeleton C={C} />;
@@ -417,6 +485,72 @@ export default function PartnerDashboard({ partner }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
+      
+      {/* ── HERO BANNER SLIDER ── */}
+      <div 
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        style={{ 
+          width: "100%", height: isMobile ? "180px" : "320px", 
+          borderRadius: "20px", display: "flex", 
+          alignItems: "center", justifyContent: "center", overflow: "hidden", 
+          position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)` 
+        }}
+      >
+        {bannerSlides.map((slide, idx) => (
+          <div key={idx} 
+            onClick={() => slide.action()}
+            style={{
+              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+              background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
+              opacity: idx === bannerIndex ? 1 : 0,
+              pointerEvents: idx === bannerIndex ? "auto" : "none",
+              transition: "opacity 0.6s ease-in-out",
+              cursor: "pointer"
+            }}
+          />
+        ))}
+
+        {/* Left Arrow */}
+        {bannerSlides.length > 1 && (
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
+            <MdChevronLeft size={20} />
+          </div>
+        )}
+
+        {/* Right Arrow */}
+        {bannerSlides.length > 1 && (
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
+            <MdChevronRight size={20} />
+          </div>
+        )}
+
+        {/* Slider Indicators */}
+        {bannerSlides.length > 1 && (
+          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
+            {bannerSlides.map((_, idx) => (
+              <div 
+                key={idx} 
+                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+                style={{ 
+                  width: idx === bannerIndex ? "24px" : "8px", 
+                  height: "8px", 
+                  borderRadius: "4px", 
+                  background: idx === bannerIndex ? (isDark ? C.primary : "#333") : "rgba(255,255,255,0.5)", 
+                  cursor: "pointer",
+                  transition: "all 0.3s ease"
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       
       {/* ──── STATUS / KYC WARNING BANNERS ──── */}
       {kycStatus !== 'approved' && (
