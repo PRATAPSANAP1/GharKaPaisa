@@ -3264,7 +3264,7 @@ const migrate = async () => {
       ADD COLUMN IF NOT EXISTS company_logo_url VARCHAR(500) NULL;
     `);
 
-    // 14. Alter referral_clicks to ensure missing tracking columns exist (excluding registered)
+    // 14. Alter referral_clicks to ensure missing tracking columns exist
     await query(`
       ALTER TABLE referral_clicks
         ADD COLUMN IF NOT EXISTS partner_code VARCHAR(50),
@@ -3278,6 +3278,7 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS utm_campaign VARCHAR(100),
         ADD COLUMN IF NOT EXISTS referrer VARCHAR(1000),
         ADD COLUMN IF NOT EXISTS landing_page VARCHAR(1000),
+        ADD COLUMN IF NOT EXISTS registered BOOLEAN DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'CLICKED',
         ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS application_id UUID;

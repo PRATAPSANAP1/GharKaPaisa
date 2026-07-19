@@ -402,6 +402,90 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
   }
 };
 
+// Release money from Hold Balance to Available Balance (Approved commission)
+const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) => {
+  const client = existingClient || await getClient();
+  const isInternalTxn = !existingClient;
+  try {
+    if (isInternalTxn) await client.query('BEGIN');
+
+    // Resolve partner profile ID
+    let resolvedPartnerId = partnerId;
+    const { rows: [p] } = await client.query(
+      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
+      [String(partnerId)]
+    );
+    if (p) {
+      resolvedPartnerId = p.id;
+    }
+
+    // Get/ensure wallet
+    let { rows: [wallet] } = await client.query(
+      `SELECT id, available_balance, hold_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+      [resolvedPartnerId]
+    );
+    if (!wallet) {
+      await client.query(
+        `INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`,
+        [resolvedPartnerId]
+      );
+      const result = await client.query(
+        `SELECT id, available_balance, hold_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+        [resolvedPartnerId]
+      );
+      wallet = result.rows[0];
+    }
+
+    if (!wallet) {
+      throw new Error(`Partner wallet not found for partner_id: ${resolvedPartnerId}`);
+    }
+
+    const txnType = 'COMMISSION_RELEASE';
+    const status = 'Approved';
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = balanceBefore + parseFloat(amount);
+
+    // Update wallet_ledger status if txn_id provided
+    if (meta.txn_id) {
+      await client.query(`
+        UPDATE wallet_ledger 
+        SET status = 'Approved', updated_at = NOW() 
+        WHERE id::text = $1::text
+      `, [String(meta.txn_id)]);
+    }
+
+    // Insert release transaction in wallet_ledger
+    const { rows: [txn] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+      ) VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8)
+      RETURNING id
+    `, [
+      wallet.id, resolvedPartnerId, txnType, amount,
+      meta.description || 'Commission release to available balance',
+      meta.reference_id || meta.txn_id || null,
+      status,
+      meta.processed_by || null
+    ]);
+
+    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || meta.txn_id || null, meta.processed_by || null, {
+      remarks: meta.remarks || null
+    });
+
+    await syncWalletBalance(resolvedPartnerId, client);
+
+    if (isInternalTxn) await client.query('COMMIT');
+    logger.info(`releaseHold: Released ₹${amount} to available balance for partner ${resolvedPartnerId}`);
+    return txn;
+  } catch (err) {
+    if (isInternalTxn) await client.query('ROLLBACK');
+    logger.error('releaseHold failed', err.message);
+    throw err;
+  } finally {
+    if (isInternalTxn) client.release();
+  }
+};
+
 // Release commission helper wrapper for matured releases scheduler
 const releaseCommission = async (partnerId, walletId, txnId, amount) => {
   const client = await getClient();
@@ -410,8 +494,8 @@ const releaseCommission = async (partnerId, walletId, txnId, amount) => {
 
     // 1. Lock the wallet_ledger row and check status to prevent concurrent releases
     const { rows: [txn] } = await client.query(
-      `SELECT status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
-      [txnId]
+      `SELECT status FROM wallet_ledger WHERE id::text = $1::text FOR UPDATE`,
+      [String(txnId)]
     );
 
     if (!txn || txn.status !== 'pending') {
@@ -431,8 +515,8 @@ const releaseCommission = async (partnerId, walletId, txnId, amount) => {
 
     await client.query(`
       UPDATE applications SET commission_status = 'approved' 
-      WHERE id = (SELECT application_id FROM wallet_ledger WHERE id = $1)
-    `, [txnId]);
+      WHERE id::text = (SELECT application_id::text FROM wallet_ledger WHERE id::text = $1::text)
+    `, [String(txnId)]);
 
     await client.query('COMMIT');
   } catch (err) {
@@ -1135,6 +1219,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 module.exports = {
   ensureWallet,
   creditHold,
+  releaseHold,
   debitAvailable,
   creditCommission,
   releaseCommission,
