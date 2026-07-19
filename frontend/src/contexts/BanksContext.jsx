@@ -32,8 +32,27 @@ export function BanksProvider({ children }) {
       if (res.data?.success && res.data?.data) {
         const mapped = res.data.data.map(b => {
           const slug = (b.short_code || '').toLowerCase();
-          const staticBank = banksList.find(sb => sb.id === slug);
-          const logoUrl = b.logo || b.logo_url || (staticBank ? staticBank.image : null);
+          const staticBank = banksList.find(sb => sb.id === slug || sb.id === b.name?.toLowerCase());
+          
+          let logoUrl = null;
+          let rawLogo = b.logo || b.logo_url || '';
+          if (rawLogo) {
+            if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
+              logoUrl = rawLogo;
+            } else {
+              const filename = rawLogo.split('/').pop().toLowerCase();
+              const matched = banksList.find(sb => 
+                filename.includes(sb.id) || 
+                slug.includes(sb.id)
+              );
+              logoUrl = matched ? matched.image : rawLogo;
+            }
+          }
+          
+          if (!logoUrl) {
+            logoUrl = staticBank ? staticBank.image : null;
+          }
+          
           const labelName = b.bank_name || b.name || '';
           return {
             id: b.id,               // Database primary key UUID
