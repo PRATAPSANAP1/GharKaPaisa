@@ -2,11 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import api from '../../../services/api';
 import { 
   MdCreditCard, MdAccountBalanceWallet, MdShield, MdAdd, 
-  MdSearch, MdFilterList, MdInfoOutline, MdCheckCircle, 
-  MdArrowBack, MdChevronRight, MdShare, MdCheck, MdOpenInNew
+  MdSearch
 } from 'react-icons/md';
 
 // Category Specific Cards Breakdown Data
@@ -72,7 +70,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   const [selectedMoreInfoCard, setSelectedMoreInfoCard] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bankFilter, setBankFilter] = useState('ALL');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -88,27 +85,19 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     return creditCardRoleCards;
   }, [activeCategory]);
 
-  // Filtered Cards based on search query & bank filter
+  // Filtered Cards based on search query
   const filteredCards = useMemo(() => {
     return rawCards.filter(card => {
-      const matchSearch = !searchQuery || 
+      return !searchQuery || 
         card.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
         card.sub.toLowerCase().includes(searchQuery.toLowerCase()) ||
         card.availableCards.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchBank = bankFilter === 'ALL' || 
-        card.bankKey?.toUpperCase() === bankFilter || 
-        card.title.toUpperCase().includes(bankFilter);
-
-      return matchSearch && matchBank;
     });
-  }, [rawCards, searchQuery, bankFilter]);
+  }, [rawCards, searchQuery]);
 
   const categoryMeta = useMemo(() => {
     if (activeCategory === 'loans') {
       return {
-        title: "Loans Overview",
-        subtitle: "Role & Bank loan performance, leads, and program breakdown",
         icon: MdAccountBalanceWallet,
         color: "#10B981",
         route: "/partner/products?category=personal_loan"
@@ -116,314 +105,126 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     }
     if (activeCategory === 'insurance') {
       return {
-        title: "Insurance Overview",
-        subtitle: "Health, Term & General Insurance partner performance counts",
         icon: MdShield,
         color: "#F59E0B",
         route: "/partner/products?category=insurance"
       };
     }
     return {
-      title: "Credit Cards Overview",
-      subtitle: "Role & Bank credit card performance count breakdown",
       icon: MdCreditCard,
       color: C.primary,
       route: "/partner/products?category=credit_card"
     };
   }, [activeCategory, C.primary]);
 
-  const CategoryIcon = categoryMeta.icon;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
-      {/* ── TOP BREADCRUMB & PAGE HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: C.textMid, marginBottom: '6px' }}>
-            <span style={{ cursor: 'pointer', color: C.primary }} onClick={() => navigate('/partner/dashboard')}>Dashboard</span>
-            <MdChevronRight size={16} />
-            <span style={{ fontWeight: 700, color: C.text }}>{categoryMeta.title}</span>
-          </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CategoryIcon size={28} color={categoryMeta.color} />
-            {categoryMeta.title}
-          </h1>
-          <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0' }}>
-            {categoryMeta.subtitle}
-          </p>
+      {/* ── SEARCH & ACTION HEADER BAR ── */}
+      <div style={{
+        background: C.card,
+        borderRadius: '20px',
+        padding: '16px 20px',
+        border: `1px solid ${C.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', background: isDark ? C.bgSecondary : '#F8FAFC', padding: '8px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+          <MdSearch size={20} color={C.textMid} />
+          <input
+            type="text"
+            placeholder="Search cards, banks, or roles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ background: 'none', border: 'none', color: C.text, width: '100%', fontSize: '14px', outline: 'none' }}
+          />
         </div>
 
-        <button
-          onClick={() => navigate(categoryMeta.route)}
-          style={{
-            padding: '12px 20px', borderRadius: '14px', border: 'none',
-            background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-            color: '#FFFFFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px',
-            boxShadow: `0 4px 16px ${C.primary}35`
-          }}
-        >
-          <MdAdd size={20} />
-          Add Lead / Apply Product
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>
+            Showing <strong>{filteredCards.length}</strong> items
+          </span>
+          <button
+            onClick={() => navigate(categoryMeta.route)}
+            style={{
+              padding: '10px 18px', borderRadius: '12px', border: 'none',
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: '#FFFFFF', fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: `0 4px 16px ${C.primary}35`
+            }}
+          >
+            <MdAdd size={18} />
+            Add Lead / Apply Product
+          </button>
+        </div>
       </div>
 
-      {/* ── TWO-COLUMN MAIN CONTAINER WITH DEDICATED CATEGORY SIDEBAR ── */}
+      {/* ── CARDS BREAKDOWN GRID VIEW ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '260px 1fr',
-        gap: '20px',
-        alignItems: 'start'
+        background: C.card,
+        borderRadius: "20px",
+        padding: isMobile ? "16px" : "24px",
+        border: `1px solid ${C.border}`,
+        boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.04)"
       }}>
-        
-        {/* ── LEFT DEDICATED SIDEBAR ── */}
-        <div style={{
-          background: C.card,
-          borderRadius: '20px',
-          padding: '20px',
-          border: `1px solid ${C.border}`,
-          boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          
-          {/* Category Navigation Menu */}
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Category Navigation
-            </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-              
-              <button
-                onClick={() => navigate('/partner/credit-cards')}
+        {filteredCards.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: C.textMid }}>
+            <p style={{ fontSize: '15px', fontWeight: 700 }}>No cards found matching your search.</p>
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ marginTop: '8px', padding: '8px 16px', background: C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Reset Search
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(180px, 1fr))",
+            gap: isMobile ? "10px" : "16px"
+          }}>
+            {filteredCards.map((card, idx) => (
+              <div
+                key={idx}
                 style={{
-                  padding: '12px 14px', borderRadius: '14px',
-                  border: activeCategory === 'credit_card' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-                  background: activeCategory === 'credit_card' ? `${C.primary}15` : (isDark ? C.bgSecondary : '#F8FAFC'),
-                  color: activeCategory === 'credit_card' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '14px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <MdCreditCard size={20} />
-                <span>Credit Cards</span>
-              </button>
-
-              {/* Second Sidebar Item: Products (Opens Products Page) */}
-              <button
-                onClick={() => navigate(categoryMeta.route)}
-                style={{
-                  padding: '12px 14px', borderRadius: '14px',
+                  background: isDark ? C.bgSecondary : "#F8FAFC",
+                  borderRadius: "14px",
+                  padding: isMobile ? "12px" : "16px",
                   border: `1px solid ${C.border}`,
-                  background: isDark ? C.bgSecondary : '#F8FAFC',
-                  color: C.text,
-                  fontWeight: 800, fontSize: '14px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  transition: 'all 0.2s ease'
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  transition: "all 0.2s ease"
                 }}
               >
-                <MdOpenInNew size={20} color={C.primary} />
-                <span>Products Catalog</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/partner/loans')}
-                style={{
-                  padding: '12px 14px', borderRadius: '14px',
-                  border: activeCategory === 'loans' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-                  background: activeCategory === 'loans' ? `${C.primary}15` : (isDark ? C.bgSecondary : '#F8FAFC'),
-                  color: activeCategory === 'loans' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '14px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <MdAccountBalanceWallet size={20} />
-                <span>Loans</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/partner/insurance')}
-                style={{
-                  padding: '12px 14px', borderRadius: '14px',
-                  border: activeCategory === 'insurance' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-                  background: activeCategory === 'insurance' ? `${C.primary}15` : (isDark ? C.bgSecondary : '#F8FAFC'),
-                  color: activeCategory === 'insurance' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '14px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <MdShield size={20} />
-                <span>Insurance</span>
-              </button>
-
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: `1px solid ${C.border}`, margin: 0 }} />
-
-          {/* Quick Bank Filters */}
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Filter by Provider / Bank
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-              {['ALL', 'HDFC', 'SBI', 'ICICI', 'AXIS', 'INDUSIND', 'IDFC', 'AU', 'HSBC', 'FEDERAL', 'BOB', 'YES', 'KOTAK'].map((b) => (
-                <button
-                  key={b}
-                  onClick={() => setBankFilter(b)}
-                  style={{
-                    padding: '6px 12px', borderRadius: '10px',
-                    border: bankFilter === b ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-                    background: bankFilter === b ? C.primary : C.card,
-                    color: bankFilter === b ? '#FFFFFF' : C.text,
-                    fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: `1px solid ${C.border}`, margin: 0 }} />
-
-          {/* Quick Action */}
-          <div style={{ background: isDark ? C.bgSecondary : '#F1F5F9', padding: '14px', borderRadius: '14px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>💡 Quick Tip</span>
-            <p style={{ fontSize: '11px', color: C.textMid, margin: '4px 0 0', lineHeight: 1.4 }}>
-              Click <strong>More Info</strong> on any card to view exact commission payouts, card variants, and approval ratios!
-            </p>
-          </div>
-
-        </div>
-
-        {/* ── RIGHT MAIN CONTENT AREA ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* Search & Filter Header Bar */}
-          <div style={{
-            background: C.card,
-            borderRadius: '20px',
-            padding: '16px 20px',
-            border: `1px solid ${C.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', background: isDark ? C.bgSecondary : '#F8FAFC', padding: '8px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-              <MdSearch size={20} color={C.textMid} />
-              <input
-                type="text"
-                placeholder="Search cards, banks, or roles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ background: 'none', border: 'none', color: C.text, width: '100%', fontSize: '14px', outline: 'none' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>
-                Showing <strong>{filteredCards.length}</strong> items
-              </span>
-              {bankFilter !== 'ALL' && (
-                <button
-                  onClick={() => setBankFilter('ALL')}
-                  style={{ background: `${C.primary}15`, border: 'none', color: C.primary, fontSize: '11px', fontWeight: 800, padding: '6px 10px', borderRadius: '10px', cursor: 'pointer' }}
-                >
-                  Clear Bank Filter ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Cards Breakdown Grid View (Mobile: 2 cards per row) */}
-          <div style={{
-            background: C.card,
-            borderRadius: "20px",
-            padding: isMobile ? "16px" : "24px",
-            border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.04)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <div>
-                <h3 style={{ fontSize: isMobile ? "15px" : "17px", fontWeight: 800, color: C.text, margin: 0 }}>
-                  Role & Bank Performance Breakdown
-                </h3>
-                <p style={{ fontSize: "12px", color: C.textMid, margin: "2px 0 0" }}>
-                  Live metrics, logged applications, and approval ratios
-                </p>
-              </div>
-              <span style={{ fontSize: "11px", fontWeight: 700, padding: "4px 10px", borderRadius: "20px", background: `${C.primary}15`, color: C.primary }}>
-                Active View
-              </span>
-            </div>
-
-            {filteredCards.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: C.textMid }}>
-                <p style={{ fontSize: '15px', fontWeight: 700 }}>No cards found matching your search.</p>
-                <button
-                  onClick={() => { setSearchQuery(''); setBankFilter('ALL'); }}
-                  style={{ marginTop: '8px', padding: '8px 16px', background: C.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  Reset Filters
-                </button>
-              </div>
-            ) : (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(180px, 1fr))",
-                gap: isMobile ? "10px" : "16px"
-              }}>
-                {filteredCards.map((card, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: isDark ? C.bgSecondary : "#F8FAFC",
-                      borderRadius: "14px",
-                      padding: isMobile ? "12px" : "16px",
-                      border: `1px solid ${C.border}`,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase", letterSpacing: '0.5px' }}>
-                          {card.sub}
-                        </span>
-                        <button
-                          onClick={() => setSelectedMoreInfoCard(card)}
-                          style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
-                        >
-                          More info
-                        </button>
-                      </div>
-                      <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
-                        {card.count}
-                      </div>
-                    </div>
-
-                    <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {card.title}
-                    </div>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase", letterSpacing: '0.5px' }}>
+                      {card.sub}
+                    </span>
+                    <button
+                      onClick={() => setSelectedMoreInfoCard(card)}
+                      style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
+                    >
+                      More info
+                    </button>
                   </div>
-                ))}
+                  <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
+                    {card.count}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {card.title}
+                </div>
               </div>
-            )}
+            ))}
           </div>
-
-        </div>
-
+        )}
       </div>
 
       {/* ═══ MORE INFO DETAIL MODAL ═══ */}
