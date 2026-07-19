@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
@@ -477,6 +477,9 @@ const SuperAdminLayout = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {/* Theme Toggle Button */}
+              <ThemeToggle />
+
               {/* Notification Button */}
               <button 
                 onClick={() => navigate("/super-admin/notifications")}

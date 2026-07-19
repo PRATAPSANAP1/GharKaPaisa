@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, ThemeToggle } from '../contexts/ThemeContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 
@@ -88,6 +88,7 @@ const AdminLayout = () => {
  
           {/* User Status / Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <ThemeToggle />
             <LanguageSwitcher />
             <button
               id="admin-logout-button"
