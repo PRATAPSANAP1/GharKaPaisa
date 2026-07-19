@@ -540,6 +540,14 @@ const register = async (req, res, next) => {
       return error(res, 'Email and mobile are required', 400);
     }
 
+    if (password) {
+      try {
+        security.assertPasswordPolicy(password);
+      } catch (policyErr) {
+        return error(res, policyErr.message, 400);
+      }
+    }
+
     const client = await getClient();
     let committed = false;
     let parentPartnerId = null;
@@ -930,6 +938,7 @@ const loginPassword = async (req, res, next) => {
     console.log("LOGIN PASSWORD API HIT", { identity: req.body?.identity });
     const { identity, password } = req.body;
     if (!identity || !password) return error(res, 'Identity and password required', 400);
+    if (password.length > 128) return error(res, 'Password cannot exceed 128 characters', 400);
 
     let reqRole = String(req.body.role || '').toUpperCase().trim();
     if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';

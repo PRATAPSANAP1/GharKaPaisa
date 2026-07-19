@@ -1910,9 +1910,11 @@ const updatePartnerStatus = async (req, res, next) => {
 const resetPartnerPassword = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { new_password } = req.body;
-    if (!new_password || new_password.length < 6) {
-      return error(res, 'Password must be at least 6 characters', 400);
+    if (!new_password || new_password.length < 8) {
+      return error(res, 'Password must be at least 8 characters', 400);
+    }
+    if (new_password.length > 128) {
+      return error(res, 'Password cannot exceed 128 characters', 400);
     }
 
     const { rows: [partner] } = await query(

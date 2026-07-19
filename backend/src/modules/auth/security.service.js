@@ -42,8 +42,14 @@ const detectSuspiciousLogin = async (userId, req) => {
 };
 
 const assertPasswordPolicy = (password) => {
-  if (typeof password !== 'string' || password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-    const err = new Error('Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'); err.status = 400; throw err;
+  if (typeof password !== 'string' || password.length < 8) {
+    const err = new Error('Password must be at least 8 characters long.'); err.status = 400; throw err;
+  }
+  if (password.length > 128) {
+    const err = new Error('Password cannot exceed 128 characters.'); err.status = 400; throw err;
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+    const err = new Error('Password must include uppercase, lowercase, number, and special character.'); err.status = 400; throw err;
   }
 };
 

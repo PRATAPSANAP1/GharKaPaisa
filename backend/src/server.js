@@ -47,6 +47,7 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true,
   },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
 const envOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);

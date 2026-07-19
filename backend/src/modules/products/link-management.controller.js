@@ -170,11 +170,20 @@ const saveProductLink = async (req, res, next) => {
     } = req.body;
 
     // URL validations
-    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/i;
-    if (public_url && !urlRegex.test(public_url)) {
+    const isValidUrl = (urlStr) => {
+      if (!urlStr || urlStr.length > 2048) return false;
+      try {
+        const withProto = urlStr.match(/^https?:\/\//i) ? urlStr : `https://${urlStr}`;
+        const parsed = new URL(withProto);
+        return parsed.hostname && parsed.hostname.includes('.');
+      } catch (err) {
+        return false;
+      }
+    };
+    if (public_url && !isValidUrl(public_url)) {
       return error(res, 'Invalid Public URL format', 400);
     }
-    if (partner_url && !urlRegex.test(partner_url)) {
+    if (partner_url && !isValidUrl(partner_url)) {
       return error(res, 'Invalid Partner URL format', 400);
     }
 
