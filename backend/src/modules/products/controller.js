@@ -821,6 +821,52 @@ const updateFeatured = async (req, res, next) => {
   }
 };
 
+const duplicateProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [original] } = await query(`SELECT * FROM products WHERE id = $1`, [id]);
+    if (!original) return error(res, 'Product not found', 404);
+
+    const newName = `${original.name} (Copy)`;
+    const newSlug = `${original.slug || 'product'}-copy-${Date.now().toString().slice(-4)}`;
+
+    const { rows: [duplicated] } = await query(`
+      INSERT INTO products (
+        bank_id, name, category, sub_category, description, image_url, thumbnail_url, banner_url,
+        fees_structure, eligibility_criteria, commissions_json, features_list, benefits_list,
+        required_documents, compare_specs, visibility, seo_metadata, is_active, status, slug
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      RETURNING *
+    `, [
+      original.bank_id,
+      newName,
+      original.category,
+      original.sub_category,
+      original.description,
+      original.image_url,
+      original.thumbnail_url,
+      original.banner_url,
+      original.fees_structure || {},
+      original.eligibility_criteria || {},
+      original.commissions_json || {},
+      original.features_list || [],
+      original.benefits_list || [],
+      original.required_documents || [],
+      original.compare_specs || {},
+      original.visibility || {},
+      original.seo_metadata || {},
+      original.is_active,
+      original.status,
+      newSlug
+    ]);
+
+    await logAction(req, 'DUPLICATE_PRODUCT', duplicated.id, { original_id: id, name: newName });
+    return created(res, duplicated, 'Product duplicated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -841,5 +887,7 @@ module.exports = {
   resolveApplication,
   getClickAnalytics,
   updateStatus,
-  updateFeatured
+  updateFeatured,
+  duplicateProduct
 };
+

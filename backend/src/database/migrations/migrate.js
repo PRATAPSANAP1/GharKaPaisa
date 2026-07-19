@@ -3587,6 +3587,36 @@ const migrate = async () => {
       logger.error('Failed to run Bank-Wise Credit Card Application Schema Migration (Task 19):', task19Err.message);
       throw task19Err;
     }
+
+    // Task 20: Dynamic Bank & Product Management Schema Extensions
+    try {
+      logger.info('Running Dynamic Bank & Product Management Schema Migration (Task 20)...');
+
+      await query(`
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 0;
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active';
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS slug VARCHAR(255);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS sub_category VARCHAR(100);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS fees_structure JSONB DEFAULT '{}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS eligibility_criteria JSONB DEFAULT '{}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS commissions_json JSONB DEFAULT '{}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS features_list JSONB DEFAULT '[]';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS benefits_list JSONB DEFAULT '[]';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS required_documents JSONB DEFAULT '[]';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS compare_specs JSONB DEFAULT '{}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS visibility JSONB DEFAULT '{"show_on_website":true,"show_in_partner":true,"is_featured":false,"is_popular":false}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_metadata JSONB DEFAULT '{}';
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS card_image_url VARCHAR(500);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(500);
+      `);
+
+      logger.info('Dynamic Bank & Product Management Schema Migration (Task 20) completed successfully.');
+    } catch (task20Err) {
+      logger.error('Failed to run Dynamic Bank & Product Management Schema Migration (Task 20):', task20Err.message);
+      throw task20Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

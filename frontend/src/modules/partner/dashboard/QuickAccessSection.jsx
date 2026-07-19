@@ -367,13 +367,44 @@ export default function QuickAccessSection() {
     return () => clearTimeout(t);
   }, []);
 
+  const [dynamicBankServices, setDynamicBankServices] = useState([]);
+
+  useEffect(() => {
+    const fetchActiveBanks = async () => {
+      try {
+        const res = await api.get('/banks', { params: { status: 'Active', limit: 100 } });
+        if (res.data?.success && res.data?.data && res.data.data.length > 0) {
+          const mapped = res.data.data.map(b => {
+            const slug = (b.short_code || b.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+            return {
+              id: slug,
+              category: 'banks',
+              label: b.name,
+              icon: FaUniversity,
+              color: '#4F46E5',
+              route: `/partner/credit-cards/${slug}`
+            };
+          });
+          setDynamicBankServices(mapped);
+        }
+      } catch (err) {
+        console.warn('Using default bank services in QuickAccessSection');
+      }
+    };
+    fetchActiveBanks();
+  }, []);
+
   const groupedServices = useMemo(() => {
     const groups = {};
     serviceCatalog.categories.forEach((cat) => {
-      groups[cat.id] = serviceCatalog.services.filter((s) => s.category === cat.id);
+      if (cat.id === 'banks' && dynamicBankServices.length > 0) {
+        groups[cat.id] = dynamicBankServices;
+      } else {
+        groups[cat.id] = serviceCatalog.services.filter((s) => s.category === cat.id);
+      }
     });
     return groups;
-  }, []);
+  }, [dynamicBankServices]);
 
   const toggleCategory = useCallback((categoryId) => {
     setExpandedCategories((prev) => ({

@@ -53,6 +53,7 @@ const AdminLayout = () => {
   const [openBankSlug, setOpenBankSlug] = useState(null);
   const [openLoansMenu, setOpenLoansMenu] = useState(false);
   const [openInsuranceMenu, setOpenInsuranceMenu] = useState(false);
+  const [openProductsMenu, setOpenProductsMenu] = useState(false);
 
   useEffect(() => {
     const fetchBanks = async () => {
@@ -257,6 +258,58 @@ const AdminLayout = () => {
             <Icons.trending size={18} />
             <span>👥 Customers</span>
           </NavLink>
+
+          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
+
+          {/* 🏦 BANKS MANAGEMENT */}
+          <NavLink
+            to="/super-admin/banks"
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
+              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
+              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
+            })}
+          >
+            <Icons.university size={18} />
+            <span>🏦 Banks</span>
+          </NavLink>
+
+          {/* 📦 PRODUCTS MANAGEMENT */}
+          <div>
+            <button
+              onClick={() => setOpenProductsMenu(!openProductsMenu)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 700,
+                color: openProductsMenu ? '#fff' : 'rgba(255, 255, 255, 0.7)', background: 'transparent',
+                border: 'none', cursor: 'pointer', outline: 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Icons.product size={18} />
+                <span>📦 Products</span>
+              </div>
+              {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+            </button>
+
+            {openProductsMenu && (
+              <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                <NavLink to="/super-admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
+                <NavLink to="/super-admin/products/loans" style={subLinkStyle}>Loans</NavLink>
+                <NavLink to="/super-admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
+                <NavLink to="/super-admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
+                <NavLink to="/super-admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
+                <NavLink to="/super-admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
+                <NavLink to="/super-admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
+                <NavLink to="/super-admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
+                <NavLink to="/super-admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
+                <NavLink to="/super-admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
+                <NavLink to="/super-admin/products/other" style={subLinkStyle}>Other Products</NavLink>
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
           {/* 💰 Wallet */}
           <NavLink

@@ -5,13 +5,14 @@ const roleCheck = require('../../middleware/authorization/role.middleware.js');
 const ctrl = require('./controller.js');
 const { upload } = require('../../services/aws/s3.service.js');
 
-// Require authentication and admin or superadmin authorization globally for banks CRUD
-router.use(jwtAuth);
-router.use(roleCheck('ADMIN', 'SUPER_ADMIN'));
-
+// Public endpoints to fetch banks (Home page, partner panel, etc.)
 router.get('/', ctrl.listAllBanks);
-router.post('/', upload.single('logo'), ctrl.createBank);
-router.put('/:id', upload.single('logo'), ctrl.updateBank);
-router.delete('/:id', roleCheck('SUPER_ADMIN'), ctrl.deleteBank);
+router.get('/:id', ctrl.getBankById);
+
+// Admin / Super Admin protected endpoints for Bank CRUD
+router.post('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('logo'), ctrl.createBank);
+router.put('/:id', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('logo'), ctrl.updateBank);
+router.patch('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateBankStatus);
+router.delete('/:id', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.deleteBank);
 
 module.exports = router;

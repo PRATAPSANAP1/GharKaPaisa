@@ -63,6 +63,46 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     return defaultCategory;
   });
 
+  const [dynamicCcCards, setDynamicCcCards] = useState(creditCardRoleCards);
+
+  useEffect(() => {
+    const fetchActiveBanks = async () => {
+      try {
+        const res = await api.get('/banks', { params: { status: 'Active', limit: 100 } });
+        if (res.data?.success && res.data?.data && res.data.data.length > 0) {
+          const activeBanks = res.data.data;
+          const mapped = activeBanks.map(b => {
+            const slug = (b.short_code || b.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+            return {
+              title: `${(b.short_code || b.name).toUpperCase()} Cards`,
+              sub: 'Bank',
+              count: b.products_count || '10',
+              availableCards: `${b.products_count || '8'} Credit Card Variants`,
+              commission: 'Up to ₹2,500 / approval',
+              applications: '120 logged',
+              approvalRatio: '88%',
+              slug: slug,
+              logo: b.logo_url
+            };
+          });
+          setDynamicCcCards(mapped);
+        }
+      } catch (err) {
+        console.warn('Using fallback credit card cards in PartnerCategoryOverview');
+      }
+    };
+    fetchActiveBanks();
+  }, []);
+
+  const [selectedRoleCard, setSelectedRoleCard] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const roleCardsMap = {
+    credit_card: dynamicCcCards,
+    loans: loanRoleCards,
+    insurance: insuranceRoleCards,
+  };
+
   useEffect(() => {
     if (location.pathname.includes('/partner/loans')) setActiveCategory('loans');
     else if (location.pathname.includes('/partner/insurance')) setActiveCategory('insurance');

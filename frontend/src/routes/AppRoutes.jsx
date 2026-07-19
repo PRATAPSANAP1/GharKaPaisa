@@ -85,6 +85,8 @@ import PartnerNotifications from '../modules/partner/dashboard/PartnerNotificati
 import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
 import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
+import ManageBanks from '../modules/super-admin/cms/ManageBanks';
+import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
 
 const AppRoutes = () => {
   const isInitializing = useAuthStore((state) => state.isInitializing);
@@ -220,6 +222,12 @@ const AppRoutes = () => {
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
             
+            {/* Dynamic Bank & Product Management */}
+            <Route path="/super-admin/banks" element={<ManageBanks />} />
+            <Route path="/admin/banks" element={<ManageBanks />} />
+            <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
+            <Route path="/super-admin/products" element={<ManageAdminProducts />} />
+
             {/* Admin Bank-Wise Credit Card Applications */}
             <Route path="/admin/credit-cards/:bankSlug/:tab" element={<ManageBankCardApplications />} />
             <Route path="/admin/credit-cards/:bankSlug" element={<ManageBankCardApplications />} />

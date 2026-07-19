@@ -56,6 +56,8 @@ router.get('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'),
 router.put('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'), applicationSettingsRules, validate, productCtrl.upsertApplicationSettings);
 router.delete('/:id/application-settings', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteApplicationSettings);
 router.put('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.updateProduct);
+router.patch('/:id/status', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.updateStatus);
+router.post('/:id/duplicate', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.duplicateProduct);
 router.delete('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
 router.post('/commission', auth, authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
