@@ -3503,7 +3503,7 @@ const migrate = async () => {
       await query(`
         UPDATE homepage_sections
         SET title = 'Recharge & Bills'
-        WHERE section_key = 'money_transfer';
+        WHERE key = 'money_transfer';
       `).catch(() => {});
 
       logger.info('Loans & Insurance Applications Schema Migration (Task 18) completed successfully.');
