@@ -64,6 +64,7 @@ import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
+import PartnerCategoryOverview from '../modules/partner/dashboard/PartnerCategoryOverview';
 import PartnerApplications from '../modules/partner/leads/PartnerApplications';
 import PartnerWallet from '../modules/partner/wallet/PartnerWallet';
 import PartnerProfile from '../modules/partner/profile/PartnerProfile';
@@ -164,6 +165,9 @@ const AppRoutes = () => {
         <Route element={<RoleRoute allowedRoles={['PARTNER']} />}>
           <Route element={<PartnerLayout />}>
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/credit-cards" element={<PartnerCategoryOverview defaultCategory="credit_card" />} />
+            <Route path="/partner/loans" element={<PartnerCategoryOverview defaultCategory="loans" />} />
+            <Route path="/partner/insurance" element={<PartnerCategoryOverview defaultCategory="insurance" />} />
             <Route path="/partner/applications" element={<PartnerApplications />} />
             <Route path="/partner/wallet" element={<PartnerWallet />} />
             <Route path="/partner/profile" element={<PartnerProfile />} />

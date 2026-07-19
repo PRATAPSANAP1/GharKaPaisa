@@ -516,8 +516,7 @@ export default function PartnerDashboard({ partner }) {
         </h1>
       </div>
 
-
-      {/* ──── 4 CATEGORY ACTION BUTTONS & SPECIFIC DASHBOARD VIEW ──── */}
+      {/* ──── 4 CATEGORY ACTION BUTTONS ──── */}
       <div>
         {/* Category Buttons Row - Always 1 Line */}
         <div style={{
@@ -528,7 +527,7 @@ export default function PartnerDashboard({ partner }) {
         }}>
           {/* Credit Cards Button */}
           <button
-            onClick={() => navigate('/partner/products?category=credit_card')}
+            onClick={() => navigate('/partner/credit-cards')}
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
@@ -554,7 +553,7 @@ export default function PartnerDashboard({ partner }) {
 
           {/* Loans Button */}
           <button
-            onClick={() => navigate('/partner/products?category=personal_loan')}
+            onClick={() => navigate('/partner/loans')}
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
@@ -580,7 +579,7 @@ export default function PartnerDashboard({ partner }) {
 
           {/* Insurance Button */}
           <button
-            onClick={() => navigate('/partner/products?category=insurance')}
+            onClick={() => navigate('/partner/insurance')}
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
@@ -630,171 +629,7 @@ export default function PartnerDashboard({ partner }) {
             <span style={{ lineHeight: 1.15 }}>Add Leads</span>
           </button>
         </div>
-
-        {/* Dynamic Category Cards Grid View */}
-        <div style={{
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1px solid ${C.border}`,
-          boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.04)",
-          marginBottom: "24px"
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <div>
-              <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0, textTransform: 'capitalize' }}>
-                {activeDashboardCategory === 'credit_card' ? 'Credit Cards Overview' : activeDashboardCategory === 'loans' ? 'Loans Overview' : 'Insurance Overview'}
-              </h3>
-              <p style={{ fontSize: "12px", color: C.textLight, margin: "2px 0 0" }}>
-                Role and bank performance count breakdown
-              </p>
-            </div>
-            <span style={{ fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "20px", background: `${C.primary}15`, color: C.primary }}>
-              Active Category
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px" }}>
-            {(activeDashboardCategory === 'credit_card' ? creditCardRoleCards : activeDashboardCategory === 'loans' ? loanRoleCards : insuranceRoleCards).map((card, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: isDark ? C.bgSecondary : "#F8FAFC",
-                  borderRadius: "14px",
-                  padding: "16px",
-                  border: `1px solid ${C.border}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  transition: "all 0.2s ease"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>
-                      {card.sub}
-                    </span>
-                    <button
-                      onClick={() => setSelectedMoreInfoCard(card)}
-                      style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
-                    >
-                      More info
-                    </button>
-                  </div>
-                  <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
-                    {card.count}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {card.title}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
-
-      {/* ═══ MORE INFO DETAIL MODAL ═══ */}
-      {selectedMoreInfoCard && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
-        }}>
-          <div style={{
-            background: C.card, width: '100%', maxWidth: '500px',
-            borderRadius: '24px', overflow: 'hidden', border: `1px solid ${C.border}`,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
-            display: 'flex', flexDirection: 'column'
-          }}>
-            {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, position: 'relative' }}>
-              <button
-                onClick={() => setSelectedMoreInfoCard(null)}
-                style={{
-                  position: 'absolute', top: '16px', right: '16px',
-                  background: C.card, border: `1px solid ${C.border}`, cursor: 'pointer',
-                  width: 32, height: 32, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: C.textMid, fontSize: '16px', fontWeight: 700
-                }}
-              >
-                ✕
-              </button>
-
-              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
-                {selectedMoreInfoCard.sub} Overview
-              </span>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '6px 0 2px' }}>
-                {selectedMoreInfoCard.title}
-              </h3>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-                Detailed performance metrics and application controls
-              </p>
-            </div>
-
-            {/* Content: 4 Metric Cards & Apply Now */}
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                
-                {/* 1. Available Cards */}
-                <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>Available Cards</span>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
-                    {selectedMoreInfoCard.availableCards}
-                  </div>
-                </div>
-
-                {/* 2. Commission */}
-                <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>Commission</span>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.green || '#10B981', marginTop: '4px' }}>
-                    {selectedMoreInfoCard.commission}
-                  </div>
-                </div>
-
-                {/* 3. Applications */}
-                <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>Applications</span>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
-                    {selectedMoreInfoCard.applications}
-                  </div>
-                </div>
-
-                {/* 4. Approval Ratio */}
-                <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>Approval Ratio</span>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.primary, marginTop: '4px' }}>
-                    {selectedMoreInfoCard.approvalRatio} High
-                  </div>
-                </div>
-
-              </div>
-
-              {/* 5. Apply Now Button */}
-              <button
-                onClick={() => {
-                  const targetRoute = selectedMoreInfoCard.route;
-                  setSelectedMoreInfoCard(null);
-                  navigate(targetRoute);
-                }}
-                style={{
-                  background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark || C.primary} 100%)`,
-                  color: '#FFFFFF', border: 'none', width: '100%', padding: '14px', fontSize: '14px',
-                  borderRadius: '14px', cursor: 'pointer', fontWeight: 800, marginTop: '8px',
-                  boxShadow: `0 4px 16px ${C.primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                }}
-              >
-                <span>🚀 Apply Now</span>
-              </button>
-
-            </div>
-          </div>
-        </div>
-      )}
-
 
       {/* ──── TEAM & EARNING METRIC CARDS ──── */}
       <div 
