@@ -7,7 +7,7 @@ import {
   MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
   MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson, MdCloudUpload,
   MdInsertComment, MdFileDownload, MdFileUpload, MdAssignmentInd,
-  MdAnalytics, MdGroup, MdDoneAll, MdAlarm, MdClose
+  MdAnalytics, MdGroup, MdDoneAll, MdClose
 } from 'react-icons/md';
 
 const STAGES = [
@@ -60,12 +60,6 @@ export default function PartnerApplications() {
   const [assignPartnerId, setAssignPartnerId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
-
-  // Lead Reminder
-  const [showReminderModal, setShowReminderModal] = useState(false);
-  const [reminderApp, setReminderApp] = useState(null);
-  const [reminderDate, setReminderDate] = useState('');
-  const [reminderNote, setReminderNote] = useState('');
 
   // Import Leads
   const [showImportModal, setShowImportModal] = useState(false);
@@ -240,23 +234,7 @@ export default function PartnerApplications() {
     }
   };
 
-  const handleSetReminderSubmit = async (e) => {
-    e.preventDefault();
-    if (!reminderApp || !reminderDate) return;
-    try {
-      await api.post(`/applications/${reminderApp.id}/reminders`, {
-        reminder_at: reminderDate,
-        note: reminderNote
-      });
-      alert(`Lead reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
-      setShowReminderModal(false);
-      setReminderNote('');
-    } catch (_) {
-      alert(`Lead reminder scheduled for ${new Date(reminderDate).toLocaleString('en-IN')}`);
-      setShowReminderModal(false);
-      setReminderNote('');
-    }
-  };
+
 
   const handleImportCSVSubmit = async (e) => {
     e.preventDefault();
@@ -353,52 +331,79 @@ export default function PartnerApplications() {
       </div>
 
       {/* Lead Analytics Funnel Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.primary}` }}>
+      <div style={isMobile ? {
+        display: 'flex',
+        flexDirection: 'row',
+        overflowX: 'auto',
+        gap: '12px',
+        paddingBottom: '8px',
+        WebkitOverflowScrolling: 'touch',
+        scrollSnapType: 'x mandatory',
+        width: '100%',
+        boxSizing: 'border-box'
+      } : {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px'
+      }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.primary}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.totalLeads', 'Total Leads')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.total_applications || applications.length}</div>
         </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.gold}` }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.gold}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.underVerification', 'Under Verification')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length}</div>
         </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.green}` }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.green}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.approvedDisbursed', 'Approved & Disbursed')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length}</div>
         </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.red}` }}>
+        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.red}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.rejected', 'Rejected')}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length}</div>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <div style={{ ...S.card, padding: '16px', borderRadius: '14px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-          <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
+      <div style={{ 
+        ...S.card, 
+        padding: '10px 14px', 
+        borderRadius: '12px', 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row', 
+        gap: '8px', 
+        alignItems: isMobile ? 'stretch' : 'center',
+        boxShadow: 'none',
+        border: `1px solid ${C.border}`,
+        marginBottom: '4px'
+      }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: isMobile ? 'unset' : '220px' }}>
+          <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={16} />
           <input
             type="text"
             placeholder={t('partnerApplications.searchPlaceholder', 'Search customer, app #, or bank...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ ...S.input, paddingLeft: '36px', paddingTop: '8px', paddingBottom: '8px', fontSize: '13px' }}
+            style={{ ...S.input, paddingLeft: '32px', paddingTop: '6px', paddingBottom: '6px', fontSize: '12.5px', height: '34px', margin: 0 }}
           />
         </div>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '150px', fontSize: '13px' }}>
-          <option value="">{t('partnerApplications.allAppStatuses', 'All App Statuses')}</option>
-          <option value="submitted">Applied</option>
-          <option value="under_review">Under Review</option>
-          <option value="approved">Approved</option>
-          <option value="disbursed">Disbursed</option>
-          <option value="rejected">Rejected</option>
-        </select>
+        <div style={{ display: 'flex', gap: '8px', flexDirection: 'row', flex: isMobile ? 1 : 'unset' }}>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, flex: 1, minWidth: isMobile ? '0' : '140px', fontSize: '12.5px', height: '34px', padding: '4px 8px', margin: 0 }}>
+            <option value="">{t('partnerApplications.allAppStatuses', 'Statuses')}</option>
+            <option value="submitted">Applied</option>
+            <option value="under_review">Under Review</option>
+            <option value="approved">Approved</option>
+            <option value="disbursed">Disbursed</option>
+            <option value="rejected">Rejected</option>
+          </select>
 
-        <select value={commFilter} onChange={(e) => setCommFilter(e.target.value)} style={{ ...S.input, width: 'auto', minWidth: '160px', fontSize: '13px' }}>
-          <option value="">{t('partnerApplications.allCommissionStatus', 'All Commission Status')}</option>
-          <option value="pending">{t('partnerApplications.pendingHold', 'Pending Hold')}</option>
-          <option value="credited">{t('partnerApplications.releasedCredited', 'Released / Credited')}</option>
-        </select>
+          <select value={commFilter} onChange={(e) => setCommFilter(e.target.value)} style={{ ...S.input, flex: 1, minWidth: isMobile ? '0' : '140px', fontSize: '12.5px', height: '34px', padding: '4px 8px', margin: 0 }}>
+            <option value="">{t('partnerApplications.allCommissionStatus', 'Commissions')}</option>
+            <option value="pending">{t('partnerApplications.pendingHold', 'Pending')}</option>
+            <option value="credited">{t('partnerApplications.releasedCredited', 'Released')}</option>
+          </select>
+        </div>
       </div>
 
       {/* Applications List Table */}
@@ -471,9 +476,6 @@ export default function PartnerApplications() {
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
                         <MdAssignmentInd size={16} /> {t('partnerApplications.assign', 'Assign')}
-                      </button>
-                      <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title={t('partnerApplications.reminder', 'Reminder')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-                        <MdAlarm size={16} /> {t('partnerApplications.reminder', 'Reminder')}
                       </button>
                     </div>
                     <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('primary'), padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
@@ -581,9 +583,6 @@ export default function PartnerApplications() {
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                             <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
                               <MdAssignmentInd size={16} />
-                            </button>
-                            <button onClick={() => { setReminderApp(app); setShowReminderModal(true); }} title={t('partnerApplications.reminder', 'Reminder')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
-                              <MdAlarm size={16} />
                             </button>
                             <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
                               {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}

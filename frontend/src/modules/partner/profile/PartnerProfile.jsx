@@ -26,6 +26,16 @@ export default function PartnerProfile() {
   const isLoading = usePartnerStore((state) => state.isLoading);
 
   const [activeTab, setActiveTab] = useState('personal');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [isEditing, setIsEditing] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -197,7 +207,7 @@ export default function PartnerProfile() {
 
   const fieldLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px' };
   const fieldValue = { fontSize: '15px', fontWeight: 600, color: C.text, margin: 0 };
-  const sectionCard = { ...S.card, padding: '28px', borderRadius: '16px' };
+  const sectionCard = { ...S.card, padding: isMobile ? '16px' : '28px', borderRadius: '16px' };
 
   const kycTagColor = profile.kyc_status === 'approved' ? C.green
     : profile.kyc_status === 'rejected' ? C.red : C.gold;
@@ -208,14 +218,17 @@ export default function PartnerProfile() {
       {/* ───── Profile Header Banner ───── */}
       <div style={{ ...S.card, padding: 0, overflow: 'hidden', borderRadius: '20px' }}>
         <div style={{ height: '120px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` }} />
-        <div style={{
+        <div style={isMobile ? {
+          padding: '0 16px 20px', position: 'relative',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '12px', marginTop: '-48px'
+        } : {
           padding: '0 28px 24px', position: 'relative',
           display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '20px', marginTop: '-48px'
         }}>
           {/* Avatar */}
           <div 
             style={{
-              width: 96, height: 96, borderRadius: '50%', background: C.card,
+              width: isMobile ? 90 : 96, height: isMobile ? 90 : 96, borderRadius: '50%', background: C.card,
               border: `4px solid ${C.card}`, boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               position: 'relative', cursor: 'pointer', overflow: 'hidden'
@@ -243,11 +256,13 @@ export default function PartnerProfile() {
           </div>
 
           {/* Name & badges */}
-          <div style={{ flex: 1, minWidth: 200, paddingBottom: 4 }}>
+          <div style={isMobile ? {
+            display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', paddingBottom: 4
+          } : { flex: 1, minWidth: 200, paddingBottom: 4 }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: '0 0 8px' }}>
               {profile.first_name} {profile.last_name}
             </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '8px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
               <span style={{
                 fontFamily: 'monospace', fontWeight: 700, fontSize: '13px',
                 color: C.primary, background: `${C.primary}15`, padding: '4px 12px',
@@ -265,7 +280,8 @@ export default function PartnerProfile() {
           {/* Edit button */}
           <button onClick={() => setIsEditing(true)} style={{
             ...S.btn('outline'), padding: '8px 18px', fontSize: '13px', borderRadius: '10px',
-            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer'
+            display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, cursor: 'pointer',
+            width: isMobile ? '100%' : 'auto', justifyContent: 'center'
           }}>
             <MdEdit size={16} /> Edit Profile
           </button>
@@ -273,11 +289,30 @@ export default function PartnerProfile() {
       </div>
 
       {/* ───── Tabs + Content ───── */}
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
 
         {/* Sidebar Tabs */}
-        <aside style={{ width: '220px', flexShrink: 0 }}>
-          <div style={{ ...S.card, padding: '8px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <aside style={{ width: isMobile ? '100%' : '220px', flexShrink: 0 }}>
+          <div style={isMobile ? {
+            display: 'flex',
+            flexDirection: 'row',
+            overflowX: 'auto',
+            gap: '8px',
+            padding: '8px',
+            background: C.card,
+            borderRadius: '16px',
+            border: `1px solid ${C.border}`,
+            WebkitOverflowScrolling: 'touch',
+            width: '100%',
+            boxSizing: 'border-box'
+          } : {
+            ...S.card,
+            padding: '8px',
+            borderRadius: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}>
             {tabs.map(t => {
               const isActive = activeTab === t.id;
               const Icon = t.icon;
@@ -285,7 +320,17 @@ export default function PartnerProfile() {
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
-                  style={{
+                  style={isMobile ? {
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 16px', borderRadius: '12px',
+                    fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    background: isActive ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : 'transparent',
+                    color: isActive ? '#fff' : C.textMid,
+                    boxShadow: isActive ? `0 4px 14px ${C.primary}30` : 'none',
+                    whiteSpace: 'nowrap',
+                    flex: '0 0 auto'
+                  } : {
                     display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
                     textAlign: 'left', padding: '12px 16px', borderRadius: '12px',
                     fontWeight: 700, fontSize: '14px', border: 'none', cursor: 'pointer',
@@ -381,7 +426,7 @@ export default function PartnerProfile() {
                 <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <MdBusinessCenter style={{ color: C.primary }} /> Business Details
                 </h3>
-                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'center' : 'flex-start', width: '100%' }}>
                   {/* Business Logo Section */}
                   <div style={{
                     width: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'
@@ -433,7 +478,11 @@ export default function PartnerProfile() {
 
               <div style={{
                 background: C.bgSecondary, border: `1px solid ${C.border}`,
-                borderRadius: '14px', padding: '20px', display: 'flex', gap: '16px', alignItems: 'flex-start'
+                borderRadius: '14px', padding: '20px', display: 'flex', gap: '16px',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'center' : 'flex-start',
+                width: '100%',
+                boxSizing: 'border-box'
               }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: '50%', background: C.card,
@@ -443,7 +492,7 @@ export default function PartnerProfile() {
                   <MdAccountBalance size={22} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'center' : 'flex-start', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: 8, textAlign: isMobile ? 'center' : 'left' }}>
                     <div>
                       <h4 style={{ fontSize: '16px', fontWeight: 700, color: C.text, margin: 0 }}>
                         {profile.bank_name || 'No Bank Linked'}
@@ -459,7 +508,8 @@ export default function PartnerProfile() {
 
                   <div style={{
                     marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${C.border}`,
-                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'
+                    display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px',
+                    textAlign: 'left'
                   }}>
                     <div>
                       <p style={fieldLabel}>{t("Account Number")}</p>
@@ -508,7 +558,7 @@ export default function PartnerProfile() {
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px 28px',
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px 12px' : '24px 28px',
             width: '100%', maxWidth: '640px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', gap: '16px',
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflowY: 'auto'
           }}>
@@ -534,7 +584,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
                         👤 Personal & Contact Info {isKycApproved && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via approved KYC)</span>}
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("First Name")}</label>
                           <input type="text" value={editForm.first_name} onChange={e => handleInputChange('first_name', e.target.value)} style={{ ...S.input, padding: '10px' }} required disabled={isKycApproved} />
@@ -551,7 +601,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
                         🏢 Business & GST Details {isKycApproved && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via approved KYC)</span>}
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Company / Agency Name")}</label>
                           <input type="text" value={editForm.company_name} onChange={e => handleInputChange('company_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Acme Financials" disabled={isKycApproved} />
@@ -569,7 +619,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
                         📍 Residential Address
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Address")}</label>
                           <input type="text" value={editForm.current_address} onChange={e => handleInputChange('current_address', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="House/Flat No, Street, Landmark" />
@@ -587,7 +637,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
                         👤 Nominee Details
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Nominee Name")}</label>
                           <input type="text" value={editForm.nominee_name} onChange={e => handleInputChange('nominee_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Nominee Full Name" />
@@ -609,7 +659,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
                         🚨 Emergency Contact Info
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Name")}</label>
                           <input type="text" value={editForm.emergency_contact_name} onChange={e => handleInputChange('emergency_contact_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Contact Full Name" />
@@ -627,7 +677,7 @@ export default function PartnerProfile() {
                       <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px' }}>
                         🏦 Bank Account Details (For Payouts) {isBankVerified && <span style={{ color: C.green, textTransform: 'none', fontSize: '11px' }}>(Locked via verification)</span>}
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
                           <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Account Holder Name")}</label>
                           <input type="text" value={editForm.account_holder_name} onChange={e => handleInputChange('account_holder_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="As printed on Passbook/Cheque" disabled={isBankVerified} />
