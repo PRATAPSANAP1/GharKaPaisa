@@ -32,6 +32,14 @@ export default function PartnerDashboard({ partner }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Core Data States
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -511,102 +519,115 @@ export default function PartnerDashboard({ partner }) {
 
       {/* ──── 4 CATEGORY ACTION BUTTONS & SPECIFIC DASHBOARD VIEW ──── */}
       <div>
-        {/* Category Buttons Row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+        {/* Category Buttons Row - Always 1 Line */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: isMobile ? "6px" : "16px",
+          marginBottom: "20px"
+        }}>
           {/* Credit Cards Button */}
           <button
             onClick={() => navigate('/partner/products?category=credit_card')}
             style={{
-              padding: "16px 20px",
-              borderRadius: "16px",
+              padding: isMobile ? "10px 2px" : "16px 20px",
+              borderRadius: isMobile ? "12px" : "16px",
               border: `1px solid ${C.border}`,
               background: C.card,
               color: C.text,
               cursor: "pointer",
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: "10px",
+              gap: isMobile ? "4px" : "10px",
               fontWeight: 800,
-              fontSize: "15px",
+              fontSize: isMobile ? "11px" : "15px",
+              textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdCreditCard size={22} color={C.primary} />
-            <span>Credit Cards</span>
+            <MdCreditCard size={isMobile ? 18 : 22} color={C.primary} />
+            <span style={{ lineHeight: 1.15 }}>Credit Cards</span>
           </button>
 
           {/* Loans Button */}
           <button
             onClick={() => navigate('/partner/products?category=personal_loan')}
             style={{
-              padding: "16px 20px",
-              borderRadius: "16px",
+              padding: isMobile ? "10px 2px" : "16px 20px",
+              borderRadius: isMobile ? "12px" : "16px",
               border: `1px solid ${C.border}`,
               background: C.card,
               color: C.text,
               cursor: "pointer",
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: "10px",
+              gap: isMobile ? "4px" : "10px",
               fontWeight: 800,
-              fontSize: "15px",
+              fontSize: isMobile ? "11px" : "15px",
+              textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdAccountBalanceWallet size={22} color={C.primary} />
-            <span>Loans</span>
+            <MdAccountBalanceWallet size={isMobile ? 18 : 22} color={C.primary} />
+            <span style={{ lineHeight: 1.15 }}>Loans</span>
           </button>
 
           {/* Insurance Button */}
           <button
             onClick={() => navigate('/partner/products?category=insurance')}
             style={{
-              padding: "16px 20px",
-              borderRadius: "16px",
+              padding: isMobile ? "10px 2px" : "16px 20px",
+              borderRadius: isMobile ? "12px" : "16px",
               border: `1px solid ${C.border}`,
               background: C.card,
               color: C.text,
               cursor: "pointer",
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: "10px",
+              gap: isMobile ? "4px" : "10px",
               fontWeight: 800,
-              fontSize: "15px",
+              fontSize: isMobile ? "11px" : "15px",
+              textAlign: "center",
               boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdShield size={22} color={C.primary} />
-            <span>Insurance</span>
+            <MdShield size={isMobile ? 18 : 22} color={C.primary} />
+            <span style={{ lineHeight: 1.15 }}>Insurance</span>
           </button>
 
           {/* Add Leads Button */}
           <button
             onClick={() => navigate('/partner/products')}
             style={{
-              padding: "16px 20px",
-              borderRadius: "16px",
+              padding: isMobile ? "10px 2px" : "16px 20px",
+              borderRadius: isMobile ? "12px" : "16px",
               border: "none",
               background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
               color: "#FFFFFF",
               cursor: "pointer",
               display: "flex",
+              flexDirection: isMobile ? "column" : "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: "10px",
+              gap: isMobile ? "4px" : "10px",
               fontWeight: 800,
-              fontSize: "15px",
+              fontSize: isMobile ? "11px" : "15px",
+              textAlign: "center",
               boxShadow: `0 4px 16px ${C.primary}40`,
               transition: "all 0.2s ease"
             }}
           >
-            <MdAdd size={22} />
-            <span>Add Leads</span>
+            <MdAdd size={isMobile ? 18 : 22} />
+            <span style={{ lineHeight: 1.15 }}>Add Leads</span>
           </button>
         </div>
 
