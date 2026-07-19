@@ -1439,7 +1439,7 @@ export default function PartnerProducts() {
                     fontWeight: 700, borderColor: C.primary, color: C.primary
                   }}
                 >
-                  {savingDraft ? 'Saving Draft...' : '💾 Save Draft'}
+                  {savingDraft ? 'Saving Draft...' : 'Save Draft'}
                 </button>
 
                 <button
@@ -1453,7 +1453,7 @@ export default function PartnerProducts() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  {submitting ? 'Submitting...' : '🚀 Submit Application'}
+                  {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </form>
