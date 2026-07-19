@@ -22,6 +22,7 @@ const AdminLayout = () => {
     { path: '/admin/partners', label: 'Partners', icon: <Icons.profile size={18} /> },
     { path: '/admin/applications', label: 'Applications', icon: <Icons.creditCard size={18} /> },
     { path: '/admin/leads', label: 'Leads', icon: <Icons.trending size={18} /> },
+    { path: '/admin/direct-leads', label: 'Direct Leads', icon: <Icons.creditCard size={18} /> },
     { path: '/admin/withdrawals', label: 'Withdrawals', icon: <Icons.wallet size={18} /> },
   ];
 

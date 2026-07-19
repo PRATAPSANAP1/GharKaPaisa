@@ -200,6 +200,7 @@ const AppRoutes = () => {
             <Route path="/admin/partners" element={<ManagePartners />} />
             <Route path="/admin/withdrawals" element={<ManageWithdrawals />} />
             <Route path="/admin/leads" element={<ManageLeads />} />
+            <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
           </Route>
         </Route>
       </Route>

@@ -1061,9 +1061,15 @@ const migrate = async () => {
       mobile VARCHAR(15) NOT NULL,
       bank_name VARCHAR(100) NOT NULL,
       card_name VARCHAR(100) NOT NULL,
+      category VARCHAR(50) DEFAULT 'credit_card',
       status VARCHAR(50) DEFAULT 'verified',
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
+  `);
+
+  await query(`
+    ALTER TABLE direct_card_applications
+      ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'credit_card';
   `);
 
 

@@ -164,6 +164,15 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       </div>
 
       {/* ── CARDS BREAKDOWN GRID VIEW ── */}
+      <style>{`
+        @media (max-width: 767px) {
+          .category-cards-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px !important;
+          }
+        }
+      `}</style>
       <div style={{
         background: C.card,
         borderRadius: "20px",
@@ -182,7 +191,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             </button>
           </div>
         ) : (
-          <div style={{
+          <div className="category-cards-grid" style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(180px, 1fr))",
             gap: isMobile ? "10px" : "16px"

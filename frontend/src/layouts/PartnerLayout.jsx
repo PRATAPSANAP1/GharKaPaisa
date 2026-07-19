@@ -148,7 +148,50 @@ export default function PartnerLayout() {
     }
   }, [accountStatus, location.pathname, navigate, logout]);
 
-  const filteredNavItems = NAV_ITEMS.filter((item) => {
+  const getCategoryHubNav = () => {
+    const fullPath = location.pathname + location.search;
+    if (location.pathname.startsWith('/partner/credit-cards') || location.search.includes('category=credit_card')) {
+      return {
+        title: 'CREDIT CARDS HUB',
+        category: 'credit_card',
+        items: [
+          { id: 'cc-overview', path: '/partner/credit-cards', label: 'Credit Cards Overview', icon: MdCreditCard },
+          { id: 'cc-products', path: '/partner/products?category=credit_card', label: 'Credit Card Products', icon: MdStorefront },
+          { id: 'cc-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
+          { id: 'cc-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
+        ]
+      };
+    }
+    if (location.pathname.startsWith('/partner/loans') || location.search.includes('category=personal_loan') || location.search.includes('category=home_loan') || location.search.includes('category=business_loan')) {
+      return {
+        title: 'LOANS HUB',
+        category: 'loans',
+        items: [
+          { id: 'loan-overview', path: '/partner/loans', label: 'Loans Overview', icon: MdAccountBalanceWallet },
+          { id: 'loan-products', path: '/partner/products?category=personal_loan', label: 'Loan Products', icon: MdStorefront },
+          { id: 'loan-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
+          { id: 'loan-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
+        ]
+      };
+    }
+    if (location.pathname.startsWith('/partner/insurance') || location.search.includes('category=insurance')) {
+      return {
+        title: 'INSURANCE HUB',
+        category: 'insurance',
+        items: [
+          { id: 'ins-overview', path: '/partner/insurance', label: 'Insurance Overview', icon: MdShield },
+          { id: 'ins-products', path: '/partner/products?category=insurance', label: 'Insurance Products', icon: MdStorefront },
+          { id: 'ins-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
+          { id: 'ins-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
+        ]
+      };
+    }
+    return null;
+  };
+
+  const hubInfo = getCategoryHubNav();
+
+  const filteredNavItems = hubInfo ? hubInfo.items : NAV_ITEMS.filter((item) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard', 'kyc-centre', 'training', 'notifications', 'profile', 'settings'].includes(item.id);
     }
@@ -194,7 +237,7 @@ export default function PartnerLayout() {
           height: '100%',
           overflow: 'hidden',
         }}>
-          {/* Logo */}
+          {/* Logo & Category Hub Banner */}
           <div style={{
             padding: '20px 24px',
             borderBottom: `1px solid ${C.border}`,
@@ -203,7 +246,16 @@ export default function PartnerLayout() {
             gap: '12px',
           }}>
             <img src={logo} alt="Logo" style={{ height: '32px' }} />
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.primary, margin: 0 }}>{t('partnerLayout.panelTitle', 'Partner Panel')}</h2>
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.primary, margin: 0, lineHeight: 1.2 }}>
+                {hubInfo ? hubInfo.title : t('partnerLayout.panelTitle', 'Partner Panel')}
+              </h2>
+              {hubInfo && (
+                <span style={{ fontSize: '10px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Category Hub
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Nav Items */}
@@ -214,7 +266,10 @@ export default function PartnerLayout() {
           }}>
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
+              const currentPathAndQuery = location.pathname + location.search;
+              const isActive = item.path.includes('?') 
+                ? currentPathAndQuery === item.path 
+                : location.pathname === item.path;
 
               return (
                 <NavLink
