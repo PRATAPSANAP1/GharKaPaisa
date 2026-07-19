@@ -480,7 +480,7 @@ const loginWithMsg91 = async (req, res, next) => {
 // ── POST /auth/refresh ───────────────────────────────────────────────────────
 const refresh = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!refreshToken) {
       clearRefreshTokenCookie(res);
       return error(res, 'No token provided', 401);
@@ -511,15 +511,20 @@ const refresh = async (req, res, next) => {
       { expiresIn: '15m' }
     );
 
-    const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id, req, tokenRecord.expires_at - new Date() > 8 * 24 * 60 * 60 * 1000);
+    const expiresMs = tokenRecord.expires_at ? new Date(tokenRecord.expires_at).getTime() : 0;
+    const isLongSession = (expiresMs - Date.now()) > (8 * 24 * 60 * 60 * 1000);
 
-    setRefreshTokenCookie(res, newRefreshToken, tokenRecord.expires_at - new Date() > 8 * 24 * 60 * 60 * 1000);
+    const newRefreshToken = await generateAndSaveRefreshToken(tokenRecord.user_id, req, isLongSession);
+
+    setRefreshTokenCookie(res, newRefreshToken, isLongSession);
     return res.json({
       success: true,
       token: newToken
     });
   } catch (err) {
-    next(err);
+    logger.error('[Auth Refresh Error]:', err);
+    clearRefreshTokenCookie(res);
+    return error(res, 'Invalid or expired refresh token', 401);
   }
 };
 

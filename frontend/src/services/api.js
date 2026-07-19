@@ -166,8 +166,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        // Only clear session on actual 401 authentication failures, not network/timeout issues
-        if (refreshError?.response?.status === 401) {
+        // Clear session on authentication/refresh failures (401, 500, 403) to prevent stale token retries
+        const status = refreshError?.response?.status;
+        if (!status || status === 401 || status === 500 || status === 403) {
           clearSession();
         }
         return Promise.reject(refreshError);
