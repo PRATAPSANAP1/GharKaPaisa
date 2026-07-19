@@ -515,13 +515,13 @@ export default function PartnerDashboard({ partner }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
           {/* Credit Cards Button */}
           <button
-            onClick={() => setActiveDashboardCategory('credit_card')}
+            onClick={() => navigate('/partner/products?category=credit_card')}
             style={{
               padding: "16px 20px",
               borderRadius: "16px",
-              border: activeDashboardCategory === 'credit_card' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-              background: activeDashboardCategory === 'credit_card' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
-              color: activeDashboardCategory === 'credit_card' ? C.primary : C.text,
+              border: `1px solid ${C.border}`,
+              background: C.card,
+              color: C.text,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -529,23 +529,23 @@ export default function PartnerDashboard({ partner }) {
               gap: "10px",
               fontWeight: 800,
               fontSize: "15px",
-              boxShadow: activeDashboardCategory === 'credit_card' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdCreditCard size={22} />
+            <MdCreditCard size={22} color={C.primary} />
             <span>Credit Cards</span>
           </button>
 
           {/* Loans Button */}
           <button
-            onClick={() => setActiveDashboardCategory('loans')}
+            onClick={() => navigate('/partner/products?category=personal_loan')}
             style={{
               padding: "16px 20px",
               borderRadius: "16px",
-              border: activeDashboardCategory === 'loans' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-              background: activeDashboardCategory === 'loans' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
-              color: activeDashboardCategory === 'loans' ? C.primary : C.text,
+              border: `1px solid ${C.border}`,
+              background: C.card,
+              color: C.text,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -553,23 +553,23 @@ export default function PartnerDashboard({ partner }) {
               gap: "10px",
               fontWeight: 800,
               fontSize: "15px",
-              boxShadow: activeDashboardCategory === 'loans' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdAccountBalanceWallet size={22} />
+            <MdAccountBalanceWallet size={22} color={C.primary} />
             <span>Loans</span>
           </button>
 
           {/* Insurance Button */}
           <button
-            onClick={() => setActiveDashboardCategory('insurance')}
+            onClick={() => navigate('/partner/products?category=insurance')}
             style={{
               padding: "16px 20px",
               borderRadius: "16px",
-              border: activeDashboardCategory === 'insurance' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-              background: activeDashboardCategory === 'insurance' ? (isDark ? `${C.primary}25` : "#F5F3FF") : C.card,
-              color: activeDashboardCategory === 'insurance' ? C.primary : C.text,
+              border: `1px solid ${C.border}`,
+              background: C.card,
+              color: C.text,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -577,11 +577,11 @@ export default function PartnerDashboard({ partner }) {
               gap: "10px",
               fontWeight: 800,
               fontSize: "15px",
-              boxShadow: activeDashboardCategory === 'insurance' ? `0 4px 16px ${C.primary}30` : "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               transition: "all 0.2s ease"
             }}
           >
-            <MdShield size={22} />
+            <MdShield size={22} color={C.primary} />
             <span>Insurance</span>
           </button>
 

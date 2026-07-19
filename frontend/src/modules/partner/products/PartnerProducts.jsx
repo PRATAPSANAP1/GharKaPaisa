@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { resolveAndApply } from '../../../services/applicationResolver';
@@ -84,6 +85,9 @@ export default function PartnerProducts() {
   const [error, setError] = useState("");
 
   // Filters & Sorting & Pagination
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeBank, setActiveBank] = useState("All Banks");
@@ -93,6 +97,18 @@ export default function PartnerProducts() {
   const [minApproval, setMinApproval] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const cardsPerPage = 6;
+
+  // Sync category from URL search query parameter or navigation state
+  useEffect(() => {
+    const cat = searchParams.get('category') || location.state?.category;
+    if (cat) {
+      if (cat === 'loans' || cat === 'personal_loan') {
+        setActiveCategory('personal_loan');
+      } else {
+        setActiveCategory(cat);
+      }
+    }
+  }, [searchParams, location.state]);
 
   // Reset pagination when any filter changes
   useEffect(() => {
@@ -314,7 +330,10 @@ export default function PartnerProducts() {
                         p.commission_value?.toString().includes(query) ||
                         eligibilityText.toLowerCase().includes(query);
                         
-    const matchCategory = activeCategory === 'all' || p.category === activeCategory;
+    const matchCategory = activeCategory === 'all' || 
+                        p.category === activeCategory ||
+                        (activeCategory === 'personal_loan' && p.category?.toLowerCase().includes('loan')) ||
+                        (activeCategory === 'credit_card' && p.category?.toLowerCase().includes('card'));
     const matchBank = activeBank === 'All Banks' || p.bank_code === activeBank || p.name.includes(activeBank);
     
     // Commission Filter
