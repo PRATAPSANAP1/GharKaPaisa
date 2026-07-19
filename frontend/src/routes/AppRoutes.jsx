@@ -209,8 +209,13 @@ const AppRoutes = () => {
         <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>
           <Route element={<SuperAdminLayout />}>
             <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin/partners" element={<ManagePartners />} />
+            <Route path="/super-admin/leads" element={<ManageLeads />} />
+            <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />
+            <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/reports" element={<SuperAdminReports />} />
             <Route path="/super-admin/audit" element={<AuditLogs />} />
+            <Route path="/super-admin/audit-logs" element={<AuditLogs />} />
             <Route path="/super-admin/banners" element={<ManageBanners />} />
             <Route path="/super-admin/products" element={<ManageProducts />} />
             <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
@@ -221,10 +226,27 @@ const AppRoutes = () => {
             <Route path="/super-admin/commissions" element={<ManageCommissions />} />
             <Route path="/super-admin/commission-rules" element={<ManageCommissionRules />} />
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
-            <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
+
+            {/* Legacy /superadmin/ URL Redirect Compatibility */}
+            <Route path="/superadmin/dashboard" element={<Navigate to="/super-admin/dashboard" replace />} />
+            <Route path="/superadmin/partners" element={<Navigate to="/super-admin/partners" replace />} />
+            <Route path="/superadmin/leads" element={<Navigate to="/super-admin/leads" replace />} />
+            <Route path="/superadmin/applications" element={<Navigate to="/super-admin/crm" replace />} />
+            <Route path="/superadmin/banks" element={<Navigate to="/super-admin/banks" replace />} />
+            <Route path="/superadmin/products" element={<Navigate to="/super-admin/products" replace />} />
+            <Route path="/superadmin/product-links" element={<Navigate to="/super-admin/product-links" replace />} />
+            <Route path="/superadmin/sections" element={<Navigate to="/super-admin/sections" replace />} />
+            <Route path="/superadmin/banners" element={<Navigate to="/super-admin/banners" replace />} />
+            <Route path="/superadmin/wallet" element={<Navigate to="/super-admin/wallet" replace />} />
+            <Route path="/superadmin/announcements" element={<Navigate to="/super-admin/announcements" replace />} />
+            <Route path="/superadmin/services" element={<Navigate to="/super-admin/services" replace />} />
+            <Route path="/superadmin/commission-rules" element={<Navigate to="/super-admin/commission-rules" replace />} />
+            <Route path="/superadmin/audit-logs" element={<Navigate to="/super-admin/audit" replace />} />
+            <Route path="/superadmin/reports" element={<Navigate to="/super-admin/reports" replace />} />
+            <Route path="/superadmin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
           </Route>
         </Route>
       </Route>
