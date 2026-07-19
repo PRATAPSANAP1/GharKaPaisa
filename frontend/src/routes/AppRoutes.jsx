@@ -65,6 +65,8 @@ import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
 import PartnerCategoryOverview from '../modules/partner/dashboard/PartnerCategoryOverview';
+import PartnerEntityDetail from '../modules/partner/dashboard/PartnerEntityDetail';
+import PartnerAddLead from '../modules/partner/leads/PartnerAddLead';
 import PartnerApplications from '../modules/partner/leads/PartnerApplications';
 import PartnerWallet from '../modules/partner/wallet/PartnerWallet';
 import PartnerProfile from '../modules/partner/profile/PartnerProfile';
@@ -80,6 +82,8 @@ import PartnerMarketing from '../modules/partner/dashboard/PartnerMarketing';
 import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
 import PartnerReports from '../modules/partner/dashboard/PartnerReports';
 import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
+import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
+import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
 
 const AppRoutes = () => {
   const isInitializing = useAuthStore((state) => state.isInitializing);
@@ -165,9 +169,22 @@ const AppRoutes = () => {
         <Route element={<RoleRoute allowedRoles={['PARTNER']} />}>
           <Route element={<PartnerLayout />}>
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            
+            {/* Category Dashboards */}
             <Route path="/partner/credit-cards" element={<PartnerCategoryOverview defaultCategory="credit_card" />} />
+            <Route path="/partner/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
+            <Route path="/partner/credit-cards/:bankSlug/product" element={<PartnerEntityDetail />} />
+
             <Route path="/partner/loans" element={<PartnerCategoryOverview defaultCategory="loans" />} />
+            <Route path="/partner/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />
+            <Route path="/partner/loans/:loanTypeSlug/product" element={<PartnerEntityDetail />} />
+
             <Route path="/partner/insurance" element={<PartnerCategoryOverview defaultCategory="insurance" />} />
+            <Route path="/partner/insurance/:insuranceTypeSlug" element={<PartnerEntityDetail />} />
+            <Route path="/partner/insurance/:insuranceTypeSlug/product" element={<PartnerEntityDetail />} />
+
+            <Route path="/partner/leads/add" element={<PartnerAddLead />} />
+
             <Route path="/partner/applications" element={<PartnerApplications />} />
             <Route path="/partner/wallet" element={<PartnerWallet />} />
             <Route path="/partner/profile" element={<PartnerProfile />} />
@@ -201,6 +218,15 @@ const AppRoutes = () => {
             <Route path="/admin/withdrawals" element={<ManageWithdrawals />} />
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
+            
+            {/* Admin Loans & Insurance Category Extensions */}
+            <Route path="/admin/loans/:loanType/:tab" element={<ManageAdminLoans />} />
+            <Route path="/admin/loans/:loanType" element={<ManageAdminLoans />} />
+            <Route path="/admin/loans" element={<ManageAdminLoans />} />
+
+            <Route path="/admin/insurance/:insuranceType/:tab" element={<ManageAdminInsurance />} />
+            <Route path="/admin/insurance/:insuranceType" element={<ManageAdminInsurance />} />
+            <Route path="/admin/insurance" element={<ManageAdminInsurance />} />
           </Route>
         </Route>
       </Route>

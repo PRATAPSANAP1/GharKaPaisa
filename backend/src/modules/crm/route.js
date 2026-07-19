@@ -1,4 +1,14 @@
 const leadRouter            = require('./lead.routes');
 const cardApplicationRouter = require('./card_application.routes');
 const applicationRouter     = require('./application.routes');
-module.exports = { leadRouter, cardApplicationRouter, applicationRouter };
+const loanApplicationRouter = require('./loan_application.routes');
+const insuranceApplicationRouter = require('./insurance_application.routes');
+
+module.exports = { 
+  leadRouter, 
+  cardApplicationRouter, 
+  applicationRouter,
+  loanApplicationRouter,
+  insuranceApplicationRouter
+};
+

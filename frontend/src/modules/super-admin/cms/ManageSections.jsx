@@ -139,7 +139,7 @@ export default function ManageSections() {
   const [savingFooter, setSavingFooter] = useState(false);
 
   const sectionsList = [
-    { key: "section_visibility_money_transfer", cmsKey: "money_transfer", label: "Money Transfer & Payments", icon: <Icons.wallet size={20} />, description: "Displays fast money transfer and domestic payout service buttons." },
+    { key: "section_visibility_money_transfer", cmsKey: "money_transfer", label: "Recharge & Bills", icon: <Icons.wallet size={20} />, description: "Displays fast money transfer and domestic payout service buttons." },
     { key: "section_visibility_attractive_cards", cmsKey: "attractive_cards", label: "Attractive Cards & Loans", icon: <Icons.creditCard size={20} />, description: "Highlighted list of top converting bank credit cards and loan offers." },
     { key: "section_visibility_insurance", cmsKey: "insurance", label: "Insurance Section", icon: <Icons.check size={20} />, description: "Life, health, and vehicle insurance policy application cards." },
     { key: "section_visibility_travel", cmsKey: "travel", label: "Travel Section", icon: <Icons.clock size={20} />, description: "Flight, train, bus, and hotel booking options." },

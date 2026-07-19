@@ -605,7 +605,7 @@ export default function PartnerDashboard({ partner }) {
 
           {/* Add Leads Button */}
           <button
-            onClick={() => navigate('/partner/products')}
+            onClick={() => navigate('/partner/leads/add')}
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",

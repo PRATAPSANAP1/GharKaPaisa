@@ -3438,6 +3438,71 @@ const migrate = async () => {
       logger.error('Failed to run Enhanced Partner Product Application Schema Migration (Task 17):', task17Err.message);
       throw task17Err;
     }
+
+    // Task 18: Loans & Insurance Application Tables and Section Renaming
+    try {
+      logger.info('Running Loans & Insurance Applications Schema Migration (Task 18)...');
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS loan_applications (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          loan_type_slug VARCHAR(100) NOT NULL,
+          customer_name VARCHAR(255) NOT NULL,
+          mobile VARCHAR(15) NOT NULL,
+          email VARCHAR(255),
+          loan_amount NUMERIC(15, 2),
+          tenure_months INT,
+          interest_rate NUMERIC(5, 2),
+          monthly_income NUMERIC(15, 2),
+          employer_name VARCHAR(255),
+          pincode VARCHAR(10),
+          city VARCHAR(100),
+          state VARCHAR(100),
+          partner_id UUID REFERENCES partner_profiles(id),
+          status VARCHAR(50) DEFAULT 'submitted',
+          remarks TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_loan_app_type ON loan_applications(loan_type_slug);
+        CREATE INDEX IF NOT EXISTS idx_loan_app_status ON loan_applications(status);
+      `);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS insurance_applications (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          insurance_type_slug VARCHAR(100) NOT NULL,
+          customer_name VARCHAR(255) NOT NULL,
+          mobile VARCHAR(15) NOT NULL,
+          email VARCHAR(255),
+          policy_type VARCHAR(100),
+          sum_insured NUMERIC(15, 2),
+          premium_amount NUMERIC(15, 2),
+          pincode VARCHAR(10),
+          city VARCHAR(100),
+          state VARCHAR(100),
+          nominee_name VARCHAR(255),
+          partner_id UUID REFERENCES partner_profiles(id),
+          status VARCHAR(50) DEFAULT 'submitted',
+          remarks TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_ins_app_type ON insurance_applications(insurance_type_slug);
+        CREATE INDEX IF NOT EXISTS idx_ins_app_status ON insurance_applications(status);
+      `);
+
+      await query(`
+        UPDATE homepage_sections
+        SET title = 'Recharge & Bills'
+        WHERE section_key = 'money_transfer';
+      `).catch(() => {});
+
+      logger.info('Loans & Insurance Applications Schema Migration (Task 18) completed successfully.');
+    } catch (task18Err) {
+      logger.error('Failed to run Loans & Insurance Applications Schema Migration (Task 18):', task18Err.message);
+      throw task18Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

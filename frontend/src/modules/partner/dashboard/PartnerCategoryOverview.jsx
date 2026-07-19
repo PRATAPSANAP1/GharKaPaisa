@@ -7,45 +7,47 @@ import {
   MdSearch
 } from 'react-icons/md';
 
+// Helper function to convert title to slug
+const toSlug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+const employeeRoleCard = {
+  title: "Employee", sub: "Role Context", count: "120",
+  availableCards: "12 Staff Roles", commission: "Internal Allocation",
+  applications: "120 active staff", approvalRatio: "100%", route: "/partner/team"
+};
+
 // Category Specific Cards Breakdown Data
 const creditCardRoleCards = [
-  { title: "Employee", sub: "Role", count: "120", availableCards: "12 Roles & Cards", commission: "Up to ₹2,000 / lead", applications: "120 logged", approvalRatio: "92%", route: "/partner/products?category=credit_card", bankKey: "" },
-  { title: "HDFC Cards", sub: "Bank", count: "60139", availableCards: "18 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "60,139 logged", approvalRatio: "88%", route: "/partner/products?bank=HDFC", bankKey: "HDFC" },
-  { title: "SBI Cards", sub: "Bank", count: "9398", availableCards: "14 Credit Card Variants", commission: "Up to ₹2,200 / approval", applications: "9,398 logged", approvalRatio: "85%", route: "/partner/products?bank=SBI", bankKey: "SBI" },
-  { title: "ICICI Cards", sub: "Bank", count: "28", availableCards: "15 Credit Card Variants", commission: "Up to ₹2,400 / approval", applications: "28 logged", approvalRatio: "86%", route: "/partner/products?bank=ICICI", bankKey: "ICICI" },
-  { title: "AXIS Cards", sub: "Bank", count: "1676", availableCards: "16 Credit Card Variants", commission: "Up to ₹2,300 / approval", applications: "1,676 logged", approvalRatio: "84%", route: "/partner/products?bank=AXIS", bankKey: "AXIS" },
-  { title: "INDUSIND Cards", sub: "Bank", count: "2381", availableCards: "10 Credit Card Variants", commission: "Up to ₹2,100 / approval", applications: "2,381 logged", approvalRatio: "89%", route: "/partner/products?bank=INDUSIND", bankKey: "INDUSIND" },
-  { title: "IDFC Cards", sub: "Bank", count: "13", availableCards: "8 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "13 logged", approvalRatio: "91%", route: "/partner/products?bank=IDFC", bankKey: "IDFC" },
-  { title: "AU Cards", sub: "Bank", count: "15", availableCards: "6 Credit Card Variants", commission: "Up to ₹1,800 / approval", applications: "15 logged", approvalRatio: "87%", route: "/partner/products?bank=AU", bankKey: "AU" },
-  { title: "HSBC Cards", sub: "Bank", count: "3", availableCards: "5 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "3 logged", approvalRatio: "90%", route: "/partner/products?bank=HSBC", bankKey: "HSBC" },
-  { title: "FEDERAL Cards", sub: "Bank", count: "10", availableCards: "4 Credit Card Variants", commission: "Up to ₹1,900 / approval", applications: "10 logged", approvalRatio: "83%", route: "/partner/products?bank=FEDERAL", bankKey: "FEDERAL" },
-  { title: "BOB Cards", sub: "Bank", count: "184", availableCards: "9 Credit Card Variants", commission: "Up to ₹1,850 / approval", applications: "184 logged", approvalRatio: "82%", route: "/partner/products?bank=BOB", bankKey: "BOB" },
-  { title: "YES Cards", sub: "Bank", count: "73", availableCards: "7 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "73 logged", approvalRatio: "85%", route: "/partner/products?bank=YES", bankKey: "YES" },
-  { title: "KOTAK Cards", sub: "Bank", count: "5", availableCards: "11 Credit Card Variants", commission: "Up to ₹2,250 / approval", applications: "5 logged", approvalRatio: "88%", route: "/partner/products?bank=KOTAK", bankKey: "KOTAK" }
+  { title: "HDFC Cards", sub: "Bank", count: "60139", availableCards: "18 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "60,139 logged", approvalRatio: "88%", slug: "hdfc" },
+  { title: "SBI Cards", sub: "Bank", count: "9398", availableCards: "14 Credit Card Variants", commission: "Up to ₹2,200 / approval", applications: "9,398 logged", approvalRatio: "85%", slug: "sbi" },
+  { title: "ICICI Cards", sub: "Bank", count: "28", availableCards: "15 Credit Card Variants", commission: "Up to ₹2,400 / approval", applications: "28 logged", approvalRatio: "86%", slug: "icici" },
+  { title: "AXIS Cards", sub: "Bank", count: "1676", availableCards: "16 Credit Card Variants", commission: "Up to ₹2,300 / approval", applications: "1,676 logged", approvalRatio: "84%", slug: "axis" },
+  { title: "INDUSIND Cards", sub: "Bank", count: "2381", availableCards: "10 Credit Card Variants", commission: "Up to ₹2,100 / approval", applications: "2,381 logged", approvalRatio: "89%", slug: "indusind" },
+  { title: "IDFC Cards", sub: "Bank", count: "13", availableCards: "8 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "13 logged", approvalRatio: "91%", slug: "idfc" },
+  { title: "AU Cards", sub: "Bank", count: "15", availableCards: "6 Credit Card Variants", commission: "Up to ₹1,800 / approval", applications: "15 logged", approvalRatio: "87%", slug: "au" },
+  { title: "HSBC Cards", sub: "Bank", count: "3", availableCards: "5 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "3 logged", approvalRatio: "90%", slug: "hsbc" },
+  { title: "FEDERAL Cards", sub: "Bank", count: "10", availableCards: "4 Credit Card Variants", commission: "Up to ₹1,900 / approval", applications: "10 logged", approvalRatio: "83%", slug: "federal" },
+  { title: "BOB Cards", sub: "Bank", count: "184", availableCards: "9 Credit Card Variants", commission: "Up to ₹1,850 / approval", applications: "184 logged", approvalRatio: "82%", slug: "bob" },
+  { title: "YES Cards", sub: "Bank", count: "73", availableCards: "7 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "73 logged", approvalRatio: "85%", slug: "yes" },
+  { title: "KOTAK Cards", sub: "Bank", count: "5", availableCards: "11 Credit Card Variants", commission: "Up to ₹2,250 / approval", applications: "5 logged", approvalRatio: "88%", slug: "kotak" }
 ];
 
 const loanRoleCards = [
-  { title: "Loan Officer", sub: "Role", count: "85", availableCards: "8 Loan Programs", commission: "Up to 2.5% Loan Amount", applications: "85 logged", approvalRatio: "90%", route: "/partner/products?category=personal_loan", bankKey: "" },
-  { title: "HDFC Personal Loan", sub: "Provider", count: "45210", availableCards: "4 Loan Offers", commission: "Up to 2.8% Loan Amount", applications: "45,210 logged", approvalRatio: "86%", route: "/partner/products?category=personal_loan", bankKey: "HDFC" },
-  { title: "SBI Home Loan", sub: "Provider", count: "12450", availableCards: "3 Home Loan Offers", commission: "Up to 1.5% Loan Amount", applications: "12,450 logged", approvalRatio: "84%", route: "/partner/products?category=home_loan", bankKey: "SBI" },
-  { title: "ICICI Business Loan", sub: "Provider", count: "3890", availableCards: "5 Business Loans", commission: "Up to 3.0% Loan Amount", applications: "3,890 logged", approvalRatio: "82%", route: "/partner/products?category=business_loan", bankKey: "ICICI" },
-  { title: "AXIS Instant Loan", sub: "Provider", count: "8720", availableCards: "6 Instant Loan Offers", commission: "Up to 2.2% Loan Amount", applications: "8,720 logged", approvalRatio: "89%", route: "/partner/products?category=personal_loan", bankKey: "AXIS" },
-  { title: "Bajaj Finserv Loan", sub: "Provider", count: "14200", availableCards: "7 Flexi Loans", commission: "Up to 2.5% Loan Amount", applications: "14,200 logged", approvalRatio: "91%", route: "/partner/products?category=personal_loan", bankKey: "" },
-  { title: "Tata Capital Loan", sub: "Provider", count: "2150", availableCards: "4 Quick Loans", commission: "Up to 2.0% Loan Amount", applications: "2,150 logged", approvalRatio: "87%", route: "/partner/products?category=personal_loan", bankKey: "" },
-  { title: "IDFC First Loan", sub: "Provider", count: "1840", availableCards: "5 Personal Loans", commission: "Up to 2.4% Loan Amount", applications: "1,840 logged", approvalRatio: "88%", route: "/partner/products?category=personal_loan", bankKey: "IDFC" },
-  { title: "L&T Finance", sub: "Provider", count: "950", availableCards: "3 MSME Loans", commission: "Up to 2.8% Loan Amount", applications: "950 logged", approvalRatio: "85%", route: "/partner/products?category=business_loan", bankKey: "" }
+  { title: "Personal Loan", sub: "Loan Type", count: "45210", availableCards: "12 Personal Loan Offers", commission: "Up to 2.8% Loan Amount", applications: "45,210 logged", approvalRatio: "86%", slug: "personal-loan" },
+  { title: "Home Loan", sub: "Loan Type", count: "12450", availableCards: "8 Home Loan Offers", commission: "Up to 1.5% Loan Amount", applications: "12,450 logged", approvalRatio: "84%", slug: "home-loan" },
+  { title: "Business Loan", sub: "Loan Type", count: "3890", availableCards: "10 Business Loans", commission: "Up to 3.0% Loan Amount", applications: "3,890 logged", approvalRatio: "82%", slug: "business-loan" },
+  { title: "Loan Against Property", sub: "Loan Type", count: "8720", availableCards: "6 LAP Offers", commission: "Up to 2.0% Loan Amount", applications: "8,720 logged", approvalRatio: "89%", slug: "loan-against-property" },
+  { title: "Gold Loan", sub: "Loan Type", count: "14200", availableCards: "5 Quick Gold Loans", commission: "Up to 1.8% Loan Amount", applications: "14,200 logged", approvalRatio: "94%", slug: "gold-loan" },
+  { title: "Vehicle Loan", sub: "Loan Type", count: "2150", availableCards: "7 Auto & Bike Loans", commission: "Up to 2.2% Loan Amount", applications: "2,150 logged", approvalRatio: "87%", slug: "vehicle-loan" },
+  { title: "Education Loan", sub: "Loan Type", count: "1840", availableCards: "4 Student Loans", commission: "Up to 2.0% Loan Amount", applications: "1,840 logged", approvalRatio: "88%", slug: "education-loan" },
+  { title: "Overdraft", sub: "Loan Type", count: "950", availableCards: "3 OD Limits", commission: "Up to 2.5% Limit Amount", applications: "950 logged", approvalRatio: "85%", slug: "overdraft" },
+  { title: "Working Capital", sub: "Loan Type", count: "1250", availableCards: "5 WC Limits", commission: "Up to 2.7% Limit Amount", applications: "1,250 logged", approvalRatio: "83%", slug: "working-capital" }
 ];
 
 const insuranceRoleCards = [
-  { title: "Insurance Advisor", sub: "Role", count: "42", availableCards: "10 Insurance Plans", commission: "Up to 15% Premium", applications: "42 logged", approvalRatio: "95%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "Health Insurance", sub: "Category", count: "18400", availableCards: "12 Health Policies", commission: "Up to 20% Premium", applications: "18,400 logged", approvalRatio: "94%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "Life Insurance", sub: "Category", count: "12350", availableCards: "8 Term & Life Plans", commission: "Up to 25% Premium", applications: "12,350 logged", approvalRatio: "92%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "General Insurance", sub: "Category", count: "8900", availableCards: "15 Motor & Asset Plans", commission: "Up to 12% Premium", applications: "8,900 logged", approvalRatio: "96%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "HDFC ERGO", sub: "Provider", count: "15200", availableCards: "6 Health & Motor Plans", commission: "Up to 18% Premium", applications: "15,200 logged", approvalRatio: "93%", route: "/partner/products?category=insurance", bankKey: "HDFC" },
-  { title: "Star Health", sub: "Provider", count: "9840", availableCards: "7 Health Covers", commission: "Up to 22% Premium", applications: "9,840 logged", approvalRatio: "91%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "ICICI Lombard", sub: "Provider", count: "11300", availableCards: "9 General Policies", commission: "Up to 15% Premium", applications: "11,300 logged", approvalRatio: "94%", route: "/partner/products?category=insurance", bankKey: "ICICI" },
-  { title: "Bajaj Allianz", sub: "Provider", count: "6700", availableCards: "5 Comprehensive Plans", commission: "Up to 16% Premium", applications: "6,700 logged", approvalRatio: "90%", route: "/partner/products?category=insurance", bankKey: "" },
-  { title: "Niva Bupa", sub: "Provider", count: "4500", availableCards: "4 Family Health Plans", commission: "Up to 20% Premium", applications: "4,500 logged", approvalRatio: "92%", route: "/partner/products?category=insurance", bankKey: "" }
+  { title: "Health Insurance", sub: "Insurance Type", count: "18400", availableCards: "12 Health Policies", commission: "Up to 20% Premium", applications: "18,400 logged", approvalRatio: "94%", slug: "health-insurance" },
+  { title: "Life Insurance", sub: "Insurance Type", count: "12350", availableCards: "8 Term & Life Plans", commission: "Up to 25% Premium", applications: "12,350 logged", approvalRatio: "92%", slug: "life-insurance" },
+  { title: "General Insurance", sub: "Insurance Type", count: "8900", availableCards: "15 Motor & Asset Plans", commission: "Up to 12% Premium", applications: "8,900 logged", approvalRatio: "96%", slug: "general-insurance" }
 ];
 
 export default function PartnerCategoryOverview({ defaultCategory = 'credit_card' }) {
@@ -55,7 +57,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const S = makeS(C);
   const { t } = useTranslation();
 
-  // Determine active category based on URL pathname
   const [activeCategory, setActiveCategory] = useState(() => {
     if (location.pathname.includes('/partner/loans')) return 'loans';
     if (location.pathname.includes('/partner/insurance')) return 'insurance';
@@ -78,14 +79,12 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Get raw cards data based on current activeCategory
   const rawCards = useMemo(() => {
     if (activeCategory === 'loans') return loanRoleCards;
     if (activeCategory === 'insurance') return insuranceRoleCards;
     return creditCardRoleCards;
   }, [activeCategory]);
 
-  // Filtered Cards based on search query
   const filteredCards = useMemo(() => {
     return rawCards.filter(card => {
       return !searchQuery || 
@@ -95,31 +94,74 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     });
   }, [rawCards, searchQuery]);
 
+  const categoryBasePath = useMemo(() => {
+    if (activeCategory === 'loans') return '/partner/loans';
+    if (activeCategory === 'insurance') return '/partner/insurance';
+    return '/partner/credit-cards';
+  }, [activeCategory]);
+
   const categoryMeta = useMemo(() => {
     if (activeCategory === 'loans') {
-      return {
-        icon: MdAccountBalanceWallet,
-        color: "#10B981",
-        route: "/partner/products?category=personal_loan"
-      };
+      return { icon: MdAccountBalanceWallet, color: "#10B981", route: "/partner/leads/add" };
     }
     if (activeCategory === 'insurance') {
-      return {
-        icon: MdShield,
-        color: "#F59E0B",
-        route: "/partner/products?category=insurance"
-      };
+      return { icon: MdShield, color: "#F59E0B", route: "/partner/leads/add" };
     }
-    return {
-      icon: MdCreditCard,
-      color: C.primary,
-      route: "/partner/products?category=credit_card"
-    };
+    return { icon: MdCreditCard, color: C.primary, route: "/partner/leads/add" };
   }, [activeCategory, C.primary]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
+      {/* ── ROLE SUMMARY CARD (Top Context) ── */}
+      <div style={{
+        background: C.card,
+        borderRadius: '20px',
+        padding: '18px 24px',
+        border: `1px solid ${C.border}`,
+        boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '46px', height: '46px', borderRadius: '14px',
+            background: `${C.primary}15`, color: C.primary,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '20px', fontWeight: 800
+          }}>
+            👨‍💼
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase' }}>
+              Staff & Role Context
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
+              Employee — <span style={{ color: C.primary }}>120</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setSelectedMoreInfoCard(employeeRoleCard)}
+          style={{
+            background: isDark ? C.bgSecondary : '#F1F5F9',
+            color: C.primary,
+            border: `1px solid ${C.border}`,
+            borderRadius: '12px',
+            padding: '8px 16px',
+            fontSize: '12px',
+            fontWeight: 800,
+            cursor: 'pointer'
+          }}
+        >
+          More Info
+        </button>
+      </div>
+
       {/* ── SEARCH & ACTION HEADER BAR ── */}
       <div style={{
         background: C.card,
@@ -136,7 +178,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           <MdSearch size={20} color={C.textMid} />
           <input
             type="text"
-            placeholder="Search cards, banks, or roles..."
+            placeholder="Search cards, banks, or types..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ background: 'none', border: 'none', color: C.text, width: '100%', fontSize: '14px', outline: 'none' }}
@@ -148,7 +190,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             Showing <strong>{filteredCards.length}</strong> items
           </span>
           <button
-            onClick={() => navigate(categoryMeta.route)}
+            onClick={() => navigate('/partner/leads/add')}
             style={{
               padding: '10px 18px', borderRadius: '12px', border: 'none',
               background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
@@ -163,7 +205,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         </div>
       </div>
 
-      {/* ── CARDS BREAKDOWN GRID VIEW ── */}
+      {/* ── CARDS BREAKDOWN GRID VIEW (2 per row on Mobile) ── */}
       <style>{`
         @media (max-width: 767px) {
           .category-cards-grid {
@@ -196,44 +238,83 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(180px, 1fr))",
             gap: isMobile ? "10px" : "16px"
           }}>
-            {filteredCards.map((card, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: isDark ? C.bgSecondary : "#F8FAFC",
-                  borderRadius: "14px",
-                  padding: isMobile ? "12px" : "16px",
-                  border: `1px solid ${C.border}`,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  transition: "all 0.2s ease"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase", letterSpacing: '0.5px' }}>
-                      {card.sub}
-                    </span>
-                    <button
-                      onClick={() => setSelectedMoreInfoCard(card)}
-                      style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
-                    >
-                      More info
-                    </button>
-                  </div>
-                  <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
-                    {card.count}
-                  </div>
-                </div>
+            {filteredCards.map((card, idx) => {
+              const cardSlug = card.slug || toSlug(card.title);
+              const cardDetailPath = `${categoryBasePath}/${cardSlug}`;
 
-                <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {card.title}
+              return (
+                <div
+                  key={idx}
+                  onClick={() => navigate(cardDetailPath)}
+                  style={{
+                    background: isDark ? C.bgSecondary : "#F8FAFC",
+                    borderRadius: "14px",
+                    padding: isMobile ? "12px" : "16px",
+                    border: `1px solid ${C.border}`,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    cursor: 'pointer',
+                    transition: "all 0.2s ease"
+                  }}
+                  className="hover-card-clickable"
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase", letterSpacing: '0.5px' }}>
+                        {card.sub}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedMoreInfoCard({ ...card, route: cardDetailPath });
+                        }}
+                        style={{ background: "none", border: "none", color: C.primary, fontSize: "11px", fontWeight: 800, cursor: "pointer", padding: 0 }}
+                      >
+                        More info
+                      </button>
+                    </div>
+                    <div style={{ fontSize: "22px", fontWeight: 900, color: C.text, margin: "8px 0 4px" }}>
+                      {card.count}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {card.title}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
+      </div>
+
+      {/* ── SUMMARY CARDS ROW (Bottom of Category Dashboard) ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: isMobile ? "10px" : "16px"
+      }}>
+        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Teams</span>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>15</div>
+          <span style={{ fontSize: "11px", color: C.green, fontWeight: 700 }}>Active network</span>
+        </div>
+        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Earning</span>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
+          <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Calculated live</span>
+        </div>
+        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Today's Earning</span>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
+          <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Updated today</span>
+        </div>
+        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Inactive Team</span>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: C.red, marginTop: "4px" }}>2</div>
+          <span style={{ fontSize: "11px", color: C.red, fontWeight: 600 }}>Action required</span>
+        </div>
       </div>
 
       {/* ═══ MORE INFO DETAIL MODAL ═══ */}
@@ -249,7 +330,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
             display: 'flex', flexDirection: 'column'
           }}>
-            {/* Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, background: isDark ? C.bgSecondary : '#F8FAFC', position: 'relative' }}>
               <button
                 onClick={() => setSelectedMoreInfoCard(null)}
@@ -263,7 +343,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               >
                 ✕
               </button>
-
               <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
                 {selectedMoreInfoCard.sub} Overview
               </span>
@@ -274,47 +353,33 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 Detailed performance metrics and application controls
               </p>
             </div>
-
-            {/* Content: 4 Metric Cards & Apply Now */}
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                
-                {/* 1. Available Cards */}
                 <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Available Offers</span>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
                     {selectedMoreInfoCard.availableCards}
                   </div>
                 </div>
-
-                {/* 2. Commission */}
                 <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Commission</span>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '4px' }}>
                     {selectedMoreInfoCard.commission}
                   </div>
                 </div>
-
-                {/* 3. Applications */}
                 <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Applications</span>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
                     {selectedMoreInfoCard.applications}
                   </div>
                 </div>
-
-                {/* 4. Approval Ratio */}
                 <div style={{ background: isDark ? C.bgSecondary : '#F8FAFC', padding: '16px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Approval Ratio</span>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: C.primary, marginTop: '4px' }}>
                     {selectedMoreInfoCard.approvalRatio}
                   </div>
                 </div>
-
               </div>
-
-              {/* Apply Now Action Button */}
               <button
                 onClick={() => {
                   const targetRoute = selectedMoreInfoCard.route || categoryMeta.route;
@@ -332,12 +397,10 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 <MdAdd size={20} />
                 <span>Apply / Add Lead Now</span>
               </button>
-
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

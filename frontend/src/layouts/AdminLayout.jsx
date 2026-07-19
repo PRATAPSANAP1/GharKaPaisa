@@ -21,6 +21,8 @@ const AdminLayout = () => {
     { path: '/admin/dashboard', label: 'Dashboard', icon: <Icons.dashboard size={18} /> },
     { path: '/admin/partners', label: 'Partners', icon: <Icons.profile size={18} /> },
     { path: '/admin/applications', label: 'Applications', icon: <Icons.creditCard size={18} /> },
+    { path: '/admin/loans/personal-loan/list', label: 'Loans', icon: <Icons.wallet size={18} /> },
+    { path: '/admin/insurance/health-insurance/list', label: 'Insurance', icon: <Icons.trending size={18} /> },
     { path: '/admin/leads', label: 'Leads', icon: <Icons.trending size={18} /> },
     { path: '/admin/direct-leads', label: 'Direct Leads', icon: <Icons.creditCard size={18} /> },
     { path: '/admin/withdrawals', label: 'Withdrawals', icon: <Icons.wallet size={18} /> },
