@@ -178,7 +178,7 @@ const SuperAdminLayout = () => {
     {
       title: "PRODUCTS & PARTNERS",
       items: [
-        { path: '/super-admin/banks', label: 'Lending Partners', icon: <Icons.wallet size={16} /> },
+        { path: '/super-admin/banks', label: 'Manage Banks', icon: <Icons.wallet size={16} /> },
         { path: '/super-admin/products', label: 'Products', icon: <Icons.investment size={16} /> },
         { path: '/super-admin/product-links', label: 'Product Link Management', icon: <Icons.trending size={16} /> },
       ]

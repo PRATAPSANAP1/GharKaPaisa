@@ -94,7 +94,6 @@ export default function ManageBanks() {
     try {
       const res = await api.delete(`/banks/${bankToDelete.id}`);
       if (res.data?.success) {
-        alert(`${bankToDelete.name} deleted successfully!`);
         setDeleteModalOpen(false);
         setBankToDelete(null);
         fetchBanks();
@@ -209,7 +208,7 @@ export default function ManageBanks() {
           }}
         >
           <MdAdd size={20} />
-          <span>+ New Bank</span>
+          <span>New Bank</span>
         </button>
       </div>
 
@@ -250,7 +249,7 @@ export default function ManageBanks() {
             {loading ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading banks catalog...</td></tr>
             ) : banks.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No banks found. Click <strong>+ New Bank</strong> to add one!</td></tr>
+              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No banks found. Click <strong>New Bank</strong> to add one!</td></tr>
             ) : (
               banks.map(bank => (
                 <tr key={bank.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -307,7 +306,7 @@ export default function ManageBanks() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '500px', width: '100%', border: `1px solid ${C.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '0 0 16px 0' }}>
-              {editItem ? 'Edit Bank Partner' : '+ New Bank'}
+              {editItem ? 'Edit Bank Partner' : 'New Bank'}
             </h3>
             
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

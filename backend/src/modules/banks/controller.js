@@ -251,9 +251,30 @@ const deleteBank = async (req, res, next) => {
   }
 };
 
+// GET /api/v1/banks/active — Public, lightweight, no auth
+// Returns only active banks with product counts, ordered by display_order
+const getActiveBanks = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        b.id, b.name, b.short_code, b.logo_url, b.display_order,
+        COUNT(p.id) FILTER (WHERE p.status = 'Active' OR p.is_active = true)::int as products_count
+      FROM banks b
+      LEFT JOIN products p ON p.bank_id = b.id
+      WHERE b.is_active = true OR b.status = 'Active'
+      GROUP BY b.id
+      ORDER BY b.display_order ASC, b.name ASC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listAllBanks,
   getBankById,
+  getActiveBanks,
   createBank,
   updateBank,
   updateBankStatus,

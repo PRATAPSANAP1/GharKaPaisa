@@ -7,6 +7,7 @@ const { upload } = require('../../services/aws/s3.service.js');
 
 // Public endpoints to fetch banks (Home page, partner panel, etc.)
 router.get('/', ctrl.listAllBanks);
+router.get('/active', ctrl.getActiveBanks);
 router.get('/:id', ctrl.getBankById);
 
 // Admin / Super Admin protected endpoints for Bank CRUD
