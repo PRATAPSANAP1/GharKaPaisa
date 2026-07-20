@@ -4,24 +4,32 @@ const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js')
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate } = require('../../utils/response/response');
 
-const CLOUDFRONT_URL = process.env.CLOUDFRONT_URL || "https://d18qh1l6j6vziz.cloudfront.net";
-
 const mapBankRow = (bank) => {
   if (!bank) return bank;
-  const processed = { ...bank };
-  if (processed.logo_url) {
-    processed.logo_url = processed.logo_url.replace(
-      "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
-      CLOUDFRONT_URL
-    );
-  }
-  if (processed.logo) {
-    processed.logo = processed.logo.replace(
-      "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
-      CLOUDFRONT_URL
-    );
-  }
-  return processed;
+
+  const CDN =
+    process.env.CLOUDFRONT_URL ||
+    "https://d18qh1l6j6vziz.cloudfront.net";
+
+  const logo = bank.logo
+    ? bank.logo.replace(
+        "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+        CDN
+      )
+    : null;
+
+  const logo_url = bank.logo_url
+    ? bank.logo_url.replace(
+        "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+        CDN
+      )
+    : null;
+
+  return {
+    ...bank,
+    logo,
+    logo_url
+  };
 };
 
 // GET /api/v1/banks (Admin/Super Admin/Public — list all banks)
