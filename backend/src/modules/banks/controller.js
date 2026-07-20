@@ -278,12 +278,15 @@ const deleteBank = async (req, res, next) => {
 };
 
 // GET /api/v1/banks/active — Public, lightweight, no auth
-// Returns only active banks with product counts, ordered by display_order
 const getActiveBanks = async (req, res, next) => {
   try {
     const { rows } = await query(`
-      SELECT 
-        b.id, b.name as bank_name, b.short_code, b.logo_url as logo, b.display_order,
+      SELECT
+        b.id,
+        b.name as bank_name,
+        b.short_code,
+        b.logo_url as logo,
+        b.display_order,
         COUNT(p.id) FILTER (WHERE p.status = 'Active' OR p.is_active = true)::int as products_count
       FROM banks b
       LEFT JOIN products p ON p.bank_id = b.id
@@ -291,7 +294,22 @@ const getActiveBanks = async (req, res, next) => {
       GROUP BY b.id
       ORDER BY b.display_order ASC, b.name ASC
     `);
-    return success(res, rows.map(mapBankRow));
+
+    const cloudfrontUrl =
+      process.env.CLOUDFRONT_URL ||
+      "https://d18qh1l6j6vziz.cloudfront.net";
+
+    const data = rows.map((bank) => ({
+      ...bank,
+      logo: bank.logo
+        ? bank.logo.replace(
+            "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+            cloudfrontUrl
+          )
+        : null,
+    }));
+
+    return success(res, data);
   } catch (err) {
     next(err);
   }
