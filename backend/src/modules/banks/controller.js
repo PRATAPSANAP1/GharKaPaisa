@@ -4,6 +4,26 @@ const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js')
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate } = require('../../utils/response/response');
 
+const CLOUDFRONT_URL = process.env.CLOUDFRONT_URL || "https://d18qh1l6j6vziz.cloudfront.net";
+
+const mapBankRow = (bank) => {
+  if (!bank) return bank;
+  const processed = { ...bank };
+  if (processed.logo_url) {
+    processed.logo_url = processed.logo_url.replace(
+      "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+      CLOUDFRONT_URL
+    );
+  }
+  if (processed.logo) {
+    processed.logo = processed.logo.replace(
+      "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+      CLOUDFRONT_URL
+    );
+  }
+  return processed;
+};
+
 // GET /api/v1/banks (Admin/Super Admin/Public — list all banks)
 const listAllBanks = async (req, res, next) => {
   try {
@@ -50,7 +70,7 @@ const listAllBanks = async (req, res, next) => {
     ]);
 
     const total = parseInt(countResult.rows[0].count);
-    return paginate(res, dataResult.rows, total, page, limit);
+    return paginate(res, dataResult.rows.map(mapBankRow), total, page, limit);
   } catch (err) {
     next(err);
   }
@@ -70,7 +90,7 @@ const getBankById = async (req, res, next) => {
     `, [id]);
 
     if (!bank) return notFound(res, 'Bank partner not found');
-    return success(res, bank);
+    return success(res, mapBankRow(bank));
   } catch (err) {
     next(err);
   }
@@ -119,7 +139,7 @@ const createBank = async (req, res, next) => {
     // Log action to audit logs
     await logAction(req, 'CREATE_BANK', bank.id, { name, short_code });
 
-    return created(res, bank, 'Bank partner created successfully');
+    return created(res, mapBankRow(bank), 'Bank partner created successfully');
   } catch (err) {
     next(err);
   }
@@ -191,7 +211,7 @@ const updateBank = async (req, res, next) => {
 
     await logAction(req, 'UPDATE_BANK', bank.id, { name: bank.name, status: bank.status, is_active: bank.is_active });
 
-    return success(res, bank, 'Bank partner updated successfully');
+    return success(res, mapBankRow(bank), 'Bank partner updated successfully');
   } catch (err) {
     next(err);
   }
@@ -215,7 +235,7 @@ const updateBankStatus = async (req, res, next) => {
     `, [newStatus, newIsActive, id]);
 
     await logAction(req, 'UPDATE_BANK_STATUS', id, { status: newStatus });
-    return success(res, updated, 'Bank status updated successfully');
+    return success(res, mapBankRow(updated), 'Bank status updated successfully');
   } catch (err) {
     next(err);
   }
@@ -263,7 +283,7 @@ const getActiveBanks = async (req, res, next) => {
       GROUP BY b.id
       ORDER BY b.display_order ASC, b.name ASC
     `);
-    return success(res, rows);
+    return success(res, rows.map(mapBankRow));
   } catch (err) {
     next(err);
   }
