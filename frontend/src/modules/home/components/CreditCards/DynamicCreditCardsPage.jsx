@@ -38,6 +38,26 @@ export default function DynamicCreditCardsPage() {
   // Comparison State
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState([]);
+  const [showCardBSelector, setShowCardBSelector] = useState(false);
+
+  // Tab details inside Card Details modal
+  const [detailTab, setDetailTab] = useState('features');
+  const [selectedCardFaqs, setSelectedCardFaqs] = useState([]);
+
+  useEffect(() => {
+    if (selectedCard) {
+      setDetailTab('features');
+      setSelectedCardFaqs([]);
+      fetch(`${getApiV1Url()}/products/${selectedCard.id}/faqs`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success && Array.isArray(data.data)) {
+            setSelectedCardFaqs(data.data);
+          }
+        })
+        .catch(err => console.error("Error fetching card FAQs:", err));
+    }
+  }, [selectedCard]);
 
   // Fetch bank and credit cards from API
   useEffect(() => {
@@ -104,17 +124,7 @@ export default function DynamicCreditCardsPage() {
     window.open(url, '_blank');
   };
 
-  const toggleCompareSelection = (card) => {
-    if (selectedForCompare.find(c => c.id === card.id)) {
-      setSelectedForCompare(selectedForCompare.filter(c => c.id !== card.id));
-    } else {
-      if (selectedForCompare.length >= 4) {
-        alert('You can compare up to 4 credit cards at a time.');
-        return;
-      }
-      setSelectedForCompare([...selectedForCompare, card]);
-    }
-  };
+
 
   // Filter cards by category & search query
   const filteredCards = cards.filter(card => {
@@ -286,38 +296,7 @@ export default function DynamicCreditCardsPage() {
       {/* ── CARDS LISTING & COMPARISON TOOL BAR ── */}
       <div style={{ maxWidth: '1280px', margin: '24px auto 0', padding: '0 24px' }}>
         
-        {/* Sticky Compare Bar if items selected */}
-        {selectedForCompare.length > 0 && (
-          <div style={{
-            position: 'sticky',
-            top: '80px',
-            zIndex: 100,
-            background: isDark ? '#1e293b' : '#ffffff',
-            border: `2px solid ${bankThemeColor}`,
-            borderRadius: '16px',
-            padding: '14px 20px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800 }}>Compare ({selectedForCompare.length}/4 selected):</span>
-              {selectedForCompare.map(c => (
-                <span key={c.id} style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '14px', background: `${bankThemeColor}20`, color: bankThemeColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {c.name}
-                  <FaTimes size={10} style={{ cursor: 'pointer' }} onClick={() => toggleCompareSelection(c)} />
-                </span>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setSelectedForCompare([])} style={{ padding: '6px 12px', background: 'none', border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', color: 'inherit' }}>Clear</button>
-              <button onClick={() => setIsCompareOpen(true)} style={{ padding: '6px 16px', background: bankThemeColor, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Compare Now</button>
-            </div>
-          </div>
-        )}
+
 
         {filteredCards.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -411,20 +390,23 @@ export default function DynamicCreditCardsPage() {
                               Details
                             </button>
                             <button
-                              onClick={() => toggleCompareSelection(card)}
+                              onClick={() => {
+                                setSelectedForCompare([card]);
+                                setIsCompareOpen(true);
+                              }}
                               style={{
                                 flex: 1,
                                 padding: '8px',
-                                background: isComparing ? `${bankThemeColor}20` : 'transparent',
-                                color: isComparing ? bankThemeColor : (isDark ? '#94a3b8' : '#64748b'),
-                                border: `1px solid ${isComparing ? bankThemeColor : (isDark ? '#334155' : '#cbd5e1')}`,
+                                background: 'transparent',
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
                                 borderRadius: '8px',
                                 fontSize: '12px',
                                 fontWeight: 700,
                                 cursor: 'pointer'
                               }}
                             >
-                              {isComparing ? '✓ Comparing' : '+ Compare'}
+                              + Compare
                             </button>
                           </div>
 
@@ -500,52 +482,141 @@ export default function DynamicCreditCardsPage() {
               </div>
             </div>
 
-            <p style={{ fontSize: '14px', color: isDark ? '#cbd5e1' : '#475569', lineHeight: 1.5, marginBottom: '20px' }}>{selectedCard.description}</p>
+            {/* Horizontal Tabs */}
+            <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, paddingBottom: '10px', marginBottom: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              {[
+                { id: 'features', label: 'Features' },
+                { id: 'fees', label: 'Fees & Charges' },
+                { id: 'eligibility', label: 'Eligibility' },
+                { id: 'documents', label: 'Documents' },
+                { id: 'faqs', label: 'FAQs' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setDetailTab(t.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: detailTab === t.id ? bankThemeColor : 'transparent',
+                    color: detailTab === t.id ? '#FFF' : (isDark ? '#94a3b8' : '#475569'),
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-            {/* Features */}
-            {(selectedCard.features || selectedCard.features_list) && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 10px 0' }}>Key Features</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(Array.isArray(selectedCard.features) ? selectedCard.features : (selectedCard.features_list || [])).map((f, i) => (
-                    <div key={i} style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
-                      <FaCheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
-                      <span>{typeof f === 'string' ? f : (f.title || f.label)}</span>
-                    </div>
-                  ))}
+            {/* Tab Contents */}
+            <div style={{ minHeight: '200px', marginBottom: '24px' }}>
+              {detailTab === 'features' && (
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Key Features & Benefits</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(Array.isArray(selectedCard.features) ? selectedCard.features : (selectedCard.features_list || [])).map((f, i) => (
+                      <div key={i} style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
+                        <FaCheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                        <span>{typeof f === 'string' ? f : (f.title || f.label)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Eligibility & Documents */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ padding: '14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '12px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 8px 0', color: bankThemeColor }}>Eligibility Criteria</h4>
-                <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px', color: isDark ? '#94a3b8' : '#64748b' }}>
-                  <div><strong>Age:</strong> {selectedCard.min_age || 21} - {selectedCard.max_age || 65} Years</div>
-                  <div><strong>Min Income:</strong> ₹{selectedCard.min_income ? Number(selectedCard.min_income).toLocaleString('en-IN') : '25,000'}/mo</div>
-                  {selectedCard.eligibility_criteria && (
-                    typeof selectedCard.eligibility_criteria === 'string' ? (
-                      <div style={{ marginTop: '4px', whiteSpace: 'pre-line', lineHeight: 1.4 }}>{selectedCard.eligibility_criteria}</div>
-                    ) : (
-                      Object.entries(selectedCard.eligibility_criteria).map(([k, v]) => (
-                        <div key={k} style={{ textTransform: 'capitalize' }}>
-                          <strong>{k.replace(/_/g, ' ')}:</strong> {String(v)}
-                        </div>
-                      ))
-                    )
+              {detailTab === 'fees' && (
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Fees & Charges</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Joining Fee</span>
+                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.joining_fee || selectedCard.fees_structure?.joining_fee || '₹0'}</div>
+                    </div>
+                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Annual Fee</span>
+                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.annual_fee || selectedCard.fees_structure?.annual_fee || '₹500'}</div>
+                    </div>
+                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Interest Rate</span>
+                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.interest_rate || selectedCard.fees_structure?.interest_rate || '3.5% p.m.'}</div>
+                    </div>
+                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>Late Payment Charges</span>
+                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.fees_structure?.late_payment_charges || 'Up to ₹1300'}</div>
+                    </div>
+                  </div>
+                  {selectedCard.fees_charges && (
+                    <p style={{ fontSize: '11px', color: '#64748b', marginTop: '12px', lineHeight: 1.4 }}>{selectedCard.fees_charges}</p>
                   )}
                 </div>
-              </div>
+              )}
 
-              <div style={{ padding: '14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '12px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 8px 0', color: bankThemeColor }}>Required Documents</h4>
-                <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px', color: isDark ? '#94a3b8' : '#64748b' }}>
-                  {(Array.isArray(selectedCard.required_documents) && selectedCard.required_documents.length > 0 ? selectedCard.required_documents : ['PAN Card', 'Aadhaar Card', 'Income Proof / Salary Slip']).map((doc, dI) => (
-                    <div key={dI}>• {doc}</div>
-                  ))}
+              {detailTab === 'eligibility' && (
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Eligibility Requirements</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: isDark ? '#cbd5e1' : '#334155' }}>
+                    <div><strong>Min Age:</strong> {selectedCard.min_age || 21} Years</div>
+                    <div><strong>Max Age:</strong> {selectedCard.max_age || 65} Years</div>
+                    <div><strong>Min monthly income:</strong> ₹{selectedCard.min_income ? Number(selectedCard.min_income).toLocaleString('en-IN') : '25,000'}</div>
+                    {selectedCard.eligibility_criteria && (
+                      typeof selectedCard.eligibility_criteria === 'string' ? (
+                        <div style={{ marginTop: '8px', padding: '10px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, whiteSpace: 'pre-line', lineHeight: 1.4 }}>{selectedCard.eligibility_criteria}</div>
+                      ) : (
+                        Object.entries(selectedCard.eligibility_criteria).map(([k, v]) => (
+                          <div key={k} style={{ textTransform: 'capitalize' }}>
+                            <strong>{k.replace(/_/g, ' ')}:</strong> {String(v)}
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {detailTab === 'documents' && (
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Documents Required</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(Array.isArray(selectedCard.required_documents) && selectedCard.required_documents.length > 0 ? selectedCard.required_documents : ['PAN Card', 'Aadhaar Card', 'Income Proof / Salary Slip']).map((doc, dI) => (
+                      <div key={dI} style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: bankThemeColor, flexShrink: 0 }} />
+                        <span>{doc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'faqs' && (
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Frequently Asked Questions</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedCardFaqs.length > 0 ? (
+                      selectedCardFaqs.map((faq, idx) => (
+                        <div key={idx} style={{ padding: '10px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                          <div style={{ fontWeight: 700, fontSize: '12.5px', marginBottom: '4px' }}>Q: {faq.question}</div>
+                          <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', lineHeight: 1.4 }}>A: {faq.answer}</div>
+                        </div>
+                      ))
+                    ) : (
+                      [
+                        { question: 'What is the annual fee for this card?', answer: `The annual fee is ${selectedCard.annual_fee || selectedCard.fees_structure?.annual_fee || '₹500'}.` },
+                        { question: 'Who is eligible to apply?', answer: `Any Indian resident aged between ${selectedCard.min_age || 21} and ${selectedCard.max_age || 65} with a regular monthly income source starting from ₹${selectedCard.min_income ? Number(selectedCard.min_income).toLocaleString('en-IN') : '25,000'}.` },
+                        { question: 'What documents are required for application?', answer: 'You will need a PAN Card, Aadhaar Card, and income proof (like the latest 3 months salary slips or ITR).' }
+                      ].map((faq, idx) => (
+                        <div key={idx} style={{ padding: '10px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                          <div style={{ fontWeight: 700, fontSize: '12.5px', marginBottom: '4px' }}>Q: {faq.question}</div>
+                          <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', lineHeight: 1.4 }}>A: {faq.answer}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button onClick={() => { setSelectedCard(null); handleApplyClick(selectedCard); }} style={{ width: '100%', padding: '12px', background: bankThemeColor, color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>
@@ -561,45 +632,168 @@ export default function DynamicCreditCardsPage() {
           <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '900px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
               <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Compare Credit Cards</h3>
-              <button onClick={() => setIsCompareOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}><FaTimes size={18} /></button>
+              <button onClick={() => { setIsCompareOpen(false); setShowCardBSelector(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}><FaTimes size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', flexShrink: 0 }}>
+              {/* Card A Box */}
+              <div style={{ flex: 1, padding: '16px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: '240px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 800 }}>Base Card</div>
+                {selectedForCompare[0] && (
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: isDark ? '#1e293b' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
+                      <img src={selectedForCompare[0].card_image_url || selectedForCompare[0].image_url || getCardSpecificImage(selectedForCompare[0].name) || bank.logo_url} alt={selectedForCompare[0].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{selectedForCompare[0].name}</h4>
+                      <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[0].annual_fee || 'Standard Fee'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card B Box */}
+              <div style={{ flex: 1, padding: '16px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: '240px', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                {selectedForCompare[1] ? (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Comparing With</span>
+                      <button onClick={() => setShowCardBSelector(true)} style={{ background: 'none', border: 'none', color: bankThemeColor, fontSize: '12px', fontWeight: 700, cursor: 'pointer', padding: 0 }}>Change</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: isDark ? '#1e293b' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
+                        <img src={selectedForCompare[1].card_image_url || selectedForCompare[1].image_url || getCardSpecificImage(selectedForCompare[1].name) || bank.logo_url} alt={selectedForCompare[1].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{selectedForCompare[1].name}</h4>
+                        <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[1].annual_fee || 'Standard Fee'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <button
+                      onClick={() => setShowCardBSelector(true)}
+                      style={{
+                        padding: '8px 16px',
+                        background: bankThemeColor,
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Select Card to Compare
+                    </button>
+                  </div>
+                )}
+
+                {showCardBSelector && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '55px',
+                    left: '16px',
+                    right: '16px',
+                    background: isDark ? '#1e293b' : '#ffffff',
+                    border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+                    borderRadius: '12px',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    zIndex: 100,
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)'
+                  }}>
+                    <div style={{ padding: '8px 12px', fontWeight: 700, borderBottom: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                      <span>Select Card to Compare</span>
+                      <FaTimes size={10} style={{ cursor: 'pointer' }} onClick={() => setShowCardBSelector(false)} />
+                    </div>
+                    {cards.filter(c => c.id !== selectedForCompare[0]?.id).map(c => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedForCompare([selectedForCompare[0], c]);
+                          setShowCardBSelector(false);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <img src={c.card_image_url || c.image_url || getCardSpecificImage(c.name) || bank.logo_url} style={{ width: '30px', height: '20px', objectFit: 'contain' }} />
+                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: isDark ? '#1e293b' : '#ffffff' }}>
-                  <tr style={{ borderBottom: `2px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                    <th style={{ padding: '12px', width: '180px', background: isDark ? '#1e293b' : '#ffffff' }}>Feature / Card</th>
-                    {selectedForCompare.map(c => (
-                      <th key={c.id} style={{ padding: '12px', minWidth: '160px', verticalAlign: 'top', background: isDark ? '#1e293b' : '#ffffff' }}>
-                        <div style={{ fontWeight: 800, color: bankThemeColor }}>{c.name}</div>
-                        <div style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b' }}>{c.annual_fee || 'Standard Fee'}</div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                    <td style={{ padding: '12px', fontWeight: 700 }}>Category</td>
-                    {selectedForCompare.map(c => <td key={c.id} style={{ padding: '12px' }}>{c.sub_category || c.category}</td>)}
-                  </tr>
-                  <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                    <td style={{ padding: '12px', fontWeight: 700 }}>Min Age</td>
-                    {selectedForCompare.map(c => <td key={c.id} style={{ padding: '12px' }}>{c.min_age || 21} Years</td>)}
-                  </tr>
-                  <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                    <td style={{ padding: '12px', fontWeight: 700 }}>Min Income</td>
-                    {selectedForCompare.map(c => <td key={c.id} style={{ padding: '12px' }}>₹{c.min_income ? Number(c.min_income).toLocaleString('en-IN') : '25,000'}/mo</td>)}
-                  </tr>
-                  <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                    <td style={{ padding: '12px', fontWeight: 700 }}>Highlights</td>
-                    {selectedForCompare.map(c => (
-                      <td key={c.id} style={{ padding: '12px' }}>
-                        <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.4 }}>{c.description}</p>
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
+              {selectedForCompare[1] ? (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: isDark ? '#1e293b' : '#ffffff' }}>
+                    <tr style={{ borderBottom: `2px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                      <th style={{ padding: '12px', width: '180px', background: isDark ? '#1e293b' : '#ffffff' }}>Feature</th>
+                      <th style={{ padding: '12px', background: isDark ? '#1e293b' : '#ffffff' }}>{selectedForCompare[0]?.name}</th>
+                      <th style={{ padding: '12px', background: isDark ? '#1e293b' : '#ffffff' }}>{selectedForCompare[1]?.name}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Category</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.sub_category || selectedForCompare[0]?.category}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.sub_category || selectedForCompare[1]?.category}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Min Age</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.min_age || 21} Years</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.min_age || 21} Years</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Min Income</td>
+                      <td style={{ padding: '12px' }}>₹{selectedForCompare[0]?.min_income ? Number(selectedForCompare[0]?.min_income).toLocaleString('en-IN') : '25,000'}/mo</td>
+                      <td style={{ padding: '12px' }}>₹{selectedForCompare[1]?.min_income ? Number(selectedForCompare[1]?.min_income).toLocaleString('en-IN') : '25,000'}/mo</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Joining Fee</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.joining_fee || selectedForCompare[0]?.fees_structure?.joining_fee || '₹0'}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.joining_fee || selectedForCompare[1]?.fees_structure?.joining_fee || '₹0'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Annual Fee</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.annual_fee || selectedForCompare[0]?.fees_structure?.annual_fee || '₹500'}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.annual_fee || selectedForCompare[1]?.fees_structure?.annual_fee || '₹500'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Interest Rate</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.interest_rate || selectedForCompare[0]?.fees_structure?.interest_rate || '3.5% p.m.'}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.interest_rate || selectedForCompare[1]?.fees_structure?.interest_rate || '3.5% p.m.'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Lounge Access</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.lounge_access || selectedForCompare[0]?.compare_specs?.lounge || 'Nil'}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.lounge_access || selectedForCompare[1]?.compare_specs?.lounge || 'Nil'}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
+                      <td style={{ padding: '12px', fontWeight: 700 }}>Fuel Surcharge</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.fuel_surcharge || selectedForCompare[0]?.compare_specs?.fuel || 'Nil'}</td>
+                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.fuel_surcharge || selectedForCompare[1]?.compare_specs?.fuel || 'Nil'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: `1px dashed ${isDark ? '#334155' : '#cbd5e1'}`, borderRadius: '16px' }}>
+                  <FaRegCreditCard size={36} style={{ color: bankThemeColor, marginBottom: '12px', opacity: 0.6 }} />
+                  <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>Select a Second Card to Compare</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Click "+ Select Card to Compare" above to choose another card and view detailed specs.</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
