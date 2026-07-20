@@ -4,7 +4,7 @@ import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
-  MdSearch, MdFilterList, MdAdd, MdModeEdit, MdDelete, MdContentCopy,
+  MdSearch, MdFilterList, MdAdd, MdModeEdit, MdDelete,
   MdStar, MdVisibility, MdAttachMoney, MdSettings, MdCheck, MdClose,
   MdDragIndicator, MdBusiness, MdCategory, MdInfo, MdLabel
 } from "react-icons/md";
@@ -278,21 +278,6 @@ export default function ManageProducts() {
     setModalOpen(true);
   };
 
-  const handleDuplicate = (item) => {
-    setEditItem(null); // Save as new
-    setModalTab("core");
-    setForm({
-      ...item,
-      name: `${item.name} (Copy)`,
-      features: JSON.stringify(item.features || []),
-      application_url: item.application_url || item.public_url || "",
-      logo: item.logo || "",
-      banner: item.banner || "",
-      image: item.image || item.image_url || ""
-    });
-    setModalOpen(true);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -520,7 +505,6 @@ export default function ManageProducts() {
                           <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                             <button onClick={() => { setViewProduct(p); setViewModalOpen(true); }} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="View Details"><MdVisibility size={16} /></button>
                             <button onClick={() => openEditModal(p)} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="Edit"><MdModeEdit size={16} /></button>
-                            <button onClick={() => handleDuplicate(p)} style={{ padding: "6px", border: `1px solid ${C.border}`, background: C.bgSecondary, cursor: "pointer", borderRadius: "6px", color: C.text }} title="Duplicate"><MdContentCopy size={16} /></button>
                             <button onClick={() => handleDelete(p.id)} style={{ padding: "6px", border: `1px solid ${C.red}40`, background: `${C.red}10`, cursor: "pointer", borderRadius: "6px", color: C.red }} title="Delete"><MdDelete size={16} /></button>
                           </div>
                         </td>

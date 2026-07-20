@@ -4,7 +4,7 @@ import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
-  MdAdd, MdSearch, MdEdit, MdDelete, MdContentCopy, MdVisibility,
+  MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload 
 } from "react-icons/md";
 
@@ -285,18 +285,6 @@ export default function ManageAdminProducts() {
     setModalOpen(true);
   };
 
-  const handleDuplicate = async (id) => {
-    try {
-      const res = await api.post(`/products/${id}/duplicate`);
-      if (res.data?.success) {
-        alert("Product duplicated successfully!");
-        fetchProducts();
-      }
-    } catch (e) {
-      alert(e.response?.data?.message || "Failed to duplicate product");
-    }
-  };
-
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
@@ -539,9 +527,6 @@ export default function ManageAdminProducts() {
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
                       <button onClick={() => openEditModal(prod)} title="Edit" style={{ padding: '6px 10px', background: `${C.teal}15`, color: C.teal, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                         <MdEdit size={16} />
-                      </button>
-                      <button onClick={() => handleDuplicate(prod.id)} title="Duplicate" style={{ padding: '6px 10px', background: `${C.teal}15`, color: C.teal, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                        <MdContentCopy size={16} />
                       </button>
                       <button onClick={() => handleDelete(prod.id)} title="Delete" style={{ padding: '6px 10px', background: '#EF444415', color: '#EF4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                         <MdDelete size={16} />
