@@ -19,7 +19,7 @@ import * as FaIcons from "react-icons/fa";
 
 // Import modular data lists
 import { bankCardsDetails, ltfCards } from "./components/CreditCards/index";
-import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
+// import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
 import { getCardSpecificImage } from "./components/CreditCards/cardImageHelper";
 import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
 import { loansData } from "./components/Loans/index";
@@ -593,9 +593,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
     );
   }
 
-  if (category.id === "bank-hdfc") {
-    return <HDFCCardsPage onBack={onBack} C={C} isMobile={isMobile} breadcrumbs={breadcrumbs} />;
-  }
+
 
   if (category.type === "bank-detail") {
     // Filtered sections logic
@@ -2067,7 +2065,7 @@ export default function Home({ onNavigate }) {
     const tLower = (title || "").toLowerCase();
     const imgLower = (image_url || "").toLowerCase();
     if (tLower.includes("pixel") || imgLower.includes("pixel")) {
-      return () => navigate("/credit-cards/hdfc-bank");
+      return () => navigate("/cards/hdfc");
     }
     if (tLower.includes("lifetime") || tLower.includes("ltf") || imgLower.includes("lifetimefree")) {
       return () => navigate("/credit-cards/lifetime-free-credit-cards-ltf");
@@ -2156,7 +2154,7 @@ export default function Home({ onNavigate }) {
       subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
       btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
       bgImage: hdfcBanner,
-      action: () => navigate("/credit-cards/hdfc-bank")
+      action: () => navigate("/cards/hdfc")
     }
   ];
 
@@ -2189,7 +2187,7 @@ export default function Home({ onNavigate }) {
           navigate("/credit-cards/lifetime-free-credit-cards-ltf");
         } else if (searchItem.target.id.startsWith("bank-")) {
           const bankId = searchItem.target.id.split("-")[1];
-          navigate(`/credit-cards/${bankId}-bank`);
+          navigate(`/cards/${bankId}`);
         } else {
           const attractiveCat = attractiveCategories.find(c => c.id === searchItem.target.id);
           if (attractiveCat) {
@@ -2209,7 +2207,7 @@ export default function Home({ onNavigate }) {
           navigate("/credit-cards/lifetime-free-credit-cards-ltf");
         } else if (searchItem.target.id.startsWith("bank-")) {
           const bankId = searchItem.target.id.split("-")[1];
-          navigate(`/credit-cards/${bankId}-bank`);
+          navigate(`/cards/${bankId}`);
         }
       } else if (searchItem.type === "info") {
         if (searchItem.target.id === "terms-and-conditions") {
