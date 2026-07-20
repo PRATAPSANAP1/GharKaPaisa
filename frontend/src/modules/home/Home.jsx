@@ -2922,11 +2922,6 @@ export default function Home({ onNavigate }) {
 
         {/* ── SECTION 4: Popular Credit Card Banks ── */}
         <Section title={t('sections.popularBanks')} C={C}>
-          {(() => {
-            console.log("Active Banks:", activeBanks);
-            console.log("Dynamic Banks:", dynamicBanks);
-            return null;
-          })()}
           <ResponsiveGrid C={C} items={dynamicBanks} onSeeMore={() => navigate("/credit-cards")} onItemClick={handleItemClick} />
         </Section>
 
