@@ -361,7 +361,7 @@ export function CreditCardsSection({ C, navigate }) {
       C={C}
     >
       <ResponsiveGrid 
-        items={activeBanks.length > 0 ? activeBanks : banksList} 
+        items={activeBanks} 
         C={C} 
         onItemClick={(item) => navigate(`/credit-cards/${item.id}-bank`)}
       />
