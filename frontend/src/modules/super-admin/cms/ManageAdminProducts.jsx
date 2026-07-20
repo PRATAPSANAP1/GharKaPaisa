@@ -388,10 +388,27 @@ export default function ManageAdminProducts() {
       };
 
       let res;
-      if (editItem) {
-        res = await api.put(`/products/${editItem.id}`, payload);
+      if (cardImageFile) {
+        const formData = new FormData();
+        formData.append('image', cardImageFile);
+        Object.keys(payload).forEach(key => {
+          if (typeof payload[key] === 'object' && payload[key] !== null) {
+            formData.append(key, JSON.stringify(payload[key]));
+          } else if (payload[key] !== undefined && payload[key] !== null) {
+            formData.append(key, payload[key]);
+          }
+        });
+        if (editItem) {
+          res = await api.put(`/products/${editItem.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        } else {
+          res = await api.post(`/products`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        }
       } else {
-        res = await api.post(`/products`, payload);
+        if (editItem) {
+          res = await api.put(`/products/${editItem.id}`, payload);
+        } else {
+          res = await api.post(`/products`, payload);
+        }
       }
 
       if (res.data?.success) {
@@ -628,8 +645,32 @@ export default function ManageAdminProducts() {
                   )}
 
                   <div>
-                    <label style={S.label}>Card / Product Image URL</label>
-                    <input type="text" placeholder="https://.../card.png" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <label style={S.label}>Card / Product Image (Upload File or URL)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setCardImageFile(e.target.files[0])}
+                      style={{ ...S.input, padding: '8px', cursor: 'pointer' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL (https://.../card.png)"
+                      value={form.image_url}
+                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                      style={{ ...S.input, height: '40px', marginTop: '6px' }}
+                    />
+                    {(cardImageFile || form.image_url) && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : form.image_url}
+                          alt="Card Preview"
+                          style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          {cardImageFile ? `Selected File: ${cardImageFile.name}` : 'URL Preview'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ gridColumn: 'span 2' }}>
@@ -762,8 +803,26 @@ export default function ManageAdminProducts() {
               {modalTab === 'images' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label style={S.label}>Card Image URL</label>
-                    <input type="text" placeholder="https://.../card.png" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <label style={S.label}>Card / Product Image (Upload File or URL)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setCardImageFile(e.target.files[0])}
+                      style={{ ...S.input, padding: '8px', cursor: 'pointer' }}
+                    />
+                    <input type="text" placeholder="Or paste image URL (https://.../card.png)" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} style={{ ...S.input, height: '40px', marginTop: '6px' }} />
+                    {(cardImageFile || form.image_url) && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : form.image_url}
+                          alt="Card Preview"
+                          style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          {cardImageFile ? `Selected File: ${cardImageFile.name}` : 'URL Preview'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={S.label}>Thumbnail URL</label>
