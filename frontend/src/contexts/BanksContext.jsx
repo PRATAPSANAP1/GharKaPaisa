@@ -34,24 +34,14 @@ export function BanksProvider({ children }) {
           const slug = (b.short_code || '').toLowerCase();
           const staticBank = banksList.find(sb => sb.id === slug || sb.id === b.name?.toLowerCase());
           
-          let logoUrl = null;
-          let rawLogo = b.logo || b.logo_url || '';
-          if (rawLogo) {
-            const cfBase = 'https://d18qh1l6j6vziz.cloudfront.net';
-            if (rawLogo.includes('.s3.') || rawLogo.includes('.s3-') || rawLogo.includes('s3.amazonaws.com')) {
-              const key = rawLogo.split('.com/').pop().replace(/^\/+/, '');
-              const prefix = key.startsWith('public/') ? '' : 'public/';
-              logoUrl = `${cfBase}/${prefix}${key}`;
-            } else if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
-              logoUrl = rawLogo;
-            } else {
-              const filename = rawLogo.split('/').pop().toLowerCase();
-              const matched = banksList.find(sb => 
-                filename.includes(sb.id) || 
-                slug.includes(sb.id)
-              );
-              logoUrl = matched ? matched.image : `${cfBase}/public/${rawLogo.replace(/^\/+/, '')}`;
-            }
+          let logoUrl = b.logo || b.logo_url || null;
+
+          if (
+            logoUrl &&
+            (logoUrl.includes(".s3.") || logoUrl.includes("s3.amazonaws.com"))
+          ) {
+            const key = logoUrl.split(".com/").pop();
+            logoUrl = `https://d18qh1l6j6vziz.cloudfront.net/${key}`;
           }
           
           if (!logoUrl) {
