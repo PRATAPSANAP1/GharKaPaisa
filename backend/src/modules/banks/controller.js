@@ -107,7 +107,11 @@ const getBankById = async (req, res, next) => {
 // POST /api/v1/banks (Admin/Super Admin — create new bank)
 const createBank = async (req, res, next) => {
   try {
-    const { name, short_code, is_active, status, display_order } = req.body;
+    const {
+      name, short_code, is_active, status, display_order,
+      hero_title, hero_description, theme_color, secondary_color, gradient,
+      button_color, accent_color, banner, seo_title, seo_description
+    } = req.body;
     let logo_url = req.body.logo_url;
 
     if (!name || !short_code) {
@@ -139,10 +143,18 @@ const createBank = async (req, res, next) => {
     const finalIsActive = finalStatus === 'Active';
 
     const { rows: [bank] } = await query(`
-      INSERT INTO banks (name, short_code, logo_url, is_active, status, display_order)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO banks (
+        name, short_code, logo_url, is_active, status, display_order,
+        hero_title, hero_description, theme_color, secondary_color, gradient,
+        button_color, accent_color, banner, seo_title, seo_description
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
-    `, [name, short_code, logo_url || null, finalIsActive, finalStatus, display_order || 0]);
+    `, [
+      name, short_code, logo_url || null, finalIsActive, finalStatus, display_order || 0,
+      hero_title || null, hero_description || null, theme_color || null, secondary_color || null, gradient || null,
+      button_color || null, accent_color || null, banner || null, seo_title || null, seo_description || null
+    ]);
 
     // Log action to audit logs
     await logAction(req, 'CREATE_BANK', bank.id, { name, short_code });
@@ -157,7 +169,11 @@ const createBank = async (req, res, next) => {
 const updateBank = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, short_code, is_active, status, display_order } = req.body;
+    const {
+      name, short_code, is_active, status, display_order,
+      hero_title, hero_description, theme_color, secondary_color, gradient,
+      button_color, accent_color, banner, seo_title, seo_description
+    } = req.body;
     let logo_url = req.body.logo_url;
 
     const { rows: [existing] } = await query('SELECT * FROM banks WHERE id = $1', [id]);
@@ -204,8 +220,18 @@ const updateBank = async (req, res, next) => {
         is_active = $4,
         status = $5,
         display_order = COALESCE($6, display_order),
+        hero_title = COALESCE($7, hero_title),
+        hero_description = COALESCE($8, hero_description),
+        theme_color = COALESCE($9, theme_color),
+        secondary_color = COALESCE($10, secondary_color),
+        gradient = COALESCE($11, gradient),
+        button_color = COALESCE($12, button_color),
+        accent_color = COALESCE($13, accent_color),
+        banner = COALESCE($14, banner),
+        seo_title = COALESCE($15, seo_title),
+        seo_description = COALESCE($16, seo_description),
         updated_at = NOW()
-      WHERE id = $7
+      WHERE id = $17
       RETURNING *
     `, [
       name || null,
@@ -214,6 +240,16 @@ const updateBank = async (req, res, next) => {
       finalIsActive,
       finalStatus,
       display_order !== undefined ? parseInt(display_order) : null,
+      hero_title !== undefined ? hero_title : null,
+      hero_description !== undefined ? hero_description : null,
+      theme_color !== undefined ? theme_color : null,
+      secondary_color !== undefined ? secondary_color : null,
+      gradient !== undefined ? gradient : null,
+      button_color !== undefined ? button_color : null,
+      accent_color !== undefined ? accent_color : null,
+      banner !== undefined ? banner : null,
+      seo_title !== undefined ? seo_title : null,
+      seo_description !== undefined ? seo_description : null,
       id
     ]);
 

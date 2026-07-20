@@ -142,6 +142,10 @@ export default function DynamicCreditCardsPage() {
   }, [filteredCards]);
 
   const bankThemeColor = bank?.theme_color || '#004B87';
+  const bankSecondaryColor = bank?.secondary_color || '#00296B';
+  const bankGradient = bank?.gradient || `linear-gradient(135deg, ${bankThemeColor} 0%, ${bankSecondaryColor} 100%)`;
+  const bankButtonColor = bank?.button_color || bankThemeColor;
+  const bankAccentColor = bank?.accent_color || '#10B981';
   const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
 
   if (loading) {
@@ -160,7 +164,7 @@ export default function DynamicCreditCardsPage() {
         <FaUniversity size={56} style={{ color: '#94a3b8', marginBottom: '16px' }} />
         <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 8px' }}>{errorMsg || 'Bank Not Found'}</h2>
         <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px' }}>We couldn't find active credit cards for this bank partner.</p>
-        <button onClick={() => navigate('/credit-cards')} style={{ padding: '10px 24px', background: bankThemeColor, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={() => navigate('/credit-cards')} style={{ padding: '10px 24px', background: bankButtonColor, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>
           Explore All Credit Cards
         </button>
       </div>
@@ -218,7 +222,7 @@ export default function DynamicCreditCardsPage() {
           <div style={{
             width: '100%',
             height: '160px',
-            background: bank.banner ? `url(${bank.banner}) center/cover no-repeat` : `linear-gradient(135deg, ${bankThemeColor} 0%, #1e293b 100%)`,
+            background: bank.banner ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
             borderRadius: '16px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
             display: 'flex',
@@ -402,7 +406,7 @@ export default function DynamicCreditCardsPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {features.slice(0, 3).map((feat, fIdx) => (
                                 <div key={fIdx} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#94a3b8' : '#64748b' }}>
-                                  <FaCheckCircle size={12} style={{ color: '#10B981', flexShrink: 0 }} />
+                                  <FaCheckCircle size={12} style={{ color: bankAccentColor, flexShrink: 0 }} />
                                   <span>{typeof feat === 'string' ? feat : (feat.title || feat.label)}</span>
                                 </div>
                               ))}
@@ -453,7 +457,7 @@ export default function DynamicCreditCardsPage() {
                               style={{
                                 flex: 1,
                                 padding: '10px',
-                                background: bankThemeColor,
+                                background: bankButtonColor,
                                 color: '#ffffff',
                                 border: 'none',
                                 borderRadius: '10px',

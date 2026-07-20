@@ -29,7 +29,17 @@ export default function ManageBanks() {
     short_code: "",
     logo_url: "",
     status: "Active",
-    display_order: 0
+    display_order: 0,
+    hero_title: "",
+    hero_description: "",
+    banner: "",
+    theme_color: "#004B87",
+    secondary_color: "#00296B",
+    gradient: "",
+    button_color: "#004B87",
+    accent_color: "#10B981",
+    seo_title: "",
+    seo_description: ""
   });
 
   const fetchBanks = async () => {
@@ -65,7 +75,17 @@ export default function ManageBanks() {
       short_code: "",
       logo_url: "",
       status: "Active",
-      display_order: banks.length + 1
+      display_order: banks.length + 1,
+      hero_title: "",
+      hero_description: "",
+      banner: "",
+      theme_color: "#004B87",
+      secondary_color: "#00296B",
+      gradient: "",
+      button_color: "#004B87",
+      accent_color: "#10B981",
+      seo_title: "",
+      seo_description: ""
     });
     setModalOpen(true);
   };
@@ -74,11 +94,21 @@ export default function ManageBanks() {
     setEditItem(item);
     setLogoFile(null);
     setForm({
-      name: item.name,
-      short_code: item.short_code,
+      name: item.name || "",
+      short_code: item.short_code || "",
       logo_url: item.logo_url || "",
       status: item.status || "Active",
-      display_order: item.display_order || 0
+      display_order: item.display_order || 0,
+      hero_title: item.hero_title || "",
+      hero_description: item.hero_description || "",
+      banner: item.banner || "",
+      theme_color: item.theme_color || "#004B87",
+      secondary_color: item.secondary_color || "#00296B",
+      gradient: item.gradient || "",
+      button_color: item.button_color || item.theme_color || "#004B87",
+      accent_color: item.accent_color || "#10B981",
+      seo_title: item.seo_title || "",
+      seo_description: item.seo_description || ""
     });
     setModalOpen(true);
   };
@@ -117,6 +147,8 @@ export default function ManageBanks() {
     }
   };
 
+  const [activeTab, setActiveTab] = useState("basic");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -130,6 +162,16 @@ export default function ManageBanks() {
         formData.append("status", form.status);
         formData.append("is_active", (form.status === "Active").toString());
         formData.append("display_order", form.display_order.toString());
+        formData.append("hero_title", form.hero_title.trim());
+        formData.append("hero_description", form.hero_description.trim());
+        formData.append("banner", form.banner.trim());
+        formData.append("theme_color", form.theme_color.trim());
+        formData.append("secondary_color", form.secondary_color.trim());
+        formData.append("gradient", form.gradient.trim());
+        formData.append("button_color", form.button_color.trim());
+        formData.append("accent_color", form.accent_color.trim());
+        formData.append("seo_title", form.seo_title.trim());
+        formData.append("seo_description", form.seo_description.trim());
 
         if (editItem) {
           res = await api.put(`/banks/${editItem.id}`, formData, {
@@ -147,7 +189,17 @@ export default function ManageBanks() {
           logo_url: form.logo_url.trim() || null,
           status: form.status,
           is_active: form.status === "Active",
-          display_order: parseInt(form.display_order) || 0
+          display_order: parseInt(form.display_order) || 0,
+          hero_title: form.hero_title.trim() || null,
+          hero_description: form.hero_description.trim() || null,
+          banner: form.banner.trim() || null,
+          theme_color: form.theme_color.trim() || "#004B87",
+          secondary_color: form.secondary_color.trim() || "#00296B",
+          gradient: form.gradient.trim() || null,
+          button_color: form.button_color.trim() || "#004B87",
+          accent_color: form.accent_color.trim() || "#10B981",
+          seo_title: form.seo_title.trim() || null,
+          seo_description: form.seo_description.trim() || null
         };
         if (editItem) {
           res = await api.put(`/banks/${editItem.id}`, payload);
@@ -306,79 +358,273 @@ export default function ManageBanks() {
       {/* ── ADD / EDIT BANK MODAL ── */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '500px', width: '100%', border: `1px solid ${C.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '0 0 16px 0' }}>
-              {editItem ? 'Edit Bank Partner' : 'New Bank'}
+              {editItem ? 'Edit Bank Partner & Theme' : 'New Bank Partner'}
             </h3>
-            
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={S.label}>Bank Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. HDFC Bank"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  style={{ ...S.input, height: '42px' }}
-                />
-              </div>
 
-              <div>
-                <label style={S.label}>Short Code *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. HDFC"
-                  value={form.short_code}
-                  onChange={(e) => setForm({ ...form, short_code: e.target.value.toUpperCase() })}
-                  style={{ ...S.input, height: '42px' }}
-                />
-              </div>
-
-              <div>
-                <label style={S.label}>Status *</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  style={{ ...S.input, height: '42px', fontWeight: 700 }}
+            {/* Modal Tabs */}
+            <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, marginBottom: '20px', paddingBottom: '10px', overflowX: 'auto' }}>
+              {[
+                { id: 'basic', label: 'Basic Info' },
+                { id: 'hero', label: 'Hero Header' },
+                { id: 'theme', label: 'Theme & Colors' },
+                { id: 'seo', label: 'SEO Metadata' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activeTab === tab.id ? C.teal : 'transparent',
+                    color: activeTab === tab.id ? '#FFF' : C.textLight,
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-              <div>
-                <label style={S.label}>Priority / Position Order *</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  placeholder="e.g. 1 (lower numbers display first)"
-                  value={form.display_order}
-                  onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })}
-                  style={{ ...S.input, height: '42px' }}
-                />
-              </div>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-              <div>
-                <label style={S.label}>Bank Logo Image (Upload or URL)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setLogoFile(e.target.files[0])}
-                  style={{ ...S.input, padding: '8px' }}
-                />
-                <input
-                  type="text"
-                  placeholder="Or paste image URL (e.g. https://.../logo.png)"
-                  value={form.logo_url}
-                  onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                  style={{ ...S.input, height: '40px', marginTop: '6px' }}
-                />
-              </div>
+              {/* TAB 1: BASIC INFO */}
+              {activeTab === 'basic' && (
+                <>
+                  <div>
+                    <label style={S.label}>Bank Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. HDFC Bank"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                  <div>
+                    <label style={S.label}>Short Code *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. HDFC"
+                      value={form.short_code}
+                      onChange={(e) => setForm({ ...form, short_code: e.target.value.toUpperCase() })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Status *</label>
+                      <select
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={S.label}>Display Order *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="e.g. 1"
+                        value={form.display_order}
+                        onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })}
+                        style={{ ...S.input, height: '42px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Bank Logo (Upload or URL)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setLogoFile(e.target.files[0])}
+                      style={{ ...S.input, padding: '8px' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL (e.g. https://.../logo.png)"
+                      value={form.logo_url}
+                      onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                      style={{ ...S.input, height: '40px', marginTop: '6px' }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* TAB 2: HERO HEADER */}
+              {activeTab === 'hero' && (
+                <>
+                  <div>
+                    <label style={S.label}>Hero Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HDFC Bank Credit Cards"
+                      value={form.hero_title}
+                      onChange={(e) => setForm({ ...form, hero_title: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Hero Description</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Compare rates, key features, and apply online..."
+                      value={form.hero_description}
+                      onChange={(e) => setForm({ ...form, hero_description: e.target.value })}
+                      style={{ ...S.input, padding: '10px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Hero Banner Image URL</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. https://d18qh1l6j6vziz.cloudfront.net/public/banks/banners/hdfc.png"
+                      value={form.banner}
+                      onChange={(e) => setForm({ ...form, banner: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* TAB 3: THEME & COLORS */}
+              {activeTab === 'theme' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Primary Color</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={form.theme_color || '#004B87'}
+                          onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
+                          style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        />
+                        <input
+                          type="text"
+                          value={form.theme_color}
+                          onChange={(e) => setForm({ ...form, theme_color: e.target.value })}
+                          style={{ ...S.input, height: '40px', flex: 1 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={S.label}>Secondary Color</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={form.secondary_color || '#00296B'}
+                          onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                          style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        />
+                        <input
+                          type="text"
+                          value={form.secondary_color}
+                          onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                          style={{ ...S.input, height: '40px', flex: 1 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Button Color</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={form.button_color || '#004B87'}
+                          onChange={(e) => setForm({ ...form, button_color: e.target.value })}
+                          style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        />
+                        <input
+                          type="text"
+                          value={form.button_color}
+                          onChange={(e) => setForm({ ...form, button_color: e.target.value })}
+                          style={{ ...S.input, height: '40px', flex: 1 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={S.label}>Accent Color</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={form.accent_color || '#10B981'}
+                          onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                          style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        />
+                        <input
+                          type="text"
+                          value={form.accent_color}
+                          onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                          style={{ ...S.input, height: '40px', flex: 1 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Custom Linear Gradient CSS</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
+                      value={form.gradient}
+                      onChange={(e) => setForm({ ...form, gradient: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* TAB 4: SEO METADATA */}
+              {activeTab === 'seo' && (
+                <>
+                  <div>
+                    <label style={S.label}>SEO Meta Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HDFC Bank Credit Cards - Compare & Apply Online"
+                      value={form.seo_title}
+                      onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>SEO Meta Description</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Compare HDFC Bank Credit Cards, benefits, rewards, annual fees and eligibility..."
+                      value={form.seo_description}
+                      onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
+                      style={{ ...S.input, padding: '10px' }}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
@@ -391,7 +637,7 @@ export default function ManageBanks() {
                   disabled={submitting}
                   style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: C.teal, color: '#FFF', fontWeight: 800, cursor: 'pointer' }}
                 >
-                  {submitting ? 'Saving...' : 'Save Bank'}
+                  {submitting ? 'Saving...' : 'Save Configuration'}
                 </button>
               </div>
             </form>

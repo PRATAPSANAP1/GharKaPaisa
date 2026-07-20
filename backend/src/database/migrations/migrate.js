@@ -3716,6 +3716,21 @@ const migrate = async () => {
       logger.error('Failed to run Bank Schema Expansion Migration (Task 22):', task22Err.message);
       throw task22Err;
     }
+
+    // Task 23: Add Full Bank Color Theme Controls (Secondary, Gradient, Button & Accent Colors)
+    try {
+      logger.info('Running Bank Theme Controls Expansion (Task 23)...');
+      await query(`
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS secondary_color VARCHAR(100);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS gradient VARCHAR(255);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS button_color VARCHAR(100);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS accent_color VARCHAR(100);
+      `);
+      logger.info('Bank Theme Controls Migration (Task 23) completed successfully.');
+    } catch (task23Err) {
+      logger.error('Failed to run Bank Theme Controls Migration (Task 23):', task23Err.message);
+      throw task23Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
