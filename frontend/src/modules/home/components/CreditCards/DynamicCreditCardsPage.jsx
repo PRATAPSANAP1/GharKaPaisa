@@ -12,6 +12,7 @@ import {
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from './CardApplyVerificationModal';
 import { resolveAndApply } from '../../../../services/applicationResolver';
+import { getCardSpecificImage } from './cardImageHelper';
 
 export default function DynamicCreditCardsPage() {
   const { bankSlug } = useParams();
@@ -192,51 +193,27 @@ export default function DynamicCreditCardsPage() {
       {/* ── HERO BANNER SECTION ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
         <div style={{
-          background: isDark ? '#1e293b' : '#ffffff',
+          width: '100%',
+          height: isMobile ? '180px' : '320px',
+          background: bank.banner ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
           borderRadius: '24px',
-          padding: isMobile ? '20px' : '32px',
-          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
-          gap: '24px',
-          alignItems: 'center'
+          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          position: 'relative',
+          overflow: 'hidden',
+          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
         }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          {!bank.banner && (
+            <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
               {bank.logo_url && (
-                <img src={bank.logo_url} alt={bank.name} style={{ height: '36px', maxWidth: '120px', objectFit: 'contain' }} />
+                <img src={bank.logo_url} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
               )}
-              <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '20px', background: `${bankThemeColor}15`, color: bankThemeColor, textTransform: 'uppercase' }}>
-                Verified Partner
-              </span>
+              <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0 }}>{bank.name} Credit Cards</h1>
             </div>
-            <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, margin: '0 0 8px 0', lineHeight: 1.2 }}>
-              {bank.hero_title || `${bank.name} Credit Cards`}
-            </h1>
-            <p style={{ fontSize: '14px', color: isDark ? '#94a3b8' : '#64748b', margin: 0, lineHeight: 1.6 }}>
-              {bank.hero_description || `Compare interest rates, cashback, lounge access, and apply online for pre-approved ${bank.name} credit cards with instant digital verification.`}
-            </p>
-          </div>
-
-          <div style={{
-            width: '100%',
-            height: '160px',
-            background: bank.banner ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
-            borderRadius: '16px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}>
-            {!bank.banner && (
-              <div style={{ textAlign: 'center', color: '#ffffff' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px 0' }}>{bank.name} Cards</h3>
-                <p style={{ fontSize: '12px', opacity: 0.9, margin: 0 }}>Apply Online • Zero Pre-Approval Paperwork</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -385,7 +362,7 @@ export default function DynamicCreditCardsPage() {
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '80px', height: '52px', borderRadius: '10px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
                             <img
-                              src={card.card_image_url || card.image_url || card.thumbnail_url || bank.logo_url}
+                              src={card.card_image_url || card.image_url || card.thumbnail_url || getCardSpecificImage(card.name) || bank.logo_url}
                               alt={card.name}
                               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                               onError={(e) => { e.target.src = bank.logo_url; }}
@@ -515,7 +492,7 @@ export default function DynamicCreditCardsPage() {
 
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ width: '90px', height: '60px', borderRadius: '12px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                <img src={selectedCard.card_image_url || selectedCard.image_url || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                <img src={selectedCard.card_image_url || selectedCard.image_url || getCardSpecificImage(selectedCard.name) || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               </div>
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCard.name}</h3>
