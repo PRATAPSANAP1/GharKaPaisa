@@ -62,8 +62,10 @@ export function BanksProvider({ children }) {
           return {
             id: b.id,               // Database primary key UUID
             name: labelName,
+            label: labelName,
             short_code: b.short_code || '',
             logo: logoUrl,
+            image: logoUrl,
             slug: slug,
             display_order: b.display_order || 0
           };
