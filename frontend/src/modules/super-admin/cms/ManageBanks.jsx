@@ -92,19 +92,19 @@ export default function ManageBanks() {
     setModalOpen(true);
   };
 
-  const openEditModal = (item) => {
+  const openEditModal = async (item) => {
     setEditItem(item);
     setLogoFile(null);
     setBannerFile(null);
     setForm({
       name: item.name || "",
       short_code: item.short_code || "",
-      logo_url: item.logo_url || "",
-      status: item.status || "Active",
-      display_order: item.display_order || 0,
+      logo_url: item.logo_url || item.logo || "",
+      status: item.status || (item.is_active ? "Active" : "Inactive"),
+      display_order: item.display_order !== undefined ? item.display_order : 0,
       hero_title: item.hero_title || "",
       hero_description: item.hero_description || "",
-      banner: item.banner || "",
+      banner: item.banner || item.banner_url || "",
       theme_color: item.theme_color || "#004B87",
       secondary_color: item.secondary_color || "#00296B",
       gradient: item.gradient || "",
@@ -113,7 +113,34 @@ export default function ManageBanks() {
       seo_title: item.seo_title || "",
       seo_description: item.seo_description || ""
     });
+    setActiveTab("basic");
     setModalOpen(true);
+
+    try {
+      const res = await api.get(`/banks/${item.id}`);
+      if (res.data?.success && res.data.data) {
+        const b = res.data.data;
+        setForm({
+          name: b.name || "",
+          short_code: b.short_code || "",
+          logo_url: b.logo_url || b.logo || "",
+          status: b.status || (b.is_active ? "Active" : "Inactive"),
+          display_order: b.display_order !== undefined ? b.display_order : 0,
+          hero_title: b.hero_title || "",
+          hero_description: b.hero_description || "",
+          banner: b.banner || b.banner_url || "",
+          theme_color: b.theme_color || "#004B87",
+          secondary_color: b.secondary_color || "#00296B",
+          gradient: b.gradient || "",
+          button_color: b.button_color || b.theme_color || "#004B87",
+          accent_color: b.accent_color || "#10B981",
+          seo_title: b.seo_title || "",
+          seo_description: b.seo_description || ""
+        });
+      }
+    } catch (e) {
+      console.warn("Could not fetch extra bank details:", e);
+    }
   };
 
   const confirmDelete = (bank) => {
@@ -163,12 +190,13 @@ export default function ManageBanks() {
         formData.append("short_code", form.short_code.trim().toUpperCase());
         if (logoFile) formData.append("logo", logoFile);
         if (bannerFile) formData.append("banner", bannerFile);
+        formData.append("logo_url", form.logo_url.trim());
+        formData.append("banner_url", form.banner.trim());
         formData.append("status", form.status);
         formData.append("is_active", (form.status === "Active").toString());
         formData.append("display_order", form.display_order.toString());
         formData.append("hero_title", form.hero_title.trim());
         formData.append("hero_description", form.hero_description.trim());
-        formData.append("banner_url", form.banner.trim());
         formData.append("theme_color", form.theme_color.trim());
         formData.append("secondary_color", form.secondary_color.trim());
         formData.append("gradient", form.gradient.trim());
@@ -197,6 +225,7 @@ export default function ManageBanks() {
           hero_title: form.hero_title.trim() || null,
           hero_description: form.hero_description.trim() || null,
           banner: form.banner.trim() || null,
+          banner_url: form.banner.trim() || null,
           theme_color: form.theme_color.trim() || "#004B87",
           secondary_color: form.secondary_color.trim() || "#00296B",
           gradient: form.gradient.trim() || null,
@@ -467,6 +496,18 @@ export default function ManageBanks() {
                       onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
                       style={{ ...S.input, height: '40px', marginTop: '6px' }}
                     />
+                    {(logoFile || form.logo_url) && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={logoFile ? URL.createObjectURL(logoFile) : form.logo_url}
+                          alt="Logo Preview"
+                          style={{ maxHeight: '40px', maxWidth: '120px', objectFit: 'contain', padding: '4px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          {logoFile ? `File: ${logoFile.name}` : 'Current Logo Preview'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -511,6 +552,18 @@ export default function ManageBanks() {
                       onChange={(e) => setForm({ ...form, banner: e.target.value })}
                       style={{ ...S.input, height: '40px', marginTop: '6px' }}
                     />
+                    {(bannerFile || form.banner) && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={bannerFile ? URL.createObjectURL(bannerFile) : form.banner}
+                          alt="Banner Preview"
+                          style={{ maxHeight: '60px', maxWidth: '200px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>
+                          {bannerFile ? `File: ${bannerFile.name}` : 'Current Banner Preview'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

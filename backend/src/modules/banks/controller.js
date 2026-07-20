@@ -187,8 +187,8 @@ const updateBank = async (req, res, next) => {
       hero_title, hero_description, theme_color, secondary_color, gradient,
       button_color, accent_color, banner, seo_title, seo_description
     } = req.body;
-    let logo_url = req.body.logo_url;
-    let banner_url = banner;
+    let logo_url = req.body.logo_url || req.body.logo;
+    let banner_url = req.body.banner || req.body.banner_url;
 
     const { rows: [existing] } = await query('SELECT * FROM banks WHERE id = $1', [id]);
     if (!existing) {
