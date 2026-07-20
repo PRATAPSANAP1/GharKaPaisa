@@ -295,7 +295,9 @@ const getActiveBanks = async (req, res, next) => {
       ORDER BY b.display_order ASC, b.name ASC
     `);
 
-    const cloudfrontUrl = process.env.CLOUDFRONT_URL;
+    const cloudfrontUrl =
+      process.env.CLOUDFRONT_URL ||
+      "https://d18qh1l6j6vziz.cloudfront.net";
 
     const data = rows.map((bank) => ({
       ...bank,
