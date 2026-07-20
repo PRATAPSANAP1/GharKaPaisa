@@ -234,34 +234,36 @@ export default function ManageBanks() {
       {/* BANKS TABLE */}
       <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-          <thead>
-            <tr style={{ background: isDark ? C.bgSecondary : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Logo</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank Name</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Short Code</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Status</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Products</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Created On</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800, textAlign: 'center' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading banks catalog...</td></tr>
-            ) : banks.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No banks found. Click <strong>New Bank</strong> to add one!</td></tr>
-            ) : (
-              banks.map(bank => (
-                <tr key={bank.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '14px 16px' }}>
-                    {bank.logo_url ? (
-                      <img src={bank.logo_url} alt={bank.name} style={{ height: '28px', maxWidth: '80px', objectFit: 'contain' }} />
-                    ) : (
-                      <span style={{ fontSize: '20px' }}>🏦</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>{bank.name}</td>
-                  <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700, color: C.teal }}>{bank.short_code}</td>
+           <thead>
+             <tr style={{ background: isDark ? C.bgSecondary : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Logo</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank Name</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Short Code</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Priority</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Status</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Products</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Created On</th>
+               <th style={{ padding: '14px 16px', fontWeight: 800, textAlign: 'center' }}>Action</th>
+             </tr>
+           </thead>
+           <tbody>
+             {loading ? (
+               <tr><td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading banks catalog...</td></tr>
+             ) : banks.length === 0 ? (
+               <tr><td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No banks found. Click <strong>New Bank</strong> to add one!</td></tr>
+             ) : (
+               banks.map(bank => (
+                 <tr key={bank.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                   <td style={{ padding: '14px 16px' }}>
+                     {bank.logo_url ? (
+                       <img src={bank.logo_url} alt={bank.name} style={{ height: '28px', maxWidth: '80px', objectFit: 'contain' }} />
+                     ) : (
+                       <span style={{ fontSize: '20px' }}>🏦</span>
+                     )}
+                   </td>
+                   <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>{bank.name}</td>
+                   <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700, color: C.teal }}>{bank.short_code}</td>
+                   <td style={{ padding: '14px 16px', fontWeight: 700, color: C.textLight }}>{bank.display_order}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <button
                       onClick={() => toggleStatus(bank)}
@@ -344,6 +346,19 @@ export default function ManageBanks() {
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
+              </div>
+
+              <div>
+                <label style={S.label}>Priority / Position Order *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="e.g. 1 (lower numbers display first)"
+                  value={form.display_order}
+                  onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })}
+                  style={{ ...S.input, height: '42px' }}
+                />
               </div>
 
               <div>
