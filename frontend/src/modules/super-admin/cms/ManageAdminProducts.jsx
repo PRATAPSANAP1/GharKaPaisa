@@ -446,7 +446,7 @@ export default function ManageAdminProducts() {
           }}
         >
           <MdAdd size={20} />
-          <span>+ Add {categoryTitle}</span>
+          <span>Add {categoryTitle}</span>
         </button>
       </div>
 
@@ -487,7 +487,7 @@ export default function ManageAdminProducts() {
             {loading ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products found. Click <strong>+ Add {categoryTitle}</strong> to add one!</td></tr>
+              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products found. Click <strong>Add {categoryTitle}</strong> to add one!</td></tr>
             ) : (
               products.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -609,6 +609,23 @@ export default function ManageAdminProducts() {
                       <option value="Inactive">Inactive</option>
                     </select>
                   </div>
+
+                  {activeCategory === 'credit_card' && (
+                    <div>
+                      <label style={S.label}>Credit Card Type *</label>
+                      <select 
+                        required
+                        value={form.sub_category} 
+                        onChange={(e) => setForm({ ...form, sub_category: e.target.value })} 
+                        style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                      >
+                        <option value="">-- Select Type --</option>
+                        <option value="Core Cards">Core Card</option>
+                        <option value="Co-Branded Cards">Co-Branded Cards</option>
+                        <option value="Secured Cards">Secured Card</option>
+                      </select>
+                    </div>
+                  )}
 
                   <div>
                     <label style={S.label}>Card / Product Image URL</label>
