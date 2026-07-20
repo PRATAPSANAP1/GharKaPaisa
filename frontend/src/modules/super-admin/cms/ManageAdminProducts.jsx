@@ -129,12 +129,11 @@ export default function ManageAdminProducts() {
     try {
       const res = await api.get('/products', {
         params: {
-          category: activeCategory === 'credit_card' ? '%card%' :
-                    activeCategory === 'loans' ? '%loan%' :
+          category: activeCategory === 'loans' ? '%loan%' :
                     activeCategory === 'insurance' ? '%insurance%' :
                     activeCategory,
           search: search.trim() || undefined,
-          limit: 500
+          limit: 100
         }
       });
       if (res.data?.success) {
