@@ -11,7 +11,7 @@ import {
   MdCheckCircle, MdCancel, MdPending, MdChevronLeft, MdChevronRight,
   MdSearch, MdFilterList, MdShare, MdDownload, MdLock, MdPlayCircleOutline,
   MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp,
-  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy
+  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy, MdReceiptLong
 } from "react-icons/md";
 import { FaLock, FaWhatsapp, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
@@ -737,9 +737,9 @@ export default function PartnerDashboard({ partner }) {
             <span style={{ lineHeight: 1.15 }}>Insurance</span>
           </button>
 
-          {/* Add Leads Button */}
+          {/* Recharge & Bill Button */}
           <button
-            onClick={() => navigate('/partner/leads/add')}
+            onClick={() => navigate('/cms/recharge')}
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
@@ -759,8 +759,8 @@ export default function PartnerDashboard({ partner }) {
               transition: "all 0.2s ease"
             }}
           >
-            <MdAdd size={isMobile ? 18 : 22} />
-            <span style={{ lineHeight: 1.15 }}>Add Leads</span>
+            <MdReceiptLong size={isMobile ? 18 : 22} />
+            <span style={{ lineHeight: 1.15 }}>Recharge & Bill</span>
           </button>
         </div>
       </div>
