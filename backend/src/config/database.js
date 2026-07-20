@@ -23,7 +23,7 @@ const poolOptions = process.env.DATABASE_URL
 
 poolOptions.max = 20;
 poolOptions.idleTimeoutMillis = 30000;
-poolOptions.connectionTimeoutMillis = 5000;
+poolOptions.connectionTimeoutMillis = 30000;
 
 const pool = new Pool(poolOptions);
 
