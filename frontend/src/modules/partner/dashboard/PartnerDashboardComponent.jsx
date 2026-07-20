@@ -484,7 +484,7 @@ export default function PartnerDashboard({ partner }) {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
       {/* ── HERO BANNER SLIDER ── */}
       <div 
@@ -657,7 +657,7 @@ export default function PartnerDashboard({ partner }) {
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
           gap: isMobile ? "6px" : "16px",
-          marginBottom: "20px"
+          marginBottom: "0px"
         }}>
           {/* Credit Cards Button */}
           <button
@@ -665,9 +665,9 @@ export default function PartnerDashboard({ partner }) {
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
-              border: `1px solid ${C.border}`,
-              background: C.card,
-              color: C.text,
+              border: "none",
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: "#FFFFFF",
               cursor: "pointer",
               display: "flex",
               flexDirection: isMobile ? "column" : "row",
@@ -677,11 +677,11 @@ export default function PartnerDashboard({ partner }) {
               fontWeight: 800,
               fontSize: isMobile ? "11px" : "15px",
               textAlign: "center",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: `0 4px 16px ${C.primary}30`,
               transition: "all 0.2s ease"
             }}
           >
-            <MdCreditCard size={isMobile ? 18 : 22} color={C.primary} />
+            <MdCreditCard size={isMobile ? 18 : 22} color="#FFFFFF" />
             <span style={{ lineHeight: 1.15 }}>Credit Cards</span>
           </button>
 
@@ -691,9 +691,9 @@ export default function PartnerDashboard({ partner }) {
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
-              border: `1px solid ${C.border}`,
-              background: C.card,
-              color: C.text,
+              border: "none",
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: "#FFFFFF",
               cursor: "pointer",
               display: "flex",
               flexDirection: isMobile ? "column" : "row",
@@ -703,11 +703,11 @@ export default function PartnerDashboard({ partner }) {
               fontWeight: 800,
               fontSize: isMobile ? "11px" : "15px",
               textAlign: "center",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: `0 4px 16px ${C.primary}30`,
               transition: "all 0.2s ease"
             }}
           >
-            <MdAccountBalanceWallet size={isMobile ? 18 : 22} color={C.primary} />
+            <MdAccountBalanceWallet size={isMobile ? 18 : 22} color="#FFFFFF" />
             <span style={{ lineHeight: 1.15 }}>Loans</span>
           </button>
 
@@ -717,9 +717,9 @@ export default function PartnerDashboard({ partner }) {
             style={{
               padding: isMobile ? "10px 2px" : "16px 20px",
               borderRadius: isMobile ? "12px" : "16px",
-              border: `1px solid ${C.border}`,
-              background: C.card,
-              color: C.text,
+              border: "none",
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: "#FFFFFF",
               cursor: "pointer",
               display: "flex",
               flexDirection: isMobile ? "column" : "row",
@@ -729,11 +729,11 @@ export default function PartnerDashboard({ partner }) {
               fontWeight: 800,
               fontSize: isMobile ? "11px" : "15px",
               textAlign: "center",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              boxShadow: `0 4px 16px ${C.primary}30`,
               transition: "all 0.2s ease"
             }}
           >
-            <MdShield size={isMobile ? 18 : 22} color={C.primary} />
+            <MdShield size={isMobile ? 18 : 22} color="#FFFFFF" />
             <span style={{ lineHeight: 1.15 }}>Insurance</span>
           </button>
 
@@ -755,7 +755,7 @@ export default function PartnerDashboard({ partner }) {
               fontWeight: 800,
               fontSize: isMobile ? "11px" : "15px",
               textAlign: "center",
-              boxShadow: `0 4px 16px ${C.primary}40`,
+              boxShadow: `0 4px 16px ${C.primary}30`,
               transition: "all 0.2s ease"
             }}
           >
