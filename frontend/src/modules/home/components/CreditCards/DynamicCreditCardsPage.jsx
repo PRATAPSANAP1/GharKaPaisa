@@ -399,9 +399,6 @@ export default function DynamicCreditCardsPage() {
 
                         {/* Key Highlights / Features */}
                         <div style={{ marginBottom: '20px', flex: 1 }}>
-                          <p style={{ fontSize: '13px', color: isDark ? '#cbd5e1' : '#475569', margin: '0 0 10px 0', lineHeight: 1.4 }}>
-                            {card.description || card.short_description}
-                          </p>
                           {features.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {features.slice(0, 3).map((feat, fIdx) => (
