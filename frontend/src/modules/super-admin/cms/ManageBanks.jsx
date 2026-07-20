@@ -50,6 +50,7 @@ export default function ManageBanks() {
       const res = await api.get("/banks", {
         params: {
           search: search.trim() || undefined,
+          status: 'all',
           limit: 100
         }
       });
