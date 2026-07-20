@@ -12,8 +12,8 @@ router.get('/:id', ctrl.getBankById);
 router.get('/:slug/cards', ctrl.getBankCardsBySlug);
 
 // Admin / Super Admin protected endpoints for Bank CRUD
-router.post('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('logo'), ctrl.createBank);
-router.put('/:id', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.single('logo'), ctrl.updateBank);
+router.post('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), ctrl.createBank);
+router.put('/:id', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), ctrl.updateBank);
 router.patch('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateBankStatus);
 router.delete('/:id', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.deleteBank);
 

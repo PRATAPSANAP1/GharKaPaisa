@@ -16,6 +16,7 @@ export default function ManageBanks() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
+  const [bannerFile, setBannerFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Delete confirmation modal state
@@ -70,6 +71,7 @@ export default function ManageBanks() {
   const openAddModal = () => {
     setEditItem(null);
     setLogoFile(null);
+    setBannerFile(null);
     setForm({
       name: "",
       short_code: "",
@@ -93,6 +95,7 @@ export default function ManageBanks() {
   const openEditModal = (item) => {
     setEditItem(item);
     setLogoFile(null);
+    setBannerFile(null);
     setForm({
       name: item.name || "",
       short_code: item.short_code || "",
@@ -154,17 +157,18 @@ export default function ManageBanks() {
     setSubmitting(true);
     try {
       let res;
-      if (logoFile) {
+      if (logoFile || bannerFile) {
         const formData = new FormData();
         formData.append("name", form.name.trim());
         formData.append("short_code", form.short_code.trim().toUpperCase());
-        formData.append("logo", logoFile);
+        if (logoFile) formData.append("logo", logoFile);
+        if (bannerFile) formData.append("banner", bannerFile);
         formData.append("status", form.status);
         formData.append("is_active", (form.status === "Active").toString());
         formData.append("display_order", form.display_order.toString());
         formData.append("hero_title", form.hero_title.trim());
         formData.append("hero_description", form.hero_description.trim());
-        formData.append("banner", form.banner.trim());
+        formData.append("banner_url", form.banner.trim());
         formData.append("theme_color", form.theme_color.trim());
         formData.append("secondary_color", form.secondary_color.trim());
         formData.append("gradient", form.gradient.trim());
@@ -493,13 +497,19 @@ export default function ManageBanks() {
                   </div>
 
                   <div>
-                    <label style={S.label}>Hero Banner Image URL</label>
+                    <label style={S.label}>Hero Banner Image (Upload File or URL)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setBannerFile(e.target.files[0])}
+                      style={{ ...S.input, padding: '8px' }}
+                    />
                     <input
                       type="text"
-                      placeholder="e.g. https://d18qh1l6j6vziz.cloudfront.net/public/banks/banners/hdfc.png"
+                      placeholder="Or paste image URL (e.g. https://.../banner.png)"
                       value={form.banner}
                       onChange={(e) => setForm({ ...form, banner: e.target.value })}
-                      style={{ ...S.input, height: '42px' }}
+                      style={{ ...S.input, height: '40px', marginTop: '6px' }}
                     />
                   </div>
                 </>

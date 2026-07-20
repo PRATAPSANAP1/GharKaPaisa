@@ -113,18 +113,31 @@ const createBank = async (req, res, next) => {
       button_color, accent_color, banner, seo_title, seo_description
     } = req.body;
     let logo_url = req.body.logo_url;
+    let banner_url = req.body.banner;
 
     if (!name || !short_code) {
       return error(res, 'Bank Name and Short Code are required', 400);
     }
 
-    if (req.file) {
+    // Handle file uploads (logo and banner)
+    const logoFile = req.file || req.files?.logo?.[0];
+    const bannerFile = req.files?.banner?.[0];
+
+    if (logoFile || bannerFile) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
         return error(res, 'S3 bucket is not configured.', 503);
       }
-      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
-      logo_url = url;
+
+      if (logoFile) {
+        const { url } = await uploadToS3(logoFile.buffer, logoFile.originalname, 'banks');
+        logo_url = url;
+      }
+
+      if (bannerFile) {
+        const { url } = await uploadToS3(bannerFile.buffer, bannerFile.originalname, 'banners');
+        banner_url = url;
+      }
     }
 
     // Check if short_code already exists
@@ -153,7 +166,7 @@ const createBank = async (req, res, next) => {
     `, [
       name, short_code, logo_url || null, finalIsActive, finalStatus, display_order || 0,
       hero_title || null, hero_description || null, theme_color || null, secondary_color || null, gradient || null,
-      button_color || null, accent_color || null, banner || null, seo_title || null, seo_description || null
+      button_color || null, accent_color || null, banner_url || null, seo_title || null, seo_description || null
     ]);
 
     // Log action to audit logs
@@ -175,26 +188,47 @@ const updateBank = async (req, res, next) => {
       button_color, accent_color, banner, seo_title, seo_description
     } = req.body;
     let logo_url = req.body.logo_url;
+    let banner_url = banner;
 
     const { rows: [existing] } = await query('SELECT * FROM banks WHERE id = $1', [id]);
     if (!existing) {
       return notFound(res, 'Bank partner not found');
     }
 
-    if (req.file) {
+    const logoFile = req.file || req.files?.logo?.[0];
+    const bannerFile = req.files?.banner?.[0];
+
+    if (logoFile || bannerFile) {
       const isS3Configured = !!process.env.AWS_S3_BUCKET;
       if (!isS3Configured) {
         return error(res, 'S3 bucket is not configured.', 503);
       }
-      const { url } = await uploadToS3(req.file.buffer, req.file.originalname, 'banks');
-      logo_url = url;
 
-      if (existing.logo_url && existing.logo_url.includes(process.env.AWS_S3_BUCKET)) {
-        try {
-          const parts = existing.logo_url.split('.com/');
-          if (parts[1]) await deleteFromS3(parts[1]);
-        } catch (s3Err) {
-          console.error('Failed to delete old bank logo from S3', s3Err);
+      if (logoFile) {
+        const { url } = await uploadToS3(logoFile.buffer, logoFile.originalname, 'banks');
+        logo_url = url;
+
+        if (existing.logo_url && existing.logo_url.includes(process.env.AWS_S3_BUCKET)) {
+          try {
+            const parts = existing.logo_url.split('.com/');
+            if (parts[1]) await deleteFromS3(parts[1]);
+          } catch (s3Err) {
+            console.error('Failed to delete old bank logo from S3', s3Err);
+          }
+        }
+      }
+
+      if (bannerFile) {
+        const { url } = await uploadToS3(bannerFile.buffer, bannerFile.originalname, 'banners');
+        banner_url = url;
+
+        if (existing.banner && existing.banner.includes(process.env.AWS_S3_BUCKET)) {
+          try {
+            const parts = existing.banner.split('.com/');
+            if (parts[1]) await deleteFromS3(parts[1]);
+          } catch (s3Err) {
+            console.error('Failed to delete old bank banner from S3', s3Err);
+          }
         }
       }
     }
@@ -247,7 +281,7 @@ const updateBank = async (req, res, next) => {
       gradient !== undefined ? gradient : null,
       button_color !== undefined ? button_color : null,
       accent_color !== undefined ? accent_color : null,
-      banner !== undefined ? banner : null,
+      banner_url !== undefined ? banner_url : null,
       seo_title !== undefined ? seo_title : null,
       seo_description !== undefined ? seo_description : null,
       id
