@@ -308,7 +308,6 @@ export default function ManageProducts() {
       }
 
       if (res.data?.success) {
-        alert(editItem ? "Product updated successfully!" : "Product created successfully!");
         setModalOpen(false);
         fetchProducts();
       }

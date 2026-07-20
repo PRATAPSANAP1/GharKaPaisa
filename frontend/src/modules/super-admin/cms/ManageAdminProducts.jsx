@@ -419,7 +419,6 @@ export default function ManageAdminProducts() {
           }
         }
 
-        alert(editItem ? "Product updated successfully!" : "Product created successfully!");
         setModalOpen(false);
         fetchProducts();
       }
