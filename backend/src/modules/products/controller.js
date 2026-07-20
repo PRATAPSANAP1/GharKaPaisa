@@ -27,7 +27,11 @@ const listProducts = async (req, res, next) => {
     }
 
     if (category) { 
-      where += ` AND p.category = $${idx++}`; 
+      if (category.includes('%')) {
+        where += ` AND p.category ILIKE $${idx++}`; 
+      } else {
+        where += ` AND p.category = $${idx++}`; 
+      }
       values.push(category); 
     }
     if (bank_id) { 

@@ -104,26 +104,38 @@ const uploadGeneric = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
 
+// Helper to convert an S3 key to CloudFront public CDN URL
+const getCloudFrontUrl = (key) => {
+  if (!key) return key;
+  const domain = (process.env.AWS_CLOUDFRONT_URL || 'https://d18qh1l6j6vziz.cloudfront.net').replace(/\/+$/, '');
+  const cleanKey = key.replace(/^\/+/, '');
+  const prefix = cleanKey.startsWith('public/') ? '' : 'public/';
+  return `${domain}/${prefix}${cleanKey}`;
+};
+
 // Upload a buffer to S3
-const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
+const uploadToS3 = async (buffer, originalName, folder = 'kyc', customFileName = null) => {
   let ext = path.extname(originalName).toLowerCase();
   if (!ext || ext === '') {
     ext = '.mp4'; // Default to mp4 if extension is missing (e.g. raw iOS Safari blob upload)
   }
-  const key = `${folder}/${uuidv4()}${ext}`;
+  const fileName = customFileName ? (customFileName.endsWith(ext) ? customFileName : `${customFileName}${ext}`) : `${uuidv4()}${ext}`;
+  const key = `${folder}/${fileName}`;
 
   await s3Client.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
-    ContentType: MIME_MAP[ext] || 'video/mp4',
+    ContentType: MIME_MAP[ext] || (ext === '.webp' ? 'image/webp' : 'application/octet-stream'),
     ServerSideEncryption: 'AES256',
   }));
 
-  const region = process.env.AWS_REGION || 'ap-south-1';
-  const url = region === 'us-east-1'
-    ? `https://${BUCKET}.s3.amazonaws.com/${key}`
-    : `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`;
+  const isPublicAsset = folder.startsWith('public') || folder.startsWith('banks') || folder.startsWith('banners') || folder.startsWith('products');
+  const url = isPublicAsset ? getCloudFrontUrl(key) : (
+    (process.env.AWS_REGION || 'ap-south-1') === 'us-east-1'
+      ? `https://${BUCKET}.s3.amazonaws.com/${key}`
+      : `https://${BUCKET}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`
+  );
 
   logger.info(`Uploaded to S3: ${key}`);
   return { url, key };
@@ -141,4 +153,5 @@ const deleteFromS3 = async (key) => {
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadVideo, uploadGeneric, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
+module.exports = { upload, uploadVideo, uploadGeneric, uploadToS3, getSignedDownloadUrl, deleteFromS3, getCloudFrontUrl };
+

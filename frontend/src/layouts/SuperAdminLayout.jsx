@@ -122,7 +122,7 @@ const SuperAdminLayout = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modifyOpen, setModifyOpen] = useState(false);
-  const [cmsOpen, setCmsOpen] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -137,8 +137,8 @@ const SuperAdminLayout = () => {
     if (location.pathname.includes('/banners')) {
       setModifyOpen(true);
     }
-    if (location.pathname.includes('/product-links') || location.pathname.includes('/sections')) {
-      setCmsOpen(true);
+    if (location.pathname.includes('/products')) {
+      setProductsOpen(true);
     }
   }, [location.pathname]);
 
@@ -179,7 +179,16 @@ const SuperAdminLayout = () => {
       title: "PRODUCTS & PARTNERS",
       items: [
         { path: '/super-admin/banks', label: 'Manage Banks', icon: <Icons.wallet size={16} /> },
-        { path: '/super-admin/products', label: 'Products', icon: <Icons.investment size={16} /> },
+        {
+          label: 'Products',
+          icon: <Icons.investment size={16} />,
+          isGroup: true,
+          subItems: [
+            { path: '/super-admin/products/credit_card', label: 'Credit Cards', icon: <Icons.creditCard size={16} /> },
+            { path: '/super-admin/products/loans', label: 'Loans', icon: <Icons.trending size={16} /> },
+            { path: '/super-admin/products/insurance', label: 'Insurance', icon: <Icons.wallet size={16} /> }
+          ]
+        },
         { path: '/super-admin/product-links', label: 'Product Link Management', icon: <Icons.trending size={16} /> },
       ]
     },
@@ -295,6 +304,79 @@ const SuperAdminLayout = () => {
                 {cat.title}
               </div>
               {cat.items.map((item) => {
+                if (item.isGroup) {
+                  const isChildActive = location.pathname.includes('/super-admin/products');
+                  return (
+                    <div key={item.label} style={{ display: 'flex', flexDirection: 'column' }}>
+                      <button
+                        type="button"
+                        onClick={() => setProductsOpen(!productsOpen)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          background: isChildActive ? `${C.teal}15` : 'transparent',
+                          border: 'none',
+                          color: isChildActive ? C.teal : C.text,
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          transition: 'all 0.2s',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ color: isChildActive ? C.teal : C.textSecondary }}>{item.icon}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.label}</span>
+                        </div>
+                        <Chevron open={productsOpen} color={isChildActive ? C.teal : C.textSecondary} />
+                      </button>
+
+                      {productsOpen && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          paddingLeft: '24px',
+                          marginTop: '6px',
+                          borderLeft: `1.5px solid ${C.border}`,
+                          marginLeft: '24px',
+                        }}>
+                          {item.subItems.map((sub) => {
+                            const isSubActive = location.pathname === sub.path;
+                            return (
+                              <NavLink
+                                key={sub.path}
+                                to={sub.path}
+                                onClick={onLinkClick}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  padding: '8px 12px',
+                                  borderRadius: '8px',
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  color: isSubActive ? C.teal : C.textMid,
+                                  background: isSubActive ? `${C.teal}10` : 'transparent',
+                                  textDecoration: 'none',
+                                  transition: 'all 0.2s',
+                                }}
+                              >
+                                {sub.icon}
+                                <span>{sub.label}</span>
+                              </NavLink>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 const isActive = location.pathname === item.path;
                 return (
                   <NavLink

@@ -129,7 +129,9 @@ export default function ManageAdminProducts() {
     try {
       const res = await api.get('/products', {
         params: {
-          category: activeCategory,
+          category: activeCategory === 'loans' ? '%loan%' :
+                    activeCategory === 'insurance' ? '%insurance%' :
+                    activeCategory,
           search: search.trim() || undefined,
           limit: 100
         }

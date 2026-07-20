@@ -37,7 +37,12 @@ export function BanksProvider({ children }) {
           let logoUrl = null;
           let rawLogo = b.logo || b.logo_url || '';
           if (rawLogo) {
-            if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
+            const cfBase = 'https://d18qh1l6j6vziz.cloudfront.net';
+            if (rawLogo.includes('.s3.') || rawLogo.includes('.s3-') || rawLogo.includes('s3.amazonaws.com')) {
+              const key = rawLogo.split('.com/').pop().replace(/^\/+/, '');
+              const prefix = key.startsWith('public/') ? '' : 'public/';
+              logoUrl = `${cfBase}/${prefix}${key}`;
+            } else if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
               logoUrl = rawLogo;
             } else {
               const filename = rawLogo.split('/').pop().toLowerCase();
@@ -45,7 +50,7 @@ export function BanksProvider({ children }) {
                 filename.includes(sb.id) || 
                 slug.includes(sb.id)
               );
-              logoUrl = matched ? matched.image : rawLogo;
+              logoUrl = matched ? matched.image : `${cfBase}/public/${rawLogo.replace(/^\/+/, '')}`;
             }
           }
           

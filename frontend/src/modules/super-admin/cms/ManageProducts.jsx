@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
@@ -51,14 +52,29 @@ export default function ManageProducts() {
   const [errorMsg, setErrorMsg] = useState("");
 
   // Search & Filters state
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type') || '';
+
+  const getInitialCategory = () => {
+    if (typeParam === 'credit_card') return '%card%';
+    if (typeParam === 'loans') return '%loan%';
+    if (typeParam === 'insurance') return '%insurance%';
+    return '';
+  };
+
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(getInitialCategory());
   const [bankFilter, setBankFilter] = useState("");
   const [commissionFilter, setCommissionFilter] = useState("");
   const [featuredFilter, setFeaturedFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    setCategoryFilter(getInitialCategory());
+    setPage(1);
+  }, [typeParam]);
 
   // Edit / Create Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -390,6 +406,13 @@ export default function ManageProducts() {
               <label style={S.label}>Category</label>
               <select style={S.input} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
                 <option value="">All Categories</option>
+                {categoryFilter && !PRODUCT_CATEGORIES.find(c => c.id === categoryFilter) && (
+                  <option value={categoryFilter}>
+                    {categoryFilter === '%card%' ? 'All Credit Cards' :
+                     categoryFilter === '%loan%' ? 'All Loans' :
+                     categoryFilter === '%insurance%' ? 'All Insurance' : 'Active Group'}
+                  </option>
+                )}
                 {PRODUCT_CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
               </select>
             </div>
