@@ -8,8 +8,8 @@ const { upload } = require('../../services/aws/s3.service.js');
 // Public endpoints to fetch banks (Home page, partner panel, etc.)
 router.get('/', ctrl.listAllBanks);
 router.get('/active', ctrl.getActiveBanks);
-router.get('/:id', ctrl.getBankById);
 router.get('/:slug/cards', ctrl.getBankCardsBySlug);
+router.get('/:id', ctrl.getBankById);
 
 // Admin / Super Admin protected endpoints for Bank CRUD
 router.post('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), ctrl.createBank);

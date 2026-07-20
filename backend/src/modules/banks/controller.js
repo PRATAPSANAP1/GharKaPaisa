@@ -389,12 +389,18 @@ const getActiveBanks = async (req, res, next) => {
 const getBankCardsBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
+    const cleanSlug = slug ? slug.replace(/-bank$/i, '').trim() : '';
 
-    // 1. Fetch the bank
+    // 1. Fetch the bank matching short_code, name, cleanSlug, or id
     const { rows: [bank] } = await query(`
       SELECT * FROM banks 
-      WHERE LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1)
-    `, [slug]);
+      WHERE LOWER(short_code) = LOWER($1) 
+         OR LOWER(short_code) = LOWER($2)
+         OR LOWER(name) = LOWER($1)
+         OR LOWER(name) = LOWER($2)
+         OR LOWER(REPLACE(name, ' ', '')) = LOWER(REPLACE($2, ' ', ''))
+         OR id::text = $1
+    `, [slug, cleanSlug]);
 
     if (!bank) {
       return notFound(res, 'Bank partner not found');
