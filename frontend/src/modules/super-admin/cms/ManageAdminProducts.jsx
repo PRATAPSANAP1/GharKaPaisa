@@ -5,7 +5,8 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
-  MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload 
+  MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload,
+  MdCheck, MdHelpOutline, MdPreview
 } from "react-icons/md";
 
 const CATEGORY_MAP = {
@@ -22,11 +23,10 @@ const CATEGORY_MAP = {
   other: "Other Products"
 };
 
-const FEATURE_OPTIONS = [
-  "Airport Lounge", "Cashback", "Reward Points", "Fuel Benefits",
-  "Dining Offers", "Movie Offers", "Travel Benefits", "Golf Access",
-  "EMI Option", "Insurance Cover", "Contactless", "UPI Enabled"
-];
+const CARD_NETWORKS = ["Visa", "Mastercard", "RuPay", "American Express", "Diners Club"];
+const CARD_VARIANTS = ["Classic", "Gold", "Platinum", "Signature", "World", "Infinite", "Select", "Privilege", "Metal"];
+const BEST_FOR_OPTIONS = ["Cashback", "Travel", "Shopping", "Fuel", "Rewards", "Business", "Students", "Premium", "Golf", "Dining"];
+const BADGE_OPTIONS = ["New", "Hot", "Editor's Choice", "Limited Offer", "Best Seller", "Popular"];
 
 const DOCUMENT_OPTIONS = [
   "PAN Card", "Aadhaar Card", "Salary Slip", "ITR (Income Tax Return)",
@@ -51,7 +51,7 @@ export default function ManageAdminProducts() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [modalTab, setModalTab] = useState("basic"); // basic, fees, eligibility, commission, features, benefits, documents, compare, visibility, seo
+  const [modalTab, setModalTab] = useState("basic"); // basic, fees, benefits, documents, marketing, seo, preview
 
   // File Upload State
   const [cardImageFile, setCardImageFile] = useState(null);
@@ -61,66 +61,60 @@ export default function ManageAdminProducts() {
     name: "",
     bank_id: "",
     category: activeCategory,
-    sub_category: "",
+    sub_category: "Core Cards",
     description: "",
     image_url: "",
-    thumbnail_url: "",
-    banner_url: "",
     status: "Active",
     is_active: true,
 
+    // Card Specifics
+    card_network: "Visa",
+    card_variant: "Platinum",
+    is_lifetime_free: false,
+    best_for: "Cashback",
+    welcome_benefits: "₹500 Gift Voucher on first transaction",
+
     // Fees
     joining_fee: "₹0",
-    annual_fee: "₹500",
+    annual_fee: "₹500 (Waived on ₹50,000 spend)",
     interest_rate: "3.5% p.m.",
-    late_payment_charges: "Up to ₹1300",
-    foreign_markup: "3.5%",
-    fuel_surcharge: "1% waiver",
 
     // Eligibility
     min_age: 21,
     max_age: 60,
     min_income: 25000,
-    employment_type: "Salaried / Self-Employed",
     cibil_required: 750,
-    resident_type: "Indian Resident",
 
-    // Commission
-    partner_commission: 1500,
-    sub_partner_commission: 300,
-    super_partner_commission: 200,
-    admin_commission: 500,
-
-    // Features & Benefits
-    features: ["Cashback", "Airport Lounge"],
+    // Benefits
+    features: ["5% Cashback on top merchants", "1% Fuel Surcharge Waiver", "4 Complimentary Lounge Access"],
     benefits: [
-      { title: "5% Cashback", description: "On top online merchants" },
-      { title: "Complimentary Lounge", description: "4 visits per year" }
+      { title: "Cashback Rewards", description: "Earn up to 5% cashback on online shopping" },
+      { title: "Lounge Visits", description: "4 free domestic airport lounge passes per year" }
+    ],
+    compare_reward_rate: "5% Cashback",
+    compare_lounge: "4 Visits/Year",
+
+    // Documents & FAQs
+    required_documents: ["PAN Card", "Aadhaar Card", "Salary Slip"],
+    faqs: [
+      { question: "What is the annual fee for this card?", answer: "The annual fee is ₹500, which is waived on spending ₹50,000 in a year." }
     ],
 
-    // Required Documents
-    required_documents: ["PAN Card", "Aadhaar Card", "Salary Slip"],
-
-    // Compare Specs
-    compare_annual_fee: "₹500",
-    compare_reward_rate: "5%",
-    compare_lounge: "Yes (4/yr)",
-    compare_fuel: "1% Waiver",
-    compare_forex: "3.5%",
-
-    // Visibility
+    // Marketing & Badges
     show_on_website: true,
     show_in_partner: true,
     is_featured: false,
     is_popular: false,
+    is_recommended: false,
+    is_trending: false,
+    badge: "Hot",
+    display_order: 1,
 
     // SEO
     meta_title: "",
     meta_description: "",
     slug: ""
   });
-
-
 
   // Fetch products
   const fetchProducts = async () => {
@@ -151,6 +145,17 @@ export default function ManageAdminProducts() {
     fetchProducts();
   }, [activeCategory, search]);
 
+  // Auto-generate slug when name changes if slug hasn't been manually edited
+  const handleNameChange = (newName) => {
+    const autoSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    setForm(prev => ({
+      ...prev,
+      name: newName,
+      slug: editItem ? prev.slug : autoSlug,
+      meta_title: prev.meta_title || `${newName} - Apply Online | GharKaPaisa`
+    }));
+  };
+
   const openAddModal = () => {
     setEditItem(null);
     setCardImageFile(null);
@@ -158,51 +163,46 @@ export default function ManageAdminProducts() {
       name: "",
       bank_id: banks[0]?.id || "",
       category: activeCategory,
-      sub_category: "",
+      sub_category: "Core Cards",
       description: "",
       image_url: "",
-      thumbnail_url: "",
-      banner_url: "",
       status: "Active",
       is_active: true,
 
+      card_network: "Visa",
+      card_variant: "Platinum",
+      is_lifetime_free: false,
+      best_for: "Cashback",
+      welcome_benefits: "₹500 Gift Voucher on first transaction",
+
       joining_fee: "₹0",
-      annual_fee: "₹500",
+      annual_fee: "₹500 (Waived on ₹50,000 spend)",
       interest_rate: "3.5% p.m.",
-      late_payment_charges: "Up to ₹1300",
-      foreign_markup: "3.5%",
-      fuel_surcharge: "1% waiver",
 
       min_age: 21,
       max_age: 60,
       min_income: 25000,
-      employment_type: "Salaried / Self-Employed",
       cibil_required: 750,
-      resident_type: "Indian Resident",
 
-      partner_commission: 1500,
-      sub_partner_commission: 300,
-      super_partner_commission: 200,
-      admin_commission: 500,
-
-      features: ["Cashback", "Airport Lounge"],
+      features: ["5% Cashback on top merchants", "1% Fuel Surcharge Waiver", "4 Complimentary Lounge Access"],
       benefits: [
-        { title: "5% Cashback", description: "On online shopping" },
-        { title: "Airport Lounge Access", description: "4 free passes annually" }
+        { title: "Cashback Rewards", description: "Earn up to 5% cashback on online shopping" },
+        { title: "Lounge Visits", description: "4 free domestic airport lounge passes per year" }
       ],
+      compare_reward_rate: "5% Cashback",
+      compare_lounge: "4 Visits/Year",
 
       required_documents: ["PAN Card", "Aadhaar Card", "Salary Slip"],
-
-      compare_annual_fee: "₹500",
-      compare_reward_rate: "5%",
-      compare_lounge: "Yes (4/yr)",
-      compare_fuel: "1% Waiver",
-      compare_forex: "3.5%",
+      faqs: [],
 
       show_on_website: true,
       show_in_partner: true,
       is_featured: false,
       is_popular: false,
+      is_recommended: false,
+      is_trending: false,
+      badge: "Hot",
+      display_order: 1,
 
       meta_title: "",
       meta_description: "",
@@ -218,7 +218,6 @@ export default function ManageAdminProducts() {
 
     const fees = item.fees_structure || {};
     const elig = item.eligibility_criteria || {};
-    const comm = item.commissions_json || {};
     const compare = item.compare_specs || {};
     const vis = item.visibility || {};
     const seo = item.seo_metadata || {};
@@ -227,52 +226,47 @@ export default function ManageAdminProducts() {
       name: item.name || "",
       bank_id: item.bank_id || "",
       category: item.category || activeCategory,
-      sub_category: item.sub_category || "",
+      sub_category: item.sub_category || "Core Cards",
       description: item.description || "",
       image_url: item.image_url || "",
-      thumbnail_url: item.thumbnail_url || "",
-      banner_url: item.banner_url || "",
       status: item.status || "Active",
       is_active: item.is_active !== undefined ? item.is_active : true,
 
-      joining_fee: fees.joining_fee || "₹0",
+      card_network: item.card_network || "Visa",
+      card_variant: item.card_variant || "Platinum",
+      is_lifetime_free: item.is_lifetime_free || false,
+      best_for: item.best_for || "Cashback",
+      welcome_benefits: item.welcome_benefits || "",
+
+      joining_fee: fees.joining_fee || item.joining_fee || "₹0",
       annual_fee: fees.annual_fee || item.annual_fee || "₹500",
-      interest_rate: fees.interest_rate || "3.5% p.m.",
-      late_payment_charges: fees.late_payment_charges || "",
-      foreign_markup: fees.foreign_markup || "",
-      fuel_surcharge: fees.fuel_surcharge || "",
+      interest_rate: fees.interest_rate || item.interest_rate || "3.5% p.m.",
 
       min_age: elig.min_age || item.min_age || 21,
       max_age: elig.max_age || item.max_age || 60,
       min_income: elig.min_income || item.min_income || 25000,
-      employment_type: elig.employment_type || "Salaried",
       cibil_required: elig.cibil_required || 750,
-      resident_type: elig.resident_type || "Indian Resident",
 
-      partner_commission: comm.partner_commission || item.commission_value || 1500,
-      sub_partner_commission: comm.sub_partner_commission || 300,
-      super_partner_commission: comm.super_partner_commission || 200,
-      admin_commission: comm.admin_commission || 500,
-
-      features: Array.isArray(item.features_list) ? item.features_list : [],
+      features: Array.isArray(item.features_list) ? item.features_list : (Array.isArray(item.features) ? item.features : []),
       benefits: Array.isArray(item.benefits_list) ? item.benefits_list : [],
-      required_documents: Array.isArray(item.required_documents) ? item.required_documents : [],
-
-      compare_annual_fee: compare.annual_fee || "",
       compare_reward_rate: compare.reward_rate || "",
       compare_lounge: compare.lounge || "",
-      compare_fuel: compare.fuel || "",
-      compare_forex: compare.forex || "",
+
+      required_documents: Array.isArray(item.required_documents) ? item.required_documents : [],
+      faqs: [],
 
       show_on_website: vis.show_on_website !== undefined ? vis.show_on_website : true,
       show_in_partner: vis.show_in_partner !== undefined ? vis.show_in_partner : true,
       is_featured: vis.is_featured || item.featured || false,
       is_popular: vis.is_popular || false,
+      is_recommended: item.is_recommended || false,
+      is_trending: item.is_trending || false,
+      badge: item.badge || "Hot",
+      display_order: item.display_order || 1,
 
-      meta_title: seo.meta_title || "",
-      meta_description: seo.meta_description || "",
+      meta_title: seo.meta_title || item.seo_title || "",
+      meta_description: seo.meta_description || item.seo_description || "",
       slug: item.slug || "",
-      faqs: []
     });
 
     api.get(`/products/${item.id}/faqs`).then(res => {
@@ -320,6 +314,8 @@ export default function ManageAdminProducts() {
     setSubmitting(true);
 
     try {
+      const autoSlug = form.slug?.trim() || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
       const payload = {
         name: form.name.trim(),
         bank_id: form.bank_id,
@@ -327,46 +323,31 @@ export default function ManageAdminProducts() {
         sub_category: form.sub_category,
         description: form.description,
         image_url: form.image_url,
-        thumbnail_url: form.thumbnail_url,
-        banner_url: form.banner_url,
         status: form.status,
         is_active: form.status === "Active",
 
-        fees_structure: {
-          joining_fee: form.joining_fee,
-          annual_fee: form.annual_fee,
-          interest_rate: form.interest_rate,
-          late_payment_charges: form.late_payment_charges,
-          foreign_markup: form.foreign_markup,
-          fuel_surcharge: form.fuel_surcharge
-        },
+        card_network: form.card_network,
+        card_variant: form.card_variant,
+        is_lifetime_free: form.is_lifetime_free,
+        best_for: form.best_for,
+        welcome_benefits: form.welcome_benefits,
 
-        eligibility_criteria: {
-          min_age: parseInt(form.min_age),
-          max_age: parseInt(form.max_age),
-          min_income: parseFloat(form.min_income),
-          employment_type: form.employment_type,
-          cibil_required: parseInt(form.cibil_required),
-          resident_type: form.resident_type
-        },
-
-        commissions_json: {
-          partner_commission: parseFloat(form.partner_commission),
-          sub_partner_commission: parseFloat(form.sub_partner_commission),
-          super_partner_commission: parseFloat(form.super_partner_commission),
-          admin_commission: parseFloat(form.admin_commission)
-        },
+        annual_fee: form.annual_fee,
+        joining_fee: form.joining_fee,
+        interest_rate: form.interest_rate,
+        min_age: parseInt(form.min_age),
+        max_age: parseInt(form.max_age),
+        min_income: parseFloat(form.min_income),
 
         features_list: form.features,
+        features: form.features,
         benefits_list: form.benefits,
         required_documents: form.required_documents,
 
         compare_specs: {
-          annual_fee: form.compare_annual_fee,
+          annual_fee: form.annual_fee,
           reward_rate: form.compare_reward_rate,
           lounge: form.compare_lounge,
-          fuel: form.compare_fuel,
-          forex: form.compare_forex
         },
 
         visibility: {
@@ -377,14 +358,17 @@ export default function ManageAdminProducts() {
         },
 
         seo_metadata: {
-          meta_title: form.meta_title,
-          meta_description: form.meta_description,
-          slug: form.slug
+          meta_title: form.meta_title || `${form.name} - Apply Online | GharKaPaisa`,
+          meta_description: form.meta_description || form.description,
+          slug: autoSlug
         },
 
-        commission_type: "fixed",
-        commission_value: parseFloat(form.partner_commission) || 0,
-        annual_fee: form.annual_fee
+        slug: autoSlug,
+        badge: form.badge,
+        display_order: parseInt(form.display_order) || 1,
+        is_recommended: form.is_recommended,
+        is_trending: form.is_trending,
+        featured: form.is_featured
       };
 
       let res;
@@ -437,6 +421,8 @@ export default function ManageAdminProducts() {
     }
   };
 
+  const selectedBank = banks.find(b => b.id === form.bank_id);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -450,7 +436,7 @@ export default function ManageAdminProducts() {
             {categoryTitle} Management
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight || '#64748B', margin: '4px 0 0' }}>
-            Add, edit, de-activate and manage full specification for {categoryTitle.toLowerCase()}
+            Create, edit and manage credit cards and product specifications dynamically
           </p>
         </div>
 
@@ -486,7 +472,7 @@ export default function ManageAdminProducts() {
         </form>
       </div>
 
-      {/* TABLE */}
+      {/* PRODUCT LIST TABLE */}
       <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
@@ -494,9 +480,9 @@ export default function ManageAdminProducts() {
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Image</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Product Name</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank</th>
+              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Type</th>
+              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Fee</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Status</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Commission</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Visibility</th>
               <th style={{ padding: '14px 16px', fontWeight: 800, textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
@@ -504,19 +490,24 @@ export default function ManageAdminProducts() {
             {loading ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
             ) : products.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products found. Click <strong>Add {categoryTitle}</strong> to add one!</td></tr>
+              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products found. Click <strong>Add {categoryTitle}</strong> to create one!</td></tr>
             ) : (
               products.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     {prod.image_url ? (
-                      <img src={prod.image_url} alt={prod.name} style={{ height: '36px', width: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                      <img src={prod.image_url} alt={prod.name} style={{ height: '36px', width: '56px', objectFit: 'contain', borderRadius: '6px' }} />
                     ) : (
                       <span style={{ fontSize: '20px' }}>💳</span>
                     )}
                   </td>
-                  <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>{prod.name}</td>
+                  <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>
+                    {prod.name}
+                    {prod.badge && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: '#F59E0B20', color: '#D97706', borderRadius: '4px', fontWeight: 800 }}>{prod.badge}</span>}
+                  </td>
                   <td style={{ padding: '14px 16px', fontWeight: 700, color: C.teal }}>{prod.bank_name || 'Generic'}</td>
+                  <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.sub_category || 'Core Cards'}</td>
+                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>{prod.is_lifetime_free ? <span style={{ color: '#10B981' }}>Lifetime Free</span> : (prod.annual_fee || '₹500')}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <button
                       onClick={() => toggleStatus(prod)}
@@ -528,17 +519,6 @@ export default function ManageAdminProducts() {
                     >
                       {prod.status || (prod.is_active ? 'Active' : 'Inactive')}
                     </button>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontWeight: 800, color: '#10B981' }}>₹{prod.commission_value || 0}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: `${C.teal}15`, color: C.teal, fontWeight: 700 }}>
-                        {prod.visibility?.show_on_website !== false ? 'Website' : 'Hidden Web'}
-                      </span>
-                      <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: `${C.teal}15`, color: C.teal, fontWeight: 700 }}>
-                        {prod.visibility?.show_in_partner !== false ? 'Partner' : 'Hidden Part'}
-                      </span>
-                    </div>
                   </td>
                   <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
@@ -557,10 +537,10 @@ export default function ManageAdminProducts() {
         </table>
       </div>
 
-      {/* ── RICH SPECIFICATION ADD/EDIT MODAL ── */}
+      {/* ── REDESIGNED 7-TAB PRODUCT MODAL ── */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '800px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '850px', width: '100%', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
@@ -574,25 +554,23 @@ export default function ManageAdminProducts() {
             {/* TAB STRIP */}
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', borderBottom: `1px solid ${C.border}`, marginBottom: '20px' }}>
               {[
-                { id: 'basic', label: 'Basic Info' },
-                { id: 'fees', label: 'Fees & Charges' },
-                { id: 'eligibility', label: 'Eligibility' },
-                { id: 'commission', label: 'Commission' },
-                { id: 'features', label: 'Features' },
-                { id: 'benefits', label: 'Benefits' },
-                { id: 'documents', label: 'Documents' },
-                { id: 'compare', label: 'Compare Specs' },
-                { id: 'faqs', label: 'FAQs' },
-                { id: 'visibility', label: 'Visibility & SEO' }
+                { id: 'basic', label: '1. Basic Info' },
+                { id: 'fees', label: '2. Fees & Eligibility' },
+                { id: 'benefits', label: '3. Benefits' },
+                { id: 'documents', label: '4. Docs & FAQs' },
+                { id: 'marketing', label: '5. Marketing' },
+                { id: 'seo', label: '6. SEO' },
+                { id: 'preview', label: '7. Live Preview 👁️' }
               ].map(t => (
                 <button
                   key={t.id}
                   onClick={() => setModalTab(t.id)}
                   style={{
-                    padding: '6px 14px', borderRadius: '8px', border: 'none',
-                    background: modalTab === t.id ? C.teal : 'transparent',
+                    padding: '8px 16px', borderRadius: '10px', border: 'none',
+                    background: modalTab === t.id ? C.teal : (isDark ? '#334155' : '#F1F5F9'),
                     color: modalTab === t.id ? '#FFF' : C.text,
-                    fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap'
+                    fontWeight: 800, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap',
+                    transition: 'all 0.2s'
                   }}
                 >
                   {t.label}
@@ -607,12 +585,24 @@ export default function ManageAdminProducts() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
                     <label style={S.label}>Product Name *</label>
-                    <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. HDFC Regalia Gold"
+                      value={form.name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      style={{ ...S.input, height: '42px' }}
+                    />
                   </div>
 
                   <div>
-                    <label style={S.label}>Issuing Bank (Active Banks Only) *</label>
-                    <select value={form.bank_id} onChange={(e) => setForm({ ...form, bank_id: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                    <label style={S.label}>Issuing Bank *</label>
+                    <select
+                      required
+                      value={form.bank_id}
+                      onChange={(e) => setForm({ ...form, bank_id: e.target.value })}
+                      style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                    >
                       <option value="">-- Select Bank --</option>
                       {banks.map(b => <option key={b.id} value={b.id}>{b.name} ({b.short_code})</option>)}
                     </select>
@@ -626,25 +616,36 @@ export default function ManageAdminProducts() {
                     </select>
                   </div>
 
-                  {activeCategory === 'credit_card' && (
-                    <div>
-                      <label style={S.label}>Credit Card Type *</label>
-                      <select 
-                        required
-                        value={form.sub_category} 
-                        onChange={(e) => setForm({ ...form, sub_category: e.target.value })} 
-                        style={{ ...S.input, height: '42px', fontWeight: 700 }}
-                      >
-                        <option value="">-- Select Type --</option>
-                        <option value="Core Cards">Core Card</option>
-                        <option value="Co-Branded Cards">Co-Branded Cards</option>
-                        <option value="Secured Cards">Secured Card</option>
-                      </select>
-                    </div>
-                  )}
+                  <div>
+                    <label style={S.label}>Credit Card Type *</label>
+                    <select
+                      required
+                      value={form.sub_category}
+                      onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
+                      style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                    >
+                      <option value="Core Cards">Core Card</option>
+                      <option value="Co-Branded Cards">Co-Branded Card</option>
+                      <option value="Secured Cards">Secured Card</option>
+                    </select>
+                  </div>
 
                   <div>
-                    <label style={S.label}>Card / Product Image (Upload File or URL)</label>
+                    <label style={S.label}>Card Network</label>
+                    <select value={form.card_network} onChange={(e) => setForm({ ...form, card_network: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                      {CARD_NETWORKS.map(net => <option key={net} value={net}>{net}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Card Variant</label>
+                    <select value={form.card_variant} onChange={(e) => setForm({ ...form, card_variant: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                      {CARD_VARIANTS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Card Image (Upload File or URL)</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -656,62 +657,60 @@ export default function ManageAdminProducts() {
                       placeholder="Or paste image URL (https://.../card.png)"
                       value={form.image_url}
                       onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                      style={{ ...S.input, height: '40px', marginTop: '6px' }}
+                      style={{ ...S.input, height: '38px', marginTop: '6px' }}
                     />
                     {(cardImageFile || form.image_url) && (
                       <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img
                           src={cardImageFile ? URL.createObjectURL(cardImageFile) : form.image_url}
                           alt="Card Preview"
-                          style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                          style={{ width: '80px', height: '50px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                         />
                         <span style={{ fontSize: '12px', color: '#64748b' }}>
-                          {cardImageFile ? `Selected File: ${cardImageFile.name}` : 'URL Preview'}
+                          {cardImageFile ? `File: ${cardImageFile.name}` : 'URL Preview'}
                         </span>
                       </div>
                     )}
                   </div>
 
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '24px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.is_lifetime_free}
+                        onChange={(e) => setForm({ ...form, is_lifetime_free: e.target.checked, annual_fee: e.target.checked ? 'Lifetime Free' : form.annual_fee })}
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                      <span style={{ color: '#10B981' }}>Is Lifetime Free?</span>
+                    </label>
+                  </div>
+
                   <div style={{ gridColumn: 'span 2' }}>
-                    <label style={S.label}>Description</label>
-                    <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...S.input }} />
+                    <label style={S.label}>Short Card Description</label>
+                    <textarea rows={3} placeholder="Write 1-2 line summary of the card..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...S.input }} />
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: FEES & CHARGES */}
+              {/* TAB 2: FEES & ELIGIBILITY */}
               {modalTab === 'fees' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
                     <label style={S.label}>Joining Fee</label>
-                    <input type="text" value={form.joining_fee} onChange={(e) => setForm({ ...form, joining_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <input type="text" placeholder="e.g. ₹0 or ₹500" value={form.joining_fee} onChange={(e) => setForm({ ...form, joining_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
                   <div>
                     <label style={S.label}>Annual Fee</label>
-                    <input type="text" value={form.annual_fee} onChange={(e) => setForm({ ...form, annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <input type="text" placeholder="e.g. ₹500 (Waived on ₹50k spend)" value={form.annual_fee} onChange={(e) => setForm({ ...form, annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
                   <div>
-                    <label style={S.label}>Interest Rate</label>
-                    <input type="text" value={form.interest_rate} onChange={(e) => setForm({ ...form, interest_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <label style={S.label}>Minimum Monthly Income (₹)</label>
+                    <input type="number" placeholder="25000" value={form.min_income} onChange={(e) => setForm({ ...form, min_income: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
                   <div>
-                    <label style={S.label}>Late Payment Charges</label>
-                    <input type="text" value={form.late_payment_charges} onChange={(e) => setForm({ ...form, late_payment_charges: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <label style={S.label}>Minimum CIBIL Score</label>
+                    <input type="number" placeholder="750" value={form.cibil_required} onChange={(e) => setForm({ ...form, cibil_required: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
-                  <div>
-                    <label style={S.label}>Foreign Markup</label>
-                    <input type="text" value={form.foreign_markup} onChange={(e) => setForm({ ...form, foreign_markup: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Fuel Surcharge</label>
-                    <input type="text" value={form.fuel_surcharge} onChange={(e) => setForm({ ...form, fuel_surcharge: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: ELIGIBILITY */}
-              {modalTab === 'eligibility' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
                     <label style={S.label}>Minimum Age</label>
                     <input type="number" value={form.min_age} onChange={(e) => setForm({ ...form, min_age: e.target.value })} style={{ ...S.input, height: '42px' }} />
@@ -720,269 +719,343 @@ export default function ManageAdminProducts() {
                     <label style={S.label}>Maximum Age</label>
                     <input type="number" value={form.max_age} onChange={(e) => setForm({ ...form, max_age: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
-                  <div>
-                    <label style={S.label}>Minimum Monthly Income (₹)</label>
-                    <input type="number" value={form.min_income} onChange={(e) => setForm({ ...form, min_income: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Minimum CIBIL Score</label>
-                    <input type="number" value={form.cibil_required} onChange={(e) => setForm({ ...form, cibil_required: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={S.label}>Interest Rate (Optional)</label>
+                    <input type="text" placeholder="e.g. 3.5% p.m." value={form.interest_rate} onChange={(e) => setForm({ ...form, interest_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
                 </div>
               )}
 
-              {/* TAB 4: COMMISSION */}
-              {modalTab === 'commission' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={S.label}>Partner Commission (₹)</label>
-                    <input type="number" value={form.partner_commission} onChange={(e) => setForm({ ...form, partner_commission: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Sub Partner Commission (₹)</label>
-                    <input type="number" value={form.sub_partner_commission} onChange={(e) => setForm({ ...form, sub_partner_commission: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Super Partner Commission (₹)</label>
-                    <input type="number" value={form.super_partner_commission} onChange={(e) => setForm({ ...form, super_partner_commission: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Admin Commission (₹)</label>
-                    <input type="number" value={form.admin_commission} onChange={(e) => setForm({ ...form, admin_commission: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 5: FEATURES */}
-              {modalTab === 'features' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <label style={S.label}>Key Features (Text Fields)</label>
-                  {form.features.map((feat, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        placeholder={`Feature #${idx + 1} (e.g. 5% cashback on online spends)`}
-                        value={feat}
-                        onChange={(e) => {
-                          const next = [...form.features];
-                          next[idx] = e.target.value;
-                          setForm({ ...form, features: next });
-                        }}
-                        style={{ ...S.input, flex: 1, height: '42px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = form.features.filter((_, i) => i !== idx);
-                          setForm({ ...form, features: next });
-                        }}
-                        style={{ padding: '8px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, features: [...form.features, ''] })}
-                    style={{ padding: '8px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginTop: '4px' }}
-                  >
-                    + Add Feature
-                  </button>
-                </div>
-              )}
-
-              {/* TAB 6: BENEFITS */}
+              {/* TAB 3: BENEFITS */}
               {modalTab === 'benefits' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <label style={S.label}>Benefit Cards (Title & Description)</label>
-                  {form.benefits.map((b, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', background: C.bgSecondary, padding: '12px', borderRadius: '12px', alignItems: 'center' }}>
-                      <input
-                        type="text"
-                        placeholder="Benefit Title (e.g. 5% Cashback)"
-                        value={b.title}
-                        onChange={(e) => {
-                          const next = [...form.benefits];
-                          next[idx].title = e.target.value;
-                          setForm({ ...form, benefits: next });
-                        }}
-                        style={{ ...S.input, flex: 1, height: '42px' }}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Description (e.g. On top e-commerce merchants)"
-                        value={b.description}
-                        onChange={(e) => {
-                          const next = [...form.benefits];
-                          next[idx].description = e.target.value;
-                          setForm({ ...form, benefits: next });
-                        }}
-                        style={{ ...S.input, flex: 2, height: '42px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = form.benefits.filter((_, i) => i !== idx);
-                          setForm({ ...form, benefits: next });
-                        }}
-                        style={{ padding: '8px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Delete
-                      </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={S.label}>Best For Category</label>
+                      <select value={form.best_for} onChange={(e) => setForm({ ...form, best_for: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                        {BEST_FOR_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, benefits: [...form.benefits, { title: '', description: '' }] })}
-                    style={{ padding: '8px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginTop: '4px' }}
-                  >
-                    + Add Benefit Card
-                  </button>
+                    <div>
+                      <label style={S.label}>Reward Rate Tag</label>
+                      <input type="text" placeholder="e.g. 5% Cashback" value={form.compare_reward_rate} onChange={(e) => setForm({ ...form, compare_reward_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    </div>
+                    <div>
+                      <label style={S.label}>Lounge Access Tag</label>
+                      <input type="text" placeholder="e.g. 4 Passes/Year" value={form.compare_lounge} onChange={(e) => setForm({ ...form, compare_lounge: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Welcome Benefits</label>
+                    <input type="text" placeholder="e.g. Amazon voucher worth ₹500" value={form.welcome_benefits} onChange={(e) => setForm({ ...form, welcome_benefits: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Key Features (Bullets on Card List)</label>
+                    {form.features.map((feat, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder={`Feature #${idx + 1}`}
+                          value={feat}
+                          onChange={(e) => {
+                            const next = [...form.features];
+                            next[idx] = e.target.value;
+                            setForm({ ...form, features: next });
+                          }}
+                          style={{ ...S.input, flex: 1, height: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = form.features.filter((_, i) => i !== idx);
+                            setForm({ ...form, features: next });
+                          }}
+                          style={{ padding: '6px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, features: [...form.features, ''] })}
+                      style={{ padding: '6px 14px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + Add Feature
+                    </button>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Benefit Cards (Title & Description)</label>
+                    {form.benefits.map((b, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '10px', background: isDark ? '#1e293b' : '#f8fafc', padding: '10px', borderRadius: '10px', marginBottom: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Title"
+                          value={b.title}
+                          onChange={(e) => {
+                            const next = [...form.benefits];
+                            next[idx].title = e.target.value;
+                            setForm({ ...form, benefits: next });
+                          }}
+                          style={{ ...S.input, flex: 1, height: '40px' }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={b.description}
+                          onChange={(e) => {
+                            const next = [...form.benefits];
+                            next[idx].description = e.target.value;
+                            setForm({ ...form, benefits: next });
+                          }}
+                          style={{ ...S.input, flex: 2, height: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = form.benefits.filter((_, i) => i !== idx);
+                            setForm({ ...form, benefits: next });
+                          }}
+                          style={{ padding: '6px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, benefits: [...form.benefits, { title: '', description: '' }] })}
+                      style={{ padding: '6px 14px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + Add Benefit Card
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* TAB 7: DOCUMENTS */}
+              {/* TAB 4: DOCUMENTS & FAQS */}
               {modalTab === 'documents' && (
-                <div>
-                  <label style={S.label}>Required Documents Checklist</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                    {DOCUMENT_OPTIONS.map(doc => {
-                      const checked = form.required_documents.includes(doc);
-                      return (
-                        <label key={doc} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              const next = checked ? form.required_documents.filter(d => d !== doc) : [...form.required_documents, doc];
-                              setForm({ ...form, required_documents: next });
-                            }}
-                          />
-                          <span>{doc}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: COMPARE SPECS */}
-              {modalTab === 'compare' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={S.label}>Annual Fee</label>
-                    <input type="text" value={form.compare_annual_fee} onChange={(e) => setForm({ ...form, compare_annual_fee: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Reward Rate</label>
-                    <input type="text" value={form.compare_reward_rate} onChange={(e) => setForm({ ...form, compare_reward_rate: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Lounge Access</label>
-                    <input type="text" value={form.compare_lounge} onChange={(e) => setForm({ ...form, compare_lounge: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Fuel Waiver</label>
-                    <input type="text" value={form.compare_fuel} onChange={(e) => setForm({ ...form, compare_fuel: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Forex Markup</label>
-                    <input type="text" value={form.compare_forex} onChange={(e) => setForm({ ...form, compare_forex: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: FAQS */}
-              {modalTab === 'faqs' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <label style={S.label}>Frequently Asked Questions (Unlimited)</label>
-                  {(form.faqs || []).map((faq, idx) => (
-                    <div key={idx} style={{ background: C.bgSecondary, padding: '12px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="Question"
-                        value={faq.question}
-                        onChange={(e) => {
-                          const next = [...(form.faqs || [])];
-                          next[idx].question = e.target.value;
-                          setForm({ ...form, faqs: next });
-                        }}
-                        style={{ ...S.input, height: '38px', fontWeight: 700 }}
-                      />
-                      <textarea
-                        rows={2}
-                        placeholder="Answer"
-                        value={faq.answer}
-                        onChange={(e) => {
-                          const next = [...(form.faqs || [])];
-                          next[idx].answer = e.target.value;
-                          setForm({ ...form, faqs: next });
-                        }}
-                        style={{ ...S.input }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = (form.faqs || []).filter((_, i) => i !== idx);
-                          setForm({ ...form, faqs: next });
-                        }}
-                        style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, alignSelf: 'flex-end' }}
-                      >
-                        Remove FAQ
-                      </button>
+                    <label style={S.label}>Required Documents Checklist</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '8px' }}>
+                      {DOCUMENT_OPTIONS.map(doc => {
+                        const checked = form.required_documents.includes(doc);
+                        return (
+                          <label key={doc} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked ? form.required_documents.filter(d => d !== doc) : [...form.required_documents, doc];
+                                setForm({ ...form, required_documents: next });
+                              }}
+                            />
+                            <span>{doc}</span>
+                          </label>
+                        );
+                      })}
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, faqs: [...(form.faqs || []), { question: '', answer: '' }] })}
-                    style={{ padding: '8px 16px', background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }}
-                  >
-                    + Add Question & Answer
-                  </button>
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Frequently Asked Questions (Unlimited)</label>
+                    {(form.faqs || []).map((faq, idx) => (
+                      <div key={idx} style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: '10px', borderRadius: '10px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <input
+                          type="text"
+                          placeholder="Question"
+                          value={faq.question}
+                          onChange={(e) => {
+                            const next = [...(form.faqs || [])];
+                            next[idx].question = e.target.value;
+                            setForm({ ...form, faqs: next });
+                          }}
+                          style={{ ...S.input, height: '38px', fontWeight: 700 }}
+                        />
+                        <textarea
+                          rows={2}
+                          placeholder="Answer"
+                          value={faq.answer}
+                          onChange={(e) => {
+                            const next = [...(form.faqs || [])];
+                            next[idx].answer = e.target.value;
+                            setForm({ ...form, faqs: next });
+                          }}
+                          style={{ ...S.input }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = (form.faqs || []).filter((_, i) => i !== idx);
+                            setForm({ ...form, faqs: next });
+                          }}
+                          style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700, alignSelf: 'flex-end' }}
+                        >
+                          Remove FAQ
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, faqs: [...(form.faqs || []), { question: '', answer: '' }] })}
+                      style={{ padding: '6px 14px', background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      + Add Question & Answer
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* TAB 8: VISIBILITY & SEO */}
-              {modalTab === 'visibility' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.show_on_website} onChange={(e) => setForm({ ...form, show_on_website: e.target.checked })} />
-                    <span>Show on Website</span>
-                  </label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.show_in_partner} onChange={(e) => setForm({ ...form, show_in_partner: e.target.checked })} />
-                    <span>Show in Partner Panel</span>
-                  </label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
-                    <span>Featured Product Section</span>
-                  </label>
-
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={form.is_popular} onChange={(e) => setForm({ ...form, is_popular: e.target.checked })} />
-                    <span>Popular Product Section</span>
-                  </label>
+              {/* TAB 5: MARKETING & BADGES */}
+              {modalTab === 'marketing' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={S.label}>Card Badge</label>
+                    <select value={form.badge} onChange={(e) => setForm({ ...form, badge: e.target.value })} style={{ ...S.input, height: '42px', fontWeight: 700 }}>
+                      <option value="">-- No Badge --</option>
+                      {BADGE_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
 
                   <div>
-                    <label style={S.label}>Meta Title (SEO)</label>
+                    <label style={S.label}>Display Priority Order</label>
+                    <input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isDark ? '#1e293b' : '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.show_on_website} onChange={(e) => setForm({ ...form, show_on_website: e.target.checked })} />
+                      <span>Show on Public Website</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.show_in_partner} onChange={(e) => setForm({ ...form, show_in_partner: e.target.checked })} />
+                      <span>Show in Partner Portal</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
+                      <span>Featured Product Section</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.is_popular} onChange={(e) => setForm({ ...form, is_popular: e.target.checked })} />
+                      <span>Popular Product Section</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.is_recommended} onChange={(e) => setForm({ ...form, is_recommended: e.target.checked })} />
+                      <span>Recommended Badge</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={form.is_trending} onChange={(e) => setForm({ ...form, is_trending: e.target.checked })} />
+                      <span>Trending Badge</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: SEO */}
+              {modalTab === 'seo' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={S.label}>URL Slug (Auto-generated)</label>
+                    <input type="text" placeholder="e.g. hdfc-regalia-gold" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                  </div>
+
+                  <div>
+                    <label style={S.label}>Meta Title</label>
                     <input type="text" placeholder="SEO Title" value={form.meta_title} onChange={(e) => setForm({ ...form, meta_title: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
 
                   <div>
-                    <label style={S.label}>Meta Description (SEO)</label>
-                    <textarea rows={2} placeholder="SEO Meta Description" value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} style={{ ...S.input }} />
-                  </div>
-
-                  <div>
-                    <label style={S.label}>URL Slug</label>
-                    <input type="text" placeholder="e.g. hdfc-regalia-gold" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} style={{ ...S.input, height: '42px' }} />
+                    <label style={S.label}>Meta Description</label>
+                    <textarea rows={3} placeholder="SEO Meta Description" value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} style={{ ...S.input }} />
                   </div>
                 </div>
               )}
 
+              {/* TAB 7: LIVE PREVIEW */}
+              {modalTab === 'preview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: C.textLight }}>Live Website Card Preview:</h4>
+                  
+                  <div style={{
+                    background: isDark ? '#1e293b' : '#ffffff',
+                    borderRadius: '20px',
+                    border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                    padding: '20px',
+                    maxWidth: '400px',
+                    margin: '0 auto',
+                    width: '100%',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: selectedBank?.theme_color || '#2563EB', textTransform: 'uppercase' }}>
+                        {form.sub_category}
+                      </span>
+                      {form.badge && (
+                        <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px', background: '#F59E0B20', color: '#D97706' }}>
+                          ★ {form.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
+                      <div style={{ width: '80px', height: '52px', borderRadius: '10px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
+                        <img
+                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : (form.image_url || selectedBank?.logo_url)}
+                          alt="Preview"
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px 0' }}>{form.name || "Card Name"}</h3>
+                        <p style={{ fontSize: '12px', color: form.is_lifetime_free ? '#10B981' : '#64748b', margin: 0, fontWeight: 700 }}>
+                          {form.is_lifetime_free ? 'Lifetime Free' : form.annual_fee}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p style={{ fontSize: '13px', color: isDark ? '#cbd5e1' : '#475569', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                      {form.description || "Card description goes here..."}
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+                      {form.features.filter(f => f).slice(0, 3).map((f, i) => (
+                        <div key={i} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#94a3b8' : '#64748b' }}>
+                          <MdCheckCircle size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: selectedBank?.button_color || '#2563EB',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Apply Now
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ACTION FOOTER */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
                 <button type="button" onClick={() => setModalOpen(false)} style={{ padding: '10px 18px', borderRadius: '10px', border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontWeight: 700, cursor: 'pointer' }}>
                   Cancel

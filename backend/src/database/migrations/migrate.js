@@ -360,6 +360,14 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS priority INT DEFAULT 0`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS annual_fee VARCHAR(255)`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS time_period VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS card_network VARCHAR(50)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS card_variant VARCHAR(50)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS best_for VARCHAR(100)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS welcome_benefits TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_lifetime_free BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS badge VARCHAR(50)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_recommended BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_trending BOOLEAN DEFAULT FALSE`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`

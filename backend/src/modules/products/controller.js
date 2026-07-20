@@ -232,12 +232,13 @@ const getProduct = async (req, res, next) => {
 const createProduct = async (req, res, next) => {
   try {
     const { 
-      bank_id, name, category, description, commission_type, commission_value, 
+      bank_id, name, category, sub_category, description, commission_type, commission_value, 
       min_age, max_age, min_income, display_order, annual_fee, time_period,
       short_description, logo, banner, image, commission_enabled, commission_amount,
       override_percentage, featured, public_visible, partner_visible, eligibility_criteria,
       documents_required, benefits, fees_charges, apply_button_text, seo_title,
-      seo_description, seo_keywords, priority, status, is_active
+      seo_description, seo_keywords, priority, status, is_active,
+      card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending
     } = req.body;
     let image_url = req.body.image_url;
 
@@ -273,6 +274,9 @@ const createProduct = async (req, res, next) => {
     const isPubVisible = public_visible !== undefined ? (public_visible === 'true' || public_visible === true) : true;
     const isPartVisible = partner_visible !== undefined ? (partner_visible === 'true' || partner_visible === true) : true;
     const isActive = is_active !== undefined ? (is_active === 'true' || is_active === true) : true;
+    const isLtf = is_lifetime_free !== undefined ? (is_lifetime_free === 'true' || is_lifetime_free === true) : false;
+    const isRec = is_recommended !== undefined ? (is_recommended === 'true' || is_recommended === true) : false;
+    const isTrend = is_trending !== undefined ? (is_trending === 'true' || is_trending === true) : false;
 
     // Generate unique slug
     let productSlug = req.body.slug;
@@ -286,18 +290,23 @@ const createProduct = async (req, res, next) => {
 
     const { rows: [p] } = await query(`
       INSERT INTO products (
-        bank_id, name, category, description, features, eligibility, 
+        bank_id, name, category, sub_category, description, features, eligibility, 
         commission_type, commission_value, min_age, max_age, min_income, 
         display_order, annual_fee, time_period, image_url,
         short_description, logo, banner, image, commission_enabled, 
         commission_amount, override_percentage, featured, public_visible, 
         partner_visible, eligibility_criteria, documents_required, benefits, 
         fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
-        priority, status, is_active, created_by, slug
+        priority, status, is_active, created_by, slug,
+        card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38) RETURNING id
+      VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
+        $40,$41,$42,$43,$44,$45,$46,$47
+      ) RETURNING id
     `, [
-      bank_id, name, category, description, JSON.stringify(parsedFeatures || []), 
+      bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []), 
       JSON.stringify(parsedEligibility || {}), commission_type || 'fixed', 
       commission_value || 0, min_age || null, max_age || null, min_income || null, display_order || 0, 
       annual_fee || null, time_period || null, image_url || null,
@@ -305,7 +314,8 @@ const createProduct = async (req, res, next) => {
       commission_amount || 0, override_percentage || 0, isFeatured, isPubVisible,
       isPartVisible, eligibility_criteria || null, documents_required || null, benefits || null,
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
-      priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug
+      priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug,
+      card_network || null, card_variant || null, best_for || null, welcome_benefits || null, isLtf, badge || null, isRec, isTrend
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -406,6 +416,15 @@ const updateProduct = async (req, res, next) => {
         status = COALESCE($31, status),
         updated_by = $32,
         slug = COALESCE($34, slug),
+        sub_category = COALESCE($35, sub_category),
+        card_network = COALESCE($36, card_network),
+        card_variant = COALESCE($37, card_variant),
+        best_for = COALESCE($38, best_for),
+        welcome_benefits = COALESCE($39, welcome_benefits),
+        is_lifetime_free = COALESCE($40, is_lifetime_free),
+        badge = COALESCE($41, badge),
+        is_recommended = COALESCE($42, is_recommended),
+        is_trending = COALESCE($43, is_trending),
         updated_at = NOW()
       WHERE id = $33
     `, [
@@ -442,7 +461,16 @@ const updateProduct = async (req, res, next) => {
       status || null,
       req.user?.id || null,
       id,
-      productSlug || null
+      productSlug || null,
+      sub_category || null,
+      card_network || null,
+      card_variant || null,
+      best_for || null,
+      welcome_benefits || null,
+      req.body.is_lifetime_free !== undefined ? (req.body.is_lifetime_free === 'true' || req.body.is_lifetime_free === true) : null,
+      badge || null,
+      req.body.is_recommended !== undefined ? (req.body.is_recommended === 'true' || req.body.is_recommended === true) : null,
+      req.body.is_trending !== undefined ? (req.body.is_trending === 'true' || req.body.is_trending === true) : null
     ]);
 
     await logAction(req, 'UPDATE_PRODUCT', id, { name, commission_value, is_active });
