@@ -205,7 +205,7 @@ export default function DynamicCreditCardsPage() {
         <div style={{
           width: '100%',
           height: isMobile ? '180px' : '320px',
-          background: bank.banner ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
+          background: (bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
           borderRadius: '24px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
           display: 'flex',
@@ -216,7 +216,7 @@ export default function DynamicCreditCardsPage() {
           overflow: 'hidden',
           border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
         }}>
-          {!bank.banner && (
+          {(!bank.banner || bank.banner === 'null' || bank.banner === 'undefined' || bank.banner.trim() === '') && (
             <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
               {bank.logo_url && (
                 <img src={bank.logo_url} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />

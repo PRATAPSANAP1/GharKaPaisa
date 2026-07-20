@@ -416,6 +416,13 @@ const getBankCardsBySlug = async (req, res, next) => {
       );
     }
 
+    if (bank.banner) {
+      bank.banner = bank.banner.replace(
+        "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+        cloudfrontUrl
+      );
+    }
+
     // 2. Fetch the active cards (products) of this bank
     const { rows: cards } = await query(`
       SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
