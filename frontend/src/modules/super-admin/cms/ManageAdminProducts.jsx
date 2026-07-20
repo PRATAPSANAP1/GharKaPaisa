@@ -47,6 +47,13 @@ export default function ManageAdminProducts() {
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
 
+  // Filters State
+  const [bankFilter, setBankFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [networkFilter, setNetworkFilter] = useState("All");
+  const [feeFilter, setFeeFilter] = useState("All");
+
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -425,6 +432,18 @@ export default function ManageAdminProducts() {
 
   const selectedBank = banks.find(b => b.id === form.bank_id);
 
+  // Compute Filtered Products
+  const filteredProducts = products.filter(p => {
+    if (bankFilter !== "All" && p.bank_id !== bankFilter) return false;
+    if (typeFilter !== "All" && p.sub_category !== typeFilter) return false;
+    const itemStatus = p.status || (p.is_active ? "Active" : "Inactive");
+    if (statusFilter !== "All" && itemStatus !== statusFilter) return false;
+    if (networkFilter !== "All" && p.card_network !== networkFilter) return false;
+    if (feeFilter === "ltf" && !p.is_lifetime_free) return false;
+    if (feeFilter === "paid" && p.is_lifetime_free) return false;
+    return true;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -439,7 +458,7 @@ export default function ManageAdminProducts() {
               {categoryTitle} Management
             </h2>
             <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.teal}15`, color: C.teal }}>
-              {products.length} Total Records
+              {filteredProducts.length} / {products.length} Records
             </span>
           </div>
           <p style={{ fontSize: '13px', color: C.textLight || '#64748B', margin: '4px 0 0' }}>
@@ -460,14 +479,14 @@ export default function ManageAdminProducts() {
         </button>
       </div>
 
-      {/* SEARCH BAR */}
-      <div style={{ background: C.card, borderRadius: '16px', padding: '16px', border: `1px solid ${C.border}` }}>
+      {/* SEARCH & FILTER CONTROLS */}
+      <div style={{ background: C.card, borderRadius: '16px', padding: '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <form onSubmit={(e) => { e.preventDefault(); fetchProducts(); }} style={{ display: 'flex', gap: '12px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <MdSearch size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
             <input
               type="text"
-              placeholder={`Search ${categoryTitle}...`}
+              placeholder={`Search ${categoryTitle} by name, bank, or benefits...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ ...S.input, paddingLeft: '40px', height: '44px' }}
@@ -477,6 +496,68 @@ export default function ManageAdminProducts() {
             Search
           </button>
         </form>
+
+        {/* MULTI-FILTER DROPDOWNS */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Bank</span>
+            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+              <option value="All">All Banks</option>
+              {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Card Type</span>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+              <option value="All">All Card Types</option>
+              <option value="Core Cards">Core Cards</option>
+              <option value="Co-Branded Cards">Co-Branded Cards</option>
+              <option value="Secured Cards">Secured Cards</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Status</span>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+              <option value="All">All Statuses</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive Only</option>
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Network</span>
+            <select value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+              <option value="All">All Networks</option>
+              {CARD_NETWORKS.map(net => <option key={net} value={net}>{net}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Annual Fee</span>
+            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+              <option value="All">All Fee Options</option>
+              <option value="ltf">Lifetime Free Only</option>
+              <option value="paid">Paid Annual Fee</option>
+            </select>
+          </div>
+
+          {(bankFilter !== "All" || typeFilter !== "All" || statusFilter !== "All" || networkFilter !== "All" || feeFilter !== "All") && (
+            <button
+              onClick={() => {
+                setBankFilter("All");
+                setTypeFilter("All");
+                setStatusFilter("All");
+                setNetworkFilter("All");
+                setFeeFilter("All");
+              }}
+              style={{ marginTop: '16px', padding: '6px 12px', background: '#EF444420', color: '#EF4444', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* PRODUCT LIST TABLE */}
@@ -496,10 +577,10 @@ export default function ManageAdminProducts() {
           <tbody>
             {loading ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
-            ) : products.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products found. Click <strong>Add {categoryTitle}</strong> to create one!</td></tr>
+            ) : filteredProducts.length === 0 ? (
+              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new card!</td></tr>
             ) : (
-              products.map(prod => (
+              filteredProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     {prod.image_url ? (
