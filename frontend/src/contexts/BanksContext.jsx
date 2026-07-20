@@ -10,20 +10,20 @@ export function BanksProvider({ children }) {
   const [error, setError] = useState(null);
 
   const fetchActiveBanks = async (forceRefresh = false) => {
-    if (!forceRefresh) {
-      const cached = sessionStorage.getItem('gkp_active_banks');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed && parsed.length > 0) {
-            setActiveBanks(parsed);
-            return parsed;
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
-    }
+    // if (!forceRefresh) {
+    //   const cached = sessionStorage.getItem('gkp_active_banks');
+    //   if (cached) {
+    //     try {
+    //       const parsed = JSON.parse(cached);
+    //       if (parsed && parsed.length > 0) {
+    //         setActiveBanks(parsed);
+    //         return parsed;
+    //       }
+    //     } catch (e) {
+    //       // ignore parsing error
+    //     }
+    //   }
+    // }
 
     setLoading(true);
     setError(null);
