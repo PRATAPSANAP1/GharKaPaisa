@@ -123,11 +123,13 @@ export default function ManageAdminProducts() {
     try {
       const res = await api.get('/products', {
         params: {
-          category: activeCategory === 'loans' ? '%loan%' :
+          category: activeCategory === 'credit_card' ? '%card%' :
+                    activeCategory === 'loans' ? '%loan%' :
                     activeCategory === 'insurance' ? '%insurance%' :
                     activeCategory,
+          is_active: 'all',
           search: search.trim() || undefined,
-          limit: 100
+          limit: 1000
         }
       });
       if (res.data?.success) {
@@ -432,9 +434,14 @@ export default function ManageAdminProducts() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px'
       }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>
-            {categoryTitle} Management
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>
+              {categoryTitle} Management
+            </h2>
+            <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.teal}15`, color: C.teal }}>
+              {products.length} Total Records
+            </span>
+          </div>
           <p style={{ fontSize: '13px', color: C.textLight || '#64748B', margin: '4px 0 0' }}>
             Create, edit and manage credit cards and product specifications dynamically
           </p>
