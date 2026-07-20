@@ -316,6 +316,108 @@ const getActiveBanks = async (req, res, next) => {
   }
 };
 
+const getBankCardsBySlug = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+
+    // 1. Fetch the bank
+    const { rows: [bank] } = await query(`
+      SELECT * FROM banks 
+      WHERE LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1)
+    `, [slug]);
+
+    if (!bank) {
+      return notFound(res, 'Bank partner not found');
+    }
+
+    const cloudfrontUrl = process.env.CLOUDFRONT_URL || "https://d18qh1l6j6vziz.cloudfront.net";
+
+    // Map logo S3 URL if any
+    if (bank.logo_url) {
+      bank.logo_url = bank.logo_url.replace(
+        "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+        cloudfrontUrl
+      );
+    }
+
+    // 2. Fetch the active cards (products) of this bank
+    const { rows: cards } = await query(`
+      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+      FROM products p
+      JOIN banks b ON b.id = p.bank_id
+      WHERE p.bank_id = $1 
+        AND (p.category::text ILIKE '%card%' OR p.category::text IN ('credit_card', 'co_branded_card', 'fd_card')) 
+        AND (p.is_active = true OR p.status = 'Active')
+      ORDER BY p.priority ASC, p.display_order ASC
+    `, [bank.id]);
+
+    // Map S3 image_url and banner_url to CloudFront if any
+    const mappedCards = cards.map(c => {
+      const mapped = { ...c };
+      if (mapped.image_url) {
+        mapped.image_url = mapped.image_url.replace(
+          "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+          cloudfrontUrl
+        );
+      }
+      if (mapped.banner_url) {
+        mapped.banner_url = mapped.banner_url.replace(
+          "https://gharkapaisa-documents.s3.ap-south-1.amazonaws.com",
+          cloudfrontUrl
+        );
+      }
+      // Make sure features and benefits are arrays
+      try {
+        if (typeof mapped.features === 'string') mapped.features = JSON.parse(mapped.features);
+      } catch (e) {
+        if (!Array.isArray(mapped.features)) mapped.features = [];
+      }
+      try {
+        if (typeof mapped.benefits === 'string') mapped.benefits = JSON.parse(mapped.benefits);
+      } catch (e) {
+        if (!Array.isArray(mapped.benefits)) mapped.benefits = [];
+      }
+      return mapped;
+    });
+
+    // 3. Fetch distinct subcategories
+    const { rows: catRows } = await query(`
+      SELECT DISTINCT sub_category as cat
+      FROM products
+      WHERE category IN ('credit_card', 'co_branded_card', 'fd_card')
+        AND is_active = true 
+        AND status = 'Active'
+        AND sub_category IS NOT NULL 
+        AND sub_category != ''
+    `);
+
+    let distinctCategories = catRows.map(r => r.cat);
+    if (distinctCategories.length === 0) {
+      distinctCategories = ["Rewards", "Travel", "Cashback", "Business"];
+    }
+
+    // 4. Construct response structures
+    const categories = distinctCategories;
+    const filters = ["All", ...categories];
+
+    const seo = {
+      title: bank.seo_title || `${bank.name} Credit Cards - Apply Online & Compare`,
+      description: bank.seo_description || `Compare ${bank.name} Credit Cards, benefits, rewards, annual fees and eligibility. Apply online for instant approval.`,
+      keywords: `${bank.short_code.toLowerCase()} credit cards, compare ${bank.short_code.toLowerCase()} cards, apply ${bank.short_code.toLowerCase()} cards`
+    };
+
+    return success(res, {
+      bank,
+      cards: mappedCards,
+      categories,
+      filters,
+      seo
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listAllBanks,
   getBankById,
@@ -323,5 +425,6 @@ module.exports = {
   createBank,
   updateBank,
   updateBankStatus,
-  deleteBank
+  deleteBank,
+  getBankCardsBySlug
 };

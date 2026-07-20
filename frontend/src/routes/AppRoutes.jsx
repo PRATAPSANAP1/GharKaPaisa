@@ -34,6 +34,7 @@ import ComingSoon from '../modules/cms/ComingSoon';
 import ProductDetails from '../modules/products/ProductDetails';
 import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
+import DynamicCreditCardsPage from '../modules/home/components/CreditCards/DynamicCreditCardsPage';
 
 // Admin Pages
 import AdminDashboard from '../modules/admin/dashboard/AdminDashboard';
@@ -129,8 +130,9 @@ const AppRoutes = () => {
         <Route path="/loans" element={<Home />} />
         <Route path="/insurance" element={<Home />} />
         <Route path="/credit-cards" element={<Home />} />
+        <Route path="/cards/:bankSlug" element={<DynamicCreditCardsPage />} />
         <Route path="/credit-cards/lifetime-free-credit-cards-ltf" element={<Home />} />
-        <Route path="/credit-cards/:bankIdParam" element={<Home />} />
+        <Route path="/credit-cards/:bankSlug" element={<DynamicCreditCardsPage />} />
         <Route path="/credit-cards/:bankIdParam/:typeParam" element={<Home />} />
         <Route path="/money-transfer/fastag" element={<Home />} />
         <Route path="/travel-transit/flight-booking" element={<Home />} />
@@ -163,6 +165,7 @@ const AppRoutes = () => {
         <Route path="/product/:slug" element={<ProductDetails />} />
         <Route path="/product/:slug/apply" element={<ApplyForm />} />
         <Route path="/card-benefits/:bankId/:cardId" element={<CardBenefitsPage />} />
+        <Route path="/cards/:bankSlug" element={<DynamicCreditCardsPage />} />
       </Route>
 
       {/* Customer Secure Upload Portal (Standalone Public Route) */}

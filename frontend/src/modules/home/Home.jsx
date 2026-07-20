@@ -2418,9 +2418,10 @@ export default function Home({ onNavigate }) {
       navigate(`/credit-cards/${bankId}-bank/${type}`);
       return;
     }
-    const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === item.id)) || banksList.find(b => b.id === item.id);
+    const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === item.id || b.short_code?.toLowerCase() === item.id || b.slug === item.id)) || banksList.find(b => b.id === item.id);
     if (bankItem) {
-      navigate(`/credit-cards/${bankItem.id}-bank`);
+      const slug = bankItem.slug || bankItem.short_code?.toLowerCase() || bankItem.id;
+      navigate(`/cards/${slug}`);
       return;
     }
     const categoryKey = mapToCategoryKey(item);

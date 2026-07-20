@@ -3699,6 +3699,23 @@ const migrate = async () => {
       logger.error('Failed to run SBI Credit Card Application Schema Migration (Task 21):', task21Err.message);
       throw task21Err;
     }
+
+    // Task 22: Add Future-ready Bank Fields for Dynamic Page Theme, Banner & SEO
+    try {
+      logger.info('Running Bank Schema Expansion for Dynamic Customization (Task 22)...');
+      await query(`
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS hero_title VARCHAR(255);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS hero_description TEXT;
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS theme_color VARCHAR(100);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS banner VARCHAR(500);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS seo_title VARCHAR(255);
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS seo_description TEXT;
+      `);
+      logger.info('Bank Schema Expansion Migration (Task 22) completed successfully.');
+    } catch (task22Err) {
+      logger.error('Failed to run Bank Schema Expansion Migration (Task 22):', task22Err.message);
+      throw task22Err;
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
