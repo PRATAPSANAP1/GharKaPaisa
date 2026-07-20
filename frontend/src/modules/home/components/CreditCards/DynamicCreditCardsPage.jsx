@@ -780,11 +780,7 @@ export default function DynamicCreditCardsPage() {
                       <td style={{ padding: '12px' }}>{selectedForCompare[0]?.lounge_access || selectedForCompare[0]?.compare_specs?.lounge || 'Nil'}</td>
                       <td style={{ padding: '12px' }}>{selectedForCompare[1]?.lounge_access || selectedForCompare[1]?.compare_specs?.lounge || 'Nil'}</td>
                     </tr>
-                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                      <td style={{ padding: '12px', fontWeight: 700 }}>Fuel Surcharge</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.fuel_surcharge || selectedForCompare[0]?.compare_specs?.fuel || 'Nil'}</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.fuel_surcharge || selectedForCompare[1]?.compare_specs?.fuel || 'Nil'}</td>
-                    </tr>
+
                   </tbody>
                 </table>
               ) : (
