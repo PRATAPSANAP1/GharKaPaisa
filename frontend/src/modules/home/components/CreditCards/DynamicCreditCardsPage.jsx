@@ -802,18 +802,9 @@ export default function DynamicCreditCardsPage() {
       {/* ── OTP VERIFICATION & APPLY MODAL ── */}
       {verifyCard && (
         <CardApplyVerificationModal
-          cardName={verifyCard.cardName}
-          bankName={verifyCard.bankName}
-          bankId={verifyCard.bankId}
+          card={verifyCard}
           onClose={() => setVerifyCard(null)}
-          onSuccess={() => {
-            const c = verifyCard.card;
-            if (c) {
-              const redirectUrl = c.redirect_type === 'partner' && c.partner_url ? c.partner_url : (c.public_url || c.application_url || '#');
-              window.open(redirectUrl, '_blank');
-            }
-            setVerifyCard(null);
-          }}
+          C={C}
         />
       )}
 

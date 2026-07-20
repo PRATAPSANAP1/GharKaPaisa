@@ -133,10 +133,9 @@ export default function ProductDetails() {
       {/* VERIFICATION MODAL */}
       {verifyCard && (
         <CardApplyVerificationModal
-          cardName={verifyCard.cardName}
-          bankName={verifyCard.bankName}
-          bankId={verifyCard.bankId}
+          card={verifyCard}
           onClose={() => setVerifyCard(null)}
+          C={C}
         />
       )}
 
