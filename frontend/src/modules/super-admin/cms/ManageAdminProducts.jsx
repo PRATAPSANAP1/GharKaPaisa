@@ -575,7 +575,6 @@ export default function ManageAdminProducts() {
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', borderBottom: `1px solid ${C.border}`, marginBottom: '20px' }}>
               {[
                 { id: 'basic', label: 'Basic Info' },
-                { id: 'images', label: 'Images & Gallery' },
                 { id: 'fees', label: 'Fees & Charges' },
                 { id: 'eligibility', label: 'Eligibility' },
                 { id: 'commission', label: 'Commission' },
@@ -756,82 +755,90 @@ export default function ManageAdminProducts() {
 
               {/* TAB 5: FEATURES */}
               {modalTab === 'features' && (
-                <div>
-                  <label style={S.label}>Select Key Features</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                    {FEATURE_OPTIONS.map(feat => {
-                      const checked = form.features.includes(feat);
-                      return (
-                        <label key={feat} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              const next = checked ? form.features.filter(f => f !== feat) : [...form.features, feat];
-                              setForm({ ...form, features: next });
-                            }}
-                          />
-                          <span>{feat}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={S.label}>Key Features (Text Fields)</label>
+                  {form.features.map((feat, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder={`Feature #${idx + 1} (e.g. 5% cashback on online spends)`}
+                        value={feat}
+                        onChange={(e) => {
+                          const next = [...form.features];
+                          next[idx] = e.target.value;
+                          setForm({ ...form, features: next });
+                        }}
+                        style={{ ...S.input, flex: 1, height: '42px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = form.features.filter((_, i) => i !== idx);
+                          setForm({ ...form, features: next });
+                        }}
+                        style={{ padding: '8px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, features: [...form.features, ''] })}
+                    style={{ padding: '8px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginTop: '4px' }}
+                  >
+                    + Add Feature
+                  </button>
                 </div>
               )}
 
               {/* TAB 6: BENEFITS */}
               {modalTab === 'benefits' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={S.label}>Benefit Cards</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label style={S.label}>Benefit Cards (Title & Description)</label>
                   {form.benefits.map((b, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', background: C.bgSecondary, padding: '10px', borderRadius: '10px' }}>
-                      <input type="text" placeholder="Title" value={b.title} onChange={(e) => {
-                        const next = [...form.benefits]; next[idx].title = e.target.value; setForm({ ...form, benefits: next });
-                      }} style={{ ...S.input, flex: 1 }} />
-                      <input type="text" placeholder="Description" value={b.description} onChange={(e) => {
-                        const next = [...form.benefits]; next[idx].description = e.target.value; setForm({ ...form, benefits: next });
-                      }} style={{ ...S.input, flex: 2 }} />
+                    <div key={idx} style={{ display: 'flex', gap: '10px', background: C.bgSecondary, padding: '12px', borderRadius: '12px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Benefit Title (e.g. 5% Cashback)"
+                        value={b.title}
+                        onChange={(e) => {
+                          const next = [...form.benefits];
+                          next[idx].title = e.target.value;
+                          setForm({ ...form, benefits: next });
+                        }}
+                        style={{ ...S.input, flex: 1, height: '42px' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Description (e.g. On top e-commerce merchants)"
+                        value={b.description}
+                        onChange={(e) => {
+                          const next = [...form.benefits];
+                          next[idx].description = e.target.value;
+                          setForm({ ...form, benefits: next });
+                        }}
+                        style={{ ...S.input, flex: 2, height: '42px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = form.benefits.filter((_, i) => i !== idx);
+                          setForm({ ...form, benefits: next });
+                        }}
+                        style={{ padding: '8px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setForm({ ...form, benefits: [...form.benefits, { title: '', description: '' }] })} style={{ padding: '8px 14px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }}>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, benefits: [...form.benefits, { title: '', description: '' }] })}
+                    style={{ padding: '8px 16px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginTop: '4px' }}
+                  >
                     + Add Benefit Card
                   </button>
-                </div>
-              )}
-
-              {/* TAB: IMAGES & GALLERY */}
-              {modalTab === 'images' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={S.label}>Card / Product Image (Upload File or URL)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setCardImageFile(e.target.files[0])}
-                      style={{ ...S.input, padding: '8px', cursor: 'pointer' }}
-                    />
-                    <input type="text" placeholder="Or paste image URL (https://.../card.png)" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} style={{ ...S.input, height: '40px', marginTop: '6px' }} />
-                    {(cardImageFile || form.image_url) && (
-                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img
-                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : form.image_url}
-                          alt="Card Preview"
-                          style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                        />
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>
-                          {cardImageFile ? `Selected File: ${cardImageFile.name}` : 'URL Preview'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label style={S.label}>Thumbnail URL</label>
-                    <input type="text" placeholder="https://.../thumb.png" value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={S.label}>Banner Image URL</label>
-                    <input type="text" placeholder="https://.../banner.png" value={form.banner_url} onChange={(e) => setForm({ ...form, banner_url: e.target.value })} style={{ ...S.input, height: '42px' }} />
-                  </div>
                 </div>
               )}
 
