@@ -401,8 +401,7 @@ export default function ManageBanks() {
               {[
                 { id: 'basic', label: 'Basic Info' },
                 { id: 'hero', label: 'Hero Header' },
-                { id: 'theme', label: 'Theme & Colors' },
-                { id: 'seo', label: 'SEO Metadata' }
+                { id: 'theme', label: 'Theme & Colors' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -655,33 +654,6 @@ export default function ManageBanks() {
                       value={form.gradient}
                       onChange={(e) => setForm({ ...form, gradient: e.target.value })}
                       style={{ ...S.input, height: '42px' }}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* TAB 4: SEO METADATA */}
-              {activeTab === 'seo' && (
-                <>
-                  <div>
-                    <label style={S.label}>SEO Meta Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. HDFC Bank Credit Cards - Compare & Apply Online"
-                      value={form.seo_title}
-                      onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
-                      style={{ ...S.input, height: '42px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={S.label}>SEO Meta Description</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Compare HDFC Bank Credit Cards, benefits, rewards, annual fees and eligibility..."
-                      value={form.seo_description}
-                      onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
-                      style={{ ...S.input, padding: '10px' }}
                     />
                   </div>
                 </>
