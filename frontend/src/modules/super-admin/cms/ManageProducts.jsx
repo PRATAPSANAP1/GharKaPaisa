@@ -70,6 +70,7 @@ export default function ManageProducts() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   useEffect(() => {
     setCategoryFilter(getInitialCategory());
@@ -144,7 +145,7 @@ export default function ManageProducts() {
       const res = await api.get("/products", {
         params: {
           page,
-          limit: 25,
+          limit: 200,
           search: search.trim() || undefined,
           category: categoryFilter || undefined,
           bank_id: bankFilter || undefined,
@@ -157,6 +158,7 @@ export default function ManageProducts() {
       if (res.data?.success) {
         setProducts(res.data.data);
         setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalRecords(res.data.pagination?.total || res.data.data?.length || 0);
       }
     } catch (e) {
       console.error(e);
@@ -358,7 +360,7 @@ export default function ManageProducts() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Product & Partner Catalog Master</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage financial products, payout margins, redirects, and SEO parameters</p>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Manage financial products, payout margins, redirects, and SEO parameters — <strong>{totalRecords} Records</strong></p>
         </div>
         <button onClick={openAddModal} style={{ ...S.btn("primary"), display: "flex", alignItems: "center", gap: "6px" }}>
           <MdAdd size={20} /> Create Product
