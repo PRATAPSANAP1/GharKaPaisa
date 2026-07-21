@@ -1061,27 +1061,25 @@ export default function PartnerProducts() {
 
                       {/* Buttons Row */}
                       <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-                        {(product.public_url || product.partner_url) && (
-                          <button
-                            onClick={() => handleCopyLink(product)}
-                            type="button"
-                            style={{
-                              ...S.btn('outline'),
-                              flex: 1,
-                              padding: isMobile ? '8px 4px' : '10px 8px',
-                              fontSize: isMobile ? '11px' : '12.5px',
-                              borderRadius: '10px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              fontWeight: 700
-                            }}
-                          >
-                            <MdShare size={isMobile ? 12 : 14} /> Link
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleCopyLink(product)}
+                          type="button"
+                          style={{
+                            ...S.btn('outline'),
+                            flex: 1,
+                            padding: isMobile ? '8px 4px' : '10px 8px',
+                            fontSize: isMobile ? '11px' : '12.5px',
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            fontWeight: 700
+                          }}
+                        >
+                          <MdShare size={isMobile ? 12 : 14} /> Share
+                        </button>
                         
                         <button
                           onClick={() => handleToggleCompare(product)}
