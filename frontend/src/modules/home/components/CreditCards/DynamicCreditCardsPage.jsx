@@ -212,67 +212,32 @@ export default function DynamicCreditCardsPage() {
       {/* ── HERO BANNER SECTION ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
         <div style={{
-          background: isDark ? '#1e293b' : '#ffffff',
           borderRadius: '24px',
-          padding: isMobile ? '20px' : '32px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
-          gap: '24px',
-          alignItems: 'center'
+          background: isDark ? '#1e293b' : '#ffffff',
+          width: '100%',
+          minHeight: isMobile ? '180px' : '260px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          {/* Left Side: Bank Name & Info */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              {bank.logo_url && (
-                <img 
-                  src={getCleanImageUrl(bank.logo_url)} 
-                  alt={bank.name} 
-                  style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
-                />
-              )}
-              <h1 style={{ fontSize: isMobile ? '22px' : '30px', fontWeight: 800, color: isDark ? '#f8fafc' : '#1e293b', margin: 0 }}>
-                {bank.name} Credit Cards
-              </h1>
-            </div>
-            <p style={{ fontSize: '14px', color: isDark ? '#94a3b8' : '#64748b', margin: 0, lineHeight: 1.6 }}>
-              Compare rates, key features, rewards, and apply online. Unlock exclusive shopping, dining, cashback, and travel perks with official {bank.name} cards.
-            </p>
-          </div>
-
-          {/* Right Side: Card-Size Box with Full Image */}
-          <div style={{ width: '100%', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-end', alignItems: 'center' }}>
-            <div style={{
-              width: isMobile ? '100%' : '300px',
-              height: isMobile ? '170px' : '190px',
-              borderRadius: '16px',
-              background: isDark ? '#0f172a' : '#f8fafc',
-              border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
-              boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-              padding: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden'
-            }}>
-              {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
-                <img 
-                  src={getCleanImageUrl(bank.banner)} 
-                  alt={`${bank.name} Card Banner`} 
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '10px' }} 
-                />
-              ) : bank.logo_url ? (
-                <img 
-                  src={getCleanImageUrl(bank.logo_url)} 
-                  alt={bank.name} 
-                  style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} 
-                />
-              ) : (
-                <span style={{ fontSize: '48px' }}>💳</span>
-              )}
-            </div>
-          </div>
+          {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
+            <img 
+              src={getCleanImageUrl(bank.banner)} 
+              alt={`${bank.name} Credit Cards Banner`} 
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px' }} 
+            />
+          ) : bank.logo_url ? (
+            <img 
+              src={getCleanImageUrl(bank.logo_url)} 
+              alt={bank.name} 
+              style={{ maxWidth: '50%', maxHeight: '60%', objectFit: 'contain' }} 
+            />
+          ) : (
+            <span style={{ fontSize: '64px' }}>💳</span>
+          )}
         </div>
       </div>
 
