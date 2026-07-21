@@ -48,8 +48,8 @@ import offerBanner from "./components/banner/offerbanner.png";
 // Import bank card images
 import axisCardImg from "./components/CreditCards/image/AXIS/AXIS.png";
 import sbiCardImg from "./components/CreditCards/image/SBI/SBI.png";
-import iciciCardImg from "./components/CreditCards/image/ICICI/ICICI.png";
-import kotakCardImg from "./components/CreditCards/image/KOTAK/KOTAK.png";
+import iciciCardImg from "./components/CreditCards/image/icici/ICICI.png";
+import kotakCardImg from "./components/CreditCards/image/kotak/KOTAK.png";
 import yesBankCardImg from "./components/CreditCards/image/yes/yes bank.png";
 
 // Import attractive section card images

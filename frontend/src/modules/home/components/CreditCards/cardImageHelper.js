@@ -94,8 +94,8 @@ import sbiTataNeu from './image/SBI/tata neu.png';
 // Fallbacks/General bank images
 import axisGeneral from './image/AXIS/AXIS.png';
 import sbiGeneral from './image/SBI/SBI.png';
-import iciciGeneral from './image/ICICI/ICICI.png';
-import kotakGeneral from './image/KOTAK/KOTAK.png';
+import iciciGeneral from './image/icici/ICICI.png';
+import kotakGeneral from './image/kotak/KOTAK.png';
 import yesGeneral from './image/yes/yes bank.png';
 import hdfcGeneral from './image/HDFC/hdfc.png';
 
