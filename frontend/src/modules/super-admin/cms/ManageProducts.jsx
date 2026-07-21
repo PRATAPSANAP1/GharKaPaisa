@@ -144,7 +144,7 @@ export default function ManageProducts() {
       const res = await api.get("/products", {
         params: {
           page,
-          limit: 10,
+          limit: 25,
           search: search.trim() || undefined,
           category: categoryFilter || undefined,
           bank_id: bankFilter || undefined,
@@ -517,9 +517,10 @@ export default function ManageProducts() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
-              <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={S.btn("outline")}>Previous</button>
-              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={S.btn("outline")}>Next</button>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "16px" }}>
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ ...S.btn("outline"), opacity: page <= 1 ? 0.5 : 1, cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>← Previous</button>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: C.textSecondary }}>Page {page} of {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ ...S.btn("outline"), opacity: page >= totalPages ? 0.5 : 1, cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>Next →</button>
             </div>
           )}
 
