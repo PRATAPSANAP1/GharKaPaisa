@@ -49,6 +49,9 @@ router.get('/recommendations', auth, engagementCtrl.getRecommendations);
 router.post('/:id/ratings', auth, subEntityCtrl.submitProductRating);
 
 // ── Admin/Super Admin Product Management ─────────────────────────
+router.put('/link/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), linkCtrl.saveProductLink);
+router.post('/link', auth, authorize('ADMIN', 'SUPER_ADMIN'), linkCtrl.saveProductLink);
+router.delete('/link/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), linkCtrl.deleteProductLink);
 router.get('/analytics/clicks', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.getClickAnalytics);
 router.post('/create', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);
 router.post('/', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image'), productCtrl.createProduct);

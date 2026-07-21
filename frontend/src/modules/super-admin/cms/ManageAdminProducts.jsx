@@ -6,7 +6,7 @@ import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload,
-  MdCheck, MdHelpOutline, MdPreview
+  MdCheck, MdHelpOutline, MdPreview, MdLink, MdContentCopy, MdOpenInNew, MdLaunch
 } from "react-icons/md";
 
 const CATEGORY_MAP = {
@@ -645,7 +645,7 @@ export default function ManageAdminProducts() {
                 { id: 'fees', label: '2. Fees & Eligibility' },
                 { id: 'benefits', label: '3. Benefits' },
                 { id: 'documents', label: '4. Docs & FAQs' },
-                { id: 'marketing', label: '5. Marketing' },
+                { id: 'marketing', label: '5. Marketing & Links 🔗' },
                 { id: 'seo', label: '6. SEO' },
                 { id: 'preview', label: '7. Live Preview 👁️' }
               ].map(t => (
@@ -997,7 +997,7 @@ export default function ManageAdminProducts() {
                 </div>
               )}
 
-              {/* TAB 5: MARKETING & BADGES */}
+               {/* TAB 5: MARKETING & LINKS */}
               {modalTab === 'marketing' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
@@ -1013,36 +1013,77 @@ export default function ManageAdminProducts() {
                     <input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: e.target.value })} style={{ ...S.input, height: '42px' }} />
                   </div>
 
-                  <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: isDark ? '#1e293b' : '#f8fafc', padding: '16px', borderRadius: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                  <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', background: isDark ? '#1e293b' : '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
                       <input type="checkbox" checked={form.show_on_website} onChange={(e) => setForm({ ...form, show_on_website: e.target.checked })} />
-                      <span>Show on Public Website</span>
+                      <span>Show on Home Page</span>
                     </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
                       <input type="checkbox" checked={form.show_in_partner} onChange={(e) => setForm({ ...form, show_in_partner: e.target.checked })} />
-                      <span>Show in Partner Portal</span>
+                      <span>Show on Partner Page</span>
                     </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
-                      <span>Featured Product Section</span>
-                    </label>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}>
                       <input type="checkbox" checked={form.is_popular} onChange={(e) => setForm({ ...form, is_popular: e.target.checked })} />
-                      <span>Popular Product Section</span>
+                      <span>Popular Credit Card Section</span>
                     </label>
+                  </div>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={form.is_recommended} onChange={(e) => setForm({ ...form, is_recommended: e.target.checked })} />
-                      <span>Recommended Badge</span>
-                    </label>
+                  {/* APPLICATION LINKS (Home Page & Partner Page) */}
+                  <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '14px', background: isDark ? '#0f172a' : '#f1f5f9', padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <div style={{ fontWeight: 800, fontSize: '13.5px', color: C.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🔗 Credit Card Application Links
+                    </div>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={form.is_trending} onChange={(e) => setForm({ ...form, is_trending: e.target.checked })} />
-                      <span>Trending Badge</span>
-                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={S.label}>Home Page Link (Public Application URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://bank.com/apply/credit-card-home"
+                          value={form.public_url || ''}
+                          onChange={(e) => setForm({ ...form, public_url: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Partner Page Link (Partner Portal URL)</label>
+                        <input
+                          type="url"
+                          placeholder="https://bank.com/apply/credit-card-partner"
+                          value={form.partner_url || ''}
+                          onChange={(e) => setForm({ ...form, partner_url: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={S.label}>Apply Button Display Label</label>
+                        <input
+                          type="text"
+                          placeholder="Apply Now"
+                          value={form.button_text || 'Apply Now'}
+                          onChange={(e) => setForm({ ...form, button_text: e.target.value })}
+                          style={{ ...S.input, height: '42px' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={S.label}>Redirect Target Window</label>
+                        <select
+                          value={form.redirect_type || 'new_tab'}
+                          onChange={(e) => setForm({ ...form, redirect_type: e.target.value })}
+                          style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                        >
+                          <option value="new_tab">Open in New Tab</option>
+                          <option value="same_tab">Open in Same Tab</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

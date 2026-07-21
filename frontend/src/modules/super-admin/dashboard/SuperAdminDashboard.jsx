@@ -5,7 +5,7 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { Icons } from '../../../components/Icon/PartnerIcons';
 
 const MiniChart = ({ color }) => (
-  <svg width="100%" height="30" viewBox="0 0 100 30" preserveAspectRatio="none" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+  <svg width="100%" height="16" viewBox="0 0 100 30" preserveAspectRatio="none" style={{ marginTop: 'auto', paddingTop: '2px' }}>
     <path
       d="M0,25 C10,15 20,25 30,10 C40,-5 50,20 60,15 C70,10 80,25 90,5 L100,10 L100,30 L0,30 Z"
       fill={`${color}15`}
@@ -198,16 +198,16 @@ export default function SuperAdminDashboard() {
   };
 
   const cardData = [
-    { label: "Total Admins", desc: "All registered administrators", val: stats.total, icon: <Icons.profile size={24} />, color: "#3B82F6", path: "/super-admin/dashboard" },
-    { label: "Active Admins", desc: "Currently active", val: stats.active, icon: <Icons.check size={24} />, color: "#10B981", path: "/super-admin/dashboard" },
-    { label: "Pending KYC", desc: "Awaiting verification", val: bStats.Partners?.pending_kyc || 0, icon: <Icons.clock size={24} />, color: "#F59E0B", path: "/super-admin/partners" },
-    { label: "Total Leads", desc: "All leads generated", val: bStats.leads?.total_leads || 0, icon: <Icons.trending size={24} />, color: "#8B5CF6", path: "/super-admin/leads" },
-    { label: "Approved Leads", desc: "Successfully approved", val: bStats.leads?.approved_leads || 0, icon: <Icons.check size={24} />, color: "#10B981", path: "/super-admin/leads" },
-    { label: "Rejected Leads", desc: "Not approved", val: bStats.leads?.rejected_leads || 0, icon: <Icons.x size={24} />, color: "#EF4444", path: "/super-admin/leads" },
-    { label: "Commission Paid", desc: "Total payout", val: `₹${parseFloat(bStats.withdrawal?.total_commission_paid || 0).toLocaleString("en-IN")}`, icon: <Icons.wallet size={24} />, color: "#10B981", path: "/super-admin/commissions" },
-    { label: "Pending Withdrawals", desc: "Withdrawal requests", val: bStats.withdrawal?.pending_withdrawals || 0, icon: <Icons.clock size={24} />, color: "#F59E0B", path: "/super-admin/commissions" },
-    { label: "Total Banks", desc: "Connected banks", val: bStats.banks?.total_banks || 0, icon: <Icons.wallet size={24} />, color: "#3B82F6", path: "/super-admin/banks" },
-    { label: "Total Products", desc: "Available products", val: bStats.products?.total_products || 0, icon: <Icons.creditCard size={24} />, color: "#8B5CF6", path: "/super-admin/products" }
+    { label: "Total Admins", val: stats.total, icon: <Icons.profile size={18} />, color: "#3B82F6", path: "/super-admin/dashboard" },
+    { label: "Active Admins", val: stats.active, icon: <Icons.check size={18} />, color: "#10B981", path: "/super-admin/dashboard" },
+    { label: "Pending KYC", val: bStats.Partners?.pending_kyc || 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/partners" },
+    { label: "Total Leads", val: bStats.leads?.total_leads || 0, icon: <Icons.trending size={18} />, color: "#8B5CF6", path: "/super-admin/leads" },
+    { label: "Approved Leads", val: bStats.leads?.approved_leads || 0, icon: <Icons.check size={18} />, color: "#10B981", path: "/super-admin/leads" },
+    { label: "Rejected Leads", val: bStats.leads?.rejected_leads || 0, icon: <Icons.x size={18} />, color: "#EF4444", path: "/super-admin/leads" },
+    { label: "Commission Paid", val: `₹${parseFloat(bStats.withdrawal?.total_commission_paid || 0).toLocaleString("en-IN")}`, icon: <Icons.wallet size={18} />, color: "#10B981", path: "/super-admin/commissions" },
+    { label: "Pending Withdrawals", val: bStats.withdrawal?.pending_withdrawals || 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/commissions" },
+    { label: "Total Banks", val: bStats.banks?.total_banks || 0, icon: <Icons.wallet size={18} />, color: "#3B82F6", path: "/super-admin/banks" },
+    { label: "Total Products", val: bStats.products?.total_products || 0, icon: <Icons.creditCard size={18} />, color: "#8B5CF6", path: "/super-admin/products" }
   ];
 
   const formatDate = (dateString) => {
@@ -236,39 +236,38 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: "20px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: "10px" }}>
         {cardData.map((card, idx) => (
           <div 
             key={idx} 
             onClick={() => navigate(card.path)}
             style={{ 
               background: C.card, 
-              borderRadius: "16px", 
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)", 
+              borderRadius: "12px", 
+              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)", 
               border: `1px solid ${C.border}`,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
               cursor: "pointer",
-              transition: "transform 0.2s, box-shadow 0.2s"
+              transition: "transform 0.15s, box-shadow 0.15s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-4px)";
-              e.currentTarget.style.boxShadow = "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.08)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)";
+              e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.04)";
             }}
           >
-            <div style={{ padding: "20px 20px 10px 20px", display: "flex", alignItems: "flex-start", gap: "16px" }}>
-              <div style={{ width: "48px", height: "48px", background: `${card.color}15`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
+            <div style={{ padding: "10px 12px 2px 12px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "34px", height: "34px", background: `${card.color}15`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
                 {card.icon}
               </div>
-              <div>
-                <div style={{ fontSize: "24px", fontWeight: 800, color: C.text, lineHeight: 1 }}>{card.val}</div>
-                <div style={{ fontSize: "14px", fontWeight: 600, color: C.textMid, marginTop: "4px" }}>{card.label}</div>
-                <div style={{ fontSize: "12px", color: C.textLight, marginTop: "2px" }}>{card.desc}</div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "18px", fontWeight: 800, color: C.text, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.val}</div>
+                <div style={{ fontSize: "11.5px", fontWeight: 700, color: C.textMid, marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.label}</div>
               </div>
             </div>
             <MiniChart color={card.color} />

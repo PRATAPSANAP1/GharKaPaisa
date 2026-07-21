@@ -147,53 +147,55 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
       {/* ── ROLE SUMMARY CARD (Top Context) ── */}
-      <div style={{
-        background: C.card,
-        borderRadius: '20px',
-        padding: '18px 24px',
-        border: `1px solid ${C.border}`,
-        boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            width: '46px', height: '46px', borderRadius: '14px',
-            background: `${C.primary}15`, color: C.primary,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '20px', fontWeight: 800
-          }}>
-            👨‍💼
-          </div>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase' }}>
-              Staff & Role Context
+      {activeCategory !== 'credit_card' && (
+        <div style={{
+          background: C.card,
+          borderRadius: '20px',
+          padding: '18px 24px',
+          border: `1px solid ${C.border}`,
+          boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '46px', height: '46px', borderRadius: '14px',
+              background: `${C.primary}15`, color: C.primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '20px', fontWeight: 800
+            }}>
+              👨‍💼
             </div>
-            <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
-              Employee — <span style={{ color: C.primary }}>120</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase' }}>
+                Staff & Role Context
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, marginTop: '2px' }}>
+                Employee — <span style={{ color: C.primary }}>120</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          onClick={() => setSelectedMoreInfoCard(employeeRoleCard)}
-          style={{
-            background: isDark ? C.bgSecondary : '#F1F5F9',
-            color: C.primary,
-            border: `1px solid ${C.border}`,
-            borderRadius: '12px',
-            padding: '8px 16px',
-            fontSize: '12px',
-            fontWeight: 800,
-            cursor: 'pointer'
-          }}
-        >
-          More Info
-        </button>
-      </div>
+          <button
+            onClick={() => setSelectedMoreInfoCard(employeeRoleCard)}
+            style={{
+              background: isDark ? C.bgSecondary : '#F1F5F9',
+              color: C.primary,
+              border: `1px solid ${C.border}`,
+              borderRadius: '12px',
+              padding: '8px 16px',
+              fontSize: '12px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            More Info
+          </button>
+        </div>
+      )}
 
       {/* ── SEARCH & ACTION HEADER BAR ── */}
       <div style={{
@@ -323,32 +325,34 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       </div>
 
       {/* ── SUMMARY CARDS ROW (Bottom of Category Dashboard) ── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: isMobile ? "10px" : "16px"
-      }}>
-        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Teams</span>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>15</div>
-          <span style={{ fontSize: "11px", color: C.green, fontWeight: 700 }}>Active network</span>
+      {activeCategory !== 'credit_card' && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: isMobile ? "10px" : "16px"
+        }}>
+          <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Teams</span>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>15</div>
+            <span style={{ fontSize: "11px", color: C.green, fontWeight: 700 }}>Active network</span>
+          </div>
+          <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Earning</span>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
+            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Calculated live</span>
+          </div>
+          <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Today's Earning</span>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
+            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Updated today</span>
+          </div>
+          <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Inactive Team</span>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: C.red, marginTop: "4px" }}>2</div>
+            <span style={{ fontSize: "11px", color: C.red, fontWeight: 600 }}>Action required</span>
+          </div>
         </div>
-        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Total Earning</span>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
-          <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Calculated live</span>
-        </div>
-        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Today's Earning</span>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: C.text, marginTop: "4px" }}>₹0</div>
-          <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600 }}>Updated today</span>
-        </div>
-        <div style={{ background: C.card, borderRadius: "18px", padding: "16px 20px", border: `1px solid ${C.border}` }}>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: C.textMid }}>Inactive Team</span>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: C.red, marginTop: "4px" }}>2</div>
-          <span style={{ fontSize: "11px", color: C.red, fontWeight: 600 }}>Action required</span>
-        </div>
-      </div>
+      )}
 
       {/* ═══ MORE INFO DETAIL MODAL ═══ */}
       {selectedMoreInfoCard && (

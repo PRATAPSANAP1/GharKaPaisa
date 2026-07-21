@@ -68,7 +68,7 @@ const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("gkp_theme");
-    return saved === null ? true : saved === "dark";
+    return saved === null ? false : saved === "dark";
   });
 
   useEffect(() => {

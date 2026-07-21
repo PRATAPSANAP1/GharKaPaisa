@@ -188,8 +188,7 @@ const SuperAdminLayout = () => {
             { path: '/super-admin/products/loans', label: 'Loans', icon: <Icons.trending size={16} /> },
             { path: '/super-admin/products/insurance', label: 'Insurance', icon: <Icons.wallet size={16} /> }
           ]
-        },
-        { path: '/super-admin/product-links', label: 'Product Link Management', icon: <Icons.trending size={16} /> },
+        }
       ]
     },
     {
@@ -215,7 +214,7 @@ const SuperAdminLayout = () => {
 
   const renderNavigationList = (onLinkClick) => {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {categories.map((cat, idx) => {
           if (cat.isModifyGroup) {
             const isChildActive = location.pathname.includes('/banners') || location.pathname.includes('/sections');
@@ -230,34 +229,34 @@ const SuperAdminLayout = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '10px 16px',
-                    borderRadius: '10px',
+                    padding: '5px 10px',
+                    borderRadius: '6px',
                     background: isChildActive ? `${C.teal}15` : 'transparent',
                     border: 'none',
                     color: isChildActive ? C.teal : C.text,
                     cursor: 'pointer',
-                    fontSize: '14px',
+                    fontSize: '12.5px',
                     fontWeight: 700,
                     transition: 'all 0.2s',
                     textAlign: 'left',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Icons.gift size={16} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Modify</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Icons.gift size={15} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
+                    <span style={{ fontSize: '12.5px', fontWeight: 600 }}>Modify</span>
                   </div>
-                  <Chevron open={modifyOpen} color={isChildActive ? C.teal : C.textSecondary} />
+                  <Chevron open={modifyOpen} color={isChildActive ? C.teal : C.textSecondary} size={14} />
                 </button>
 
                 {modifyOpen && (
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
-                    paddingLeft: '24px',
-                    marginTop: '6px',
+                    gap: '2px',
+                    paddingLeft: '14px',
+                    marginTop: '2px',
                     borderLeft: `1.5px solid ${C.border}`,
-                    marginLeft: '24px',
+                    marginLeft: '14px',
                   }}>
                     {cat.items.map((item) => {
                       const isActive = location.pathname === item.path;
@@ -269,10 +268,10 @@ const SuperAdminLayout = () => {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            fontSize: '13px',
+                            gap: '6px',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
                             fontWeight: 600,
                             color: isActive ? C.teal : C.textMid,
                             background: isActive ? `${C.teal}10` : 'transparent',
@@ -292,14 +291,15 @@ const SuperAdminLayout = () => {
           }
 
           return (
-            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{
-                fontSize: '10px',
+                fontSize: '9.5px',
                 fontWeight: 800,
                 color: C.textLight,
-                letterSpacing: '1px',
-                padding: '0 16px',
-                marginBottom: '4px',
+                letterSpacing: '0.8px',
+                padding: '0 10px',
+                marginBottom: '2px',
+                marginTop: '2px',
               }}>
                 {cat.title}
               </div>
@@ -316,34 +316,34 @@ const SuperAdminLayout = () => {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           width: '100%',
-                          padding: '10px 16px',
-                          borderRadius: '10px',
+                          padding: '5px 10px',
+                          borderRadius: '6px',
                           background: isChildActive ? `${C.teal}15` : 'transparent',
                           border: 'none',
                           color: isChildActive ? C.teal : C.text,
                           cursor: 'pointer',
-                          fontSize: '14px',
+                          fontSize: '12.5px',
                           fontWeight: 600,
                           transition: 'all 0.2s',
                           textAlign: 'left',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ color: isChildActive ? C.teal : C.textSecondary }}>{item.icon}</span>
-                          <span style={{ fontSize: '14px', fontWeight: 600 }}>{item.label}</span>
+                          <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{item.label}</span>
                         </div>
-                        <Chevron open={productsOpen} color={isChildActive ? C.teal : C.textSecondary} />
+                        <Chevron open={productsOpen} color={isChildActive ? C.teal : C.textSecondary} size={14} />
                       </button>
 
                       {productsOpen && (
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '4px',
-                          paddingLeft: '24px',
-                          marginTop: '6px',
+                          gap: '2px',
+                          paddingLeft: '14px',
+                          marginTop: '2px',
                           borderLeft: `1.5px solid ${C.border}`,
-                          marginLeft: '24px',
+                          marginLeft: '14px',
                         }}>
                           {item.subItems.map((sub) => {
                             const isSubActive = location.pathname === sub.path;
@@ -355,10 +355,10 @@ const SuperAdminLayout = () => {
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '10px',
-                                  padding: '8px 12px',
-                                  borderRadius: '8px',
-                                  fontSize: '13px',
+                                  gap: '6px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11.5px',
                                   fontWeight: 600,
                                   color: isSubActive ? C.teal : C.textMid,
                                   background: isSubActive ? `${C.teal}10` : 'transparent',
@@ -386,14 +386,14 @@ const SuperAdminLayout = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      padding: '10px 16px',
-                      borderRadius: '10px',
-                      fontSize: '14px',
+                      gap: '8px',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12.5px',
                       fontWeight: 600,
                       color: isActive ? '#fff' : C.text,
                       background: isActive ? C.teal : 'transparent',
-                      boxShadow: isActive ? `0 4px 12px ${C.teal}40` : 'none',
+                      boxShadow: isActive ? `0 2px 8px ${C.teal}40` : 'none',
                       textDecoration: 'none',
                       transition: 'all 0.2s',
                     }}
@@ -407,19 +407,19 @@ const SuperAdminLayout = () => {
           );
         })}
 
-        <div style={{ height: "1px", background: C.border, margin: "12px 0 8px" }} />
+        <div style={{ height: "1px", background: C.border, margin: "4px 0" }} />
 
         {/* Language Switcher */}
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <label style={{ fontSize: '9px', fontWeight: 800, color: C.textLight, letterSpacing: '0.8px' }}>LANGUAGE</label>
+        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <label style={{ fontSize: '8.5px', fontWeight: 800, color: C.textLight, letterSpacing: '0.8px' }}>LANGUAGE</label>
           <select 
             value={i18n.language} 
             onChange={(e) => i18n.changeLanguage(e.target.value)}
             style={{
               width: '100%',
-              padding: "8px 12px", borderRadius: "10px",
-              border: `1.5px solid ${C.border}`, background: C.inputBg,
-              color: C.text, fontSize: "12.5px", fontWeight: 700, cursor: "pointer",
+              padding: "4px 8px", borderRadius: "6px",
+              border: `1px solid ${C.border}`, background: C.inputBg,
+              color: C.text, fontSize: "11.5px", fontWeight: 700, cursor: "pointer",
               outline: 'none'
             }}
           >
@@ -436,24 +436,24 @@ const SuperAdminLayout = () => {
         </div>
 
         {/* Interface Mode */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', marginTop: '6px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 10px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
           <ThemeToggle />
         </div>
 
         {/* Private Mode */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', marginBottom: '10px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid }}>Private Mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 10px', marginBottom: '4px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Private Mode</span>
           <button
             onClick={togglePrivacyMode}
             disabled={loadingPrivacy}
             style={{
-              padding: '5px 12px',
-              borderRadius: '8px',
-              border: `1.5px solid ${privacyMode ? C.red : C.border}`,
+              padding: '2px 8px',
+              borderRadius: '6px',
+              border: `1px solid ${privacyMode ? C.red : C.border}`,
               background: privacyMode ? `${C.red}15` : 'transparent',
               color: privacyMode ? C.red : C.text,
-              fontSize: '11px',
+              fontSize: '10px',
               fontWeight: 800,
               cursor: 'pointer',
               textTransform: 'uppercase',
@@ -474,7 +474,7 @@ const SuperAdminLayout = () => {
       {/* ── DESKTOP SIDEBAR ── */}
       {!isMobile && (
         <aside style={{
-          width: '260px',
+          width: '240px',
           height: '100vh',
           background: C.card,
           borderRight: `1px solid ${C.border}`,
@@ -484,20 +484,20 @@ const SuperAdminLayout = () => {
           zIndex: 20
         }}>
           {/* Logo & Header */}
-          <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid ${C.border}` }}>
-            <img src={logo} alt="GharKaPaisa" style={{ height: '32px' }} />
+          <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}` }}>
+            <img src={logo} alt="GharKaPaisa" style={{ height: '28px' }} />
             <div>
-              <span style={{ fontSize: '15px', fontWeight: 900, color: C.text, display: 'block', lineHeight: 1.1 }}>
+              <span style={{ fontSize: '14px', fontWeight: 900, color: C.text, display: 'block', lineHeight: 1.1 }}>
                 SUPER ADMIN
               </span>
-              <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>
+              <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 700 }}>
                 Control Center
               </span>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 14px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px' }}>
             {renderNavigationList()}
           </div>
         </aside>

@@ -141,7 +141,7 @@ export default function ManageProductLinks() {
         reason
       };
       
-      const res = await api.put(`/superadmin/products/link/${selectedProduct.id}`, payload);
+      const res = await api.put(`/products/link/${selectedProduct.id}`, payload);
       if (res.data?.success) {
         triggerToast('Product link updated successfully!');
         setModalOpen(false);
@@ -166,7 +166,7 @@ export default function ManageProductLinks() {
         tracking_enabled: enable,
         reason: `${enable ? 'Enabled' : 'Disabled'} tracking`
       };
-      const res = await api.put(`/superadmin/products/link/${product.id}`, payload);
+      const res = await api.put(`/products/link/${product.id}`, payload);
       if (res.data?.success) {
         triggerToast(`Tracking ${enable ? 'enabled' : 'disabled'} successfully!`);
         fetchData();
