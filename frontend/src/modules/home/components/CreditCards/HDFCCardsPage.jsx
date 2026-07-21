@@ -9,7 +9,7 @@ import {
   FaPlane, FaShoppingBag, FaBriefcase, FaRegCreditCard,
   FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp
 } from "react-icons/fa";
-import hdfcCardImg from "./image/hdfc.png";
+import hdfcCardImg from "./image/HDFC/hdfc.png";
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from "./CardApplyVerificationModal";
 import { ltfCards } from "./LTFCardsData";

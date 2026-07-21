@@ -44,36 +44,38 @@ import hdfcTataNeuInfinite from './image/HDFC/tata neu infinite.png';
 import hdfcTataNeuplus from './image/HDFC/tata neuplus.png';
 
 // ICICI
-import iciciAmazon from './image/icici/amazon.png';
-import iciciCoral from './image/icici/coral.png';
-import iciciEmirates from './image/icici/emirates.png';
-import iciciExpressions from './image/icici/expressions.png';
-import iciciHpclSuperSaver from './image/icici/hpcl super saver.png';
-import iciciMakemytrip from './image/icici/makemytrip.png';
-import iciciManchesterUnited from './image/icici/manchester united.png';
-import iciciPlatinumChip from './image/icici/platinum chip.png';
-import iciciRuby from './image/icici/ruby.png';
-import iciciSapphero from './image/icici/sapphero.png';
+import iciciAmazon from './image/ICICI/amazon.png';
+import iciciCoral from './image/ICICI/coral.png';
+import iciciEmirates from './image/ICICI/emirates.png';
+import iciciExpressions from './image/ICICI/expressions.png';
+import iciciHpclSuperSaver from './image/ICICI/hpcl super saver.png';
+import iciciMakemytrip from './image/ICICI/makemytrip.png';
+import iciciManchesterUnited from './image/ICICI/manchester united.png';
+import iciciPlatinumChip from './image/ICICI/platinum chip.png';
+import iciciRuby from './image/ICICI/ruby.png';
+import iciciSapphero from './image/ICICI/sapphero.png';
 
 // IDFC
-import idfcAshva from './image/IDFC/ashva.png';
-import idfcClassic from './image/IDFC/classic.png';
-import idfcFamily from './image/IDFC/family.png';
-import idfcMilennia from './image/IDFC/milennia.png';
-import idfcPower from './image/IDFC/power.png';
-import idfcPrkote from './image/IDFC/prkote.png';
+import idfcClassic from './image/IDFC/classic visa.png';
+import idfcMilennia from './image/IDFC/millenia.png';
 import idfcSelect from './image/IDFC/select.png';
-import idfcWealth from './image/IDFC/wealth.png';
+import idfcLogo from '../banks/idfc_first_bank.png';
+
+const idfcAshva = idfcSelect;
+const idfcFamily = idfcSelect;
+const idfcPower = idfcSelect;
+const idfcPrkote = idfcSelect;
+const idfcWealth = idfcSelect;
 
 // IND
-import ind1 from './image/IND/IND1.png';
-import ind2 from './image/IND/IND2.png';
-import ind3 from './image/IND/IND3.png';
-import ind4 from './image/IND/IND4.png';
-import ind5 from './image/IND/IND5.png';
-import ind6 from './image/IND/IND6.png';
-import ind7 from './image/IND/IND7.png';
-import ind8 from './image/IND/IND8.png';
+import ind1 from './image/IND/legend.png';
+import ind2 from './image/IND/platinum aura edge.png';
+import ind3 from './image/IND/avios.png';
+import ind4 from './image/IND/eazydiner.png';
+import ind5 from './image/IND/pinnacle.png';
+import ind6 from './image/IND/samman.png';
+import ind7 from './image/IND/nexxt.png';
+import ind8 from './image/IND/fd credit.png';
 
 // SBI
 import sbiAirIndiaPlatinum from './image/SBI/air india platinum.png';
@@ -90,12 +92,12 @@ import sbiSimplySave from './image/SBI/simply save.png';
 import sbiTataNeu from './image/SBI/tata neu.png';
 
 // Fallbacks/General bank images
-import axisGeneral from './image/AXIS.png';
-import sbiGeneral from './image/SBI.png';
-import iciciGeneral from './image/ICICI.png';
-import kotakGeneral from './image/KOTAK.png';
-import yesGeneral from './image/yes bank.png';
-import hdfcGeneral from './image/hdfc.png';
+import axisGeneral from './image/AXIS/AXIS.png';
+import sbiGeneral from './image/SBI/SBI.png';
+import iciciGeneral from './image/ICICI/ICICI.png';
+import kotakGeneral from './image/KOTAK/KOTAK.png';
+import yesGeneral from './image/yes/yes bank.png';
+import hdfcGeneral from './image/HDFC/hdfc.png';
 
 export const getCardSpecificImage = (cardName) => {
   if (!cardName) return null;
