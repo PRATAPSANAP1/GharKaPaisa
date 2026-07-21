@@ -20,6 +20,9 @@ const DEFAULT_BANKS = [
   { id: 'idfc', name: 'IDFC First Bank', short_code: 'IDFC' },
   { id: 'hsbc', name: 'HSBC Bank', short_code: 'HSBC' },
   { id: 'federal', name: 'Federal Bank', short_code: 'FEDERAL' },
+  { id: 'rbl', name: 'RBL Bank', short_code: 'RBL' },
+  { id: 'equitas', name: 'Equitas Small Finance Bank', short_code: 'EQUITAS' },
+  { id: 'dcb', name: 'DCB Bank', short_code: 'DCB' },
   { id: 'indusind', name: 'IndusInd Bank', short_code: 'INDUSIND' },
   { id: 'kotak', name: 'Kotak Bank', short_code: 'KOTAK' }
 ];
