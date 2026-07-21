@@ -47,13 +47,20 @@ export default function ManageAdminProducts() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
-
   // Filters State
   const [bankFilter, setBankFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [networkFilter, setNetworkFilter] = useState("All");
   const [feeFilter, setFeeFilter] = useState("All");
+
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Reset page to 1 on filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeCategory, search, bankFilter, typeFilter, statusFilter, networkFilter, feeFilter]);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -444,6 +451,9 @@ export default function ManageAdminProducts() {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
@@ -580,7 +590,7 @@ export default function ManageAdminProducts() {
             ) : filteredProducts.length === 0 ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new card!</td></tr>
             ) : (
-              filteredProducts.map(prod => (
+              paginatedProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     {prod.image_url ? (
@@ -624,6 +634,47 @@ export default function ManageAdminProducts() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "16px" }}>
+          <button 
+            disabled={page <= 1} 
+            onClick={() => setPage(page - 1)} 
+            style={{ 
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              border: `1px solid ${C.border}`, 
+              background: C.card, 
+              color: C.text, 
+              fontWeight: 700, 
+              fontSize: '13px', 
+              opacity: page <= 1 ? 0.5 : 1, 
+              cursor: page <= 1 ? 'not-allowed' : 'pointer' 
+            }}
+          >
+            ← Previous
+          </button>
+          <span style={{ fontSize: "14px", fontWeight: 600, color: C.textLight }}>Page {page} of {totalPages}</span>
+          <button 
+            disabled={page >= totalPages} 
+            onClick={() => setPage(page + 1)} 
+            style={{ 
+              padding: '8px 16px', 
+              borderRadius: '8px', 
+              border: `1px solid ${C.border}`, 
+              background: C.card, 
+              color: C.text, 
+              fontWeight: 700, 
+              fontSize: '13px', 
+              opacity: page >= totalPages ? 0.5 : 1, 
+              cursor: page >= totalPages ? 'not-allowed' : 'pointer' 
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      )}
 
       {/* ── REDESIGNED 7-TAB PRODUCT MODAL ── */}
       {modalOpen && (
