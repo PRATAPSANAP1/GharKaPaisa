@@ -31,7 +31,6 @@ const NAV_ITEMS = [
       { id: 'cc-products', path: '/partner/products?category=credit_card', label: 'Products', icon: MdStorefront },
       { id: 'cc-applications', path: '/partner/applications?category=credit_card', label: 'Applications', icon: MdLeaderboard },
       { id: 'cc-customers', path: '/partner/customers?category=credit_card', label: 'Customers', icon: MdPeople },
-      { id: 'cc-documents', path: '/partner/documents?category=credit_card', label: 'Documents', icon: MdFolder },
       { id: 'cc-reports', path: '/partner/reports?category=credit_card', label: 'Reports', icon: MdBarChart },
     ]
   },
