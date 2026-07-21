@@ -209,36 +209,31 @@ export default function DynamicCreditCardsPage() {
         </div>
       </div>
 
-      {/* ── HERO BANNER SECTION ── */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-        <div style={{
-          borderRadius: '24px',
-          overflow: 'hidden',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-          background: isDark ? '#1e293b' : '#ffffff',
-          width: '100%',
-          minHeight: isMobile ? '180px' : '260px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
-            <img 
-              src={getCleanImageUrl(bank.banner)} 
-              alt={`${bank.name} Credit Cards Banner`} 
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '24px' }} 
-            />
-          ) : bank.logo_url ? (
-            <img 
-              src={getCleanImageUrl(bank.logo_url)} 
-              alt={bank.name} 
-              style={{ maxWidth: '50%', maxHeight: '60%', objectFit: 'contain' }} 
-            />
-          ) : (
-            <span style={{ fontSize: '64px' }}>💳</span>
-          )}
-        </div>
+      {/* ── HERO BANNER SECTION (Full Screen) ── */}
+      <div style={{
+        width: '100%',
+        overflow: 'hidden',
+        background: isDark ? '#1e293b' : '#f1f5f9',
+        minHeight: isMobile ? '180px' : '280px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
+          <img 
+            src={getCleanImageUrl(bank.banner)} 
+            alt={`${bank.name} Credit Cards Banner`} 
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+          />
+        ) : bank.logo_url ? (
+          <img 
+            src={getCleanImageUrl(bank.logo_url)} 
+            alt={bank.name} 
+            style={{ maxWidth: '40%', maxHeight: '50%', objectFit: 'contain' }} 
+          />
+        ) : (
+          <span style={{ fontSize: '64px' }}>💳</span>
+        )}
       </div>
 
       {/* ── SEARCH & DYNAMIC CATEGORY FILTERS ── */}
