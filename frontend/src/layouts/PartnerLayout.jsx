@@ -10,7 +10,7 @@ import {
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout,
-  MdNotifications, MdBarChart, MdSearch
+  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
@@ -21,7 +21,48 @@ import '../components/Navbar/Navbar.css';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
-  { id: 'products', path: '/partner/products', label: 'Products', icon: MdStorefront },
+  {
+    id: 'credit_card',
+    label: 'Credit Cards',
+    icon: MdCreditCard,
+    isModule: true,
+    subItems: [
+      { id: 'cc-dashboard', path: '/partner/credit-cards', label: 'Dashboard', icon: MdDashboard },
+      { id: 'cc-products', path: '/partner/products?category=credit_card', label: 'Products', icon: MdStorefront },
+      { id: 'cc-applications', path: '/partner/applications?category=credit_card', label: 'Applications', icon: MdLeaderboard },
+      { id: 'cc-customers', path: '/partner/customers?category=credit_card', label: 'Customers', icon: MdPeople },
+      { id: 'cc-documents', path: '/partner/documents?category=credit_card', label: 'Documents', icon: MdFolder },
+      { id: 'cc-reports', path: '/partner/reports?category=credit_card', label: 'Reports', icon: MdBarChart },
+    ]
+  },
+  {
+    id: 'loans',
+    label: 'Loans',
+    icon: MdAccountBalanceWallet,
+    isModule: true,
+    subItems: [
+      { id: 'loan-dashboard', path: '/partner/loans', label: 'Dashboard', icon: MdDashboard },
+      { id: 'loan-products', path: '/partner/products?category=personal_loan', label: 'Products', icon: MdStorefront },
+      { id: 'loan-applications', path: '/partner/applications?category=loans', label: 'Applications', icon: MdLeaderboard },
+      { id: 'loan-customers', path: '/partner/customers?category=loans', label: 'Customers', icon: MdPeople },
+      { id: 'loan-documents', path: '/partner/documents?category=loans', label: 'Documents', icon: MdFolder },
+      { id: 'loan-reports', path: '/partner/reports?category=loans', label: 'Reports', icon: MdBarChart },
+    ]
+  },
+  {
+    id: 'insurance',
+    label: 'Insurance',
+    icon: MdShield,
+    isModule: true,
+    subItems: [
+      { id: 'ins-dashboard', path: '/partner/insurance', label: 'Dashboard', icon: MdDashboard },
+      { id: 'ins-products', path: '/partner/products?category=insurance', label: 'Products', icon: MdStorefront },
+      { id: 'ins-applications', path: '/partner/applications?category=insurance', label: 'Applications', icon: MdLeaderboard },
+      { id: 'ins-customers', path: '/partner/customers?category=insurance', label: 'Customers', icon: MdPeople },
+      { id: 'ins-documents', path: '/partner/documents?category=insurance', label: 'Documents', icon: MdFolder },
+      { id: 'ins-reports', path: '/partner/reports?category=insurance', label: 'Reports', icon: MdBarChart },
+    ]
+  },
   { id: 'applications', path: '/partner/applications', label: 'Applications', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
   { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
@@ -59,6 +100,29 @@ export default function PartnerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [walletBalance, setWalletBalance] = useState("₹0");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [openModules, setOpenModules] = useState({
+    credit_card: false,
+    loans: false,
+    insurance: false,
+  });
+
+  useEffect(() => {
+    const fullPath = location.pathname + location.search;
+    if (location.pathname.startsWith('/partner/credit-cards') || location.search.includes('category=credit_card')) {
+      setOpenModules(prev => ({ ...prev, credit_card: true }));
+    } else if (location.pathname.startsWith('/partner/loans') || location.search.includes('category=loans') || location.search.includes('category=personal_loan')) {
+      setOpenModules(prev => ({ ...prev, loans: true }));
+    } else if (location.pathname.startsWith('/partner/insurance') || location.search.includes('category=insurance')) {
+      setOpenModules(prev => ({ ...prev, insurance: true }));
+    }
+  }, [location.pathname, location.search]);
+
+  const toggleModule = (id) => {
+    setOpenModules(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -148,50 +212,7 @@ export default function PartnerLayout() {
     }
   }, [accountStatus, location.pathname, navigate, logout]);
 
-  const getCategoryHubNav = () => {
-    const fullPath = location.pathname + location.search;
-    if (location.pathname.startsWith('/partner/credit-cards') || location.search.includes('category=credit_card')) {
-      return {
-        title: 'CREDIT CARDS HUB',
-        category: 'credit_card',
-        items: [
-          { id: 'cc-overview', path: '/partner/credit-cards', label: 'Credit Cards Overview', icon: MdCreditCard },
-          { id: 'cc-products', path: '/partner/products?category=credit_card', label: 'Credit Card Products', icon: MdStorefront },
-          { id: 'cc-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
-          { id: 'cc-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
-        ]
-      };
-    }
-    if (location.pathname.startsWith('/partner/loans') || location.search.includes('category=personal_loan') || location.search.includes('category=home_loan') || location.search.includes('category=business_loan')) {
-      return {
-        title: 'LOANS HUB',
-        category: 'loans',
-        items: [
-          { id: 'loan-overview', path: '/partner/loans', label: 'Loans Overview', icon: MdAccountBalanceWallet },
-          { id: 'loan-products', path: '/partner/products?category=personal_loan', label: 'Loan Products', icon: MdStorefront },
-          { id: 'loan-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
-          { id: 'loan-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
-        ]
-      };
-    }
-    if (location.pathname.startsWith('/partner/insurance') || location.search.includes('category=insurance')) {
-      return {
-        title: 'INSURANCE HUB',
-        category: 'insurance',
-        items: [
-          { id: 'ins-overview', path: '/partner/insurance', label: 'Insurance Overview', icon: MdShield },
-          { id: 'ins-products', path: '/partner/products?category=insurance', label: 'Insurance Products', icon: MdStorefront },
-          { id: 'ins-leads', path: '/partner/applications', label: 'Applications & Leads', icon: MdLeaderboard },
-          { id: 'ins-exit', path: '/partner/dashboard', label: 'Main Partner Panel', icon: MdDashboard },
-        ]
-      };
-    }
-    return null;
-  };
-
-  const hubInfo = getCategoryHubNav();
-
-  const filteredNavItems = hubInfo ? hubInfo.items : NAV_ITEMS.filter((item) => {
+  const filteredNavItems = NAV_ITEMS.filter((item) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard', 'kyc-centre', 'training', 'notifications', 'profile', 'settings'].includes(item.id);
     }
@@ -204,9 +225,145 @@ export default function PartnerLayout() {
     }
     return true;
   });
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const renderNavItem = (item, isMobileNav = false) => {
+    const Icon = item.icon;
+    const currentPathAndQuery = location.pathname + location.search;
+
+    if (item.isModule) {
+      const isExpanded = !!openModules[item.id];
+      const isChildActive = item.subItems.some((sub) =>
+        sub.path.includes('?')
+          ? currentPathAndQuery === sub.path
+          : location.pathname === sub.path
+      );
+
+      return (
+        <div key={item.id} style={{ marginBottom: '6px' }}>
+          <button
+            type="button"
+            onClick={() => toggleModule(item.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: isMobileNav ? '15px' : '14px',
+              fontWeight: 700,
+              color: isChildActive ? C.primary : C.text,
+              background: isChildActive
+                ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF')
+                : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+              border: `1px solid ${isChildActive ? C.primary + '40' : 'transparent'}`,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Icon size={isMobileNav ? 22 : 20} style={{ color: isChildActive ? C.primary : SIDEBAR_TEXT }} />
+              <span>{item.label}</span>
+            </div>
+            {isExpanded ? (
+              <MdExpandLess size={20} style={{ color: SIDEBAR_TEXT }} />
+            ) : (
+              <MdExpandMore size={20} style={{ color: SIDEBAR_TEXT }} />
+            )}
+          </button>
+
+          {isExpanded && (
+            <div style={{
+              paddingLeft: '12px',
+              marginTop: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+              borderLeft: `2px solid ${isChildActive ? C.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}`,
+              marginLeft: '20px',
+            }}>
+              {item.subItems.map((sub) => {
+                const SubIcon = sub.icon;
+                const isSubActive = sub.path.includes('?')
+                  ? currentPathAndQuery === sub.path
+                  : location.pathname === sub.path;
+
+                return (
+                  <NavLink
+                    key={sub.id}
+                    id={`partner-nav-${sub.id}`}
+                    to={sub.path}
+                    onClick={() => {
+                      if (isMobileNav) setMobileMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: isSubActive ? 700 : 600,
+                      color: isSubActive ? '#fff' : C.text,
+                      background: isSubActive
+                        ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`
+                        : 'transparent',
+                      boxShadow: isSubActive ? `0 3px 10px ${C.primary}35` : 'none',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <SubIcon size={16} style={{ color: isSubActive ? '#fff' : SIDEBAR_TEXT }} />
+                    {sub.label}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const isActive = item.path.includes('?')
+      ? currentPathAndQuery === item.path
+      : location.pathname === item.path;
+
+    return (
+      <NavLink
+        key={item.id}
+        id={isMobileNav ? `partner-mobile-nav-${item.id}` : `partner-nav-${item.id}`}
+        to={item.path}
+        onClick={() => {
+          if (isMobileNav) setMobileMenuOpen(false);
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '10px 16px',
+          borderRadius: '12px',
+          fontSize: isMobileNav ? '15px' : '14px',
+          fontWeight: 600,
+          color: isActive ? '#fff' : C.text,
+          background: isActive
+            ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`
+            : 'transparent',
+          boxShadow: isActive ? `0 4px 14px ${C.primary}35` : 'none',
+          textDecoration: 'none',
+          transition: 'all 0.2s',
+          marginBottom: '4px',
+        }}
+      >
+        <Icon size={isMobileNav ? 22 : 20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
+        {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+      </NavLink>
+    );
   };
 
   // ── Color Constants ─────────────────────────────────
@@ -237,7 +394,7 @@ export default function PartnerLayout() {
           height: '100%',
           overflow: 'hidden',
         }}>
-          {/* Logo & Category Hub Banner */}
+          {/* Logo Banner */}
           <div style={{
             padding: '20px 24px',
             borderBottom: `1px solid ${C.border}`,
@@ -248,13 +405,8 @@ export default function PartnerLayout() {
             <img src={logo} alt="Logo" style={{ height: '32px' }} />
             <div>
               <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.primary, margin: 0, lineHeight: 1.2 }}>
-                {hubInfo ? hubInfo.title : t('partnerLayout.panelTitle', 'Partner Panel')}
+                {t('partnerLayout.panelTitle', 'Partner Panel')}
               </h2>
-              {hubInfo && (
-                <span style={{ fontSize: '10px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Category Hub
-                </span>
-              )}
             </div>
           </div>
 
@@ -264,39 +416,7 @@ export default function PartnerLayout() {
             overflowY: 'auto',
             padding: '16px 12px',
           }}>
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              const currentPathAndQuery = location.pathname + location.search;
-              const isActive = item.path.includes('?') 
-                ? currentPathAndQuery === item.path 
-                : location.pathname === item.path;
-
-              return (
-                <NavLink
-                  key={item.id}
-                  id={`partner-nav-${item.id}`}
-                  to={item.path}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 16px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: isActive ? '#fff' : C.text,
-                    background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
-                    boxShadow: isActive ? `0 4px 14px ${C.primary}35` : 'none',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s',
-                    marginBottom: '4px',
-                  }}
-                >
-                  <Icon size={20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
-                  {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
-                </NavLink>
-              );
-            })}
+            {filteredNavItems.map((item) => renderNavItem(item, false))}
           </div>
 
           {/* Sidebar Footer */}
@@ -458,35 +578,7 @@ export default function PartnerLayout() {
 
             {/* Menu Nav Items */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              {filteredNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname.startsWith(item.path);
-                return (
-                  <NavLink
-                    key={item.id}
-                    id={`partner-mobile-nav-${item.id}`}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '14px',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
-                      fontWeight: 700,
-                      fontSize: '15px',
-                      color: isActive ? '#fff' : C.text,
-                      background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : (isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc'),
-                      boxShadow: isActive ? `0 4px 12px ${C.primary}35` : 'none',
-                      textDecoration: 'none',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <Icon size={22} style={{ color: isActive ? '#fff' : C.primary }} />
-                    {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
-                  </NavLink>
-                );
-              })}
+              {filteredNavItems.map((item) => renderNavItem(item, true))}
 
               {/* Mobile Footer Controls */}
               <div style={{

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
@@ -66,6 +67,9 @@ export default function PartnerApplications() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const categoryFilter = searchParams.get('category');
+
   const fetchDashboardStats = async () => {
     try {
       const res = await api.get('/applications/dashboard');
@@ -85,6 +89,7 @@ export default function PartnerApplications() {
           search: search.trim() || undefined,
           status: statusFilter || undefined,
           commission_status: commFilter || undefined,
+          category: categoryFilter || undefined,
           limit: 100
         }
       });
@@ -113,7 +118,7 @@ export default function PartnerApplications() {
     fetchDashboardStats();
     fetchApplicationsList();
     fetchTeamMembers();
-  }, [search, statusFilter, commFilter]);
+  }, [search, statusFilter, commFilter, categoryFilter]);
 
   const loadDetailData = async (appId) => {
     try {
