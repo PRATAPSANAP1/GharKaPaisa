@@ -1375,8 +1375,8 @@ export default function ManageBankCardApplications() {
           </div>
 
           {/* Table List of Applications */}
-          <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 6px 20px rgba(0,0,0,0.02)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', boxShadow: '0 6px 20px rgba(0,0,0,0.02)' }}>
+            <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: isDark ? '#1F2937' : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Application No</th>
