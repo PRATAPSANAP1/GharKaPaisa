@@ -23,20 +23,21 @@ const ALL_CARDS = {
       description: 'HDFC Freedom Credit Card provides entry-level credit card offering rewards on dining, grocery, and everyday utility spends. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        'Entry-level credit card offering rewards on dining, grocery, and everyday utility spends.',
+        '5X reward points on dining and grocery spends',
         '1% fuel surcharge waiver across India',
+        'Complimentary access to domestic airport lounges (2/year)',
         'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'EMI conversion on transactions above ₹2,500'
       ],
       benefits: 'Entry-level credit card offering rewards on dining, grocery, and everyday utility spends. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'HDFC Freedom Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for HDFC Freedom Credit Card. Entry-level credit card offering rewards on dining, grocery, and everyday utility spends.',
       seo_keywords: 'hdfc freedom credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'HDFC MoneyBack+ Credit Card',
@@ -46,20 +47,20 @@ const ALL_CARDS = {
       description: 'HDFC MoneyBack+ Credit Card provides 10x cashpoints on popular online merchants like amazon, flipkart, swiggy and bigbasket. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        '10X CashPoints on popular online merchants like Amazon, Flipkart, Swiggy and BigBasket.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X CashPoints on Amazon, Flipkart, Swiggy, and BigBasket',
+        '2 CashPoints per ₹150 on all other spends',
+        '1% fuel surcharge waiver',
+        'Up to 15% discount at partner dining outlets'
       ],
       benefits: '10X CashPoints on popular online merchants like Amazon, Flipkart, Swiggy and BigBasket. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'HDFC MoneyBack+ Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for HDFC MoneyBack+ Credit Card. 10X CashPoints on popular online merchants like Amazon, Flipkart, Swiggy and BigBasket.',
       seo_keywords: 'hdfc moneyback+ credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'HDFC Millennia Credit Card',
@@ -69,10 +70,10 @@ const ALL_CARDS = {
       description: 'HDFC Millennia Credit Card provides 5% cashback on top online shopping brands and complimentary domestic airport lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹1,000 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '5% cashback on top online shopping brands and complimentary domestic airport lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% cashback on Amazon, Flipkart, Swiggy, Zomato, BookMyShow',
+        '1% cashback on all other online & offline spends',
+        '4 complimentary domestic lounge visits per year',
+        '1% fuel surcharge waiver'
       ],
       benefits: '5% cashback on top online shopping brands and complimentary domestic airport lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -92,10 +93,10 @@ const ALL_CARDS = {
       description: 'HDFC Regalia Gold Credit Card provides premium travel and lifestyle card with 12 domestic and 6 international lounge visits per year. Designed to offer max savings and convenience.',
       annual_fee: '₹2,500 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Premium travel and lifestyle card with 12 domestic and 6 international lounge visits per year.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 Reward Points per ₹150 spent',
+        '5X Reward Points on Marks & Spencer, Myntra, Reliance Digital',
+        '12 domestic & 6 international airport lounge access visits per year',
+        'Flight vouchers worth ₹5,000 on ₹5 Lakh annual spend'
       ],
       benefits: 'Premium travel and lifestyle card with 12 domestic and 6 international lounge visits per year. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -115,10 +116,10 @@ const ALL_CARDS = {
       description: 'HDFC Regalia Credit Card provides classic luxury lifestyle card offering travel vouchers, priority pass membership, and dining rewards. Designed to offer max savings and convenience.',
       annual_fee: '₹2,500 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Classic luxury lifestyle card offering travel vouchers, priority pass membership, and dining rewards.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 Reward Points on every ₹150 spent',
+        '12 complimentary airport lounge visits annually',
+        '1% fuel surcharge waiver',
+        'Low foreign currency markup of 2%'
       ],
       benefits: 'Classic luxury lifestyle card offering travel vouchers, priority pass membership, and dining rewards. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -138,20 +139,20 @@ const ALL_CARDS = {
       description: 'HDFC BizGrow Credit Card provides tailored for small business owners and freelancers with 55 days interest-free period. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        'Tailored for small business owners and freelancers with 55 days interest-free period.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2 Reward Points per ₹150 spent on business expenses',
+        '55 days interest-free credit period',
+        'Cashback on bill payments and tax filing',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Tailored for small business owners and freelancers with 55 days interest-free period. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'HDFC BizGrow Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for HDFC BizGrow Credit Card. Tailored for small business owners and freelancers with 55 days interest-free period.',
       seo_keywords: 'hdfc bizgrow credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 6, priority: 6
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 6, priority: 6
     },
     {
       name: 'HDFC BizPower Credit Card',
@@ -161,10 +162,10 @@ const ALL_CARDS = {
       description: 'HDFC BizPower Credit Card provides commercial card with accelerated rewards on google ads, aws, telecom, and business travel. Designed to offer max savings and convenience.',
       annual_fee: '₹2,500 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Commercial card with accelerated rewards on Google Ads, AWS, telecom, and business travel.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 Reward Points per ₹150 spent',
+        '10X Rewards on Google Ads, AWS, and Telecom expenses',
+        '16 domestic airport lounge access visits per year',
+        'Commercial travel insurance cover'
       ],
       benefits: 'Commercial card with accelerated rewards on Google Ads, AWS, telecom, and business travel. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -184,20 +185,20 @@ const ALL_CARDS = {
       description: 'HDFC BizFirst Credit Card provides entry-level commercial card with cashback on operational costs and utility bills. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        'Entry-level commercial card with cashback on operational costs and utility bills.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3% cashback on EMI & utility expenses',
+        '2% cashback on online business transactions',
+        '1% cashback on offline spends',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Entry-level commercial card with cashback on operational costs and utility bills. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'HDFC BizFirst Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for HDFC BizFirst Credit Card. Entry-level commercial card with cashback on operational costs and utility bills.',
       seo_keywords: 'hdfc bizfirst credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 8, priority: 8
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 8, priority: 8
     },
     {
       name: 'HDFC Diners Club Privilege Credit Card',
@@ -207,10 +208,10 @@ const ALL_CARDS = {
       description: 'HDFC Diners Club Privilege Credit Card provides premium lifestyle card with diners club privileges, golf rounds, and bogo movie tickets. Designed to offer max savings and convenience.',
       annual_fee: '₹2,500 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Premium lifestyle card with Diners Club privileges, golf rounds, and BOGO movie tickets.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 Reward Points for every ₹150 spent',
+        '20 Reward Points per ₹150 on SmartBuy dining and flight bookings',
+        '12 complimentary domestic & international lounge access visits',
+        'Buy 1 Get 1 free movie ticket offer on BookMyShow'
       ],
       benefits: 'Premium lifestyle card with Diners Club privileges, golf rounds, and BOGO movie tickets. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -230,10 +231,11 @@ const ALL_CARDS = {
       description: 'HDFC Diners Club Black Credit Card provides ultra-premium super card with unlimited lounge access globally and 10x rewards on smartbuy. Designed to offer max savings and convenience.',
       annual_fee: '₹10,000 (Waived on ₹5,00,000 annual spend)',
       features: [
-        'Ultra-premium super card with unlimited lounge access globally and 10X rewards on SmartBuy.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5 Reward Points per ₹150 spent',
+        '10X Reward Points on SmartBuy partners',
+        'Unlimited domestic and international airport lounge access',
+        'Complimentary memberships: Club Marriott, Amazon Prime, Swiggy One',
+        '6 complimentary golf games per quarter'
       ],
       benefits: 'Ultra-premium super card with unlimited lounge access globally and 10X rewards on SmartBuy. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -253,10 +255,11 @@ const ALL_CARDS = {
       description: 'HDFC Infinia Credit Card provides flagship metal credit card with 1:1 reward redemption for flights and unlimited lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹12,500 (Waived on ₹10,00,000 annual spend)',
       features: [
-        'Flagship metal credit card with 1:1 reward redemption for flights and unlimited lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5 Reward Points for every ₹150 spent',
+        'Up to 10X Reward Points on SmartBuy travel & shopping',
+        'Unlimited domestic and international lounge access for primary and add-on cardholders',
+        '1:1 Reward Point value on air tickets & hotel bookings',
+        '24/7 dedicated global concierge services'
       ],
       benefits: 'Flagship metal credit card with 1:1 reward redemption for flights and unlimited lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -276,10 +279,10 @@ const ALL_CARDS = {
       description: 'Swiggy HDFC Bank Credit Card provides 10% cashback on swiggy food delivery, instamart, and dineout plus 5% on online apps. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '10% cashback on Swiggy food delivery, Instamart, and Dineout plus 5% on online apps.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10% cashback on Swiggy app (Food delivery, Instamart, Dineout, Genie)',
+        '5% cashback on leading online shopping platforms (Amazon, Flipkart, Myntra, Uber, etc.)',
+        '1% cashback on all other eligible spends',
+        '3 months complimentary Swiggy One membership as welcome benefit'
       ],
       benefits: '10% cashback on Swiggy food delivery, Instamart, and Dineout plus 5% on online apps. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -299,10 +302,10 @@ const ALL_CARDS = {
       description: 'Tata Neu Plus HDFC Credit Card provides 2% neucoins on tata neu app purchases and tata brands like croma, bigbasket, and westside. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '2% NeuCoins on Tata Neu app purchases and Tata brands like Croma, BigBasket, and Westside.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2% NeuCoins on Tata Neu App & partner Tata brands',
+        '1% NeuCoins on non-Tata spends & merchant UPI spends',
+        '4 complimentary domestic lounge visits per year',
+        '1% fuel surcharge waiver'
       ],
       benefits: '2% NeuCoins on Tata Neu app purchases and Tata brands like Croma, BigBasket, and Westside. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -322,10 +325,10 @@ const ALL_CARDS = {
       description: 'Tata Neu Infinity HDFC Credit Card provides 5% neucoins on tata brands, upi transactions, and complimentary domestic & international lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹3,00,000 annual spend)',
       features: [
-        '5% NeuCoins on Tata brands, UPI transactions, and complimentary domestic & international lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% NeuCoins on spends across Tata Neu app and Tata brands',
+        '1.5% NeuCoins on non-Tata online & offline spends and RuPay UPI spends',
+        '8 domestic airport lounge access visits per year',
+        '4 international lounge visits annually via Priority Pass'
       ],
       benefits: '5% NeuCoins on Tata brands, UPI transactions, and complimentary domestic & international lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -345,20 +348,20 @@ const ALL_CARDS = {
       description: 'IndianOil HDFC Bank Credit Card provides earn up to 50 litres of free fuel annually at indianoil outlets with fuel points. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        'Earn up to 50 Litres of free fuel annually at IndianOil outlets with Fuel Points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% of spends as Fuel Points at IndianOil outlets',
+        '5% of spends as Fuel Points on groceries and utility bills',
+        '1% fuel surcharge waiver',
+        'Complimentary fuel points redemption at IOCL pumps'
       ],
       benefits: 'Earn up to 50 Litres of free fuel annually at IndianOil outlets with Fuel Points. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IndianOil HDFC Bank Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IndianOil HDFC Bank Credit Card. Earn up to 50 Litres of free fuel annually at IndianOil outlets with Fuel Points.',
       seo_keywords: 'indianoil hdfc bank credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 15, priority: 15
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 15, priority: 15
     },
     {
       name: 'IRCTC HDFC Bank Credit Card',
@@ -368,20 +371,20 @@ const ALL_CARDS = {
       description: 'IRCTC HDFC Bank Credit Card provides 5x reward points on irctc train ticket bookings and executive railway lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        '5X reward points on IRCTC train ticket bookings and executive railway lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5 Reward Points per ₹100 spent on IRCTC tickethub',
+        '1% transaction fee waiver on IRCTC website and Rail Connect app',
+        '4 complimentary executive railway lounge visits annually',
+        '₹500 gift voucher on spend milestone'
       ],
       benefits: '5X reward points on IRCTC train ticket bookings and executive railway lounge access. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IRCTC HDFC Bank Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IRCTC HDFC Bank Credit Card. 5X reward points on IRCTC train ticket bookings and executive railway lounge access.',
       seo_keywords: 'irctc hdfc bank credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 16, priority: 16
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 16, priority: 16
     },
     {
       name: 'Marriott Bonvoy HDFC Bank Credit Card',
@@ -391,10 +394,10 @@ const ALL_CARDS = {
       description: 'Marriott Bonvoy HDFC Bank Credit Card provides complimentary free night award every year, marriott silver status, and airport lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹3,000 (No fee waiver)',
       features: [
-        'Complimentary Free Night Award every year, Marriott Silver Status, and airport lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '1 Complimentary Free Night Award annually (up to 15,000 points)',
+        'Automatic Marriott Bonvoy Silver Elite Status + 10 Elite Night Credits',
+        '8 Marriott Bonvoy Points per ₹150 spent at participating Marriott properties',
+        '12 domestic & 12 international airport lounge access visits per year'
       ],
       benefits: 'Complimentary Free Night Award every year, Marriott Silver Status, and airport lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -414,10 +417,10 @@ const ALL_CARDS = {
       description: 'Shoppers Stop HDFC Credit Card provides 3% first citizen reward points on shoppers stop apparel and fashion shopping. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '3% First Citizen reward points on Shoppers Stop apparel and fashion shopping.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3% First Citizen points on Shoppers Stop purchases',
+        '1% First Citizen points on non-Shoppers Stop purchases',
+        'Complimentary Shoppers Stop First Citizen Silver membership',
+        'Discount vouchers on welcome'
       ],
       benefits: '3% First Citizen reward points on Shoppers Stop apparel and fashion shopping. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -437,10 +440,10 @@ const ALL_CARDS = {
       description: 'Shoppers Stop Black HDFC Credit Card provides 7% first citizen reward points, vip shopping tier, and complimentary lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹4,500 (Waived on ₹4,00,000 annual spend)',
       features: [
-        '7% First Citizen reward points, VIP shopping tier, and complimentary lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '7% First Citizen Points on Shoppers Stop purchases',
+        '2% First Citizen Points on all non-Shoppers Stop spends',
+        'Complimentary First Citizen Black Tier Membership',
+        '8 domestic airport lounge access visits per year'
       ],
       benefits: '7% First Citizen reward points, VIP shopping tier, and complimentary lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -460,20 +463,20 @@ const ALL_CARDS = {
       description: 'Paytm HDFC Credit Card provides 3% cashback on paytm app recharges, utility bill payments, and movie bookings. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        '3% cashback on Paytm app recharges, utility bill payments, and movie bookings.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3% cashback on Paytm app spends (Recharges, Utility bills, Movies)',
+        '2% cashback on Paytm Mall shopping & food orders',
+        '1% cashback on all other eligible merchant spends',
+        'Paytm First membership benefits'
       ],
       benefits: '3% cashback on Paytm app recharges, utility bill payments, and movie bookings. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Paytm HDFC Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Paytm HDFC Credit Card. 3% cashback on Paytm app recharges, utility bill payments, and movie bookings.',
       seo_keywords: 'paytm hdfc credit card, apply hdfc credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 20, priority: 20
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 20, priority: 20
     },
     {
       name: 'HDFC Credit Card Against Existing FD',
@@ -483,10 +486,10 @@ const ALL_CARDS = {
       description: 'HDFC Credit Card Against Existing FD provides 100% instant approval against existing hdfc fixed deposit with zero income documents. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '100% instant approval against existing HDFC Fixed Deposit with zero income documents.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '90% credit limit of fixed deposit value (min FD ₹12,000)',
+        'No income documentation or CIBIL score required',
+        'Earn interest on underlying FD while using credit card',
+        'Build and repair CIBIL credit score rapidly'
       ],
       benefits: '100% instant approval against existing HDFC Fixed Deposit with zero income documents. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -506,10 +509,10 @@ const ALL_CARDS = {
       description: 'HDFC FD Based Credit Card provides guaranteed credit card approval on opening a new hdfc fixed deposit. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Guaranteed credit card approval on opening a new HDFC Fixed Deposit.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant issuance on new FD creation (min ₹15,000)',
+        '100% approval rate with zero income proof',
+        '1 CashPoint per ₹150 on everyday spends',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Guaranteed credit card approval on opening a new HDFC Fixed Deposit. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -532,10 +535,10 @@ const ALL_CARDS = {
       description: 'SBI SimplySAVE Credit Card provides 10x reward points on dining, movies, grocery shopping, and departmental store spends. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '10X reward points on dining, movies, grocery shopping, and departmental store spends.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on grocery, dining, and movies',
+        '2,000 bonus reward points on ₹2,000 spend in first 60 days',
+        '1% fuel surcharge waiver across petrol pumps in India',
+        'Annual fee reversal on ₹1,00,000 spend'
       ],
       benefits: '10X reward points on dining, movies, grocery shopping, and departmental store spends. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -555,10 +558,10 @@ const ALL_CARDS = {
       description: 'SBI SimplyCLICK Credit Card provides 10x reward points on online shopping with partner brands amazon, bookmyshow, cleartrip, lenskart. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '10X reward points on online shopping with partner brands Amazon, BookMyShow, Cleartrip, Lenskart.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on online shopping with partner merchants',
+        '5X reward points on all other online spends',
+        '₹500 Amazon gift voucher on joining',
+        'E-vouchers worth ₹2,000 each on ₹1L and ₹2L annual spends'
       ],
       benefits: '10X reward points on online shopping with partner brands Amazon, BookMyShow, Cleartrip, Lenskart. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -578,10 +581,10 @@ const ALL_CARDS = {
       description: 'SBI PRIME Credit Card provides premium rewards credit card offering ₹3,000 welcome gift vouchers, lounge access, and milestone benefits. Designed to offer max savings and convenience.',
       annual_fee: '₹2,999 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Premium rewards credit card offering ₹3,000 welcome gift vouchers, lounge access, and milestone benefits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '₹3,000 welcome gift voucher from Yatra, Pantaloons, Marks & Spencer',
+        '20 reward points per ₹100 on utility bill payments',
+        '4 international & 8 domestic airport lounge visits annually',
+        'Free Trident Privilege Red Tier & Club Vistara Silver membership'
       ],
       benefits: 'Premium rewards credit card offering ₹3,000 welcome gift vouchers, lounge access, and milestone benefits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -601,10 +604,10 @@ const ALL_CARDS = {
       description: 'SBI Elite Credit Card provides super premium credit card with complimentary movie tickets worth ₹6,000/yr, club vistara membership, and lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹4,999 (Waived on ₹10,00,000 annual spend)',
       features: [
-        'Super premium credit card with complimentary movie tickets worth ₹6,000/yr, Club Vistara membership, and lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Complimentary movie tickets worth ₹6,000 per year on BookMyShow',
+        '6 international Priority Pass & 8 domestic airport lounge visits per year',
+        '10 reward points per ₹100 on dining, department stores, and international spends',
+        'Club Vistara Silver tier and Trident Privilege Red tier memberships'
       ],
       benefits: 'Super premium credit card with complimentary movie tickets worth ₹6,000/yr, Club Vistara membership, and lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -624,10 +627,10 @@ const ALL_CARDS = {
       description: 'SBI Pulse Credit Card provides health & fitness focused credit card with complimentary noise smartwatch and cult.pass live membership. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹2,00,000 annual spend)',
       features: [
-        'Health & fitness focused credit card with complimentary Noise smartwatch and Cult.pass LIVE membership.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Complimentary Noise ColorFit Pulse Smartwatch on joining',
+        '1-year complimentary Cult.pass LIVE membership',
+        '10 reward points per ₹100 on pharmacy, dining, and entertainment spends',
+        '8 domestic airport lounge access visits annually'
       ],
       benefits: 'Health & fitness focused credit card with complimentary Noise smartwatch and Cult.pass LIVE membership. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -647,10 +650,10 @@ const ALL_CARDS = {
       description: 'SBI Cashback Credit Card provides 5% cashback on all online merchants without merchant restrictions. Designed to offer max savings and convenience.',
       annual_fee: '₹999 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '5% cashback on all online merchants without merchant restrictions.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% cashback on all online shopping transactions',
+        '1% cashback on all offline spends and utility payments',
+        'Cashback auto-credited to statement balance',
+        'Annual fee waived on ₹2,00,000 annual spend'
       ],
       benefits: '5% cashback on all online merchants without merchant restrictions. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -670,10 +673,10 @@ const ALL_CARDS = {
       description: 'SBI Aurum Credit Card provides exclusive super-premium card with metal design, flight & apple vouchers, and dedicated concierge service. Designed to offer max savings and convenience.',
       annual_fee: '₹9,999 (Waived on ₹12,00,000 annual spend)',
       features: [
-        'Exclusive super-premium card with metal design, Flight & Apple vouchers, and dedicated concierge service.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Premium Metal card design with 40,000 reward points on joining',
+        '4 movie tickets every month on BookMyShow (up to ₹1,000/month)',
+        'Unlimited domestic and international airport lounge access',
+        'Dedicated 24x7 Aurum Concierge Desk'
       ],
       benefits: 'Exclusive super-premium card with metal design, Flight & Apple vouchers, and dedicated concierge service. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -693,10 +696,10 @@ const ALL_CARDS = {
       description: 'SBI Unnati Credit Card provides everyday rewards card issued to build credit history with 1 reward point per ₹100 spend. Designed to offer max savings and convenience.',
       annual_fee: 'Free for first 4 years (Then ₹499)',
       features: [
-        'Everyday rewards card issued to build credit history with 1 reward point per ₹100 spend.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero annual fee for first 4 years',
+        '1 reward point per ₹100 spent',
+        '₹500 cashback milestone on ₹50,000 annual spend',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Everyday rewards card issued to build credit history with 1 reward point per ₹100 spend. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -716,20 +719,20 @@ const ALL_CARDS = {
       description: 'BPCL SBI Card provides 4.25% valueback (13x reward points) on fuel transactions at bharat petroleum stations. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        '4.25% valueback (13X reward points) on fuel transactions at Bharat Petroleum stations.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4.25% valueback (13X reward points) on BPCL fuel purchases',
+        '2,000 activation bonus points worth ₹500',
+        '5X reward points on groceries, movies, and dining',
+        '1% fuel surcharge waiver'
       ],
       benefits: '4.25% valueback (13X reward points) on fuel transactions at Bharat Petroleum stations. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'BPCL SBI Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for BPCL SBI Card. 4.25% valueback (13X reward points) on fuel transactions at Bharat Petroleum stations.',
       seo_keywords: 'bpcl sbi card, apply sbi credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 9, priority: 9
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 9, priority: 9
     },
     {
       name: 'BPCL SBI Octane Card',
@@ -739,10 +742,10 @@ const ALL_CARDS = {
       description: 'BPCL SBI Octane Card provides 7.25% valueback (25x reward points) on bpcl fuel & lubricant purchases + domestic lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '7.25% valueback (25X reward points) on BPCL fuel & lubricant purchases + domestic lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '7.25% valueback (25X reward points) on fuel at BPCL pumps',
+        '6,000 activation reward points worth ₹1,500',
+        '4 complimentary domestic airport lounge visits per year',
+        '10X reward points on dining, groceries, and movies'
       ],
       benefits: '7.25% valueback (25X reward points) on BPCL fuel & lubricant purchases + domestic lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -760,18 +763,18 @@ const ALL_CARDS = {
       sub_category: 'Co-Branded Cards',
       short_description: 'Up to 10% valueback as Reward Points on train ticket bookings via IRCTC website/app.',
       description: 'IRCTC SBI Platinum Card provides up to 10% valueback as reward points on train ticket bookings via irctc website/app. Designed to offer max savings and convenience.',
-      annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
+      annual_fee: '₹500 (Waived on ₹50,00,0 annual spend)',
       features: [
-        'Up to 10% valueback as Reward Points on train ticket bookings via IRCTC website/app.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Up to 10% valueback as Reward Points on AC train ticket bookings on IRCTC',
+        '1% transaction charge waiver on IRCTC website bookings',
+        '350 bonus reward points on joining',
+        '4 complimentary railway lounge access visits per year'
       ],
       benefits: 'Up to 10% valueback as Reward Points on train ticket bookings via IRCTC website/app. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
       eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
-      fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
+      fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,00,0 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IRCTC SBI Platinum Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IRCTC SBI Platinum Card. Up to 10% valueback as Reward Points on train ticket bookings via IRCTC website/app.',
       seo_keywords: 'irctc sbi platinum card, apply sbi credit card',
@@ -785,10 +788,10 @@ const ALL_CARDS = {
       description: 'Air India SBI Signature Card provides up to 30 reward points per ₹100 spent on air india ticket bookings and 20,000 welcome reward points. Designed to offer max savings and convenience.',
       annual_fee: '₹4,999 (No fee waiver)',
       features: [
-        'Up to 30 reward points per ₹100 spent on Air India ticket bookings and 20,000 welcome reward points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '20,000 welcome reward points on fee payment',
+        'Up to 30 reward points per ₹100 spent on Air India ticket bookings',
+        'Up to 1,00,000 bonus reward points per year on milestone spends',
+        'Complimentary Priority Pass & domestic lounge access'
       ],
       benefits: 'Up to 30 reward points per ₹100 spent on Air India ticket bookings and 20,000 welcome reward points. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -808,10 +811,10 @@ const ALL_CARDS = {
       description: 'Air India SBI Platinum Card provides 15 reward points per ₹100 on air india bookings and 5,000 welcome reward points. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (No fee waiver)',
       features: [
-        '15 reward points per ₹100 on Air India bookings and 5,000 welcome reward points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5,000 welcome reward points on fee payment',
+        'Up to 15 reward points per ₹100 spent on Air India ticket bookings',
+        'Up to 15,000 bonus reward points per year on milestone spends',
+        'Complimentary Air India Frequent Flyer Program membership'
       ],
       benefits: '15 reward points per ₹100 on Air India bookings and 5,000 welcome reward points. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -831,10 +834,10 @@ const ALL_CARDS = {
       description: 'Apollo SBI Card provides up to 10% instant savings on medicines, lab tests, and health checkups at apollo pharmacy. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
       features: [
-        'Up to 10% instant savings on medicines, lab tests, and health checkups at Apollo Pharmacy.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10% instant savings on Apollo Pharmacy medicines & lab tests',
+        'Complimentary OneApollo Circle membership',
+        '3X reward points on all healthcare & grocery purchases',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Up to 10% instant savings on medicines, lab tests, and health checkups at Apollo Pharmacy. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -854,10 +857,10 @@ const ALL_CARDS = {
       description: 'Reliance SBI Card provides accelerated reward points across reliance retail stores (reliance smart, trends, digital, jiomart). Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
       features: [
-        'Accelerated reward points across Reliance Retail stores (Reliance Smart, Trends, Digital, JioMart).',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5 Reward Points per ₹100 on Reliance Retail stores (Trends, Smart, Digital, JioMart)',
+        'Welcome voucher worth ₹500 for Reliance Retail brands',
+        '1 Reward Point per ₹100 on all other spends',
+        'Annual fee reversal on ₹1,00,000 spend'
       ],
       benefits: 'Accelerated reward points across Reliance Retail stores (Reliance Smart, Trends, Digital, JioMart). 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -877,20 +880,20 @@ const ALL_CARDS = {
       description: 'SBI Secured Credit Card Against FD provides secured credit card against sbi fixed deposit with 100% approval rate and no income proof. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        'Secured credit card against SBI Fixed Deposit with 100% approval rate and no income proof.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% instant approval against SBI Fixed Deposit (min FD ₹25,000)',
+        'Credit limit up to 85% of FD value',
+        'Earn interest on underlying FD while using card',
+        'Zero income documents or credit score check'
       ],
       benefits: 'Secured credit card against SBI Fixed Deposit with 100% approval rate and no income proof. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 18, max_age: 65, min_income: 0 },
-      eligibility_criteria: 'Age 18-65 years. Monthly income ₹0+ or active FD.',
+      eligibility: { min_age: 18, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 18-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'SBI Secured Credit Card Against FD – Apply Online | GharKaPaisa',
       seo_description: 'Apply for SBI Secured Credit Card Against FD. Secured credit card against SBI Fixed Deposit with 100% approval rate and no income proof.',
       seo_keywords: 'sbi secured credit card against fd, apply sbi credit card',
-      min_age: 18, max_age: 65, min_income: 0, display_order: 16, priority: 16
+      min_age: 18, max_age: 65, min_income: 150000, display_order: 16, priority: 16
     }
   ],
 
@@ -903,20 +906,20 @@ const ALL_CARDS = {
       description: 'ICICI Coral Credit Card provides earn 2x reward points on dining and shopping, discount on bookmyshow, and lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Earn 2X reward points on dining and shopping, discount on BookMyShow, and lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2X reward points on dining, groceries, and supermarket spends',
+        '25% discount up to ₹100 on BookMyShow & INOX movie tickets',
+        '1 complimentary domestic airport lounge & railway lounge visit per quarter',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Earn 2X reward points on dining and shopping, discount on BookMyShow, and lounge access. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'ICICI Coral Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for ICICI Coral Credit Card. Earn 2X reward points on dining and shopping, discount on BookMyShow, and lounge access.',
       seo_keywords: 'icici coral credit card, apply icici credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'ICICI Rubyx Credit Card',
@@ -926,10 +929,10 @@ const ALL_CARDS = {
       description: 'ICICI Rubyx Credit Card provides dual-card privilege offering 25% off on movie tickets, golf rounds, and domestic lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹3,000 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Dual-card privilege offering 25% off on movie tickets, golf rounds, and domestic lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Dual card combination (Amex + Mastercard / Visa)',
+        '25% off up to ₹150 on BookMyShow & INOX (twice per month)',
+        '2 complimentary domestic lounge access visits per quarter',
+        '2 complimentary golf rounds per month'
       ],
       benefits: 'Dual-card privilege offering 25% off on movie tickets, golf rounds, and domestic lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -949,10 +952,10 @@ const ALL_CARDS = {
       description: 'ICICI Sapphiro Credit Card provides premium travel and lifestyle card with complimentary lounge access, golf privileges, and bogo movie tickets. Designed to offer max savings and convenience.',
       annual_fee: '₹6,500 (Waived on ₹6,00,000 annual spend)',
       features: [
-        'Premium travel and lifestyle card with complimentary lounge access, golf privileges, and BOGO movie tickets.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Buy 1 Get 1 free movie ticket offer on BookMyShow (up to ₹500 off)',
+        '4 domestic airport lounge & 2 international lounge visits per quarter',
+        '4 complimentary golf rounds per month',
+        'Welcome vouchers worth ₹10,000 on travel & shopping'
       ],
       benefits: 'Premium travel and lifestyle card with complimentary lounge access, golf privileges, and BOGO movie tickets. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -972,10 +975,10 @@ const ALL_CARDS = {
       description: 'ICICI Emeralde Credit Card provides super-premium credit card with unlimited domestic & international lounge visits and zero cancellation fee on bookings. Designed to offer max savings and convenience.',
       annual_fee: '₹12,000 (Waived on ₹10,00,000 annual spend)',
       features: [
-        'Super-premium credit card with unlimited domestic & international lounge visits and zero cancellation fee on bookings.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Unlimited domestic & international airport lounge access',
+        'Zero cancellation charge on air travel & hotel bookings (up to ₹12,000/yr)',
+        'Unlimited complimentary golf games per month',
+        'Low foreign currency markup fee of 1.5%'
       ],
       benefits: 'Super-premium credit card with unlimited domestic & international lounge visits and zero cancellation fee on bookings. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -995,10 +998,10 @@ const ALL_CARDS = {
       description: 'ICICI Platinum Chip Credit Card provides classic lifetime free shopping card with icici culinary treats dining discounts and fuel waiver. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Classic lifetime free shopping card with ICICI Culinary Treats dining discounts and fuel waiver.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Lifetime free – zero joining fee and zero annual fee',
+        '2 PAYBACK points per ₹100 spent',
+        '15% savings on dining at partner restaurants via Culinary Treats',
+        '1% fuel surcharge waiver at HPCL petrol pumps'
       ],
       benefits: 'Classic lifetime free shopping card with ICICI Culinary Treats dining discounts and fuel waiver. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1018,20 +1021,20 @@ const ALL_CARDS = {
       description: 'ICICI HPCL Super Saver Card provides 5% savings on hpcl fuel purchases, utility bills, and departmental store purchases. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        '5% savings on HPCL fuel purchases, utility bills, and departmental store purchases.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4% cashback + 1% surcharge waiver on fuel at HPCL pumps',
+        '5% payback points on utility bills & departmental store purchases',
+        '24/7 roadside assistance services',
+        '1 complimentary domestic airport lounge visit per quarter'
       ],
       benefits: '5% savings on HPCL fuel purchases, utility bills, and departmental store purchases. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'ICICI HPCL Super Saver Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for ICICI HPCL Super Saver Card. 5% savings on HPCL fuel purchases, utility bills, and departmental store purchases.',
       seo_keywords: 'icici hpcl super saver card, apply icici credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 6, priority: 6
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 6, priority: 6
     },
     {
       name: 'Amazon Pay ICICI Credit Card',
@@ -1041,10 +1044,10 @@ const ALL_CARDS = {
       description: 'Amazon Pay ICICI Credit Card provides 5% unlimited cashback for amazon prime members and 3% for non-prime members credited to amazon pay balance. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '5% unlimited cashback for Amazon Prime members and 3% for non-Prime members credited to Amazon Pay balance.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% unlimited cashback on Amazon purchases for Prime members',
+        '3% unlimited cashback on Amazon purchases for non-Prime members',
+        '2% cashback on Amazon Pay partner merchants (flight, dining, recharges)',
+        '1% unlimited cashback on all other online and offline spends'
       ],
       benefits: '5% unlimited cashback for Amazon Prime members and 3% for non-Prime members credited to Amazon Pay balance. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1064,10 +1067,10 @@ const ALL_CARDS = {
       description: 'MakeMyTrip ICICI Signature Card provides accelerated mycash on makemytrip hotel and flight bookings plus airport lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹2,500 (Welcome MMT MyCash ₹1,500)',
       features: [
-        'Accelerated MyCash on MakeMyTrip hotel and flight bookings plus airport lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '₹1,500 MyCash + ₹2,500 MakeMyTrip holiday voucher on joining',
+        'Up to 4 MyCash per ₹200 spent on MakeMyTrip hotel bookings',
+        '1 complimentary domestic airport lounge & MMT rail lounge visit per quarter',
+        '1 international airport lounge visit per year'
       ],
       benefits: 'Accelerated MyCash on MakeMyTrip hotel and flight bookings plus airport lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1087,10 +1090,10 @@ const ALL_CARDS = {
       description: 'MakeMyTrip ICICI Platinum Card provides entry travel card with mycash rewards on makemytrip travel bookings. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Welcome MMT MyCash ₹500)',
       features: [
-        'Entry travel card with MyCash rewards on MakeMyTrip travel bookings.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '₹500 MyCash + ₹3,000 MakeMyTrip travel voucher on joining',
+        '3 MyCash per ₹200 on MakeMyTrip hotel bookings',
+        '1 MyCash per ₹200 on all other spends',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Entry travel card with MyCash rewards on MakeMyTrip travel bookings. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1110,10 +1113,10 @@ const ALL_CARDS = {
       description: 'Emirates Skywards ICICI Card provides earn skywards miles directly on all spends and enjoy emirates silver tier status perks. Designed to offer max savings and convenience.',
       annual_fee: '₹10,000 (Welcome Skywards Miles)',
       features: [
-        'Earn Skywards Miles directly on all spends and enjoy Emirates Silver tier status perks.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10,000 Emirates Skywards Miles as welcome benefit',
+        '2.5 Skywards Miles per ₹100 spent on Emirates bookings',
+        'Complimentary Emirates Silver Tier status for first year',
+        'Unlimited domestic lounge access'
       ],
       benefits: 'Earn Skywards Miles directly on all spends and enjoy Emirates Silver tier status perks. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -1133,20 +1136,20 @@ const ALL_CARDS = {
       description: 'Manchester United ICICI Card provides co-branded sports card offering discounts on official manchester united merchandise and match trip entry. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Co-branded sports card offering discounts on official Manchester United merchandise and match trip entry.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Exclusive Manchester United welcome gift (duffle bag / merchandise)',
+        'Chance to win match tickets to Old Trafford stadium in Manchester',
+        '10% discount on Manchester United online Megastore',
+        '2X reward points on match days'
       ],
       benefits: 'Co-branded sports card offering discounts on official Manchester United merchandise and match trip entry. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Manchester United ICICI Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Manchester United ICICI Card. Co-branded sports card offering discounts on official Manchester United merchandise and match trip entry.',
       seo_keywords: 'manchester united icici card, apply icici credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 11, priority: 11
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 11, priority: 11
     },
     {
       name: 'ICICI FD Backed Credit Card',
@@ -1156,10 +1159,10 @@ const ALL_CARDS = {
       description: 'ICICI FD Backed Credit Card provides secured credit card against icici fixed deposit (instant platinum chip / coral fd card) with no income proof. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against ICICI Fixed Deposit (Instant Platinum Chip / Coral FD card) with no income proof.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant issuance against ICICI Fixed Deposit (min FD ₹10,000)',
+        'Credit limit up to 90% of FD value',
+        'Earn full interest rate on underlying Fixed Deposit',
+        'Lifetime free – zero joining and zero annual fee'
       ],
       benefits: 'Secured credit card against ICICI Fixed Deposit (Instant Platinum Chip / Coral FD card) with no income proof. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -1182,10 +1185,10 @@ const ALL_CARDS = {
       description: 'Axis ACE Credit Card provides 5% unlimited cashback on google pay utility bills and 2% unlimited cashback on swiggy, zomato, ola. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '5% unlimited cashback on Google Pay utility bills and 2% unlimited cashback on Swiggy, Zomato, Ola.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% unlimited cashback on utility bills & recharges via Google Pay',
+        '4% unlimited cashback on Swiggy, Zomato, and Ola orders',
+        '2% unlimited cashback on all other online & offline spends',
+        '4 complimentary domestic lounge visits per year'
       ],
       benefits: '5% unlimited cashback on Google Pay utility bills and 2% unlimited cashback on Swiggy, Zomato, Ola. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1205,10 +1208,10 @@ const ALL_CARDS = {
       description: 'Axis Neo Credit Card provides discounts on zomato, bookmyshow, paytm bill payments, and amazon shopping. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Discounts on Zomato, BookMyShow, Paytm bill payments, and Amazon shopping.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '40% off on Zomato food delivery orders',
+        '10% off on BookMyShow movie ticket bookings',
+        '10% off on Paytm mobile recharges and bill payments',
+        'Lifetime free card'
       ],
       benefits: 'Discounts on Zomato, BookMyShow, Paytm bill payments, and Amazon shopping. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1228,20 +1231,20 @@ const ALL_CARDS = {
       description: 'Axis Flipkart Credit Card provides 5% unlimited cashback on flipkart purchases and 1.5% on all online & offline spends. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹3,50,000 annual spend)',
       features: [
-        '5% unlimited cashback on Flipkart purchases and 1.5% on all online & offline spends.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% unlimited cashback on Flipkart online shopping',
+        '4% cashback on preferred partners (Swiggy, Uber, PVR, Cleartrip)',
+        '1.5% unlimited cashback on all other purchases',
+        '4 complimentary domestic airport lounge visits annually'
       ],
       benefits: '5% unlimited cashback on Flipkart purchases and 1.5% on all online & offline spends. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹3,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Axis Flipkart Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Axis Flipkart Credit Card. 5% unlimited cashback on Flipkart purchases and 1.5% on all online & offline spends.',
       seo_keywords: 'axis flipkart credit card, apply axis credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 3, priority: 3
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 3, priority: 3
     },
     {
       name: 'Axis Select Credit Card',
@@ -1251,10 +1254,10 @@ const ALL_CARDS = {
       description: 'Axis Select Credit Card provides premium lifestyle credit card with bigbasket & swiggy discounts and complimentary lounge visits. Designed to offer max savings and convenience.',
       annual_fee: '₹3,000 (Waived on ₹8,00,000 annual spend)',
       features: [
-        'Premium lifestyle credit card with BigBasket & Swiggy discounts and complimentary lounge visits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '₹500 off per month on BigBasket online grocery shopping',
+        '₹200 off per month on Swiggy food delivery',
+        'Buy 1 Get 1 free movie ticket on BookMyShow (up to ₹300 off)',
+        '2 complimentary domestic lounge access visits per quarter'
       ],
       benefits: 'Premium lifestyle credit card with BigBasket & Swiggy discounts and complimentary lounge visits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1274,10 +1277,10 @@ const ALL_CARDS = {
       description: 'Axis Magnus Credit Card provides luxury travel credit card offering 12 edge points per ₹200, unlimited airport lounge access, and concierge service. Designed to offer max savings and convenience.',
       annual_fee: '₹12,500 (Waived on ₹25,00,000 annual spend)',
       features: [
-        'Luxury travel credit card offering 12 EDGE points per ₹200, unlimited airport lounge access, and concierge service.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '12 EDGE reward points per ₹200 spent',
+        'Unlimited domestic airport lounge access for primary and add-on cardholders',
+        '8 international lounge guest visits per year via Priority Pass',
+        'Complimentary luxury airport concierge & fast track service'
       ],
       benefits: 'Luxury travel credit card offering 12 EDGE points per ₹200, unlimited airport lounge access, and concierge service. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1297,20 +1300,20 @@ const ALL_CARDS = {
       description: 'Axis Reserve Credit Card provides ultra-exclusive luxury credit card with 50 guest lounge visits, club marriott membership, and chauffeured airport transfers. Designed to offer max savings and convenience.',
       annual_fee: '₹50,000 (Waived on ₹35,00,000 annual spend)',
       features: [
-        'Ultra-exclusive luxury credit card with 50 guest lounge visits, Club Marriott membership, and chauffeured airport transfers.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '50 EDGE reward points per ₹200 spent on international purchases',
+        'Unlimited domestic and 50 international guest lounge visits',
+        'Complimentary ITC Culinaire, Club Marriott & Accor Plus memberships',
+        '4 complimentary luxury airport transfer transfers per year'
       ],
       benefits: 'Ultra-exclusive luxury credit card with 50 guest lounge visits, Club Marriott membership, and chauffeured airport transfers. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹50,000 (Waived on ₹35,00,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Axis Reserve Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Axis Reserve Credit Card. Ultra-exclusive luxury credit card with 50 guest lounge visits, Club Marriott membership, and chauffeured airport transfers.',
       seo_keywords: 'axis reserve credit card, apply axis credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 6, priority: 6
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 6, priority: 6
     },
     {
       name: 'Axis Privilege Credit Card',
@@ -1320,20 +1323,20 @@ const ALL_CARDS = {
       description: 'Axis Privilege Credit Card provides double activation shopping vouchers worth ₹5,000 and milestone reward points. Designed to offer max savings and convenience.',
       annual_fee: '₹1,500 (Waived on ₹2,50,000 annual spend)',
       features: [
-        'Double activation shopping vouchers worth ₹5,000 and milestone reward points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '12,500 EDGE reward points worth ₹5,000 on card activation',
+        '10 EDGE points per ₹200 spent',
+        '2 complimentary domestic lounge visits per quarter',
+        'Double reward points on spending milestones'
       ],
       benefits: 'Double activation shopping vouchers worth ₹5,000 and milestone reward points. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,500 (Waived on ₹2,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Axis Privilege Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Axis Privilege Credit Card. Double activation shopping vouchers worth ₹5,000 and milestone reward points.',
       seo_keywords: 'axis privilege credit card, apply axis credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 7, priority: 7
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 7, priority: 7
     },
     {
       name: 'Axis My Zone Credit Card',
@@ -1343,10 +1346,10 @@ const ALL_CARDS = {
       description: 'Axis My Zone Credit Card provides buy 1 get 1 free movie tickets on paytm movies, sonyliv subscription, and swiggy discounts. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Buy 1 Get 1 free movie tickets on Paytm Movies, SonyLIV subscription, and Swiggy discounts.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Buy 1 Get 1 free movie ticket on Paytm Movies (up to ₹200 off)',
+        'Complimentary SonyLIV Premium annual subscription',
+        '₹120 off on Swiggy food delivery orders',
+        '1 complimentary domestic lounge access visit per quarter'
       ],
       benefits: 'Buy 1 Get 1 free movie tickets on Paytm Movies, SonyLIV subscription, and Swiggy discounts. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1366,20 +1369,20 @@ const ALL_CARDS = {
       description: 'Flipkart Axis Bank Credit Card provides 5% unlimited cashback on flipkart & myntra and 4 complimentary domestic airport lounge visits. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹3,50,000 annual spend)',
       features: [
-        '5% unlimited cashback on Flipkart & Myntra and 4 complimentary domestic airport lounge visits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% unlimited cashback on Flipkart and Myntra apps',
+        '4% cashback on Uber, Swiggy, Cleartrip, and PVR',
+        '1.5% cashback on all other eligible spends',
+        '4 domestic airport lounge visits per year'
       ],
       benefits: '5% unlimited cashback on Flipkart & Myntra and 4 complimentary domestic airport lounge visits. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹3,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Flipkart Axis Bank Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Flipkart Axis Bank Credit Card. 5% unlimited cashback on Flipkart & Myntra and 4 complimentary domestic airport lounge visits.',
       seo_keywords: 'flipkart axis bank credit card, apply axis credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 9, priority: 9
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 9, priority: 9
     },
     {
       name: 'IndianOil Axis Bank Credit Card',
@@ -1389,10 +1392,10 @@ const ALL_CARDS = {
       description: 'IndianOil Axis Bank Credit Card provides 100% cashback up to ₹250 on first fuel transaction and 4% value back as edge points at iocl outlets. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,00,0 annual spend)',
       features: [
-        '100% cashback up to ₹250 on first fuel transaction and 4% value back as Edge Points at IOCL outlets.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% cashback up to ₹250 on first fuel spend within 30 days',
+        '4% value back (20 EDGE points per ₹100) at IndianOil pumps',
+        '1% fuel surcharge waiver',
+        '1% cashback on online shopping spends'
       ],
       benefits: '100% cashback up to ₹250 on first fuel transaction and 4% value back as Edge Points at IOCL outlets. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1412,10 +1415,10 @@ const ALL_CARDS = {
       description: 'Samsung Axis Bank Credit Card provides 10% cashback across samsung products, electronics, smartphones, and appliance purchases year-round. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '10% cashback across Samsung products, electronics, smartphones, and appliance purchases year-round.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10% instant cashback on Samsung smartphones, TVs & appliances',
+        'Cashback valid across official Samsung store, Samsung.com & authorized offline dealers',
+        '5 EDGE reward points on key partner spends (Zomato, BigBasket, Tata 1mg)',
+        '4 domestic airport lounge visits per year'
       ],
       benefits: '10% cashback across Samsung products, electronics, smartphones, and appliance purchases year-round. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1435,10 +1438,10 @@ const ALL_CARDS = {
       description: 'Airtel Axis Bank Credit Card provides 25% cashback on airtel mobile, dth & broadband bills, 10% on swiggy, zomato, bigbasket. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '25% cashback on Airtel mobile, DTH & Broadband bills, 10% on Swiggy, Zomato, BigBasket.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '25% cashback on Airtel mobile recharges, WiFi, DTH, and Broadband bills via Airtel Thanks App',
+        '10% cashback on Swiggy, Zomato, and BigBasket',
+        '10% cashback on utility bill payments (Electricity, Water, Gas)',
+        '4 domestic lounge access visits per year'
       ],
       benefits: '25% cashback on Airtel mobile, DTH & Broadband bills, 10% on Swiggy, Zomato, BigBasket. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1458,10 +1461,10 @@ const ALL_CARDS = {
       description: 'Axis FD Credit Card provides secured credit card issued instantly against axis fixed deposit with no income verification. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card issued instantly against Axis Fixed Deposit with no income verification.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant issuance against Axis Fixed Deposit (min FD ₹15,000)',
+        '80% credit limit of fixed deposit amount',
+        'Zero CIBIL score or salary slip required',
+        'Earn interest on underlying FD while spending'
       ],
       benefits: 'Secured credit card issued instantly against Axis Fixed Deposit with no income verification. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -1484,20 +1487,20 @@ const ALL_CARDS = {
       description: 'Kotak League Platinum Card provides 8x reward points on select categories and movie ticket discounts via pvr vouchers. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        '8X reward points on select categories and movie ticket discounts via PVR vouchers.',
+        '8X reward points on travel, apparel, durable goods & jewelry',
+        '4 PVR movie tickets free every quarter on milestone spends',
         '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero lost card liability cover'
       ],
       benefits: '8X reward points on select categories and movie ticket discounts via PVR vouchers. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Kotak League Platinum Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Kotak League Platinum Card. 8X reward points on select categories and movie ticket discounts via PVR vouchers.',
       seo_keywords: 'kotak league platinum card, apply kotak credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'Kotak Mojo Card',
@@ -1507,10 +1510,10 @@ const ALL_CARDS = {
       description: 'Kotak Mojo Card provides 2.5 mojo points per ₹100 spent online and airport lounge access benefits. Designed to offer max savings and convenience.',
       annual_fee: '₹1,000 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '2.5 Mojo Points per ₹100 spent online and airport lounge access benefits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2.5 Mojo Points for every ₹100 spent on online transactions',
+        '1 Mojo Point for every ₹100 spent on all other categories',
+        '8 complimentary domestic airport lounge access visits per year',
+        'Annual fee waiver on ₹1,00,000 spend'
       ],
       benefits: '2.5 Mojo Points per ₹100 spent online and airport lounge access benefits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1530,10 +1533,10 @@ const ALL_CARDS = {
       description: 'Kotak White Reserve Card provides exclusive luxury card earning white pass value back on top premium brands and flights. Designed to offer max savings and convenience.',
       annual_fee: '₹12,500 (Waived on ₹10,00,000 annual spend)',
       features: [
-        'Exclusive luxury card earning White Pass value back on top premium brands and flights.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'White Pass value back worth up to ₹2,50,000 per year',
+        'Unlimited domestic and international airport lounge access',
+        'Complimentary golf games at premier courses worldwide',
+        '24/7 dedicated White Pass concierge desk'
       ],
       benefits: 'Exclusive luxury card earning White Pass value back on top premium brands and flights. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1553,20 +1556,20 @@ const ALL_CARDS = {
       description: 'Kotak Zen Signature Card provides 10 zen points on apparel & shopping spends + domestic airport lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹1,500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        '10 Zen points on apparel & shopping spends + domestic airport lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10 Zen Points per ₹150 spent on apparel, shopping & jewelry',
+        '8 complimentary domestic airport lounge access visits annually',
+        '7,500 bonus Zen points on milestone spends of ₹6 Lakhs',
+        '1% fuel surcharge waiver'
       ],
       benefits: '10 Zen points on apparel & shopping spends + domestic airport lounge access. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Kotak Zen Signature Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Kotak Zen Signature Card. 10 Zen points on apparel & shopping spends + domestic airport lounge access.',
       seo_keywords: 'kotak zen signature card, apply kotak credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 4, priority: 4
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 4, priority: 4
     },
     {
       name: 'Kotak Royale Signature Card',
@@ -1576,10 +1579,10 @@ const ALL_CARDS = {
       description: 'Kotak Royale Signature Card provides 4x reward points on dining, travel, international spends and complimentary lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹999 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '4X reward points on dining, travel, international spends and complimentary lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4X reward points on dining, travel, hotels, and international spends',
+        '2 domestic airport lounge access visits per quarter',
+        '10,000 bonus reward points on ₹8 Lakh annual spend milestone',
+        'Fuel surcharge waiver'
       ],
       benefits: '4X reward points on dining, travel, international spends and complimentary lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1599,20 +1602,20 @@ const ALL_CARDS = {
       description: 'Myntra Kotak Credit Card provides 7.5% instant discount on myntra app orders and 1.5% cashback on all other spends. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        '7.5% instant discount on Myntra app orders and 1.5% cashback on all other spends.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '7.5% instant discount on Myntra app purchases (up to ₹750/transaction)',
+        '1.5% unlimited cashback on preferred partner apps (Swiggy, Zomato, Cleartrip, PVR)',
+        '1.25% cashback on all other eligible spends',
+        '₹500 Myntra welcome voucher on card issuance'
       ],
       benefits: '7.5% instant discount on Myntra app orders and 1.5% cashback on all other spends. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Myntra Kotak Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Myntra Kotak Credit Card. 7.5% instant discount on Myntra app orders and 1.5% cashback on all other spends.',
       seo_keywords: 'myntra kotak credit card, apply kotak credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 6, priority: 6
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 6, priority: 6
     },
     {
       name: 'PVR Kotak Credit Card',
@@ -1622,20 +1625,20 @@ const ALL_CARDS = {
       description: 'PVR Kotak Credit Card provides free pvr movie tickets worth ₹400 every month on achieving spend milestone. Designed to offer max savings and convenience.',
       annual_fee: '₹999 (Waived on ₹50,000 annual spend)',
       features: [
-        'Free PVR movie tickets worth ₹400 every month on achieving spend milestone.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2 free PVR movie tickets (worth ₹400 each) every month on ₹10,000 spend',
+        '15% cashback on PVR food & beverage counters',
+        '5% cashback on PVR movie ticket bookings',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Free PVR movie tickets worth ₹400 every month on achieving spend milestone. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹999 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'PVR Kotak Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for PVR Kotak Credit Card. Free PVR movie tickets worth ₹400 every month on achieving spend milestone.',
       seo_keywords: 'pvr kotak credit card, apply kotak credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 7, priority: 7
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 7, priority: 7
     },
     {
       name: 'IndianOil Kotak Credit Card',
@@ -1645,20 +1648,20 @@ const ALL_CARDS = {
       description: 'IndianOil Kotak Credit Card provides 4% value back as reward points on fuel purchases at indianoil petrol pumps. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        '4% value back as reward points on fuel purchases at IndianOil petrol pumps.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4% value back (16 reward points per ₹150) on fuel spends at IndianOil pumps',
+        '2% value back (8 reward points per ₹150) on dining & grocery purchases',
+        '1% fuel surcharge waiver',
+        '1,000 bonus reward points on spending ₹500 within 30 days'
       ],
       benefits: '4% value back as reward points on fuel purchases at IndianOil petrol pumps. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IndianOil Kotak Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IndianOil Kotak Credit Card. 4% value back as reward points on fuel purchases at IndianOil petrol pumps.',
       seo_keywords: 'indianoil kotak credit card, apply kotak credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 8, priority: 8
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 8, priority: 8
     },
     {
       name: 'Kotak FD Credit Card',
@@ -1668,10 +1671,10 @@ const ALL_CARDS = {
       description: 'Kotak FD Credit Card provides 100% fd backed credit card (811 dream different) with zero annual fee and instant approval. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '100% FD backed credit card (811 Dream Different) with zero annual fee and instant approval.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant approval against Kotak 811 Fixed Deposit (min FD ₹10,000)',
+        '90% credit limit of FD amount',
+        '500 bonus reward points on card activation & ₹5,000 spend',
+        '2 reward points per ₹100 spent online'
       ],
       benefits: '100% FD backed credit card (811 Dream Different) with zero annual fee and instant approval. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -1694,20 +1697,20 @@ const ALL_CARDS = {
       description: 'YES Prosperity Card provides everyday reward points on dining and retail shopping with interest-free atm withdrawals. Designed to offer max savings and convenience.',
       annual_fee: '₹399 (Waived on ₹50,000 annual spend)',
       features: [
-        'Everyday reward points on dining and retail shopping with interest-free ATM withdrawals.',
+        '2 Reward Points per ₹200 on everyday spends',
+        'Interest-free cash withdrawal at ATMs up to 50 days',
         '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Dining discount of up to 15% at partner restaurants'
       ],
       benefits: 'Everyday reward points on dining and retail shopping with interest-free ATM withdrawals. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹399 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'YES Prosperity Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for YES Prosperity Card. Everyday reward points on dining and retail shopping with interest-free ATM withdrawals.',
       seo_keywords: 'yes prosperity card, apply yes credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'YES Elite+ Card',
@@ -1717,10 +1720,10 @@ const ALL_CARDS = {
       description: 'YES Elite+ Card provides accelerated reward points on online spends, dining, and complimentary lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹999 (Waived on ₹1,00,000 annual spend)',
       features: [
-        'Accelerated reward points on online spends, dining, and complimentary lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '8 Reward Points per ₹200 on online & travel spends',
+        '4 Reward Points per ₹200 on all other categories',
+        '1 domestic airport lounge visit per quarter',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Accelerated reward points on online spends, dining, and complimentary lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1740,10 +1743,10 @@ const ALL_CARDS = {
       description: 'YES Wellness Card provides health & wellness perks including consultations, health checkups, and fitness discounts. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹2,00,000 annual spend)',
       features: [
-        'Health & wellness perks including consultations, health checkups, and fitness discounts.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Complimentary annual health checkup package',
+        'Unlimited tele-consultations with doctors and dieticians',
+        '6 Reward Points per ₹200 on healthcare, pharmacy & fitness spends',
+        '1 domestic lounge access visit per quarter'
       ],
       benefits: 'Health & wellness perks including consultations, health checkups, and fitness discounts. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1763,10 +1766,10 @@ const ALL_CARDS = {
       description: 'YES Reserv Credit Card provides 24 reward points per ₹200 spent on subscription & travel bookings + lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹1,999 (Waived on ₹3,00,000 annual spend)',
       features: [
-        '24 Reward Points per ₹200 spent on subscription & travel bookings + lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '24 Reward Points per ₹200 on subscription services & flight bookings',
+        '12 Reward Points per ₹200 on domestic retail spends',
+        '3 complimentary domestic lounge visits per quarter',
+        '1.75% low foreign currency markup fee'
       ],
       benefits: '24 Reward Points per ₹200 spent on subscription & travel bookings + lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1786,10 +1789,10 @@ const ALL_CARDS = {
       description: 'YES Marquee Credit Card provides ultra-premium card offering 36 reward points per ₹200 on online purchases and unlimited international lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹9,999 (Waived on ₹12,00,000 annual spend)',
       features: [
-        'Ultra-premium card offering 36 Reward Points per ₹200 on online purchases and unlimited international lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '36 Reward Points per ₹200 on online shopping & international spends',
+        'Unlimited domestic and international airport lounge access',
+        'Buy 1 Get 1 free movie ticket on BookMyShow (up to ₹800/ticket)',
+        'Low 1% foreign currency markup fee'
       ],
       benefits: 'Ultra-premium card offering 36 Reward Points per ₹200 on online purchases and unlimited international lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1809,10 +1812,10 @@ const ALL_CARDS = {
       description: 'YES Paisabazaar Credit Card provides co-branded stepup credit card with paisabazaar offering cashback rewards and credit score build benefits. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Co-branded StepUp credit card with Paisabazaar offering cashback rewards and credit score build benefits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Co-branded StepUp credit card with Paisabazaar',
+        '1% cashback on all online and offline purchases',
+        'Build and track credit score on Paisabazaar platform',
+        'Lifetime free card – zero annual fee'
       ],
       benefits: 'Co-branded StepUp credit card with Paisabazaar offering cashback rewards and credit score build benefits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1832,10 +1835,10 @@ const ALL_CARDS = {
       description: 'YES FD Backed Credit Card provides secured credit card against yes bank fixed deposit with instant digital onboarding. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against YES Bank Fixed Deposit with instant digital onboarding.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant digital credit card issued against YES Bank Fixed Deposit',
+        'Credit limit up to 90% of FD value',
+        'Earn interest on underlying deposit while using card',
+        'No income proof or credit score check required'
       ],
       benefits: 'Secured credit card against YES Bank Fixed Deposit with instant digital onboarding. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -1858,10 +1861,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Classic Credit Card provides lifetime free card offering 10x reward points on milestone spends, low interest rates, and roadside assistance. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Lifetime free card offering 10X reward points on milestone spends, low interest rates, and roadside assistance.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on incremental spends above ₹20,000/month',
+        'Never-expiring reward points with 1 point = ₹0.25 value',
+        'Complimentary roadside assistance worth ₹1,399',
+        '4 domestic airport lounge visits per year'
       ],
       benefits: 'Lifetime free card offering 10X reward points on milestone spends, low interest rates, and roadside assistance. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1881,10 +1884,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Millennia Credit Card provides lifetime free card with 10x rewards on online shopping, lounge access, and interest-free cash withdrawal. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Lifetime free card with 10X rewards on online shopping, lounge access, and interest-free cash withdrawal.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on online shopping spends',
+        '6X reward points on offline shopping spends',
+        'Interest-free cash withdrawal at domestic ATMs for up to 48 days',
+        '4 complimentary domestic lounge access visits per year'
       ],
       benefits: 'Lifetime free card with 10X rewards on online shopping, lounge access, and interest-free cash withdrawal. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1904,10 +1907,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Select Credit Card provides premium lifetime free card with 10x rewards, domestic & international lounge access, and movie discounts. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Premium lifetime free card with 10X rewards, domestic & international lounge access, and movie discounts.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on spends above ₹25,000/month',
+        'Buy 1 Get 1 free movie ticket on Paytm Movies (up to ₹250 off)',
+        '4 domestic airport & 2 international lounge visits per quarter',
+        'Comprehensive travel & air accident insurance cover'
       ],
       benefits: 'Premium lifetime free card with 10X rewards, domestic & international lounge access, and movie discounts. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1927,10 +1930,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Wealth Credit Card provides ultra-premium lifetime free card with 10x reward points, unlimited airport lounge access, and spa visits. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Ultra-premium lifetime free card with 10X reward points, unlimited airport lounge access, and spa visits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on all online & international spends',
+        'Complimentary domestic & international airport lounge visits + spa visits',
+        'Buy 1 Get 1 free movie ticket on Paytm Movies (up to ₹500 off)',
+        'Low foreign currency markup fee of 1.5%'
       ],
       benefits: 'Ultra-premium lifetime free card with 10X reward points, unlimited airport lounge access, and spa visits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1950,10 +1953,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Ashva Credit Card provides metal design travel card with low 1% foreign forex markup and accelerated travel rewards. Designed to offer max savings and convenience.',
       annual_fee: '₹2,999 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Metal design travel card with low 1% foreign forex markup and accelerated travel rewards.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Premium Metal credit card design',
+        'Low 1% foreign currency forex markup fee',
+        '10X reward points on travel & international spends',
+        'Domestic & international lounge access + Priority Pass'
       ],
       benefits: 'Metal design travel card with low 1% foreign forex markup and accelerated travel rewards. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1973,10 +1976,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST Mayura Credit Card provides super-premium metal credit card with zero forex markup fee and unlimited airport lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹5,999 (Waived on ₹6,00,000 annual spend)',
       features: [
-        'Super-premium metal credit card with zero forex markup fee and unlimited airport lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero foreign exchange markup fee (0% forex fee)',
+        'Unlimited domestic and international airport lounge visits',
+        '10X reward points on all online & flight bookings',
+        'Complimentary golf games and dedicated concierge'
       ],
       benefits: 'Super-premium metal credit card with zero forex markup fee and unlimited airport lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -1996,10 +1999,10 @@ const ALL_CARDS = {
       description: 'FIRST WOW Card provides zero forex fee, guaranteed approval co-branded secured card with 4x reward points. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Zero forex fee, guaranteed approval co-branded secured card with 4X reward points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero foreign currency markup fee (0% forex markup worldwide)',
+        '4X reward points on all everyday purchases',
+        '100% instant approval with zero income proof',
+        'Lifetime free – zero annual fee'
       ],
       benefits: 'Zero forex fee, guaranteed approval co-branded secured card with 4X reward points. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2019,10 +2022,10 @@ const ALL_CARDS = {
       description: 'IDFC FIRST WOW FD Credit Card provides lifetime free fd-backed credit card with zero forex markup and 100% approval rate. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Lifetime free FD-backed credit card with zero forex markup and 100% approval rate.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'FD backed credit card with credit limit up to 100% of deposit value',
+        'Zero foreign currency conversion fee (0% forex fee)',
+        '4X reward points on all spends',
+        'No credit history or income proof needed'
       ],
       benefits: 'Lifetime free FD-backed credit card with zero forex markup and 100% approval rate. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -2045,10 +2048,10 @@ const ALL_CARDS = {
       description: 'BOB Prime Credit Card provides 1% cashback on all spends, zero annual fee, and easy approval. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '1% cashback on all spends, zero annual fee, and easy approval.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '1% cashback (4 reward points per ₹100) on all spends',
+        'Lifetime free – zero joining and annual fees',
+        '1% fuel surcharge waiver at fuel stations across India',
+        'Zero lost card liability'
       ],
       benefits: '1% cashback on all spends, zero annual fee, and easy approval. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2068,20 +2071,20 @@ const ALL_CARDS = {
       description: 'BOB Eterna Credit Card provides 7x reward points on travel, dining, and online shopping + unlimited lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹2,499 (Waived on ₹2,50,000 annual spend)',
       features: [
-        '7X reward points on travel, dining, and online shopping + unlimited lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '7X reward points (15 points per ₹100) on travel, dining & online shopping',
+        'Unlimited domestic airport lounge access visits',
+        'Buy 1 Get 1 free movie ticket on Paytm Movies',
+        '₹2,000 gift voucher on spend milestone'
       ],
       benefits: '7X reward points on travel, dining, and online shopping + unlimited lounge access. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹2,499 (Waived on ₹2,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'BOB Eterna Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for BOB Eterna Credit Card. 7X reward points on travel, dining, and online shopping + unlimited lounge access.',
       seo_keywords: 'bob eterna credit card, apply bob credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'BOB Premier Credit Card',
@@ -2091,10 +2094,10 @@ const ALL_CARDS = {
       description: 'BOB Premier Credit Card provides 5x reward points on travel, dining, and utility bill spends. Designed to offer max savings and convenience.',
       annual_fee: '₹1,000 (Waived on ₹1,20,000 annual spend)',
       features: [
-        '5X reward points on travel, dining, and utility bill spends.',
+        '5X reward points (10 points per ₹100) on dining, travel & utility bill spends',
+        '1 complimentary domestic lounge access visit per quarter',
         '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Annual fee waiver on ₹1,20,000 annual spend'
       ],
       benefits: '5X reward points on travel, dining, and utility bill spends. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2114,10 +2117,10 @@ const ALL_CARDS = {
       description: 'BOB Easy Credit Card provides 5x reward points on groceries, department store purchases, and movies. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹35,000 annual spend)',
       features: [
-        '5X reward points on groceries, department store purchases, and movies.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5X reward points (5 points per ₹100) on groceries, department stores & movies',
+        '1 reward point per ₹100 on all other spends',
+        '1% fuel surcharge waiver',
+        'Reversal of annual fee on spending ₹35,000 per year'
       ],
       benefits: '5X reward points on groceries, department store purchases, and movies. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2137,20 +2140,20 @@ const ALL_CARDS = {
       description: 'HPCL BOB ENERGIE Card provides 24 reward points per ₹150 spent at hpcl fuel pumps and lpg cylinder refills. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        '24 reward points per ₹150 spent at HPCL fuel pumps and LPG cylinder refills.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '24 reward points per ₹150 spent at HPCL fuel stations & LPG cylinder bookings',
+        '1% fuel surcharge waiver at HPCL petrol pumps',
+        '10 reward points per ₹150 on utility bill payments and groceries',
+        '4 complimentary domestic lounge access visits per year'
       ],
       benefits: '24 reward points per ₹150 spent at HPCL fuel pumps and LPG cylinder refills. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'HPCL BOB ENERGIE Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for HPCL BOB ENERGIE Card. 24 reward points per ₹150 spent at HPCL fuel pumps and LPG cylinder refills.',
       seo_keywords: 'hpcl bob energie card, apply bob credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 5, priority: 5
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 5, priority: 5
     },
     {
       name: 'IRCTC BOB Credit Card',
@@ -2160,10 +2163,10 @@ const ALL_CARDS = {
       description: 'IRCTC BOB Credit Card provides up to 40 reward points per ₹100 spent on irctc train ticket bookings. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,00,000 annual spend)',
       features: [
-        'Up to 40 reward points per ₹100 spent on IRCTC train ticket bookings.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Up to 40 reward points per ₹100 spent on IRCTC train ticket bookings',
+        '1% transaction charge waiver on IRCTC website & Rail Connect app',
+        '4 complimentary executive railway lounge visits per year',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Up to 40 reward points per ₹100 spent on IRCTC train ticket bookings. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2183,10 +2186,10 @@ const ALL_CARDS = {
       description: 'BOB FD Credit Card provides secured credit card against bank of baroda fixed deposit with zero income verification. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against Bank of Baroda Fixed Deposit with zero income verification.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% instant approval against Bank of Baroda Fixed Deposit',
+        'Credit limit up to 85% of FD value',
+        'Earn full interest on underlying FD while using card',
+        'Lifetime free – zero joining and zero annual fee'
       ],
       benefits: 'Secured credit card against Bank of Baroda Fixed Deposit with zero income verification. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -2209,10 +2212,10 @@ const ALL_CARDS = {
       description: 'Federal Bank Celesta Card provides premium lifestyle credit card offering 3x rewards, airport lounge access, and golf games. Designed to offer max savings and convenience.',
       annual_fee: '₹3,000 (Waived on ₹3,00,000 annual spend)',
       features: [
-        'Premium lifestyle credit card offering 3X rewards, airport lounge access, and golf games.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3X reward points on travel, dining, and international spends',
+        '4 domestic airport lounge access visits per quarter',
+        'Complimentary golf games per month',
+        'Buy 1 Get 1 free movie tickets on INOX / BookMyShow'
       ],
       benefits: 'Premium lifestyle credit card offering 3X rewards, airport lounge access, and golf games. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2232,20 +2235,20 @@ const ALL_CARDS = {
       description: 'Federal Bank Imperio Card provides 3x rewards on groceries & healthcare, airport lounge visits, and dining discounts. Designed to offer max savings and convenience.',
       annual_fee: '₹1,500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        '3X rewards on groceries & healthcare, airport lounge visits, and dining discounts.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3X reward points on healthcare, pharmacy & grocery spends',
+        '2 domestic airport lounge access visits per quarter',
+        'Dining discounts of up to 15% at partner restaurants',
+        '1% fuel surcharge waiver'
       ],
       benefits: '3X rewards on groceries & healthcare, airport lounge visits, and dining discounts. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Federal Bank Imperio Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Federal Bank Imperio Card. 3X rewards on groceries & healthcare, airport lounge visits, and dining discounts.',
       seo_keywords: 'federal bank imperio card, apply federal credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'Federal Bank Signet Card',
@@ -2255,10 +2258,10 @@ const ALL_CARDS = {
       description: 'Federal Bank Signet Card provides 3x rewards on electronics and apparel shopping with complimentary lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹750 (Waived on ₹75,000 annual spend)',
       features: [
-        '3X rewards on electronics and apparel shopping with complimentary lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '3X reward points on electronics, gadgets, and apparel shopping',
+        '1 domestic airport lounge access visit per quarter',
+        'Buy 1 Get 1 free movie ticket offer on INOX Movies once per month',
+        '1% fuel surcharge waiver'
       ],
       benefits: '3X rewards on electronics and apparel shopping with complimentary lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2278,10 +2281,10 @@ const ALL_CARDS = {
       description: 'Federal Bank Scapia Credit Card provides zero forex markup travel card with 10% scapia coins on all spends and unlimited lounge access. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Zero forex markup travel card with 10% Scapia coins on all spends and unlimited lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero foreign exchange markup fee (0% forex fee worldwide)',
+        '10% Scapia coins on all eligible online & offline spends',
+        'Unlimited domestic airport lounge access on spending ₹10,000/month',
+        'Instant travel booking redemption via Scapia App'
       ],
       benefits: 'Zero forex markup travel card with 10% Scapia coins on all spends and unlimited lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2301,10 +2304,10 @@ const ALL_CARDS = {
       description: 'Federal Bank OneCard provides metal credit card with zero annual fee, 5x rewards on top spend categories, and instant mobile app control. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Metal credit card with zero annual fee, 5X rewards on top spend categories, and instant mobile app control.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Premium Metal credit card design with zero joining or annual fee',
+        '5X reward points on top 2 spend categories each month',
+        'Full mobile card controls via OneCard app',
+        '1% fuel surcharge waiver across India'
       ],
       benefits: 'Metal credit card with zero annual fee, 5X rewards on top spend categories, and instant mobile app control. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2324,10 +2327,10 @@ const ALL_CARDS = {
       description: 'Federal Bank FD Credit Card provides 100% instant approval card issued against federal bank fixed deposit. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        '100% instant approval card issued against Federal Bank Fixed Deposit.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant digital approval against Federal Bank Fixed Deposit',
+        'Credit limit up to 90% of deposit value',
+        'No CIBIL score or salary proof required',
+        'Lifetime free – zero annual fee'
       ],
       benefits: '100% instant approval card issued against Federal Bank Fixed Deposit. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -2350,20 +2353,20 @@ const ALL_CARDS = {
       description: 'RBL Platinum Maxima provides 10x reward points on dining, entertainment, utility bill payments, and fuel. Designed to offer max savings and convenience.',
       annual_fee: '₹2,000 (Waived on ₹2,50,000 annual spend)',
       features: [
-        '10X reward points on dining, entertainment, utility bill payments, and fuel.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '10X reward points on dining, entertainment, utility bills, and fuel',
+        '2 complimentary domestic airport lounge visits per quarter',
+        '10,000 bonus reward points on achieving ₹2,00,000 annual spend',
+        '1% fuel surcharge waiver'
       ],
       benefits: '10X reward points on dining, entertainment, utility bill payments, and fuel. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹2,000 (Waived on ₹2,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'RBL Platinum Maxima – Apply Online | GharKaPaisa',
       seo_description: 'Apply for RBL Platinum Maxima. 10X reward points on dining, entertainment, utility bill payments, and fuel.',
       seo_keywords: 'rbl platinum maxima, apply rbl credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'RBL World Safari Card',
@@ -2373,10 +2376,10 @@ const ALL_CARDS = {
       description: 'RBL World Safari Card provides zero forex markup credit card designed for international travelers with lounge access. Designed to offer max savings and convenience.',
       annual_fee: '₹3,000 (Waived on ₹5,00,000 annual spend)',
       features: [
-        'Zero forex markup credit card designed for international travelers with lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Zero foreign currency markup fee (0% forex markup on international spends)',
+        '5 travel reward points per ₹100 spent on travel bookings',
+        '2 complimentary domestic lounge visits per quarter',
+        'Complimentary Priority Pass membership for international lounges'
       ],
       benefits: 'Zero forex markup credit card designed for international travelers with lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2396,10 +2399,10 @@ const ALL_CARDS = {
       description: 'RBL Icon Card provides super-premium credit card offering 20 reward points per ₹100 spent, golf access, and lounge privileges. Designed to offer max savings and convenience.',
       annual_fee: '₹5,000 (Waived on ₹8,00,000 annual spend)',
       features: [
-        'Super-premium credit card offering 20 reward points per ₹100 spent, golf access, and lounge privileges.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '20 reward points per ₹100 spent on international & dining purchases',
+        'Complimentary golf games and golf access at top Indian courses',
+        'Buy 1 Get 1 free movie ticket on BookMyShow (up to ₹200 off)',
+        'Dedicated Icon concierge desk'
       ],
       benefits: 'Super-premium credit card offering 20 reward points per ₹100 spent, golf access, and lounge privileges. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2419,20 +2422,20 @@ const ALL_CARDS = {
       description: 'RBL ShopRite Card provides 20 reward points per ₹100 on grocery purchases and 10% off on movie tickets. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        '20 reward points per ₹100 on grocery purchases and 10% off on movie tickets.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '20 reward points per ₹100 spent on grocery purchases',
+        '10% discount up to ₹100 on BookMyShow movie tickets',
+        '1 reward point per ₹100 on all other spends',
+        '1% fuel surcharge waiver'
       ],
       benefits: '20 reward points per ₹100 on grocery purchases and 10% off on movie tickets. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'RBL ShopRite Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for RBL ShopRite Card. 20 reward points per ₹100 on grocery purchases and 10% off on movie tickets.',
       seo_keywords: 'rbl shoprite card, apply rbl credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 4, priority: 4
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 4, priority: 4
     },
     {
       name: 'Bajaj Finserv RBL Card',
@@ -2442,10 +2445,10 @@ const ALL_CARDS = {
       description: 'Bajaj Finserv RBL Card provides supercard features with emergency cash advance, interest-free personal loan facility, and reward points. Designed to offer max savings and convenience.',
       annual_fee: '₹999 (Waived on ₹1,00,000 annual spend)',
       features: [
-        'SuperCard features with emergency cash advance, interest-free personal loan facility, and reward points.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Emergency 50-day interest-free cash withdrawal from ATMs',
+        'Convert credit limit into instant personal loan for 90 days',
+        '10X reward points on online shopping spends',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'SuperCard features with emergency cash advance, interest-free personal loan facility, and reward points. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2465,20 +2468,20 @@ const ALL_CARDS = {
       description: 'BookMyShow RBL Card provides free movie tickets worth ₹500 every month on bookmyshow app. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Free movie tickets worth ₹500 every month on BookMyShow app.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Free movie tickets worth ₹500 every month on BookMyShow app',
+        '₹100 discount on food & beverages at cinema counters',
+        '4 reward points per ₹100 spent on non-movie purchases',
+        'Annual fee waiver on ₹1.5 Lakh spend'
       ],
       benefits: 'Free movie tickets worth ₹500 every month on BookMyShow app. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'BookMyShow RBL Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for BookMyShow RBL Card. Free movie tickets worth ₹500 every month on BookMyShow app.',
       seo_keywords: 'bookmyshow rbl card, apply rbl credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 6, priority: 6
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 6, priority: 6
     },
     {
       name: 'Zomato RBL Card',
@@ -2488,10 +2491,10 @@ const ALL_CARDS = {
       description: 'Zomato RBL Card provides 5% edition cash on zomato food orders and blinkit grocery deliveries. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹1,00,000 annual spend)',
       features: [
-        '5% Edition Cash on Zomato food orders and Blinkit grocery deliveries.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '5% Edition Cash on Zomato food delivery orders & Blinkit grocery',
+        '10% Edition Cash on dining spends on birthday',
+        'Complimentary Zomato Gold membership',
+        '1% Edition Cash on all other online & offline spends'
       ],
       benefits: '5% Edition Cash on Zomato food orders and Blinkit grocery deliveries. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2507,22 +2510,22 @@ const ALL_CARDS = {
       name: 'RBL FD Credit Card',
       category: 'fd_card',
       sub_category: 'Secured Cards',
-      short_description: 'Secured credit card against RBL Bank Fixed Deposit with guaranteed approval and zero income proof.',
-      description: 'RBL FD Credit Card provides secured credit card against rbl bank fixed deposit with guaranteed approval and zero income proof. Designed to offer max savings and convenience.',
+      short_description: 'Secured credit card against RBL Fixed Deposit with guaranteed approval and zero income proof.',
+      description: 'RBL FD Credit Card provides secured credit card against rbl fixed deposit with guaranteed approval and zero income proof. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against RBL Bank Fixed Deposit with guaranteed approval and zero income proof.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% guaranteed approval against RBL Fixed Deposit (min FD ₹15,000)',
+        'Credit limit up to 90% of deposit value',
+        'Earn FD interest while using credit line',
+        'Lifetime free – zero joining and zero annual fee'
       ],
-      benefits: 'Secured credit card against RBL Bank Fixed Deposit with guaranteed approval and zero income proof. 1% fuel surcharge waiver and dining rewards.',
+      benefits: 'Secured credit card against RBL Fixed Deposit with guaranteed approval and zero income proof. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
       eligibility_criteria: 'Age 18-65 years. Monthly income ₹0+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: Nil | Annual Fee: Lifetime Free | Interest Rate: 3.49% p.m.',
       seo_title: 'RBL FD Credit Card – Apply Online | GharKaPaisa',
-      seo_description: 'Apply for RBL FD Credit Card. Secured credit card against RBL Bank Fixed Deposit with guaranteed approval and zero income proof.',
+      seo_description: 'Apply for RBL FD Credit Card. Secured credit card against RBL Fixed Deposit with guaranteed approval and zero income proof.',
       seo_keywords: 'rbl fd credit card, apply rbl credit card',
       min_age: 18, max_age: 65, min_income: 0, display_order: 8, priority: 8
     }
@@ -2537,20 +2540,20 @@ const ALL_CARDS = {
       description: 'Equitas Credit Card provides entry-level rewards card with cashback on daily grocery, fuel, and utility bill spends. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        'Entry-level rewards card with cashback on daily grocery, fuel, and utility bill spends.',
-        '1% fuel surcharge waiver across India',
+        '2 Reward Points per ₹100 on everyday grocery & utility spends',
+        '1% fuel surcharge waiver across petrol pumps in India',
         'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Contactless payments and EMI facility'
       ],
       benefits: 'Entry-level rewards card with cashback on daily grocery, fuel, and utility bill spends. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Equitas Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Equitas Credit Card. Entry-level rewards card with cashback on daily grocery, fuel, and utility bill spends.',
       seo_keywords: 'equitas credit card, apply equitas credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'Equitas Privilege Credit Card',
@@ -2560,20 +2563,20 @@ const ALL_CARDS = {
       description: 'Equitas Privilege Credit Card provides accelerated reward points on dining & travel, airport lounge access, and movie discounts. Designed to offer max savings and convenience.',
       annual_fee: '₹1,000 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Accelerated reward points on dining & travel, airport lounge access, and movie discounts.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 Reward Points per ₹100 on travel and dining spends',
+        '4 complimentary domestic airport lounge access visits per year',
+        'Buy 1 Get 1 free movie ticket discount on BookMyShow',
+        'Annual fee waiver on ₹1,50,000 annual spend'
       ],
       benefits: 'Accelerated reward points on dining & travel, airport lounge access, and movie discounts. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,000 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'Equitas Privilege Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for Equitas Privilege Credit Card. Accelerated reward points on dining & travel, airport lounge access, and movie discounts.',
       seo_keywords: 'equitas privilege credit card, apply equitas credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'Equitas FD Credit Card',
@@ -2583,10 +2586,10 @@ const ALL_CARDS = {
       description: 'Equitas FD Credit Card provides secured credit card against equitas small finance bank fixed deposit with 100% instant approval. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against Equitas Small Finance Bank Fixed Deposit with 100% instant approval.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% instant digital approval against Equitas Fixed Deposit',
+        'Credit limit up to 90% of FD value',
+        'Earn interest on FD deposit while using credit card',
+        'No CIBIL score or salary slip required'
       ],
       benefits: 'Secured credit card against Equitas Small Finance Bank Fixed Deposit with 100% instant approval. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -2609,20 +2612,20 @@ const ALL_CARDS = {
       description: 'DCB Platinum Credit Card provides classic shopping card offering cash rewards on everyday purchases and utility bill payments. Designed to offer max savings and convenience.',
       annual_fee: '₹499 (Waived on ₹50,000 annual spend)',
       features: [
-        'Classic shopping card offering cash rewards on everyday purchases and utility bill payments.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2% cashback on online purchases and bill payments',
+        '1% cashback on offline retail transactions',
+        '1% fuel surcharge waiver',
+        'Annual fee waived on ₹50,000 annual spend'
       ],
       benefits: 'Classic shopping card offering cash rewards on everyday purchases and utility bill payments. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹499 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'DCB Platinum Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for DCB Platinum Credit Card. Classic shopping card offering cash rewards on everyday purchases and utility bill payments.',
       seo_keywords: 'dcb platinum credit card, apply dcb credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 1, priority: 1
     },
     {
       name: 'DCB Signature Credit Card',
@@ -2632,20 +2635,20 @@ const ALL_CARDS = {
       description: 'DCB Signature Credit Card provides premium rewards credit card with domestic lounge access and dining privileges. Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Premium rewards credit card with domestic lounge access and dining privileges.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '4 complimentary domestic airport lounge visits per quarter',
+        '2X reward points on dining, hotels, and travel spends',
+        'Complimentary golf games per month',
+        'Comprehensive travel insurance coverage'
       ],
       benefits: 'Premium rewards credit card with domestic lounge access and dining privileges. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,499 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'DCB Signature Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for DCB Signature Credit Card. Premium rewards credit card with domestic lounge access and dining privileges.',
       seo_keywords: 'dcb signature credit card, apply dcb credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'DCB Infinite Credit Card',
@@ -2655,10 +2658,10 @@ const ALL_CARDS = {
       description: 'DCB Infinite Credit Card provides super-premium credit card with dedicated concierge services, golf access, and air travel perks. Designed to offer max savings and convenience.',
       annual_fee: '₹4,999 (Waived on ₹5,00,000 annual spend)',
       features: [
-        'Super-premium credit card with dedicated concierge services, golf access, and air travel perks.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Dedicated 24/7 concierge desk service',
+        'Unlimited domestic airport lounge access',
+        '5X reward points on air ticket & luxury hotel bookings',
+        'Complimentary golf sessions at premier golf courses'
       ],
       benefits: 'Super-premium credit card with dedicated concierge services, golf access, and air travel perks. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2678,10 +2681,10 @@ const ALL_CARDS = {
       description: 'DCB FD Credit Card provides secured credit card issued against dcb fixed deposit with no credit score check. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card issued against DCB Fixed Deposit with no credit score check.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Instant credit card issued against DCB Fixed Deposit',
+        'Credit limit up to 90% of fixed deposit value',
+        'Earn FD interest earnings alongside card usage',
+        'Lifetime free – zero annual fee'
       ],
       benefits: 'Secured credit card issued against DCB Fixed Deposit with no credit score check. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
@@ -2704,10 +2707,11 @@ const ALL_CARDS = {
       description: 'IndusInd Legend Credit Card provides exclusive travel, dining and golfing privileges with unlimited domestic lounge access. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Exclusive travel, dining and golfing privileges with unlimited domestic lounge access.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Unlimited domestic airport lounge access visits',
+        '4 international lounge visits per year via Priority Pass',
+        'Golf privileges & complimentary golf rounds at premier courses',
+        '5X reward points on travel and dining spends',
+        'Lifetime free – zero annual fee'
       ],
       benefits: 'Exclusive travel, dining and golfing privileges with unlimited domestic lounge access. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2727,20 +2731,20 @@ const ALL_CARDS = {
       description: 'IndusInd Platinum Aura Edge provides customizable reward plans across dining, shopping, travel, and utility bill spends. Designed to offer max savings and convenience.',
       annual_fee: '₹500 (Waived on ₹50,000 annual spend)',
       features: [
-        'Customizable reward plans across dining, shopping, travel, and utility bill spends.',
+        'Customizable reward plans (Shopaholic, Home Improvement, Travel, Party)',
+        '4 Reward Points per ₹100 on selected category spends',
         '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Contactless payments enabled'
       ],
       benefits: 'Customizable reward plans across dining, shopping, travel, and utility bill spends. 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹500 (Waived on ₹50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IndusInd Platinum Aura Edge – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IndusInd Platinum Aura Edge. Customizable reward plans across dining, shopping, travel, and utility bill spends.',
       seo_keywords: 'indusind platinum aura edge, apply indusind credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 2, priority: 2
     },
     {
       name: 'IndusInd Pinnacle Credit Card',
@@ -2750,10 +2754,10 @@ const ALL_CARDS = {
       description: 'IndusInd Pinnacle Credit Card provides super-premium credit card with 2.5 reward points per ₹100, golf rounds, and complimentary flight vouchers. Designed to offer max savings and convenience.',
       annual_fee: '₹12,000 (No annual fee from 2nd year)',
       features: [
-        'Super-premium credit card with 2.5 reward points per ₹100, golf rounds, and complimentary flight vouchers.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '2.5 Reward Points per ₹100 spent on all online & travel transactions',
+        'Complimentary Oberoi hotel stays & flight vouchers on joining',
+        'Unlimited airport lounge access visits',
+        'Complimentary golf games per month & 24/7 concierge'
       ],
       benefits: 'Super-premium credit card with 2.5 reward points per ₹100, golf rounds, and complimentary flight vouchers. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -2773,20 +2777,20 @@ const ALL_CARDS = {
       description: 'IndusInd Nexxt Credit Card provides interactive credit card with built-in led buttons to switch between payment options (credit, rewards, emi). Designed to offer max savings and convenience.',
       annual_fee: '₹1,499 (Waived on ₹1,50,000 annual spend)',
       features: [
-        'Interactive credit card with built-in LED buttons to switch between Payment Options (Credit, Rewards, EMI).',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Interactive card with built-in LED buttons for Credit, Rewards & EMI payment modes',
+        '2 Reward Points per ₹150 spent on retail purchases',
+        'Buy 1 Get 1 free movie ticket on BookMyShow',
+        '1% fuel surcharge waiver'
       ],
       benefits: 'Interactive credit card with built-in LED buttons to switch between Payment Options (Credit, Rewards, EMI). 1% fuel surcharge waiver and dining rewards.',
-      eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
-      eligibility_criteria: 'Age 21-65 years. Monthly income ₹25,000+ or active FD.',
+      eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
+      eligibility_criteria: 'Age 21-65 years. Monthly income ₹1,50,000+ or active FD.',
       documents_required: 'PAN Card, Aadhaar Card, Income Slips / Bank Statement',
       fees_charges: 'Joining Fee: As per card policy | Annual Fee: ₹1,499 (Waived on ₹1,50,000 annual spend) | Interest Rate: 3.49% p.m.',
       seo_title: 'IndusInd Nexxt Credit Card – Apply Online | GharKaPaisa',
       seo_description: 'Apply for IndusInd Nexxt Credit Card. Interactive credit card with built-in LED buttons to switch between Payment Options (Credit, Rewards, EMI).',
       seo_keywords: 'indusind nexxt credit card, apply indusind credit card',
-      min_age: 21, max_age: 65, min_income: 25000, display_order: 4, priority: 4
+      min_age: 21, max_age: 65, min_income: 150000, display_order: 4, priority: 4
     },
     {
       name: 'IndusInd Avios Visa Infinite',
@@ -2796,10 +2800,10 @@ const ALL_CARDS = {
       description: 'IndusInd Avios Visa Infinite provides ultra-luxurious airline card earning british airways & qatar airways avios points directly on spends. Designed to offer max savings and convenience.',
       annual_fee: '₹40,000 (Welcome Avios points)',
       features: [
-        'Ultra-luxurious airline card earning British Airways & Qatar Airways Avios points directly on spends.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Direct British Airways & Qatar Airways Avios earnings on spends',
+        '5 Avios per ₹200 on international spends',
+        'Unlimited domestic & international airport lounge access',
+        'Complimentary airport meet & greet assistance service'
       ],
       benefits: 'Ultra-luxurious airline card earning British Airways & Qatar Airways Avios points directly on spends. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -2819,10 +2823,10 @@ const ALL_CARDS = {
       description: 'IndusInd EazyDiner Card provides 25% extra discount up to ₹1,000 on eazydiner dining payments + complimentary eazydiner prime membership. Designed to offer max savings and convenience.',
       annual_fee: '₹1,999 (Waived on ₹2,00,000 annual spend)',
       features: [
-        '25% extra discount up to ₹1,000 on EazyDiner dining payments + complimentary EazyDiner Prime membership.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '25% extra instant discount up to ₹1,000 on PayEazy dining payments',
+        'Complimentary 1-year EazyDiner Prime membership',
+        '2 complimentary alcoholic beverages at partner luxury restaurants',
+        '2 domestic airport lounge access visits per quarter'
       ],
       benefits: '25% extra discount up to ₹1,000 on EazyDiner dining payments + complimentary EazyDiner Prime membership. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2842,10 +2846,10 @@ const ALL_CARDS = {
       description: 'IndusInd Club Vistara Explorer provides complimentary business class flight tickets, club vistara gold status, and zero forex fee. Designed to offer max savings and convenience.',
       annual_fee: '₹40,000 (Welcome Business Class ticket)',
       features: [
-        'Complimentary Business Class flight tickets, Club Vistara Gold status, and zero forex fee.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Complimentary Business Class flight ticket voucher on joining',
+        'Automatic Club Vistara Gold Tier Status',
+        'Zero foreign currency markup fee (0% forex fee worldwide)',
+        'Domestic & international lounge access'
       ],
       benefits: 'Complimentary Business Class flight tickets, Club Vistara Gold status, and zero forex fee. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -2865,10 +2869,10 @@ const ALL_CARDS = {
       description: 'IndusInd Club Vistara Pioneer provides complimentary premium economy flight tickets and club vistara silver status. Designed to offer max savings and convenience.',
       annual_fee: '₹10,000 (Welcome Premium Economy ticket)',
       features: [
-        'Complimentary Premium Economy flight tickets and Club Vistara Silver status.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Complimentary Premium Economy flight ticket voucher on joining',
+        'Club Vistara Silver Tier Status',
+        '1 domestic airport lounge visit per quarter',
+        'Accelerated Club Vistara points on flight bookings'
       ],
       benefits: 'Complimentary Premium Economy flight tickets and Club Vistara Silver status. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 150000 },
@@ -2888,10 +2892,10 @@ const ALL_CARDS = {
       description: 'IndusInd Samman RuPay Card provides government employee special rupay credit card with upi linkability and cashback benefits. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Government employee special RuPay credit card with UPI linkability and cashback benefits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        'Designed specifically for Government & PSU employees',
+        'Linked to UPI network for instant credit payments via QR codes',
+        '1% cashback on all spends',
+        'Lifetime free credit card – zero annual fee'
       ],
       benefits: 'Government employee special RuPay credit card with UPI linkability and cashback benefits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
@@ -2911,10 +2915,10 @@ const ALL_CARDS = {
       description: 'IndusInd FD Credit Card provides secured credit card against indusind fixed deposit with zero income verification and lifetime free benefits. Designed to offer max savings and convenience.',
       annual_fee: 'Lifetime Free',
       features: [
-        'Secured credit card against IndusInd Fixed Deposit with zero income verification and lifetime free benefits.',
-        '1% fuel surcharge waiver across India',
-        'Zero lost card liability protection',
-        'Contactless & EMI payment enabled'
+        '100% instant approval against IndusInd Fixed Deposit',
+        'Credit limit up to 90% of deposit value',
+        'Earn full FD interest earnings alongside card usage',
+        'Lifetime free card – zero annual fee'
       ],
       benefits: 'Secured credit card against IndusInd Fixed Deposit with zero income verification and lifetime free benefits. 1% fuel surcharge waiver and dining rewards.',
       eligibility: { min_age: 18, max_age: 65, min_income: 0 },
