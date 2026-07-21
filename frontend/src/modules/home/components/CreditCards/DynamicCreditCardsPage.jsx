@@ -13,6 +13,7 @@ import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from './CardApplyVerificationModal';
 import { resolveAndApply } from '../../../../services/applicationResolver';
 import { getCardSpecificImage } from './cardImageHelper';
+import { getCleanImageUrl } from '../../../../utils/urlHelper';
 
 export default function DynamicCreditCardsPage() {
   const { bankSlug } = useParams();
@@ -346,7 +347,7 @@ export default function DynamicCreditCardsPage() {
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '80px', height: '52px', borderRadius: '10px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
                             <img
-                              src={card.card_image_url || card.image_url || card.thumbnail_url || getCardSpecificImage(card.name) || bank.logo_url}
+                              src={getCleanImageUrl(card.card_image_url || card.image_url || card.thumbnail_url) || getCardSpecificImage(card.name) || bank.logo_url}
                               alt={card.name}
                               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                               onError={(e) => { e.target.src = bank.logo_url; }}

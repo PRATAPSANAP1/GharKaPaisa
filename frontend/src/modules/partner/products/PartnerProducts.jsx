@@ -4,6 +4,7 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
+import { getCleanImageUrl } from '../../../utils/urlHelper';
 import { resolveAndApply } from '../../../services/applicationResolver';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
@@ -920,7 +921,7 @@ export default function PartnerProducts() {
                           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}>
                           {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                            <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                           ) : (
                             emoji
                           )}

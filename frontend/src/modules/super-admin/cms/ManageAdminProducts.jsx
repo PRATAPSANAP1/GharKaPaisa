@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
+import { getCleanImageUrl } from "../../../utils/urlHelper";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload,
@@ -583,7 +584,7 @@ export default function ManageAdminProducts() {
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 16px' }}>
                     {prod.image_url ? (
-                      <img src={prod.image_url} alt={prod.name} style={{ height: '36px', width: '56px', objectFit: 'contain', borderRadius: '6px' }} />
+                      <img src={getCleanImageUrl(prod.image_url)} alt={prod.name} style={{ height: '36px', width: '56px', objectFit: 'contain', borderRadius: '6px' }} />
                     ) : (
                       <span style={{ fontSize: '20px' }}>💳</span>
                     )}
@@ -749,7 +750,7 @@ export default function ManageAdminProducts() {
                     {(cardImageFile || form.image_url) && (
                       <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img
-                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : form.image_url}
+                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : getCleanImageUrl(form.image_url)}
                           alt="Card Preview"
                           style={{ width: '80px', height: '50px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                         />
@@ -1137,7 +1138,7 @@ export default function ManageAdminProducts() {
                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
                       <div style={{ width: '80px', height: '52px', borderRadius: '10px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
                         <img
-                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : (form.image_url || selectedBank?.logo_url)}
+                          src={cardImageFile ? URL.createObjectURL(cardImageFile) : getCleanImageUrl(form.image_url || selectedBank?.logo_url)}
                           alt="Preview"
                           style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                         />
