@@ -209,12 +209,12 @@ export default function DynamicCreditCardsPage() {
         </div>
       </div>
 
-      {/* ── HERO BANNER SECTION (Full Screen) ── */}
+      {/* ── HERO BANNER SECTION (Full Screen Width) ── */}
       <div style={{
         width: '100%',
         overflow: 'hidden',
         background: isDark ? '#1e293b' : '#f1f5f9',
-        minHeight: isMobile ? '180px' : '280px',
+        height: isMobile ? '200px' : '320px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
