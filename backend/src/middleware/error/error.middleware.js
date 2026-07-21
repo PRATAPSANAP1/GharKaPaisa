@@ -48,9 +48,9 @@ const errorHandler = (err, req, res, next) => {
     logger.error('DB schema error — undefined table', { message: err.message });
     return serverError(res);
   }
-  if (err.code === 'ECONNREFUSED') { // DB connection lost
-    logger.error('DB connection refused');
-    return serverError(res, 'Database unavailable');
+  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.message?.includes('timeout') || err.message?.includes('Connection terminated')) { // DB connection lost or timed out
+    logger.error('DB connection unavailable or timed out:', { error: err.message, code: err.code });
+    return error(res, 'Database connection unavailable. Please check AWS RDS connectivity.', 503);
   }
 
   // Default
