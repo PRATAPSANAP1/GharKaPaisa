@@ -223,7 +223,7 @@ export default function DynamicCreditCardsPage() {
           <img 
             src={getCleanImageUrl(bank.banner)} 
             alt={`${bank.name} Credit Cards Banner`} 
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} 
           />
         ) : bank.logo_url ? (
           <img 
