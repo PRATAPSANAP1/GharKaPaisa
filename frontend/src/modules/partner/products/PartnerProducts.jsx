@@ -99,7 +99,17 @@ export default function PartnerProducts() {
   const [minCommission, setMinCommission] = useState(0);
   const [minApproval, setMinApproval] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const cardsPerPage = 6;
+  const [cardsPerPage, setCardsPerPage] = useState(12);
+
+  // Memoize active filters count for the badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (activeCategory !== 'all') count++;
+    if (activeBank !== 'All Banks') count++;
+    if (minCommission !== 0) count++;
+    if (search.trim() !== '') count++;
+    return count;
+  }, [activeCategory, activeBank, minCommission, search]);
 
   // Sync category from URL search query parameter or navigation state
   useEffect(() => {
@@ -116,7 +126,7 @@ export default function PartnerProducts() {
   // Reset pagination when any filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, activeCategory, activeBank, filterTab, sortBy, minCommission, minApproval]);
+  }, [search, activeCategory, activeBank, filterTab, sortBy, minCommission, minApproval, cardsPerPage]);
 
   // Enhanced Lead modal/form state
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -365,17 +375,69 @@ export default function PartnerProducts() {
   });
 
   // Pagination Logic
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = sortedProducts.slice(indexOfFirstCard, indexOfLastCard);
-  const totalPages = Math.ceil(sortedProducts.length / cardsPerPage);
+  const limitValue = cardsPerPage === 'all' ? sortedProducts.length : cardsPerPage;
+  const indexOfLastCard = cardsPerPage === 'all' ? sortedProducts.length : currentPage * limitValue;
+  const indexOfFirstCard = cardsPerPage === 'all' ? 0 : indexOfLastCard - limitValue;
+  const currentCards = cardsPerPage === 'all' ? sortedProducts : sortedProducts.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = cardsPerPage === 'all' ? 1 : Math.ceil(sortedProducts.length / limitValue);
+
+  // Smart Pagination helper to avoid overflowing mobile screen
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = isMobile ? 3 : 5;
+    
+    if (totalPages <= maxVisiblePages + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      
+      let start = Math.max(2, currentPage - Math.floor(maxVisiblePages / 2));
+      let end = Math.min(totalPages - 1, currentPage + Math.floor(maxVisiblePages / 2));
+      
+      if (currentPage <= Math.floor(maxVisiblePages / 2) + 1) {
+        end = maxVisiblePages;
+      } else if (currentPage >= totalPages - Math.floor(maxVisiblePages / 2)) {
+        start = totalPages - maxVisiblePages + 1;
+      }
+      
+      if (start > 2) {
+        pages.push('...');
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (end < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   const sectionLabel = { fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' };
 
   // Helper to render filter options block
-  const renderFilterContent = () => (
-    <div style={{ ...S.card, padding: '24px', borderRadius: '20px', background: C.card, border: `1.5px solid ${C.border}`, boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.04)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+  const renderFilterContent = (isDrawer = false) => (
+    <div style={isDrawer ? {
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      padding: '0 4px',
+      boxSizing: 'border-box'
+    } : {
+      ...S.card,
+      padding: '24px',
+      borderRadius: '20px',
+      background: C.card,
+      border: `1.5px solid ${C.border}`,
+      boxShadow: isDark ? 'none' : '0 10px 30px rgba(0,0,0,0.04)'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
         <h3 style={{ fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '18px' }}>
           <MdFilterList size={20} style={{ color: C.primary }} /> Filter Products
         </h3>
@@ -389,128 +451,194 @@ export default function PartnerProducts() {
         )}
       </div>
 
-      {/* ─── TWO MAIN FILTER SELECT DROPDOWNS: ALL PRODUCTS & ALL BANKS ─── */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexDirection: 'column' }}>
-        <div>
-          <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
-            {t("Product Category")}
-          </label>
-          <select
-            id="sidebar-select-products"
-            value={activeCategory}
-            onChange={(e) => {
-              setActiveCategory(e.target.value);
-              if (isMobile) setShowMobileFilter(false);
-            }}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-              background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-              color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-              boxShadow: activeCategory !== 'all' ? `0 4px 12px ${C.primary}35` : 'none',
-              outline: 'none'
-            }}
-          >
-            <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
-            {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-              <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                {getCategoryEmoji(cat.id)} {cat.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
-            {t("Select Bank")}
-          </label>
-          <select
-            id="sidebar-select-banks"
-            value={activeBank}
-            onChange={(e) => {
-              setActiveBank(e.target.value);
-              if (isMobile) setShowMobileFilter(false);
-            }}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-              background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-              color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
-              boxShadow: activeBank !== 'All Banks' ? `0 4px 12px ${C.primary}35` : 'none',
-              outline: 'none'
-            }}
-          >
-            <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-            {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
-              <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                🏦 {bank}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-
-
-      <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
-
-      {/* Commission */}
-      <p style={sectionLabel}>{t("Commission")}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '20px' }}>
-        {[0, 500, 1000, 1500].map(val => {
-          const isActive = minCommission === val;
-          return (
-            <button
-              key={val}
-              onClick={() => { setMinCommission(val); if (isMobile) setShowMobileFilter(false); }}
-              style={{
-                textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
-                fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                background: isActive ? `${C.primary}15` : 'transparent',
-                color: isActive ? C.primary : C.textMid,
+      {/* Filter Body Area */}
+      <div style={isDrawer ? {
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        paddingBottom: '20px',
+        paddingRight: '4px'
+      } : {
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* ─── TWO MAIN FILTER SELECT DROPDOWNS: ALL PRODUCTS & ALL BANKS ─── */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexDirection: 'column' }}>
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
+              {t("Product Category")}
+            </label>
+            <select
+              id="sidebar-select-products"
+              value={activeCategory}
+              onChange={(e) => {
+                setActiveCategory(e.target.value);
               }}
-              className={isActive ? "" : "hover-bg-button"}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
+                boxShadow: activeCategory !== 'all' ? `0 4px 12px ${C.primary}35` : 'none',
+                outline: 'none'
+              }}
             >
-              {val === 0 ? 'Any Payout' : `₹${val}+`}
-            </button>
-          );
-        })}
+              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
+              {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+                <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                  {getCategoryEmoji(cat.id)} {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px', display: 'block' }}>
+              {t("Select Bank")}
+            </label>
+            <select
+              id="sidebar-select-banks"
+              value={activeBank}
+              onChange={(e) => {
+                setActiveBank(e.target.value);
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
+                background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
+                color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
+                boxShadow: activeBank !== 'All Banks' ? `0 4px 12px ${C.primary}35` : 'none',
+                outline: 'none'
+              }}
+            >
+              <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
+              {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
+                <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
+                  🏦 {bank}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: C.border, margin: '0 0 20px' }} />
+
+        {/* Commission */}
+        <p style={sectionLabel}>{t("Commission")}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
+          {[0, 500, 1000, 1500].map(val => {
+            const isActive = minCommission === val;
+            return (
+              <button
+                key={val}
+                type="button"
+                onClick={() => { setMinCommission(val); }}
+                style={{
+                  textAlign: 'left', padding: '9px 12px', borderRadius: '10px',
+                  fontSize: '13px', fontWeight: 650, border: 'none', cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  background: isActive ? `${C.primary}15` : 'transparent',
+                  color: isActive ? C.primary : C.textMid,
+                }}
+                className={isActive ? "" : "hover-bg-button"}
+              >
+                {val === 0 ? 'Any Payout' : `₹${val}+`}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-
-      <button
-        onClick={() => {
-          setActiveCategory('all');
-          setActiveBank('All Banks');
-          setMinCommission(0);
-          setMinApproval(0);
-          setSearch('');
-          setSortBy('featured');
-          if (isMobile) setShowMobileFilter(false);
-        }}
-        style={{
-          width: '100%', padding: '12px', borderRadius: '10px',
-          background: 'none', border: `1.5px solid ${C.border}`,
-          color: C.red, fontWeight: 700, fontSize: '13px', cursor: 'pointer',
-          transition: 'all 0.15s ease'
-        }}
-        className="hover-bg-button-danger"
-      >
-        Reset Filters
-      </button>
+      {isDrawer ? (
+        <div style={{
+          marginTop: 'auto',
+          paddingTop: '16px',
+          display: 'flex',
+          gap: '10px',
+          borderTop: `1.5px solid ${C.border}`,
+          background: C.card,
+          flexShrink: 0
+        }}>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('all');
+              setActiveBank('All Banks');
+              setMinCommission(0);
+              setMinApproval(0);
+              setSearch('');
+              setSortBy('featured');
+              setShowMobileFilter(false);
+            }}
+            style={{
+              ...S.btn('outline'),
+              flex: 1,
+              padding: '12px 6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              borderColor: C.red,
+              color: C.red
+            }}
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMobileFilter(false)}
+            style={{
+              ...S.btn('primary'),
+              flex: 1.5,
+              padding: '12px 6px',
+              fontSize: '13px',
+              fontWeight: 800,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+              color: '#fff',
+              border: 'none',
+              textAlign: 'center'
+            }}
+          >
+            Show {filteredProducts.length} Results
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => {
+            setActiveCategory('all');
+            setActiveBank('All Banks');
+            setMinCommission(0);
+            setMinApproval(0);
+            setSearch('');
+            setSortBy('featured');
+          }}
+          style={{
+            width: '100%', padding: '12px', borderRadius: '10px',
+            background: 'none', border: `1.5px solid ${C.border}`,
+            color: C.red, fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          className="hover-bg-button-danger"
+        >
+          Reset Filters
+        </button>
+      )}
     </div>
   );
 
@@ -554,15 +682,17 @@ export default function PartnerProducts() {
         {isMobile && showMobileFilter && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 999,
-            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
             display: 'flex', justifyContent: 'flex-end'
           }}>
             <div style={{
               width: '85%', maxWidth: '320px', height: '100%',
-              background: C.card, overflowY: 'auto', padding: '16px',
-              boxShadow: '-10px 0 30px rgba(0,0,0,0.2)'
+              background: C.card, padding: '16px 20px',
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)',
+              display: 'flex', flexDirection: 'column',
+              boxSizing: 'border-box'
             }}>
-              {renderFilterContent()}
+              {renderFilterContent(true)}
             </div>
           </div>
         )}
@@ -651,12 +781,13 @@ export default function PartnerProducts() {
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
                   ...S.input,
-                  width: isMobile ? '100%' : '180px',
+                  flex: isMobile ? 1 : 'none',
+                  width: isMobile ? 'auto' : '170px',
                   height: '42px',
-                  fontSize: '13px',
+                  fontSize: isMobile ? '12px' : '13px',
                   fontWeight: 650,
                   cursor: 'pointer',
-                  padding: '0 12px'
+                  padding: '0 8px'
                 }}
               >
                 <option value="featured">Featured</option>
@@ -667,6 +798,29 @@ export default function PartnerProducts() {
                 <option value="popular">Popular</option>
               </select>
 
+              <select
+                value={cardsPerPage}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCardsPerPage(val === 'all' ? 'all' : parseInt(val, 10));
+                }}
+                style={{
+                  ...S.input,
+                  flex: isMobile ? 1 : 'none',
+                  width: isMobile ? 'auto' : '140px',
+                  height: '42px',
+                  fontSize: isMobile ? '12px' : '13px',
+                  fontWeight: 650,
+                  cursor: 'pointer',
+                  padding: '0 8px'
+                }}
+              >
+                <option value={12}>12 per page</option>
+                <option value={24}>24 per page</option>
+                <option value={48}>48 per page</option>
+                <option value="all">Show All</option>
+              </select>
+
               {isMobile && (
                 <button
                   onClick={() => setShowMobileFilter(true)}
@@ -675,79 +829,24 @@ export default function PartnerProducts() {
                     border: `1.5px solid ${C.primary}30`,
                     color: C.primary,
                     borderRadius: '10px',
-                    padding: '0 16px',
+                    padding: '0 12px',
                     height: '42px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    justifyContent: 'center',
+                    gap: '4px',
                     fontWeight: 700,
-                    fontSize: '12.5px',
+                    fontSize: '12px',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    flex: 1
                   }}
                 >
-                  <MdFilterList size={18} /> Filters
+                  <MdFilterList size={16} /> Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
                 </button>
               )}
             </div>
           </div>
-
-          {/* Mobile Select Dropdowns for Product & Bank */}
-          {isMobile && (
-            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <select
-                id="mobile-select-products"
-                value={activeCategory}
-                onChange={(e) => setActiveCategory(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: '10px',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                  background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                  color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-                  outline: 'none'
-                }}
-              >
-                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
-                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                  <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                    {getCategoryEmoji(cat.id)} {cat.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                id="mobile-select-banks"
-                value={activeBank}
-                onChange={(e) => setActiveBank(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: '10px',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                  background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                  color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
-                  outline: 'none'
-                }}
-              >
-                <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-                {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
-                  <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                    🏦 {bank}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Results count & Active filter status */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid }}>
@@ -1087,23 +1186,32 @@ export default function PartnerProducts() {
                   &lt;
                 </button>
                 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    style={{
-                      ...S.btn(currentPage === page ? 'primary' : 'outline'),
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 750,
-                      boxShadow: currentPage === page && !isDark ? `0 4px 10px ${C.primary}30` : 'none'
-                    }}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {getPageNumbers().map((page, idx) => {
+                  if (page === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} style={{ padding: '8px', color: C.textLight, fontWeight: 700 }}>
+                        ...
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        ...S.btn(currentPage === page ? 'primary' : 'outline'),
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 750,
+                        boxShadow: currentPage === page && !isDark ? `0 4px 10px ${C.primary}30` : 'none'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
                 
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
