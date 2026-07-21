@@ -202,35 +202,48 @@ export default function DynamicCreditCardsPage() {
 
       {/* ── HERO BANNER SECTION ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-        <div style={{
-          width: '100%',
-          height: isMobile ? '180px' : '320px',
-          background: (bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? `url(${bank.banner}) center/cover no-repeat` : bankGradient,
-          borderRadius: '24px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-          position: 'relative',
-          overflow: 'hidden',
-          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
-        }}>
-          {/* Overlay to ensure readability and fallback contrast */}
+        {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
           <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: (bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? 'rgba(0,0,0,0.45)' : 'transparent',
-            zIndex: 1
-          }} />
-          
-          <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
-            {bank.logo_url && (
-              <img src={bank.logo_url} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
-            )}
-            <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{bank.name} Credit Cards</h1>
+            width: '100%',
+            borderRadius: '24px',
+            overflow: 'hidden',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
+          }}>
+            <img 
+              src={getCleanImageUrl(bank.banner)} 
+              alt={`${bank.name} Banner`} 
+              style={{
+                width: '100%',
+                maxHeight: isMobile ? '220px' : '360px',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+            />
           </div>
-        </div>
+        ) : (
+          <div style={{
+            width: '100%',
+            height: isMobile ? '180px' : '320px',
+            background: bankGradient,
+            borderRadius: '24px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            position: 'relative',
+            overflow: 'hidden',
+            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
+          }}>
+            <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
+              {bank.logo_url && (
+                <img src={getCleanImageUrl(bank.logo_url)} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
+              )}
+              <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{bank.name} Credit Cards</h1>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── SEARCH & DYNAMIC CATEGORY FILTERS ── */}
