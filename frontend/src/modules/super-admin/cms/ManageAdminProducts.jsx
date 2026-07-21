@@ -301,7 +301,6 @@ export default function ManageAdminProducts() {
     try {
       const res = await api.delete(`/products/${id}`);
       if (res.data?.success) {
-        alert("Product deleted successfully!");
         fetchProducts();
       }
     } catch (e) {
