@@ -145,7 +145,7 @@ export default function ManageProducts() {
       const res = await api.get("/products", {
         params: {
           page,
-          limit: 200,
+          limit: 25,
           search: search.trim() || undefined,
           category: categoryFilter || undefined,
           bank_id: bankFilter || undefined,
@@ -167,6 +167,11 @@ export default function ManageProducts() {
       setLoading(false);
     }
   };
+
+  // Reset page to 1 when filters change to avoid empty pages
+  useEffect(() => {
+    setPage(1);
+  }, [categoryFilter, bankFilter, commissionFilter, featuredFilter, statusFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -430,7 +435,7 @@ export default function ManageProducts() {
             </div>
 
             <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={fetchProducts} style={S.btn("primary")}>Filter</button>
+              <button onClick={() => { if (page !== 1) { setPage(1); } else { fetchProducts(); } }} style={S.btn("primary")}>Filter</button>
               <button onClick={handleResetFilters} style={S.btn("outline")}>Reset</button>
             </div>
           </div>
