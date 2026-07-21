@@ -364,7 +364,7 @@ export default function DynamicCreditCardsPage() {
                           <div style={{ flex: 1 }}>
                             <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px 0', lineHeight: 1.3 }}>{card.name}</h3>
                             <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: 0, lineHeight: 1.3 }}>
-                              {card.annual_fee || (card.fees_structure?.annual_fee ? `Fee: ₹${card.fees_structure.annual_fee}` : 'Lifetime Free Option')}
+                              {features.length > 0 ? (typeof features[0] === 'string' ? features[0] : (features[0].title || features[0].label)) : (card.short_description || card.sub_category || 'Credit Card')}
                             </p>
                           </div>
                         </div>
@@ -499,7 +499,6 @@ export default function DynamicCreditCardsPage() {
             <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, paddingBottom: '10px', marginBottom: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               {[
                 { id: 'features', label: 'Features' },
-                { id: 'fees', label: 'Fees & Charges' },
                 { id: 'eligibility', label: 'Eligibility' },
                 { id: 'documents', label: 'Documents' },
                 { id: 'faqs', label: 'FAQs' }
@@ -541,32 +540,7 @@ export default function DynamicCreditCardsPage() {
                 </div>
               )}
 
-              {detailTab === 'fees' && (
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Fees & Charges</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Joining Fee</span>
-                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.joining_fee || selectedCard.fees_structure?.joining_fee || '₹0'}</div>
-                    </div>
-                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Annual Fee</span>
-                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.annual_fee || selectedCard.fees_structure?.annual_fee || '₹500'}</div>
-                    </div>
-                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Interest Rate</span>
-                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.interest_rate || selectedCard.fees_structure?.interest_rate || '3.5% p.m.'}</div>
-                    </div>
-                    <div style={{ padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '10px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>Late Payment Charges</span>
-                      <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{selectedCard.fees_structure?.late_payment_charges || 'Up to ₹1300'}</div>
-                    </div>
-                  </div>
-                  {selectedCard.fees_charges && (
-                    <p style={{ fontSize: '11px', color: '#64748b', marginTop: '12px', lineHeight: 1.4 }}>{selectedCard.fees_charges}</p>
-                  )}
-                </div>
-              )}
+
 
               {detailTab === 'eligibility' && (
                 <div>
@@ -617,8 +591,8 @@ export default function DynamicCreditCardsPage() {
                       ))
                     ) : (
                       [
-                        { question: 'What is the annual fee for this card?', answer: `The annual fee is ${selectedCard.annual_fee || selectedCard.fees_structure?.annual_fee || '₹500'}.` },
-                        { question: 'Who is eligible to apply?', answer: `Any Indian resident aged between ${selectedCard.min_age || 21} and ${selectedCard.max_age || 65} with a regular monthly income source starting from ₹${selectedCard.min_income ? Number(selectedCard.min_income).toLocaleString('en-IN') : '25,000'}.` },
+                        { question: 'What are the key benefits of this card?', answer: `This card offers exclusive rewards, cashback, and lifestyle perks tailored for your spending needs.` },
+                        { question: 'Who is eligible to apply?', answer: `Any Indian resident aged between ${selectedCard.min_age || 21} and ${selectedCard.max_age || 65} with a regular monthly income source.` },
                         { question: 'What documents are required for application?', answer: 'You will need a PAN Card, Aadhaar Card, and income proof (like the latest 3 months salary slips or ITR).' }
                       ].map((faq, idx) => (
                         <div key={idx} style={{ padding: '10px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
@@ -659,7 +633,7 @@ export default function DynamicCreditCardsPage() {
                     </div>
                     <div>
                       <h4 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0 }}>{selectedForCompare[0].name}</h4>
-                      <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[0].annual_fee || 'Standard Fee'}</p>
+                      <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[0].sub_category || selectedForCompare[0].category || 'Credit Card'}</p>
                     </div>
                   </div>
                 )}
@@ -679,7 +653,7 @@ export default function DynamicCreditCardsPage() {
                       </div>
                       <div>
                         <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{selectedForCompare[1].name}</h4>
-                        <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[1].annual_fee || 'Standard Fee'}</p>
+                        <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[1].sub_category || selectedForCompare[1].category || 'Credit Card'}</p>
                       </div>
                     </div>
                   </div>
@@ -773,21 +747,7 @@ export default function DynamicCreditCardsPage() {
                       <td style={{ padding: '12px' }}>₹{selectedForCompare[0]?.min_income ? Number(selectedForCompare[0]?.min_income).toLocaleString('en-IN') : '25,000'}/mo</td>
                       <td style={{ padding: '12px' }}>₹{selectedForCompare[1]?.min_income ? Number(selectedForCompare[1]?.min_income).toLocaleString('en-IN') : '25,000'}/mo</td>
                     </tr>
-                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                      <td style={{ padding: '12px', fontWeight: 700 }}>Joining Fee</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.joining_fee || selectedForCompare[0]?.fees_structure?.joining_fee || '₹0'}</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.joining_fee || selectedForCompare[1]?.fees_structure?.joining_fee || '₹0'}</td>
-                    </tr>
-                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                      <td style={{ padding: '12px', fontWeight: 700 }}>Annual Fee</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.annual_fee || selectedForCompare[0]?.fees_structure?.annual_fee || '₹500'}</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.annual_fee || selectedForCompare[1]?.fees_structure?.annual_fee || '₹500'}</td>
-                    </tr>
-                    <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
-                      <td style={{ padding: '12px', fontWeight: 700 }}>Interest Rate</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[0]?.interest_rate || selectedForCompare[0]?.fees_structure?.interest_rate || '3.5% p.m.'}</td>
-                      <td style={{ padding: '12px' }}>{selectedForCompare[1]?.interest_rate || selectedForCompare[1]?.fees_structure?.interest_rate || '3.5% p.m.'}</td>
-                    </tr>
+
                     <tr style={{ borderBottom: `1px solid ${isDark ? '#334155' : '#f1f5f9'}` }}>
                       <td style={{ padding: '12px', fontWeight: 700 }}>Lounge Access</td>
                       <td style={{ padding: '12px' }}>{selectedForCompare[0]?.lounge_access || selectedForCompare[0]?.compare_specs?.lounge || 'Nil'}</td>

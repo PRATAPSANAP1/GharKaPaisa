@@ -1048,18 +1048,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
                 );
               })()}
 
-              {/* Annual Fee */}
-              <div style={{
-                background: C.bgSecondary,
-                padding: "12px",
-                borderRadius: "10px",
-                fontSize: "12px",
-                fontWeight: 700,
-                marginBottom: "20px",
-                color: C.text
-              }}>
-                {getCardFee(selectedDetailCard)}
-              </div>
+
 
               {/* Actions */}
               {(() => {
@@ -1271,7 +1260,6 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden", background: C.bgSecondary }}>
                 {[
                   { label: "Category", val1: getCardCategory(compareCard1), val2: getCardCategory(compareCard2) },
-                  { label: "Joining/Annual Fee", val1: getCardFee(compareCard1), val2: getCardFee(compareCard2) },
                   { label: "Key Spend Benefit", val1: getCardHighlights(compareCard1)[0], val2: getCardHighlights(compareCard2)[0] },
                   { label: "Primary Advantage", val1: compareCard1.desc || "Standard benefits", val2: compareCard2.desc || "Standard benefits" },
                   { label: "Payment network", val1: getCardNetwork(compareCard1), val2: getCardNetwork(compareCard2) }
