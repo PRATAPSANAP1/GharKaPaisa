@@ -3748,7 +3748,7 @@ const migrate = async () => {
       await query(`UPDATE products SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE products SET image = REPLACE(image, 'cloudfront.net/public/', 'cloudfront.net/') WHERE image LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE banks SET logo_url = REPLACE(logo_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE logo_url LIKE '%cloudfront.net/public/%'`);
-      await query(`UPDATE banks SET banner_url = REPLACE(banner_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner_url LIKE '%cloudfront.net/public/%'`);
+      await query(`UPDATE banks SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE banners SET image_url = REPLACE(image_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE image_url LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE product_videos SET thumbnail_url = REPLACE(thumbnail_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE thumbnail_url LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE product_offers SET banner_url = REPLACE(banner_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner_url LIKE '%cloudfront.net/public/%'`);
