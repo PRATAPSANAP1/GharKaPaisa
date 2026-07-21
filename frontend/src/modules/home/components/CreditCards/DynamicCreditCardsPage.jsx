@@ -152,12 +152,21 @@ export default function DynamicCreditCardsPage() {
     }));
   }, [filteredCards]);
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const bankThemeColor = bank?.theme_color || '#004B87';
   const bankSecondaryColor = bank?.secondary_color || '#00296B';
   const bankGradient = bank?.gradient || `linear-gradient(135deg, ${bankThemeColor} 0%, ${bankSecondaryColor} 100%)`;
   const bankButtonColor = bank?.button_color || bankThemeColor;
   const bankAccentColor = bank?.accent_color || '#10B981';
-  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const isMobile = windowWidth < 640;
+  const isTablet = windowWidth >= 640 && windowWidth < 1024;
 
   if (loading) {
     return (
@@ -346,7 +355,11 @@ export default function DynamicCreditCardsPage() {
                   {sec.title}
                 </h2>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '20px' }}>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: isMobile ? '1fr' : (isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'), 
+                  gap: isMobile ? '16px' : '20px' 
+                }}>
                   {sec.cards.map(card => {
                     const isComparing = selectedForCompare.some(c => c.id === card.id);
                     const features = Array.isArray(card.features) ? card.features : (card.features_list || []);
@@ -506,18 +519,18 @@ export default function DynamicCreditCardsPage() {
 
       {/* ── CARD DETAILS MODAL ── */}
       {selectedCard && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
-            <button onClick={() => setSelectedCard(null)} style={{ position: 'absolute', right: '20px', top: '20px', background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '12px' : '20px' }}>
+          <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '640px', width: '100%', maxHeight: '92vh', overflowY: 'auto', padding: isMobile ? '16px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
+            <button onClick={() => setSelectedCard(null)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}>
               <FaTimes size={18} />
             </button>
 
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ width: '90px', height: '60px', borderRadius: '12px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
-                <img src={selectedCard.card_image_url || selectedCard.image_url || getCardSpecificImage(selectedCard.name) || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <div style={{ width: '90px', height: '60px', borderRadius: '12px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
+                <img src={getCleanImageUrl(selectedCard.card_image_url || selectedCard.image_url) || getCardSpecificImage(selectedCard.name) || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               </div>
               <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCard.name}</h3>
+                <h3 style={{ fontSize: isMobile ? '17px' : '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCard.name}</h3>
                 <p style={{ fontSize: '13px', color: bankThemeColor, fontWeight: 700, margin: 0 }}>{bank.name} • {selectedCard.sub_category || selectedCard.category}</p>
               </div>
             </div>
@@ -668,24 +681,24 @@ export default function DynamicCreditCardsPage() {
 
       {/* ── CARD COMPARISON MODAL ── */}
       {isCompareOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '900px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Compare Credit Cards</h3>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '12px' : '20px' }}>
+          <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '900px', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', padding: isMobile ? '16px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
+              <h3 style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: 800, margin: 0 }}>Compare Credit Cards</h3>
               <button onClick={() => { setIsCompareOpen(false); setShowCardBSelector(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}><FaTimes size={18} /></button>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: isMobile ? '10px' : '20px', marginBottom: '16px', flexDirection: isMobile ? 'column' : 'row', flexShrink: 0 }}>
               {/* Card A Box */}
-              <div style={{ flex: 1, padding: '16px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: '240px' }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: isMobile ? '100%' : '200px' }}>
                 <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 800 }}>Base Card</div>
                 {selectedForCompare[0] && (
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: isDark ? '#1e293b' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
-                      <img src={selectedForCompare[0].card_image_url || selectedForCompare[0].image_url || getCardSpecificImage(selectedForCompare[0].name) || bank.logo_url} alt={selectedForCompare[0].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      <img src={getCleanImageUrl(selectedForCompare[0].card_image_url || selectedForCompare[0].image_url) || getCardSpecificImage(selectedForCompare[0].name) || bank.logo_url} alt={selectedForCompare[0].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                     </div>
                     <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{selectedForCompare[0].name}</h4>
+                      <h4 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0 }}>{selectedForCompare[0].name}</h4>
                       <p style={{ fontSize: '11px', color: bankThemeColor, margin: 0, fontWeight: 700 }}>{selectedForCompare[0].annual_fee || 'Standard Fee'}</p>
                     </div>
                   </div>
@@ -693,7 +706,7 @@ export default function DynamicCreditCardsPage() {
               </div>
 
               {/* Card B Box */}
-              <div style={{ flex: 1, padding: '16px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: '240px', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '16px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, minWidth: isMobile ? '100%' : '200px', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {selectedForCompare[1] ? (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
