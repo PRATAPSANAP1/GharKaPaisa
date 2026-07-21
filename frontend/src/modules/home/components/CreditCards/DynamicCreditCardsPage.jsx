@@ -202,48 +202,69 @@ export default function DynamicCreditCardsPage() {
 
       {/* ── HERO BANNER SECTION ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-        {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
-          <div style={{
-            width: '100%',
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
-          }}>
-            <img 
-              src={getCleanImageUrl(bank.banner)} 
-              alt={`${bank.name} Banner`} 
-              style={{
-                width: '100%',
-                maxHeight: isMobile ? '220px' : '360px',
-                objectFit: 'cover',
-                display: 'block'
-              }}
-            />
-          </div>
-        ) : (
-          <div style={{
-            width: '100%',
-            height: isMobile ? '180px' : '320px',
-            background: bankGradient,
-            borderRadius: '24px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            position: 'relative',
-            overflow: 'hidden',
-            border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
-          }}>
-            <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
+        <div style={{
+          background: isDark ? '#1e293b' : '#ffffff',
+          borderRadius: '24px',
+          padding: isMobile ? '20px' : '32px',
+          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
+          gap: '24px',
+          alignItems: 'center'
+        }}>
+          {/* Left Side: Bank Name & Info */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
               {bank.logo_url && (
-                <img src={getCleanImageUrl(bank.logo_url)} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
+                <img 
+                  src={getCleanImageUrl(bank.logo_url)} 
+                  alt={bank.name} 
+                  style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
+                />
               )}
-              <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{bank.name} Credit Cards</h1>
+              <h1 style={{ fontSize: isMobile ? '22px' : '30px', fontWeight: 800, color: isDark ? '#f8fafc' : '#1e293b', margin: 0 }}>
+                {bank.name} Credit Cards
+              </h1>
+            </div>
+            <p style={{ fontSize: '14px', color: isDark ? '#94a3b8' : '#64748b', margin: 0, lineHeight: 1.6 }}>
+              Compare rates, key features, rewards, and apply online. Unlock exclusive shopping, dining, cashback, and travel perks with official {bank.name} cards.
+            </p>
+          </div>
+
+          {/* Right Side: Card-Size Box with Full Image */}
+          <div style={{ width: '100%', display: 'flex', justifyContent: isMobile ? 'center' : 'flex-end', alignItems: 'center' }}>
+            <div style={{
+              width: isMobile ? '100%' : '300px',
+              height: isMobile ? '170px' : '190px',
+              borderRadius: '16px',
+              background: isDark ? '#0f172a' : '#f8fafc',
+              border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+              boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
+              padding: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              {(bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? (
+                <img 
+                  src={getCleanImageUrl(bank.banner)} 
+                  alt={`${bank.name} Card Banner`} 
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '10px' }} 
+                />
+              ) : bank.logo_url ? (
+                <img 
+                  src={getCleanImageUrl(bank.logo_url)} 
+                  alt={bank.name} 
+                  style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} 
+                />
+              ) : (
+                <span style={{ fontSize: '48px' }}>💳</span>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── SEARCH & DYNAMIC CATEGORY FILTERS ── */}
