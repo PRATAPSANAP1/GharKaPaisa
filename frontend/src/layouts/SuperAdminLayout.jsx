@@ -214,7 +214,7 @@ const SuperAdminLayout = () => {
 
   const renderNavigationList = (onLinkClick) => {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
         {categories.map((cat, idx) => {
           if (cat.isModifyGroup) {
             const isChildActive = location.pathname.includes('/banners') || location.pathname.includes('/sections');
@@ -229,23 +229,23 @@ const SuperAdminLayout = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '5px 10px',
+                    padding: '3px 8px',
                     borderRadius: '6px',
                     background: isChildActive ? `${C.teal}15` : 'transparent',
                     border: 'none',
                     color: isChildActive ? C.teal : C.text,
                     cursor: 'pointer',
-                    fontSize: '12.5px',
+                    fontSize: '12px',
                     fontWeight: 700,
                     transition: 'all 0.2s',
                     textAlign: 'left',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icons.gift size={15} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
-                    <span style={{ fontSize: '12.5px', fontWeight: 600 }}>Modify</span>
+                    <Icons.gift size={14} style={{ color: isChildActive ? C.teal : C.textSecondary }} />
+                    <span style={{ fontSize: '12px', fontWeight: 600 }}>Modify</span>
                   </div>
-                  <Chevron open={modifyOpen} color={isChildActive ? C.teal : C.textSecondary} size={14} />
+                  <Chevron open={modifyOpen} color={isChildActive ? C.teal : C.textSecondary} size={12} />
                 </button>
 
                 {modifyOpen && (
@@ -253,10 +253,10 @@ const SuperAdminLayout = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '2px',
-                    paddingLeft: '14px',
-                    marginTop: '2px',
+                    paddingLeft: '12px',
+                    marginTop: '1px',
                     borderLeft: `1.5px solid ${C.border}`,
-                    marginLeft: '14px',
+                    marginLeft: '12px',
                   }}>
                     {cat.items.map((item) => {
                       const isActive = location.pathname === item.path;
@@ -269,9 +269,9 @@ const SuperAdminLayout = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '3px 8px',
+                            padding: '2px 6px',
                             borderRadius: '6px',
-                            fontSize: '11.5px',
+                            fontSize: '11px',
                             fontWeight: 600,
                             color: isActive ? C.teal : C.textMid,
                             background: isActive ? `${C.teal}10` : 'transparent',
@@ -293,13 +293,13 @@ const SuperAdminLayout = () => {
           return (
             <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <div style={{
-                fontSize: '9.5px',
+                fontSize: '9px',
                 fontWeight: 800,
                 color: C.textLight,
                 letterSpacing: '0.8px',
-                padding: '0 10px',
-                marginBottom: '2px',
-                marginTop: '2px',
+                padding: '0 8px',
+                marginBottom: '0px',
+                marginTop: '0px',
               }}>
                 {cat.title}
               </div>
@@ -316,13 +316,13 @@ const SuperAdminLayout = () => {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           width: '100%',
-                          padding: '5px 10px',
+                          padding: '3px 8px',
                           borderRadius: '6px',
                           background: isChildActive ? `${C.teal}15` : 'transparent',
                           border: 'none',
                           color: isChildActive ? C.teal : C.text,
                           cursor: 'pointer',
-                          fontSize: '12.5px',
+                          fontSize: '12px',
                           fontWeight: 600,
                           transition: 'all 0.2s',
                           textAlign: 'left',
@@ -330,9 +330,9 @@ const SuperAdminLayout = () => {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ color: isChildActive ? C.teal : C.textSecondary }}>{item.icon}</span>
-                          <span style={{ fontSize: '12.5px', fontWeight: 600 }}>{item.label}</span>
+                          <span style={{ fontSize: '12px', fontWeight: 600 }}>{item.label}</span>
                         </div>
-                        <Chevron open={productsOpen} color={isChildActive ? C.teal : C.textSecondary} size={14} />
+                        <Chevron open={productsOpen} color={isChildActive ? C.teal : C.textSecondary} size={12} />
                       </button>
 
                       {productsOpen && (
@@ -340,10 +340,10 @@ const SuperAdminLayout = () => {
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '2px',
-                          paddingLeft: '14px',
-                          marginTop: '2px',
+                          paddingLeft: '12px',
+                          marginTop: '1px',
                           borderLeft: `1.5px solid ${C.border}`,
-                          marginLeft: '14px',
+                          marginLeft: '12px',
                         }}>
                           {item.subItems.map((sub) => {
                             const isSubActive = location.pathname === sub.path;
@@ -356,9 +356,9 @@ const SuperAdminLayout = () => {
                                   display: 'flex',
                                   alignItems: 'center',
                                   gap: '6px',
-                                  padding: '3px 8px',
+                                  padding: '2px 6px',
                                   borderRadius: '6px',
-                                  fontSize: '11.5px',
+                                  fontSize: '11px',
                                   fontWeight: 600,
                                   color: isSubActive ? C.teal : C.textMid,
                                   background: isSubActive ? `${C.teal}10` : 'transparent',
@@ -387,9 +387,9 @@ const SuperAdminLayout = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '5px 10px',
+                      padding: '3px 8px',
                       borderRadius: '6px',
-                      fontSize: '12.5px',
+                      fontSize: '12px',
                       fontWeight: 600,
                       color: isActive ? '#fff' : C.text,
                       background: isActive ? C.teal : 'transparent',
@@ -407,19 +407,19 @@ const SuperAdminLayout = () => {
           );
         })}
 
-        <div style={{ height: "1px", background: C.border, margin: "4px 0" }} />
+        <div style={{ height: "1px", background: C.border, margin: "2px 0" }} />
 
         {/* Language Switcher */}
-        <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <label style={{ fontSize: '8.5px', fontWeight: 800, color: C.textLight, letterSpacing: '0.8px' }}>LANGUAGE</label>
+        <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <label style={{ fontSize: '8px', fontWeight: 800, color: C.textLight, letterSpacing: '0.8px' }}>LANGUAGE</label>
           <select 
             value={i18n.language} 
             onChange={(e) => i18n.changeLanguage(e.target.value)}
             style={{
               width: '100%',
-              padding: "4px 8px", borderRadius: "6px",
+              padding: "2px 6px", borderRadius: "6px",
               border: `1px solid ${C.border}`, background: C.inputBg,
-              color: C.text, fontSize: "11.5px", fontWeight: 700, cursor: "pointer",
+              color: C.text, fontSize: "11px", fontWeight: 700, cursor: "pointer",
               outline: 'none'
             }}
           >
@@ -436,24 +436,24 @@ const SuperAdminLayout = () => {
         </div>
 
         {/* Interface Mode */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 10px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1px 8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Interface Mode</span>
           <ThemeToggle />
         </div>
 
         {/* Private Mode */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 10px', marginBottom: '4px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Private Mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1px 8px', marginBottom: '2px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Private Mode</span>
           <button
             onClick={togglePrivacyMode}
             disabled={loadingPrivacy}
             style={{
-              padding: '2px 8px',
+              padding: '1px 6px',
               borderRadius: '6px',
               border: `1px solid ${privacyMode ? C.red : C.border}`,
               background: privacyMode ? `${C.red}15` : 'transparent',
               color: privacyMode ? C.red : C.text,
-              fontSize: '10px',
+              fontSize: '9.5px',
               fontWeight: 800,
               cursor: 'pointer',
               textTransform: 'uppercase',

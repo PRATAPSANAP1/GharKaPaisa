@@ -151,6 +151,14 @@ export default function ManagePartners() {
     }
   };
 
+  const toggleSelectAllProcessed = (e) => {
+    if (e.target.checked) {
+      setSelectedPartnerIds(partnersProcessed.map(p => p.id));
+    } else {
+      setSelectedPartnerIds([]);
+    }
+  };
+
   const handleBulkActionSubmit = async (e) => {
     e.preventDefault();
     if (!selectedPartnerIds.length) return;
@@ -316,52 +324,157 @@ export default function ManagePartners() {
         ) : partnersNew.length === 0 ? (
           <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>No pending KYC requests found.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-              <thead>
-                <tr style={{ background: C.card, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "11px", textTransform: "uppercase" }}>
-                  <th style={{ padding: "12px 16px", width: "36px" }}>
-                    <input type="checkbox" onChange={toggleSelectAllNew} checked={selectedPartnerIds.length === partnersNew.length && partnersNew.length > 0} />
-                  </th>
-                  <th style={{ padding: "12px 16px" }}>Partner</th>
-                  <th style={{ padding: "12px 16px" }}>Mobile / Email</th>
-                  <th style={{ padding: "12px 16px" }}>KYC Status</th>
-                  <th style={{ padding: "12px 16px" }}>Registered Date</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partnersNew.map(p => (
-                  <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "14px 16px" }}>
-                      <input type="checkbox" checked={selectedPartnerIds.includes(p.id)} onChange={() => toggleSelectPartner(p.id)} />
-                    </td>
-                    <td style={{ padding: "14px 16px", fontWeight: 700 }}>
-                      <div>{p.first_name} {p.last_name}</div>
-                      <div style={{ fontSize: "11px", color: C.primary, fontFamily: "monospace" }}>{p.partner_code}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div>{p.mobile}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{p.email || '—'}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span style={S.tag(p.kyc_status === 'approved' ? C.green : p.kyc_status === 'rejected' ? C.red : C.gold)}>
-                        {p.kyc_status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 16px", color: C.textLight }}>
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                      <button onClick={() => handleViewDetails(p)} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 12px", borderRadius: "8px" }}>
-                        Inspect KYC
-                      </button>
-                    </td>
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: C.card, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "11px", textTransform: "uppercase" }}>
+                    <th style={{ padding: "12px 16px", width: "36px" }}>
+                      <input type="checkbox" onChange={toggleSelectAllNew} checked={partnersNew.length > 0 && partnersNew.every(p => selectedPartnerIds.includes(p.id))} />
+                    </th>
+                    <th style={{ padding: "12px 16px" }}>Partner</th>
+                    <th style={{ padding: "12px 16px" }}>Mobile / Email</th>
+                    <th style={{ padding: "12px 16px" }}>KYC Status</th>
+                    <th style={{ padding: "12px 16px" }}>Registered Date</th>
+                    <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {partnersNew.map(p => (
+                    <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "14px 16px" }}>
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)} onChange={() => toggleSelectPartner(p.id)} />
+                      </td>
+                      <td style={{ padding: "14px 16px", fontWeight: 700 }}>
+                        <div>{p.first_name} {p.last_name}</div>
+                        <div style={{ fontSize: "11px", color: C.primary, fontFamily: "monospace" }}>{p.partner_code}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{p.mobile}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{p.email || '—'}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={S.tag(p.kyc_status === 'approved' ? C.green : p.kyc_status === 'rejected' ? C.red : C.gold)}>
+                          {p.kyc_status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.textLight }}>
+                        {new Date(p.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <button onClick={() => handleViewDetails(p)} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 12px", borderRadius: "8px" }}>
+                          Inspect KYC
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalNew > 10 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '12px 24px', borderTop: `1px solid ${C.border}`, background: C.card }}>
+                <button 
+                  type="button"
+                  onClick={() => setPageNew(p => Math.max(1, p - 1))} 
+                  disabled={pageNew === 1}
+                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: '13px', color: C.textMid, fontWeight: 600 }}>Page {pageNew} of {Math.ceil(totalNew / 10)}</span>
+                <button 
+                  type="button"
+                  onClick={() => setPageNew(p => Math.min(Math.ceil(totalNew / 10), p + 1))} 
+                  disabled={pageNew >= Math.ceil(totalNew / 10)}
+                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Table 2: Remaining KYC Records */}
+      <div style={{ ...S.card, padding: 0, borderRadius: "16px", overflow: "hidden", marginBottom: "24px" }}>
+        <div style={{ padding: "16px 24px", background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>📋 Remaining KYC Records ({totalProcessed})</h3>
+        </div>
+        {loadingProcessed ? (
+          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>Loading records...</div>
+        ) : partnersProcessed.length === 0 ? (
+          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>No processed KYC records found.</div>
+        ) : (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: C.card, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "11px", textTransform: "uppercase" }}>
+                    <th style={{ padding: "12px 16px", width: "36px" }}>
+                      <input type="checkbox" onChange={toggleSelectAllProcessed} checked={partnersProcessed.length > 0 && partnersProcessed.every(p => selectedPartnerIds.includes(p.id))} />
+                    </th>
+                    <th style={{ padding: "12px 16px" }}>Partner</th>
+                    <th style={{ padding: "12px 16px" }}>Mobile / Email</th>
+                    <th style={{ padding: "12px 16px" }}>KYC Status</th>
+                    <th style={{ padding: "12px 16px" }}>Registered Date</th>
+                    <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {partnersProcessed.map(p => (
+                    <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "14px 16px" }}>
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)} onChange={() => toggleSelectPartner(p.id)} />
+                      </td>
+                      <td style={{ padding: "14px 16px", fontWeight: 700 }}>
+                        <div>{p.first_name} {p.last_name}</div>
+                        <div style={{ fontSize: "11px", color: C.primary, fontFamily: "monospace" }}>{p.partner_code}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{p.mobile}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{p.email || '—'}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={S.tag(p.kyc_status === 'approved' ? C.green : p.kyc_status === 'rejected' ? C.red : C.gold)}>
+                          {p.kyc_status}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.textLight }}>
+                        {new Date(p.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <button onClick={() => handleViewDetails(p)} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 12px", borderRadius: "8px" }}>
+                          Inspect KYC
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalProcessed > 10 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', padding: '12px 24px', borderTop: `1px solid ${C.border}`, background: C.card }}>
+                <button 
+                  type="button"
+                  onClick={() => setPageProcessed(p => Math.max(1, p - 1))} 
+                  disabled={pageProcessed === 1}
+                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: '13px', color: C.textMid, fontWeight: 600 }}>Page {pageProcessed} of {Math.ceil(totalProcessed / 10)}</span>
+                <button 
+                  type="button"
+                  onClick={() => setPageProcessed(p => Math.min(Math.ceil(totalProcessed / 10), p + 1))} 
+                  disabled={pageProcessed >= Math.ceil(totalProcessed / 10)}
+                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

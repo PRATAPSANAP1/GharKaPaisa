@@ -250,7 +250,8 @@ export default function SuperAdminDashboard() {
               display: "flex",
               flexDirection: "column",
               cursor: "pointer",
-              transition: "transform 0.15s, box-shadow 0.15s"
+              transition: "transform 0.15s, box-shadow 0.15s",
+              padding: "10px 12px"
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
@@ -261,7 +262,7 @@ export default function SuperAdminDashboard() {
               e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.04)";
             }}
           >
-            <div style={{ padding: "10px 12px 2px 12px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{ width: "34px", height: "34px", background: `${card.color}15`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
                 {card.icon}
               </div>
@@ -270,7 +271,6 @@ export default function SuperAdminDashboard() {
                 <div style={{ fontSize: "11.5px", fontWeight: 700, color: C.textMid, marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.label}</div>
               </div>
             </div>
-            <MiniChart color={card.color} />
           </div>
         ))}
       </div>

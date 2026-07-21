@@ -1790,16 +1790,11 @@ export default function Home({ onNavigate }) {
 
       // 4) Fetch all products to create bank details
       try {
-        const cachedProducts = sessionStorage.getItem('gkp_all_products');
-        if (cachedProducts) {
-          setDynamicProducts(JSON.parse(cachedProducts));
-        } else {
-          const res = await fetch(`${apiBase}/products`);
-          const data = await res.json();
-          if (data && data.success && data.data?.length > 0) {
-            setDynamicProducts(data.data);
-            sessionStorage.setItem('gkp_all_products', JSON.stringify(data.data));
-          }
+        const res = await fetch(`${apiBase}/products?limit=1000`);
+        const data = await res.json();
+        if (data && data.success && data.data?.length > 0) {
+          setDynamicProducts(data.data);
+          sessionStorage.setItem('gkp_all_products', JSON.stringify(data.data));
         }
       } catch (err) {
         console.warn("Failed to load products for banks:", err);
@@ -1910,7 +1905,10 @@ export default function Home({ onNavigate }) {
       const bankId = cardsMatch[1];
       const bankItem = (dynamicBanks && dynamicBanks.find(b => b.id === bankId)) || banksList.find(b => b.id === bankId);
       if (bankItem) {
-        const dbBankProducts = dynamicProducts.filter(p => p.bank_id === bankItem.dbId && p.category === 'credit_card');
+        const dbBankProducts = dynamicProducts.filter(p => 
+          (p.bank_id === bankItem.dbId || p.bank_id === bankItem.id || String(p.bank_id) === String(bankItem.dbId)) &&
+          (!p.category || p.category === 'credit_card' || p.category.toLowerCase().includes('card'))
+        );
         
         if (dbBankProducts.length > 0) {
           const dynamicSections = [

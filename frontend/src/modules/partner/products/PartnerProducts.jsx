@@ -161,7 +161,7 @@ export default function PartnerProducts() {
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get('/products', { params: { is_active: 'true', limit: 100 } });
+      const res = await api.get('/products', { params: { is_active: 'true', limit: 1000 } });
       if (res.data?.success) {
         setProducts(res.data.data);
       }

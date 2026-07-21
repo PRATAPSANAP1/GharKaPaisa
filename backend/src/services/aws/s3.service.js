@@ -105,12 +105,14 @@ const uploadGeneric = multer({
 });
 
 // Helper to convert an S3 key to CloudFront public CDN URL
-const getCloudFrontUrl = (key) => {
-  if (!key) return key;
+const getCloudFrontUrl = (urlOrKey) => {
+  if (!urlOrKey) return urlOrKey;
   const domain = (process.env.AWS_CLOUDFRONT_URL || 'https://d18qh1l6j6vziz.cloudfront.net').replace(/\/+$/, '');
-  const cleanKey = key.replace(/^\/+/, '');
-  const prefix = cleanKey.startsWith('public/') ? '' : 'public/';
-  return `${domain}/${prefix}${cleanKey}`;
+  const cleanKey = String(urlOrKey)
+    .replace(/^https?:\/\/[^\/]+\//, '')
+    .replace(/^\/+/, '')
+    .replace(/^public\//, '');
+  return `${domain}/${cleanKey}`;
 };
 
 // Upload a buffer to S3

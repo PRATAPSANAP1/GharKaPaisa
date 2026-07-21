@@ -310,13 +310,18 @@ const cards = [
 ];
 
 export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Local products mapping state
   const [dbProducts, setDbProducts] = useState([]);
+
+  const getDbCardImage = (cardItem) => {
+    if (!cardItem) return hdfcCardImg;
+    const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === cardItem.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    return dbProduct?.card_image_url || dbProduct?.image_url || dbProduct?.thumbnail_url || getCardSpecificImage(cardItem.name) || hdfcCardImg;
+  };
 
   useEffect(() => {
     const fetchDbProducts = async () => {
@@ -787,7 +792,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
                           }}
                         >
                           <span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-                            <img src={getCardSpecificImage(card.name) || hdfcCardImg} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} />
+                            <img src={getDbCardImage(card)} alt="Card" style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} />
                           </span>
                           <span>{t(`hdfc.cards.${card.id}.name`, card.name)}</span>
                         </button>
@@ -1009,7 +1014,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               overflow: "hidden"
             }}>
               <img 
-                src={getCardSpecificImage(selectedCard.name) || hdfcCardImg} 
+                src={getDbCardImage(selectedCard)} 
                 alt={selectedCard.name} 
                 style={{ 
                   height: "100%", 

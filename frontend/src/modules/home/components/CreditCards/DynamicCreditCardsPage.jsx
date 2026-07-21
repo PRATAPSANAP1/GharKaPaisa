@@ -19,8 +19,7 @@ export default function DynamicCreditCardsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { theme, C } = useTheme();
-  const isDark = theme === 'dark';
+  const { isDark, C } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -216,14 +215,20 @@ export default function DynamicCreditCardsPage() {
           overflow: 'hidden',
           border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`
         }}>
-          {(!bank.banner || bank.banner === 'null' || bank.banner === 'undefined' || bank.banner.trim() === '') && (
-            <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
-              {bank.logo_url && (
-                <img src={bank.logo_url} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
-              )}
-              <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0 }}>{bank.name} Credit Cards</h1>
-            </div>
-          )}
+          {/* Overlay to ensure readability and fallback contrast */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: (bank.banner && bank.banner !== 'null' && bank.banner !== 'undefined' && bank.banner.trim() !== '') ? 'rgba(0,0,0,0.45)' : 'transparent',
+            zIndex: 1
+          }} />
+          
+          <div style={{ textAlign: 'center', color: '#ffffff', zIndex: 2 }}>
+            {bank.logo_url && (
+              <img src={bank.logo_url} alt={bank.name} style={{ height: '48px', marginBottom: '12px', filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
+            )}
+            <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: 800, margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{bank.name} Credit Cards</h1>
+          </div>
         </div>
       </div>
 

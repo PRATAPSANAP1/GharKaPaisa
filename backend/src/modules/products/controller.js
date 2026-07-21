@@ -2,7 +2,7 @@ const { query } = require('../../config/database');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate, forbidden } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
-const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js');
+const { uploadToS3, deleteFromS3, getCloudFrontUrl } = require('../../services/aws/s3.service.js');
 const appSettingsService = require('./application-settings.service');
 const logger = require('../../config/logger');
 
@@ -110,6 +110,8 @@ const listProducts = async (req, res, next) => {
       // Default metadata
       prodData.hold_days = prodData.hold_days || 7;
       prodData.approval_rate = prodData.approval_rate || 82;
+      if (prodData.image_url) prodData.image_url = getCloudFrontUrl(prodData.image_url);
+      if (prodData.bank_logo) prodData.bank_logo = getCloudFrontUrl(prodData.bank_logo);
 
       if (!isPartnerOrAdmin) {
         // Public Visitor View - Strip out commission and margin metrics
