@@ -497,7 +497,16 @@ const SuperAdminLayout = () => {
           </div>
 
           {/* Navigation Links */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px' }}>
+          <div style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            padding: '6px 8px', 
+            scrollbarWidth: 'thin', 
+            scrollbarColor: `${C.border} transparent`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between'
+          }}>
             {renderNavigationList()}
           </div>
         </aside>
