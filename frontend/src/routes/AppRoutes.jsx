@@ -181,7 +181,7 @@ const AppRoutes = () => {
             {/* Category Dashboards */}
             <Route path="/partner/credit-cards" element={<PartnerCategoryOverview defaultCategory="credit_card" />} />
             <Route path="/partner/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
-            <Route path="/partner/credit-cards/:bankSlug/product" element={<PartnerEntityDetail />} />
+            <Route path="/partner/credit-cards/:bankSlug/:tab" element={<PartnerEntityDetail />} />
 
             <Route path="/partner/loans" element={<PartnerCategoryOverview defaultCategory="loans" />} />
             <Route path="/partner/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />
