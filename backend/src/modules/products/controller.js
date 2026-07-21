@@ -340,7 +340,7 @@ const updateProduct = async (req, res, next) => {
       commission_amount, override_percentage, featured, public_visible, partner_visible,
       eligibility_criteria, documents_required, benefits, fees_charges, apply_button_text,
       seo_title, seo_description, seo_keywords, priority, status,
-      public_url, partner_url
+      public_url, partner_url, sub_category
     } = req.body;
     let image_url = req.body.image_url;
 

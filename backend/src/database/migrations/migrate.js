@@ -81,6 +81,7 @@ const migrate = async () => {
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await addEnumValue('application_status', 'confirmed');
+  await addEnumValue('application_status', 'pending');
   await query(`
     DO $$ BEGIN
       CREATE TYPE product_category AS ENUM ('credit_card','personal_loan','home_loan','business_loan',
@@ -3748,7 +3749,16 @@ const migrate = async () => {
       await query(`UPDATE products SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE products SET image = REPLACE(image, 'cloudfront.net/public/', 'cloudfront.net/') WHERE image LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE banks SET logo_url = REPLACE(logo_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE logo_url LIKE '%cloudfront.net/public/%'`);
-      await query(`UPDATE banks SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%'`);
+      await query(`
+        DO $$ BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'banks' AND column_name = 'banner') THEN
+            UPDATE banks SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%';
+          END IF;
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'banks' AND column_name = 'banner_url') THEN
+            UPDATE banks SET banner_url = REPLACE(banner_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner_url LIKE '%cloudfront.net/public/%';
+          END IF;
+        END $$;
+      `);
       await query(`UPDATE banners SET image_url = REPLACE(image_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE image_url LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE product_videos SET thumbnail_url = REPLACE(thumbnail_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE thumbnail_url LIKE '%cloudfront.net/public/%'`);
       await query(`UPDATE product_offers SET banner_url = REPLACE(banner_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner_url LIKE '%cloudfront.net/public/%'`);

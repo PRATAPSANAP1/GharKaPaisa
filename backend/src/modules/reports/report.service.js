@@ -56,7 +56,7 @@ const getDashboardReport = async (partnerId, filters) => {
       COUNT(*) as total_applications,
       COUNT(*) FILTER (WHERE status = 'approved') as approved,
       COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-      COUNT(*) FILTER (WHERE status IN ('pending','submitted','under_review')) as pending
+      COUNT(*) FILTER (WHERE status IN ('submitted','under_review','draft')) as pending
     FROM applications ${whereApp}
   `, valuesApp);
 
