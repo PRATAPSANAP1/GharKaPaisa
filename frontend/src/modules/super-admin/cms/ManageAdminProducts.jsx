@@ -511,7 +511,7 @@ export default function ManageAdminProducts() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Bank</span>
-            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '150px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Banks</option>
               {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
@@ -519,7 +519,7 @@ export default function ManageAdminProducts() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Card Type</span>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '150px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Card Types</option>
               <option value="Core Cards">Core Cards</option>
               <option value="Co-Branded Cards">Co-Branded Cards</option>
@@ -529,7 +529,7 @@ export default function ManageAdminProducts() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Status</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '140px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Statuses</option>
               <option value="Active">Active Only</option>
               <option value="Inactive">Inactive Only</option>
@@ -537,23 +537,15 @@ export default function ManageAdminProducts() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Network</span>
-            <select value={networkFilter} onChange={(e) => setNetworkFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
-              <option value="All">All Networks</option>
-              {CARD_NETWORKS.map(net => <option key={net} value={net}>{net}</option>)}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Annual Fee</span>
-            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '36px', fontSize: '12.5px', fontWeight: 700 }}>
+            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '160px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Fee Options</option>
               <option value="ltf">Lifetime Free Only</option>
               <option value="paid">Paid Annual Fee</option>
             </select>
           </div>
 
-          {(bankFilter !== "All" || typeFilter !== "All" || statusFilter !== "All" || networkFilter !== "All" || feeFilter !== "All") && (
+          {(bankFilter !== "All" || typeFilter !== "All" || statusFilter !== "All" || feeFilter !== "All") && (
             <button
               onClick={() => {
                 setBankFilter("All");
@@ -562,7 +554,7 @@ export default function ManageAdminProducts() {
                 setNetworkFilter("All");
                 setFeeFilter("All");
               }}
-              style={{ marginTop: '16px', padding: '6px 12px', background: '#EF444420', color: '#EF4444', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+              style={{ marginTop: '16px', padding: '8px 14px', background: '#EF444420', color: '#EF4444', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
             >
               Reset Filters
             </button>
@@ -571,8 +563,8 @@ export default function ManageAdminProducts() {
       </div>
 
       {/* PRODUCT LIST TABLE */}
-      <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+      <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
             <tr style={{ background: isDark ? C.bgSecondary : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Image</th>
