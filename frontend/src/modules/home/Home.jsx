@@ -2095,7 +2095,7 @@ export default function Home({ onNavigate }) {
     },
     { 
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
-      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
+      subtitle: t('home.banners.slide0.subtitle', 'Instant Approval • Exclusive Benefits'), 
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
       action: () => navigate("/credit-cards/lifetime-free-credit-cards-ltf")

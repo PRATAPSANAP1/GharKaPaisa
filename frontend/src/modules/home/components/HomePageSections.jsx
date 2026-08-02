@@ -211,7 +211,7 @@ export function HeroBannerCarousel({ C, navigate }) {
     },
     { 
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
-      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
+      subtitle: t('home.banners.slide0.subtitle', 'Instant Approval • Exclusive Benefits'), 
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
       action: () => navigate("/credit-cards/lifetime-free-credit-cards-ltf")
@@ -636,7 +636,7 @@ export function PartnerReferralBanner({ C, navigate }) {
           opacity: 0.9,
           lineHeight: 1.5
         }}>
-          {t('partnerReferral.desc', 'Earn commissions by referring customers. Join our partner network today!')}
+          {t('partnerReferral.desc', 'Earn rewards by referring customers. Join our partner network today!')}
         </p>
         <button
           style={{
@@ -644,14 +644,15 @@ export function PartnerReferralBanner({ C, navigate }) {
             color: "#0D5CAB",
             border: "none",
             padding: isMobile ? "10px 20px" : "12px 28px",
-            borderRadius: "30px",
+            borderRadius: "10px",
             fontSize: isMobile ? "13px" : "14px",
             fontWeight: 800,
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
           }}
+          onClick={() => navigate("/partner/register")}
         >
-          {t('partnerReferral.cta', 'Learn More')}
+          {t('partnerReferral.btn', 'Register as Partner')}
         </button>
       </div>
     </div>

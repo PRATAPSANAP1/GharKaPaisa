@@ -1041,26 +1041,7 @@ export function HDFCCardsPage({ onBack, C, isMobile, breadcrumbs }) {
               </ul>
             </div>
 
-            {/* Annual Fee */}
-            <div style={{
-              background: "var(--bg-slate-100)",
-              padding: "12px",
-              borderRadius: "10px",
-              fontSize: "12px",
-              fontWeight: 700,
-              marginBottom: "20px",
-              color: "var(--text-slate-800)"
-            }}>
-              {(() => {
-                const dbProduct = dbProducts.find(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''));
-                if (dbProduct && dbProduct.annual_fee) {
-                  return `Annual Fee: ${dbProduct.annual_fee}`;
-                }
-                const isCardLTF = ltfCards.some(lc => lc.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(selectedCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''))) || 
-                                  (selectedCard.fee && (selectedCard.fee.toLowerCase().includes('free') || selectedCard.fee.toLowerCase().includes('nil') || selectedCard.fee.toLowerCase().includes('zero')));
-                return isCardLTF ? "Annual Fee: Zero" : t(`hdfc.cards.${selectedCard.id}.fee`, selectedCard.fee);
-              })()}
-            </div>
+
 
             {/* Actions */}
             {(() => {
