@@ -267,28 +267,7 @@ export default function ProductDetails() {
           </div>
         </div>
 
-        {/* ── QUICK INFORMATION HIGHLIGHT CARDS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: isMobile ? '8px' : '14px' }}>
-          {[
-            { label: 'Joining Fee', value: fees.joining_fee || '₹0', icon: MdAttachMoney, color: '#10B981' },
-            { label: 'Annual Fee', value: fees.annual_fee || product.annual_fee || '₹500', icon: MdCreditCard, color: '#3B82F6' },
-            { label: 'Min Income', value: eligibility.min_income ? `₹${eligibility.min_income.toLocaleString()}` : '₹25,000', icon: MdAccountBalance, color: '#8B5CF6' },
-            { label: 'Required Age', value: eligibility.min_age ? `${eligibility.min_age} - ${eligibility.max_age || 60} yrs` : '21 - 60 yrs', icon: MdVerifiedUser, color: '#F59E0B' },
-            { label: 'Reward Rate', value: compare.reward_rate || fees.interest_rate || 'Up to 5%', icon: MdLoyalty, color: '#EC4899' },
-            { label: 'Credit Score', value: eligibility.cibil_required ? `${eligibility.cibil_required}+ CIBIL` : '750+ CIBIL', icon: MdStar, color: '#6366F1' }
-          ].map((item, idx) => (
-            <div key={idx} style={{
-              background: C.card, borderRadius: isMobile ? '12px' : '16px', padding: isMobile ? '10px 12px' : '16px', border: `1px solid ${C.border}`,
-              display: 'flex', flexDirection: 'column', gap: '4px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: item.color }}>
-                <item.icon size={isMobile ? 16 : 20} />
-                <span style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: 800, textTransform: 'uppercase', color: C.textLight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
-              </div>
-              <span style={{ fontSize: isMobile ? '13.5px' : '16px', fontWeight: 900, color: C.text, wordBreak: 'break-word' }}>{item.value}</span>
-            </div>
-          ))}
-        </div>
+
 
         {/* ── HORIZONTAL SCROLLABLE TAB NAVIGATION ── */}
         {(() => {
@@ -405,26 +384,39 @@ export default function ProductDetails() {
                     </h3>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Age Limit</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_age ? `${eligibility.min_age} - ${eligibility.max_age || 60} years` : '21 - 60 years'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Minimum Income</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_income ? `₹${eligibility.min_income.toLocaleString()} / month` : '₹25,000 / month'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Employment Type</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.employment_type || 'Salaried / Self-Employed'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>CIBIL Score</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.cibil_required ? `${eligibility.cibil_required}+` : '750+'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: C.textLight }}>Residential Status</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.resident_type || 'Indian Resident'}</span>
-                      </div>
+                      {eligibility.min_age && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Age Limit</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{`${eligibility.min_age} - ${eligibility.max_age || 60} years`}</span>
+                        </div>
+                      )}
+                      {eligibility.min_income && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Minimum Income</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{`₹${Number(eligibility.min_income).toLocaleString('en-IN')} / month`}</span>
+                        </div>
+                      )}
+                      {eligibility.employment_type && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Employment Type</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{eligibility.employment_type}</span>
+                        </div>
+                      )}
+                      {eligibility.cibil_required && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>CIBIL Score</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{`${eligibility.cibil_required}+`}</span>
+                        </div>
+                      )}
+                      {eligibility.resident_type && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: C.textLight }}>Residential Status</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{eligibility.resident_type}</span>
+                        </div>
+                      )}
+                      {!eligibility.min_age && !eligibility.min_income && !eligibility.employment_type && !eligibility.cibil_required && !eligibility.resident_type && (
+                        <p style={{ color: C.textLight, margin: 0 }}>Standard bank eligibility guidelines apply upon verification.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -437,26 +429,39 @@ export default function ProductDetails() {
                     </h3>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Joining Fee</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{fees.joining_fee || '₹0'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Annual Fee</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{fees.annual_fee || product.annual_fee || '₹500'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Interest Rate</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{fees.interest_rate || '3.5% p.m.'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                        <span style={{ color: C.textLight }}>Fuel Surcharge</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{fees.fuel_surcharge || '1% Waiver'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: C.textLight }}>Forex Charges</span>
-                        <span style={{ fontWeight: 800, color: C.text }}>{fees.foreign_markup || '3.5%'}</span>
-                      </div>
+                      {fees.joining_fee && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Joining Fee</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{fees.joining_fee}</span>
+                        </div>
+                      )}
+                      {(fees.annual_fee || product.annual_fee) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Annual Fee</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{fees.annual_fee || product.annual_fee}</span>
+                        </div>
+                      )}
+                      {fees.interest_rate && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Interest Rate</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{fees.interest_rate}</span>
+                        </div>
+                      )}
+                      {fees.fuel_surcharge && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight }}>Fuel Surcharge</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{fees.fuel_surcharge}</span>
+                        </div>
+                      )}
+                      {fees.foreign_markup && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: C.textLight }}>Forex Charges</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{fees.foreign_markup}</span>
+                        </div>
+                      )}
+                      {!fees.joining_fee && !fees.annual_fee && !product.annual_fee && !fees.interest_rate && !fees.fuel_surcharge && !fees.foreign_markup && (
+                        <p style={{ color: C.textLight, margin: 0 }}>Standard issuer fee schedule applies based on product variant.</p>
+                      )}
                     </div>
                   </div>
                 )}

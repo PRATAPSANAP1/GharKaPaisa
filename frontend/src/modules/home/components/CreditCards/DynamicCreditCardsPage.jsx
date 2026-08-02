@@ -546,9 +546,9 @@ export default function DynamicCreditCardsPage() {
                 <div>
                   <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px 0' }}>Eligibility Requirements</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: isDark ? '#cbd5e1' : '#334155' }}>
-                    <div><strong>Min Age:</strong> {selectedCard.min_age || 21} Years</div>
-                    <div><strong>Max Age:</strong> {selectedCard.max_age || 65} Years</div>
-                    <div><strong>Min monthly income:</strong> ₹{selectedCard.min_income ? Number(selectedCard.min_income).toLocaleString('en-IN') : '25,000'}</div>
+                    {selectedCard.min_age && <div><strong>Min Age:</strong> {selectedCard.min_age} Years</div>}
+                    {selectedCard.max_age && <div><strong>Max Age:</strong> {selectedCard.max_age} Years</div>}
+                    {selectedCard.min_income && <div><strong>Min monthly income:</strong> ₹{Number(selectedCard.min_income).toLocaleString('en-IN')}</div>}
                     {selectedCard.eligibility_criteria && (
                       typeof selectedCard.eligibility_criteria === 'string' ? (
                         <div style={{ marginTop: '8px', padding: '10px', background: isDark ? '#0f172a' : '#f8fafc', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, whiteSpace: 'pre-line', lineHeight: 1.4 }}>{selectedCard.eligibility_criteria}</div>
