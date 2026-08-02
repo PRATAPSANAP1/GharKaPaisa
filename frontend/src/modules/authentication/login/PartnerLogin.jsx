@@ -1388,8 +1388,8 @@ export default function PartnerLogin() {
           align-items: center;
         }
         .otp-slot {
-          width: 3rem;
-          height: 3.8rem;
+          width: 3.2rem;
+          height: 3.2rem;
           transition: transform 0.3s ease-in-out, opacity 0.3s ease, width 0.3s ease-in-out, height 0.3s ease-in-out;
           will-change: transform, width, height;
         }
@@ -1405,7 +1405,7 @@ export default function PartnerLogin() {
           position: relative;
           width: 100%;
           height: 100%;
-          border-radius: 1.15rem;
+          border-radius: 12px;
           border: 2px solid transparent;
           box-shadow: none;
           transition: border-color 1s ease, box-shadow 1s ease, transform 1s ease, border-radius 0.3s ease-in-out;
@@ -1479,16 +1479,16 @@ export default function PartnerLogin() {
           position: relative;
           width: 100%;
           height: 100%;
-          border: 2px solid transparent;
-          border-radius: 1.15rem;
+          border: 2px solid var(--otp-border);
+          border-radius: 12px;
           background: var(--otp-input-bg);
           color: var(--otp-text);
           text-align: center;
-          font-size: 1.6rem;
-          font-weight: 700;
+          font-size: 1.5rem;
+          font-weight: 800;
           outline: none;
           caret-color: var(--otp-primary);
-          box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.05);
+          box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.04);
           transition: background 0.25s ease, transform 0.25s ease, opacity 0.35s ease, box-shadow 0.25s ease, border-radius 0.3s ease-in-out;
         }
         .otp-slot.stacked .otp-input {
@@ -1496,7 +1496,8 @@ export default function PartnerLogin() {
         }
         .otp-input:focus {
           background: var(--otp-card-bg);
-          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), inset 0 4px 10px rgba(0, 0, 0, 0.05);
+          border-color: var(--otp-primary);
+          box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), inset 0 2px 6px rgba(0, 0, 0, 0.04);
         }
         .otp-input:disabled {
           cursor: default;
@@ -1566,14 +1567,14 @@ export default function PartnerLogin() {
         }
         @media (max-width: 520px) {
           .otp-input-group {
-            gap: 0.5rem;
+            gap: 0.4rem;
           }
           .otp-slot {
-            width: 2.6rem;
-            height: 3.3rem;
+            width: 2.7rem;
+            height: 2.7rem;
           }
           .otp-input {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
           }
           .otp-result-icon {
             font-size: 1.6rem;
