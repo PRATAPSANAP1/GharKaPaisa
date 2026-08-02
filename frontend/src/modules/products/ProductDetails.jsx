@@ -25,6 +25,7 @@ export default function ProductDetails() {
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [verifyCard, setVerifyCard] = useState(null);
+  const [activeTab, setActiveTab] = useState('features');
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
@@ -250,31 +251,17 @@ export default function ProductDetails() {
                 Apply Now
               </button>
 
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <button
-                  onClick={handleBookmark}
-                  style={{
-                    flex: 1, padding: '8px', borderRadius: '10px', border: `1px solid ${C.border}`,
-                    background: C.card, color: isBookmarked ? C.teal : C.text, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '12px', fontWeight: 700
-                  }}
-                >
-                  {isBookmarked ? <MdBookmark size={18} /> : <MdBookmarkBorder size={18} />}
-                  <span>{isBookmarked ? 'Saved' : 'Save'}</span>
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  style={{
-                    flex: 1, padding: '8px', borderRadius: '10px', border: `1px solid ${C.border}`,
-                    background: C.card, color: C.text, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '12px', fontWeight: 700
-                  }}
-                >
-                  <MdShare size={18} />
-                  <span>Share</span>
-                </button>
-              </div>
+              <button
+                onClick={handleShare}
+                style={{
+                  width: '100%', padding: '9px 16px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                  background: C.card, color: C.text, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700
+                }}
+              >
+                <MdShare size={18} />
+                <span>Share</span>
+              </button>
             </div>
 
           </div>
@@ -303,198 +290,257 @@ export default function ProductDetails() {
           ))}
         </div>
 
-        {/* ── KEY FEATURES ── */}
-        {features.length > 0 && (
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdStar color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Key Features</span>
-            </h3>
+        {/* ── HORIZONTAL SCROLLABLE TAB NAVIGATION ── */}
+        {(() => {
+          const tabItems = [
+            { id: 'features', label: 'Key Features', icon: MdStar, show: features.length > 0 },
+            { id: 'benefits', label: 'Exclusive Benefits', icon: MdLoyalty, show: benefits.length > 0 },
+            { id: 'eligibility', label: 'Eligibility Criteria', icon: MdVerifiedUser, show: true },
+            { id: 'fees', label: 'Fees & Charges', icon: MdAttachMoney, show: true },
+            { id: 'documents', label: 'Required Documents', icon: MdFolderOpen, show: documents.length > 0 },
+            { id: 'faqs', label: "FAQ's", icon: MdHelpOutline, show: faqs.length > 0 },
+            { id: 'compare', label: 'Compare & Specs', icon: MdCompareArrows, show: Object.keys(compare || {}).length > 0 }
+          ].filter(t => t.show);
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: isMobile ? '8px' : '12px' }}>
-              {features.map((f, idx) => {
-                const title = typeof f === 'string' ? f : f.title;
-                const desc = typeof f === 'object' ? f.description : '';
-                return (
-                  <div key={idx} style={{
-                    background: isDark ? C.bgSecondary : '#F8FAFC', borderRadius: '14px',
-                    padding: isMobile ? '10px 12px' : '14px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: '10px'
-                  }}>
-                    <MdCheckCircle color={C.teal} size={isMobile ? 18 : 20} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 800, color: C.text }}>{title}</h4>
-                      {desc && <p style={{ margin: '4px 0 0', fontSize: isMobile ? '11px' : '11.5px', color: C.textLight, lineHeight: 1.3 }}>{desc}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+          const currentTab = tabItems.some(t => t.id === activeTab) ? activeTab : (tabItems[0]?.id || 'eligibility');
 
-        {/* ── BENEFITS SECTION ── */}
-        {benefits.length > 0 && (
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdLoyalty color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Exclusive Benefits</span>
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: isMobile ? '10px' : '14px' }}>
-              {benefits.map((b, idx) => (
-                <div key={idx} style={{
-                  background: isDark ? C.bgSecondary : '#F8FAFC', borderRadius: '16px',
-                  padding: isMobile ? '12px 14px' : '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '6px'
-                }}>
-                  <h4 style={{ margin: 0, fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: C.text }}>{b.title}</h4>
-                  <p style={{ margin: 0, fontSize: isMobile ? '11.5px' : '12.5px', color: C.textLight, lineHeight: 1.4 }}>{b.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── ELIGIBILITY & FEES TABLE ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '16px' : '20px' }}>
-          
-          {/* ELIGIBILITY CRITERIA */}
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdVerifiedUser color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Eligibility Criteria</span>
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Age Limit</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_age ? `${eligibility.min_age} - ${eligibility.max_age || 60} years` : '21 - 60 years'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Minimum Income</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_income ? `₹${eligibility.min_income.toLocaleString()} / month` : '₹25,000 / month'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Employment Type</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{eligibility.employment_type || 'Salaried / Self-Employed'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>CIBIL Score</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{eligibility.cibil_required ? `${eligibility.cibil_required}+` : '750+'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Residential Status</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{eligibility.resident_type || 'Indian Resident'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* FEES & CHARGES */}
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdAttachMoney color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Fees & Charges</span>
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Joining Fee</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{fees.joining_fee || '₹0'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Annual Fee</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{fees.annual_fee || product.annual_fee || '₹500'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Interest Rate</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{fees.interest_rate || '3.5% p.m.'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
-                <span style={{ color: C.textLight }}>Fuel Surcharge</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{fees.fuel_surcharge || '1% Waiver'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Forex Charges</span>
-                <span style={{ fontWeight: 800, color: C.text }}>{fees.foreign_markup || '3.5%'}</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── REQUIRED DOCUMENTS ── */}
-        {documents.length > 0 && (
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdFolderOpen color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Required Documents</span>
-            </h3>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '8px' : '10px' }}>
-              {documents.map((doc, idx) => (
-                <div key={idx} style={{
-                  padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: '12px', background: isDark ? C.bgSecondary : '#F1F5F9',
-                  border: `1px solid ${C.border}`, fontWeight: 700, fontSize: isMobile ? '12px' : '13px', color: C.text,
-                  display: 'flex', alignItems: 'center', gap: '6px'
-                }}>
-                  <MdCheckCircle color={C.teal} size={isMobile ? 14 : 16} />
-                  <span>{typeof doc === 'string' ? doc : doc.title || doc.document_type}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── FREQUENTLY ASKED QUESTIONS (FAQS ACCORDION) ── */}
-        {faqs.length > 0 && (
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MdHelpOutline color={C.teal} size={isMobile ? 18 : 22} />
-              <span>Frequently Asked Questions</span>
-            </h3>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {faqs.map((faq, idx) => {
-                const isOpen = expandedFaq === idx;
-                return (
-                  <div key={idx} style={{
-                    borderRadius: '12px', border: `1px solid ${C.border}`, overflow: 'hidden', background: isDark ? C.bgSecondary : '#F8FAFC'
-                  }}>
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                display: 'flex',
+                overflowX: 'auto',
+                gap: '8px',
+                paddingBottom: '6px',
+                scrollbarWidth: 'thin',
+                WebkitOverflowScrolling: 'touch'
+              }}>
+                {tabItems.map((t) => {
+                  const isActive = currentTab === t.id;
+                  const IconComp = t.icon;
+                  return (
                     <button
-                      onClick={() => setExpandedFaq(isOpen ? null : idx)}
+                      key={t.id}
+                      onClick={() => setActiveTab(t.id)}
                       style={{
-                        width: '100%', padding: isMobile ? '12px 14px' : '14px 16px', display: 'flex', justifyContent: 'space-between',
-                        alignItems: 'center', background: 'transparent', border: 'none', textAlign: 'left',
-                        fontWeight: 800, fontSize: isMobile ? '13px' : '14px', color: C.text, cursor: 'pointer'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: isMobile ? '8px 14px' : '10px 18px',
+                        borderRadius: '12px',
+                        border: isActive ? `1.5px solid ${C.teal}` : `1px solid ${C.border}`,
+                        background: isActive ? `${C.teal}18` : C.card,
+                        color: isActive ? C.teal : C.text,
+                        fontWeight: isActive ? 800 : 600,
+                        fontSize: isMobile ? '12.5px' : '13.5px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        boxShadow: isActive ? `0 4px 12px ${C.teal}20` : 'none',
+                        transition: 'all 0.2s'
                       }}
                     >
-                      <span>{faq.question}</span>
-                      {isOpen ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                      <IconComp size={isMobile ? 16 : 18} />
+                      <span>{t.label}</span>
                     </button>
-                    {isOpen && (
-                      <div style={{ padding: isMobile ? '0 14px 12px 14px' : '0 16px 14px 16px', fontSize: isMobile ? '12px' : '13px', color: C.textLight, lineHeight: 1.5 }}>
-                        {faq.answer}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  );
+                })}
+              </div>
 
-        {/* ── GALLERY / OFFERS CAROUSEL ── */}
-        {gallery.length > 0 && (
-          <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
-            <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0' }}>Promotional Offers & Banners</h3>
-            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-              {gallery.map((g, idx) => (
-                <div key={idx} style={{ flexShrink: 0, width: isMobile ? '220px' : '280px', borderRadius: '14px', overflow: 'hidden', border: `1px solid ${C.border}` }}>
-                  <img src={g.image_url} alt={g.title || 'Offer'} style={{ width: '100%', height: isMobile ? '110px' : '140px', objectFit: 'cover' }} />
-                </div>
-              ))}
+              {/* ── ACTIVE TAB CONTENT PANEL ── */}
+              <div>
+                {currentTab === 'features' && features.length > 0 && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdStar color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Key Features</span>
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: isMobile ? '8px' : '12px' }}>
+                      {features.map((f, idx) => {
+                        const title = typeof f === 'string' ? f : f.title;
+                        const desc = typeof f === 'object' ? f.description : '';
+                        return (
+                          <div key={idx} style={{
+                            background: isDark ? C.bgSecondary : '#F8FAFC', borderRadius: '14px',
+                            padding: isMobile ? '10px 12px' : '14px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: '10px'
+                          }}>
+                            <MdCheckCircle color={C.teal} size={isMobile ? 18 : 20} style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 800, color: C.text }}>{title}</h4>
+                              {desc && <p style={{ margin: '4px 0 0', fontSize: isMobile ? '11px' : '11.5px', color: C.textLight, lineHeight: 1.3 }}>{desc}</p>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'benefits' && benefits.length > 0 && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdLoyalty color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Exclusive Benefits</span>
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: isMobile ? '10px' : '14px' }}>
+                      {benefits.map((b, idx) => (
+                        <div key={idx} style={{
+                          background: isDark ? C.bgSecondary : '#F8FAFC', borderRadius: '16px',
+                          padding: isMobile ? '12px 14px' : '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '6px'
+                        }}>
+                          <h4 style={{ margin: 0, fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: C.text }}>{b.title}</h4>
+                          <p style={{ margin: 0, fontSize: isMobile ? '11.5px' : '12.5px', color: C.textLight, lineHeight: 1.4 }}>{b.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'eligibility' && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdVerifiedUser color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Eligibility Criteria</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Age Limit</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_age ? `${eligibility.min_age} - ${eligibility.max_age || 60} years` : '21 - 60 years'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Minimum Income</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.min_income ? `₹${eligibility.min_income.toLocaleString()} / month` : '₹25,000 / month'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Employment Type</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.employment_type || 'Salaried / Self-Employed'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>CIBIL Score</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.cibil_required ? `${eligibility.cibil_required}+` : '750+'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: C.textLight }}>Residential Status</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{eligibility.resident_type || 'Indian Resident'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'fees' && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdAttachMoney color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Fees & Charges</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Joining Fee</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{fees.joining_fee || '₹0'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Annual Fee</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{fees.annual_fee || product.annual_fee || '₹500'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Interest Rate</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{fees.interest_rate || '3.5% p.m.'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                        <span style={{ color: C.textLight }}>Fuel Surcharge</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{fees.fuel_surcharge || '1% Waiver'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: C.textLight }}>Forex Charges</span>
+                        <span style={{ fontWeight: 800, color: C.text }}>{fees.foreign_markup || '3.5%'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'documents' && documents.length > 0 && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdFolderOpen color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Required Documents</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? '8px' : '10px' }}>
+                      {documents.map((doc, idx) => (
+                        <div key={idx} style={{
+                          padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: '12px', background: isDark ? C.bgSecondary : '#F1F5F9',
+                          border: `1px solid ${C.border}`, fontWeight: 700, fontSize: isMobile ? '12px' : '13px', color: C.text,
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <MdCheckCircle color={C.teal} size={isMobile ? 14 : 16} />
+                          <span>{typeof doc === 'string' ? doc : doc.title || doc.document_type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'faqs' && faqs.length > 0 && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdHelpOutline color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Frequently Asked Questions</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {faqs.map((faq, idx) => {
+                        const isOpen = expandedFaq === idx;
+                        return (
+                          <div key={idx} style={{
+                            borderRadius: '12px', border: `1px solid ${C.border}`, overflow: 'hidden', background: isDark ? C.bgSecondary : '#F8FAFC'
+                          }}>
+                            <button
+                              onClick={() => setExpandedFaq(isOpen ? null : idx)}
+                              style={{
+                                width: '100%', padding: isMobile ? '12px 14px' : '14px 16px', display: 'flex', justifyContent: 'space-between',
+                                alignItems: 'center', background: 'transparent', border: 'none', textAlign: 'left',
+                                fontWeight: 800, fontSize: isMobile ? '13px' : '14px', color: C.text, cursor: 'pointer'
+                              }}
+                            >
+                              <span>{faq.question}</span>
+                              {isOpen ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                            </button>
+                            {isOpen && (
+                              <div style={{ padding: isMobile ? '0 14px 12px 14px' : '0 16px 14px 16px', fontSize: isMobile ? '12px' : '13px', color: C.textLight, lineHeight: 1.5 }}>
+                                {faq.answer}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {currentTab === 'compare' && Object.keys(compare || {}).length > 0 && (
+                  <div style={{ background: C.card, borderRadius: isMobile ? '16px' : '20px', padding: isMobile ? '16px' : '24px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, color: C.text, margin: '0 0 14px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <MdCompareArrows color={C.teal} size={isMobile ? 18 : 22} />
+                      <span>Compare & Specifications</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: isMobile ? '12px' : '13px' }}>
+                      {Object.entries(compare).map(([key, val], idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px' }}>
+                          <span style={{ color: C.textLight, textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</span>
+                          <span style={{ fontWeight: 800, color: C.text }}>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
       </div>
 
