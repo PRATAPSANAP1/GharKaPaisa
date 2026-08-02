@@ -183,16 +183,31 @@ export default function ProductDetails() {
           <div style={{ padding: isMobile ? '16px' : '28px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '16px' : '24px', alignItems: isMobile ? 'stretch' : 'center' }}>
             
             {/* CARD IMAGE & BANK LOGO */}
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: '12px' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: isMobile ? '8px' : '12px',
+              width: isMobile ? '100%' : 'auto'
+            }}>
               <div style={{
-                width: isMobile ? '130px' : '160px', height: isMobile ? '80px' : '100px', borderRadius: '14px', overflow: 'hidden',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.15)', background: C.card,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', flexShrink: 0
+                width: isMobile ? '140px' : '160px',
+                height: isMobile ? '90px' : '100px',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                background: C.card,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px',
+                flexShrink: 0
               }}>
                 <img src={product.image_url || bank.logo_url} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               </div>
               {bank.logo_url && (
-                <img src={bank.logo_url} alt={bank.name} style={{ height: '22px', maxWidth: '100px', objectFit: 'contain' }} />
+                <img src={bank.logo_url} alt={bank.name} style={{ height: isMobile ? '20px' : '22px', maxWidth: '100px', objectFit: 'contain' }} />
               )}
             </div>
 
