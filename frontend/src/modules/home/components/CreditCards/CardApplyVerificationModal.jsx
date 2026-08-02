@@ -292,7 +292,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "16px",
+      padding: "12px",
       backdropFilter: "blur(8px)",
       fontFamily: "'Inter', sans-serif"
     }}>
@@ -300,15 +300,18 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         background: C.card || "#ffffff",
         width: "100%",
         maxWidth: "420px",
+        maxHeight: "90vh",
+        overflowY: "auto",
         borderRadius: "24px",
         border: `1px solid ${C.border || '#e2e8f0'}`,
-        padding: "28px",
+        padding: "20px 18px",
         position: "relative",
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         color: C.text || "#1e293b",
         display: "flex",
         flexDirection: "column",
-        gap: "20px"
+        gap: "18px",
+        boxSizing: "border-box"
       }}>
         
         {/* Close Button */}

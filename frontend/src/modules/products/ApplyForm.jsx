@@ -26,6 +26,14 @@ export default function ApplyForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     // If they came with a partner code in URL (e.g. ?ref=PARTNER123)
     const params = new URLSearchParams(location.search);
@@ -72,15 +80,15 @@ export default function ApplyForm() {
 
   if (success) {
     return (
-      <div style={{ padding: "60px 20px", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-        <div style={{ ...S.card, padding: "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-          <div style={{ color: C.green, fontSize: "64px" }}>{Icons.CheckCircle || "✅"}</div>
-          <h2 style={{ color: C.text, margin: 0 }}>Application Submitted!</h2>
-          <p style={{ color: C.textLight }}>Thank you! Your application for {product?.name} has been received.</p>
+      <div style={{ padding: isMobile ? "20px 12px" : "60px 20px", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+        <div style={{ ...S.card, padding: isMobile ? "24px 16px" : "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          <div style={{ color: C.green, fontSize: isMobile ? "48px" : "64px" }}>{Icons.CheckCircle || "✅"}</div>
+          <h2 style={{ color: C.text, margin: 0, fontSize: isMobile ? "20px" : "24px" }}>Application Submitted!</h2>
+          <p style={{ color: C.textLight, fontSize: isMobile ? "13px" : "14px" }}>Thank you! Your application for {product?.name} has been received.</p>
           {product?.public_url ? (
-            <p style={{ color: C.primary, fontWeight: 'bold' }}>Redirecting you to the lending partner page...</p>
+            <p style={{ color: C.primary, fontWeight: 'bold', fontSize: isMobile ? "13px" : "14px" }}>Redirecting you to the lending partner page...</p>
           ) : (
-            <button onClick={() => navigate('/')} style={{ ...S.btn("primary"), marginTop: "20px" }}>
+            <button onClick={() => navigate('/')} style={{ ...S.btn("primary"), marginTop: "20px", width: isMobile ? "100%" : "auto" }}>
               Return to Homepage
             </button>
           )}
@@ -90,15 +98,15 @@ export default function ApplyForm() {
   }
 
   return (
-    <div style={{ padding: "40px 20px", maxWidth: "600px", margin: "0 auto" }}>
-      <button onClick={() => navigate(-1)} style={{ ...S.btn("outline"), marginBottom: "20px", border: "none", padding: 0 }}>
+    <div style={{ padding: isMobile ? "16px 12px 60px" : "40px 20px", maxWidth: "600px", margin: "0 auto" }}>
+      <button onClick={() => navigate(-1)} style={{ ...S.btn("outline"), marginBottom: "16px", border: "none", padding: 0 }}>
         {Icons.ArrowLeft || "←"} Back
       </button>
 
-      <div style={{ ...S.card, padding: "32px" }}>
-        <div style={{ marginBottom: "24px" }}>
-          <h1 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: "0 0 8px 0" }}>Apply Now</h1>
-          <p style={{ color: C.textLight, margin: 0 }}>{product ? `Applying for ${product.name}` : 'Loading product...'}</p>
+      <div style={{ ...S.card, padding: isMobile ? "20px 16px" : "32px" }}>
+        <div style={{ marginBottom: isMobile ? "16px" : "24px" }}>
+          <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 800, color: C.text, margin: "0 0 6px 0" }}>Apply Now</h1>
+          <p style={{ color: C.textLight, margin: 0, fontSize: isMobile ? "12.5px" : "14px" }}>{product ? `Applying for ${product.name}` : 'Loading product...'}</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

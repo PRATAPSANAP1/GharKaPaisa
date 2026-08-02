@@ -617,3 +617,120 @@
   font-size: 0.75rem;
   line-height: 1.5;
 }
+
+/* Mobile Responsiveness Improvements */
+@media (max-width: 768px) {
+  .cbp-header {
+    padding: 10px 12px;
+  }
+  
+  .cbp-header-title {
+    font-size: 0.85rem;
+  }
+  
+  .cbp-header-apply-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+  }
+
+  .cbp-header-share-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+  }
+  
+  .cbp-hero {
+    padding: 16px 12px;
+    margin: 8px 8px;
+    border-radius: 12px;
+  }
+  
+  .cbp-hero-title {
+    font-size: 1.15rem;
+  }
+  
+  .cbp-hero-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .cbp-tab-nav-wrapper {
+    margin: 0 8px 10px 8px;
+  }
+  
+  .cbp-tab-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .cbp-tab-content-container {
+    padding: 0 8px 16px 8px;
+  }
+  
+  .cbp-tab-pane {
+    padding: 14px 12px;
+    border-radius: 12px;
+  }
+  
+  .cbp-pane-title {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+  
+  .cbp-glass-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .cbp-feature-item {
+    padding: 8px 10px;
+  }
+  
+  .cbp-feature-text {
+    font-size: 0.75rem;
+  }
+
+  .cbp-tag {
+    padding: 5px 8px;
+    font-size: 0.7rem;
+  }
+
+  .cbp-step-content {
+    padding: 8px 10px;
+  }
+  
+  .cbp-step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .cbp-timeline::before {
+    left: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cbp-header-title {
+    font-size: 0.8rem;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cbp-header-share-btn span {
+    display: none;
+  }
+  
+  .cbp-header-share-btn {
+    padding: 7px;
+    border-radius: 8px;
+  }
+  
+  .cbp-header-apply-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
+  }
+}
+

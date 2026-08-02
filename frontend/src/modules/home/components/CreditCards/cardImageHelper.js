@@ -44,16 +44,16 @@ import hdfcTataNeuInfinite from './image/HDFC/tata neu infinite.png';
 import hdfcTataNeuplus from './image/HDFC/tata neuplus.png';
 
 // ICICI
-import iciciAmazon from './image/icici/amazon.png';
-import iciciCoral from './image/icici/coral.png';
-import iciciEmirates from './image/icici/emirates.png';
+import iciciAmazon from './image/icici/amazon pay.png';
+import iciciCoral from './image/icici/coral (2).png';
+import iciciEmirates from './image/icici/emirates (2).png';
 import iciciExpressions from './image/icici/expressions.png';
 import iciciHpclSuperSaver from './image/icici/hpcl super saver.png';
-import iciciMakemytrip from './image/icici/makemytrip.png';
-import iciciManchesterUnited from './image/icici/manchester united.png';
-import iciciPlatinumChip from './image/icici/platinum chip.png';
-import iciciRuby from './image/icici/ruby.png';
-import iciciSapphero from './image/icici/sapphero.png';
+import iciciMakemytrip from './image/icici/makemytrip platinum.png';
+import iciciManchesterUnited from './image/icici/manchester.png';
+import iciciPlatinumChip from './image/icici/platinum.png';
+import iciciRuby from './image/icici/rubyx.png';
+import iciciSapphero from './image/icici/sappiro.png';
 
 // IDFC
 import idfcClassic from './image/IDFC/classic visa.png';
