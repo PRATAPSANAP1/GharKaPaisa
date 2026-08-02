@@ -1815,7 +1815,7 @@ export default function Home({ onNavigate }) {
           const mapped = data.data.map(p => ({
             name: p.name,
             bank: p.bank_name || p.bank_code || 'Bank',
-            benefit: p.description || p.short_description || 'Premium rewards & benefits',
+            features: Array.isArray(p.features) ? p.features.slice(0, 3) : (p.short_description ? [p.short_description] : ['Premium Rewards']),
             image: p.card_image_url || p.image_url || p.thumbnail_url || p.logo,
             slug: p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
           }));
@@ -2831,7 +2831,7 @@ export default function Home({ onNavigate }) {
                   return dynamicPopular.slice(0, 6).map(p => ({
                     name: p.name,
                     bank: p.bank_name || p.bank_code || 'Bank',
-                    benefit: p.description || p.short_description || 'Premium rewards & benefits',
+                    features: Array.isArray(p.features) ? p.features.slice(0, 3) : (p.short_description ? [p.short_description] : ['Premium Rewards']),
                     image: p.card_image_url || p.image_url || p.thumbnail_url || p.logo,
                     slug: p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
                   }));
@@ -2877,8 +2877,17 @@ export default function Home({ onNavigate }) {
 
                   {/* Details */}
                   <div>
-                    <h3 style={{ margin: "0 0 4px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
-                    <p style={{ margin: "0 0 10px 0", fontSize: "10px", color: C.textLight, lineHeight: 1.3 }}>{t('popularCardsList.' + card.name.toLowerCase().replace(/[^a-z0-9]/g, ''), card.benefit)}</p>
+                    <h3 style={{ margin: "0 0 8px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
+                      {(card.features || []).slice(0, 3).map((feat, fi) => (
+                        <span key={fi} style={{
+                          fontSize: "9px", fontWeight: 600, color: C.teal,
+                          background: `${C.teal}12`, border: `1px solid ${C.teal}30`,
+                          borderRadius: "6px", padding: "2px 6px", lineHeight: 1.4,
+                          whiteSpace: "nowrap"
+                        }}>{feat}</span>
+                      ))}
+                    </div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -3158,9 +3167,15 @@ export default function Home({ onNavigate }) {
             <div style={{ display: "inline-block", background: `${C.teal}15`, color: C.teal, padding: "4px 10px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, marginBottom: "16px" }}>
               {selectedPopularCard.bank}
             </div>
-            <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: C.textLight, lineHeight: 1.5 }}>
-              {t('popularCardsList.' + selectedPopularCard.name.toLowerCase().replace(/[^a-z0-9]/g, ''), selectedPopularCard.benefit)}
-            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "24px" }}>
+              {(selectedPopularCard.features || []).slice(0, 3).map((feat, fi) => (
+                <span key={fi} style={{
+                  fontSize: "12px", fontWeight: 600, color: C.teal,
+                  background: `${C.teal}12`, border: `1px solid ${C.teal}30`,
+                  borderRadius: "8px", padding: "4px 10px", lineHeight: 1.4
+                }}>{feat}</span>
+              ))}
+            </div>
             <button 
               onClick={() => {
                 resolveAndApply(selectedPopularCard.name, {

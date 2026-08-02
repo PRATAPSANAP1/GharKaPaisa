@@ -9,37 +9,37 @@ export const popularCards = [
   { 
     name: "HDFC Millennia", 
     bank: "HDFC Bank", 
-    benefit: "5% Cashback on online shopping", 
+    features: ["5% Cashback", "Lounge Access", "Zero Forex"],
     image: hdfcImg
   },
   { 
     name: "SBI SimplyCLICK", 
     bank: "SBI Card", 
-    benefit: "10X Rewards on online partners", 
+    features: ["10X Rewards", "Amazon Voucher", "Fuel Waiver"],
     image: sbiImg
   },
   { 
     name: "Axis Neo", 
     bank: "Axis Bank", 
-    benefit: "10% off on Zomato & BookMyShow", 
+    features: ["10% Off Dining", "BookMyShow Deals", "Reward Points"],
     image: axisImg
   },
   { 
     name: "ICICI Coral", 
     bank: "ICICI Bank", 
-    benefit: "BookMyShow discounts & dining rewards", 
+    features: ["Movie Discounts", "Dining Rewards", "Lounge Access"],
     image: iciciImg
   },
   { 
     name: "Yes Bank BYOC", 
     bank: "Yes Bank", 
-    benefit: "Choose your own rewards category", 
+    features: ["Custom Rewards", "Flexible Categories", "Welcome Bonus"],
     image: yesImg
   },
   { 
     name: "Kotak League", 
     bank: "Kotak Bank", 
-    benefit: "Premium rewards with zero annual fee", 
+    features: ["Premium Rewards", "Zero Annual Fee", "Travel Perks"],
     image: kotakImg
   }
 ];
