@@ -94,6 +94,7 @@ export default function PartnerProducts() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeBank, setActiveBank] = useState("All Banks");
+  const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
   const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
   const [sortBy, setSortBy] = useState("featured");
   const [minCommission, setMinCommission] = useState(0);
@@ -106,10 +107,12 @@ export default function PartnerProducts() {
     let count = 0;
     if (activeCategory !== 'all') count++;
     if (activeBank !== 'All Banks') count++;
+    if (featureFilter !== 'all') count++;
     if (minCommission !== 0) count++;
+    if (minApproval !== 0) count++;
     if (search.trim() !== '') count++;
     return count;
-  }, [activeCategory, activeBank, minCommission, search]);
+  }, [activeCategory, activeBank, featureFilter, minCommission, minApproval, search]);
 
   // Sync category from URL search query parameter or navigation state
   useEffect(() => {
@@ -348,7 +351,15 @@ export default function PartnerProducts() {
     // Approval % Filter
     const matchApproval = approvalRate >= minApproval;
     
-    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval;
+    // Feature Filter
+    const pName = (p.name || '').toLowerCase();
+    const pDesc = (p.description || '').toLowerCase();
+    const matchFeature = featureFilter === 'all' ||
+      (featureFilter === 'ltf' && (pName.includes('free') || pName.includes('ltf') || pName.includes('pixel') || pDesc.includes('free'))) ||
+      (featureFilter === 'high_payout' && parseFloat(p.commission_value || 0) >= 1000) ||
+      (featureFilter === 'high_approval' && approvalRate >= 88);
+    
+    return matchSearch && matchCategory && matchBank && matchCommission && matchApproval && matchFeature;
   });
 
   // Sort Logic
@@ -578,6 +589,7 @@ export default function PartnerProducts() {
             onClick={() => {
               setActiveCategory('all');
               setActiveBank('All Banks');
+              setFeatureFilter('all');
               setMinCommission(0);
               setMinApproval(0);
               setSearch('');
@@ -623,6 +635,7 @@ export default function PartnerProducts() {
           onClick={() => {
             setActiveCategory('all');
             setActiveBank('All Banks');
+            setFeatureFilter('all');
             setMinCommission(0);
             setMinApproval(0);
             setSearch('');
@@ -700,79 +713,54 @@ export default function PartnerProducts() {
       {/* ═══ MAIN CONTENT ═══ */}
       <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* Search & Mobile Control Header */}
+        {/* Smart & User-Friendly Filter Controls Header */}
         <div style={{
-          ...S.card, padding: isMobile ? '12px 16px' : '14px 20px', borderRadius: '16px',
-          display: 'flex', flexDirection: 'column', gap: '12px'
+          ...S.card,
+          padding: isMobile ? '14px' : '18px 22px',
+          borderRadius: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          background: C.card,
+          border: `1.5px solid ${C.border}`,
+          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(15,23,42,0.04)'
         }}>
-          {/* Top Filter Select Dropdowns Row (Desktop Only) */}
-          {!isMobile && (
-            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              <select
-                id="header-select-products"
-                value={activeCategory}
-                onChange={(e) => setActiveCategory(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: activeCategory !== 'all' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                  background: activeCategory !== 'all' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                  color: activeCategory !== 'all' ? '#FFFFFF' : C.text,
-                  outline: 'none'
-                }}
-              >
-                <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
-                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
-                  <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                    {getCategoryEmoji(cat.id)} {cat.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                id="header-select-banks"
-                value={activeBank}
-                onChange={(e) => setActiveBank(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: activeBank !== 'All Banks' ? `1.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
-                  background: activeBank !== 'All Banks' ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` : (isDark ? '#18181B' : '#F8FAFC'),
-                  color: activeBank !== 'All Banks' ? '#FFFFFF' : C.text,
-                  outline: 'none'
-                }}
-              >
-                <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
-                {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
-                  <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                    🏦 {bank}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Search bar row */}
+          
+          {/* Row 1: Search Bar + Sort & Page Controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
             <div style={{ position: 'relative', flex: 1, width: '100%' }}>
-              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={20} />
+              <MdSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.primary }} size={20} />
               <input 
                 type="text" 
-                placeholder={t("🔍 Search products, cards, loans, insurance...")} 
+                placeholder={t("Search by card name, bank, category, or payout...")} 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ ...S.input, paddingLeft: '38px', height: '42px', fontSize: '13px' }}
+                style={{
+                  ...S.input,
+                  paddingLeft: '42px',
+                  paddingRight: search ? '36px' : '14px',
+                  height: '44px',
+                  fontSize: '13.5px',
+                  borderRadius: '12px',
+                  border: `1.5px solid ${search ? C.primary : C.border}`,
+                  background: isDark ? '#18181B' : '#F8FAFC',
+                  color: C.text,
+                  boxShadow: search ? `0 0 0 3px ${C.primary}20` : 'none'
+                }}
               />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', color: C.textMid, cursor: 'pointer', padding: '4px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title="Clear search"
+                >
+                  <MdClose size={18} />
+                </button>
+              )}
             </div>
             
             <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto', alignSelf: 'stretch' }}>
@@ -783,19 +771,22 @@ export default function PartnerProducts() {
                   ...S.input,
                   flex: isMobile ? 1 : 'none',
                   width: isMobile ? 'auto' : '170px',
-                  height: '42px',
+                  height: '44px',
                   fontSize: isMobile ? '12px' : '13px',
-                  fontWeight: 650,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '0 8px'
+                  borderRadius: '12px',
+                  padding: '0 10px',
+                  background: isDark ? '#18181B' : '#F8FAFC',
+                  border: `1.5px solid ${C.border}`
                 }}
               >
-                <option value="featured">Featured</option>
-                <option value="highest_commission">Highest Commission</option>
-                <option value="newest">Newest</option>
-                <option value="highest_approval">Highest Approval</option>
-                <option value="a_z">A-Z</option>
-                <option value="popular">Popular</option>
+                <option value="featured">✨ Featured</option>
+                <option value="highest_commission">💰 Highest Commission</option>
+                <option value="highest_approval">⭐ Highest Approval</option>
+                <option value="newest">🆕 Newest</option>
+                <option value="a_z">🔤 A-Z</option>
+                <option value="popular">🔥 Popular</option>
               </select>
 
               <select
@@ -807,17 +798,20 @@ export default function PartnerProducts() {
                 style={{
                   ...S.input,
                   flex: isMobile ? 1 : 'none',
-                  width: isMobile ? 'auto' : '140px',
-                  height: '42px',
+                  width: isMobile ? 'auto' : '130px',
+                  height: '44px',
                   fontSize: isMobile ? '12px' : '13px',
-                  fontWeight: 650,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  padding: '0 8px'
+                  borderRadius: '12px',
+                  padding: '0 10px',
+                  background: isDark ? '#18181B' : '#F8FAFC',
+                  border: `1.5px solid ${C.border}`
                 }}
               >
-                <option value={12}>12 per page</option>
-                <option value={24}>24 per page</option>
-                <option value={48}>48 per page</option>
+                <option value={12}>12 / page</option>
+                <option value={24}>24 / page</option>
+                <option value={48}>48 / page</option>
                 <option value="all">Show All</option>
               </select>
 
@@ -825,50 +819,221 @@ export default function PartnerProducts() {
                 <button
                   onClick={() => setShowMobileFilter(true)}
                   style={{
-                    background: `${C.primary}12`,
-                    border: `1.5px solid ${C.primary}30`,
+                    background: `${C.primary}15`,
+                    border: `1.5px solid ${C.primary}`,
                     color: C.primary,
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     padding: '0 12px',
-                    height: '42px',
+                    height: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '4px',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     fontSize: '12px',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                     flex: 1
                   }}
                 >
-                  <MdFilterList size={16} /> Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
+                  <MdFilterList size={18} /> Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Results count & Active filter status */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid }}>
-            <span>
-              Showing <strong style={{ color: C.text }}>{filteredProducts.length}</strong> Products
-            </span>
-            {(activeCategory !== 'all' || activeBank !== 'All Banks' || minCommission !== 0 || minApproval !== 0 || search) && (
+          {/* Row 2: Horizontal Category Pills */}
+          <div>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              overflowX: 'auto',
+              paddingBottom: '4px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}>
+              {CATEGORIES.map(cat => {
+                const isActive = activeCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '30px',
+                      fontSize: '12.5px',
+                      fontWeight: isActive ? 800 : 650,
+                      border: isActive ? `1.5px solid ${C.primary}` : `1.5px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}`,
+                      background: isActive 
+                        ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` 
+                        : (isDark ? '#18181B' : '#F8FAFC'),
+                      color: isActive ? '#FFFFFF' : C.text,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isActive ? `0 4px 14px ${C.primary}40` : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>{cat.id === 'all' ? '🛍️' : getCategoryEmoji(cat.id)}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Row 3: Bank Quick Chips + Feature Filter Toggles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}` }}>
+            
+            {/* Bank Chips */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
+                Banks:
+              </span>
+              {banksForCategory.map(bank => {
+                const isActive = activeBank === bank;
+                return (
+                  <button
+                    key={bank}
+                    onClick={() => setActiveBank(bank)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: isActive ? 800 : 650,
+                      border: isActive ? `1.5px solid ${C.primary}` : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'}`,
+                      background: isActive ? `${C.primary}18` : 'transparent',
+                      color: isActive ? C.primary : C.textMid,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {bank === 'All Banks' ? '🏦 All' : bank}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Feature Chips */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
+                Features:
+              </span>
+              {[
+                { id: 'all', label: 'All Cards' },
+                { id: 'ltf', label: '🎁 Lifetime Free' },
+                { id: 'high_payout', label: '🔥 High Payout (₹1000+)' },
+                { id: 'high_approval', label: '⭐ High Approval (88%+)' }
+              ].map(feat => {
+                const isActive = featureFilter === feat.id;
+                return (
+                  <button
+                    key={feat.id}
+                    onClick={() => setFeatureFilter(feat.id)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: isActive ? 800 : 650,
+                      border: isActive ? `1.5px solid ${C.primary}` : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'}`,
+                      background: isActive ? `${C.primary}18` : 'transparent',
+                      color: isActive ? C.primary : C.textMid,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {feat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Row 4: Results Count & Active Filter Tags */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '6px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: 700, color: C.textMid }}>
+                Showing <strong style={{ color: C.text, fontSize: '14px' }}>{filteredProducts.length}</strong> products
+              </span>
+
+              {/* Active Filter Removable Tags */}
+              {activeCategory !== 'all' && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  Category: {CATEGORIES.find(c => c.id === activeCategory)?.label}
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveCategory('all')} />
+                </span>
+              )}
+
+              {activeBank !== 'All Banks' && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  Bank: {activeBank}
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveBank('All Banks')} />
+                </span>
+              )}
+
+              {featureFilter !== 'all' && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  Feature: {featureFilter === 'ltf' ? 'Lifetime Free' : featureFilter === 'high_payout' ? 'High Payout' : 'High Approval'}
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setFeatureFilter('all')} />
+                </span>
+              )}
+
+              {minCommission > 0 && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  Payout: ₹{minCommission}+
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setMinCommission(0)} />
+                </span>
+              )}
+
+              {search && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
+                  background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                }}>
+                  Search: "{search}"
+                  <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setSearch('')} />
+                </span>
+              )}
+            </div>
+
+            {activeFiltersCount > 0 && (
               <button
                 onClick={() => {
                   setActiveCategory('all');
                   setActiveBank('All Banks');
+                  setFeatureFilter('all');
                   setMinCommission(0);
                   setMinApproval(0);
                   setSearch('');
                   setSortBy('featured');
                 }}
-                style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', fontSize: '11px' }}
+                style={{
+                  background: 'none', border: 'none', color: C.red, fontWeight: 800,
+                  cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px'
+                }}
               >
-                Reset Filters
+                Clear All ✕
               </button>
             )}
           </div>
+
         </div>
 
         {error && (

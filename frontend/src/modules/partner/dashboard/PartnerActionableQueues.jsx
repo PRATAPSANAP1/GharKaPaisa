@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { MdWarning, MdAccessTime, MdArrowForward } from 'react-icons/md';
+import { MdWarning, MdArrowForward } from 'react-icons/md';
 import api from '../../../services/api';
 
 export default function PartnerActionableQueues({ onSelectCustomer, notifications = [], allLeads = [] }) {
   const { C, isDark } = useTheme();
   const [urgentQueries, setUrgentQueries] = useState([]);
-  const [pendingKyc, setPendingKyc] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -28,7 +27,6 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
         }
 
         const queries = [];
-        const kycList = [];
 
         // Parse applications for action required & underwriting queries
         if (Array.isArray(apps)) {
@@ -43,17 +41,6 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
                 issue: app.query_description || app.remark || 'Action Required by Bank',
                 slaRemaining: app.sla_remaining || '4 hrs SLA',
                 income: app.income || '45000'
-              });
-            }
-            if (st.includes('kyc') || st.includes('pending_kyc')) {
-              kycList.push({
-                id: app.application_number || app.id || `APP-${app.id}`,
-                customer: app.customer_name || app.name || 'Customer',
-                phone: app.customer_phone || app.phone || '',
-                bank: app.bank_name || app.bank_code || 'Bank Partner',
-                issue: app.remark || 'Aadhaar e-KYC Pending',
-                slaRemaining: app.sla_remaining || '24 hrs SLA',
-                income: app.income || '38000'
               });
             }
           });
@@ -79,27 +66,11 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
                 });
               }
             }
-
-            if ((title.includes('kyc') || msg.includes('kyc') || title.includes('aadhaar')) && kycList.length < 5) {
-              const appNo = n.reference_id ? `APP-${n.reference_id}` : 'KYC-REQ';
-              if (!kycList.some(k => k.id === appNo)) {
-                kycList.push({
-                  id: appNo,
-                  customer: n.customer_name || 'Customer',
-                  phone: n.phone || '',
-                  bank: n.bank_name || 'Bank Partner',
-                  issue: n.title || 'Aadhaar e-KYC Pending',
-                  slaRemaining: '24 hrs SLA',
-                  income: '40000'
-                });
-              }
-            }
           });
         }
 
         if (isMounted) {
           setUrgentQueries(queries);
-          setPendingKyc(kycList);
         }
       } catch (err) {
         console.warn('Failed to load actionable queues:', err);
@@ -112,8 +83,8 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
     return () => { isMounted = false; };
   }, [notifications, allLeads]);
 
-  // CRITICAL: Hide component completely if there are no dynamic actionable notifications/queries!
-  if (!loading && urgentQueries.length === 0 && pendingKyc.length === 0) {
+  // Hide component completely if there are no dynamic actionable queries
+  if (!loading && urgentQueries.length === 0) {
     return null;
   }
 
@@ -124,7 +95,7 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
       gap: '16px',
       marginBottom: '10px'
     }}>
-      {/* QUEUE 1: URGENT BANK QUERIES */}
+      {/* URGENT BANK QUERIES */}
       {urgentQueries.length > 0 && (
         <div style={{
           background: C.card, borderRadius: '18px', padding: '18px 20px',
@@ -175,65 +146,6 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
                   </span>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
                     Resolve <MdArrowForward size={14} />
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* QUEUE 2: PENDING E-KYC */}
-      {pendingKyc.length > 0 && (
-        <div style={{
-          background: C.card, borderRadius: '18px', padding: '18px 20px',
-          border: `1.5px solid ${isDark ? '#78350F' : '#FDE68A'}`,
-          display: 'flex', flexDirection: 'column', gap: '14px',
-          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(245,158,11,0.04)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ padding: '6px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706' }}>
-                <MdAccessTime size={18} />
-              </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>
-                e-KYC Pending ({pendingKyc.length})
-              </h4>
-            </div>
-            <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '8px', background: '#FEF3C7', color: '#92400E' }}>
-              Customer Action
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {pendingKyc.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => onSelectCustomer && onSelectCustomer({ name: item.customer, phone: item.phone, income: item.income })}
-                style={{
-                  padding: '12px 14px', borderRadius: '12px',
-                  background: isDark ? C.bgSecondary : '#FFFBEB',
-                  border: `1px solid ${isDark ? '#B45309' : '#FDE68A'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  cursor: 'pointer'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <strong style={{ fontSize: '13.5px', color: C.text }}>{item.customer}</strong>
-                    <span style={{ fontSize: '11px', color: C.primary, fontWeight: 800 }}>({item.bank})</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#D97706', fontWeight: 700, marginTop: '2px' }}>
-                    ⏳ {item.issue}
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block' }}>
-                    {item.slaRemaining}
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                    Remind <MdArrowForward size={14} />
                   </span>
                 </div>
               </div>
