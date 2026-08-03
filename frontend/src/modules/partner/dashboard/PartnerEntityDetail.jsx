@@ -197,68 +197,55 @@ export default function PartnerEntityDetail() {
         </button>
       </div>
 
-      {/* ── MAIN WORKSPACE CONTAINER WITH LEFT SUB-SIDEBAR ── */}
+      {/* ── BANK WORKSPACE HORIZONTAL TOP NAVIGATION TABS ── */}
       <div style={{
+        background: C.card,
+        borderRadius: '16px',
+        padding: '8px 12px',
+        border: `1px solid ${C.border}`,
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: '20px',
-        alignItems: 'flex-start'
+        alignItems: 'center',
+        gap: '6px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        {/* LEFT BANK WORKSPACE SUB-SIDEBAR */}
-        <aside style={{
-          width: isMobile ? '100%' : '240px',
-          background: C.card,
-          borderRadius: '20px',
-          padding: '16px',
-          border: `1px solid ${C.border}`,
-          display: 'flex',
-          flexDirection: isMobile ? 'row' : 'column',
-          gap: '6px',
-          flexShrink: 0,
-          overflowX: isMobile ? 'auto' : 'visible'
-        }}>
-          <div style={{ padding: '4px 8px 10px', display: isMobile ? 'none' : 'block', borderBottom: `1px solid ${C.border}`, marginBottom: '6px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>
-              {bankName}
-            </span>
-          </div>
+        {BANK_WORKSPACE_TABS.map((tItem) => {
+          const Icon = tItem.icon;
+          const isActive = activeTab === tItem.id;
+          const targetPath = tItem.id === 'dashboard'
+            ? `/partner/credit-cards/${slug}`
+            : `/partner/credit-cards/${slug}/${tItem.id}`;
 
-          {BANK_WORKSPACE_TABS.map((tItem) => {
-            const Icon = tItem.icon;
-            const isActive = activeTab === tItem.id;
-            const targetPath = tItem.id === 'dashboard'
-              ? `/partner/credit-cards/${slug}`
-              : `/partner/credit-cards/${slug}/${tItem.id}`;
+          return (
+            <Link
+              key={tItem.id}
+              to={targetPath}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                fontWeight: isActive ? 800 : 600,
+                textDecoration: 'none',
+                color: isActive ? '#FFFFFF' : C.text,
+                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
+                whiteSpace: 'nowrap',
+                boxShadow: isActive ? `0 4px 12px ${C.primary}30` : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Icon size={18} />
+              <span>{tItem.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
-            return (
-              <Link
-                key={tItem.id}
-                to={targetPath}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  fontSize: '13.5px',
-                  fontWeight: isActive ? 800 : 600,
-                  textDecoration: 'none',
-                  color: isActive ? '#FFFFFF' : C.text,
-                  background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
-                  whiteSpace: 'nowrap',
-                  boxShadow: isActive ? `0 4px 12px ${C.primary}30` : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Icon size={18} />
-                <span>{tItem.label}</span>
-              </Link>
-            );
-          })}
-        </aside>
-
-        {/* WORKSPACE CONTENT AREA */}
-        <main style={{ flex: 1, width: '100%' }}>
+      {/* WORKSPACE CONTENT AREA */}
+      <main style={{ width: '100%' }}>
 
           {/* 1. BANK DASHBOARD VIEW */}
           {activeTab === 'dashboard' && (
@@ -636,14 +623,13 @@ export default function PartnerEntityDetail() {
                 </div>
               ) : (
                 <p style={{ fontSize: '13.5px', color: C.textMid }}>
-                  Access {activeTab} tools directly for {bankName}. Use the navigation on the left to switch modules.
+                  Access {activeTab} tools directly for {bankName}. Use the navigation tabs above to switch modules.
                 </p>
               )}
             </div>
           )}
 
         </main>
-      </div>
 
       {/* ═══ PRODUCT WORKSPACE MODAL (STEP 4) ═══ */}
       {selectedProductWorkspace && (
