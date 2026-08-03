@@ -4,6 +4,9 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
 import api from "../../../services/api";
 import QuickAccessSection from './QuickAccessSection';
+import LeadQualificationBar from './LeadQualificationBar';
+import PartnerActionableQueues from './PartnerActionableQueues';
+import Customer360Drawer from './Customer360Drawer';
 import {
   MdDashboard, MdStorefront, MdLeaderboard, MdPeople,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
@@ -75,6 +78,7 @@ export default function PartnerDashboard({ partner }) {
   const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [activeDashboardCategory, setActiveDashboardCategory] = useState('credit_card');
+  const [selectedCustomer360, setSelectedCustomer360] = useState(null);
   const [selectedMoreInfoCard, setSelectedMoreInfoCard] = useState(null);
 
   // Category Specific Role & Bank Cards Data
@@ -484,7 +488,13 @@ export default function PartnerDashboard({ partner }) {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
+      
+      {/* ── 1-CLICK INSTANT BANK MATCH & QUALIFICATION ENGINE ── */}
+      <LeadQualificationBar />
+
+      {/* ── SLA-DRIVEN ACTIONABLE EXECUTION QUEUES ── */}
+      <PartnerActionableQueues onSelectCustomer={(cust) => setSelectedCustomer360(cust)} />
       
       {/* ── HERO BANNER SLIDER ── */}
       <div 
