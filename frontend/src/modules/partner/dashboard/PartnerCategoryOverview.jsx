@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
-  MdSearch, MdArrowForward, MdAccountBalance
+  MdSearch, MdArrowForward, MdDashboard, MdStorefront, MdPeople, 
+  MdLeaderboard, MdFolder, MdBarChart, MdAccountBalanceWallet, MdSupportAgent
 } from 'react-icons/md';
 import api from '../../../services/api';
+
+// Embedded Sub-Components
+import PartnerProducts from '../products/PartnerProducts';
+import PartnerApplications from '../leads/PartnerApplications';
+import PartnerCrm from '../leads/PartnerCrm';
+import PartnerVault from '../profile/PartnerVault';
+import PartnerReports from './PartnerReports';
+import PartnerWallet from '../wallet/PartnerWallet';
+import PartnerSupport from './PartnerSupport';
 
 // Bank Logo Imports
 import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
@@ -98,9 +108,21 @@ const insuranceRoleCards = [
   { title: "General Insurance", sub: "Insurance Type", count: "8,900", availableCards: "15 Motor & Asset Plans", slug: "general-insurance" }
 ];
 
+const SUB_MODULE_TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: MdDashboard },
+  { id: 'cards', label: 'Credit Cards', icon: MdStorefront },
+  { id: 'customers', label: 'Customers', icon: MdPeople },
+  { id: 'applications', label: 'Applications', icon: MdLeaderboard },
+  { id: 'documents', label: 'Documents', icon: MdFolder },
+  { id: 'reports', label: 'Reports', icon: MdBarChart },
+  { id: 'commission', label: 'Commission', icon: MdAccountBalanceWallet },
+  { id: 'support', label: 'Support', icon: MdSupportAgent },
+];
+
 export default function PartnerCategoryOverview({ defaultCategory = 'credit_card' }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { C, isDark } = useTheme();
   const { activeBanks } = useActiveBanks();
 
@@ -109,6 +131,20 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     if (location.pathname.includes('/partner/insurance')) return 'insurance';
     return defaultCategory;
   });
+
+  const activeTab = searchParams.get('tab') || 'dashboard';
+
+  const handleTabChange = (tabId) => {
+    if (tabId === 'dashboard') {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('tab');
+      setSearchParams(newParams);
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('tab', tabId);
+      setSearchParams(newParams);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [bankCategoryFilter, setBankCategoryFilter] = useState('all');
@@ -143,7 +179,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           setDbBanks(list);
         }
       } catch (err) {
-        console.warn('Could not load database banks, using active bank context fallback:', err);
+        console.warn('Could not load database banks, using fallback:', err);
       } finally {
         if (isMounted) setLoadingBanks(false);
       }
@@ -248,7 +284,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   }, [rawCards, searchQuery]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
       {/* ── 1. HEADER SECTION WITH TITLE, SEARCH & FILTERS ON SAME LINE ── */}
       <div style={{
@@ -283,314 +319,405 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         </div>
 
         {/* Top Controls: Search Bar & Filters on Same Line */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-          width: isMobile ? '100%' : 'auto'
-        }}>
-          {/* Search Input */}
+        {activeTab === 'dashboard' && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            background: isDark ? '#1E293B' : '#FFFFFF',
-            padding: '9px 16px',
-            borderRadius: '14px',
-            border: `1px solid ${C.border}`,
-            width: isMobile ? '100%' : '240px',
-            boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 12px rgba(15,23,42,0.03)'
+            flexWrap: 'wrap',
+            width: isMobile ? '100%' : 'auto'
           }}>
-            <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
-            <input
-              type="text"
-              placeholder={activeCategory === 'credit_card' ? "Search banks..." : "Search product..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: C.text,
-                width: '100%',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                outline: 'none'
-              }}
-            />
-          </div>
-
-          {activeCategory === 'credit_card' && (
-            <>
-              {/* Category Filter */}
-              <select
-                value={bankCategoryFilter}
-                onChange={(e) => setBankCategoryFilter(e.target.value)}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: '14px',
-                  border: `1px solid ${C.border}`,
-                  background: isDark ? '#1E293B' : '#FFFFFF',
-                  color: C.text,
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  outline: 'none',
-                  cursor: 'pointer',
-                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
-                }}
-              >
-                <option value="all">All Banks</option>
-                <option value="private">Private Banks</option>
-                <option value="psu">PSU Banks</option>
-              </select>
-
-              {/* Sort By */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: '14px',
-                  border: `1px solid ${C.border}`,
-                  background: isDark ? '#1E293B' : '#FFFFFF',
-                  color: C.text,
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  outline: 'none',
-                  cursor: 'pointer',
-                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
-                }}
-              >
-                <option value="default">Sort By</option>
-                <option value="most">Most Card Variants</option>
-                <option value="name-asc">Name A-Z</option>
-                <option value="name-desc">Name Z-A</option>
-              </select>
-            </>
-          )}
-        </div>
-      </div>
-
-      {activeCategory === 'credit_card' && (
-        <>
-          {/* ── 2. BANK CARDS GRID (FETCHED FROM DATABASE) ── */}
-          {loadingBanks && dbBanks.length === 0 ? (
+            {/* Search Input */}
             <div style={{
-              textAlign: 'center',
-              padding: '48px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
               background: isDark ? '#1E293B' : '#FFFFFF',
-              borderRadius: '20px',
+              padding: '9px 16px',
+              borderRadius: '14px',
               border: `1px solid ${C.border}`,
-              color: C.textMid || '#64748B',
-              fontWeight: 600
+              width: isMobile ? '100%' : '240px',
+              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 12px rgba(15,23,42,0.03)'
             }}>
-              Loading banks from database...
+              <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
+              <input
+                type="text"
+                placeholder={activeCategory === 'credit_card' ? "Search banks..." : "Search product..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: C.text,
+                  width: '100%',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  outline: 'none'
+                }}
+              />
             </div>
-          ) : filteredBanks.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '48px',
-              background: isDark ? '#1E293B' : '#FFFFFF',
-              borderRadius: '20px',
-              border: `1px solid ${C.border}`,
-              color: C.textMid || '#64748B'
-            }}>
-              No bank found matching "{searchQuery}"
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(210px, 1fr))',
-              gap: '16px'
-            }}>
-              {filteredBanks.map((bank) => (
-                <div
-                  key={`bank-${bank.id || bank.slug}`}
-                  onClick={() => handleBankClick(bank)}
+
+            {activeCategory === 'credit_card' && (
+              <>
+                {/* Category Filter */}
+                <select
+                  value={bankCategoryFilter}
+                  onChange={(e) => setBankCategoryFilter(e.target.value)}
                   style={{
-                    background: isDark ? '#1E293B' : '#FFFFFF',
-                    borderRadius: '20px',
-                    padding: '20px',
+                    padding: '9px 14px',
+                    borderRadius: '14px',
                     border: `1px solid ${C.border}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    gap: '16px',
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
                     cursor: 'pointer',
-                    boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.borderColor = bank.accent || C.primary;
-                    e.currentTarget.style.boxShadow = isDark 
-                      ? `0 8px 25px ${bank.accent}30` 
-                      : `0 8px 25px rgba(0,0,0,0.08)`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)';
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
                   }}
                 >
-                  {/* Top Part: Logo & Name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {bank.logo ? (
-                      <div style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '12px',
-                        background: isDark ? '#0F172A' : '#F8FAFC',
-                        border: `1px solid ${C.border}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '6px',
-                        flexShrink: 0
-                      }}>
-                        <img 
-                          src={bank.logo} 
-                          alt={bank.name} 
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                        />
-                      </div>
-                    ) : (
-                      <div style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '12px',
-                        background: `${bank.accent || C.primary}18`,
-                        color: bank.accent || C.primary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '15px',
-                        fontWeight: 900,
-                        flexShrink: 0
-                      }}>
-                        {bank.name.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
+                  <option value="all">All Banks</option>
+                  <option value="private">Private Banks</option>
+                  <option value="psu">PSU Banks</option>
+                </select>
 
-                    <h3 style={{
-                      fontSize: '15px',
-                      fontWeight: 800,
-                      color: C.text,
-                      margin: 0,
-                      lineHeight: 1.25
-                    }}>
-                      {bank.name}
-                    </h3>
-                  </div>
+                {/* Sort By */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '14px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="default">Sort By</option>
+                  <option value="most">Most Card Variants</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                </select>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
-                  {/* Middle Part: Variants Count */}
-                  <div>
-                    <div style={{
-                      fontSize: '26px',
-                      fontWeight: 900,
-                      color: C.text,
-                      letterSpacing: '-0.5px',
-                      lineHeight: 1
-                    }}>
-                      {bank.activeCardsCount}
-                    </div>
-                    <span style={{
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: C.textMid || '#64748B',
-                      marginTop: '4px',
-                      display: 'block'
-                    }}>
-                      Card Variants
-                    </span>
-                  </div>
+      {/* ── 2. TOP HORIZONTAL SUB-MODULE NAVIGATION BAR ── */}
+      <div style={{
+        background: isDark ? '#1E293B' : '#FFFFFF',
+        borderRadius: '16px',
+        padding: '8px 12px',
+        border: `1px solid ${C.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
+      }}>
+        {SUB_MODULE_TABS.map((tItem) => {
+          const Icon = tItem.icon;
+          const isActive = activeTab === tItem.id;
 
-                  {/* Bottom Part: Explore Link with Accent Underline */}
-                  <div style={{
-                    paddingTop: '10px',
-                    borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <span style={{
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      color: bank.accent || C.primary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      Explore <MdArrowForward size={16} />
-                    </span>
-                  </div>
-
-                  {/* Bottom Color Accent Line */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '3px',
-                    background: bank.accent || C.primary,
-                    opacity: 0.85
-                  }} />
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Non-Credit Card Category View (Loans & Insurance) */}
-      {activeCategory !== 'credit_card' && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: "16px"
-        }}>
-          {filteredNonCcCards.map((card, idx) => (
-            <div
-              key={idx}
-              onClick={() => navigate(`${location.pathname}/${card.slug}`)}
+          return (
+            <button
+              key={tItem.id}
+              onClick={() => handleTabChange(tItem.id)}
               style={{
-                background: isDark ? '#1E293B' : '#FFFFFF',
-                borderRadius: "18px",
-                padding: "20px",
-                border: `1px solid ${C.border}`,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                fontWeight: isActive ? 800 : 600,
+                border: 'none',
                 cursor: 'pointer',
-                boxShadow: isDark ? 'none' : '0 4px 18px rgba(0,0,0,0.03)'
+                color: isActive ? '#FFFFFF' : C.text,
+                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
+                whiteSpace: 'nowrap',
+                boxShadow: isActive ? `0 4px 12px ${C.primary}30` : 'none',
+                transition: 'all 0.2s'
               }}
             >
-              <div>
-                <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase" }}>
-                  {card.sub}
-                </span>
-                <h4 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "6px 0 4px" }}>
-                  {card.title}
-                </h4>
-                <span style={{ fontSize: "13px", fontWeight: 700, color: C.textMid }}>
-                  {card.availableCards}
-                </span>
+              <Icon size={18} />
+              <span>{tItem.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── 3. DYNAMIC CONTENT AREA BELOW BUTTONS ── */}
+      <div style={{ width: '100%' }}>
+
+        {/* TAB 1: DASHBOARD (BANK CARDS COLLECTION GRID) */}
+        {activeTab === 'dashboard' && (
+          <>
+            {activeCategory === 'credit_card' && (
+              <>
+                {loadingBanks && dbBanks.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '48px',
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    borderRadius: '20px',
+                    border: `1px solid ${C.border}`,
+                    color: C.textMid || '#64748B',
+                    fontWeight: 600
+                  }}>
+                    Loading banks from database...
+                  </div>
+                ) : filteredBanks.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '48px',
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    borderRadius: '20px',
+                    border: `1px solid ${C.border}`,
+                    color: C.textMid || '#64748B'
+                  }}>
+                    No bank found matching "{searchQuery}"
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(210px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {filteredBanks.map((bank) => (
+                      <div
+                        key={`bank-${bank.id || bank.slug}`}
+                        onClick={() => handleBankClick(bank)}
+                        style={{
+                          background: isDark ? '#1E293B' : '#FFFFFF',
+                          borderRadius: '20px',
+                          padding: '20px',
+                          border: `1px solid ${C.border}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '16px',
+                          cursor: 'pointer',
+                          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
+                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                          e.currentTarget.style.borderColor = bank.accent || C.primary;
+                          e.currentTarget.style.boxShadow = isDark 
+                            ? `0 8px 25px ${bank.accent}30` 
+                            : `0 8px 25px rgba(0,0,0,0.08)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.borderColor = C.border;
+                          e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)';
+                        }}
+                      >
+                        {/* Top Part: Logo & Name */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          {bank.logo ? (
+                            <div style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '12px',
+                              background: isDark ? '#0F172A' : '#F8FAFC',
+                              border: `1px solid ${C.border}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '6px',
+                              flexShrink: 0
+                            }}>
+                              <img 
+                                src={bank.logo} 
+                                alt={bank.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                              />
+                            </div>
+                          ) : (
+                            <div style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '12px',
+                              background: `${bank.accent || C.primary}18`,
+                              color: bank.accent || C.primary,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '15px',
+                              fontWeight: 900,
+                              flexShrink: 0
+                            }}>
+                              {bank.name.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+
+                          <h3 style={{
+                            fontSize: '15px',
+                            fontWeight: 800,
+                            color: C.text,
+                            margin: 0,
+                            lineHeight: 1.25
+                          }}>
+                            {bank.name}
+                          </h3>
+                        </div>
+
+                        {/* Middle Part: Variants Count */}
+                        <div>
+                          <div style={{
+                            fontSize: '26px',
+                            fontWeight: 900,
+                            color: C.text,
+                            letterSpacing: '-0.5px',
+                            lineHeight: 1
+                          }}>
+                            {bank.activeCardsCount}
+                          </div>
+                          <span style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: C.textMid || '#64748B',
+                            marginTop: '4px',
+                            display: 'block'
+                          }}>
+                            Card Variants
+                          </span>
+                        </div>
+
+                        {/* Bottom Part: Explore Link with Accent Underline */}
+                        <div style={{
+                          paddingTop: '10px',
+                          borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <span style={{
+                            fontSize: '13px',
+                            fontWeight: 800,
+                            color: bank.accent || C.primary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            Explore <MdArrowForward size={16} />
+                          </span>
+                        </div>
+
+                        {/* Bottom Color Accent Line */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: bank.accent || C.primary,
+                          opacity: 0.85
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Non-Credit Card Category View (Loans & Insurance) */}
+            {activeCategory !== 'credit_card' && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: "16px"
+              }}>
+                {filteredNonCcCards.map((card, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => navigate(`${location.pathname}/${card.slug}`)}
+                    style={{
+                      background: isDark ? '#1E293B' : '#FFFFFF',
+                      borderRadius: "18px",
+                      padding: "20px",
+                      border: `1px solid ${C.border}`,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      gap: '14px',
+                      cursor: 'pointer',
+                      boxShadow: isDark ? 'none' : '0 4px 18px rgba(0,0,0,0.03)'
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase" }}>
+                        {card.sub}
+                      </span>
+                      <h4 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "6px 0 4px" }}>
+                        {card.title}
+                      </h4>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: C.textMid }}>
+                        {card.availableCards}
+                      </span>
+                    </div>
+                    <button
+                      style={{
+                        padding: '10px', borderRadius: '10px', border: 'none',
+                        background: C.primary, color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                      }}
+                    >
+                      More Info
+                    </button>
+                  </div>
+                ))}
               </div>
-              <button
-                style={{
-                  padding: '10px', borderRadius: '10px', border: 'none',
-                  background: C.primary, color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer'
-                }}
-              >
-                More Info
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </>
+        )}
+
+        {/* TAB 2: CREDIT CARDS / PRODUCTS */}
+        {(activeTab === 'cards' || activeTab === 'products') && (
+          <PartnerProducts />
+        )}
+
+        {/* TAB 3: CUSTOMERS */}
+        {activeTab === 'customers' && (
+          <PartnerCrm />
+        )}
+
+        {/* TAB 4: APPLICATIONS */}
+        {activeTab === 'applications' && (
+          <PartnerApplications />
+        )}
+
+        {/* TAB 5: DOCUMENTS */}
+        {activeTab === 'documents' && (
+          <PartnerVault />
+        )}
+
+        {/* TAB 6: REPORTS */}
+        {activeTab === 'reports' && (
+          <PartnerReports />
+        )}
+
+        {/* TAB 7: COMMISSION / WALLET */}
+        {activeTab === 'commission' && (
+          <PartnerWallet />
+        )}
+
+        {/* TAB 8: SUPPORT */}
+        {activeTab === 'support' && (
+          <PartnerSupport />
+        )}
+
+      </div>
     </div>
   );
 }

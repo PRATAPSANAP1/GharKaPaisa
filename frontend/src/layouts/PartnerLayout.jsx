@@ -21,47 +21,9 @@ import '../components/Navbar/Navbar.css';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
-  {
-    id: 'credit_card',
-    label: 'Credit Cards',
-    icon: MdCreditCard,
-    isModule: true,
-    subItems: [
-      { id: 'cc-dashboard', path: '/partner/credit-cards', label: 'Dashboard', icon: MdDashboard },
-      { id: 'cc-products', path: '/partner/products?category=credit_card', label: 'Products', icon: MdStorefront },
-      { id: 'cc-applications', path: '/partner/applications?category=credit_card', label: 'Applications', icon: MdLeaderboard },
-      { id: 'cc-customers', path: '/partner/customers?category=credit_card', label: 'Customers', icon: MdPeople },
-      { id: 'cc-reports', path: '/partner/reports?category=credit_card', label: 'Reports', icon: MdBarChart },
-    ]
-  },
-  {
-    id: 'loans',
-    label: 'Loans',
-    icon: MdAccountBalanceWallet,
-    isModule: true,
-    subItems: [
-      { id: 'loan-dashboard', path: '/partner/loans', label: 'Dashboard', icon: MdDashboard },
-      { id: 'loan-products', path: '/partner/products?category=personal_loan', label: 'Products', icon: MdStorefront },
-      { id: 'loan-applications', path: '/partner/applications?category=loans', label: 'Applications', icon: MdLeaderboard },
-      { id: 'loan-customers', path: '/partner/customers?category=loans', label: 'Customers', icon: MdPeople },
-      { id: 'loan-documents', path: '/partner/documents?category=loans', label: 'Documents', icon: MdFolder },
-      { id: 'loan-reports', path: '/partner/reports?category=loans', label: 'Reports', icon: MdBarChart },
-    ]
-  },
-  {
-    id: 'insurance',
-    label: 'Insurance',
-    icon: MdShield,
-    isModule: true,
-    subItems: [
-      { id: 'ins-dashboard', path: '/partner/insurance', label: 'Dashboard', icon: MdDashboard },
-      { id: 'ins-products', path: '/partner/products?category=insurance', label: 'Products', icon: MdStorefront },
-      { id: 'ins-applications', path: '/partner/applications?category=insurance', label: 'Applications', icon: MdLeaderboard },
-      { id: 'ins-customers', path: '/partner/customers?category=insurance', label: 'Customers', icon: MdPeople },
-      { id: 'ins-documents', path: '/partner/documents?category=insurance', label: 'Documents', icon: MdFolder },
-      { id: 'ins-reports', path: '/partner/reports?category=insurance', label: 'Reports', icon: MdBarChart },
-    ]
-  },
+  { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Cards', icon: MdCreditCard },
+  { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
+  { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   { id: 'applications', path: '/partner/applications', label: 'Applications', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
   { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
