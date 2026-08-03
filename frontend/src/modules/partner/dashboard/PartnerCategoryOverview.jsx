@@ -146,7 +146,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* ── 1. HEADER SECTION ── */}
+      {/* ── 1. HEADER SECTION WITH TITLE, SEARCH & FILTERS ON SAME LINE ── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -178,67 +178,53 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           </p>
         </div>
 
-        {/* Top Header Search Input */}
+        {/* Top Controls: Search Bar & Filters on Same Line */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          background: isDark ? '#1E293B' : '#FFFFFF',
-          padding: '10px 18px',
-          borderRadius: '16px',
-          border: `1px solid ${C.border}`,
-          width: isMobile ? '100%' : '320px',
-          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 12px rgba(15,23,42,0.03)'
+          flexWrap: 'wrap',
+          width: isMobile ? '100%' : 'auto'
         }}>
-          <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
-          <input
-            type="text"
-            placeholder={activeCategory === 'credit_card' ? "Search banks or card type..." : "Search product or category..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: C.text,
-              width: '100%',
-              fontSize: '13.5px',
-              fontWeight: 600,
-              outline: 'none'
-            }}
-          />
-        </div>
-      </div>
-
-      {activeCategory === 'credit_card' && (
-        <>
-
-
-          {/* ── 3. BANKS & CARD COLLECTION HEADER ── */}
+          {/* Search Input */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '16px',
-            marginTop: '8px'
+            gap: '10px',
+            background: isDark ? '#1E293B' : '#FFFFFF',
+            padding: '9px 16px',
+            borderRadius: '14px',
+            border: `1px solid ${C.border}`,
+            width: isMobile ? '100%' : '240px',
+            boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 12px rgba(15,23,42,0.03)'
           }}>
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0 }}>
-                Banks & Card Collection
-              </h2>
-              <p style={{ fontSize: '13.5px', color: C.textMid || '#64748B', margin: '2px 0 0', fontWeight: 500 }}>
-                Select a bank to view all available credit cards
-              </p>
-            </div>
+            <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
+            <input
+              type="text"
+              placeholder={activeCategory === 'credit_card' ? "Search banks..." : "Search product..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: C.text,
+                width: '100%',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                outline: 'none'
+              }}
+            />
+          </div>
 
-            {/* Filter and Sort Dropdowns */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {activeCategory === 'credit_card' && (
+            <>
+              {/* Category Filter */}
               <select
                 value={bankCategoryFilter}
                 onChange={(e) => setBankCategoryFilter(e.target.value)}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: '12px',
+                  padding: '9px 14px',
+                  borderRadius: '14px',
                   border: `1px solid ${C.border}`,
                   background: isDark ? '#1E293B' : '#FFFFFF',
                   color: C.text,
@@ -246,7 +232,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                   fontWeight: 700,
                   outline: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
                 }}
               >
                 <option value="all">All Banks</option>
@@ -254,12 +240,13 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 <option value="psu">PSU Banks</option>
               </select>
 
+              {/* Sort By */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: '12px',
+                  padding: '9px 14px',
+                  borderRadius: '14px',
                   border: `1px solid ${C.border}`,
                   background: isDark ? '#1E293B' : '#FFFFFF',
                   color: C.text,
@@ -267,7 +254,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                   fontWeight: 700,
                   outline: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                  boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
                 }}
               >
                 <option value="default">Sort By</option>
@@ -275,8 +262,13 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 <option value="name-asc">Name A-Z</option>
                 <option value="name-desc">Name Z-A</option>
               </select>
-            </div>
-          </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {activeCategory === 'credit_card' && (
+        <>
 
           {/* ── 4. BANK CARDS GRID ── */}
           {filteredBanks.length === 0 ? (
