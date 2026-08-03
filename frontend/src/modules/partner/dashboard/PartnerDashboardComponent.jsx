@@ -4,7 +4,6 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
 import api from "../../../services/api";
 import QuickAccessSection from './QuickAccessSection';
-import LeadQualificationBar from './LeadQualificationBar';
 import PartnerActionableQueues from './PartnerActionableQueues';
 import Customer360Drawer from './Customer360Drawer';
 import {
@@ -490,9 +489,6 @@ export default function PartnerDashboard({ partner }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
-      {/* ── 1-CLICK INSTANT BANK MATCH & QUALIFICATION ENGINE ── */}
-      <LeadQualificationBar />
-
       {/* ── SLA-DRIVEN ACTIONABLE EXECUTION QUEUES ── */}
       <PartnerActionableQueues onSelectCustomer={(cust) => setSelectedCustomer360(cust)} />
       
