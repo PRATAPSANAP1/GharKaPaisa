@@ -1,44 +1,60 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTheme, makeS } from '../../../contexts/ThemeContext';
-import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
-  MdCreditCard, MdAccountBalanceWallet, MdShield, MdAdd, 
-  MdSearch, MdStar
+  MdSearch, MdPeople, MdCreditCard, MdAccountBalanceWallet, 
+  MdAddCircle, MdFilterList, MdSwapVert, MdArrowForward
 } from 'react-icons/md';
-import api from '../../../services/api';
+
+// Bank Logo Imports
+import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
+import sbiLogo from '../../home/components/banks/sbi_card.png';
+import iciciLogo from '../../home/components/banks/icici_bank.png';
+import axisLogo from '../../home/components/banks/axis_bank.png';
+import indusindLogo from '../../home/components/banks/inducind.png';
+import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
+import federalLogo from '../../home/components/banks/federal_bank.png';
+import bobLogo from '../../home/components/banks/bank_of_baroda.png';
+import yesLogo from '../../home/components/banks/yes_bank.png';
+import kotakLogo from '../../home/components/banks/kotak_bank.png';
+import dcbLogo from '../../home/components/banks/dcb_bank.png';
+import rblLogo from '../../home/components/banks/rbl_bank.png';
+import equitasLogo from '../../home/components/banks/equitas.png';
 
 const toSlug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 const defaultCreditCardBanks = [
-  { name: "HDFC Bank", slug: "hdfc", activeCardsCount: 22, shortCode: "HDFC" },
-  { name: "State Bank of India", slug: "sbi", activeCardsCount: 15, shortCode: "SBI" },
-  { name: "ICICI Bank", slug: "icici", activeCardsCount: 18, shortCode: "ICICI" },
-  { name: "Axis Bank", slug: "axis", activeCardsCount: 18, shortCode: "AXIS" },
-  { name: "IndusInd Bank", slug: "indusind", activeCardsCount: 10, shortCode: "INDUSIND" },
-  { name: "IDFC FIRST Bank", slug: "idfc", activeCardsCount: 8, shortCode: "IDFC" },
-  { name: "AU Small Finance Bank", slug: "au", activeCardsCount: 6, shortCode: "AU" },
-  { name: "HSBC Bank", slug: "hsbc", activeCardsCount: 5, shortCode: "HSBC" },
-  { name: "Federal Bank", slug: "federal", activeCardsCount: 4, shortCode: "FEDERAL" },
-  { name: "Bank of Baroda", slug: "bob", activeCardsCount: 9, shortCode: "BOB" },
-  { name: "YES Bank", slug: "yes", activeCardsCount: 7, shortCode: "YES" },
-  { name: "Kotak Mahindra Bank", slug: "kotak", activeCardsCount: 11, shortCode: "KOTAK" }
+  { name: "HDFC Bank", slug: "hdfc", activeCardsCount: "63,145", rawCount: 63145, logo: hdfcLogo, accent: "#2563EB", category: "private" },
+  { name: "SBI Card", slug: "sbi", activeCardsCount: "9,614", rawCount: 9614, logo: sbiLogo, accent: "#0284C7", category: "psu" },
+  { name: "ICICI Bank", slug: "icici", activeCardsCount: "28", rawCount: 28, logo: iciciLogo, accent: "#F97316", category: "private" },
+  { name: "Axis Bank", slug: "axis", activeCardsCount: "1,811", rawCount: 1811, logo: axisLogo, accent: "#E11D48", category: "private" },
+  { name: "IndusInd Bank", slug: "indusind", activeCardsCount: "2,381", rawCount: 2381, logo: indusindLogo, accent: "#991B1B", category: "private" },
+  { name: "IDFC FIRST Bank", slug: "idfc", activeCardsCount: "13", rawCount: 13, logo: idfcLogo, accent: "#DC2626", category: "private" },
+  { name: "AU Small Finance", slug: "au", activeCardsCount: "15", rawCount: 15, logo: equitasLogo, accent: "#D97706", category: "private" },
+  { name: "HSBC Bank", slug: "hsbc", activeCardsCount: "3", rawCount: 3, logo: null, accent: "#E11D48", category: "private" },
+  { name: "Federal Bank", slug: "federal", activeCardsCount: "10", rawCount: 10, logo: federalLogo, accent: "#2563EB", category: "private" },
+  { name: "Bank of Baroda", slug: "bob", activeCardsCount: "184", rawCount: 184, logo: bobLogo, accent: "#EA580C", category: "psu" },
+  { name: "YES Bank", slug: "yes", activeCardsCount: "73", rawCount: 73, logo: yesLogo, accent: "#2563EB", category: "private" },
+  { name: "Kotak Mahindra", slug: "kotak", activeCardsCount: "5", rawCount: 5, logo: kotakLogo, accent: "#DC2626", category: "private" },
+  { name: "HSBC UK", slug: "hsbc-uk", activeCardsCount: "2,142", rawCount: 2142, logo: null, accent: "#E11D48", category: "private" },
+  { name: "DCB Bank", slug: "dcb", activeCardsCount: "12", rawCount: 12, logo: dcbLogo, accent: "#0284C7", category: "private" },
+  { name: "RBL Bank", slug: "rbl", activeCardsCount: "16", rawCount: 16, logo: rblLogo, accent: "#0284C7", category: "private" },
 ];
 
 const loanRoleCards = [
-  { title: "Personal Loan", sub: "Loan Type", count: "45210", availableCards: "12 Personal Loan Offers", slug: "personal-loan" },
-  { title: "Home Loan", sub: "Loan Type", count: "12450", availableCards: "8 Home Loan Offers", slug: "home-loan" },
-  { title: "Business Loan", sub: "Loan Type", count: "3890", availableCards: "10 Business Loans", slug: "business-loan" },
-  { title: "Loan Against Property", sub: "Loan Type", count: "8720", availableCards: "6 LAP Offers", slug: "loan-against-property" },
-  { title: "Gold Loan", sub: "Loan Type", count: "14200", availableCards: "5 Quick Gold Loans", slug: "gold-loan" },
-  { title: "Vehicle Loan", sub: "Loan Type", count: "2150", availableCards: "7 Auto & Bike Loans", slug: "vehicle-loan" }
+  { title: "Personal Loan", sub: "Loan Type", count: "45,210", availableCards: "12 Personal Loan Offers", slug: "personal-loan" },
+  { title: "Home Loan", sub: "Loan Type", count: "12,450", availableCards: "8 Home Loan Offers", slug: "home-loan" },
+  { title: "Business Loan", sub: "Loan Type", count: "3,890", availableCards: "10 Business Loans", slug: "business-loan" },
+  { title: "Loan Against Property", sub: "Loan Type", count: "8,720", availableCards: "6 LAP Offers", slug: "loan-against-property" },
+  { title: "Gold Loan", sub: "Loan Type", count: "14,200", availableCards: "5 Quick Gold Loans", slug: "gold-loan" },
+  { title: "Vehicle Loan", sub: "Loan Type", count: "2,150", availableCards: "7 Auto & Bike Loans", slug: "vehicle-loan" }
 ];
 
 const insuranceRoleCards = [
-  { title: "Health Insurance", sub: "Insurance Type", count: "18400", availableCards: "12 Health Policies", slug: "health-insurance" },
-  { title: "Life Insurance", sub: "Insurance Type", count: "12350", availableCards: "8 Term & Life Plans", slug: "life-insurance" },
-  { title: "General Insurance", sub: "Insurance Type", count: "8900", availableCards: "15 Motor & Asset Plans", slug: "general-insurance" }
+  { title: "Health Insurance", sub: "Insurance Type", count: "18,400", availableCards: "12 Health Policies", slug: "health-insurance" },
+  { title: "Life Insurance", sub: "Insurance Type", count: "12,350", availableCards: "8 Term & Life Plans", slug: "life-insurance" },
+  { title: "General Insurance", sub: "Insurance Type", count: "8,900", availableCards: "15 Motor & Asset Plans", slug: "general-insurance" }
 ];
 
 export default function PartnerCategoryOverview({ defaultCategory = 'credit_card' }) {
@@ -54,6 +70,8 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [bankCategoryFilter, setBankCategoryFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('default');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -70,52 +88,34 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   const bankList = useMemo(() => {
     if (activeBanks && activeBanks.length > 0) {
-      return activeBanks.map(b => ({
-        name: b.name,
-        slug: b.slug,
-        activeCardsCount: b.products_count || 10,
-        shortCode: (b.short_code || b.name).toUpperCase(),
-        logo: b.logo
-      }));
+      return defaultCreditCardBanks.map(b => {
+        const found = activeBanks.find(ab => ab.slug === b.slug || toSlug(ab.name) === b.slug);
+        return found ? { ...b, logo: found.logo || b.logo } : b;
+      });
     }
     return defaultCreditCardBanks;
   }, [activeBanks]);
 
   const filteredBanks = useMemo(() => {
-    return bankList.filter(b => {
+    let list = bankList.filter(b => {
       const q = searchQuery.toLowerCase().trim();
-      return !q || b.name.toLowerCase().includes(q) || b.shortCode.toLowerCase().includes(q);
+      const matchesQuery = !q || b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q);
+      const matchesCategory = bankCategoryFilter === 'all' || 
+        (bankCategoryFilter === 'psu' && b.category === 'psu') ||
+        (bankCategoryFilter === 'private' && b.category === 'private');
+      return matchesQuery && matchesCategory;
     });
-  }, [bankList, searchQuery]);
 
-  const [recentAppBankSlugs, setRecentAppBankSlugs] = useState([]);
+    if (sortBy === 'most') {
+      list = [...list].sort((a, b) => b.rawCount - a.rawCount);
+    } else if (sortBy === 'name-asc') {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'name-desc') {
+      list = [...list].sort((a, b) => b.name.localeCompare(a.name));
+    }
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchRecentApplications = async () => {
-      try {
-        const res = await api.get('/applications', { params: { limit: 20 } });
-        const apps = res.data?.data || res.data?.applications || (Array.isArray(res.data) ? res.data : []);
-        if (Array.isArray(apps) && apps.length > 0) {
-          const slugs = [];
-          apps.forEach(app => {
-            const rawBank = app.bank_slug || app.bank_code || app.product?.bank_slug || app.product?.bank_name || app.bank_name;
-            if (rawBank) {
-              const clean = toSlug(rawBank);
-              if (!slugs.includes(clean)) slugs.push(clean);
-            }
-          });
-          if (isMounted && slugs.length > 0) {
-            setRecentAppBankSlugs(slugs);
-          }
-        }
-      } catch (e) {
-        // Fallback gracefully
-      }
-    };
-    fetchRecentApplications();
-    return () => { isMounted = false; };
-  }, []);
+    return list;
+  }, [bankList, searchQuery, bankCategoryFilter, sortBy]);
 
   const handleBankClick = (bank) => {
     try {
@@ -128,58 +128,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     } catch (e) {}
     navigate(`/partner/credit-cards/${bank.slug}`);
   };
-
-  const favouriteBanks = useMemo(() => {
-    let storedRecentSlugs = [];
-    try {
-      const raw = localStorage.getItem('gkp_partner_recent_banks');
-      if (raw) storedRecentSlugs = JSON.parse(raw);
-    } catch (e) {}
-
-    const combinedSlugs = [];
-    recentAppBankSlugs.forEach(s => {
-      const clean = toSlug(s);
-      if (!combinedSlugs.includes(clean)) combinedSlugs.push(clean);
-    });
-    storedRecentSlugs.forEach(s => {
-      const clean = toSlug(s);
-      if (!combinedSlugs.includes(clean)) combinedSlugs.push(clean);
-    });
-
-    const result = [];
-    combinedSlugs.forEach(slug => {
-      const match = bankList.find(b => 
-        b.slug.toLowerCase() === slug || 
-        toSlug(b.shortCode) === slug ||
-        toSlug(b.name) === slug
-      );
-      if (match && !result.some(b => b.slug === match.slug)) {
-        result.push(match);
-      }
-    });
-
-    if (result.length < 4) {
-      const overallMostUsed = [...bankList].sort((a, b) => (b.activeCardsCount || 0) - (a.activeCardsCount || 0));
-      for (const bank of overallMostUsed) {
-        if (!result.some(b => b.slug.toLowerCase() === bank.slug.toLowerCase())) {
-          result.push(bank);
-        }
-        if (result.length >= 4) break;
-      }
-    }
-
-    return result.slice(0, 4);
-  }, [bankList, recentAppBankSlugs]);
-
-  const hasPartnerActivity = useMemo(() => {
-    if (recentAppBankSlugs.length > 0) return true;
-    try {
-      const raw = localStorage.getItem('gkp_partner_recent_banks');
-      return raw ? JSON.parse(raw).length > 0 : false;
-    } catch (e) {
-      return false;
-    }
-  }, [recentAppBankSlugs]);
 
   const rawCards = useMemo(() => {
     if (activeCategory === 'loans') return loanRoleCards;
@@ -198,40 +146,54 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
+      {/* ── 1. HEADER SECTION ── */}
       <div style={{
-        background: C.card,
-        borderRadius: '20px',
-        padding: '20px 24px',
-        border: `1px solid ${C.border}`,
         display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.03)'
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              {activeCategory === 'loans' ? 'Loans Dashboard' : activeCategory === 'insurance' ? 'Insurance Dashboard' : 'Credit Cards Dashboard'}
-            </span>
-            <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
-              {activeCategory === 'loans' ? 'Loan Products' : activeCategory === 'insurance' ? 'Insurance Partners' : 'Select Bank'}
-            </h2>
-          </div>
+        <div>
+          <h1 style={{
+            fontSize: isMobile ? '22px' : '26px',
+            fontWeight: 900,
+            color: C.text,
+            margin: 0,
+            letterSpacing: '-0.4px'
+          }}>
+            {activeCategory === 'loans' ? 'Loans Dashboard' : activeCategory === 'insurance' ? 'Insurance Dashboard' : 'Credit Card Dashboard'}
+          </h1>
+          <p style={{
+            fontSize: '14px',
+            color: C.textMid || '#64748B',
+            margin: '4px 0 0',
+            fontWeight: 500
+          }}>
+            {activeCategory === 'loans' 
+              ? 'Manage & explore loan offerings across top financial partners' 
+              : activeCategory === 'insurance' 
+              ? 'Explore comprehensive insurance products and providers' 
+              : 'Manage & explore bank wise credit card offerings'}
+          </p>
         </div>
 
+        {/* Top Header Search Input */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          background: isDark ? C.bgSecondary : '#F8FAFC',
-          padding: '12px 18px',
-          borderRadius: '14px',
-          border: `1px solid ${C.border}`
+          gap: '10px',
+          background: isDark ? '#1E293B' : '#FFFFFF',
+          padding: '10px 18px',
+          borderRadius: '16px',
+          border: `1px solid ${C.border}`,
+          width: isMobile ? '100%' : '320px',
+          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 12px rgba(15,23,42,0.03)'
         }}>
-          <MdSearch size={22} color={C.textMid} />
+          <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
           <input
             type="text"
-            placeholder={activeCategory === 'credit_card' ? "Search Bank..." : "Search product or category..."}
+            placeholder={activeCategory === 'credit_card' ? "Search banks or card type..." : "Search product or category..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -239,7 +201,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               border: 'none',
               color: C.text,
               width: '100%',
-              fontSize: '15px',
+              fontSize: '13.5px',
               fontWeight: 600,
               outline: 'none'
             }}
@@ -249,131 +211,386 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
       {activeCategory === 'credit_card' && (
         <>
-          {!searchQuery && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MdStar size={18} color="#F59E0B" />
-                <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {hasPartnerActivity ? 'Recently Used Banks' : 'Popular & Most Used Banks'}
-                </h3>
-              </div>
-
+          {/* ── 2. TOP KPI STAT CARDS ── */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: '16px'
+          }}>
+            {/* Card 1: Total Banks */}
+            <div style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '18px 20px',
+              border: `1px solid ${C.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(15,23,42,0.03)'
+            }}>
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '12px'
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: isDark ? 'rgba(139, 92, 246, 0.2)' : '#F3E8FF',
+                color: '#8B5CF6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                {favouriteBanks.map((bank) => (
-                  <div
-                    key={`fav-${bank.slug}`}
-                    onClick={() => handleBankClick(bank)}
-                    style={{
-                      background: isDark ? C.bgSecondary : '#FFFFFF',
-                      borderRadius: '16px',
-                      padding: '14px 18px',
-                      border: `1.5px solid ${C.border}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-                      transition: 'transform 0.2s, border-color 0.2s'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '16px' }}>⭐</span>
-                      <span style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>
-                        {bank.shortCode || bank.name}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: C.primary }}>
-                      {bank.activeCardsCount} Cards
-                    </span>
-                  </div>
-                ))}
+                <MdPeople size={24} />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid || '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Total Banks
+                </span>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '1px 0' }}>
+                  13
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: C.textMid || '#64748B' }}>
+                  Active Partners
+                </span>
               </div>
             </div>
-          )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              All Banks
-            </h3>
-
-            {filteredBanks.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, color: C.textMid }}>
-                No bank found matching "{searchQuery}"
-              </div>
-            ) : (
+            {/* Card 2: Total Card Variants */}
+            <div style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '18px 20px',
+              border: `1px solid ${C.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(15,23,42,0.03)'
+            }}>
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '16px'
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: isDark ? 'rgba(37, 99, 235, 0.2)' : '#EFF6FF',
+                color: '#2563EB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
-                {filteredBanks.map((bank) => (
-                  <div
-                    key={`bank-${bank.slug}`}
-                    style={{
-                      background: C.card,
-                      borderRadius: '20px',
-                      padding: '20px',
-                      border: `1px solid ${C.border}`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '16px',
-                      boxShadow: isDark ? 'none' : '0 4px 18px rgba(0,0,0,0.03)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      {bank.logo ? (
-                        <img src={bank.logo} alt={bank.name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
-                      ) : (
-                        <div style={{
-                          width: '42px', height: '42px', borderRadius: '12px',
-                          background: `${C.primary}15`, color: C.primary,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '20px', fontWeight: 900
-                        }}>
-                          🏦
-                        </div>
-                      )}
-                      <div>
-                        <h4 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>
-                          {bank.name}
-                        </h4>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: C.textMid, marginTop: '2px', display: 'block' }}>
-                          {bank.activeCardsCount} Active Credit Cards
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleBankClick(bank)}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-                        color: '#FFFFFF',
-                        fontSize: '14px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        boxShadow: `0 4px 14px ${C.primary}30`,
-                        transition: 'opacity 0.2s'
-                      }}
-                    >
-                      More Info
-                    </button>
-                  </div>
-                ))}
+                <MdAccountBalanceWallet size={24} />
               </div>
-            )}
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid || '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Total Card Variants
+                </span>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '1px 0' }}>
+                  96,145
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: C.textMid || '#64748B' }}>
+                  Across All Banks
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: Cards Live */}
+            <div style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '18px 20px',
+              border: `1px solid ${C.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(15,23,42,0.03)'
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '14px',
+                background: isDark ? 'rgba(20, 184, 166, 0.2)' : '#CCFBF1',
+                color: '#14B8A6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <MdCreditCard size={24} />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid || '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Cards Live
+                </span>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '1px 0' }}>
+                  86,230
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: C.textMid || '#64748B' }}>
+                  Active Cards
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: New This Month */}
+            <div style={{
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '18px 20px',
+              border: `1px solid ${C.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: isDark ? 'none' : '0 4px 16px rgba(15,23,42,0.03)'
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: isDark ? 'rgba(249, 115, 22, 0.2)' : '#FFEDD5',
+                color: '#F97316',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <MdAddCircle size={24} />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid || '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  New This Month
+                </span>
+                <div style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '1px 0' }}>
+                  1,231
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: C.textMid || '#64748B' }}>
+                  Recently Added
+                </span>
+              </div>
+            </div>
           </div>
+
+          {/* ── 3. BANKS & CARD COLLECTION HEADER ── */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+            marginTop: '8px'
+          }}>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0 }}>
+                Banks & Card Collection
+              </h2>
+              <p style={{ fontSize: '13.5px', color: C.textMid || '#64748B', margin: '2px 0 0', fontWeight: 500 }}>
+                Select a bank to view all available credit cards
+              </p>
+            </div>
+
+            {/* Filter and Sort Dropdowns */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <select
+                value={bankCategoryFilter}
+                onChange={(e) => setBankCategoryFilter(e.target.value)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '12px',
+                  border: `1px solid ${C.border}`,
+                  background: isDark ? '#1E293B' : '#FFFFFF',
+                  color: C.text,
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                }}
+              >
+                <option value="all">All Banks</option>
+                <option value="private">Private Banks</option>
+                <option value="psu">PSU Banks</option>
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '12px',
+                  border: `1px solid ${C.border}`,
+                  background: isDark ? '#1E293B' : '#FFFFFF',
+                  color: C.text,
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                }}
+              >
+                <option value="default">Sort By</option>
+                <option value="most">Most Card Variants</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ── 4. BANK CARDS GRID ── */}
+          {filteredBanks.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '48px',
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              border: `1px solid ${C.border}`,
+              color: C.textMid || '#64748B'
+            }}>
+              No bank found matching "{searchQuery}"
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(210px, 1fr))',
+              gap: '16px'
+            }}>
+              {filteredBanks.map((bank) => (
+                <div
+                  key={`bank-${bank.slug}`}
+                  onClick={() => handleBankClick(bank)}
+                  style={{
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    border: `1px solid ${C.border}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.borderColor = bank.accent || C.primary;
+                    e.currentTarget.style.boxShadow = isDark 
+                      ? `0 8px 25px ${bank.accent}30` 
+                      : `0 8px 25px rgba(0,0,0,0.08)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = C.border;
+                    e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)';
+                  }}
+                >
+                  {/* Top Part: Logo & Name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {bank.logo ? (
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: isDark ? '#0F172A' : '#F8FAFC',
+                        border: `1px solid ${C.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '6px',
+                        flexShrink: 0
+                      }}>
+                        <img 
+                          src={bank.logo} 
+                          alt={bank.name} 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                        />
+                      </div>
+                    ) : (
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '12px',
+                        background: `${bank.accent || C.primary}18`,
+                        color: bank.accent || C.primary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '15px',
+                        fontWeight: 900,
+                        flexShrink: 0
+                      }}>
+                        {bank.name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+
+                    <h3 style={{
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      color: C.text,
+                      margin: 0,
+                      lineHeight: 1.25
+                    }}>
+                      {bank.name}
+                    </h3>
+                  </div>
+
+                  {/* Middle Part: Variants Count */}
+                  <div>
+                    <div style={{
+                      fontSize: '26px',
+                      fontWeight: 900,
+                      color: C.text,
+                      letterSpacing: '-0.5px',
+                      lineHeight: 1
+                    }}>
+                      {bank.activeCardsCount}
+                    </div>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: C.textMid || '#64748B',
+                      marginTop: '4px',
+                      display: 'block'
+                    }}>
+                      Card Variants
+                    </span>
+                  </div>
+
+                  {/* Bottom Part: Explore Link with Accent Underline */}
+                  <div style={{
+                    paddingTop: '10px',
+                    borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span style={{
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      color: bank.accent || C.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      Explore →
+                    </span>
+                  </div>
+
+                  {/* Bottom Color Accent Line */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: bank.accent || C.primary,
+                    opacity: 0.85
+                  }} />
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
+      {/* Non-Credit Card Category View (Loans & Insurance) */}
       {activeCategory !== 'credit_card' && (
         <div style={{
           display: "grid",
@@ -385,15 +602,16 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               key={idx}
               onClick={() => navigate(`${location.pathname}/${card.slug}`)}
               style={{
-                background: C.card,
+                background: isDark ? '#1E293B' : '#FFFFFF',
                 borderRadius: "18px",
                 padding: "20px",
                 border: `1px solid ${C.border}`,
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
-                gap: '12px',
-                cursor: 'pointer'
+                gap: '14px',
+                cursor: 'pointer',
+                boxShadow: isDark ? 'none' : '0 4px 18px rgba(0,0,0,0.03)'
               }}
             >
               <div>
