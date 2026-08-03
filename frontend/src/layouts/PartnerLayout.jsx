@@ -905,7 +905,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
       boxSizing: 'border-box',
       width: '100%'
     }}>
-      {/* Left side: Hamburger + Logo */}
+      {/* Left side: Hamburger + Logo (rendered only when mobile or sidebar is collapsed so logo appears only once) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
         <button
           onClick={() => isMobile ? setMobileMenuOpen(true) : setSidebarOpen(!sidebarOpen)}
@@ -927,7 +927,9 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
         >
           <MdMenu size={24} />
         </button>
-        <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? '26px' : '32px', objectFit: 'contain' }} />
+        {(isMobile || !sidebarOpen) && (
+          <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? '26px' : '32px', objectFit: 'contain' }} />
+        )}
       </div>
 
       {/* Right side: Wallet + Profile */}
