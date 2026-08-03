@@ -39,10 +39,11 @@ const NAV_ITEMS = [
 ];
 
 const MOBILE_BOTTOM_NAV = [
-  { id: 'dashboard', path: '/partner/dashboard', label: 'Home', icon: MdDashboard },
-  { id: 'products', path: '/partner/products', label: 'Products', icon: MdStorefront },
-  { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
-  { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
+  { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
+  { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Card', icon: MdCreditCard },
+  { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard, isCenter: true },
+  { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
+  { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
 ];
 
 const BRAND = '#0D5CAB';
@@ -770,19 +771,71 @@ export default function PartnerLayout() {
           right: 0,
           background: C.card,
           borderTop: `1px solid ${C.border}`,
-          boxShadow: '0 -4px 10px rgba(0,0,0,0.03)',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
           zIndex: 40,
-          padding: '0 8px',
+          padding: '0 4px',
         }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-around',
             alignItems: 'center',
-            height: '60px',
+            height: '62px',
+            position: 'relative',
           }}>
             {filteredMobileBottomNav.map((nav) => {
               const Icon = nav.icon;
               const isActive = location.pathname.startsWith(nav.path);
+              
+              if (nav.isCenter) {
+                return (
+                  <NavLink
+                    key={nav.path}
+                    id={`partner-bottom-nav-${nav.id}`}
+                    to={nav.path}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20%',
+                      height: '100%',
+                      textDecoration: 'none',
+                      position: 'relative',
+                      top: '-10px',
+                    }}
+                  >
+                    <div style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      background: isActive 
+                        ? `linear-gradient(135deg, ${BRAND} 0%, #1D4ED8 100%)` 
+                        : `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_DARK} 100%)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: isActive 
+                        ? '0 6px 16px rgba(13, 92, 171, 0.45)' 
+                        : '0 4px 12px rgba(13, 92, 171, 0.3)',
+                      border: `3px solid ${C.card}`,
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                    }}>
+                      <Icon size={24} style={{ color: '#FFFFFF' }} />
+                    </div>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      color: isActive ? C.primary : SIDEBAR_TEXT,
+                      marginTop: '2px',
+                      letterSpacing: '0.2px',
+                    }}>
+                      {t('partnerLayout.' + nav.id, nav.label)}
+                    </span>
+                  </NavLink>
+                );
+              }
+
               return (
                 <NavLink
                   key={nav.path}
@@ -793,52 +846,32 @@ export default function PartnerLayout() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '100%',
+                    width: '20%',
                     height: '100%',
                     gap: '4px',
                     textDecoration: 'none',
                   }}
                 >
-                  <Icon size={24} style={{ color: isActive ? C.primary : '#94A3B8' }} />
+                  <Icon size={22} style={{ 
+                    color: isActive ? C.primary : '#94A3B8',
+                    transition: 'all 0.2s ease',
+                    transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                  }} />
                   <span style={{
                     fontSize: '10px',
-                    fontWeight: 700,
+                    fontWeight: isActive ? 700 : 600,
                     color: isActive ? C.primary : '#94A3B8',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%',
                   }}>
                     {t('partnerLayout.' + nav.id, nav.label)}
                   </span>
                 </NavLink>
               );
             })}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%',
-                gap: '4px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '50%',
-                background: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
-              }}>
-                <MdMenu size={18} style={{ color: SIDEBAR_TEXT }} />
-              </div>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: SIDEBAR_TEXT }}>More</span>
-            </button>
           </div>
         </nav>
       )}
