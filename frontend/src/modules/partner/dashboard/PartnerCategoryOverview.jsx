@@ -88,10 +88,98 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     });
   }, [bankList, searchQuery]);
 
+  const [recentAppBankSlugs, setRecentAppBankSlugs] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRecentApplications = async () => {
+      try {
+        const res = await api.get('/applications', { params: { limit: 20 } });
+        const apps = res.data?.data || res.data?.applications || (Array.isArray(res.data) ? res.data : []);
+        if (Array.isArray(apps) && apps.length > 0) {
+          const slugs = [];
+          apps.forEach(app => {
+            const rawBank = app.bank_slug || app.bank_code || app.product?.bank_slug || app.product?.bank_name || app.bank_name;
+            if (rawBank) {
+              const clean = toSlug(rawBank);
+              if (!slugs.includes(clean)) slugs.push(clean);
+            }
+          });
+          if (isMounted && slugs.length > 0) {
+            setRecentAppBankSlugs(slugs);
+          }
+        }
+      } catch (e) {
+        // Fallback gracefully
+      }
+    };
+    fetchRecentApplications();
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleBankClick = (bank) => {
+    try {
+      let current = [];
+      const raw = localStorage.getItem('gkp_partner_recent_banks');
+      if (raw) current = JSON.parse(raw);
+      const filtered = current.filter(s => s.toLowerCase() !== bank.slug.toLowerCase());
+      const updated = [bank.slug, ...filtered].slice(0, 8);
+      localStorage.setItem('gkp_partner_recent_banks', JSON.stringify(updated));
+    } catch (e) {}
+    navigate(`/partner/credit-cards/${bank.slug}`);
+  };
+
   const favouriteBanks = useMemo(() => {
-    const favSlugs = ['hdfc', 'sbi', 'icici', 'axis'];
-    return bankList.filter(b => favSlugs.includes(b.slug.toLowerCase()));
-  }, [bankList]);
+    let storedRecentSlugs = [];
+    try {
+      const raw = localStorage.getItem('gkp_partner_recent_banks');
+      if (raw) storedRecentSlugs = JSON.parse(raw);
+    } catch (e) {}
+
+    const combinedSlugs = [];
+    recentAppBankSlugs.forEach(s => {
+      const clean = toSlug(s);
+      if (!combinedSlugs.includes(clean)) combinedSlugs.push(clean);
+    });
+    storedRecentSlugs.forEach(s => {
+      const clean = toSlug(s);
+      if (!combinedSlugs.includes(clean)) combinedSlugs.push(clean);
+    });
+
+    const result = [];
+    combinedSlugs.forEach(slug => {
+      const match = bankList.find(b => 
+        b.slug.toLowerCase() === slug || 
+        toSlug(b.shortCode) === slug ||
+        toSlug(b.name) === slug
+      );
+      if (match && !result.some(b => b.slug === match.slug)) {
+        result.push(match);
+      }
+    });
+
+    if (result.length < 4) {
+      const overallMostUsed = [...bankList].sort((a, b) => (b.activeCardsCount || 0) - (a.activeCardsCount || 0));
+      for (const bank of overallMostUsed) {
+        if (!result.some(b => b.slug.toLowerCase() === bank.slug.toLowerCase())) {
+          result.push(bank);
+        }
+        if (result.length >= 4) break;
+      }
+    }
+
+    return result.slice(0, 4);
+  }, [bankList, recentAppBankSlugs]);
+
+  const hasPartnerActivity = useMemo(() => {
+    if (recentAppBankSlugs.length > 0) return true;
+    try {
+      const raw = localStorage.getItem('gkp_partner_recent_banks');
+      return raw ? JSON.parse(raw).length > 0 : false;
+    } catch (e) {
+      return false;
+    }
+  }, [recentAppBankSlugs]);
 
   const rawCards = useMemo(() => {
     if (activeCategory === 'loans') return loanRoleCards;
@@ -166,7 +254,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <MdStar size={18} color="#F59E0B" />
                 <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Favourite Banks
+                  {hasPartnerActivity ? 'Recently Used Banks' : 'Popular & Most Used Banks'}
                 </h3>
               </div>
 
@@ -178,7 +266,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                 {favouriteBanks.map((bank) => (
                   <div
                     key={`fav-${bank.slug}`}
-                    onClick={() => navigate(`/partner/credit-cards/${bank.slug}`)}
+                    onClick={() => handleBankClick(bank)}
                     style={{
                       background: isDark ? C.bgSecondary : '#FFFFFF',
                       borderRadius: '16px',
@@ -261,7 +349,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
                     <button
                       type="button"
-                      onClick={() => navigate(`/partner/credit-cards/${bank.slug}`)}
+                      onClick={() => handleBankClick(bank)}
                       style={{
                         width: '100%',
                         padding: '12px',
