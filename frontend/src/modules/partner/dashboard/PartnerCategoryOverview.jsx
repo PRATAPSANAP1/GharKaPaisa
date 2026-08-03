@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
-  MdSearch, MdPeople, MdCreditCard, MdAccountBalanceWallet, 
-  MdAddCircle, MdFilterList, MdSwapVert, MdArrowForward
+  MdSearch, MdArrowForward, MdAccountBalance
 } from 'react-icons/md';
+import api from '../../../services/api';
 
 // Bank Logo Imports
 import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
@@ -21,8 +21,49 @@ import kotakLogo from '../../home/components/banks/kotak_bank.png';
 import dcbLogo from '../../home/components/banks/dcb_bank.png';
 import rblLogo from '../../home/components/banks/rbl_bank.png';
 import equitasLogo from '../../home/components/banks/equitas.png';
+import sbmLogo from '../../home/components/banks/sbm_bank.png';
 
-const toSlug = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+const toSlug = (text) => text ? text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
+
+const getBankAccent = (slug, name) => {
+  const s = (slug || name || '').toLowerCase();
+  if (s.includes('hdfc')) return '#2563EB';
+  if (s.includes('sbi')) return '#0284C7';
+  if (s.includes('icici')) return '#F97316';
+  if (s.includes('axis')) return '#E11D48';
+  if (s.includes('indusind')) return '#991B1B';
+  if (s.includes('idfc')) return '#DC2626';
+  if (s.includes('au')) return '#D97706';
+  if (s.includes('hsbc')) return '#E11D48';
+  if (s.includes('federal')) return '#2563EB';
+  if (s.includes('baroda') || s.includes('bob')) return '#EA580C';
+  if (s.includes('yes')) return '#2563EB';
+  if (s.includes('kotak')) return '#DC2626';
+  if (s.includes('dcb')) return '#0284C7';
+  if (s.includes('rbl')) return '#0284C7';
+  if (s.includes('equitas')) return '#059669';
+  if (s.includes('sbm')) return '#4F46E5';
+  return '#2563EB';
+};
+
+const getStaticBankLogo = (name, shortCode) => {
+  const s = (shortCode || name || '').toLowerCase();
+  if (s.includes('hdfc')) return hdfcLogo;
+  if (s.includes('sbi')) return sbiLogo;
+  if (s.includes('icici')) return iciciLogo;
+  if (s.includes('axis')) return axisLogo;
+  if (s.includes('indusind')) return indusindLogo;
+  if (s.includes('idfc')) return idfcLogo;
+  if (s.includes('federal')) return federalLogo;
+  if (s.includes('baroda') || s.includes('bob')) return bobLogo;
+  if (s.includes('yes')) return yesLogo;
+  if (s.includes('kotak')) return kotakLogo;
+  if (s.includes('dcb')) return dcbLogo;
+  if (s.includes('rbl')) return rblLogo;
+  if (s.includes('equitas')) return equitasLogo;
+  if (s.includes('sbm')) return sbmLogo;
+  return null;
+};
 
 const defaultCreditCardBanks = [
   { name: "HDFC Bank", slug: "hdfc", activeCardsCount: "63,145", rawCount: 63145, logo: hdfcLogo, accent: "#2563EB", category: "private" },
@@ -74,6 +115,10 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const [sortBy, setSortBy] = useState('default');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
+  // Database Banks State
+  const [dbBanks, setDbBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(true);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -86,15 +131,74 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     else if (location.pathname.includes('/partner/credit-cards')) setActiveCategory('credit_card');
   }, [location.pathname]);
 
+  // Fetch banks live from database
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDatabaseBanks = async () => {
+      setLoadingBanks(true);
+      try {
+        const res = await api.get('/banks', { params: { limit: 100 } });
+        const list = res.data?.data || res.data?.banks || (Array.isArray(res.data) ? res.data : []);
+        if (Array.isArray(list) && list.length > 0 && isMounted) {
+          setDbBanks(list);
+        }
+      } catch (err) {
+        console.warn('Could not load database banks, using active bank context fallback:', err);
+      } finally {
+        if (isMounted) setLoadingBanks(false);
+      }
+    };
+    fetchDatabaseBanks();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Compute bank list using database records
   const bankList = useMemo(() => {
-    if (activeBanks && activeBanks.length > 0) {
-      return defaultCreditCardBanks.map(b => {
-        const found = activeBanks.find(ab => ab.slug === b.slug || toSlug(ab.name) === b.slug);
-        return found ? { ...b, logo: found.logo || b.logo } : b;
+    if (dbBanks && dbBanks.length > 0) {
+      return dbBanks.map(b => {
+        const bName = b.name || b.bank_name || 'Bank';
+        const bShort = b.short_code || '';
+        const bSlug = (bShort || toSlug(bName)).toLowerCase();
+        const pCount = parseInt(b.products_count || b.card_count || b.cards_count || 0, 10);
+        const dbLogo = b.logo_url || b.logo;
+        const staticLogo = getStaticBankLogo(bName, bShort);
+
+        return {
+          id: b.id,
+          name: bName,
+          slug: bSlug,
+          rawCount: pCount,
+          activeCardsCount: pCount > 0 ? pCount.toLocaleString('en-IN') : '0',
+          logo: dbLogo || staticLogo,
+          accent: getBankAccent(bSlug, bName),
+          category: (b.bank_type || b.type || b.category || '').toLowerCase().includes('psu') ? 'psu' : 'private'
+        };
       });
     }
+
+    if (activeBanks && activeBanks.length > 0) {
+      return activeBanks.map(b => {
+        const bName = b.name || b.label || 'Bank';
+        const bShort = b.short_code || '';
+        const bSlug = (b.slug || bShort || toSlug(bName)).toLowerCase();
+        const pCount = parseInt(b.products_count || 0, 10);
+        const staticLogo = getStaticBankLogo(bName, bShort);
+
+        return {
+          id: b.id,
+          name: bName,
+          slug: bSlug,
+          rawCount: pCount,
+          activeCardsCount: pCount > 0 ? pCount.toLocaleString('en-IN') : '0',
+          logo: b.logo || b.image || staticLogo,
+          accent: getBankAccent(bSlug, bName),
+          category: 'private'
+        };
+      });
+    }
+
     return defaultCreditCardBanks;
-  }, [activeBanks]);
+  }, [dbBanks, activeBanks]);
 
   const filteredBanks = useMemo(() => {
     let list = bankList.filter(b => {
@@ -269,9 +373,20 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
       {activeCategory === 'credit_card' && (
         <>
-
-          {/* ── 4. BANK CARDS GRID ── */}
-          {filteredBanks.length === 0 ? (
+          {/* ── 2. BANK CARDS GRID (FETCHED FROM DATABASE) ── */}
+          {loadingBanks && dbBanks.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '48px',
+              background: isDark ? '#1E293B' : '#FFFFFF',
+              borderRadius: '20px',
+              border: `1px solid ${C.border}`,
+              color: C.textMid || '#64748B',
+              fontWeight: 600
+            }}>
+              Loading banks from database...
+            </div>
+          ) : filteredBanks.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '48px',
@@ -290,7 +405,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             }}>
               {filteredBanks.map((bank) => (
                 <div
-                  key={`bank-${bank.slug}`}
+                  key={`bank-${bank.id || bank.slug}`}
                   onClick={() => handleBankClick(bank)}
                   style={{
                     background: isDark ? '#1E293B' : '#FFFFFF',
@@ -408,7 +523,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      Explore →
+                      Explore <MdArrowForward size={16} />
                     </span>
                   </div>
 
