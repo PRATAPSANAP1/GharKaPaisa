@@ -489,8 +489,12 @@ export default function PartnerDashboard({ partner }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
       
-      {/* ── SLA-DRIVEN ACTIONABLE EXECUTION QUEUES ── */}
-      <PartnerActionableQueues onSelectCustomer={(cust) => setSelectedCustomer360(cust)} />
+      {/* ── SLA-DRIVEN ACTIONABLE EXECUTION QUEUES (DYNAMICALLY RENDERED WHEN NOTIFICATIONS EXIST) ── */}
+      <PartnerActionableQueues 
+        notifications={notifications}
+        allLeads={allLeads}
+        onSelectCustomer={(cust) => setSelectedCustomer360(cust)} 
+      />
       
       {/* ── HERO BANNER SLIDER ── */}
       <div 
