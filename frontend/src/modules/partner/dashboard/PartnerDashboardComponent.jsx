@@ -80,6 +80,7 @@ export default function PartnerDashboard({ partner }) {
   const [activeDashboardCategory, setActiveDashboardCategory] = useState('credit_card');
   const [selectedCustomer360, setSelectedCustomer360] = useState(null);
   const [selectedMoreInfoCard, setSelectedMoreInfoCard] = useState(null);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   // Category Specific Role & Bank Cards Data
   const creditCardRoleCards = [
@@ -964,6 +965,166 @@ export default function PartnerDashboard({ partner }) {
 
       {/* ──── QUICK ACCESS SECTION ──── */}
       <QuickAccessSection />
+
+      {/* ──── REFER & EARN BANNER ──── */}
+      <div style={{
+        background: isDark 
+          ? "linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(147, 51, 234, 0.05) 100%)" 
+          : "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
+        borderRadius: "24px",
+        padding: isMobile ? "20px 16px" : "28px 32px",
+        border: isDark ? "1px solid rgba(139, 92, 246, 0.15)" : "1px solid rgba(79, 70, 229, 0.08)",
+        boxShadow: "0 10px 30px rgba(79, 70, 229, 0.03)",
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "24px",
+        marginTop: "16px",
+        marginBottom: "16px",
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        {/* Subtle background glow */}
+        <div style={{
+          position: "absolute",
+          top: "-50px",
+          right: "-50px",
+          width: "200px",
+          height: "200px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(147, 51, 234, 0.08) 0%, transparent 75%)",
+          pointerEvents: "none"
+        }} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+            <span style={{
+              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+              color: "#FFFFFF",
+              fontSize: "10px",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              padding: "4px 10px",
+              borderRadius: "10px",
+              letterSpacing: "0.5px"
+            }}>
+              Refer & Earn
+            </span>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: C.primary }}>
+              Unlimited Network Overrides
+            </span>
+          </div>
+
+          <h3 style={{
+            fontSize: isMobile ? "18px" : "22px",
+            fontWeight: 800,
+            color: isDark ? "#FFFFFF" : "#1E1B4B",
+            margin: "0 0 8px 0",
+            lineHeight: 1.2
+          }}>
+            Invite Partners & Earn Commission Overrides
+          </h3>
+
+          <p style={{
+            fontSize: isMobile ? "12px" : "13.5px",
+            color: C.textMid,
+            margin: 0,
+            lineHeight: 1.4,
+            fontWeight: 500
+          }}>
+            Get lifetime override payouts on every successful credit card, loan, or utility lead punched by your team. Build your passive income stream today!
+          </p>
+        </div>
+
+        {/* Action controls (Referral Link input/copy + WhatsApp action) */}
+        <div style={{
+          width: isMobile ? "100%" : "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          minWidth: isMobile ? "100%" : "360px",
+          flexShrink: 0
+        }}>
+          {/* Copy Link input row */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            background: isDark ? "rgba(0,0,0,0.2)" : "#FFFFFF",
+            borderRadius: "14px",
+            padding: "8px 12px",
+            border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
+          }}>
+            <input
+              type="text"
+              readOnly
+              value={`https://gharkapaisa.in/register?ref=${partnerCode}`}
+              style={{
+                flex: 1,
+                border: "none",
+                background: "none",
+                color: C.primary,
+                fontSize: "12px",
+                fontWeight: 700,
+                outline: "none",
+                marginRight: "8px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
+                setReferralCopied(true);
+                setTimeout(() => setReferralCopied(false), 2500);
+              }}
+              style={{
+                background: C.primary,
+                color: "#FFFFFF",
+                border: "none",
+                padding: "8px 14px",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: 800,
+                cursor: "pointer",
+                transition: "background 0.2s"
+              }}
+            >
+              {referralCopied ? "✓ Copied!" : "Copy Link"}
+            </button>
+          </div>
+
+          {/* Share on WhatsApp button */}
+          <button
+            onClick={() => {
+              const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
+              const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn the highest payouts! Register here: ${shareLink}`);
+              window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+            }}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: "14px",
+              border: "none",
+              background: "#25D366",
+              color: "#FFFFFF",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              boxShadow: "0 4px 12px rgba(37,211,102,0.2)"
+            }}
+          >
+            <FaWhatsapp size={18} />
+            Share on WhatsApp
+          </button>
+        </div>
+      </div>
 
       {/* ──── QUICK ACTIONS PANEL ──── */}
       <div style={{ marginTop: '4px' }}>

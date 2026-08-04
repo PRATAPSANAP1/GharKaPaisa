@@ -26,20 +26,14 @@ router.use(jwtAuth);
 router.post('/register', registerRules, validate, authCtrl.register);
 router.post('/upload-docs', requirePartner, kycUpload, partnerCtrl.uploadSelfKYC);
 
-// Video KYC endpoints
-router.post('/kyc/upload-pan', requirePartner, upload.single('document'), partnerCtrl.uploadPan);
-router.post('/kyc/upload-aadhaar', requirePartner, upload.single('document'), partnerCtrl.uploadAadhaar);
-router.post('/kyc/upload-cheque', requirePartner, upload.single('document'), partnerCtrl.uploadCheque);
-router.post('/kyc/upload-video', requirePartner, uploadVideo.single('video'), partnerCtrl.uploadVideo);
+// Unified KYC upload is handled by POST Partners/:id/kyc 
 router.post('/kyc/submit', requirePartner, partnerCtrl.submitKyc);
 router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.post('/profile/photo', requirePartner, upload.single('photo'), partnerCtrl.uploadProfilePhoto);
 router.post('/profile/logo', requirePartner, upload.single('logo'), partnerCtrl.uploadCompanyLogo);
-router.post('/kyc/upload-selfie', requirePartner, upload.single('selfie'), partnerCtrl.uploadSelfie);
-router.post('/kyc/ocr-scan', requirePartner, partnerCtrl.simulateOCR);
-router.post('/kyc/face-match', requirePartner, partnerCtrl.simulateFaceMatch);
+// Legacy OCR/Face Match routes removed as they are unhandled by FE
 router.get('/customers', requireApprovedPartner, partnerCtrl.listPartnerCustomers);
 router.post('/customers', requireApprovedPartner, partnerCtrl.createPartnerCustomer);
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);
