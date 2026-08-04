@@ -6,7 +6,7 @@ import api from '../../../services/api';
 import { 
   MdDashboard, MdStorefront, MdPeople, MdLeaderboard, 
   MdFolder, MdBarChart, MdAccountBalanceWallet, MdSupportAgent,
-  MdArrowBack, MdSearch, MdAdd, MdCheckCircle, MdClose,
+  MdArrowBack, MdArrowForward, MdSearch, MdAdd, MdCheckCircle, MdClose,
   MdPhone, MdPerson, MdCreditCard, MdHelpOutline, MdTimeline,
   MdOutlineInsertDriveFile, MdDone, MdErrorOutline, MdHourglassEmpty,
   MdShare, MdSwapHoriz, MdInfo, MdContentCopy
