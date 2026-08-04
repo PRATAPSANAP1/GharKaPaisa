@@ -48,6 +48,14 @@ export default function PartnerTeam() {
   // Copy Feedback
   const [copied, setCopied] = useState(false);
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // 360° Child Detail Slide-Over Drawer (8 Tabs)
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [childDetail, setChildDetail] = useState(null);
@@ -245,45 +253,49 @@ export default function PartnerTeam() {
         ];
 
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div 
+            className="gkp-team-stats-row"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: isMobile ? '8px' : '16px', marginBottom: '24px' }}
+          >
             {cards.map((card, idx) => (
               <div 
                 key={idx} 
                 className="gkp-team-kpi-card"
                 style={{
                   ...S.card,
-                  padding: '24px',
-                  borderRadius: '20px',
+                  padding: isMobile ? '12px 10px' : '24px',
+                  borderRadius: isMobile ? '14px' : '20px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '140px',
+                  minHeight: isMobile ? '100px' : '140px',
                   boxShadow: isThemeDark ? 'none' : '0 10px 25px rgba(0,0,0,0.02)',
                   border: `1.5px solid ${C.border}`,
                   transition: 'all 0.25s ease',
-                  background: C.card
+                  background: C.card,
+                  overflow: 'hidden'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 750, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '2px' : '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: isMobile ? '9px' : '13px', fontWeight: 750, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {card.title}
                     </span>
-                    <span style={{ fontSize: '32px', fontWeight: 800, color: C.text, marginTop: '4px' }}>
+                    <span style={{ fontSize: isMobile ? '20px' : '32px', fontWeight: 800, color: C.text, marginTop: isMobile ? '2px' : '4px' }}>
                       {card.value}
                     </span>
                   </div>
                   <div style={{
-                    width: '42px', height: '42px', borderRadius: '12px',
+                    width: isMobile ? '28px' : '42px', height: isMobile ? '28px' : '42px', borderRadius: isMobile ? '8px' : '12px',
                     background: card.bg, color: card.iconColor,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    display: isMobile ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}>
                     {card.icon}
                   </div>
                 </div>
                 
-                <div style={{ fontSize: '12px', fontWeight: 650, color: card.color, marginTop: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ fontSize: isMobile ? '9px' : '12px', fontWeight: 650, color: card.color, marginTop: isMobile ? '6px' : '12px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {card.subtitle}
                 </div>
               </div>
