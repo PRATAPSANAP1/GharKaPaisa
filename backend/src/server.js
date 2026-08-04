@@ -269,6 +269,18 @@ const startServer = async () => {
           logger.error('Daily Reminder Engine timer error:', err.message);
         }
       }, 24 * 60 * 60 * 1000);
+
+      // Initialize Commission Hold Release Job timer (runs every 6 hours and on startup)
+      const runCommissionRelease = async () => {
+        try {
+          const { processCommissionHoldReleases } = require('./jobs/commissionHoldRelease.job.js');
+          await processCommissionHoldReleases();
+        } catch (err) {
+          logger.error('Commission Hold Release Job timer error:', err.message);
+        }
+      };
+      runCommissionRelease();
+      setInterval(runCommissionRelease, 6 * 60 * 60 * 1000);
     });
   } catch (err) {
     logger.error('Failed to start server due to database connectivity issue:', err);

@@ -74,18 +74,17 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
       );
     }
 
-    // Mobile verification is optional; we trust MSG91 response.
-    // const requestedMobile = normalizeIndianMobile(expectedMobile);
-    // const verifiedIdentifier = findVerifiedIdentifier(payload) || expectedMobile;
-    // const verifiedMobile = normalizeIndianMobile(verifiedIdentifier);
-    // console.log("Requested:", requestedMobile);
-    // console.log("Verified :", verifiedMobile);
-    // if (!verifiedMobile) {
-    //   throw new Error("MSG91 verification failed to provide a valid mobile number");
-    // }
-    // if (requestedMobile !== verifiedMobile) {
-    //   throw new Error("Verified mobile mismatch.");
-    // }
+    if (expectedMobile) {
+      const requestedMobile = normalizeIndianMobile(expectedMobile);
+      const verifiedIdentifier = findVerifiedIdentifier(payload);
+      const verifiedMobile = verifiedIdentifier ? normalizeIndianMobile(verifiedIdentifier) : requestedMobile;
+      if (!verifiedMobile) {
+        throw new Error("MSG91 verification failed to provide a valid mobile number");
+      }
+      if (requestedMobile && verifiedMobile && requestedMobile !== verifiedMobile) {
+        throw new Error("Verified mobile mismatch. Requested number does not match OTP recipient.");
+      }
+    }
     return payload;
 
   } catch (err) {

@@ -79,15 +79,15 @@ const syncWalletBalance = async (partnerId, client) => {
       COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
       COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn
     FROM wallet_ledger 
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Released'
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
   `, [pId, uId]);
   
-  // 2. Completed Debits (e.g. withdrawal payouts settled)
+  // 2. Completed Debits (e.g. withdrawal payouts settled and TDS deductions)
   const debitQuery = await client.query(`
     SELECT 
       COALESCE(SUM(debit), 0) as completed_debits
     FROM wallet_ledger 
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Released'
+    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
   `, [pId, uId]);
 
   // 3. Hold Balance = Pending Credits
@@ -99,12 +99,15 @@ const syncWalletBalance = async (partnerId, client) => {
     WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Pending Approval'
   `, [pId, uId]);
 
-  // 4. Locked Balance = Pending/Approved Withdrawal Requests
+  // 4. Locked Balance = Pending/Approved Withdrawal Requests whose ledger status is NOT yet Released
   const lockedQuery = await client.query(`
     SELECT 
-      COALESCE(SUM(amount), 0) as locked_bal
-    FROM wallet_withdrawals
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('pending', 'approved', 'processing')
+      COALESCE(SUM(w.amount), 0) as locked_bal
+    FROM wallet_withdrawals w
+    LEFT JOIN wallet_ledger l ON l.reference_number = w.id::text AND l.transaction_type = 'WITHDRAWAL'
+    WHERE (w.partner_id = $1::uuid OR w.partner_id = $2::uuid) 
+      AND w.status IN ('pending', 'approved', 'processing')
+      AND (l.status IS NULL OR l.status NOT IN ('Released', 'Approved'))
   `, [pId, uId]);
 
   const cr = creditQuery.rows[0];
@@ -441,42 +444,68 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     }
 
     const txnType = 'COMMISSION_RELEASE';
-    const status = 'Approved';
+    const status = 'Released';
+    const numAmount = parseFloat(amount || 0);
+    const tdsAmount = parseFloat((numAmount * 0.05).toFixed(2));
     const balanceBefore = parseFloat(wallet.available_balance || 0);
-    const balanceAfter = balanceBefore + parseFloat(amount);
+    const balanceAfter = balanceBefore + (numAmount - tdsAmount);
 
-    // Update wallet_ledger status if txn_id provided
+    let txnIdToReturn = meta.txn_id || null;
+
+    // 1. Update wallet_ledger status if txn_id provided (existing hold transaction)
     if (meta.txn_id) {
       await client.query(`
         UPDATE wallet_ledger 
-        SET status = 'Approved', updated_at = NOW() 
+        SET status = 'Released', updated_at = NOW() 
         WHERE id::text = $1::text
       `, [String(meta.txn_id)]);
+    } else {
+      // Direct release without prior hold entry -> insert credit entry
+      const { rows: [txn] } = await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8)
+        RETURNING id
+      `, [
+        wallet.id, resolvedPartnerId, txnType, numAmount,
+        meta.description || 'Commission release to available balance',
+        meta.reference_id || null,
+        status,
+        meta.processed_by || null
+      ]);
+      txnIdToReturn = txn.id;
+
+      await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, numAmount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || null, meta.processed_by || null, {
+        remarks: meta.remarks || null
+      });
     }
 
-    // Insert release transaction in wallet_ledger
-    const { rows: [txn] } = await client.query(`
-      INSERT INTO wallet_ledger (
-        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8)
-      RETURNING id
-    `, [
-      wallet.id, resolvedPartnerId, txnType, amount,
-      meta.description || 'Commission release to available balance',
-      meta.reference_id || meta.txn_id || null,
-      status,
-      meta.processed_by || null
-    ]);
+    // 2. Insert 5% TDS deduction debit entry into wallet_ledger
+    if (tdsAmount > 0) {
+      const { rows: [tdsTxn] } = await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, 'TDS_DEDUCTION', 0, $3, $4, $5, 'Released', $6)
+        RETURNING id
+      `, [
+        wallet.id, resolvedPartnerId, tdsAmount,
+        `5% TDS Deduction on Commission Release (Ref: ${txnIdToReturn || meta.reference_id || 'direct'})`,
+        meta.reference_id || txnIdToReturn || null,
+        meta.processed_by || null
+      ]);
 
-    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, amount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || meta.txn_id || null, meta.processed_by || null, {
-      remarks: meta.remarks || null
-    });
+      await syncTransactionTable(client, tdsTxn.id, wallet.id, resolvedPartnerId, meta.application_id || null, 'TDS_DEDUCTION', tdsAmount, balanceBefore + numAmount, balanceAfter, status, '5% TDS Deduction', 'tds_deduction', meta.reference_id || txnIdToReturn || null, meta.processed_by || null, {
+        tds: tdsAmount,
+        net_amount: numAmount - tdsAmount,
+        remarks: meta.remarks || null
+      });
+    }
 
     await syncWalletBalance(resolvedPartnerId, client);
 
     if (isInternalTxn) await client.query('COMMIT');
-    logger.info(`releaseHold: Released ₹${amount} to available balance for partner ${resolvedPartnerId}`);
-    return txn;
+    logger.info(`releaseHold: Released ₹${numAmount} (TDS ₹${tdsAmount}) to available balance for partner ${resolvedPartnerId}`);
+    return { id: txnIdToReturn, net_amount: numAmount - tdsAmount, tds: tdsAmount };
   } catch (err) {
     if (isInternalTxn) await client.query('ROLLBACK');
     logger.error('releaseHold failed', err.message);

@@ -341,7 +341,8 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, 'Maximum single withdrawal limit is ₹50,000 per request');
     }
 
-    if ((req.user?.role || '').toUpperCase() === 'PARTNER' && !req.withdrawalOtpVerified) {
+    const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
+    if (userRole === 'PARTNER' && !req.withdrawalOtpVerified) {
       return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
     }
 

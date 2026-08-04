@@ -1058,7 +1058,12 @@ const updateBankProcessingStatus = async (req, res, next) => {
       return error(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
     }
 
-    const appRes = await query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    const appRes = await query(`
+      SELECT a.*, p.category as product_category 
+      FROM applications a
+      LEFT JOIN products p ON p.id = a.product_id
+      WHERE a.id = $1
+    `, [id]);
     if (appRes.rows.length === 0) return notFound(res, 'Application not found');
     const app = appRes.rows[0];
 
@@ -1083,12 +1088,22 @@ const updateBankProcessingStatus = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, 'admin', $5)
     `, [id, status, titleMap[status] || status, `Status updated to ${status}. ${rejection_reason ? 'Reason: ' + rejection_reason : ''}`, req.user ? req.user.id : null]);
 
-    if (status === 'disbursed' && app.commission_amount > 0 && app.partner_id) {
+    const category = app.product_category || 'loan';
+    const isDisbursed = status === 'disbursed';
+    const isApprovedForNonLoan = status === 'approved' && ['credit_card', 'insurance'].includes(category);
+
+    if ((isDisbursed || isApprovedForNonLoan) && app.commission_amount > 0 && app.partner_id) {
       try {
-        await creditCommission(app.partner_id, app.commission_amount, app.id);
+        await creditCommission(
+          app.partner_id, 
+          app.id, 
+          app.commission_amount, 
+          `Approved commission for application ${app.app_number || app.id}`, 
+          req.user ? req.user.id : null
+        );
         await query(`UPDATE applications SET commission_status = 'approved' WHERE id = $1`, [id]);
       } catch (commErr) {
-        logger.error('Failed to credit commission on disbursal:', commErr);
+        logger.error('Failed to credit commission on status change:', commErr);
       }
     }
 
