@@ -318,6 +318,70 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     });
   }, [rawCards, searchQuery]);
 
+  // Compute dynamic header title & subtitle based on active sub-module tab
+  const { headerTitle, headerSubtitle } = useMemo(() => {
+    if (activeTab === 'cards' || activeTab === 'products') {
+      return {
+        headerTitle: 'Credit Cards & Products Catalog',
+        headerSubtitle: 'Explore all active credit card products, commission payouts, and direct bank application portals'
+      };
+    }
+    if (activeTab === 'customers') {
+      return {
+        headerTitle: 'Customer Directory & CRM',
+        headerSubtitle: 'Manage customer profiles, lead histories, and customer interactions'
+      };
+    }
+    if (activeTab === 'applications') {
+      return {
+        headerTitle: 'Application Pipeline',
+        headerSubtitle: 'Track and manage all submitted lead applications, bank approval stages, and statuses'
+      };
+    }
+    if (activeTab === 'documents') {
+      return {
+        headerTitle: 'Partner Document Vault',
+        headerSubtitle: 'Access and upload partner verification, KYC, and compliance documents'
+      };
+    }
+    if (activeTab === 'reports') {
+      return {
+        headerTitle: 'Performance Reports & Analytics',
+        headerSubtitle: 'Gain insights into earnings trends, conversion rates, and partner network analytics'
+      };
+    }
+    if (activeTab === 'commission') {
+      return {
+        headerTitle: 'Commission Ledger & Wallet',
+        headerSubtitle: 'Track real-time earnings, hold releases, TDS deductions, and withdrawal payouts'
+      };
+    }
+    if (activeTab === 'support') {
+      return {
+        headerTitle: 'Partner Support & Helpdesk',
+        headerSubtitle: 'Get immediate help from support team, raise tickets, and track resolutions'
+      };
+    }
+
+    // Default: Dashboard tab
+    if (activeCategory === 'loans') {
+      return {
+        headerTitle: 'Loans Dashboard',
+        headerSubtitle: 'Manage & explore loan offerings across top financial partners'
+      };
+    }
+    if (activeCategory === 'insurance') {
+      return {
+        headerTitle: 'Insurance Dashboard',
+        headerSubtitle: 'Explore comprehensive insurance products and financial protection providers'
+      };
+    }
+    return {
+      headerTitle: 'Credit Card Dashboard',
+      headerSubtitle: 'Manage & explore bank wise credit card offerings'
+    };
+  }, [activeTab, activeCategory]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
@@ -382,7 +446,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             margin: 0,
             letterSpacing: '-0.4px'
           }}>
-            {activeCategory === 'loans' ? 'Loans Dashboard' : activeCategory === 'insurance' ? 'Insurance Dashboard' : 'Credit Card Dashboard'}
+            {headerTitle}
           </h1>
           <p style={{
             fontSize: '14px',
@@ -390,11 +454,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             margin: '4px 0 0',
             fontWeight: 500
           }}>
-            {activeCategory === 'loans' 
-              ? 'Manage & explore loan offerings across top financial partners' 
-              : activeCategory === 'insurance' 
-              ? 'Explore comprehensive insurance products and providers' 
-              : 'Manage & explore bank wise credit card offerings'}
+            {headerSubtitle}
           </p>
         </div>
 
