@@ -67,7 +67,7 @@ export default function PartnerApplications() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category');
 
   const fetchDashboardStats = async () => {
@@ -314,8 +314,51 @@ export default function PartnerApplications() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* Header Actions */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* Header Row: Category Filter Pills + Action Buttons */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        {/* Category Filter Pills */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', flex: '1 1 auto' }}>
+          {[
+            { id: 'all', label: 'All Applications' },
+            { id: 'credit_card', label: 'Credit Cards' },
+            { id: 'personal_loan', label: 'Personal Loans' },
+            { id: 'business_loan', label: 'Business Loans' },
+            { id: 'insurance', label: 'Insurance' },
+            { id: 'utility', label: 'Recharge & Utilities' },
+          ].map((cat) => {
+            const isActive = (categoryFilter || 'all') === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  const currentTab = searchParams.get('tab') || 'applications';
+                  if (cat.id === 'all') {
+                    setSearchParams({ tab: currentTab });
+                  } else {
+                    setSearchParams({ tab: currentTab, category: cat.id });
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '12px',
+                  fontSize: '12.5px',
+                  fontWeight: isActive ? 800 : 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  color: isActive ? '#FFFFFF' : C.text,
+                  background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : isDark ? '#1E293B' : '#FFFFFF',
+                  boxShadow: isActive ? `0 4px 12px ${C.primary}30` : isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bulk & CSV Action Buttons */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {selectedAppIds.length > 0 && (
             <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -561,7 +604,34 @@ export default function PartnerApplications() {
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 700, color: C.text }}>{app.customer_name}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight }}><MdPhone size={11} /> {app.customer_mobile}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                            <a 
+                              href={`tel:${app.customer_mobile}`} 
+                              title="Call Customer"
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                fontSize: '11px', color: C.primary, textDecoration: 'none',
+                                fontWeight: 700, background: `${C.primary}12`, padding: '2px 8px', borderRadius: '6px'
+                              }}
+                            >
+                              <MdPhone size={12} /> {app.customer_mobile}
+                            </a>
+                            {app.customer_mobile && (
+                              <a 
+                                href={`https://wa.me/91${app.customer_mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${app.customer_name}, regarding your application #${app.app_number} for ${app.product_name}...`)}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                title="WhatsApp Customer"
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  width: '22px', height: '22px', borderRadius: '6px',
+                                  background: '#25D36620', color: '#25D366', textDecoration: 'none'
+                                }}
+                              >
+                                <MdOutlineWhatsapp size={14} />
+                              </a>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 700, color: C.text }}>{app.product_name}</div>
