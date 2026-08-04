@@ -55,7 +55,7 @@ const getMarketingBadges = (p) => {
   return badges.slice(0, 2);
 };
 
-export default function PartnerProducts() {
+export default function PartnerProducts({ initialSearch = '' }) {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -102,7 +102,7 @@ export default function PartnerProducts() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => initialSearch || searchParams.get('q') || searchParams.get('search') || "");
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeBank, setActiveBank] = useState("All Banks");
   const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
@@ -112,6 +112,16 @@ export default function PartnerProducts() {
   const [minApproval, setMinApproval] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [cardsPerPage, setCardsPerPage] = useState(12);
+
+  // Sync initialSearch or URL q param
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+    } else {
+      const q = searchParams.get('q') || searchParams.get('search');
+      if (q) setSearch(q);
+    }
+  }, [initialSearch, searchParams]);
 
   // Memoize active filters count for the badge
   const activeFiltersCount = useMemo(() => {

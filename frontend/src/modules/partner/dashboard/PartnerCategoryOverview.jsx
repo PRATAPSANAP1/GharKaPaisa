@@ -151,9 +151,10 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const [sortBy, setSortBy] = useState('default');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
-  // Database Banks State
+  // Database Banks & Products State
   const [dbBanks, setDbBanks] = useState([]);
   const [loadingBanks, setLoadingBanks] = useState(true);
+  const [allProducts, setAllProducts] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -185,6 +186,24 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       }
     };
     fetchDatabaseBanks();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Fetch all products live for global product search
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAllProducts = async () => {
+      try {
+        const res = await api.get('/products', { params: { is_active: 'true', limit: 1000 } });
+        const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+        if (Array.isArray(list) && isMounted) {
+          setAllProducts(list);
+        }
+      } catch (err) {
+        console.warn('Could not load products for search overview:', err);
+      }
+    };
+    fetchAllProducts();
     return () => { isMounted = false; };
   }, []);
 
@@ -256,6 +275,22 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
     return list;
   }, [bankList, searchQuery, bankCategoryFilter, sortBy]);
+
+  // Compute products matching search query
+  const matchingProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return [];
+    return allProducts.filter(p => {
+      const pName = (p.name || '').toLowerCase();
+      const bName = (p.bank_name || p.bank?.name || p.bank_code || '').toLowerCase();
+      const cat = (p.category || '').toLowerCase();
+      const subCat = (p.sub_category || '').toLowerCase();
+      const desc = (p.description || '').toLowerCase();
+      const features = Array.isArray(p.features) ? p.features.join(' ').toLowerCase() : (p.features || '').toLowerCase();
+
+      return pName.includes(q) || bName.includes(q) || cat.includes(q) || subCat.includes(q) || desc.includes(q) || features.includes(q);
+    });
+  }, [allProducts, searchQuery]);
 
   const handleBankClick = (bank) => {
     try {
@@ -457,9 +492,90 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       {/* ── 3. DYNAMIC CONTENT AREA BELOW BUTTONS ── */}
       <div style={{ width: '100%' }}>
 
-        {/* TAB 1: DASHBOARD (BANK CARDS COLLECTION GRID) */}
+        {/* TAB 1: DASHBOARD (BANK CARDS COLLECTION GRID & MATCHING PRODUCTS) */}
         {activeTab === 'dashboard' && (
           <>
+            {/* Matching Products Grid when user types in search bar */}
+            {searchQuery.trim() !== '' && matchingProducts.length > 0 && (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
+                    Matching Credit Cards & Products ({matchingProducts.length})
+                  </h3>
+                  <button
+                    onClick={() => handleTabChange('cards')}
+                    style={{
+                      background: 'none', border: 'none', color: C.primary, fontWeight: 800,
+                      fontSize: '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                  >
+                    View All in Cards Catalog <MdArrowForward size={16} />
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {matchingProducts.slice(0, 12).map((product) => {
+                    const payoutVal = parseFloat(product.commission_value || 0);
+                    return (
+                      <div
+                        key={`prod-${product.id}`}
+                        onClick={() => handleTabChange('cards')}
+                        style={{
+                          background: isDark ? '#1E293B' : '#FFFFFF',
+                          borderRadius: '18px',
+                          padding: '18px',
+                          border: `1px solid ${C.border}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '14px',
+                          cursor: 'pointer',
+                          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          {product.image_url ? (
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name} 
+                              style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '10px' }} 
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div style={{ width: '48px', height: '48px', borderRadius: '10px', background: `${C.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.primary, fontWeight: 800, fontSize: '20px' }}>
+                              💳
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
+                              {product.bank_name || product.bank_code || 'Bank Product'}
+                            </span>
+                            <h4 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {product.name}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.green }}>
+                            {payoutVal > 0 ? `Earn ₹${payoutVal.toLocaleString('en-IN')}` : 'Best Rate'}
+                          </span>
+                          <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.primary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            View & Apply <MdArrowForward size={14} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {activeCategory === 'credit_card' && (
               <>
                 {loadingBanks && dbBanks.length === 0 ? (
@@ -474,7 +590,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                   }}>
                     Loading banks from database...
                   </div>
-                ) : filteredBanks.length === 0 ? (
+                ) : filteredBanks.length === 0 && matchingProducts.length === 0 ? (
                   <div style={{
                     textAlign: 'center',
                     padding: '48px',
@@ -483,7 +599,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     border: `1px solid ${C.border}`,
                     color: C.textMid || '#64748B'
                   }}>
-                    No bank found matching "{searchQuery}"
+                    No banks or products found matching "{searchQuery}"
                   </div>
                 ) : (
                   <div style={{
@@ -684,7 +800,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
         {/* TAB 2: CREDIT CARDS / PRODUCTS */}
         {(activeTab === 'cards' || activeTab === 'products') && (
-          <PartnerProducts />
+          <PartnerProducts initialSearch={searchQuery} />
         )}
 
         {/* TAB 3: CUSTOMERS */}
