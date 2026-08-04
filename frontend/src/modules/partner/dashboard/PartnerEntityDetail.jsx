@@ -13,6 +13,7 @@ import {
 } from 'react-icons/md';
 
 import { getCardSpecificImage } from '../../home/components/CreditCards/cardImageHelper';
+import { useAuthStore } from '../../../app/store/authStore';
 
 const getBankName = (slug) => {
   if (!slug) return 'Bank Workspace';
@@ -68,6 +69,7 @@ export default function PartnerEntityDetail() {
   const location = useLocation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
+  const user = useAuthStore((state) => state.user);
   const { t } = useTranslation();
 
   const [cardSearch, setCardSearch] = useState('');
