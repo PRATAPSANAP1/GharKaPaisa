@@ -7,7 +7,7 @@ export const applicationService = {
   submit: (data) => api.post('/applications', data),
   list: (params) => api.get('/applications', { params }),
   getById: (id) => api.get(`/applications/${id}`),
-  updateStatus: (id, data) => api.patch(`/applications/${id}/status`, data),
+  updateStatus: (id, data) => api.put(`/applications/${id}/status`, data),
   uploadDoc: async (id, file, doc_type, onUploadProgress) => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!validTypes.includes(file.type)) {

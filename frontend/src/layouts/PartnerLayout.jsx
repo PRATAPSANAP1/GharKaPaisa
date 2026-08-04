@@ -10,7 +10,7 @@ import {
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout,
-  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd
+  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd, MdArrowForward
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
@@ -758,6 +758,115 @@ export default function PartnerLayout() {
           position: 'relative',
           boxSizing: 'border-box',
         }}>
+          {/* Global Refer & Earn Banner */}
+          <div style={{
+            background: isDark 
+              ? 'linear-gradient(to right, rgba(78, 60, 168, 0.4), rgba(49, 46, 129, 0.4))' 
+              : 'linear-gradient(to right, #F5EFFF, #EDECFF)',
+            borderRadius: '16px',
+            padding: isMobile ? '16px' : '16px 32px',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            gap: '16px',
+            marginBottom: '24px',
+            boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(99,102,241,0.05)',
+            border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.6)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Soft decorative background circles */}
+            <div style={{
+              position: 'absolute',
+              right: '-5%',
+              top: '-50%',
+              width: '150px',
+              height: '150px',
+              background: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+              filter: 'blur(40px)',
+              borderBottomLeftRadius: '100px'
+            }} />
+            <div style={{
+              position: 'absolute',
+              left: '15%',
+              bottom: '-50%',
+              width: '120px',
+              height: '120px',
+              background: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.1)',
+              filter: 'blur(30px)',
+              borderTopRightRadius: '100px'
+            }} />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '16px' : '24px', zIndex: 1 }}>
+              {/* Image / Icon container */}
+              <div style={{
+                fontSize: isMobile ? '36px' : '44px',
+                filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.15))',
+                lineHeight: 1,
+                userSelect: 'none'
+              }}>
+                🎁
+              </div>
+              
+              <div>
+                <h3 style={{ 
+                  margin: '0 0 6px 0', 
+                  fontSize: isMobile ? '16px' : '20px', 
+                  fontWeight: 800, 
+                  color: isDark ? '#A5B4FC' : '#4338CA',
+                  letterSpacing: '-0.3px'
+                }}>
+                  {t('partnerLayout.referTitle', 'Refer & Earn More')}
+                </h3>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: isMobile ? '12px' : '14px', 
+                  color: isDark ? '#94A3B8' : '#64748B',
+                  fontWeight: 500,
+                  maxWidth: '450px',
+                  lineHeight: 1.4
+                }}>
+                  {t('partnerLayout.referDesc', 'Refer your friends and earn exciting rewards and bonuses.')}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/partner/team-network')}
+              style={{
+                background: 'linear-gradient(135deg, #5142FF 0%, #3629D3 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: isMobile ? '12px 20px' : '12px 24px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(81,66,255,0.3)',
+                transition: 'all 0.2s',
+                zIndex: 1,
+                whiteSpace: 'nowrap',
+                width: isMobile ? '100%' : 'auto'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(81,66,255,0.4)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(81,66,255,0.3)';
+              }}
+            >
+              {t('partnerLayout.referNow', 'Refer Now')}
+              <MdArrowForward size={18} />
+            </button>
+          </div>
+
           <Outlet />
         </div>
       </main>

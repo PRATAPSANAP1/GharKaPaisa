@@ -141,7 +141,7 @@ export default function ManageWallet() {
 
     setActionLoading(true);
     try {
-      await api.post('/wallet/adjust', adjustForm);
+      await api.post('/superadmin/wallet/adjust', adjustForm);
       alert('Wallet balance & ledger audit updated successfully!');
       setAdjustModalOpen(false);
       if (activeTab === 'wallets') loadWallets();

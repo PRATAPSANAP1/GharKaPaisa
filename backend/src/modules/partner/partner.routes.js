@@ -25,7 +25,7 @@ router.post('/:PartnerId/kyc',
   selfOrAdmin('PartnerId'), 
   kycUpload, 
   (req, res, next) => {
-    const allowed = ['image/jpeg', 'image/png', 'application/pdf', 'image/jpg'];
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf', 'image/jpg', 'video/mp4', 'video/webm', 'video/quicktime'];
     const files = Object.values(req.files || {}).flat();
     const invalid = files.filter(f => !allowed.includes(f.mimetype));
     if (invalid.length) {

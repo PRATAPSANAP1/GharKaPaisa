@@ -16,6 +16,7 @@ router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
 
 // Bulk Operations & Export (must be before /:id routes)
 router.put('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);
+router.patch('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);
 router.post('/import', requireApprovedPartnerOrAdmin, upload.single('file'), appCtrl.importApplications);
 router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicationsCSV);
 

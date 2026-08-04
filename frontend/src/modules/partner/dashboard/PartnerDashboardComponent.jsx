@@ -1115,6 +1115,24 @@ export default function PartnerDashboard({ partner }) {
       </div>
 
       <style>{`
+        /* Category Rich Cards Hover/Interactive Styles */
+        .category-rich-card {
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        }
+        .category-rich-card:hover {
+          transform: translateY(-5px) scale(1.02);
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
+        }
+        .category-rich-card:active {
+          transform: translateY(-2px) scale(0.98);
+        }
+        .category-rich-card:hover div:last-child div {
+          transform: scale(1.1);
+        }
+        .category-rich-card div:last-child div {
+          transition: transform 0.2s ease !important;
+        }
+
         /* KPI Cards Responsive Styling */
         .kpi-cards-container {
           display: flex !important;
