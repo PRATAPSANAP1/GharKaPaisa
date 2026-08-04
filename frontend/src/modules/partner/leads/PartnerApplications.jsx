@@ -317,8 +317,8 @@ export default function PartnerApplications() {
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('partnerApplications.title', 'Lead & Application Operations')}</h1>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t('partnerApplications.subtitle', 'Manage customer application pipelines, bulk update statuses, assign team leads & track commissions.')}</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('partnerApplications.title', 'Leads')}</h1>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t('partnerApplications.subtitle', 'Track lead pipelines, update status, assign team leads & manage commissions.')}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {selectedAppIds.length > 0 && (

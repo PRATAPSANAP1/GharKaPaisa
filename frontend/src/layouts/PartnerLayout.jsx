@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Cards', icon: MdCreditCard },
   { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
-  { id: 'applications', path: '/partner/applications', label: 'Applications', icon: MdLeaderboard },
+  { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
   { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
   { id: 'team-network', path: '/partner/team-network', label: 'Team Network', icon: MdDeviceHub },

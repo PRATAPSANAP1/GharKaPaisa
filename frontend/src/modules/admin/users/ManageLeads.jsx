@@ -152,7 +152,7 @@ export default function ManageLeads() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Enterprise Lead Management Architecture</h2>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Leads</h2>
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Operations hub, verification checklist engine, bank executive assignments, SLA monitoring & automatic wallet payouts.</p>
         </div>
 
