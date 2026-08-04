@@ -204,7 +204,42 @@ const exportPayoutsReport = async (req, res, next) => {
     sql += ` ORDER BY a.created_at DESC`;
 
     const { rows } = await query(sql, values);
-    return success(res, rows);
+
+    // Build CSV
+    const csvHeaders = [
+      "Application Number",
+      "Status",
+      "Application Date",
+      "Applied Amount",
+      "Approved Amount",
+      "Commission Amount",
+      "Customer Name",
+      "Product Name",
+      "Bank Name",
+      "Partner Code",
+      "Partner Name"
+    ];
+    
+    const csvLines = [csvHeaders.join(",")];
+    for (const row of rows) {
+      csvLines.push([
+        `"${row.app_number || ''}"`,
+        `"${row.status || ''}"`,
+        `"${row.application_date ? new Date(row.application_date).toISOString().split('T')[0] : ''}"`,
+        row.applied_amount || 0,
+        row.approved_amount || 0,
+        row.commission_amount || 0,
+        `"${(row.customer_name || '').replace(/"/g, '""')}"`,
+        `"${(row.product_name || '').replace(/"/g, '""')}"`,
+        `"${(row.bank_name || '').replace(/"/g, '""')}"`,
+        `"${row.partner_code || ''}"`,
+        `"${(row.partner_name || '').replace(/"/g, '""')}"`
+      ].join(","));
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=payouts_report_${Date.now()}.csv`);
+    return res.status(200).send(csvLines.join('\n'));
   } catch (err) {
     next(err);
   }
@@ -407,14 +442,6 @@ const getCommissionReportController = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-const getTeamReportController = async (req, res, next) => {
-  try {
-    const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
-    const data = await reportService.getTeamReport(partnerId, req.query);
-    return success(res, data);
-  } catch (err) { next(err); }
-};
-
 const getWithdrawalsReportController = async (req, res, next) => {
   try {
     const partnerId = req.user.role === 'PARTNER' ? req.partner?.id : (req.query.partner_id || null);
@@ -479,7 +506,6 @@ module.exports = {
   getCustomersReportController,
   getWalletReportController,
   getCommissionReportController,
-  getTeamReportController,
   getWithdrawalsReportController,
   getProductsReportController,
   getBanksReportController,

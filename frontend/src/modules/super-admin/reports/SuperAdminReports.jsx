@@ -125,68 +125,29 @@ export default function SuperAdminReports() {
   const handleExportReport = async () => {
     setLoadingExport(true);
     try {
-      const res = await api.get("/reports/payouts-export", {
+      const res = await api.get("/superadmin/reports/payouts/export", {
+        responseType: 'blob',
         params: {
           from_date: exportDates.from_date || undefined,
           to_date: exportDates.to_date || undefined
         }
       });
-      if (res.data?.success) {
-        downloadCSV(res.data.data);
-      }
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `payouts_report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to export payouts report.");
+      alert("Failed to export payouts report.");
     } finally {
       setLoadingExport(false);
     }
   };
 
-  const downloadCSV = (data) => {
-    if (!data || data.length === 0) {
-      alert("No data available for the selected criteria.");
-      return;
-    }
-    const headers = [
-      "Application Number",
-      "Status",
-      "Application Date",
-      "Applied Amount",
-      "Approved Amount",
-      "Commission Amount",
-      "Customer Name",
-      "Product Name",
-      "Bank Name",
-      "Partner Code",
-      "Partner Name"
-    ];
-    
-    const csvRows = [
-      headers.join(","),
-      ...data.map(row => [
-        `"${row.app_number || ''}"`,
-        `"${row.status || ''}"`,
-        `"${row.application_date ? new Date(row.application_date).toISOString().split('T')[0] : ''}"`,
-        row.applied_amount || 0,
-        row.approved_amount || 0,
-        row.commission_amount || 0,
-        `"${(row.customer_name || '').replace(/"/g, '""')}"`,
-        `"${(row.product_name || '').replace(/"/g, '""')}"`,
-        `"${(row.bank_name || '').replace(/"/g, '""')}"`,
-        `"${row.Partner_code || ''}"`,
-        `"${(row.partner_name || '').replace(/"/g, '""')}"`
-      ].join(","))
-    ];
 
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `payouts_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   useEffect(() => {
     fetchPrivacySetting();

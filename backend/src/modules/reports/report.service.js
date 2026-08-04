@@ -180,29 +180,6 @@ const getCommissionReport = async (partnerId, filters) => {
 };
 
 /**
- * 6. Team Report
- */
-const getTeamReport = async (partnerId, filters) => {
-  const cached = await getCachedReport('team', filters, partnerId);
-  if (cached) return cached;
-
-  const { rows } = await query(`
-    SELECT 
-      ptr.child_partner_id as id,
-      p.first_name, p.last_name, p.partner_code, p.kyc_status, p.status, p.created_at,
-      COALESCE(SUM(tc.commission_amount), 0) as total_override
-    FROM partner_team_relationships ptr
-    JOIN partner_profiles p ON p.id = ptr.child_partner_id
-    LEFT JOIN team_commissions tc ON tc.child_partner_id = p.id AND tc.parent_partner_id = ptr.parent_partner_id
-    WHERE ptr.parent_partner_id = $1
-    GROUP BY ptr.child_partner_id, p.id ORDER BY p.created_at DESC
-  `, [partnerId]);
-
-  await setCachedReport('team', filters, partnerId, rows);
-  return rows;
-};
-
-/**
  * 7. Withdrawals Report
  */
 const getWithdrawalsReport = async (partnerId, filters) => {
@@ -338,7 +315,6 @@ module.exports = {
   getCustomersReport,
   getWalletReport,
   getCommissionReport,
-  getTeamReport,
   getWithdrawalsReport,
   getProductsReport,
   getBanksReport,

@@ -30,7 +30,7 @@ export default function ManageDirectLeads() {
   const handleExportCSV = async () => {
     setExporting(true);
     try {
-      const res = await api.get("/crm/bulk-export", { responseType: 'blob' });
+      const res = await api.get("/superadmin/crm/bulk-export", { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;

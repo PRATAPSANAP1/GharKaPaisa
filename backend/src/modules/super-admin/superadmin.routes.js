@@ -68,4 +68,7 @@ router.put('/products/featured', productCtrl.updateFeatured);
 router.put('/products/:id', productCtrl.updateProduct);
 router.delete('/products/:id', productCtrl.deleteProduct);
 
+// CRM Bulk Export
+router.get('/crm/bulk-export', appCtrl.exportApplicationsCSV);
+
 module.exports = router;

@@ -12,7 +12,6 @@ router.get('/applications', reportCtrl.getApplicationsReportController);
 router.get('/customers', reportCtrl.getCustomersReportController);
 router.get('/wallet', reportCtrl.getWalletReportController);
 router.get('/commission', reportCtrl.getCommissionReportController);
-router.get('/team', reportCtrl.getTeamReportController);
 router.get('/withdrawals', reportCtrl.getWithdrawalsReportController);
 router.get('/products', reportCtrl.getProductsReportController);
 router.get('/banks', reportCtrl.getBanksReportController);
