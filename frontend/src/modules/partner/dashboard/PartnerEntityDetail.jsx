@@ -11,8 +11,6 @@ import {
   MdOutlineInsertDriveFile, MdDone, MdErrorOutline, MdHourglassEmpty,
   MdShare, MdSwapHoriz, MdInfo, MdContentCopy
 } from 'react-icons/md';
-
-import { getCardSpecificImage } from '../../home/components/CreditCards/cardImageHelper';
 import { useAuthStore } from '../../../app/store/authStore';
 
 const getBankName = (slug) => {
@@ -329,7 +327,7 @@ export default function PartnerEntityDetail() {
             gap: '18px'
           }}>
             {filteredCardProducts.map((card) => {
-              const cardImg = getCardSpecificImage(card.name) || card.image || card.logo;
+              const cardImg = card.card_image_url || card.image_url || card.thumbnail_url || card.image || card.logo;
               const keyFeatures = getCardKeyFeatures(card);
               const isComparing = selectedCompareCards.some(c => c.id === card.id);
 

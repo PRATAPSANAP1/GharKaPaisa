@@ -17,10 +17,6 @@ import {
 } from "react-icons/fa";
 import * as FaIcons from "react-icons/fa";
 
-// Import modular data lists
-import { bankCardsDetails, ltfCards } from "./components/CreditCards/index";
-// import { HDFCCardsPage } from "./components/CreditCards/HDFCCardsPage";
-import { getCardSpecificImage } from "./components/CreditCards/cardImageHelper";
 import CardApplyVerificationModal from "./components/CreditCards/CardApplyVerificationModal";
 import { loansData } from "./components/Loans/index";
 import { resolveAndApply } from "../../services/applicationResolver";
@@ -845,9 +841,9 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
                             }}
                           >
                             <span style={{ display: "flex", alignItems: "center", color: brand.color, fontSize: "18px", flexShrink: 0 }}>
-                              {(getCardSpecificImage(card.name) || currentBankCardImage) ? (
+                              {(card.card_image_url || card.image_url || card.thumbnail_url || currentBankCardImage) ? (
                                 <img 
-                                  src={getCardSpecificImage(card.name) || currentBankCardImage} 
+                                  src={card.card_image_url || card.image_url || card.thumbnail_url || currentBankCardImage} 
                                   alt="Card" 
                                   style={{ width: "36px", height: "24px", objectFit: "contain", borderRadius: "2px" }} 
                                 />
@@ -954,7 +950,7 @@ function CategoryPage({ category, onBack, C, onItemClick, breadcrumbs, dynamicBa
 
               {/* Card Mockup Graphic */}
               {(() => {
-                const cardImg = getCardSpecificImage(selectedDetailCard.name) || resolveCardImage(selectedDetailCard.name) || currentBankCardImage;
+                const cardImg = selectedDetailCard?.card_image_url || selectedDetailCard?.image_url || selectedDetailCard?.thumbnail_url || resolveCardImage(selectedDetailCard.name) || currentBankCardImage;
                 const getBankLogoText = () => {
                   const bid = (category.id || "").toLowerCase();
                   if (bid.includes("sbi")) return "SBI CARD";
@@ -1856,7 +1852,7 @@ export default function Home({ onNavigate }) {
     
     // Parse /credit-cards/lifetime-free-credit-cards-ltf
     if (path === "/credit-cards/lifetime-free-credit-cards-ltf") {
-      const ltfSource = dynamicLtfCards.length > 0 ? dynamicLtfCards : ltfCards;
+      const ltfSource = dynamicLtfCards;
       setActiveCategory({
         id: "ltf-detail-page",
         title: "Lifetime Free Credit Cards (LTF)",
@@ -1923,15 +1919,6 @@ export default function Home({ onNavigate }) {
             parentId: "credit-cards",
             type: "bank-detail",
             sections: dynamicSections
-          });
-        } else if (bankCardsDetails[bankId]) {
-          setActiveCategory({
-            id: `bank-${bankId}`,
-            title: bankCardsDetails[bankId].title,
-            titleKey: `${bankId}.title`,
-            parentId: "credit-cards",
-            type: "bank-detail",
-            sections: bankCardsDetails[bankId].sections
           });
         } else {
           setActiveCategory({

@@ -12,7 +12,6 @@ import {
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from './CardApplyVerificationModal';
 import { resolveAndApply } from '../../../../services/applicationResolver';
-import { getCardSpecificImage } from './cardImageHelper';
 import { getCleanImageUrl } from '../../../../utils/urlHelper';
 
 export default function DynamicCreditCardsPage() {
@@ -354,7 +353,7 @@ export default function DynamicCreditCardsPage() {
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
                           <div style={{ width: '80px', height: '52px', borderRadius: '10px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}` }}>
                             <img
-                              src={getCleanImageUrl(card.card_image_url || card.image_url || card.thumbnail_url) || getCardSpecificImage(card.name) || bank.logo_url}
+                              src={getCleanImageUrl(card.card_image_url || card.image_url || card.thumbnail_url) || bank.logo_url}
                               alt={card.name}
                               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                               onError={(e) => { e.target.src = bank.logo_url; }}
@@ -487,7 +486,7 @@ export default function DynamicCreditCardsPage() {
 
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ width: '90px', height: '60px', borderRadius: '12px', background: isDark ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
-                <img src={getCleanImageUrl(selectedCard.card_image_url || selectedCard.image_url) || getCardSpecificImage(selectedCard.name) || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                <img src={getCleanImageUrl(selectedCard.card_image_url || selectedCard.image_url) || bank.logo_url} alt={selectedCard.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               </div>
               <div>
                 <h3 style={{ fontSize: isMobile ? '17px' : '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCard.name}</h3>
@@ -629,7 +628,7 @@ export default function DynamicCreditCardsPage() {
                 {selectedForCompare[0] && (
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: isDark ? '#1e293b' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
-                      <img src={getCleanImageUrl(selectedForCompare[0].card_image_url || selectedForCompare[0].image_url) || getCardSpecificImage(selectedForCompare[0].name) || bank.logo_url} alt={selectedForCompare[0].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      <img src={getCleanImageUrl(selectedForCompare[0].card_image_url || selectedForCompare[0].image_url) || bank.logo_url} alt={selectedForCompare[0].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                     </div>
                     <div>
                       <h4 style={{ fontSize: '13.5px', fontWeight: 800, margin: 0 }}>{selectedForCompare[0].name}</h4>
@@ -649,7 +648,7 @@ export default function DynamicCreditCardsPage() {
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <div style={{ width: '60px', height: '40px', borderRadius: '8px', background: isDark ? '#1e293b' : '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`, flexShrink: 0 }}>
-                        <img src={selectedForCompare[1].card_image_url || selectedForCompare[1].image_url || getCardSpecificImage(selectedForCompare[1].name) || bank.logo_url} alt={selectedForCompare[1].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        <img src={getCleanImageUrl(selectedForCompare[1].card_image_url || selectedForCompare[1].image_url) || bank.logo_url} alt={selectedForCompare[1].name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                       </div>
                       <div>
                         <h4 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>{selectedForCompare[1].name}</h4>
@@ -712,7 +711,7 @@ export default function DynamicCreditCardsPage() {
                           gap: '8px'
                         }}
                       >
-                        <img src={c.card_image_url || c.image_url || getCardSpecificImage(c.name) || bank.logo_url} style={{ width: '30px', height: '20px', objectFit: 'contain' }} />
+                        <img src={getCleanImageUrl(c.card_image_url || c.image_url) || bank.logo_url} style={{ width: '30px', height: '20px', objectFit: 'contain' }} />
                         <span style={{ fontWeight: 600 }}>{c.name}</span>
                       </div>
                     ))}

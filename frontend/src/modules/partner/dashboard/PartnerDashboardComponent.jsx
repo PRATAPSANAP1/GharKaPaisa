@@ -966,6 +966,92 @@ export default function PartnerDashboard({ partner }) {
       {/* ──── QUICK ACCESS SECTION ──── */}
       <QuickAccessSection />
 
+      {/* ──── QUICK ACTIONS PANEL ──── */}
+      <div style={{ marginTop: '4px' }}>
+        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>
+          {t('dashboard.quickActions', 'Quick Actions')}
+        </h3>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "20px"
+        }}>
+          {quickActions.map((act) => {
+            const Icon = act.icon;
+            const cardBg = isDark ? act.bgDark : act.bgLight;
+            const borderCol = isDark ? act.borderColor : '#EEF2FF';
+            const textCol = isDark ? '#FFFFFF' : '#111827';
+            const descCol = isDark ? '#94A3B8' : '#64748B';
+
+            return (
+              <div
+                key={act.id}
+                onClick={act.action}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    act.action();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={act.ariaLabel}
+                style={{
+                  background: isDark ? C.card : '#FFFFFF',
+                  borderRadius: "18px",
+                  padding: "20px",
+                  border: `1.5px solid ${borderCol}`,
+                  boxShadow: "0 4px 20px rgba(15,23,42,0.04)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  outline: 'none'
+                }}
+                className="hover-card-clickable"
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = act.color;
+                  e.currentTarget.style.boxShadow = `0 0 0 3px ${act.color}40`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = borderCol;
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = act.color;
+                  e.currentTarget.style.boxShadow = `0 10px 25px ${act.color}15`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = borderCol;
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
+                }}
+              >
+                <div style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  background: cardBg,
+                  color: act.color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0
+                }}>
+                  <Icon size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "14.5px", fontWeight: 800, color: textCol }}>{act.label}</div>
+                  <div style={{ fontSize: "11.5px", fontWeight: 500, color: descCol, marginTop: "3px", lineHeight: 1.3 }}>{act.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ──── REFER & EARN BANNER ──── */}
       <div style={{
         background: isDark 
@@ -1123,92 +1209,6 @@ export default function PartnerDashboard({ partner }) {
             <FaWhatsapp size={18} />
             Share on WhatsApp
           </button>
-        </div>
-      </div>
-
-      {/* ──── QUICK ACTIONS PANEL ──── */}
-      <div style={{ marginTop: '4px' }}>
-        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>
-          {t('dashboard.quickActions', 'Quick Actions')}
-        </h3>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px"
-        }}>
-          {quickActions.map((act) => {
-            const Icon = act.icon;
-            const cardBg = isDark ? act.bgDark : act.bgLight;
-            const borderCol = isDark ? act.borderColor : '#EEF2FF';
-            const textCol = isDark ? '#FFFFFF' : '#111827';
-            const descCol = isDark ? '#94A3B8' : '#64748B';
-
-            return (
-              <div
-                key={act.id}
-                onClick={act.action}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    act.action();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={act.ariaLabel}
-                style={{
-                  background: isDark ? C.card : '#FFFFFF',
-                  borderRadius: "18px",
-                  padding: "20px",
-                  border: `1.5px solid ${borderCol}`,
-                  boxShadow: "0 4px 20px rgba(15,23,42,0.04)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  outline: 'none'
-                }}
-                className="hover-card-clickable"
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = act.color;
-                  e.currentTarget.style.boxShadow = `0 0 0 3px ${act.color}40`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = borderCol;
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.borderColor = act.color;
-                  e.currentTarget.style.boxShadow = `0 10px 25px ${act.color}15`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = borderCol;
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
-                }}
-              >
-                <div style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: cardBg,
-                  color: act.color,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0
-                }}>
-                  <Icon size={24} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "14.5px", fontWeight: 800, color: textCol }}>{act.label}</div>
-                  <div style={{ fontSize: "11.5px", fontWeight: 500, color: descCol, marginTop: "3px", lineHeight: 1.3 }}>{act.desc}</div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 

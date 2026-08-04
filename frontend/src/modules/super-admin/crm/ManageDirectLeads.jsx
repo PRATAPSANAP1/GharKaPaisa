@@ -23,9 +23,28 @@ export default function ManageDirectLeads() {
     customerName: "",
     mobile: "",
     category: "credit_card",
-    bankName: "",
     cardName: ""
   });
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/crm/bulk-export", { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'direct_leads_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (e) {
+      console.error(e);
+      setErr("Failed to export leads.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -134,19 +153,35 @@ export default function ManageDirectLeads() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowApplyModal(true)}
-          style={{
-            padding: "12px 22px", borderRadius: "12px", border: "none",
-            background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-            color: "#FFFFFF", fontWeight: 800, fontSize: "14px", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: "8px",
-            boxShadow: `0 4px 16px ${C.primary}35`
-          }}
-        >
-          <span>➕</span>
-          <span>Apply Direct Lead</span>
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={handleExportCSV}
+            disabled={exporting}
+            style={{
+              padding: "12px 22px", borderRadius: "12px", border: `1px solid ${C.teal}`,
+              background: "transparent",
+              color: C.teal, fontWeight: 800, fontSize: "14px", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "8px"
+            }}
+          >
+            <span>📥</span>
+            <span>{exporting ? "Exporting..." : "Export CSV"}</span>
+          </button>
+          
+          <button
+            onClick={() => setShowApplyModal(true)}
+            style={{
+              padding: "12px 22px", borderRadius: "12px", border: "none",
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+              color: "#FFFFFF", fontWeight: 800, fontSize: "14px", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "8px",
+              boxShadow: `0 4px 16px ${C.primary}35`
+            }}
+          >
+            <span>➕</span>
+            <span>Apply Direct Lead</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards Section */}
