@@ -328,6 +328,22 @@ const AdminLayout = () => {
             <span>⚙ Settings</span>
           </NavLink>
 
+          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <button
+              id="admin-sidebar-logout-button"
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
+                fontSize: '13.5px', fontWeight: 700, color: '#EF4444',
+                background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)',
+                cursor: 'pointer', transition: 'all 0.2s ease'
+              }}
+            >
+              <Icons.logout size={18} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </nav>
       </aside>
 

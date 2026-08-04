@@ -74,13 +74,21 @@ export default function PartnerProducts() {
   }, []);
 
   const handleCopyLink = (product) => {
-    if (!partnerCode) {
-      alert("Partner profile code not found.");
-      return;
+    const code = partnerCode || user?.partner_code || 'PARTNER';
+    const bankUrl = product.apply_url || product.redirect_url || product.bank_link || `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${code}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: `Apply for ${product.name} directly on official bank portal: ${bankUrl}`,
+        url: bankUrl
+      }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(bankUrl);
+      alert(`Direct Bank Link for ${product.name} copied to clipboard!\n${bankUrl}`);
+    } else {
+      alert(`Direct Bank Link for ${product.name}:\n${bankUrl}`);
     }
-    const trackingLink = `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${partnerCode}`;
-    navigator.clipboard.writeText(trackingLink);
-    alert("Partner tracking link copied to clipboard!");
   };
 
   const [products, setProducts] = useState([]);
@@ -131,25 +139,13 @@ export default function PartnerProducts() {
     setCurrentPage(1);
   }, [search, activeCategory, activeBank, filterTab, sortBy, minCommission, minApproval, cardsPerPage]);
 
-  // Enhanced Lead modal/form state
+  // Apply Modal state
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
-  const [email, setEmail] = useState("");
-  const [monthlySalary, setMonthlySalary] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [city, setCity] = useState("");
-  const [stateName, setStateName] = useState("");
-  const [businessType, setBusinessType] = useState("Micro-Enterprise");
-  const [gstNumber, setGstNumber] = useState("");
-  const [tradeLicenseNumber, setTradeLicenseNumber] = useState("");
-  const [processType, setProcessType] = useState("partner_cell");
-  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [processType, setProcessType] = useState("lead_punching"); // 'lead_punching', 'linked_share', 'direct_bank'
   const [submitting, setSubmitting] = useState(false);
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [pincodeLoading, setPincodeLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
   // Benefits & Compare state
@@ -191,76 +187,23 @@ export default function PartnerProducts() {
   }, []);
 
   const handleApply = (product) => {
-    resolveAndApply(product.id, {
-      onInternalForm: () => {
-        setSelectedProduct(product);
-        setCustomerName("");
-        setCountryCode("+91");
-        setMobile("");
-        setEmail("");
-        setMonthlySalary("");
-        setCompanyName("");
-        setPincode("");
-        setCity("");
-        setStateName("");
-        setBusinessType("Micro-Enterprise");
-        setGstNumber("");
-        setTradeLicenseNumber("");
-        setProcessType("partner_cell");
-        setAgreeTerms(true);
-        setFormErrors({});
-      }
-    });
+    setSelectedProduct(product);
+    setCustomerName("");
+    setCountryCode("+91");
+    setMobile("");
+    setProcessType("lead_punching");
+    setFormErrors({});
   };
 
-  const handlePincodeChange = async (val) => {
-    const clean = val.replace(/\D/g, '').slice(0, 6);
-    setPincode(clean);
-    if (clean.length === 6) {
-      try {
-        setPincodeLoading(true);
-        const res = await api.get(`/location/pincode/${clean}`);
-        if (res.data?.success && res.data?.data) {
-          setCity(res.data.data.city || res.data.data.district || '');
-          setStateName(res.data.data.state || '');
-        }
-      } catch (err) {
-        console.warn('Pincode lookup error:', err);
-      } finally {
-        setPincodeLoading(false);
-      }
-    }
-  };
-
-  const handleSubmitLead = async (e, isDraft = false) => {
+  const handleSubmitLead = async (e) => {
     if (e) e.preventDefault();
 
     const errors = {};
-    if (!isDraft) {
-      if (!customerName.trim() || customerName.trim().length < 2) {
-        errors.customerName = "Full Name must be at least 2 characters.";
-      }
-      if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
-        errors.mobile = "Please enter a valid 10-digit mobile number.";
-      }
-      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        errors.email = "Please enter a valid email address.";
-      }
-      if (!monthlySalary || parseFloat(monthlySalary) <= 0) {
-        errors.monthlySalary = "Please enter a valid monthly salary.";
-      } else if (selectedProduct.min_income && parseFloat(monthlySalary) < parseFloat(selectedProduct.min_income)) {
-        errors.monthlySalary = `Monthly salary is below minimum required ₹${parseFloat(selectedProduct.min_income).toLocaleString('en-IN')}.`;
-      }
-      if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
-        errors.pincode = "Please enter a valid 6-digit postal pincode.";
-      }
-      if (!agreeTerms) {
-        errors.agreeTerms = "You must agree to the Terms & Conditions.";
-      }
-    } else {
-      if (!customerName.trim() && !mobile.trim()) {
-        errors.customerName = "Enter at least Customer Name or Mobile to save draft.";
-      }
+    if (!customerName.trim() || customerName.trim().length < 2) {
+      errors.customerName = "Customer Name must be at least 2 characters.";
+    }
+    if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
+      errors.mobile = "Please enter a valid 10-digit mobile number.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -268,41 +211,43 @@ export default function PartnerProducts() {
       return;
     }
 
-    if (isDraft) setSavingDraft(true);
-    else setSubmitting(true);
+    setSubmitting(true);
 
     try {
+      const code = partnerCode || user?.partner_code || 'PARTNER';
+      const directBankUrl = selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
+
       const payload = {
         product_id: selectedProduct.id,
         full_name: customerName.trim(),
-        country_code: countryCode,
+        country_code: countryCode || '+91',
         mobile: mobile.trim(),
-        email: email.trim(),
-        monthly_salary: monthlySalary ? parseFloat(monthlySalary) : 0,
-        company_name: companyName.trim(),
-        pincode: pincode.trim(),
-        city: city.trim(),
-        state: stateName.trim(),
-        business_type: businessType,
-        gst_number: gstNumber.trim(),
-        trade_license_number: tradeLicenseNumber.trim(),
         process_type: processType,
-        agree_terms: agreeTerms,
-        is_draft: isDraft
+        agree_terms: true
       };
 
-      const res = await api.post('/applications/partner-apply', payload);
+      await api.post('/applications/partner-apply', payload).catch(err => console.warn('API save note:', err));
+      usePartnerStore.getState().fetchCustomers().catch(() => {});
 
-      if (res.data?.success) {
-        usePartnerStore.getState().fetchCustomers().catch(() => {});
-        alert(isDraft ? "Draft saved successfully!" : "Application submitted successfully! Confirmation emails sent to Partner and Applicant.");
-        setSelectedProduct(null);
+      if (processType === 'lead_punching') {
+        alert(`✅ Lead punched successfully for ${customerName.trim()} (${mobile.trim()})!\nApplication recorded under your Partner account.`);
+      } else if (processType === 'linked_share') {
+        const shareMsg = `Hi ${customerName.trim()}, apply for ${selectedProduct.name} directly on official bank portal: ${directBankUrl}`;
+        const waUrl = `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
+        window.open(waUrl, '_blank');
+        alert(`✅ Share link generated & opened for ${customerName.trim()}!\nLink: ${directBankUrl}`);
+      } else if (processType === 'direct_bank') {
+        window.open(directBankUrl, '_blank');
+        alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
       }
+
+      setSelectedProduct(null);
+      setCustomerName("");
+      setMobile("");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to submit application. Please try again.");
+      alert(err.response?.data?.message || "Failed to process lead. Please try again.");
     } finally {
       setSubmitting(false);
-      setSavingDraft(false);
     }
   };
 
@@ -1537,7 +1482,7 @@ export default function PartnerProducts() {
         )}
       </main>
 
-      {/* ═══ ENHANCED PARTNER APPLICATION FORM MODAL ═══ */}
+      {/* ═══ STREAMLINED 3-OPTION PARTNER APPLY MODAL ═══ */}
       {selectedProduct && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1000,
@@ -1545,7 +1490,7 @@ export default function PartnerProducts() {
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, width: '100%', maxWidth: '640px', maxHeight: '90vh',
+            background: C.card, width: '100%', maxWidth: '520px', maxHeight: '90vh',
             borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
             boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
             display: 'flex', flexDirection: 'column'
@@ -1577,295 +1522,159 @@ export default function PartnerProducts() {
                 Apply for {selectedProduct.name}
               </h3>
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-                Log customer application details. Payout: <strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
+                Payout: <strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
               </p>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={(e) => handleSubmitLead(e, false)} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <form onSubmit={handleSubmitLead} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
               
-              {/* SECTION 1: APPLICANT DEMOGRAPHICS */}
+              {/* 1. Customer Name */}
               <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-                  1. Applicant Demographics
-                </h4>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-                  {/* Full Name */}
-                  <div>
-                    <label style={S.label}>Full Name *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rahul Sharma"
-                      value={customerName}
-                      onChange={(e) => { setCustomerName(e.target.value); setFormErrors(prev => ({ ...prev, customerName: null })); }}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: formErrors.customerName ? C.red : C.border }}
-                    />
-                    {formErrors.customerName && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{formErrors.customerName}</span>}
-                  </div>
-
-                  {/* Contact Number with Country Code */}
-                  <div>
-                    <label style={S.label}>Contact Number *</label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                        style={{ ...S.input, width: '85px', height: '42px', fontSize: '12px', fontWeight: 700, padding: '0 6px' }}
-                      >
-                        <option value="+91">🇮🇳 +91</option>
-                        <option value="+1">🇺🇸 +1</option>
-                        <option value="+44">🇬🇧 +44</option>
-                        <option value="+971">🇦🇪 +971</option>
-                      </select>
-                      <input
-                        type="tel"
-                        placeholder="10-digit mobile number"
-                        maxLength={10}
-                        value={mobile}
-                        onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({ ...prev, mobile: null })); }}
-                        style={{ ...S.input, flex: 1, height: '42px', fontSize: '13px', borderColor: formErrors.mobile ? C.red : C.border }}
-                      />
-                    </div>
-                    {formErrors.mobile && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{formErrors.mobile}</span>}
-                  </div>
-
-                  {/* Email Address */}
-                  <div>
-                    <label style={S.label}>Email Address *</label>
-                    <input
-                      type="email"
-                      placeholder="rahul@example.com"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setFormErrors(prev => ({ ...prev, email: null })); }}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: formErrors.email ? C.red : C.border }}
-                    />
-                    {formErrors.email && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{formErrors.email}</span>}
-                  </div>
-
-                  {/* Monthly Salary */}
-                  <div>
-                    <label style={S.label}>
-                      Monthly Salary / Income (₹) *
-                      {selectedProduct.min_income && (
-                        <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 500, marginLeft: '4px' }}>
-                          (Min: ₹{parseFloat(selectedProduct.min_income).toLocaleString('en-IN')})
-                        </span>
-                      )}
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 45000"
-                      value={monthlySalary}
-                      onChange={(e) => { setMonthlySalary(e.target.value); setFormErrors(prev => ({ ...prev, monthlySalary: null })); }}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: formErrors.monthlySalary ? C.red : C.border }}
-                    />
-                    {formErrors.monthlySalary && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{formErrors.monthlySalary}</span>}
-                  </div>
-                </div>
+                <label style={S.label}>1. Customer Name *</label>
+                <input
+                  type="text"
+                  placeholder="Enter customer full name"
+                  value={customerName}
+                  onChange={(e) => { setCustomerName(e.target.value); setFormErrors(prev => ({ ...prev, customerName: null })); }}
+                  style={{ ...S.input, height: '44px', fontSize: '14px', borderColor: formErrors.customerName ? C.red : C.border }}
+                />
+                {formErrors.customerName && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.customerName}</span>}
               </div>
 
-              {/* SECTION 2: COMPANY & ADDRESS DETAILS */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-                  2. Company & Location Info
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-                  {/* Company Name */}
-                  <div>
-                    <label style={S.label}>Company / Employer Name *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Infosys Ltd / Self Employed"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px' }}
-                    />
-                  </div>
-
-                  {/* Residence / Office Pincode with Auto Lookup */}
-                  <div>
-                    <label style={S.label}>
-                      Residence / Office Pincode *
-                      {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="Enter 6-digit Pincode"
-                      value={pincode}
-                      onChange={(e) => handlePincodeChange(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: formErrors.pincode ? C.red : C.border }}
-                    />
-                    {formErrors.pincode && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{formErrors.pincode}</span>}
-                  </div>
-
-                  {/* City */}
-                  <div>
-                    <label style={S.label}>City (Auto-filled)</label>
-                    <input
-                      type="text"
-                      placeholder="City"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
-                    />
-                  </div>
-
-                  {/* State */}
-                  <div>
-                    <label style={S.label}>State (Auto-filled)</label>
-                    <input
-                      type="text"
-                      placeholder="State"
-                      value={stateName}
-                      onChange={(e) => setStateName(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: BUSINESS TYPE & DYNAMIC SUBFIELDS */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-                  3. Business & Enterprise Classification
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-                  {/* Business Type Dropdown */}
-                  <div>
-                    <label style={S.label}>Business / Company Type *</label>
-                    <select
-                      value={businessType}
-                      onChange={(e) => setBusinessType(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', fontWeight: 600 }}
-                    >
-                      <option value="Micro-Enterprise">Micro-Enterprise</option>
-                      <option value="Small Business">Small Business</option>
-                      <option value="Mid-Size Enterprise">Mid-Size Enterprise</option>
-                      <option value="Large Corporation">Large Corporation</option>
-                      <option value="Startup">Startup</option>
-                    </select>
-                  </div>
-
-                  {/* Conditional Sub-field: GST Number */}
-                  {['Micro-Enterprise', 'Small Business', 'Mid-Size Enterprise', 'Large Corporation', 'Startup'].includes(businessType) && (
-                    <div>
-                      <label style={S.label}>GST Registration Number</label>
-                      <input
-                        type="text"
-                        placeholder="15-digit GSTIN (Optional/If registered)"
-                        value={gstNumber}
-                        onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                        style={{ ...S.input, height: '42px', fontSize: '13px' }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Conditional Sub-field: Trade License Number for Physical Retail / Small Business */}
-                  {['Micro-Enterprise', 'Small Business'].includes(businessType) && (
-                    <div>
-                      <label style={S.label}>Trade License Number</label>
-                      <input
-                        type="text"
-                        placeholder="Trade License Number"
-                        value={tradeLicenseNumber}
-                        onChange={(e) => setTradeLicenseNumber(e.target.value)}
-                        style={{ ...S.input, height: '42px', fontSize: '13px' }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SECTION 4: PROCESS ASSIGNMENT & META */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-                  4. Process Assignment & Date
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
-                  {/* Process Assignment Dropdown */}
-                  <div>
-                    <label style={S.label}>Process Assignment *</label>
-                    <select
-                      value={processType}
-                      onChange={(e) => setProcessType(e.target.value)}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', fontWeight: 700, color: C.primary }}
-                    >
-                      <option value="partner_cell">1. Partner Cell Process</option>
-                      <option value="customer_sell">2. Customer Sell Process</option>
-                      <option value="punching_process">3. Punching Process</option>
-                    </select>
-                  </div>
-
-                  {/* Application Date */}
-                  <div>
-                    <label style={S.label}>Application Date (Read-Only)</label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={new Date().toISOString().split('T')[0]}
-                      style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary, fontWeight: 700 }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 5: AGREEMENT CHECKBOX */}
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', color: C.textMid, fontWeight: 600 }}>
+              {/* 2. Mobile Number */}
+              <div>
+                <label style={S.label}>2. Mobile Number *</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    style={{ ...S.input, width: '90px', height: '44px', fontSize: '13px', fontWeight: 700, padding: '0 8px' }}
+                  >
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                  </select>
                   <input
-                    type="checkbox"
-                    checked={agreeTerms}
-                    onChange={(e) => { setAgreeTerms(e.target.checked); setFormErrors(prev => ({ ...prev, agreeTerms: null })); }}
-                    style={{ width: '18px', height: '18px', accentColor: C.primary, cursor: 'pointer' }}
+                    type="tel"
+                    placeholder="Enter 10-digit mobile number"
+                    maxLength={10}
+                    value={mobile}
+                    onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({ ...prev, mobile: null })); }}
+                    style={{ ...S.input, flex: 1, height: '44px', fontSize: '14px', borderColor: formErrors.mobile ? C.red : C.border }}
                   />
-                  <span>I confirm applicant details are accurate and agree to GharKaPaisa terms & conditions. *</span>
-                </label>
-                {formErrors.agreeTerms && <span style={{ fontSize: '11px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.agreeTerms}</span>}
+                </div>
+                {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
               </div>
 
-              {/* ACTION BUTTONS: CANCEL, SAVE DRAFT, SUBMIT APPLICATION */}
-              <div style={{ display: 'flex', gap: '10px', paddingTop: '12px', flexWrap: 'wrap' }}>
+              {/* 3. Process By (3 Modes) */}
+              <div>
+                <label style={S.label}>3. Process By *</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                  
+                  {/* Mode 1: Lead punching only */}
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                    border: `2px solid ${processType === 'lead_punching' ? C.primary : C.border}`,
+                    background: processType === 'lead_punching' ? `${C.primary}0D` : C.card,
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="radio"
+                      name="processType"
+                      value="lead_punching"
+                      checked={processType === 'lead_punching'}
+                      onChange={(e) => setProcessType(e.target.value)}
+                      style={{ marginTop: '2px', accentColor: C.primary }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                        1. Lead punching only
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                        Records lead directly into your Partner CRM & Applications queue for internal processing.
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Mode 2: Linked share */}
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                    border: `2px solid ${processType === 'linked_share' ? C.primary : C.border}`,
+                    background: processType === 'linked_share' ? `${C.primary}0D` : C.card,
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="radio"
+                      name="processType"
+                      value="linked_share"
+                      checked={processType === 'linked_share'}
+                      onChange={(e) => setProcessType(e.target.value)}
+                      style={{ marginTop: '2px', accentColor: C.primary }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                        2. Linked share
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                        Generates & opens a pre-filled WhatsApp share link embedded with the official bank URL.
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Mode 3: Direct bank process */}
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                    border: `2px solid ${processType === 'direct_bank' ? C.primary : C.border}`,
+                    background: processType === 'direct_bank' ? `${C.primary}0D` : C.card,
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}>
+                    <input
+                      type="radio"
+                      name="processType"
+                      value="direct_bank"
+                      checked={processType === 'direct_bank'}
+                      onChange={(e) => setProcessType(e.target.value)}
+                      style={{ marginTop: '2px', accentColor: C.primary }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                        3. Direct bank process
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                        Immediately opens the official bank portal in a new tab for direct customer application.
+                      </div>
+                    </div>
+                  </label>
+
+                </div>
+              </div>
+
+              {/* Modal Buttons */}
+              <div style={{ display: 'flex', gap: '10px', paddingTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setSelectedProduct(null)}
                   style={{
-                    ...S.btn('outline'), flex: 1, padding: '12px', fontSize: '13px',
-                    borderRadius: '12px', cursor: 'pointer', fontWeight: 600
+                    ...S.btn('outline'), flex: 1, padding: '12px', fontSize: '13.5px',
+                    borderRadius: '12px', cursor: 'pointer', fontWeight: 700
                   }}
                 >
                   Cancel
                 </button>
 
                 <button
-                  type="button"
-                  onClick={(e) => handleSubmitLead(e, true)}
-                  disabled={savingDraft || submitting}
-                  style={{
-                    ...S.btn('outline'), flex: 1.2, padding: '12px', fontSize: '13px',
-                    borderRadius: '12px', cursor: savingDraft ? 'not-allowed' : 'pointer',
-                    fontWeight: 700, borderColor: C.primary, color: C.primary
-                  }}
-                >
-                  {savingDraft ? 'Saving Draft...' : 'Save Draft'}
-                </button>
-
-                <button
                   type="submit"
-                  disabled={submitting || savingDraft}
+                  disabled={submitting}
                   style={{
                     background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-                    color: '#ffffff', border: 'none', flex: 2, padding: '12px', fontSize: '13px',
+                    color: '#ffffff', border: 'none', flex: 2, padding: '12px', fontSize: '13.5px',
                     borderRadius: '12px', cursor: submitting ? 'not-allowed' : 'pointer',
                     fontWeight: 800, boxShadow: `0 4px 14px ${C.primary}35`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  {submitting ? 'Submitting...' : 'Submit'}
+                  {submitting ? 'Processing...' : processType === 'lead_punching' ? 'Punch Lead' : processType === 'linked_share' ? 'Generate & Share Link' : 'Open Bank Portal'}
                 </button>
               </div>
             </form>

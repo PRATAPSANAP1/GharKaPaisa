@@ -132,12 +132,20 @@ export default function PartnerEntityDetail() {
   }, [products, cardSearch]);
 
   const handleShareCard = (card) => {
-    const url = `${window.location.origin}/r/PARTNER123/${card.id || card.slug || 'card'}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-      alert(`Referral link for ${card.name} copied to clipboard!\n${url}`);
+    const code = user?.partner_code || 'PARTNER';
+    const bankUrl = card.apply_url || card.redirect_url || card.bank_link || `${window.location.origin}/redirect/${card.category || 'credit_card'}?id=${card.id || card.slug}&partner=${code}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: card.name,
+        text: `Apply for ${card.name} directly on official bank portal: ${bankUrl}`,
+        url: bankUrl
+      }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(bankUrl);
+      alert(`Direct Bank Link for ${card.name} copied to clipboard!\n${bankUrl}`);
     } else {
-      alert(`Share referral link: ${url}`);
+      alert(`Direct Bank Link for ${card.name}:\n${bankUrl}`);
     }
   };
 
