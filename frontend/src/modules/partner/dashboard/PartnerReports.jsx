@@ -73,12 +73,8 @@ export default function PartnerReports() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 id="partner-reports-title" style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>{t("reports.title", "Reports & Aggregation Engine")}</h2>
-          <p id="partner-reports-desc" style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>{t("reports.desc", "Real-time business performance analytics, MD5 filter caching & multi-format exports.")}</p>
-        </div>
+      {/* Header Export Actions */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button

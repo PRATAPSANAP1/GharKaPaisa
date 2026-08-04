@@ -5,7 +5,7 @@ import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
   MdFolderSpecial, MdPictureAsPdf, MdDownload,
-  MdVisibility, MdVerifiedUser, MdOutlineInsertDriveFile, MdAdd
+  MdVisibility, MdVerifiedUser, MdOutlineInsertDriveFile
 } from 'react-icons/md';
 
 const DOC_LABELS = {
@@ -33,8 +33,6 @@ export default function PartnerVault() {
   const [error, setError] = useState('');
 
   const handleViewOrDownload = async (docId, shouldDownload = false) => {
-    console.log('[Vault] handleViewOrDownload called with docId:', docId);
-    console.log('[Vault] current documents state:', documents);
     if (!docId || docId === 'undefined') {
       alert('Secure document ID is missing. Please refresh the page or try re-logging.');
       return;
@@ -94,26 +92,10 @@ export default function PartnerVault() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
 
-      {/* Header card */}
-      <div style={{ ...S.card, padding: '24px 28px', borderRadius: '16px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: '50%',
-              background: `${C.primary}15`, color: C.primary,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <MdFolderSpecial size={28} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t("Document Vault")}</h2>
-              <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0', fontWeight: 500 }}>
-                Your uploaded KYC documents from the verification center.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', flexWrap: 'nowrap' }}>
+      {/* Filter Category Bar */}
+      {categories.length > 1 && (
+        <div style={{ ...S.card, padding: '16px 20px', borderRadius: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flexWrap: 'nowrap' }}>
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -132,7 +114,7 @@ export default function PartnerVault() {
             ))}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -189,38 +171,39 @@ export default function PartnerVault() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: '12px',
-                  background: doc.type === 'PDF' ? `${C.red}12` : `${C.primary}12`,
-                  color: doc.type === 'PDF' ? C.red : C.primary,
+                  background: doc.type === 'PDF' ? `${C.red}15` : `${C.blue}15`,
+                  color: doc.type === 'PDF' ? C.red : C.blue,
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  {doc.type === 'PDF' ? <MdPictureAsPdf size={22} /> : <MdOutlineInsertDriveFile size={22} />}
+                  {doc.type === 'PDF' ? <MdPictureAsPdf size={24} /> : <MdOutlineInsertDriveFile size={24} />}
                 </div>
                 {doc.verified && (
-                  <span style={{ color: C.green }} title={t("Verified Document")}>
-                    <MdVerifiedUser size={18} />
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, color: C.green,
+                    background: `${C.green}15`, padding: '4px 10px', borderRadius: '20px',
+                    display: 'flex', alignItems: 'center', gap: 4
+                  }}>
+                    <MdVerifiedUser size={14} /> Verified
                   </span>
                 )}
               </div>
 
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '0 0 4px' }}>{doc.title}</h3>
-              <p style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>
-                {doc.type} • {doc.date}
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {doc.title}
+              </h3>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>
+                Uploaded: {doc.date}
               </p>
-              {doc.docNumber && (
-                <p style={{ fontSize: '12px', color: C.textMid, fontFamily: 'monospace', margin: '0 0 8px' }}>{doc.docNumber}</p>
-              )}
 
-              <div style={{
-                display: 'flex', gap: '8px', paddingTop: '14px', borderTop: `1px solid ${C.border}`, marginTop: 'auto'
-              }}>
+              <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => handleViewOrDownload(doc.id, false)}
                   style={{
-                    flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
-                    padding: '10px', background: C.bgSecondary, color: C.textMid,
-                    borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none',
-                    cursor: 'pointer'
+                    flex: 1, padding: '8px 12px', borderRadius: '8px',
+                    border: `1px solid ${C.border}`, background: 'transparent',
+                    color: C.text, fontSize: '12px', fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '4px'
                   }}
                 >
                   <MdVisibility size={16} /> View
@@ -228,11 +211,11 @@ export default function PartnerVault() {
                 <button
                   onClick={() => handleViewOrDownload(doc.id, true)}
                   style={{
-                    flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px',
-                    padding: '10px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-                    color: '#fff', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                    textDecoration: 'none', transition: 'all 0.15s ease', border: 'none',
-                    cursor: 'pointer'
+                    flex: 1, padding: '8px 12px', borderRadius: '8px',
+                    border: 'none', background: C.primary,
+                    color: '#fff', fontSize: '12px', fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '4px'
                   }}
                 >
                   <MdDownload size={16} /> Download
@@ -240,30 +223,6 @@ export default function PartnerVault() {
               </div>
             </div>
           ))}
-
-          {/* Upload more CTA card */}
-          <Link
-            to="/partner/kyc"
-            style={{
-              border: `2px dashed ${C.border}`, borderRadius: '16px',
-              padding: '20px', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-              textDecoration: 'none', minHeight: '200px',
-              transition: 'all 0.15s ease', background: 'transparent'
-            }}
-          >
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%', background: C.card,
-              boxShadow: `0 2px 8px rgba(0,0,0,0.06)`, color: C.textLight,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px'
-            }}>
-              <MdAdd size={22} />
-            </div>
-            <h3 style={{ fontWeight: 700, color: C.text, fontSize: '14px', margin: '0 0 4px' }}>{t("Upload Document")}</h3>
-            <p style={{ fontSize: '12px', color: C.textLight, maxWidth: '200px', margin: 0 }}>
-              Manage KYC uploads from the KYC center.
-            </p>
-          </Link>
         </div>
       )}
     </div>

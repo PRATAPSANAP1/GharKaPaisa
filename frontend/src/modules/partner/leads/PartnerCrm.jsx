@@ -185,16 +185,8 @@ export default function PartnerCrm() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", paddingBottom: '40px' }}>
       
-      {/* Page Title & Actions Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MdPeople style={{ color: C.primary }} /> 360° Customer Relationship Management
-          </h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            Customer-first financial lead pipelines, full 360° profile tabs, automated activity timeline, and instant multi-channel communications.
-          </p>
-        </div>
+      {/* Actions Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button

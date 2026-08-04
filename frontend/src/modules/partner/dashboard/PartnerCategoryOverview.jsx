@@ -318,68 +318,20 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     });
   }, [rawCards, searchQuery]);
 
-  // Compute dynamic header title & subtitle based on active sub-module tab
-  const { headerTitle, headerSubtitle } = useMemo(() => {
-    if (activeTab === 'cards' || activeTab === 'products') {
-      return {
-        headerTitle: 'Credit Cards & Products Catalog',
-        headerSubtitle: 'Explore all active credit card products, commission payouts, and direct bank application portals'
-      };
-    }
-    if (activeTab === 'customers') {
-      return {
-        headerTitle: 'Customer Directory & CRM',
-        headerSubtitle: 'Manage customer profiles, lead histories, and customer interactions'
-      };
-    }
-    if (activeTab === 'applications') {
-      return {
-        headerTitle: 'Application Pipeline',
-        headerSubtitle: 'Track and manage all submitted lead applications, bank approval stages, and statuses'
-      };
-    }
-    if (activeTab === 'documents') {
-      return {
-        headerTitle: 'Partner Document Vault',
-        headerSubtitle: 'Access and upload partner verification, KYC, and compliance documents'
-      };
-    }
-    if (activeTab === 'reports') {
-      return {
-        headerTitle: 'Performance Reports & Analytics',
-        headerSubtitle: 'Gain insights into earnings trends, conversion rates, and partner network analytics'
-      };
-    }
-    if (activeTab === 'commission') {
-      return {
-        headerTitle: 'Commission Ledger & Wallet',
-        headerSubtitle: 'Track real-time earnings, hold releases, TDS deductions, and withdrawal payouts'
-      };
-    }
-    if (activeTab === 'support') {
-      return {
-        headerTitle: 'Partner Support & Helpdesk',
-        headerSubtitle: 'Get immediate help from support team, raise tickets, and track resolutions'
-      };
-    }
+  // Compute dynamic header title based on active sub-module tab
+  const headerTitle = useMemo(() => {
+    if (activeTab === 'cards' || activeTab === 'products') return 'Credit Cards Catalog';
+    if (activeTab === 'customers') return 'Customer Management';
+    if (activeTab === 'applications') return 'Application Pipeline';
+    if (activeTab === 'documents') return 'Document Vault';
+    if (activeTab === 'reports') return 'Performance Reports';
+    if (activeTab === 'commission') return 'Commission & Wallet';
+    if (activeTab === 'support') return 'Partner Support';
 
     // Default: Dashboard tab
-    if (activeCategory === 'loans') {
-      return {
-        headerTitle: 'Loans Dashboard',
-        headerSubtitle: 'Manage & explore loan offerings across top financial partners'
-      };
-    }
-    if (activeCategory === 'insurance') {
-      return {
-        headerTitle: 'Insurance Dashboard',
-        headerSubtitle: 'Explore comprehensive insurance products and financial protection providers'
-      };
-    }
-    return {
-      headerTitle: 'Credit Card Dashboard',
-      headerSubtitle: 'Manage & explore bank wise credit card offerings'
-    };
+    if (activeCategory === 'loans') return 'Loans Dashboard';
+    if (activeCategory === 'insurance') return 'Insurance Dashboard';
+    return 'Credit Card Dashboard';
   }, [activeTab, activeCategory]);
 
   return (
@@ -430,7 +382,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         })}
       </div>
 
-      {/* ── 2. HEADER SECTION WITH TITLE, SEARCH & FILTERS BELOW BUTTONS ── */}
+      {/* ── 2. HEADER SECTION WITH TITLE & SEARCH CONTROLS ── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -448,14 +400,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           }}>
             {headerTitle}
           </h1>
-          <p style={{
-            fontSize: '14px',
-            color: C.textMid || '#64748B',
-            margin: '4px 0 0',
-            fontWeight: 500
-          }}>
-            {headerSubtitle}
-          </p>
         </div>
 
         {/* Search Bar & Filters */}

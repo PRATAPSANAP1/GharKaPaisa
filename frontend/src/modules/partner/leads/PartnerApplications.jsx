@@ -314,12 +314,8 @@ export default function PartnerApplications() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
-      {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('partnerApplications.title', 'Leads')}</h1>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>{t('partnerApplications.subtitle', 'Track lead pipelines, update status, assign team leads & manage commissions.')}</p>
-        </div>
+      {/* Header Actions */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           {selectedAppIds.length > 0 && (
             <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
