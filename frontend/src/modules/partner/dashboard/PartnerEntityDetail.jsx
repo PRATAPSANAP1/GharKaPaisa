@@ -373,58 +373,85 @@ export default function PartnerEntityDetail() {
                     </div>
                   </div>
 
-                  {/* 3 ACTION BUTTONS BELOW CARD: Share, Compare, Details */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px',
-                    paddingTop: '12px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`
-                  }}>
-                    {/* Share Button */}
-                    <button
-                      onClick={() => handleShareCard(card)}
-                      style={{
-                        padding: '9px 6px', borderRadius: '10px', border: `1px solid ${C.border}`,
-                        background: isDark ? C.bgSecondary : '#F8FAFC', color: C.text,
-                        fontWeight: 800, fontSize: '12px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                      }}
-                    >
-                      <MdShare size={15} color={C.primary} />
-                      <span>Share</span>
-                    </button>
-
-                    {/* Compare Button */}
-                    <button
-                      onClick={() => handleCompareCard(card)}
-                      style={{
-                        padding: '9px 6px', borderRadius: '10px',
-                        border: `1px solid ${isComparing ? C.primary : C.border}`,
-                        background: isComparing ? `${C.primary}18` : isDark ? C.bgSecondary : '#F8FAFC',
-                        color: isComparing ? C.primary : C.text,
-                        fontWeight: 800, fontSize: '12px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                      }}
-                    >
-                      <MdSwapHoriz size={16} color={C.primary} />
-                      <span>{isComparing ? 'Added' : 'Compare'}</span>
-                    </button>
-
-                    {/* Product Details Button (Opens Full Card Workspace Modal) */}
+                  {/* ACTION BUTTONS: Apply Now (Primary) + Share, Compare, Details */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '12px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}` }}>
+                    {/* Primary Apply Now Button */}
                     <button
                       onClick={() => {
                         setSelectedProductWorkspace(card);
-                        setProductWorkspaceTab('overview');
+                        setProductWorkspaceTab('apply');
                       }}
                       style={{
-                        padding: '9px 6px', borderRadius: '10px', border: 'none',
-                        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-                        color: '#FFFFFF', fontWeight: 900, fontSize: '12px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                        boxShadow: `0 3px 10px ${C.primary}30`
+                        width: '100%',
+                        padding: '11px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 900,
+                        fontSize: '13.5px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 14px rgba(16,185,129,0.35)',
+                        transition: 'all 0.2s'
                       }}
                     >
-                      <MdInfo size={15} />
-                      <span>Details</span>
+                      <span>Apply Now</span>
+                      <MdArrowForward size={16} />
                     </button>
+
+                    {/* Secondary Actions: Share, Compare, Details */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                      {/* Share Button */}
+                      <button
+                        onClick={() => handleShareCard(card)}
+                        style={{
+                          padding: '8px 4px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                          background: isDark ? C.bgSecondary : '#F8FAFC', color: C.text,
+                          fontWeight: 800, fontSize: '12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                      >
+                        <MdShare size={14} color={C.primary} />
+                        <span>Share</span>
+                      </button>
+
+                      {/* Compare Button */}
+                      <button
+                        onClick={() => handleCompareCard(card)}
+                        style={{
+                          padding: '8px 4px', borderRadius: '10px',
+                          border: `1px solid ${isComparing ? C.primary : C.border}`,
+                          background: isComparing ? `${C.primary}18` : isDark ? C.bgSecondary : '#F8FAFC',
+                          color: isComparing ? C.primary : C.text,
+                          fontWeight: 800, fontSize: '12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                      >
+                        <MdSwapHoriz size={15} color={C.primary} />
+                        <span>{isComparing ? 'Added' : 'Compare'}</span>
+                      </button>
+
+                      {/* Details Button */}
+                      <button
+                        onClick={() => {
+                          setSelectedProductWorkspace(card);
+                          setProductWorkspaceTab('overview');
+                        }}
+                        style={{
+                          padding: '8px 4px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                          background: isDark ? C.bgSecondary : '#F8FAFC',
+                          color: C.text, fontWeight: 800, fontSize: '12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                      >
+                        <MdInfo size={14} color={C.primary} />
+                        <span>Details</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
