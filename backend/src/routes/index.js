@@ -27,7 +27,6 @@ const partnerCtrl = require('../modules/partner/partner.controller.js');
 
 const customerRoute = require('../modules/customer/customer.routes.js');
 const customerPortalRoute = require('../modules/customer/customer_portal.routes.js');
-const teamRoutes    = require('../modules/team/team.routes.js');
 
 // ── Webhooks & Public Actions ──────────────────────────────────
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
@@ -77,7 +76,6 @@ router.use('/sbi-credit-card-applications', sbiRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 
-// ── Team & Referrals Routes ──
-router.use('/team', teamRoutes);
+// ── Referrals Routes ──
 
 module.exports = router;

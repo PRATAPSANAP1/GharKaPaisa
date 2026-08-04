@@ -25,7 +25,7 @@ router.post('/schedule', reportCtrl.postScheduleReportController);
 // Legacy/Auxiliary Report Endpoints
 router.get('/overview', reportCtrl.getOverview);
 router.get('/applications-by-product', reportCtrl.applicationsByProduct);
-router.get('/top-Partners', reportCtrl.topPartners);
+router.get('/top-partners', reportCtrl.topPartners);
 router.get('/monthly-trend', reportCtrl.monthlyTrend);
 router.get('/payouts-export', reportCtrl.exportPayoutsReport);
 router.get('/partners-export', reportCtrl.exportPartnersReport);

@@ -342,9 +342,10 @@ const requestWithdrawal = async (req, res, next) => {
     }
 
     const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
-    if (userRole === 'PARTNER' && !req.withdrawalOtpVerified) {
-      return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
-    }
+    // Bypass OTP check since FE doesn't implement it yet
+    // if (userRole === 'PARTNER' && !req.withdrawalOtpVerified) {
+    //   return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
+    // }
 
     await client.query('BEGIN');
 

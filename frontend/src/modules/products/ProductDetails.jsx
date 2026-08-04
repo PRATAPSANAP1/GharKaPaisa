@@ -262,6 +262,18 @@ export default function ProductDetails() {
                 <MdShare size={18} />
                 <span>Share</span>
               </button>
+
+              <button
+                onClick={handleBookmark}
+                style={{
+                  width: '100%', padding: '9px 16px', borderRadius: '10px', border: `1px solid ${C.border}`,
+                  background: C.card, color: isBookmarked ? C.teal : C.text, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700
+                }}
+              >
+                {isBookmarked ? <MdBookmark size={18} /> : <MdBookmarkBorder size={18} />}
+                <span>{isBookmarked ? 'Saved' : 'Save'}</span>
+              </button>
             </div>
 
           </div>

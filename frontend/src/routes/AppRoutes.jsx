@@ -47,6 +47,7 @@ import ManageLeads from '../modules/admin/users/ManageLeads';
 // Super Admin Pages
 import SuperAdminDashboard from '../modules/super-admin/dashboard/SuperAdminDashboard';
 import SuperAdminReports from '../modules/super-admin/reports/SuperAdminReports';
+import ReferralAnalyticsView from '../modules/super-admin/reports/ReferralAnalyticsView';
 import AuditLogs from '../modules/super-admin/audit/AuditLogs';
 import ManageBanners from '../modules/super-admin/banners/ManageBanners';
 import ManageProducts from '../modules/super-admin/cms/ManageProducts';
@@ -262,6 +263,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/reports" element={<SuperAdminReports />} />
+            <Route path="/super-admin/reports/referral-analytics" element={<ReferralAnalyticsView />} />
             <Route path="/super-admin/audit" element={<AuditLogs />} />
             <Route path="/super-admin/audit-logs" element={<AuditLogs />} />
             <Route path="/super-admin/banners" element={<ManageBanners />} />

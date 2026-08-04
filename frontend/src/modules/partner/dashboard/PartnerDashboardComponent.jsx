@@ -667,8 +667,8 @@ export default function PartnerDashboard({ partner }) {
       <div>
         <div style={{
           display: "grid",
-          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-          gap: isMobile ? "12px" : "20px",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: isMobile ? "6px" : "20px",
           marginBottom: "24px"
         }}>
           {[
@@ -721,7 +721,7 @@ export default function PartnerDashboard({ partner }) {
               icon: MdReceiptLong,
               route: '/cms/recharge',
               lightBg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-              darkBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%)',
+              darkBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.05) 100%)',
               primaryColor: '#3B82F6',
               lightText: '#1E3A8A',
               darkText: '#BFDBFE',
@@ -740,15 +740,15 @@ export default function PartnerDashboard({ partner }) {
                 onClick={() => navigate(cat.route)}
                 style={{
                   background: bg,
-                  borderRadius: "24px",
-                  padding: isMobile ? "16px" : "20px 24px",
+                  borderRadius: isMobile ? "14px" : "24px",
+                  padding: isMobile ? "10px 8px" : "20px 24px",
                   border: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.02)",
                   boxShadow: isDark ? "none" : "0 4px 12px rgba(0,0,0,0.02)",
                   cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  minHeight: isMobile ? "125px" : "150px",
+                  minHeight: isMobile ? "100px" : "150px",
                   position: "relative",
                   boxSizing: "border-box",
                   overflow: "hidden"
@@ -769,9 +769,9 @@ export default function PartnerDashboard({ partner }) {
 
                 {/* Top: Icon in colored container */}
                 <div style={{
-                  width: isMobile ? "36px" : "42px",
-                  height: isMobile ? "36px" : "42px",
-                  borderRadius: "12px",
+                  width: isMobile ? "28px" : "42px",
+                  height: isMobile ? "28px" : "42px",
+                  borderRadius: isMobile ? "8px" : "12px",
                   background: cat.primaryColor,
                   boxShadow: `0 4px 12px ${cat.primaryColor}25`,
                   display: "flex",
@@ -780,7 +780,7 @@ export default function PartnerDashboard({ partner }) {
                   color: "#FFFFFF",
                   flexShrink: 0
                 }}>
-                  <Icon size={isMobile ? 18 : 22} />
+                  <Icon size={isMobile ? 14 : 22} />
                 </div>
 
                 {/* Bottom row: Text Info + White Arrow circle */}
@@ -788,12 +788,12 @@ export default function PartnerDashboard({ partner }) {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "flex-end",
-                  marginTop: "12px",
+                  marginTop: isMobile ? "8px" : "12px",
                   width: "100%"
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, marginRight: "4px" }}>
                     <span style={{
-                      fontSize: isMobile ? "13px" : "15.5px",
+                      fontSize: isMobile ? "10px" : "15.5px",
                       fontWeight: 800,
                       color: textColor,
                       lineHeight: 1.25,
@@ -804,10 +804,10 @@ export default function PartnerDashboard({ partner }) {
                       {cat.title}
                     </span>
                     <span style={{
-                      fontSize: isMobile ? "10px" : "11px",
+                      fontSize: isMobile ? "7.5px" : "11px",
                       fontWeight: 600,
                       color: subColor,
-                      marginTop: "4px",
+                      marginTop: isMobile ? "2px" : "4px",
                       lineHeight: 1.2,
                       opacity: 0.85,
                       whiteSpace: "nowrap",
@@ -820,8 +820,8 @@ export default function PartnerDashboard({ partner }) {
 
                   {/* Arrow Action Button */}
                   <div style={{
-                    width: isMobile ? "26px" : "32px",
-                    height: isMobile ? "26px" : "32px",
+                    width: isMobile ? "20px" : "32px",
+                    height: isMobile ? "20px" : "32px",
                     borderRadius: "50%",
                     background: "#FFFFFF",
                     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)",
@@ -831,7 +831,7 @@ export default function PartnerDashboard({ partner }) {
                     color: cat.primaryColor,
                     flexShrink: 0
                   }}>
-                    <MdArrowForward size={isMobile ? 13 : 16} />
+                    <MdArrowForward size={isMobile ? 10 : 16} />
                   </div>
                 </div>
               </div>
