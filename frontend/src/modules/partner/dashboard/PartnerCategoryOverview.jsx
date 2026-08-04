@@ -607,142 +607,151 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(210px, 1fr))',
                     gap: '16px'
                   }}>
-                    {filteredBanks.map((bank) => (
-                      <div
-                        key={`bank-${bank.id || bank.slug}`}
-                        onClick={() => handleBankClick(bank)}
-                        style={{
-                          background: isDark ? '#1E293B' : '#FFFFFF',
-                          borderRadius: '20px',
-                          padding: '20px',
-                          border: `1px solid ${C.border}`,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          gap: '16px',
-                          cursor: 'pointer',
-                          boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
-                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                          position: 'relative',
-                          overflow: 'hidden'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-4px)';
-                          e.currentTarget.style.borderColor = bank.accent || C.primary;
-                          e.currentTarget.style.boxShadow = isDark 
-                            ? `0 8px 25px ${bank.accent}30` 
-                            : `0 8px 25px rgba(0,0,0,0.08)`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.borderColor = C.border;
-                          e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)';
-                        }}
-                      >
-                        {/* Top Part: Logo & Name */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          {bank.logo ? (
-                            <div style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: '12px',
-                              background: isDark ? '#0F172A' : '#F8FAFC',
-                              border: `1px solid ${C.border}`,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '6px',
-                              flexShrink: 0
-                            }}>
-                              <img 
-                                src={bank.logo} 
-                                alt={bank.name} 
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
-                              />
-                            </div>
-                          ) : (
-                            <div style={{
-                              width: '42px',
-                              height: '42px',
-                              borderRadius: '12px',
-                              background: `${bank.accent || C.primary}18`,
-                              color: bank.accent || C.primary,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '15px',
+                    {filteredBanks.map((bank) => {
+                      const accentColor = bank.accent || C.primary;
+                      const bgGradient = isDark 
+                        ? `linear-gradient(145deg, ${accentColor}25 0%, ${accentColor}0D 100%)`
+                        : `linear-gradient(145deg, ${accentColor}14 0%, ${accentColor}05 100%)`;
+                      const cardBorderColor = isDark ? `${accentColor}45` : `${accentColor}35`;
+
+                      return (
+                        <div
+                          key={`bank-${bank.id || bank.slug}`}
+                          onClick={() => handleBankClick(bank)}
+                          style={{
+                            background: bgGradient,
+                            borderRadius: '20px',
+                            padding: '20px',
+                            border: `1.5px solid ${cardBorderColor}`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: '16px',
+                            cursor: 'pointer',
+                            boxShadow: isDark ? `0 4px 20px ${accentColor}15` : `0 4px 18px ${accentColor}10`,
+                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-5px)';
+                            e.currentTarget.style.borderColor = accentColor;
+                            e.currentTarget.style.boxShadow = `0 12px 30px ${accentColor}35`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.borderColor = cardBorderColor;
+                            e.currentTarget.style.boxShadow = isDark ? `0 4px 20px ${accentColor}15` : `0 4px 18px ${accentColor}10`;
+                          }}
+                        >
+                          {/* Top Part: Logo & Name */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {bank.logo ? (
+                              <div style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '14px',
+                                background: isDark ? '#0F172A' : '#FFFFFF',
+                                border: `1.5px solid ${accentColor}40`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '6px',
+                                flexShrink: 0,
+                                boxShadow: `0 2px 8px ${accentColor}20`
+                              }}>
+                                <img 
+                                  src={bank.logo} 
+                                  alt={bank.name} 
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                                />
+                              </div>
+                            ) : (
+                              <div style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '14px',
+                                background: `${accentColor}22`,
+                                color: accentColor,
+                                border: `1.5px solid ${accentColor}40`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '15px',
+                                fontWeight: 900,
+                                flexShrink: 0,
+                                boxShadow: `0 2px 8px ${accentColor}20`
+                              }}>
+                                {bank.name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+
+                            <h3 style={{
+                              fontSize: '15.5px',
                               fontWeight: 900,
-                              flexShrink: 0
+                              color: isDark ? '#FFFFFF' : accentColor,
+                              margin: 0,
+                              lineHeight: 1.25
                             }}>
-                              {bank.name.substring(0, 2).toUpperCase()}
-                            </div>
-                          )}
-
-                          <h3 style={{
-                            fontSize: '15px',
-                            fontWeight: 800,
-                            color: C.text,
-                            margin: 0,
-                            lineHeight: 1.25
-                          }}>
-                            {bank.name}
-                          </h3>
-                        </div>
-
-                        {/* Middle Part: Variants Count */}
-                        <div>
-                          <div style={{
-                            fontSize: '26px',
-                            fontWeight: 900,
-                            color: C.text,
-                            letterSpacing: '-0.5px',
-                            lineHeight: 1
-                          }}>
-                            {bank.activeCardsCount}
+                              {bank.name}
+                            </h3>
                           </div>
-                          <span style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: C.textMid || '#64748B',
-                            marginTop: '4px',
-                            display: 'block'
-                          }}>
-                            Card Variants
-                          </span>
-                        </div>
 
-                        {/* Bottom Part: Explore Link with Accent Underline */}
-                        <div style={{
-                          paddingTop: '10px',
-                          borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between'
-                        }}>
-                          <span style={{
-                            fontSize: '13px',
-                            fontWeight: 800,
-                            color: bank.accent || C.primary,
+                          {/* Middle Part: Variants Count */}
+                          <div>
+                            <div style={{
+                              fontSize: '28px',
+                              fontWeight: 900,
+                              color: accentColor,
+                              letterSpacing: '-0.5px',
+                              lineHeight: 1
+                            }}>
+                              {bank.activeCardsCount}
+                            </div>
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: isDark ? 'rgba(255,255,255,0.75)' : `${accentColor}DD`,
+                              marginTop: '4px',
+                              display: 'block'
+                            }}>
+                              Card Variants
+                            </span>
+                          </div>
+
+                          {/* Bottom Part: Explore Link */}
+                          <div style={{
+                            paddingTop: '10px',
+                            borderTop: `1px solid ${accentColor}30`,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            justifyContent: 'space-between'
                           }}>
-                            Explore <MdArrowForward size={16} />
-                          </span>
-                        </div>
+                            <span style={{
+                              fontSize: '13px',
+                              fontWeight: 900,
+                              color: accentColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              Explore Cards <MdArrowForward size={16} />
+                            </span>
+                          </div>
 
-                        {/* Bottom Color Accent Line */}
-                        <div style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: '3px',
-                          background: bank.accent || C.primary,
-                          opacity: 0.85
-                        }} />
-                      </div>
-                    ))}
+                          {/* Bottom Color Accent Line */}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: '4px',
+                            background: accentColor,
+                            boxShadow: `0 0 10px ${accentColor}`
+                          }} />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </>
