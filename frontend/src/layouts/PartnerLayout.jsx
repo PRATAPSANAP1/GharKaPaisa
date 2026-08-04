@@ -10,7 +10,7 @@ import {
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout,
-  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess
+  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 const MOBILE_BOTTOM_NAV = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Card', icon: MdCreditCard },
-  { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard, isCenter: true },
+  { id: 'leads', path: '/partner/leads/add', label: 'Leads', icon: MdAdd, isCenter: true },
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
 ];
@@ -784,7 +784,8 @@ export default function PartnerLayout() {
           }}>
             {filteredMobileBottomNav.map((nav) => {
               const Icon = nav.icon;
-              const isActive = location.pathname.startsWith(nav.path);
+              const isActive = location.pathname.startsWith(nav.path) || 
+                (nav.isCenter && (location.pathname.startsWith('/partner/applications') || location.pathname.startsWith('/partner/leads')));
               
               if (nav.isCenter) {
                 return (
