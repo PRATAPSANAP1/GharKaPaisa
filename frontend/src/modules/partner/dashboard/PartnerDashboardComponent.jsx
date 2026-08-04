@@ -966,133 +966,6 @@ export default function PartnerDashboard({ partner }) {
       {/* ──── QUICK ACCESS SECTION ──── */}
       <QuickAccessSection />
 
-      {/* ──── REFER & EARN BANNER ──── */}
-      <div style={{
-        background: isDark 
-          ? "linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(147, 51, 234, 0.05) 100%)" 
-          : "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
-        borderRadius: "24px",
-        padding: isMobile ? "20px 16px" : "24px 32px",
-        border: isDark ? "1px solid rgba(139, 92, 246, 0.15)" : "1px solid rgba(79, 70, 229, 0.08)",
-        boxShadow: "0 10px 30px rgba(79, 70, 229, 0.03)",
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "20px",
-        marginTop: "16px",
-        marginBottom: "16px",
-        position: "relative",
-        overflow: "hidden"
-      }}>
-        {/* Subtle background glow */}
-        <div style={{
-          position: "absolute",
-          top: "-50px",
-          right: "-50px",
-          width: "200px",
-          height: "200px",
-          borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(147, 51, 234, 0.08) 0%, transparent 75%)",
-          pointerEvents: "none"
-        }} />
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{
-            fontSize: isMobile ? "18px" : "22px",
-            fontWeight: 800,
-            color: isDark ? "#FFFFFF" : "#1E1B4B",
-            margin: "0 0 6px 0",
-            lineHeight: 1.2
-          }}>
-            Refer & Earn More
-          </h3>
-
-          <p style={{
-            fontSize: isMobile ? "12px" : "13.5px",
-            color: C.textMid,
-            margin: 0,
-            lineHeight: 1.4,
-            fontWeight: 500
-          }}>
-            Refer your friends and earn exciting rewards and bonuses.
-          </p>
-        </div>
-
-        {/* Action Controls */}
-        <div style={{
-          width: isMobile ? "100%" : "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          flexWrap: "wrap",
-          flexShrink: 0
-        }}>
-          {/* Display link text box on desktop, or keep it clean */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            background: isDark ? "rgba(0,0,0,0.2)" : "#FFFFFF",
-            borderRadius: "14px",
-            padding: "6px 12px",
-            border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
-            maxWidth: isMobile ? "100%" : "220px"
-          }}>
-            <input
-              type="text"
-              readOnly
-              value={`https://gharkapaisa.in/register?ref=${partnerCode}`}
-              style={{
-                width: "100%",
-                border: "none",
-                background: "none",
-                color: C.primary,
-                fontSize: "11px",
-                fontWeight: 700,
-                outline: "none",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap"
-              }}
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
-              setReferralCopied(true);
-              setTimeout(() => setReferralCopied(false), 2500);
-              
-              // Also open WhatsApp sharing option automatically to give a Refer Now feel
-              const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
-              const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn the highest payouts! Register here: ${shareLink}`);
-              window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
-            }}
-            style={{
-              padding: "12px 24px",
-              borderRadius: "14px",
-              border: "none",
-              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "13.5px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "0 4px 14px rgba(79, 70, 229, 0.25)",
-              flexShrink: 0,
-              width: isMobile ? "100%" : "auto",
-              justifyContent: "center"
-            }}
-          >
-            <FaWhatsapp size={16} />
-            <span>{referralCopied ? "✓ Copied!" : "Refer Now"}</span>
-          </button>
-        </div>
-      </div>
-
       {/* ──── QUICK ACTIONS PANEL ──── */}
       <div style={{ marginTop: '4px' }}>
         <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>
@@ -1239,6 +1112,133 @@ export default function PartnerDashboard({ partner }) {
               ))
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ──── REFER & EARN BANNER ──── */}
+      <div style={{
+        background: isDark 
+          ? "linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(147, 51, 234, 0.05) 100%)" 
+          : "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
+        borderRadius: "24px",
+        padding: isMobile ? "20px 16px" : "24px 32px",
+        border: isDark ? "1px solid rgba(139, 92, 246, 0.15)" : "1px solid rgba(79, 70, 229, 0.08)",
+        boxShadow: "0 10px 30px rgba(79, 70, 229, 0.03)",
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "20px",
+        marginTop: "16px",
+        marginBottom: "16px",
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        {/* Subtle background glow */}
+        <div style={{
+          position: "absolute",
+          top: "-50px",
+          right: "-50px",
+          width: "200px",
+          height: "200px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(147, 51, 234, 0.08) 0%, transparent 75%)",
+          pointerEvents: "none"
+        }} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{
+            fontSize: isMobile ? "18px" : "22px",
+            fontWeight: 800,
+            color: isDark ? "#FFFFFF" : "#1E1B4B",
+            margin: "0 0 6px 0",
+            lineHeight: 1.2
+          }}>
+            Refer & Earn More
+          </h3>
+
+          <p style={{
+            fontSize: isMobile ? "12px" : "13.5px",
+            color: C.textMid,
+            margin: 0,
+            lineHeight: 1.4,
+            fontWeight: 500
+          }}>
+            Refer your friends and earn exciting rewards and bonuses.
+          </p>
+        </div>
+
+        {/* Action Controls */}
+        <div style={{
+          width: isMobile ? "100%" : "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          flexWrap: "wrap",
+          flexShrink: 0
+        }}>
+          {/* Display link text box on desktop, or keep it clean */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            background: isDark ? "rgba(0,0,0,0.2)" : "#FFFFFF",
+            borderRadius: "14px",
+            padding: "6px 12px",
+            border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+            maxWidth: isMobile ? "100%" : "220px"
+          }}>
+            <input
+              type="text"
+              readOnly
+              value={`https://gharkapaisa.in/register?ref=${partnerCode}`}
+              style={{
+                width: "100%",
+                border: "none",
+                background: "none",
+                color: C.primary,
+                fontSize: "11px",
+                fontWeight: 700,
+                outline: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
+              setReferralCopied(true);
+              setTimeout(() => setReferralCopied(false), 2500);
+              
+              // Also open WhatsApp sharing option automatically to give a Refer Now feel
+              const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
+              const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn the highest payouts! Register here: ${shareLink}`);
+              window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+            }}
+            style={{
+              padding: "12px 24px",
+              borderRadius: "14px",
+              border: "none",
+              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+              color: "#FFFFFF",
+              fontWeight: 800,
+              fontSize: "13.5px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 14px rgba(79, 70, 229, 0.25)",
+              flexShrink: 0,
+              width: isMobile ? "100%" : "auto",
+              justifyContent: "center"
+            }}
+          >
+            <FaWhatsapp size={16} />
+            <span>{referralCopied ? "✓ Copied!" : "Refer Now"}</span>
+          </button>
         </div>
       </div>
 
