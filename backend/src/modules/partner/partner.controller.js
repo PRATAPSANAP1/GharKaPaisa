@@ -1898,6 +1898,11 @@ const updatePartnerStatus = async (req, res, next) => {
     await query(`UPDATE partner_profiles SET status = $1, updated_at = NOW() WHERE id = $2`, [status, partner.id]);
     await query(`UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`, [status, partner.user_id]);
 
+    // Revoke all refresh tokens when partner is blocked or suspended
+    if (status === 'blocked' || status === 'suspended') {
+      await query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [partner.user_id]);
+    }
+
     await logAction(req, 'UPDATE_PARTNER_STATUS', partner.id, { status });
 
     return success(res, { partner_id: partner.id, status }, `Partner status updated to ${status}`);

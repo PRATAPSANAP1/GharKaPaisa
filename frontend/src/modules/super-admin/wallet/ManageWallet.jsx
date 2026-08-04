@@ -71,10 +71,10 @@ export default function ManageWallet() {
   const loadWallets = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/wallet/get-wallets-overview', {
+      const res = await api.get('/superadmin/wallet/overview', {
         params: { page: oPage, limit: 20, search: oSearch.trim() || undefined }
       }).catch(async () => {
-        // Fallback endpoint if get-wallets-overview doesn't exist
+        // Fallback endpoint if overview doesn't exist
         return await api.get('/wallet/ledger', { params: { limit: 1 } });
       });
 

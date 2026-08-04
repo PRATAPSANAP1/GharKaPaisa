@@ -13,7 +13,8 @@ import {
   MdCheckCircle, MdCancel, MdPending, MdChevronLeft, MdChevronRight,
   MdSearch, MdFilterList, MdShare, MdDownload, MdLock, MdPlayCircleOutline,
   MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp,
-  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy, MdReceiptLong
+  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy, MdReceiptLong,
+  MdArrowForward, MdBusinessCenter
 } from "react-icons/md";
 import { FaLock, FaWhatsapp, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
@@ -664,116 +665,178 @@ export default function PartnerDashboard({ partner }) {
 
       {/* ──── 4 CATEGORY ACTION BUTTONS ──── */}
       <div>
-        {/* Category Buttons Row - Always 1 Line */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: isMobile ? "6px" : "16px",
-          marginBottom: "0px"
+          gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+          gap: isMobile ? "12px" : "20px",
+          marginBottom: "24px"
         }}>
-          {/* Credit Cards Button */}
-          <button
-            onClick={() => navigate('/partner/credit-cards')}
-            style={{
-              padding: isMobile ? "10px 2px" : "16px 20px",
-              borderRadius: isMobile ? "12px" : "16px",
-              border: "none",
-              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isMobile ? "4px" : "10px",
-              fontWeight: 800,
-              fontSize: isMobile ? "11px" : "15px",
-              textAlign: "center",
-              boxShadow: `0 4px 16px ${C.primary}30`,
-              transition: "all 0.2s ease"
-            }}
-          >
-            <MdCreditCard size={isMobile ? 18 : 22} color="#FFFFFF" />
-            <span style={{ lineHeight: 1.15 }}>Credit Cards</span>
-          </button>
+          {[
+            {
+              id: 'credit-cards',
+              title: 'Credit Cards',
+              subtitle: 'Best offers for you',
+              icon: MdCreditCard,
+              route: '/partner/credit-cards',
+              lightBg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
+              darkBg: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(124, 58, 237, 0.04) 100%)',
+              primaryColor: '#4F46E5',
+              lightText: '#312E81',
+              darkText: '#DDD6FE',
+              lightSub: '#6D28D9',
+              darkSub: '#A78BFA'
+            },
+            {
+              id: 'loans',
+              title: 'Loans',
+              subtitle: 'Personal & Business loans',
+              icon: MdBusinessCenter,
+              route: '/partner/loans',
+              lightBg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+              darkBg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%)',
+              primaryColor: '#10B981',
+              lightText: '#064E3B',
+              darkText: '#A7F3D0',
+              lightSub: '#047857',
+              darkSub: '#34D399'
+            },
+            {
+              id: 'insurance',
+              title: 'Insurance',
+              subtitle: 'Secure your future',
+              icon: MdShield,
+              route: '/partner/insurance',
+              lightBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+              darkBg: 'linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(234, 88, 12, 0.04) 100%)',
+              primaryColor: '#F97316',
+              lightText: '#7C2D12',
+              darkText: '#FFD8A8',
+              lightSub: '#C2410C',
+              darkSub: '#FB923C'
+            },
+            {
+              id: 'recharge',
+              title: 'Recharge & Bill',
+              subtitle: 'All in one payments',
+              icon: MdReceiptLong,
+              route: '/cms/recharge',
+              lightBg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+              darkBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%)',
+              primaryColor: '#3B82F6',
+              lightText: '#1E3A8A',
+              darkText: '#BFDBFE',
+              lightSub: '#1D4ED8',
+              darkSub: '#60A5FA'
+            }
+          ].map((cat) => {
+            const Icon = cat.icon;
+            const bg = isDark ? cat.darkBg : cat.lightBg;
+            const textColor = isDark ? cat.darkText : cat.lightText;
+            const subColor = isDark ? cat.darkSub : cat.lightSub;
+            
+            return (
+              <div
+                key={cat.id}
+                onClick={() => navigate(cat.route)}
+                style={{
+                  background: bg,
+                  borderRadius: "24px",
+                  padding: isMobile ? "16px" : "20px 24px",
+                  border: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.02)",
+                  boxShadow: isDark ? "none" : "0 4px 12px rgba(0,0,0,0.02)",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  minHeight: isMobile ? "125px" : "150px",
+                  position: "relative",
+                  boxSizing: "border-box",
+                  overflow: "hidden"
+                }}
+                className="category-rich-card"
+              >
+                {/* Subtle graphic gradient background representation */}
+                <div style={{
+                  position: "absolute",
+                  right: "-15px",
+                  bottom: "-15px",
+                  width: "90px",
+                  height: "90px",
+                  borderRadius: "50%",
+                  background: `radial-gradient(circle, ${cat.primaryColor}10 0%, transparent 70%)`,
+                  pointerEvents: "none"
+                }} />
 
-          {/* Loans Button */}
-          <button
-            onClick={() => navigate('/partner/loans')}
-            style={{
-              padding: isMobile ? "10px 2px" : "16px 20px",
-              borderRadius: isMobile ? "12px" : "16px",
-              border: "none",
-              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isMobile ? "4px" : "10px",
-              fontWeight: 800,
-              fontSize: isMobile ? "11px" : "15px",
-              textAlign: "center",
-              boxShadow: `0 4px 16px ${C.primary}30`,
-              transition: "all 0.2s ease"
-            }}
-          >
-            <MdAccountBalanceWallet size={isMobile ? 18 : 22} color="#FFFFFF" />
-            <span style={{ lineHeight: 1.15 }}>Loans</span>
-          </button>
+                {/* Top: Icon in colored container */}
+                <div style={{
+                  width: isMobile ? "36px" : "42px",
+                  height: isMobile ? "36px" : "42px",
+                  borderRadius: "12px",
+                  background: cat.primaryColor,
+                  boxShadow: `0 4px 12px ${cat.primaryColor}25`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FFFFFF",
+                  flexShrink: 0
+                }}>
+                  <Icon size={isMobile ? 18 : 22} />
+                </div>
 
-          {/* Insurance Button */}
-          <button
-            onClick={() => navigate('/partner/insurance')}
-            style={{
-              padding: isMobile ? "10px 2px" : "16px 20px",
-              borderRadius: isMobile ? "12px" : "16px",
-              border: "none",
-              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isMobile ? "4px" : "10px",
-              fontWeight: 800,
-              fontSize: isMobile ? "11px" : "15px",
-              textAlign: "center",
-              boxShadow: `0 4px 16px ${C.primary}30`,
-              transition: "all 0.2s ease"
-            }}
-          >
-            <MdShield size={isMobile ? 18 : 22} color="#FFFFFF" />
-            <span style={{ lineHeight: 1.15 }}>Insurance</span>
-          </button>
+                {/* Bottom row: Text Info + White Arrow circle */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-end",
+                  marginTop: "12px",
+                  width: "100%"
+                }}>
+                  <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, marginRight: "4px" }}>
+                    <span style={{
+                      fontSize: isMobile ? "13px" : "15.5px",
+                      fontWeight: 800,
+                      color: textColor,
+                      lineHeight: 1.25,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis"
+                    }}>
+                      {cat.title}
+                    </span>
+                    <span style={{
+                      fontSize: isMobile ? "10px" : "11px",
+                      fontWeight: 600,
+                      color: subColor,
+                      marginTop: "4px",
+                      lineHeight: 1.2,
+                      opacity: 0.85,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis"
+                    }}>
+                      {cat.subtitle}
+                    </span>
+                  </div>
 
-          {/* Recharge & Bill Button */}
-          <button
-            onClick={() => navigate('/cms/recharge')}
-            style={{
-              padding: isMobile ? "10px 2px" : "16px 20px",
-              borderRadius: isMobile ? "12px" : "16px",
-              border: "none",
-              background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-              color: "#FFFFFF",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: isMobile ? "4px" : "10px",
-              fontWeight: 800,
-              fontSize: isMobile ? "11px" : "15px",
-              textAlign: "center",
-              boxShadow: `0 4px 16px ${C.primary}30`,
-              transition: "all 0.2s ease"
-            }}
-          >
-            <MdReceiptLong size={isMobile ? 18 : 22} />
-            <span style={{ lineHeight: 1.15 }}>Recharge & Bill</span>
-          </button>
+                  {/* Arrow Action Button */}
+                  <div style={{
+                    width: isMobile ? "26px" : "32px",
+                    height: isMobile ? "26px" : "32px",
+                    borderRadius: "50%",
+                    background: "#FFFFFF",
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: cat.primaryColor,
+                    flexShrink: 0
+                  }}>
+                    <MdArrowForward size={isMobile ? 13 : 16} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -14,13 +14,19 @@ router.use(authenticate, syncUser);
 router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsDashboard);
 router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
 
+// Bulk Operations & Export (must be before /:id routes)
+router.put('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);
+router.post('/import', requireApprovedPartnerOrAdmin, upload.single('file'), appCtrl.importApplications);
+router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicationsCSV);
+
 // Basic CRUD
 router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
 router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
 router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
 
-// Lifecycle states
+// Lifecycle states (support both PUT and PATCH for FE compatibility)
 router.put('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);
+router.patch('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);
 router.put('/:id/commission', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateCommission);
 
 // Timeline & logs

@@ -1358,6 +1358,137 @@ const submitPartnerApplication = async (req, res, next) => {
   }
 };
 
+// ── PUT /applications/bulk-status — Bulk update status ────────────────
+const bulkUpdateStatus = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { ids, status, remarks } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return error(res, 'Application IDs array is required', 400);
+    }
+    if (!status) return error(res, 'Status is required', 400);
+
+    await client.query('BEGIN');
+
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+    await client.query(
+      `UPDATE applications SET status = '${status}', updated_at = NOW() WHERE id IN (${placeholders})`,
+      ids
+    );
+
+    // Log timeline for each
+    const performedBy = req.user?.id;
+    for (const id of ids) {
+      await logTimeline(client, id, status, 'Bulk status update', remarks || `Status changed to ${status}`, performedBy);
+    }
+
+    await client.query('COMMIT');
+    await logAction(req, 'BULK_UPDATE_APPLICATION_STATUS', null, { ids, status });
+
+    return success(res, { updated: ids.length, status }, `${ids.length} applications updated to ${status}`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  }
+};
+
+// ── POST /applications/import — CSV bulk import ────────────────────
+const importApplications = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    if (!req.file) return error(res, 'CSV file is required', 400);
+
+    const csvData = req.file.buffer.toString('utf-8');
+    const lines = csvData.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return error(res, 'CSV must have a header row and at least one data row', 400);
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const nameIdx = headers.indexOf('customer_name');
+    const mobileIdx = headers.indexOf('mobile');
+    const productIdx = headers.indexOf('product_name');
+
+    if (nameIdx === -1 || mobileIdx === -1) {
+      return error(res, 'CSV must include columns: customer_name, mobile', 400);
+    }
+
+    const PartnerId = req.partner?.id;
+    let imported = 0;
+
+    await client.query('BEGIN');
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim());
+      const customerName = cols[nameIdx] || '';
+      const mobile = cols[mobileIdx] || '';
+      const productName = productIdx !== -1 ? (cols[productIdx] || '') : '';
+
+      if (!customerName || !mobile) continue;
+
+      const appNumber = generateAppNumber();
+      await client.query(
+        `INSERT INTO applications (app_number, partner_id, customer_name, customer_mobile, product_name, status, source, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'submitted', 'csv_import', NOW(), NOW())`,
+        [appNumber, PartnerId, customerName, mobile, productName]
+      );
+      imported++;
+    }
+
+    await client.query('COMMIT');
+    await logAction(req, 'IMPORT_APPLICATIONS_CSV', null, { imported, total_rows: lines.length - 1 });
+
+    return success(res, { imported, total_rows: lines.length - 1 }, `${imported} applications imported successfully`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  }
+};
+
+// ── GET /applications/export/csv — Export applications as CSV ──────
+const exportApplicationsCSV = async (req, res, next) => {
+  try {
+    const PartnerId = req.partner?.id;
+    const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
+    
+    let queryStr = `SELECT a.app_number, a.customer_name, a.customer_mobile, a.product_name, a.status, 
+                    a.bank_status, a.source, a.created_at, a.updated_at
+                    FROM applications a`;
+    const params = [];
+
+    if (userRole === 'PARTNER' && PartnerId) {
+      queryStr += ` WHERE a.partner_id = $1`;
+      params.push(PartnerId);
+    }
+
+    queryStr += ` ORDER BY a.created_at DESC LIMIT 10000`;
+
+    const { rows } = await query(queryStr, params);
+
+    // Build CSV
+    const csvHeaders = ['App Number', 'Customer Name', 'Mobile', 'Product', 'Status', 'Bank Status', 'Source', 'Created At', 'Updated At'];
+    const csvLines = [csvHeaders.join(',')];
+    
+    for (const row of rows) {
+      csvLines.push([
+        row.app_number || '',
+        `"${(row.customer_name || '').replace(/"/g, '""')}"`,
+        row.customer_mobile || '',
+        `"${(row.product_name || '').replace(/"/g, '""')}"`,
+        row.status || '',
+        row.bank_status || '',
+        row.source || '',
+        row.created_at ? new Date(row.created_at).toISOString() : '',
+        row.updated_at ? new Date(row.updated_at).toISOString() : ''
+      ].join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=applications_export_${Date.now()}.csv`);
+    return res.send(csvLines.join('\n'));
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
   submitApplication, 
   submitPublicApplication, 
@@ -1379,6 +1510,9 @@ module.exports = {
   verifyDocument,
   markVerificationComplete,
   updateBankProcessingStatus,
-  submitPartnerApplication
+  submitPartnerApplication,
+  bulkUpdateStatus,
+  importApplications,
+  exportApplicationsCSV
 };
 
