@@ -321,7 +321,52 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
       
-      {/* ── 1. HEADER SECTION WITH TITLE, SEARCH & FILTERS ON SAME LINE ── */}
+      {/* ── 1. TOP HORIZONTAL SUB-MODULE NAVIGATION BAR (BUTTONS AT VERY TOP) ── */}
+      <div style={{
+        background: isDark ? '#1E293B' : '#FFFFFF',
+        borderRadius: '16px',
+        padding: '8px 12px',
+        border: `1px solid ${C.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
+      }}>
+        {SUB_MODULE_TABS.map((tItem) => {
+          const Icon = tItem.icon;
+          const isActive = activeTab === tItem.id;
+
+          return (
+            <button
+              key={tItem.id}
+              onClick={() => handleTabChange(tItem.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                fontWeight: isActive ? 800 : 600,
+                border: 'none',
+                cursor: 'pointer',
+                color: isActive ? '#FFFFFF' : C.text,
+                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
+                whiteSpace: 'nowrap',
+                boxShadow: isActive ? `0 4px 12px ${C.primary}30` : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Icon size={18} />
+              <span>{tItem.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── 2. HEADER SECTION WITH TITLE, SEARCH & FILTERS BELOW BUTTONS ── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -353,7 +398,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
           </p>
         </div>
 
-        {/* Top Controls: Search Bar & Filters on Same Line */}
+        {/* Search Bar & Filters */}
         {activeTab === 'dashboard' && (
           <div style={{
             display: 'flex',
@@ -442,51 +487,6 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             )}
           </div>
         )}
-      </div>
-
-      {/* ── 2. TOP HORIZONTAL SUB-MODULE NAVIGATION BAR ── */}
-      <div style={{
-        background: isDark ? '#1E293B' : '#FFFFFF',
-        borderRadius: '16px',
-        padding: '8px 12px',
-        border: `1px solid ${C.border}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
-      }}>
-        {SUB_MODULE_TABS.map((tItem) => {
-          const Icon = tItem.icon;
-          const isActive = activeTab === tItem.id;
-
-          return (
-            <button
-              key={tItem.id}
-              onClick={() => handleTabChange(tItem.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 16px',
-                borderRadius: '12px',
-                fontSize: '13.5px',
-                fontWeight: isActive ? 800 : 600,
-                border: 'none',
-                cursor: 'pointer',
-                color: isActive ? '#FFFFFF' : C.text,
-                background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : 'transparent',
-                whiteSpace: 'nowrap',
-                boxShadow: isActive ? `0 4px 12px ${C.primary}30` : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Icon size={18} />
-              <span>{tItem.label}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* ── 3. DYNAMIC CONTENT AREA BELOW BUTTONS ── */}
