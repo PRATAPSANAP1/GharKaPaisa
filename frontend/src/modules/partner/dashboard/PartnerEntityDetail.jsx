@@ -82,10 +82,9 @@ export default function PartnerEntityDetail() {
   const [productWorkspaceTab, setProductWorkspaceTab] = useState('overview');
 
   // Customer Apply Form State
-  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
-  const [foundCustomer, setFoundCustomer] = useState(null);
-  const [customerSearched, setCustomerSearched] = useState(false);
-  const [applyProcess, setApplyProcess] = useState('customer_sell');
+  const [applyCustomerName, setApplyCustomerName] = useState('');
+  const [applyCustomerMobile, setApplyCustomerMobile] = useState('');
+  const [applyProcessBy, setApplyProcessBy] = useState('lead_punching');
   const [applySubmitted, setApplySubmitted] = useState(false);
 
   useEffect(() => {
@@ -179,13 +178,43 @@ export default function PartnerEntityDetail() {
     }
   };
 
-  const handleFinalSubmitApply = () => {
+  const handleFinalSubmitApply = async () => {
+    if (!applyCustomerName.trim()) {
+      alert('Please enter customer full name.');
+      return;
+    }
+    if (!applyCustomerMobile.trim() || applyCustomerMobile.trim().length < 10) {
+      alert('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    try {
+      if (applyProcessBy === 'lead_punching' || applyProcessBy === 'linked_share') {
+        await api.post('/applications', {
+          customer_name: applyCustomerName,
+          customer_mobile: applyCustomerMobile,
+          product_id: selectedProductWorkspace.id,
+          bank_code: selectedProductWorkspace.bank_code || bankName,
+          process_type: applyProcessBy
+        });
+      }
+    } catch (e) {
+      console.warn('Application submit note:', e);
+    }
+
+    if (applyProcessBy === 'direct_bank') {
+      const targetUrl = selectedProductWorkspace.apply_url || selectedProductWorkspace.tracking_url || `https://www.google.com/search?q=${encodeURIComponent(selectedProductWorkspace.name + ' apply')}`;
+      window.open(targetUrl, '_blank');
+    }
+
     setApplySubmitted(true);
     setTimeout(() => {
       setApplySubmitted(false);
       setSelectedProductWorkspace(null);
-      alert('Application submitted successfully!');
-    }, 2000);
+      setApplyCustomerName('');
+      setApplyCustomerMobile('');
+      setApplyProcessBy('lead_punching');
+    }, 2500);
   };
 
   return (
@@ -615,102 +644,194 @@ export default function PartnerEntityDetail() {
                 </div>
               )}
 
-              {/* TAB 2: APPLY WORKFLOW */}
+              {/* TAB 2: APPLY WORKFLOW FORM */}
               {productWorkspaceTab === 'apply' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   {applySubmitted ? (
-                    <div style={{ padding: '40px', textAlign: 'center', background: '#D1FAE5', borderRadius: '16px', border: '1px solid #6EE7B7' }}>
+                    <div style={{ padding: '36px 24px', textAlign: 'center', background: '#D1FAE5', borderRadius: '20px', border: '1.5px solid #6EE7B7' }}>
                       <MdCheckCircle size={48} color="#059669" />
                       <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#065F46', margin: '12px 0 6px' }}>
-                        Application Submitted Successfully!
+                        Application Processed Successfully!
                       </h3>
-                      <p style={{ fontSize: '13px', color: '#047857', margin: 0 }}>
-                        Lead for <strong>{foundCustomer?.name || 'Customer'}</strong> has been punched for {selectedProductWorkspace.name}.
+                      <p style={{ fontSize: '13.5px', color: '#047857', margin: 0, fontWeight: 600 }}>
+                        Lead for <strong>{applyCustomerName || 'Customer'}</strong> ({applyCustomerMobile}) has been processed via <strong>{applyProcessBy === 'lead_punching' ? 'Lead Punching Only' : applyProcessBy === 'linked_share' ? 'Linked Share' : 'Direct Bank Process'}</strong> for {selectedProductWorkspace.name}.
                       </p>
                     </div>
                   ) : (
                     <>
-                      {/* Step 1: Process Selection */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
-                          Step 1: Choose Process
-                        </span>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                          {[
-                            { id: 'customer_sell', label: 'Customer Sell' },
-                            { id: 'partner_sell', label: 'Partner Sell' },
-                            { id: 'lead_punching', label: 'Lead Punching' }
-                          ].map((proc) => (
-                            <button
-                              key={proc.id}
-                              onClick={() => setApplyProcess(proc.id)}
-                              style={{
-                                padding: '12px', borderRadius: '12px',
-                                border: applyProcess === proc.id ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
-                                background: applyProcess === proc.id ? `${C.primary}15` : (isDark ? C.bgSecondary : '#F8FAFC'),
-                                color: applyProcess === proc.id ? C.primary : C.text,
-                                fontWeight: 800, fontSize: '13px', cursor: 'pointer'
-                              }}
-                            >
-                              {proc.label}
-                            </button>
-                          ))}
-                        </div>
+                      {/* 1. Customer Full Name */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '6px' }}>
+                          Customer Full Name <span style={{ color: '#EF4444' }}>*</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter customer full name (e.g. Rahul Sharma)"
+                          value={applyCustomerName}
+                          onChange={(e) => setApplyCustomerName(e.target.value)}
+                          style={{
+                            width: '100%', padding: '12px 16px', borderRadius: '12px',
+                            border: `1.5px solid ${C.border}`, background: isDark ? C.bgSecondary : '#F8FAFC',
+                            color: C.text, fontSize: '14px', fontWeight: 600, outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
                       </div>
 
-                      {/* Step 2: Customer Pre-Search */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
-                          Step 2: Customer Search
-                        </span>
-                        
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                      {/* 2. Mobile Number */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '6px' }}>
+                          Mobile Number <span style={{ color: '#EF4444' }}>*</span>
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', fontWeight: 800, color: C.textMid }}>
+                            +91
+                          </span>
                           <input
-                            type="text"
-                            placeholder="Search by Phone, PAN, or Customer ID (e.g. 9876543210)..."
-                            value={customerSearchQuery}
-                            onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                            type="tel"
+                            maxLength={10}
+                            placeholder="10-digit mobile number"
+                            value={applyCustomerMobile}
+                            onChange={(e) => setApplyCustomerMobile(e.target.value.replace(/[^0-9]/g, ''))}
                             style={{
-                              flex: 1, padding: '12px 16px', borderRadius: '12px', border: `1px solid ${C.border}`,
-                              background: isDark ? C.bgSecondary : '#F8FAFC', color: C.text, fontSize: '13.5px', outline: 'none'
+                              width: '100%', padding: '12px 16px 12px 50px', borderRadius: '12px',
+                              border: `1.5px solid ${C.border}`, background: isDark ? C.bgSecondary : '#F8FAFC',
+                              color: C.text, fontSize: '14px', fontWeight: 700, outline: 'none',
+                              boxSizing: 'border-box'
                             }}
                           />
-                          <button
-                            onClick={handleCustomerSearch}
-                            style={{ padding: '12px 20px', borderRadius: '12px', border: 'none', background: C.primary, color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
-                          >
-                            Search
-                          </button>
                         </div>
-
-                        {customerSearched && (
-                          foundCustomer ? (
-                            <div style={{ padding: '14px', borderRadius: '12px', background: '#D1FAE5', border: '1px solid #6EE7B7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div>
-                                <h5 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#065F46' }}>Customer Found: {foundCustomer.name}</h5>
-                                <span style={{ fontSize: '12px', color: '#047857' }}>PAN: {foundCustomer.pan} • CIBIL: {foundCustomer.cibil}</span>
-                              </div>
-                              <span style={{ fontSize: '12px', fontWeight: 900, color: '#047857' }}>✓ Verified</span>
-                            </div>
-                          ) : (
-                            <div style={{ padding: '14px', borderRadius: '12px', background: '#FEF3C7', border: '1px solid #FDE68A' }}>
-                              <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 700 }}>No existing customer found. Proceeding with new lead intake.</span>
-                            </div>
-                          )
-                        )}
                       </div>
 
-                      {/* Step 3: Action Buttons */}
+                      {/* 3. Process By Options */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '8px' }}>
+                          Process By <span style={{ color: '#EF4444' }}>*</span>
+                        </label>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {[
+                            {
+                              id: 'lead_punching',
+                              num: '1',
+                              title: '1. Lead punching only',
+                              desc: 'Submit lead directly to CRM pipeline for backend verification & processing',
+                              icon: '📝',
+                              badgeColor: C.primary
+                            },
+                            {
+                              id: 'linked_share',
+                              num: '2',
+                              title: '2. Linked share',
+                              desc: 'Generate & share custom tracking application link via WhatsApp, SMS, or copy link',
+                              icon: '🔗',
+                              badgeColor: '#10B981'
+                            },
+                            {
+                              id: 'direct_bank',
+                              num: '3',
+                              title: '3. Direct bank process',
+                              desc: 'Direct customer to bank official portal with partner affiliate tracking parameters',
+                              icon: '🏦',
+                              badgeColor: '#8B5CF6'
+                            }
+                          ].map((proc) => {
+                            const isSelected = applyProcessBy === proc.id;
+                            return (
+                              <div
+                                key={proc.id}
+                                onClick={() => setApplyProcessBy(proc.id)}
+                                style={{
+                                  padding: '14px 16px',
+                                  borderRadius: '14px',
+                                  border: `2px solid ${isSelected ? proc.badgeColor : C.border}`,
+                                  background: isSelected ? `${proc.badgeColor}12` : isDark ? C.bgSecondary : '#F8FAFC',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                <div style={{
+                                  width: '32px', height: '32px', borderRadius: '10px',
+                                  background: isSelected ? proc.badgeColor : C.border,
+                                  color: isSelected ? '#FFFFFF' : C.textMid,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontWeight: 900, fontSize: '14px', flexShrink: 0
+                                }}>
+                                  {proc.num}
+                                </div>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '14px' }}>{proc.icon}</span>
+                                    <h5 style={{ margin: 0, fontSize: '14px', fontWeight: 900, color: isSelected ? proc.badgeColor : C.text }}>
+                                      {proc.title}
+                                    </h5>
+                                  </div>
+                                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: C.textMid, fontWeight: 500, lineHeight: 1.3 }}>
+                                    {proc.desc}
+                                  </p>
+                                </div>
+
+                                <input
+                                  type="radio"
+                                  name="applyProcessBy"
+                                  checked={isSelected}
+                                  onChange={() => setApplyProcessBy(proc.id)}
+                                  style={{ width: '18px', height: '18px', accentColor: proc.badgeColor, cursor: 'pointer' }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Linked Share Quick Actions */}
+                      {applyProcessBy === 'linked_share' && applyCustomerMobile && (
+                        <div style={{ padding: '14px', borderRadius: '12px', background: `${C.green}12`, border: `1px solid ${C.green}40`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: C.green, textTransform: 'uppercase' }}>
+                            🔗 Share Link Ready
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => {
+                                const text = `Hello ${applyCustomerName || 'Customer'}, apply for ${selectedProductWorkspace.name} here: https://gharkapaisa.in/apply?prod=${selectedProductWorkspace.id}&p=partner`;
+                                window.open(`https://wa.me/91${applyCustomerMobile}?text=${encodeURIComponent(text)}`, '_blank');
+                              }}
+                              style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                              💬 Send on WhatsApp
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(`https://gharkapaisa.in/apply?prod=${selectedProductWorkspace.id}&p=partner`);
+                                alert('Application link copied to clipboard!');
+                              }}
+                              style={{ padding: '10px 16px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                            >
+                              📋 Copy Link
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submit Action Button */}
                       <button
                         onClick={handleFinalSubmitApply}
                         style={{
-                          padding: '16px', borderRadius: '12px', border: 'none',
-                          background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-                          color: '#FFF', fontWeight: 900, fontSize: '15px', cursor: 'pointer',
-                          boxShadow: `0 4px 16px ${C.primary}35`, marginTop: '10px'
+                          width: '100%', padding: '15px', borderRadius: '14px', border: 'none',
+                          background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                          color: '#FFF', fontWeight: 900, fontSize: '15.5px', cursor: 'pointer',
+                          boxShadow: '0 4px 16px rgba(16,185,129,0.35)', marginTop: '8px'
                         }}
                       >
-                        Submit Lead Application
+                        {applyProcessBy === 'lead_punching'
+                          ? 'Submit Lead Punching Application'
+                          : applyProcessBy === 'linked_share'
+                          ? 'Generate & Share Application Link'
+                          : 'Proceed to Direct Bank Process'}
                       </button>
                     </>
                   )}
