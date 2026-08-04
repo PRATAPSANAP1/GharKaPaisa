@@ -678,16 +678,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
       margin: '0 auto',
       boxSizing: 'border-box'
     }}>
-      {/* ─── PAGE HEADER ROW ─── */}
-      <div style={{
-        width: '100%',
-        borderBottom: `1.5px solid ${C.border}`,
-        paddingBottom: '16px'
-      }}>
-        <h1 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 800, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
-          Products Marketplace
-        </h1>
-      </div>
+
 
       {/* ─── MAIN SIDEBAR + GRID CONTAINER ─── */}
       <div style={{
