@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 const MOBILE_BOTTOM_NAV = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Card', icon: MdCreditCard },
-  { id: 'leads', path: '/partner/leads/add', label: 'Leads', icon: MdAdd, isCenter: true },
+  { id: 'lead', path: '/partner/leads/add', label: 'Lead', icon: MdAdd, isCenter: true },
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
 ];
