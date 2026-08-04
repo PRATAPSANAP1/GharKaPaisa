@@ -594,6 +594,74 @@ export default function PartnerDashboard({ partner }) {
         </h1>
       </div>
 
+      {/* ── HERO BANNER SLIDER (OFFER BANNER AT TOP) ── */}
+      <div 
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        style={{ 
+          width: "100%", height: isMobile ? "180px" : "320px", 
+          borderRadius: "20px", display: "flex", 
+          alignItems: "center", justifyContent: "center", overflow: "hidden", 
+          position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)`,
+          marginTop: "8px",
+          marginBottom: "16px"
+        }}
+      >
+        {bannerSlides.map((slide, idx) => (
+          <div key={idx} 
+            onClick={() => slide.action()}
+            style={{
+              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+              background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
+              opacity: idx === bannerIndex ? 1 : 0,
+              pointerEvents: idx === bannerIndex ? "auto" : "none",
+              transition: "opacity 0.6s ease-in-out",
+              cursor: "pointer"
+            }}
+          />
+        ))}
+
+        {/* Left Arrow */}
+        {bannerSlides.length > 1 && (
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
+            <MdChevronLeft size={20} />
+          </div>
+        )}
+
+        {/* Right Arrow */}
+        {bannerSlides.length > 1 && (
+          <div 
+            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
+          >
+            <MdChevronRight size={20} />
+          </div>
+        )}
+
+        {/* Slider Indicators */}
+        {bannerSlides.length > 1 && (
+          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
+            {bannerSlides.map((_, idx) => (
+              <div 
+                key={idx} 
+                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
+                style={{ 
+                  width: idx === bannerIndex ? "24px" : "8px", 
+                  height: "8px", 
+                  borderRadius: "4px", 
+                  background: idx === bannerIndex ? (isDark ? C.primary : "#333") : "rgba(255,255,255,0.5)", 
+                  cursor: "pointer",
+                  transition: "all 0.3s ease"
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ──── 4 CATEGORY ACTION BUTTONS ──── */}
       <div>
         {/* Category Buttons Row - Always 1 Line */}
@@ -829,73 +897,6 @@ export default function PartnerDashboard({ partner }) {
             <MdCancel size={22} />
           </div>
         </div>
-      </div>
-
-      {/* ── HERO BANNER SLIDER (OFFER BANNER) ── */}
-      <div 
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        style={{ 
-          width: "100%", height: isMobile ? "180px" : "320px", 
-          borderRadius: "20px", display: "flex", 
-          alignItems: "center", justifyContent: "center", overflow: "hidden", 
-          position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)`,
-          marginBottom: "10px"
-        }}
-      >
-        {bannerSlides.map((slide, idx) => (
-          <div key={idx} 
-            onClick={() => slide.action()}
-            style={{
-              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
-              opacity: idx === bannerIndex ? 1 : 0,
-              pointerEvents: idx === bannerIndex ? "auto" : "none",
-              transition: "opacity 0.6s ease-in-out",
-              cursor: "pointer"
-            }}
-          />
-        ))}
-
-        {/* Left Arrow */}
-        {bannerSlides.length > 1 && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
-          >
-            <MdChevronLeft size={20} />
-          </div>
-        )}
-
-        {/* Right Arrow */}
-        {bannerSlides.length > 1 && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
-          >
-            <MdChevronRight size={20} />
-          </div>
-        )}
-
-        {/* Slider Indicators */}
-        {bannerSlides.length > 1 && (
-          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
-            {bannerSlides.map((_, idx) => (
-              <div 
-                key={idx} 
-                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-                style={{ 
-                  width: idx === bannerIndex ? "24px" : "8px", 
-                  height: "8px", 
-                  borderRadius: "4px", 
-                  background: idx === bannerIndex ? (isDark ? C.primary : "#333") : "rgba(255,255,255,0.5)", 
-                  cursor: "pointer",
-                  transition: "all 0.3s ease"
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ──── QUICK ACCESS SECTION ──── */}
