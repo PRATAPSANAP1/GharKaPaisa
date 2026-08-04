@@ -73,21 +73,24 @@ export default function PartnerProducts() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const [shareModalProduct, setShareModalProduct] = useState(null);
+  const [copiedNotice, setCopiedNotice] = useState(false);
+
   const handleCopyLink = (product) => {
     const code = partnerCode || user?.partner_code || 'PARTNER';
     const bankUrl = product.apply_url || product.redirect_url || product.bank_link || `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${code}`;
+    const shareText = `Apply for ${product.name} directly on official bank portal: ${bankUrl}`;
     
     if (navigator.share) {
       navigator.share({
         title: product.name,
-        text: `Apply for ${product.name} directly on official bank portal: ${bankUrl}`,
+        text: shareText,
         url: bankUrl
-      }).catch(() => {});
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(bankUrl);
-      alert(`Direct Bank Link for ${product.name} copied to clipboard!\n${bankUrl}`);
+      }).catch(() => {
+        setShareModalProduct({ ...product, bankUrl });
+      });
     } else {
-      alert(`Direct Bank Link for ${product.name}:\n${bankUrl}`);
+      setShareModalProduct({ ...product, bankUrl });
     }
   };
 
@@ -2128,6 +2131,152 @@ export default function PartnerProducts() {
           transform: translateX(3px);
         }
       `}</style>
+
+      {/* ═══ UNIVERSAL MULTI-APP SHARE MODAL ═══ */}
+      {shareModalProduct && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, width: '100%', maxWidth: '480px',
+            borderRadius: '24px', border: `1px solid ${C.border}`,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px'
+          }}>
+            <button
+              onClick={() => { setShareModalProduct(null); setCopiedNotice(false); }}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: C.bgSecondary, border: `1px solid ${C.border}`, cursor: 'pointer',
+                width: 32, height: 32, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: C.textMid, fontSize: '16px', fontWeight: 700
+              }}
+            >
+              ✕
+            </button>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
+                Direct Bank Link Share
+              </span>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '8px 0 4px' }}>
+                Share {shareModalProduct.name}
+              </h3>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
+                Official Bank Application Link:
+              </p>
+            </div>
+
+            {/* Direct Link Display Box */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px',
+              border: `1px solid ${C.border}`
+            }}>
+              <input
+                type="text"
+                readOnly
+                value={shareModalProduct.bankUrl}
+                style={{
+                  flex: 1, background: 'none', border: 'none', color: C.primary,
+                  fontSize: '12.5px', fontWeight: 700, outline: 'none',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareModalProduct.bankUrl);
+                  setCopiedNotice(true);
+                  setTimeout(() => setCopiedNotice(false), 2500);
+                }}
+                style={{
+                  background: C.primary, color: '#fff', border: 'none',
+                  padding: '6px 12px', borderRadius: '8px', fontSize: '12px',
+                  fontWeight: 700, cursor: 'pointer', flexShrink: 0
+                }}
+              >
+                {copiedNotice ? '✓ Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            {/* Share across any app options */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '6px' }}>
+              {/* WhatsApp */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal: ${shareModalProduct.bankUrl}`)}`;
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  padding: '12px', borderRadius: '12px', border: '1px solid #25D36640',
+                  background: '#25D36615', color: '#25D366', fontWeight: 800, fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>💬 WhatsApp</span>
+              </button>
+
+              {/* SMS / Messages */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `sms:?body=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal: ${shareModalProduct.bankUrl}`)}`;
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  padding: '12px', borderRadius: '12px', border: '1px solid #3B82F640',
+                  background: '#3B82F615', color: '#3B82F6', fontWeight: 800, fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>📱 Messages / SMS</span>
+              </button>
+
+              {/* Telegram */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `https://t.me/share/url?url=${encodeURIComponent(shareModalProduct.bankUrl)}&text=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal:`)}`;
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  padding: '12px', borderRadius: '12px', border: '1px solid #0088cc40',
+                  background: '#0088cc15', color: '#0088cc', fontWeight: 800, fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>✈️ Telegram</span>
+              </button>
+
+              {/* Email */}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `mailto:?subject=${encodeURIComponent(`Official Bank Application: ${shareModalProduct.name}`)}&body=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal:\n${shareModalProduct.bankUrl}`)}`;
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  padding: '12px', borderRadius: '12px', border: '1px solid #EA433540',
+                  background: '#EA433515', color: '#EA4335', fontWeight: 800, fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>✉️ Email</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );
