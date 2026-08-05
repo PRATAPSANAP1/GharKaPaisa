@@ -621,33 +621,10 @@ export default function PartnerDashboardComponent({ partner }) {
             padding: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px',
             boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
             border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
           }}
         >
-          <div
-            style={{
-              width: '84px',
-              height: '84px',
-              borderRadius: '50%',
-              background: '#EFE9FB',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              textAlign: 'center'
-            }}
-          >
-            <span style={{ fontSize: '10.5px', color: '#6B7280', fontWeight: 500 }}>Earn upto</span>
-            <span style={{ fontWeight: 800, fontSize: '24px', color: '#6E3FD6', lineHeight: 1 }}>
-              4%
-            </span>
-          </div>
-
-          <div style={{ width: '1px', alignSelf: 'stretch', background: isDark ? C.border : '#F3F4F6' }} />
-
           <div style={{ flex: 1, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <p style={{ fontWeight: 700, fontSize: '14.5px', margin: '0 0 10px 0', color: isDark ? C.text : '#111827' }}>
               Top Services
