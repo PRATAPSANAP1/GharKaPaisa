@@ -930,8 +930,38 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
         )}
       </div>
 
-      {/* Right side: Wallet + Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '20px' }}>
+      {/* Right side: Notifications + Wallet + Profile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
+        {/* Notifications Icon */}
+        <div
+          onClick={() => navigate('/partner/notifications')}
+          style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px' }}
+          aria-label="Notifications"
+          role="button"
+          tabIndex={0}
+        >
+          <MdNotifications size={isMobile ? 22 : 24} style={{ color: C.text }} />
+          <span
+            style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              fontSize: '10px',
+              color: '#FFFFFF',
+              background: '#E03B3B',
+              borderRadius: '50%',
+              width: '16px',
+              height: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700
+            }}
+          >
+            3
+          </span>
+        </div>
+
         {/* Wallet Balance */}
         <div 
           onClick={() => navigate("/partner/wallet")}

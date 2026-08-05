@@ -408,99 +408,6 @@ export default function PartnerDashboardComponent({ partner }) {
           boxSizing: 'border-box'
         }}
       >
-        {/* ──── REFERENCE HEADER BAR ──── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: '16px',
-            paddingBottom: '8px',
-            paddingLeft: '8px',
-            paddingRight: '8px'
-          }}
-        >
-          <Menu
-            size={24}
-            color={isDark ? C.text : '#1A1A1A'}
-            style={{ cursor: 'pointer' }}
-            onClick={() => navigate('/partner/settings')}
-          />
-
-          <div
-            onClick={() => navigate('/partner/dashboard')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-          >
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle at 30% 30%, #4A9CE8, #1B1547)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: '12px'
-              }}
-            >
-              G
-            </div>
-            <span style={{ fontWeight: 800, fontSize: '17px', letterSpacing: '-0.02em' }}>
-              <span style={{ color: isDark ? '#FFFFFF' : '#1E2A4A' }}>GHAR</span>
-              <span style={{ color: '#3AA655' }}>KAPAISA</span>
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={() => navigate('/partner/team-network')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                borderRadius: '999px',
-                padding: '4px 12px',
-                border: '1.5px solid #E8A93C',
-                background: isDark ? 'rgba(232, 169, 60, 0.1)' : '#FFFFFF',
-                cursor: 'pointer'
-              }}
-            >
-              <Crown size={14} color="#C98A1F" />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#C98A1F' }}>
-                To Gold
-              </span>
-            </button>
-
-            <div
-              onClick={() => navigate('/partner/notifications')}
-              style={{ position: 'relative', cursor: 'pointer' }}
-            >
-              <Bell size={22} color={isDark ? C.text : '#1A1A1A'} />
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-6px',
-                  right: '-6px',
-                  fontSize: '10px',
-                  color: '#FFFFFF',
-                  background: '#E03B3B',
-                  borderRadius: '50%',
-                  width: '16px',
-                  height: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700
-                }}
-              >
-                {unreadNotificationsCount || 3}
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* ── ACTIONABLE QUEUES & WARNING BANNERS ── */}
         <PartnerActionableQueues
           notifications={notifications}
@@ -558,76 +465,7 @@ export default function PartnerDashboardComponent({ partner }) {
           </div>
         )}
 
-        {/* ──── GREETING + WALLET CARD ──── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', paddingRight: '8px', marginTop: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                background: '#E9E4F7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Users size={24} color="#9B8CC7" />
-            </div>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: '18px', margin: 0, color: isDark ? C.text : '#1A1A2E', lineHeight: 1.2 }}>
-                Hi, {partnerName} 👋
-              </p>
-              <p style={{ fontSize: '12.5px', margin: '2px 0 0 0', color: isDark ? C.textLight : '#8A8A9E' }}>
-                Welcome back to your dashboard
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Wallet Balance Widget */}
-        <div
-          onClick={() => navigate('/partner/wallet')}
-          style={{
-            margin: '12px 8px 0 8px',
-            background: isDark ? C.card : '#FFFFFF',
-            borderRadius: '16px',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: '#EDE7FB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Wallet size={20} color="#7C4FE0" />
-            </div>
-            <div>
-              <p style={{ fontWeight: 800, fontSize: '16px', color: '#5B3FC4', margin: 0 }}>
-                {walletBalance}
-              </p>
-              <p style={{ fontSize: '11px', color: '#9CA3AF', margin: 0 }}>Wallet Balance</p>
-            </div>
-          </div>
-          <ChevronRight size={18} color="#8A8A9E" />
-        </div>
-
-        {/* ──── HERO BANNER (SALARYSE / GHARKAPAISA STYLE CARD) ──── */}
+        {/* ──── OUR OFFER BANNER SLIDER ──── */}
         <div
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
@@ -638,125 +476,122 @@ export default function PartnerDashboardComponent({ partner }) {
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            height: isMobile ? '290px' : '320px',
-            background: 'linear-gradient(135deg, #1B1547 0%, #2E2470 60%, #3B2A8C 100%)',
-            boxShadow: '0 8px 20px rgba(30,20,80,0.15)'
+            height: isMobile ? '190px' : '230px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+            background: isDark ? C.card : '#FFFFFF',
+            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
           }}
         >
-          {/* Watermark Rupee */}
-          <span
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '16px',
-              fontSize: '76px',
-              fontWeight: 800,
-              color: 'rgba(255,255,255,0.07)',
-              userSelect: 'none'
-            }}
-          >
-            ₹
-          </span>
-
-          {/* Lime Wave SVG */}
-          <svg
-            style={{ position: 'absolute', bottom: 0, left: 0, width: '100%' }}
-            height="60"
-            viewBox="0 0 400 60"
-            preserveAspectRatio="none"
-          >
-            <path d="M0,30 C100,60 300,0 400,30 L400,60 L0,60 Z" fill="#D9E547" />
-          </svg>
-
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 10,
-              padding: '20px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              boxSizing: 'border-box'
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                <div
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    background: '#3A6FE0',
-                    clipPath: 'polygon(0 0,100% 0,100% 100%)'
-                  }}
-                />
-                <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '15px' }}>
-                  salary<span style={{ color: '#E8E135' }}>se</span>
-                </span>
-              </div>
-
-              <p style={{ color: '#FFFFFF', fontWeight: 800, fontSize: isMobile ? '22px' : '25px', margin: 0, lineHeight: 1.15 }}>
-                India ka sabse
+          {bannerSlides[bannerIndex]?.bgImage ? (
+            <img
+              src={bannerSlides[bannerIndex].bgImage}
+              alt={bannerSlides[bannerIndex].title || 'Offer Banner'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #7C4FE0 0%, #3B2A8C 100%)',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                boxSizing: 'border-box'
+              }}
+            >
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '999px', alignSelf: 'flex-start' }}>
+                Special Offer
+              </span>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '10px 0 4px 0', color: '#FFFFFF' }}>
+                {bannerSlides[bannerIndex]?.title}
+              </h3>
+              <p style={{ fontSize: '13px', margin: 0, opacity: 0.9 }}>
+                {bannerSlides[bannerIndex]?.subtitle}
               </p>
-              <p style={{ color: '#E8E135', fontWeight: 800, fontSize: isMobile ? '24px' : '27px', margin: 0, lineHeight: 1.15 }}>
-                Rewarding Credit Card
-              </p>
+              <button
+                style={{
+                  marginTop: '14px',
+                  alignSelf: 'flex-start',
+                  background: '#FFFFFF',
+                  color: '#3B2A8C',
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '8px 18px',
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                {bannerSlides[bannerIndex]?.btnText || 'Apply Now'} →
+              </button>
+            </div>
+          )}
 
-              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13.5px', marginTop: '10px', margin: '10px 0 0 0' }}>
-                har UPI payment pe milega <b style={{ color: '#FFFFFF', fontWeight: 800 }}>7.5% back</b>
-              </p>
-              <p style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '17px', margin: '4px 0 0 0' }}>
-                Earn Upto ₹2000
-              </p>
-
+          {/* Left / Right Arrow Controls */}
+          {bannerSlides.length > 1 && (
+            <>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
-                  const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
-                  const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn payouts! Register here: ${shareLink}`);
-                  window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+                  setBannerIndex((prev) => (prev === 0 ? bannerSlides.length - 1 : prev - 1));
                 }}
                 style={{
-                  marginTop: '14px',
-                  background: '#FFFFFF',
-                  borderRadius: '999px',
-                  padding: '8px 20px',
-                  fontWeight: 800,
-                  fontSize: '13.5px',
-                  color: '#1B1547',
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.4)',
+                  color: '#FFFFFF',
                   border: 'none',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 15,
+                  backdropFilter: 'blur(4px)'
                 }}
               >
-                Refer Now <span>→</span>
+                <ChevronLeft size={20} />
               </button>
-            </div>
-
-            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', margin: '0 0 8px 0' }}>*T&amp;C apply</p>
-          </div>
-
-          {/* Coin Stack Illustration */}
-          <div style={{ position: 'absolute', bottom: '24px', right: '16px', display: 'flex', gap: '4px', zIndex: 0, pointerEvents: 'none' }}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column-reverse', gap: '2px' }}>
-                {Array.from({ length: 4 - i }).map((_, j) => (
-                  <div
-                    key={j}
-                    style={{
-                      width: '28px',
-                      height: '10px',
-                      borderRadius: '999px',
-                      background: 'linear-gradient(180deg,#F5D061,#D9A62A)'
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.4)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 15,
+                  backdropFilter: 'blur(4px)'
+                }}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Carousel Pagination Dots */}
