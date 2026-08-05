@@ -80,7 +80,6 @@ const serviceCatalog = {
     { id: 'fd-backed', category: 'other', label: 'FD Backed Card', icon: FaCreditCard, color: '#7C3AED', route: '/cms/coming-soon' },
     { id: 'credit-score', category: 'other', label: 'CIBIL Score', icon: FaChartBar, color: '#2563EB', route: '/cms/coming-soon' },
     { id: 'offers', category: 'other', label: 'Offers & Rewards', icon: FaGift, color: '#EC4899', route: '/cms/coming-soon' },
-    { id: 'refer-earn', category: 'other', label: 'Refer & Earn', icon: FaGift, color: '#7C3AED', route: '/cms/coming-soon' },
 
     // Travel & Bookings
     { id: 'flight', category: 'travel', label: 'Flight Booking', icon: FaPlane, color: '#2563EB', route: '/travel-transit/flight-booking' },

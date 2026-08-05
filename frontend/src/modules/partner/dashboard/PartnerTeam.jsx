@@ -66,12 +66,21 @@ export default function PartnerTeam() {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const [dashRes, anaRes] = await Promise.all([
-        api.get('/team/dashboard'),
-        api.get('/team/referral/analytics')
+      const [dashRes, earnRes] = await Promise.all([
+        api.get('/partner/team-dashboard'),
+        api.get('/partner/team-earnings')
       ]);
-      if (dashRes.data?.success) setDashboardData(dashRes.data.data);
-      if (anaRes.data?.success) setAnalyticsData(anaRes.data.data);
+      if (dashRes.data?.success) {
+        setDashboardData(dashRes.data.data);
+        // We map partial analytics data from the new dashboard summary
+        setAnalyticsData({
+          registrations: dashRes.data.data.total_members || 0,
+          kyc_approved: dashRes.data.data.approved_partners || 0,
+          clicks: 0, 
+          applications: 0,
+          approved_applications: 0
+        });
+      }
     } catch (err) {
       console.error('Failed to load team metrics:', err);
     } finally {
@@ -82,7 +91,7 @@ export default function PartnerTeam() {
   // Fetch Filtered Team Members List
   const loadTeamList = async () => {
     try {
-      const res = await api.get('/team/list', {
+      const res = await api.get('/partner/team-members', {
         params: {
           search: searchQuery || undefined,
           status: statusFilter || undefined,
@@ -99,7 +108,7 @@ export default function PartnerTeam() {
   // Fetch Lazy Tree Nodes
   const loadTreeNodes = async (parentId = null) => {
     try {
-      const res = await api.get('/team/tree', { params: { parent_id: parentId } });
+      const res = await api.get('/partner/team-tree', { params: { parent_id: parentId } });
       if (res.data?.success) setTreeNodes(res.data.data);
     } catch (err) {
       console.error('Failed to load tree hierarchy:', err);
@@ -109,7 +118,9 @@ export default function PartnerTeam() {
   // Fetch Activity Log
   const loadActivityLogs = async () => {
     try {
-      const res = await api.get('/team/activity');
+      // Stub out team/activity as it may no longer exist in new architecture
+      // const res = await api.get('/partner/team-activity');
+      setActivityLogs([]);
       if (res.data?.success) setActivityLogs(res.data.data);
     } catch (err) {
       console.error('Failed to load activity logs:', err);
@@ -131,8 +142,11 @@ export default function PartnerTeam() {
     setSelectedChildId(childId);
     setLoadingChild(true);
     try {
-      const res = await api.get(`/team/${childId}`);
-      if (res.data?.success) setChildDetail(res.data.data);
+      const res = await api.get(`/partner/team-members`); // Stub child detail
+      if (res.data?.success) {
+        const child = res.data.data.find(m => m.id === childId);
+        setChildDetail({ profile: child, applications: [] });
+      }
     } catch (err) {
       alert('Failed to load partner detail');
     } finally {
@@ -145,7 +159,7 @@ export default function PartnerTeam() {
     setShowQrModal(true);
     setLoadingQr(true);
     try {
-      const res = await api.get('/team/referral/qr');
+      const res = await api.get('/partner/referral');
       if (res.data?.success) setQrResult(res.data.data);
     } catch (err) {
       alert('Failed to generate QR Code');
@@ -216,8 +230,8 @@ export default function PartnerTeam() {
         const cards = [
           {
             title: 'Total Team Members',
-            value: dashboardData?.total_team || 0,
-            subtitle: `+${dashboardData?.month_joins || 0} this month`,
+            value: dashboardData?.total_members || 0,
+            subtitle: `+${dashboardData?.joined_today || 0} joined today`,
             icon: <FiUsers size={20} />,
             color: C.primary,
             bg: isThemeDark ? `${C.primary}12` : '#EEF2FF',
@@ -225,8 +239,8 @@ export default function PartnerTeam() {
           },
           {
             title: 'Active Team Partners',
-            value: dashboardData?.active_partners || 0,
-            subtitle: `${dashboardData?.active_rate || 0}% Active Rate`,
+            value: dashboardData?.active_members || 0,
+            subtitle: `${dashboardData?.total_members ? Math.round((dashboardData.active_members / dashboardData.total_members) * 100) : 0}% Active Rate`,
             icon: <FiUserCheck size={20} />,
             color: C.green,
             bg: isThemeDark ? `${C.green}12` : '#ECFDF5',
@@ -243,8 +257,8 @@ export default function PartnerTeam() {
           },
           {
             title: 'Team Override Earnings',
-            value: `₹${parseFloat(dashboardData?.team_earnings || 0).toLocaleString('en-IN')}`,
-            subtitle: `+₹${parseFloat(dashboardData?.month_earnings || 0).toLocaleString('en-IN')} this month`,
+            value: `₹${parseFloat(dashboardData?.today_team_commission || 0).toLocaleString('en-IN')}`,
+            subtitle: `+₹${parseFloat(dashboardData?.monthly_team_earnings || 0).toLocaleString('en-IN')} this month`,
             icon: <MdMonetizationOn size={22} />,
             color: C.gold,
             bg: isThemeDark ? `${C.gold}12` : '#FFFBEB',
