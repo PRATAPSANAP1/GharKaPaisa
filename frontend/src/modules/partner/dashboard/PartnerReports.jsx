@@ -101,12 +101,12 @@ export default function PartnerReports() {
       <div style={{ ...S.card, padding: '16px', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
           {[
-            { id: 'today', label: 'Today' },
-            { id: 'yesterday', label: 'Yesterday' },
-            { id: 'week', label: 'This Week' },
-            { id: 'month', label: 'This Month' },
-            { id: 'year', label: 'This Year' },
-            { id: 'custom', label: 'Custom Range' }
+            { id: 'today', label: t('common.today', 'Today') },
+            { id: 'yesterday', label: t('common.yesterday', 'Yesterday') },
+            { id: 'week', label: t('common.thisWeek', 'This Week') },
+            { id: 'month', label: t('common.thisMonth', 'This Month') },
+            { id: 'year', label: t('common.thisYear', 'This Year') },
+            { id: 'custom', label: t('common.customRange', 'Custom Range') }
           ].map(p => (
             <button
               key={p.id}
@@ -138,7 +138,7 @@ export default function PartnerReports() {
         <div style={{ flex: 1, minWidth: '180px' }}>
           <input
             style={S.input}
-            placeholder="Search report records..."
+            placeholder={t('reports.searchPlaceholder', 'Search report records...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -148,15 +148,15 @@ export default function PartnerReports() {
       {/* 9 Report Navigation Tabs */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, paddingBottom: '2px', overflowX: 'auto' }}>
         {[
-          { id: 'dashboard', label: 'Dashboard Overview', icon: MdDashboard },
-          { id: 'applications', label: 'Applications', icon: MdDescription },
-          { id: 'customers', label: 'Customers', icon: MdPeople },
-          { id: 'wallet', label: 'Wallet Ledger', icon: MdAccountBalanceWallet },
-          { id: 'commission', label: 'Commission Ledger', icon: MdShowChart },
-          { id: 'team', label: 'Team Downline', icon: MdGroupWork },
-          { id: 'withdrawals', label: 'Withdrawals', icon: MdAccountBalance },
-          { id: 'products', label: 'Products', icon: MdCategory },
-          { id: 'banks', label: 'Bank Partners', icon: MdPieChart },
+          { id: 'dashboard', label: t('reports.dashboardOverview', 'Dashboard Overview'), icon: MdDashboard },
+          { id: 'applications', label: t('partnerLayout.applications', 'Applications'), icon: MdDescription },
+          { id: 'customers', label: t('partnerLayout.customers', 'Customers'), icon: MdPeople },
+          { id: 'wallet', label: t('reports.walletLedger', 'Wallet Ledger'), icon: MdAccountBalanceWallet },
+          { id: 'commission', label: t('reports.commissionLedger', 'Commission Ledger'), icon: MdShowChart },
+          { id: 'team', label: t('reports.teamDownline', 'Team Downline'), icon: MdGroupWork },
+          { id: 'withdrawals', label: t('partnerLayout.withdrawals', 'Withdrawals'), icon: MdAccountBalance },
+          { id: 'products', label: t('reports.products', 'Products'), icon: MdCategory },
+          { id: 'banks', label: t('reports.bankPartners', 'Bank Partners'), icon: MdPieChart },
         ].map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -191,22 +191,22 @@ export default function PartnerReports() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Total Applications</div>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>{t('reports.totalApplications', 'Total Applications')}</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{reportData?.applications || 0}</div>
             </div>
 
             <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Approved Applications</div>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>{t('reports.approvedApplications', 'Approved Applications')}</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{reportData?.approved || 0}</div>
             </div>
 
             <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Rejected Applications</div>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>{t('reports.rejectedApplications', 'Rejected Applications')}</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: C.red, marginTop: '4px' }}>{reportData?.rejected || 0}</div>
             </div>
 
             <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Lifetime Commission</div>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>{t('reports.lifetimeCommission', 'Lifetime Commission')}</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: C.gold, marginTop: '4px' }}>₹{parseFloat(reportData?.commission || 0).toLocaleString('en-IN')}</div>
             </div>
           </div>

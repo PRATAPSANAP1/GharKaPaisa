@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdSecurity, MdSettings, MdHistory, MdNotifications, 
@@ -156,6 +157,7 @@ function SectionBadge({ icon: Icon, label, count, color, C }) {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -359,12 +361,12 @@ export default function SettingsPage() {
 
   // ── Tab definitions ──────────────────────────────────────────────────────────
   const tabs = [
-    { id: 'security', label: 'Credentials & Keys', icon: MdSecurity },
-    { id: 'loginHistory', label: 'Login History', icon: MdHistory },
-    { id: 'devices', label: 'Device Management', icon: MdDevices },
-    { id: 'sessions', label: 'Sessions', icon: MdVpnLock },
-    { id: 'twoFa', label: 'Two-Factor Auth', icon: MdShield },
-    { id: 'preferences', label: 'Preferences', icon: MdSettings },
+    { id: 'security', label: t('settings.credentialsKeys', 'Credentials & Keys'), icon: MdSecurity },
+    { id: 'loginHistory', label: t('settings.loginHistory', 'Login History'), icon: MdHistory },
+    { id: 'devices', label: t('settings.deviceManagement', 'Device Management'), icon: MdDevices },
+    { id: 'sessions', label: t('settings.sessions', 'Sessions'), icon: MdVpnLock },
+    { id: 'twoFa', label: t('settings.twoFa', 'Two-Factor Auth'), icon: MdShield },
+    { id: 'preferences', label: t('settings.preferences', 'Preferences'), icon: MdSettings },
   ];
 
   const metaRow = {
@@ -381,8 +383,8 @@ export default function SettingsPage() {
         display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px'
       }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>Settings & Security Suite</h2>
-          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>Manage primary credentials, phone/email updates, two-factor auth, devices & active sessions.</p>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: 0 }}>{t('settings.title', 'Settings & Security Suite')}</h2>
+          <p style={{ fontSize: '14px', color: C.textMid, margin: '4px 0 0' }}>{t('settings.subtitle', 'Manage primary credentials, phone/email updates, two-factor auth, devices & active sessions.')}</p>
         </div>
         
         {/* Developer Bypass Toggle */}

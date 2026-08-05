@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -133,7 +134,9 @@ const ServiceCard = ({ service, onClick, C, isDark }) => {
       }}>
         <Icon />
       </span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{service.label}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {t('quickAccess.' + (service.translationKey || service.id.replace(/-/g, '')), service.label)}
+      </span>
     </motion.button>
   );
 };
@@ -158,7 +161,7 @@ const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
         <h3 style={{
           fontSize: '15px', fontWeight: 700,
           color: C.text || category.color, margin: 0,
-        }}>{category.name}</h3>
+        }}>{t('quickAccess.' + category.id, category.name)}</h3>
       </div>
 
       <div style={{
@@ -218,7 +221,7 @@ const ServiceCardMobile = ({ service, onClick, C }) => {
           fontSize: '14px',
           fontWeight: 600,
           color: C.text || '#111827',
-        }}>{service.label}</span>
+        }}>{t('quickAccess.' + (service.translationKey || service.id.replace(/-/g, '')), service.label)}</span>
       </div>
       <FaChevronRight style={{ fontSize: '11px', color: C.textLight || '#94A3B8' }} />
     </motion.button>
@@ -275,7 +278,7 @@ const CategorySectionMobile = ({ category, services, onServiceClick, isExpanded,
             fontSize: '15px',
             fontWeight: 700,
             color: C.text || '#111827',
-          }}>{category.name}</span>
+          }}>{t('quickAccess.' + category.id, category.name)}</span>
         </div>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -347,6 +350,7 @@ const SkeletonGrid = ({ C }) => (
 
 /* ── Main Export component ───────────────────────────────────────── */
 export default function QuickAccessSection() {
+  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
   const { activeBanks } = useActiveBanks();
@@ -429,11 +433,11 @@ export default function QuickAccessSection() {
         <div>
           <h3 style={{
             fontSize: '18px', fontWeight: 800, color: C.primary || '#4338CA', margin: 0,
-          }}>Quick Access</h3>
+          }}>{t('quickAccess.title', 'Quick Access')}</h3>
           <p style={{
             fontSize: '13px', color: C.textLight || '#6B7280', margin: '4px 0 0',
             fontWeight: 500,
-          }}>Access all GharKaPaisa services from one place</p>
+          }}>{t('quickAccess.subtitle', 'Access all GharKaPaisa services from one place')}</p>
         </div>
       </div>
 

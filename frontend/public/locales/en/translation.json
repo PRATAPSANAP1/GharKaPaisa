@@ -43,7 +43,62 @@
       "myWallet": "My Wallet",
       "training": "Training",
       "marketingTools": "Marketing Tools"
-    }
+    },
+    "categoryCreditCards": "Credit Cards",
+    "categoryCreditCardsSub": "Best offers for you",
+    "categoryLoans": "Loans",
+    "categoryLoansSub": "Personal & Business loans",
+    "categoryInsurance": "Insurance",
+    "categoryInsuranceSub": "Secure your future",
+    "categoryRecharge": "Recharge & Bill",
+    "categoryRechargeSub": "All in one payments",
+    "totalTeams": "Total Teams",
+    "membersThisMonth": "+2 members this month",
+    "todaysEarning": "Today's Earning",
+    "updatedToday": "Updated today",
+    "inactiveTeam": "Inactive Team",
+    "actionRequired": "Action required",
+    "referAndEarnTitle": "Refer & Earn More",
+    "referAndEarnDesc": "Refer your friends and earn exciting rewards and bonuses.",
+    "referNow": "Refer Now"
+  },
+  "quickActions": {
+    "applyProduct": "Apply Product",
+    "applyDesc": "Submit a new product lead",
+    "addCustomer": "Add Customer",
+    "addCustomerDesc": "Register new client profile",
+    "invitePartner": "Invite Partner",
+    "inviteDesc": "Grow your network and overrides"
+  },
+  "categoryOverview": {
+    "creditCardsCatalog": "Credit Cards Catalog",
+    "customerManagement": "Customer Management",
+    "applicationPipeline": "Application Pipeline",
+    "documentVault": "Document Vault",
+    "performanceReports": "Performance Reports",
+    "commissionWallet": "Commission & Wallet",
+    "partnerSupport": "Partner Support",
+    "loansDashboard": "Loans Dashboard",
+    "insuranceDashboard": "Insurance Dashboard",
+    "creditCardDashboard": "Credit Card Dashboard",
+    "searchBanks": "Search banks...",
+    "searchProducts": "Search product...",
+    "allBanks": "All Banks",
+    "privateBanks": "Private Banks",
+    "psuBanks": "PSU Banks",
+    "sortBy": "Sort By",
+    "mostCardVariants": "Most Card Variants",
+    "nameAsc": "Name A-Z",
+    "nameDesc": "Name Z-A",
+    "matchingProductsTitle": "Matching Credit Cards & Products ({{count}})",
+    "viewAllInCatalog": "View All in Cards Catalog",
+    "earnAmount": "Earn ₹{{amount}}",
+    "bestRate": "Best Rate",
+    "viewAndApply": "View & Apply",
+    "loadingBanks": "Loading banks from database...",
+    "noBanksFound": "No banks or products found matching \"{{query}}\"",
+    "cardVariants": "Card Variants",
+    "exploreCards": "Explore Cards"
   },
   "welcome": "Welcome to GharKaPaisa",
   "tagline": "Your trusted platform for home loans",
@@ -713,16 +768,7 @@
     "recordVideoTitle": "Record Verification Video",
     "readStatementAloud": "Please read this statement aloud:"
   },
-  "status": {
-    "active": "Active",
-    "pending": "Pending",
-    "rejected": "Rejected",
-    "inactive": "Inactive",
-    "suspended": "Suspended",
-    "blocked": "Blocked",
-    "approved": "Approved",
-    "underReview": "Under Review"
-  },
+
   "common": {
     "loading": "Loading...",
     "save": "Save",
@@ -992,6 +1038,8 @@
     "resetDefaults": "Reset to Defaults"
   },
   "quickAccess": {
+    "title": "Quick Access",
+    "subtitle": "Access all GharKaPaisa services from one place",
     "recharge": "Recharge",
     "toMobile": "To Mobile",
     "loansRepay": "Loans Repay",
@@ -1018,7 +1066,12 @@
     "insurance": "Insurance",
     "accountsInvestments": "Accounts & Investments",
     "otherServices": "Other Services",
-    "travelBookings": "Travel & Bookings"
+    "travelBookings": "Travel & Bookings",
+    "money": "Recharge & Bills",
+    "banks": "Popular Credit Card Banks",
+    "invest": "Accounts & Investments",
+    "other": "Other Services",
+    "travel": "Travel & Bookings"
   },
   "changePassword": {
     "title": "Change Password",

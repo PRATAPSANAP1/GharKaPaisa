@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
@@ -6,6 +7,7 @@ import { getMe } from '../../../services/auth.api';
 import StyledDashboard from './PartnerDashboardComponent';
 
 export default function PartnerDashboard() {
+  const { t } = useTranslation();
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
   const profile = usePartnerStore((state) => state.profile);
   const { C } = useTheme();
@@ -41,7 +43,7 @@ export default function PartnerDashboard() {
           animation: "spin 0.8s linear infinite",
           display: "inline-block"
         }} />
-        <div style={{ fontSize: "14px", color: C.textMid, fontWeight: 600 }}>Loading profile...</div>
+        <div style={{ fontSize: "14px", color: C.textMid, fontWeight: 600 }}>{t('common.loading', 'Loading profile...')}</div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );

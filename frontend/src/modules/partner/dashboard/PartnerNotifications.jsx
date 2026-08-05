@@ -192,7 +192,7 @@ export default function PartnerNotifications() {
               </span>
             )}
           </h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Real-time SSE event bus streaming, partner activity timeline & notification settings.</p>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>{t('notifications.subtitle', 'Real-time SSE event bus streaming, partner activity timeline & notification settings.')}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -200,7 +200,7 @@ export default function PartnerNotifications() {
             onClick={handleMarkAllRead}
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
-            <MdCheckCircle size={16} /> Mark All as Read
+            <MdCheckCircle size={16} /> {t('notifications.markAllRead', 'Mark All as Read')}
           </button>
         </div>
       </div>
@@ -208,9 +208,9 @@ export default function PartnerNotifications() {
       {/* Main Tabs */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, paddingBottom: '2px' }}>
         {[
-          { id: 'notifications', label: 'Notifications Stream', icon: MdNotifications },
-          { id: 'activity', label: 'Activity Timeline', icon: MdTimeline },
-          { id: 'preferences', label: 'Notification Settings', icon: MdSettings },
+          { id: 'notifications', label: t('notifications.streamTab', 'Notifications Stream'), icon: MdNotifications },
+          { id: 'activity', label: t('notifications.activityTab', 'Activity Timeline'), icon: MdTimeline },
+          { id: 'preferences', label: t('notifications.settingsTab', 'Notification Settings'), icon: MdSettings },
         ].map(t => {
           const Icon = t.icon;
           const active = activeViewTab === t.id;
@@ -269,9 +269,9 @@ export default function PartnerNotifications() {
           {/* Notification List Stream */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>Loading notifications...</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('common.loading', 'Loading notifications...')}</div>
             ) : notifications.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No notifications match criteria.</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('notifications.noNotifications', 'No notifications match criteria.')}</div>
             ) : (
               notifications.map((n) => (
                 <div
@@ -314,7 +314,7 @@ export default function PartnerNotifications() {
                       onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
                       style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderRadius: '6px' }}
                     >
-                      Mark Read
+                      {t('notifications.markRead', 'Mark Read')}
                     </button>
                   )}
                 </div>
@@ -328,7 +328,7 @@ export default function PartnerNotifications() {
       {activeViewTab === 'activity' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {activityLogs.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No activity timeline logs recorded yet.</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('notifications.noActivityLogs', 'No activity timeline logs recorded yet.')}</div>
           ) : (
             activityLogs.map((act) => (
               <div key={act.id} style={{ ...S.card, padding: '16px', display: 'flex', gap: '14px', alignItems: 'center' }}>
@@ -368,7 +368,7 @@ export default function PartnerNotifications() {
           ))}
 
           <button type="submit" disabled={savingPrefs} style={{ ...S.btn('primary'), alignSelf: 'flex-start', padding: '10px 20px', marginTop: '10px' }}>
-            {savingPrefs ? 'Saving Settings...' : 'Save Preferences'}
+            {savingPrefs ? t('common.saving', 'Saving Settings...') : t('common.savePreferences', 'Save Preferences')}
           </button>
         </form>
       )}

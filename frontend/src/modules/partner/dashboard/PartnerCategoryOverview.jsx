@@ -109,15 +109,15 @@ const insuranceRoleCards = [
   { title: "General Insurance", sub: "Insurance Type", count: "8,900", availableCards: "15 Motor & Asset Plans", slug: "general-insurance" }
 ];
 
-const SUB_MODULE_TABS = [
-  { id: 'dashboard', label: 'Dashboard', icon: MdDashboard },
-  { id: 'cards', label: 'Credit Cards', icon: MdStorefront },
-  { id: 'customers', label: 'Customers', icon: MdPeople },
-  { id: 'applications', label: 'Applications', icon: MdLeaderboard },
-  { id: 'documents', label: 'Documents', icon: MdFolder },
-  { id: 'reports', label: 'Reports', icon: MdBarChart },
-  { id: 'commission', label: 'Commission', icon: MdAccountBalanceWallet },
-  { id: 'support', label: 'Support', icon: MdSupportAgent },
+const getSubModuleTabs = (t) => [
+  { id: 'dashboard', label: t('partnerLayout.dashboard', 'Dashboard'), icon: MdDashboard },
+  { id: 'cards', label: t('sections.popularCards', 'Credit Cards'), icon: MdStorefront },
+  { id: 'customers', label: t('partnerLayout.customers', 'Customers'), icon: MdPeople },
+  { id: 'applications', label: t('partnerLayout.applications', 'Applications'), icon: MdLeaderboard },
+  { id: 'documents', label: t('partnerLayout.vault', 'Documents'), icon: MdFolder },
+  { id: 'reports', label: t('partnerLayout.reports', 'Reports'), icon: MdBarChart },
+  { id: 'commission', label: t('partnerLayout.wallet', 'Commission'), icon: MdAccountBalanceWallet },
+  { id: 'support', label: t('partnerLayout.support', 'Support'), icon: MdSupportAgent },
 ];
 
 export default function PartnerCategoryOverview({ defaultCategory = 'credit_card' }) {
@@ -322,19 +322,19 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   // Compute dynamic header title based on active sub-module tab
   const headerTitle = useMemo(() => {
-    if (activeTab === 'cards' || activeTab === 'products') return 'Credit Cards Catalog';
-    if (activeTab === 'customers') return 'Customer Management';
-    if (activeTab === 'applications') return 'Application Pipeline';
-    if (activeTab === 'documents') return 'Document Vault';
-    if (activeTab === 'reports') return 'Performance Reports';
-    if (activeTab === 'commission') return 'Commission & Wallet';
-    if (activeTab === 'support') return 'Partner Support';
+    if (activeTab === 'cards' || activeTab === 'products') return t('categoryOverview.creditCardsCatalog', 'Credit Cards Catalog');
+    if (activeTab === 'customers') return t('categoryOverview.customerManagement', 'Customer Management');
+    if (activeTab === 'applications') return t('categoryOverview.applicationPipeline', 'Application Pipeline');
+    if (activeTab === 'documents') return t('categoryOverview.documentVault', 'Document Vault');
+    if (activeTab === 'reports') return t('categoryOverview.performanceReports', 'Performance Reports');
+    if (activeTab === 'commission') return t('categoryOverview.commissionWallet', 'Commission & Wallet');
+    if (activeTab === 'support') return t('categoryOverview.partnerSupport', 'Partner Support');
 
     // Default: Dashboard tab
-    if (activeCategory === 'loans') return 'Loans Dashboard';
-    if (activeCategory === 'insurance') return 'Insurance Dashboard';
-    return 'Credit Card Dashboard';
-  }, [activeTab, activeCategory]);
+    if (activeCategory === 'loans') return t('categoryOverview.loansDashboard', 'Loans Dashboard');
+    if (activeCategory === 'insurance') return t('categoryOverview.insuranceDashboard', 'Insurance Dashboard');
+    return t('categoryOverview.creditCardDashboard', 'Credit Card Dashboard');
+  }, [activeTab, activeCategory, t]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
@@ -352,7 +352,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         WebkitOverflowScrolling: 'touch',
         boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        {SUB_MODULE_TABS.map((tItem) => {
+        {getSubModuleTabs(t).map((tItem) => {
           const Icon = tItem.icon;
           const isActive = activeTab === tItem.id;
 
@@ -428,7 +428,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               <MdSearch size={20} color={isDark ? '#94A3B8' : '#64748B'} />
               <input
                 type="text"
-                placeholder={activeCategory === 'credit_card' ? "Search banks..." : "Search product..."}
+                placeholder={activeCategory === 'credit_card' ? t('categoryOverview.searchBanks', 'Search banks...') : t('categoryOverview.searchProducts', 'Search product...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -462,9 +462,9 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
                   }}
                 >
-                  <option value="all">All Banks</option>
-                  <option value="private">Private Banks</option>
-                  <option value="psu">PSU Banks</option>
+                  <option value="all">{t('categoryOverview.allBanks', 'All Banks')}</option>
+                  <option value="private">{t('categoryOverview.privateBanks', 'Private Banks')}</option>
+                  <option value="psu">{t('categoryOverview.psuBanks', 'PSU Banks')}</option>
                 </select>
 
                 {/* Sort By */}
@@ -484,10 +484,10 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
                   }}
                 >
-                  <option value="default">Sort By</option>
-                  <option value="most">Most Card Variants</option>
-                  <option value="name-asc">Name A-Z</option>
-                  <option value="name-desc">Name Z-A</option>
+                  <option value="default">{t('categoryOverview.sortBy', 'Sort By')}</option>
+                  <option value="most">{t('categoryOverview.mostCardVariants', 'Most Card Variants')}</option>
+                  <option value="name-asc">{t('categoryOverview.nameAsc', 'Name A-Z')}</option>
+                  <option value="name-desc">{t('categoryOverview.nameDesc', 'Name Z-A')}</option>
                 </select>
               </>
             )}
@@ -506,7 +506,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
               <div style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
-                    Matching Credit Cards & Products ({matchingProducts.length})
+                    {t('categoryOverview.matchingProductsTitle', 'Matching Credit Cards & Products ({{count}})', { count: matchingProducts.length })}
                   </h3>
                   <button
                     onClick={() => handleTabChange('cards')}
@@ -515,7 +515,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                       fontSize: '13.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
                     }}
                   >
-                    View All in Cards Catalog <MdArrowForward size={16} />
+                    {t('categoryOverview.viewAllInCatalog', 'View All in Cards Catalog')} <MdArrowForward size={16} />
                   </button>
                 </div>
 
@@ -569,10 +569,10 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
                           <span style={{ fontSize: '13px', fontWeight: 800, color: C.green }}>
-                            {payoutVal > 0 ? `Earn ₹${payoutVal.toLocaleString('en-IN')}` : 'Best Rate'}
+                            {payoutVal > 0 ? t('categoryOverview.earnAmount', 'Earn ₹{{amount}}', { amount: payoutVal.toLocaleString('en-IN') }) : t('categoryOverview.bestRate', 'Best Rate')}
                           </span>
                           <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.primary, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            View & Apply <MdArrowForward size={14} />
+                            {t('categoryOverview.viewAndApply', 'View & Apply')} <MdArrowForward size={14} />
                           </span>
                         </div>
                       </div>
@@ -594,7 +594,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     color: C.textMid || '#64748B',
                     fontWeight: 600
                   }}>
-                    Loading banks from database...
+                    {t('categoryOverview.loadingBanks', 'Loading banks from database...')}
                   </div>
                 ) : filteredBanks.length === 0 && matchingProducts.length === 0 ? (
                   <div style={{
@@ -605,7 +605,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                     border: `1px solid ${C.border}`,
                     color: C.textMid || '#64748B'
                   }}>
-                    No banks or products found matching "{searchQuery}"
+                    {t('categoryOverview.noBanksFound', 'No banks or products found matching "{{query}}"', { query: searchQuery })}
                   </div>
                 ) : (
                   <div style={{
@@ -721,7 +721,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                               marginTop: '4px',
                               display: 'block'
                             }}>
-                              Card Variants
+                              {t('categoryOverview.cardVariants', 'Card Variants')}
                             </span>
                           </div>
 
@@ -741,7 +741,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                               alignItems: 'center',
                               gap: '4px'
                             }}>
-                              Explore Cards <MdArrowForward size={16} />
+                              {t('categoryOverview.exploreCards', 'Explore Cards')} <MdArrowForward size={16} />
                             </span>
                           </div>
 

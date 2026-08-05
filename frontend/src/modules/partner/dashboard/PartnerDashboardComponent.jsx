@@ -675,8 +675,8 @@ export default function PartnerDashboard({ partner }) {
           {[
             {
               id: 'credit-cards',
-              title: 'Credit Cards',
-              subtitle: 'Best offers for you',
+              title: t('dashboard.categoryCreditCards', 'Credit Cards'),
+              subtitle: t('dashboard.categoryCreditCardsSub', 'Best offers for you'),
               icon: MdCreditCard,
               route: '/partner/credit-cards',
               lightBg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
@@ -689,8 +689,8 @@ export default function PartnerDashboard({ partner }) {
             },
             {
               id: 'loans',
-              title: 'Loans',
-              subtitle: 'Personal & Business loans',
+              title: t('dashboard.categoryLoans', 'Loans'),
+              subtitle: t('dashboard.categoryLoansSub', 'Personal & Business loans'),
               icon: MdBusinessCenter,
               route: '/partner/loans',
               lightBg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
@@ -703,8 +703,8 @@ export default function PartnerDashboard({ partner }) {
             },
             {
               id: 'insurance',
-              title: 'Insurance',
-              subtitle: 'Secure your future',
+              title: t('dashboard.categoryInsurance', 'Insurance'),
+              subtitle: t('dashboard.categoryInsuranceSub', 'Secure your future'),
               icon: MdShield,
               route: '/partner/insurance',
               lightBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
@@ -717,8 +717,8 @@ export default function PartnerDashboard({ partner }) {
             },
             {
               id: 'recharge',
-              title: 'Recharge & Bill',
-              subtitle: 'All in one payments',
+              title: t('dashboard.categoryRecharge', 'Recharge & Bill'),
+              subtitle: t('dashboard.categoryRechargeSub', 'All in one payments'),
               icon: MdReceiptLong,
               route: '/cms/recharge',
               lightBg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
@@ -859,12 +859,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Total Teams</span>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalTeams', 'Total Teams')}</span>
             <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
               {teamDashboard?.team_members?.length || 15}
             </div>
             <span style={{ fontSize: "11px", color: C.green, fontWeight: 700, marginTop: "4px", display: "block" }}>
-              +2 members this month
+              {t('dashboard.membersThisMonth', '+2 members this month')}
             </span>
           </div>
           <div className="kpi-card-icon" style={{
@@ -888,12 +888,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Total Earnings</span>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
             <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
               {totalEarned}
             </div>
             <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              Calculated live
+              {t('dashboard.calculatedLive', 'Calculated live')}
             </span>
           </div>
           <div className="kpi-card-icon" style={{
@@ -917,12 +917,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Today's Earning</span>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.todaysEarning', "Today's Earning")}</span>
             <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
               ₹0
             </div>
             <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              Updated today
+              {t('dashboard.updatedToday', 'Updated today')}
             </span>
           </div>
           <div className="kpi-card-icon" style={{
@@ -946,12 +946,12 @@ export default function PartnerDashboard({ partner }) {
           tabIndex={0}
         >
           <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>Inactive Team</span>
+            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.inactiveTeam', 'Inactive Team')}</span>
             <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.red, marginTop: "6px" }}>
               {teamDashboard?.inactive_count || 2}
             </div>
             <span style={{ fontSize: "11px", color: C.red, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              Action required
+              {t('dashboard.actionRequired', 'Action required')}
             </span>
           </div>
           <div className="kpi-card-icon" style={{
@@ -1006,7 +1006,7 @@ export default function PartnerDashboard({ partner }) {
               margin: 0,
               lineHeight: 1.2
             }}>
-              Refer & Earn More
+              {t('dashboard.referAndEarnTitle', 'Refer & Earn More')}
             </h4>
             <p style={{
               fontSize: isMobile ? "11px" : "12px",
@@ -1017,7 +1017,7 @@ export default function PartnerDashboard({ partner }) {
               overflow: "hidden",
               textOverflow: "ellipsis"
             }}>
-              Refer your friends and earn exciting rewards and bonuses.
+              {t('dashboard.referAndEarnDesc', 'Refer your friends and earn exciting rewards and bonuses.')}
             </p>
           </div>
         </div>
@@ -1086,7 +1086,7 @@ export default function PartnerDashboard({ partner }) {
             }}
           >
             <FaWhatsapp size={14} />
-            <span>{referralCopied ? "✓ Copied!" : "Refer Now"}</span>
+            <span>{referralCopied ? t('common.copied', '✓ Copied!') : t('dashboard.referNow', 'Refer Now')}</span>
           </button>
         </div>
       </div>

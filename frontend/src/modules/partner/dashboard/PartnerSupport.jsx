@@ -189,7 +189,7 @@ export default function PartnerSupport() {
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={18} />
             <input 
               type="text" 
-              placeholder="Search ticket ID or subject..." 
+              placeholder={t("support.searchPlaceholder", "Search ticket ID or subject...")} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ ...S.input, paddingLeft: '36px', paddingTop: '10px', paddingBottom: '10px' }}
@@ -222,12 +222,12 @@ export default function PartnerSupport() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
-              Loading tickets...
+              {t("common.loading", "Loading tickets...")}
             </div>
           ) : filteredTickets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 16px', color: C.textLight }}>
               <MdOutlineForum size={36} style={{ color: C.border, marginBottom: '8px' }} />
-              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>No tickets found.</p>
+              <p style={{ fontWeight: 600, fontSize: '14px', margin: 0 }}>{t("support.noTickets", "No tickets found.")}</p>
             </div>
           ) : (
             filteredTickets.map(tkt => {
@@ -352,7 +352,7 @@ export default function PartnerSupport() {
                 <form onSubmit={handleSendReply} style={{ position: 'relative' }}>
                   <textarea 
                     rows="2"
-                    placeholder="Type your reply here..."
+                    placeholder={t("support.typeReply", "Type your reply here...")}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     style={{ ...S.input, paddingRight: '52px', resize: 'none', borderRadius: '12px' }}
@@ -377,7 +377,7 @@ export default function PartnerSupport() {
                 padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bgSecondary,
                 textAlign: 'center', fontSize: '13px', fontWeight: 700, color: C.textLight, flexShrink: 0
               }}>
-                This ticket has been resolved and is closed to new replies.
+                {t("support.ticketClosed", "This ticket has been resolved and is closed to new replies.")}
               </div>
             )}
           </>
@@ -393,9 +393,9 @@ export default function PartnerSupport() {
             }}>
               <MdSupportAgent size={36} />
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>How can we help?</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px' }}>{t("support.howCanWeHelp", "How can we help?")}</h2>
             <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '340px', margin: 0 }}>
-              Select a ticket from the left to view the conversation, or create a new ticket to get assistance from our team.
+              {t("support.selectTicketDesc", "Select a ticket from the left to view the conversation, or create a new ticket to get assistance from our team.")}
             </p>
           </div>
         )}
@@ -483,7 +483,7 @@ export default function PartnerSupport() {
                   ...S.btn('outline'), flex: 1, padding: '10px', fontSize: '14px', borderRadius: '10px'
                 }}
               >
-                Cancel
+                {t("common.cancel", "Cancel")}
               </button>
               <button 
                 type="submit"
@@ -491,7 +491,7 @@ export default function PartnerSupport() {
                   ...S.btn('primary'), flex: 2, padding: '10px', fontSize: '14px', border: 'none', borderRadius: '10px'
                 }}
               >
-                Submit Ticket
+                {t("support.submitTicket", "Submit Ticket")}
               </button>
             </div>
           </form>
