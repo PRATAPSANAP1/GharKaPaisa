@@ -136,9 +136,10 @@ export default function PartnerTeam() {
   const loadInvitations = async () => {
     try {
       const res = await api.get('/partner/invitations');
-      if (res.data?.success) setInvitations(res.data.data);
+      if (res.data?.success) setInvitations(res.data.data || []);
     } catch (err) {
-      console.error('Failed to load invitations:', err);
+      console.warn('Invitations service unavailable or updating on server:', err.message);
+      setInvitations([]);
     }
   };
 
@@ -146,9 +147,10 @@ export default function PartnerTeam() {
   const loadCampaigns = async () => {
     try {
       const res = await api.get('/partner/referral-campaigns');
-      if (res.data?.success) setCampaigns(res.data.data);
+      if (res.data?.success) setCampaigns(res.data.data || []);
     } catch (err) {
-      console.error('Failed to load campaigns:', err);
+      console.warn('Campaigns service unavailable or updating on server:', err.message);
+      setCampaigns([]);
     }
   };
 
@@ -156,9 +158,10 @@ export default function PartnerTeam() {
   const loadTreeNodes = async (parentId = null) => {
     try {
       const res = await api.get('/partner/team-tree', { params: { parent_id: parentId } });
-      if (res.data?.success) setTreeNodes(res.data.data);
+      if (res.data?.success) setTreeNodes(res.data.data || []);
     } catch (err) {
-      console.error('Failed to load tree hierarchy:', err);
+      console.warn('Tree hierarchy service unavailable:', err.message);
+      setTreeNodes([]);
     }
   };
 
@@ -186,7 +189,7 @@ export default function PartnerTeam() {
         }
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update referral message');
+      alert(err.response?.status === 404 ? 'Referral message service is updating on server.' : (err.response?.data?.message || 'Failed to update referral message'));
     } finally {
       setSavingMsg(false);
     }
@@ -209,7 +212,7 @@ export default function PartnerTeam() {
         loadInvitations();
       }
     } catch (err) {
-      setInvMsg(err.response?.data?.message || 'Failed to send invitation');
+      setInvMsg(err.response?.status === 404 ? 'Invitation service is updating on the server. Please pull/restart the backend server.' : (err.response?.data?.message || 'Failed to send invitation'));
     } finally {
       setInvSubmitting(false);
     }
@@ -224,7 +227,7 @@ export default function PartnerTeam() {
         loadInvitations();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to resend invitation');
+      alert(err.response?.status === 404 ? 'Invitation service is updating on the server.' : (err.response?.data?.message || 'Failed to resend invitation'));
     }
   };
 
@@ -241,7 +244,7 @@ export default function PartnerTeam() {
         loadCampaigns();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create campaign');
+      alert(err.response?.status === 404 ? 'Campaign service is updating on the server.' : (err.response?.data?.message || 'Failed to create campaign'));
     } finally {
       setCampSubmitting(false);
     }
