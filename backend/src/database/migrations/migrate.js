@@ -2716,6 +2716,17 @@ const migrate = async () => {
         status VARCHAR(20) DEFAULT 'sent'
       );
       CREATE INDEX IF NOT EXISTS idx_inv_history_partner ON invitation_history(partner_id);
+
+      ALTER TABLE invitation_history
+        ADD COLUMN IF NOT EXISTS invite_type VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS recipient_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS recipient_email VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS recipient_mobile VARCHAR(15),
+        ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS registered_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS expired_at TIMESTAMPTZ;
     `);
 
     // 4. Referral Campaigns Table

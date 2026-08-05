@@ -1141,41 +1141,238 @@ const getReferralInfo = async (req, res, next) => {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    if (req.kycUnapproved) {
-      return success(res, {
-        referral_code: '',
-        referral_link: '',
-        total_invites: 0,
-        total_registered: 0
-      });
-    }
-
+    const { rows: [partner] } = await query(`
+      SELECT user_id, partner_code, referral_message FROM partner_profiles WHERE id = $1
+    `, [partnerId]);
+    
     let { rows: [referral] } = await query(`
       SELECT * FROM partner_referrals WHERE partner_id = $1
     `, [partnerId]);
 
-    const { rows: [partner] } = await query(`
-      SELECT user_id, partner_code FROM partner_profiles WHERE id = $1
-    `, [partnerId]);
-    
-    const userId = partner?.user_id || partnerId;
-    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${userId}`;
+    const code = partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
+    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${partner?.partner_code || partnerId}`;
 
     if (!referral) {
-      const code = partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
-      
       const { rows: [newRef] } = await query(`
         INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
         VALUES ($1, $2, $3)
         ON CONFLICT (partner_id) DO UPDATE SET referral_code = EXCLUDED.referral_code RETURNING *
       `, [partnerId, code, codeReferralLink]);
-      referral = newRef;
+      referral = newRef || {};
     }
 
-    // Always overwrite referralLink response to use userId
     referral.referral_link = codeReferralLink;
+    referral.referral_message = partner?.referral_message || 'Join my team on GharKaPaisa and earn highest financial commission payouts!';
+
+    // Compute detailed conversion funnel analytics for this partner
+    const { rows: [clicksRow] } = await query(`
+      SELECT COUNT(*)::int as count FROM referral_clicks WHERE partner_id = $1
+    `, [partnerId]);
+    const clicks = clicksRow?.count || 0;
+
+    const { rows: [regsRow] } = await query(`
+      SELECT COUNT(*)::int as count FROM partner_team_relationships WHERE parent_partner_id = $1 AND level = 1
+    `, [partnerId]);
+    const registrations = regsRow?.count || 0;
+
+    const { rows: [kycRow] } = await query(`
+      SELECT COUNT(*)::int as count FROM partner_team_relationships r
+      JOIN partner_profiles ap ON ap.id = r.child_partner_id
+      WHERE r.parent_partner_id = $1 AND r.level = 1 AND ap.kyc_status = 'approved'
+    `, [partnerId]);
+    const kyc_approved = kycRow?.count || 0;
+
+    const { rows: [activeRow] } = await query(`
+      SELECT COUNT(*)::int as count FROM partner_team_relationships r
+      JOIN partner_profiles ap ON ap.id = r.child_partner_id
+      JOIN users u ON u.id = ap.user_id
+      WHERE r.parent_partner_id = $1 AND r.level = 1 AND u.status = 'active'
+    `, [partnerId]);
+    const active_partners = activeRow?.count || 0;
+
+    const { rows: [appsRow] } = await query(`
+      SELECT COUNT(a.id)::int as count,
+             COUNT(CASE WHEN a.status = 'approved' THEN 1 END)::int as approved_count
+      FROM partner_team_relationships r
+      JOIN applications a ON a.partner_id = r.child_partner_id
+      WHERE r.parent_parent_id = $1
+    `, [partnerId]);
+    const applications = appsRow?.count || 0;
+    const approved_applications = appsRow?.approved_count || 0;
+
+    const { rows: [commRow] } = await query(`
+      SELECT COALESCE(SUM(wt.amount), 0)::float as total
+      FROM partner_wallets w
+      JOIN wallet_transactions wt ON wt.wallet_id = w.id
+      WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
+    `, [partnerId]);
+    const commission_earned = commRow?.total || 0;
+
+    referral.funnel = {
+      clicks,
+      registrations,
+      kyc_approved,
+      active_partners,
+      applications,
+      approved_applications,
+      commission_earned
+    };
 
     return success(res, referral);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateReferralMessage = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { referral_message } = req.body;
+    if (!referral_message || typeof referral_message !== 'string') {
+      return error(res, 'Custom referral message is required', 400);
+    }
+
+    await query(`
+      UPDATE partner_profiles SET referral_message = $1, updated_at = NOW() WHERE id = $2
+    `, [referral_message.trim(), partnerId]);
+
+    return success(res, { referral_message: referral_message.trim() }, 'Referral message updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createInvitation = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { recipient_name, recipient_email, recipient_mobile, invite_type } = req.body;
+    if (!recipient_name || (!recipient_email && !recipient_mobile)) {
+      return error(res, 'Recipient name and at least an email or mobile number are required', 400);
+    }
+
+    const { rows: [partner] } = await query(`
+      SELECT partner_code FROM partner_profiles WHERE id = $1
+    `, [partnerId]);
+
+    const code = partner?.partner_code || '';
+    const expiredAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const { rows: [invitation] } = await query(`
+      INSERT INTO invitation_history (
+        partner_id, invite_type, recipient_name, recipient_email, recipient_mobile,
+        referral_code, status, sent_at, expired_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', NOW(), $7)
+      RETURNING *
+    `, [
+      partnerId,
+      (invite_type || 'EMAIL').toUpperCase(),
+      recipient_name.trim(),
+      recipient_email ? recipient_email.trim().toLowerCase() : null,
+      recipient_mobile ? recipient_mobile.trim() : null,
+      code,
+      expiredAt
+    ]);
+
+    return created(res, invitation, 'Direct invitation sent successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getInvitationHistory = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows } = await query(`
+      SELECT * FROM invitation_history
+      WHERE partner_id = $1
+      ORDER BY sent_at DESC
+    `, [partnerId]);
+
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resendInvitation = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    const { id } = req.params;
+
+    const { rows: [inv] } = await query(`
+      SELECT * FROM invitation_history WHERE id = $1 AND partner_id = $2
+    `, [id, partnerId]);
+
+    if (!inv) return error(res, 'Invitation record not found', 404);
+
+    const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const { rows: [updated] } = await query(`
+      UPDATE invitation_history
+      SET sent_at = NOW(), expired_at = $1, status = 'PENDING'
+      WHERE id = $2
+      RETURNING *
+    `, [newExpiry, id]);
+
+    return success(res, updated, 'Invitation resent successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getReferralCampaigns = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { rows } = await query(`
+      SELECT * FROM referral_campaigns
+      WHERE partner_id = $1
+      ORDER BY created_at DESC
+    `, [partnerId]);
+
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createReferralCampaign = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+
+    const { campaign_name, platform, start_date, end_date, budget, target, bonus_type, bonus_amount } = req.body;
+    if (!campaign_name) return error(res, 'Campaign name is required', 400);
+
+    const campaignCode = 'CAMP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const { rows: [campaign] } = await query(`
+      INSERT INTO referral_campaigns (
+        partner_id, campaign_name, campaign_code, platform, start_date, end_date,
+        budget, target, bonus_type, bonus_amount, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'ACTIVE', NOW())
+      RETURNING *
+    `, [
+      partnerId,
+      campaign_name.trim(),
+      campaignCode,
+      platform || 'WhatsApp',
+      start_date || new Date(),
+      end_date || null,
+      budget ? parseFloat(budget) : 0,
+      target ? parseInt(target) : 0,
+      bonus_type || 'FIXED',
+      bonus_amount ? parseFloat(bonus_amount) : 0
+    ]);
+
+    return created(res, campaign, 'Referral campaign created successfully');
   } catch (err) {
     next(err);
   }
@@ -1811,6 +2008,12 @@ module.exports = {
   getTeamDashboard,
   getTeamEarnings,
   getReferralInfo,
+  updateReferralMessage,
+  createInvitation,
+  getInvitationHistory,
+  resendInvitation,
+  getReferralCampaigns,
+  createReferralCampaign,
   changeParentPartner,
   deactivateTeam,
   getWholeNetwork,

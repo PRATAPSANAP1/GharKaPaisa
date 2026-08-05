@@ -39,6 +39,12 @@ router.post('/customers', requireApprovedPartner, partnerCtrl.createPartnerCusto
 router.get('/training', requirePartner, partnerCtrl.getTrainingModules);
 router.post('/training/:moduleId/complete', requirePartner, partnerCtrl.completeTrainingModule);
 router.get('/referral', requireApprovedPartner, partnerCtrl.getReferralInfo);
+router.put('/referral-message', requireApprovedPartner, partnerCtrl.updateReferralMessage);
+router.get('/invitations', requireApprovedPartner, partnerCtrl.getInvitationHistory);
+router.post('/invitations', requireApprovedPartner, partnerCtrl.createInvitation);
+router.post('/invitations/:id/resend', requireApprovedPartner, partnerCtrl.resendInvitation);
+router.get('/referral-campaigns', requireApprovedPartner, partnerCtrl.getReferralCampaigns);
+router.post('/referral-campaigns', requireApprovedPartner, partnerCtrl.createReferralCampaign);
 router.get('/team-tree', requireApprovedPartner, partnerCtrl.getTeamTree);
 router.get('/team-dashboard', requireApprovedPartner, partnerCtrl.getTeamDashboard);
 router.get('/team-earnings', requireApprovedPartner, partnerCtrl.getTeamEarnings);
