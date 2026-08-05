@@ -10,6 +10,7 @@ const kycUpload = upload.fields([
   { name: 'gst_cert', maxCount: 1 },
   { name: 'cancelled_cheque', maxCount: 1 },
   { name: 'video', maxCount: 1 },
+  { name: 'selfie', maxCount: 1 },
 ]);
 
 // Public route for tracking referral clicks

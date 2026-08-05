@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { MdWarning, MdArrowForward } from 'react-icons/md';
 import api from '../../../services/api';
 
 export default function PartnerActionableQueues({ onSelectCustomer, notifications = [], allLeads = [] }) {
+  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const [urgentQueries, setUrgentQueries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -109,11 +111,11 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
                 <MdWarning size={18} />
               </div>
               <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>
-                Urgent Bank Queries ({urgentQueries.length})
+                {t('actionableQueues.urgentBankQueries', 'Urgent Bank Queries')} ({urgentQueries.length})
               </h4>
             </div>
             <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '8px', background: '#FEE2E2', color: '#991B1B' }}>
-              Action Required
+              {t('actionableQueues.actionRequired', 'Action Required')}
             </span>
           </div>
 
@@ -145,7 +147,7 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
                     ⏱️ {item.slaRemaining}
                   </span>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                    Resolve <MdArrowForward size={14} />
+                    {t('actionableQueues.resolve', 'Resolve')} <MdArrowForward size={14} />
                   </span>
                 </div>
               </div>

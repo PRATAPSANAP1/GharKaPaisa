@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
@@ -120,6 +121,7 @@ const SUB_MODULE_TABS = [
 ];
 
 export default function PartnerCategoryOverview({ defaultCategory = 'credit_card' }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();

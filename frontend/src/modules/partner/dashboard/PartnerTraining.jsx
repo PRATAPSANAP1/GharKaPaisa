@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import {
   MdPlayCircleOutline, MdOutlineMenuBook, MdCheckCircle,
@@ -7,6 +8,7 @@ import {
 import api from '../../../services/api';
 
 export default function PartnerTraining() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
 
@@ -63,7 +65,7 @@ export default function PartnerTraining() {
   if (!activeModule) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 0', color: C.textLight, fontWeight: 500 }}>
-        No training modules available yet.
+        {t('training.noModulesAvailable', 'No training modules available yet.')}
       </div>
     );
   }
@@ -92,19 +94,19 @@ export default function PartnerTraining() {
           ) : activeModule.pdf_url ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#fff', zIndex: 5 }}>
               <MdOutlineMenuBook size={64} style={{ color: C.gold, marginBottom: '16px' }} />
-              <p style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600 }}>This training module is a Document study guide.</p>
+              <p style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600 }}>{t('training.docGuideNotice', 'This training module is a Document study guide.')}</p>
               <a 
                 href={activeModule.pdf_url} 
                 target="_blank" 
                 rel="noreferrer" 
                 style={{ ...S.btn('primary'), textDecoration: 'none', display: 'inline-block', padding: '10px 20px', borderRadius: '10px' }}
               >
-                Open Document Guide
+                {t('training.openDocGuide', 'Open Document Guide')}
               </a>
             </div>
           ) : (
             <div style={{ color: '#fff', textAlign: 'center' }}>
-              No media available for this module.
+              {t('training.noMediaAvailable', 'No media available for this module.')}
             </div>
           )}
 
@@ -130,7 +132,7 @@ export default function PartnerTraining() {
               <MdAccessTime size={18} /> {activeModule.duration}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: C.textMid, fontSize: '14px', fontWeight: 600 }}>
-              <MdStar size={18} style={{ color: '#F59E0B' }} /> 4.8 Rating
+              <MdStar size={18} style={{ color: '#F59E0B' }} /> 4.8 {t('training.rating', 'Rating')}
             </div>
             {activeModule.status === 'completed' && (
               <div style={{
@@ -138,16 +140,14 @@ export default function PartnerTraining() {
                 fontWeight: 700, marginLeft: 'auto', background: `${C.green}12`,
                 padding: '4px 10px', borderRadius: '8px', fontSize: '12px'
               }}>
-                <MdCheckCircle size={18} /> Completed
+                <MdCheckCircle size={18} /> {t('status.completed', 'Completed')}
               </div>
             )}
           </div>
 
-          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>About this module</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 10px' }}>{t('training.aboutModule', 'About this module')}</h3>
           <p style={{ fontSize: '14px', color: C.textMid, lineHeight: 1.6, margin: '0 0 24px' }}>
-            In this module, you will learn the essential skills required to maximize your earnings on GharKaPaisa. 
-            We cover practical strategies, real-world examples, and common pitfalls to avoid when pitching to customers. 
-            Make sure to take notes!
+            {t('training.aboutModuleDesc', 'In this module, you will learn the essential skills required to maximize your earnings on GharKaPaisa. We cover practical strategies, real-world examples, and common pitfalls to avoid when pitching to customers. Make sure to take notes!')}
           </p>
 
           {activeModule.status !== 'completed' && (
@@ -159,7 +159,7 @@ export default function PartnerTraining() {
                 opacity: completing ? 0.7 : 1
               }}
             >
-              {completing ? 'Updating...' : 'Mark as Completed'}
+              {completing ? t('training.updating', 'Updating...') : t('training.markCompleted', 'Mark as Completed')}
             </button>
           )}
         </div>
@@ -172,7 +172,7 @@ export default function PartnerTraining() {
         maxHeight: '600px'
       }}>
         <div style={{ padding: '20px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Training Modules</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>{t('dashboard.actions.training', 'Training Modules')}</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               flex: 1, height: '6px', background: C.border, borderRadius: '3px', overflow: 'hidden'
@@ -182,7 +182,7 @@ export default function PartnerTraining() {
                 width: modules.length ? `${(completedCount / modules.length) * 100}%` : '0%'
               }} />
             </div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{completedCount}/{modules.length} Completed</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{completedCount}/{modules.length} {t('status.completed', 'Completed')}</span>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export default function PartnerTraining() {
                   )}
                 </div>
                 <div>
-                  <p style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', margin: '0 0 2px' }}>Module {idx + 1}</p>
+                  <p style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', margin: '0 0 2px' }}>{t('training.modulePrefix', 'Module')} {idx + 1}</p>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 2px', color: isActive ? C.primary : C.text, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {mod.title}
                   </h4>

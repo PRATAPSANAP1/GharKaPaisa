@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { 
   MdClose, MdPerson, MdPhone, MdEmail, MdWork, MdAttachMoney, 
@@ -6,6 +7,7 @@ import {
 } from 'react-icons/md';
 
 export default function Customer360Drawer({ customer, onClose }) {
+  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'documents' | 'history' | 'communication'
 
@@ -54,10 +56,10 @@ export default function Customer360Drawer({ customer, onClose }) {
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                Customer 360° Profile
+                {t('customer360.title', 'Customer 360° Profile')}
               </span>
               <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
-                {customer.name || 'Customer Profile'}
+                {customer.name || t('customer360.defaultName', 'Customer Profile')}
               </h3>
             </div>
           </div>
@@ -77,21 +79,21 @@ export default function Customer360Drawer({ customer, onClose }) {
           borderBottom: `1px solid ${C.border}`, gap: '10px'
         }}>
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>MOBILE</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.mobile', 'MOBILE')}</span>
             <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
               {customer.phone || '+91 98765 43210'}
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>MONTHLY SALARY</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.monthlySalary', 'MONTHLY SALARY')}</span>
             <div style={{ fontSize: '13px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>
-              ₹{customer.income ? parseFloat(customer.income).toLocaleString('en-IN') : '45,000'}/mo
+              ₹{customer.income ? parseFloat(customer.income).toLocaleString('en-IN') : '45,000'}/{t('customer360.perMonth', 'mo')}
             </div>
           </div>
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>EST. PAYOUT</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.estPayout', 'EST. PAYOUT')}</span>
             <div style={{ fontSize: '13px', fontWeight: 900, color: C.primary, marginTop: '2px' }}>
-              ₹4,700 Total
+              ₹4,700 {t('customer360.total', 'Total')}
             </div>
           </div>
         </div>
@@ -102,9 +104,9 @@ export default function Customer360Drawer({ customer, onClose }) {
           padding: '0 24px', background: isDark ? '#0F172A' : '#F8FAFC', gap: '8px'
         }}>
           {[
-            { id: 'pipeline', label: 'Pipeline Apps', icon: MdAssignment },
-            { id: 'documents', label: 'Doc Vault', icon: MdFolder },
-            { id: 'communication', label: 'Contact Customer', icon: MdSend },
+            { id: 'pipeline', label: t('customer360.tabPipeline', 'Pipeline Apps'), icon: MdAssignment },
+            { id: 'documents', label: t('customer360.tabDocs', 'Doc Vault'), icon: MdFolder },
+            { id: 'communication', label: t('customer360.tabContact', 'Contact Customer'), icon: MdSend },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -135,7 +137,7 @@ export default function Customer360Drawer({ customer, onClose }) {
           {activeTab === 'pipeline' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>
-                Active Applications & Live Bank Pipeline
+                {t('customer360.activePipelineHeader', 'Active Applications & Live Bank Pipeline')}
               </h4>
 
               {mockApplications.map((app) => (
@@ -160,7 +162,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                       background: app.status === 'Approved' ? '#D1FAE5' : '#FEF3C7',
                       color: app.status === 'Approved' ? '#065F46' : '#92400E'
                     }}>
-                      {app.status}
+                      {app.status === 'Approved' ? t('status.approved', 'Approved') : t('status.underReview', 'Under Review')}
                     </span>
                   </div>
 
@@ -171,8 +173,8 @@ export default function Customer360Drawer({ customer, onClose }) {
                     background: isDark ? '#0F172A' : '#FFFFFF', border: `1px solid ${C.border}`,
                     fontSize: '12px', color: C.textMid
                   }}>
-                    <span>Stage: <strong>{app.stage}</strong></span>
-                    <span style={{ fontWeight: 800, color: '#10B981' }}>Payout: {app.payout}</span>
+                    <span>{t('customer360.stageLabel', 'Stage:')} <strong>{app.stage}</strong></span>
+                    <span style={{ fontWeight: 800, color: '#10B981' }}>{t('customer360.payoutLabel', 'Payout:')} {app.payout}</span>
                   </div>
                 </div>
               ))}
@@ -183,7 +185,7 @@ export default function Customer360Drawer({ customer, onClose }) {
           {activeTab === 'documents' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>
-                Verification Documents Checklist
+                {t('customer360.docsChecklistHeader', 'Verification Documents Checklist')}
               </h4>
 
               {mockDocuments.map((doc, idx) => (
@@ -204,7 +206,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                         {doc.name}
                       </h5>
                       <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600 }}>
-                        {doc.status === 'Verified' ? `Uploaded ${doc.uploadedDate}` : 'Action Required'}
+                        {doc.status === 'Verified' ? `${t('customer360.uploadedOn', 'Uploaded')} ${doc.uploadedDate}` : t('customer360.actionRequired', 'Action Required')}
                       </span>
                     </div>
                   </div>
@@ -215,7 +217,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                       background: C.primary, color: '#FFFFFF', fontWeight: 800, fontSize: '12px',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
                     }}>
-                      <MdUploadFile size={16} /> Upload
+                      <MdUploadFile size={16} /> {t('common.upload', 'Upload')}
                     </button>
                   )}
                 </div>
@@ -227,7 +229,7 @@ export default function Customer360Drawer({ customer, onClose }) {
           {activeTab === 'communication' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>
-                Instant Customer Engagement
+                {t('customer360.engagementHeader', 'Instant Customer Engagement')}
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
@@ -239,7 +241,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  <MdSend size={18} /> WhatsApp Message
+                  <MdSend size={18} /> {t('customer360.whatsappMsg', 'WhatsApp Message')}
                 </button>
 
                 <button
@@ -250,7 +252,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  <MdPhone size={18} /> Call Customer
+                  <MdPhone size={18} /> {t('customer360.callCustomer', 'Call Customer')}
                 </button>
               </div>
             </div>

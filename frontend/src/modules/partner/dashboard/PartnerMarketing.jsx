@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import { 
@@ -7,6 +8,7 @@ import {
 } from 'react-icons/md';
 
 export default function PartnerMarketing() {
+  const { t } = useTranslation();
   const { C } = useTheme();
   const S = makeS(C);
   
@@ -100,16 +102,16 @@ export default function PartnerMarketing() {
               <MdCampaign size={28} style={{ color: C.greenLight || C.teal }} />
             </div>
             <div>
-              <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>Marketing Center</h2>
+              <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>{t('dashboard.actions.marketingTools', 'Marketing Center')}</h2>
               <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: 0, maxWidth: '480px' }}>
-                Download official, high-converting promotional materials to share on WhatsApp, Instagram, and Facebook.
+                {t('marketing.headerSubtitle', 'Download official, high-converting promotional materials to share on WhatsApp, Instagram, and Facebook.')}
               </p>
             </div>
           </div>
           <button style={{
             ...S.btn('primary'), padding: '10px 20px', fontSize: '13px', border: 'none', borderRadius: '10px'
           }}>
-            Request Custom Banner
+            {t('marketing.requestCustomBanner', 'Request Custom Banner')}
           </button>
         </div>
       </div>
@@ -130,7 +132,7 @@ export default function PartnerMarketing() {
               ...(filter === cat ? {} : { border: `1px solid ${C.border}` })
             }}
           >
-            {cat === 'social_media' ? 'Social Media' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+            {cat === 'All' ? t('hdfc.filter.all', 'All') : cat === 'social_media' ? t('marketing.socialMedia', 'Social Media') : cat === 'banners' ? t('superAdminLayout.banners', 'Banners') : t('marketing.leaflets', 'Leaflets')}
           </button>
         ))}
       </div>
@@ -139,11 +141,11 @@ export default function PartnerMarketing() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
         {loading ? (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px', color: C.textLight }}>
-            Loading marketing assets...
+            {t('common.loading', 'Loading marketing assets...')}
           </div>
         ) : filteredMaterials.length === 0 ? (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '48px', color: C.textLight }}>
-            No marketing materials available in this category.
+            {t('marketing.noAssetsAvailable', 'No marketing materials available in this category.')}
           </div>
         ) : (
           filteredMaterials.map((item) => (
@@ -181,13 +183,13 @@ export default function PartnerMarketing() {
                   ...S.tag(C.primary), alignSelf: 'flex-start',
                   padding: '2px 8px', fontSize: '9px', marginBottom: '8px'
                 }}>
-                  {item.category === 'social_media' ? 'Social Media' : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                  {item.category === 'social_media' ? t('marketing.socialMedia', 'Social Media') : item.category.charAt(0).toUpperCase() + item.category.slice(1)}
                 </span>
                 <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {item.title}
                 </h3>
                 <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>
-                  {item.description || 'Official Referrals Banner'}
+                  {item.description || t('marketing.officialBanner', 'Official Referrals Banner')}
                 </p>
 
                 <div style={{
@@ -201,7 +203,7 @@ export default function PartnerMarketing() {
                       borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
                     }}
                   >
-                    <MdShare size={16} /> Share
+                    <MdShare size={16} /> {t('marketing.share', 'Share')}
                   </button>
                   <button 
                     onClick={() => handleDownload(item.file_url, item.title)}
@@ -211,7 +213,7 @@ export default function PartnerMarketing() {
                       color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 700, border: 'none', cursor: 'pointer'
                     }}
                   >
-                    <MdDownload size={16} /> Get
+                    <MdDownload size={16} /> {t('common.download', 'Get')}
                   </button>
                 </div>
               </div>

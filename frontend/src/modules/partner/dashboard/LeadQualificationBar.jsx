@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { MdFlashOn, MdCheckCircle, MdArrowForward, MdClose, MdAccountBalance, MdFilterList } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 
 export default function LeadQualificationBar() {
+  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
 
@@ -90,10 +92,10 @@ export default function LeadQualificationBar() {
           </div>
           <div>
             <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.3px' }}>
-              Instant Bank Match & Qualification Engine
+              {t('leadQualification.title', 'Instant Bank Match & Qualification Engine')}
             </h3>
             <p style={{ fontSize: '12.5px', color: C.textMid, margin: '2px 0 0', fontWeight: 600 }}>
-              Enter customer income & pincode to instantly discover top approval probability banks
+              {t('leadQualification.subtitle', 'Enter customer income & pincode to instantly discover top approval probability banks')}
             </p>
           </div>
         </div>
@@ -103,7 +105,7 @@ export default function LeadQualificationBar() {
           background: isDark ? 'rgba(16,185,129,0.15)' : '#D1FAE5', color: '#10B981',
           display: 'flex', alignItems: 'center', gap: '4px'
         }}>
-          <MdCheckCircle size={15} /> Real-time Matrix Active
+          <MdCheckCircle size={15} /> {t('leadQualification.matrixActive', 'Real-time Matrix Active')}
         </span>
       </div>
 
@@ -117,10 +119,11 @@ export default function LeadQualificationBar() {
         {/* Monthly Income Input */}
         <div>
           <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-            Monthly Income (₹)
-          </label>          <input
+            {t('leadQualification.monthlyIncome', 'Monthly Income (₹)')}
+          </label>
+          <input
             type="text"
-            placeholder="e.g. 45000"
+            placeholder={t('leadQualification.incomePlaceholder', 'e.g. 45000')}
             value={income}
             onChange={(e) => setIncome(e.target.value)}
             required
@@ -135,11 +138,11 @@ export default function LeadQualificationBar() {
         {/* Pincode Input */}
         <div>
           <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-            Location Pincode
+            {t('leadQualification.locationPincode', 'Location Pincode')}
           </label>
           <input
             type="text"
-            placeholder="e.g. 400001"
+            placeholder={t('leadQualification.pincodePlaceholder', 'e.g. 400001')}
             value={pincode}
             onChange={(e) => setPincode(e.target.value)}
             maxLength={6}
@@ -155,7 +158,7 @@ export default function LeadQualificationBar() {
         {/* Employment Type */}
         <div>
           <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-            Employment Type
+            {t('leadQualification.employmentType', 'Employment Type')}
           </label>
           <select
             value={empType}
@@ -166,16 +169,16 @@ export default function LeadQualificationBar() {
               color: C.text, fontSize: '13.5px', fontWeight: 700, outline: 'none', cursor: 'pointer'
             }}
           >
-            <option value="salaried">Salaried (Private / Govt)</option>
-            <option value="self_employed">Self Employed / Business</option>
-            <option value="professional">Doctor / CA / Lawyer</option>
+            <option value="salaried">{t('leadQualification.empSalaried', 'Salaried (Private / Govt)')}</option>
+            <option value="self_employed">{t('leadQualification.empSelfEmployed', 'Self Employed / Business')}</option>
+            <option value="professional">{t('leadQualification.empProfessional', 'Doctor / CA / Lawyer')}</option>
           </select>
         </div>
 
         {/* Category Target */}
         <div>
           <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-            Product Category
+            {t('leadQualification.productCategory', 'Product Category')}
           </label>
           <select
             value={category}
@@ -186,10 +189,10 @@ export default function LeadQualificationBar() {
               color: C.text, fontSize: '13.5px', fontWeight: 700, outline: 'none', cursor: 'pointer'
             }}
           >
-            <option value="credit_card">Credit Cards</option>
-            <option value="personal_loan">Personal Loans</option>
-            <option value="business_loan">Business Loans</option>
-            <option value="home_loan">Home Loans</option>
+            <option value="credit_card">{t('sections.popularCards', 'Credit Cards')}</option>
+            <option value="personal_loan">{t('loansList.personalloan', 'Personal Loans')}</option>
+            <option value="business_loan">{t('loansList.businessloan', 'Business Loans')}</option>
+            <option value="home_loan">{t('loansList.homeloan', 'Home Loans')}</option>
           </select>
         </div>
 
@@ -206,7 +209,7 @@ export default function LeadQualificationBar() {
             }}
           >
             <MdFilterList size={18} />
-            <span>Match Banks</span>
+            <span>{t('leadQualification.matchBanksBtn', 'Match Banks')}</span>
           </button>
         </div>
       </form>
@@ -219,7 +222,7 @@ export default function LeadQualificationBar() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ fontSize: '14.5px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              🎯 Qualified Bank Matches ({matches.length} Banks Found)
+              🎯 {t('leadQualification.qualifiedMatches', 'Qualified Bank Matches')} ({matches.length} {t('leadQualification.banksFound', 'Banks Found')})
             </h4>
             <button
               onClick={() => setShowResults(false)}
@@ -251,7 +254,7 @@ export default function LeadQualificationBar() {
                       background: item.matchScore > 90 ? '#D1FAE5' : '#FEF3C7',
                       color: item.matchScore > 90 ? '#065F46' : '#92400E'
                     }}>
-                      {item.matchScore}% Match
+                      {item.matchScore}% {t('leadQualification.match', 'Match')}
                     </span>
                   </div>
 
@@ -269,7 +272,7 @@ export default function LeadQualificationBar() {
                   paddingTop: '8px', borderTop: `1px solid ${isDark ? '#1E293B' : '#F1F5F9'}`
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: 900, color: '#10B981' }}>
-                    Payout: {item.commission}
+                    {t('customer360.payoutLabel', 'Payout:')} {item.commission}
                   </span>
 
                   <button
@@ -280,7 +283,7 @@ export default function LeadQualificationBar() {
                       cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
                     }}
                   >
-                    Apply <MdArrowForward size={14} />
+                    {t('home.applyNow', 'Apply')} <MdArrowForward size={14} />
                   </button>
                 </div>
               </div>
