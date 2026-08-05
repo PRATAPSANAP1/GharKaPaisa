@@ -689,7 +689,7 @@ export default function PartnerDashboardComponent({ partner }) {
             <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
           </div>
           <span
-            onClick={() => navigate('/partner/products')}
+            onClick={() => navigate('/partner/sell-and-earn')}
             style={{ fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#6E3FD6' }}
           >
             View All →
