@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
   { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
-  { id: 'team-network', path: '/partner/team-network', label: 'Team Network', icon: MdDeviceHub },
+  { id: 'team-network', path: '/partner/team-network', label: 'Refers', icon: MdDeviceHub },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
   { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
