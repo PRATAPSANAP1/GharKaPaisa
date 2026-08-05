@@ -330,7 +330,7 @@ export default function PartnerLayout() {
 
   // ── Color Constants ─────────────────────────────────
   const SIDEBAR_BG = C.card;
-  const MAIN_BG = C.bg;
+  const MAIN_BG = isDark ? C.bg : '#F7F5FC';
 
   return (
     <div style={{
