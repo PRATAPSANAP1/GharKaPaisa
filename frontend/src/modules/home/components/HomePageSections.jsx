@@ -319,30 +319,7 @@ export function HeroBannerCarousel({ C, navigate }) {
         </div>
       ))}
 
-      {/* Navigation Dots */}
-      <div style={{
-        position: "absolute",
-        bottom: "16px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        gap: "8px"
-      }}>
-        {bannerSlides.map((_, idx) => (
-          <div
-            key={idx}
-            onClick={() => setBannerIndex(idx)}
-            style={{
-              width: bannerIndex === idx ? "24px" : "8px",
-              height: "8px",
-              borderRadius: "4px",
-              background: bannerIndex === idx ? "#fff" : "rgba(255,255,255,0.5)",
-              cursor: "pointer",
-              transition: "all 0.3s"
-            }}
-          />
-        ))}
-      </div>
+
     </div>
   );
 }

@@ -2474,39 +2474,7 @@ export default function Home({ onNavigate }) {
             />
           ))}
 
-          {/* Left Arrow */}
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
-          >
-            <FaChevronLeft size={14} />
-          </div>
 
-          {/* Right Arrow */}
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
-          >
-            <FaChevronRight size={14} />
-          </div>
-
-
-          {/* Slider Indicators */}
-          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
-            {bannerSlides.map((_, idx) => (
-              <div 
-                key={idx} 
-                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-                style={{ 
-                  width: idx === bannerIndex ? "24px" : "8px", 
-                  height: "8px", borderRadius: "4px", 
-                  background: idx === bannerIndex ? "#fff" : "rgba(255,255,255,0.5)", 
-                  transition: "all 0.3s ease", cursor: "pointer",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
-                }} 
-              />
-            ))}
-          </div>
         </div>
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}

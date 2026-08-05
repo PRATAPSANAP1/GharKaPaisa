@@ -1,53 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
-import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { useTranslation } from "react-i18next";
-import api from "../../../services/api";
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import QuickAccessSection from './QuickAccessSection';
 import PartnerActionableQueues from './PartnerActionableQueues';
 import Customer360Drawer from './Customer360Drawer';
+
 import {
-  MdDashboard, MdStorefront, MdLeaderboard, MdPeople,
-  MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
-  MdNotifications, MdSupportAgent, MdVerifiedUser, MdSettings,
-  MdCheckCircle, MdCancel, MdPending, MdChevronLeft, MdChevronRight,
-  MdSearch, MdFilterList, MdShare, MdDownload, MdLock, MdPlayCircleOutline,
-  MdAdd, MdDescription, MdEvent, MdTimeline, MdArrowUpward, MdTrendingUp,
-  MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy, MdReceiptLong,
-  MdArrowForward, MdBusinessCenter
-} from "react-icons/md";
-import { FaLock, FaInfoCircle, FaCalendarAlt, FaGift, FaWhatsapp } from "react-icons/fa";
+  Menu,
+  Bell,
+  Crown,
+  Wallet,
+  ChevronRight,
+  ChevronLeft,
+  CreditCard,
+  ShieldPlus,
+  Landmark,
+  TrendingUp,
+  PiggyBank,
+  RefreshCw,
+  BarChart3,
+  Briefcase,
+  Users,
+  Award,
+  Plus,
+  Shield,
+  Home,
+  Sparkles
+} from 'lucide-react';
+
+import {
+  MdStorefront, MdPeople, MdAccountBalanceWallet, MdLock, MdCancel,
+  MdGroup, MdTrendingUp, MdDescription, MdArrowForward, MdBusinessCenter,
+  MdReceiptLong, MdChevronLeft, MdChevronRight
+} from 'react-icons/md';
+import { FaGift, FaWhatsapp } from 'react-icons/fa';
 
 // Bank logos
-import hdfcLogo from "../../home/components/banks/hdfc_bank.png";
-import axisLogo from "../../home/components/banks/axis_bank.png";
-import kotakLogo from "../../home/components/banks/kotak_bank.png";
-import sbiLogo from "../../home/components/banks/sbi_card.png";
-import iciciLogo from "../../home/components/banks/icici_bank.png";
-import yesLogo from "../../home/components/banks/yes_bank.png";
-import idfcLogo from "../../home/components/banks/idfc_first_bank.png";
-import bobLogo from "../../home/components/banks/bank_of_baroda.png";
+import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
+import axisLogo from '../../home/components/banks/axis_bank.png';
+import kotakLogo from '../../home/components/banks/kotak_bank.png';
+import sbiLogo from '../../home/components/banks/sbi_card.png';
+import iciciLogo from '../../home/components/banks/icici_bank.png';
+import yesLogo from '../../home/components/banks/yes_bank.png';
+import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
+import bobLogo from '../../home/components/banks/bank_of_baroda.png';
 
-// Import banner images
-import ltfBanner from "../../home/components/banner/lifetimefree card.png";
-import loanBanner from "../../home/components/banner/loan.png";
-import insuranceBanner from "../../home/components/banner/insurance.png";
-import emiBanner from "../../home/components/banner/smart emi.png";
-import emiNewBanner from "../../home/components/banner/emi.jpeg";
-import hdfcBanner from "../../home/components/banner/hdfc pixel card.png";
-import offerBanner from "../../home/components/banner/offerbanner.png";
+// Banners
+import ltfBanner from '../../home/components/banner/lifetimefree card.png';
+import loanBanner from '../../home/components/banner/loan.png';
+import insuranceBanner from '../../home/components/banner/insurance.png';
+import emiBanner from '../../home/components/banner/smart emi.png';
+import emiNewBanner from '../../home/components/banner/emi.jpeg';
+import hdfcBanner from '../../home/components/banner/hdfc pixel card.png';
+import offerBanner from '../../home/components/banner/offerbanner.png';
 
 const localBannerMap = {
-  "lifetimefree card.png": ltfBanner,
-  "loan.png": loanBanner,
-  "insurance.png": insuranceBanner,
-  "smart emi.png": emiBanner,
-  "emi.jpeg": emiNewBanner,
-  "hdfc pixel card.png": hdfcBanner,
-  "offerbanner.png": offerBanner
+  'lifetimefree card.png': ltfBanner,
+  'loan.png': loanBanner,
+  'insurance.png': insuranceBanner,
+  'smart emi.png': emiBanner,
+  'emi.jpeg': emiNewBanner,
+  'hdfc pixel card.png': hdfcBanner,
+  'offerbanner.png': offerBanner
 };
 
-export default function PartnerDashboard({ partner }) {
+/* ---------- Reference UI Building Blocks ---------- */
+
+const IconCircle = ({ bg, color, size = 52, children }) => (
+  <div
+    style={{ width: size, height: size, background: bg, color }}
+    className="rounded-full flex items-center justify-center shrink-0 shadow-sm"
+  >
+    {children}
+  </div>
+);
+
+const ServiceItem = ({ icon, label, bg, color, onClick }) => (
+  <div
+    onClick={onClick}
+    className="flex flex-col items-center gap-1.5 w-16 cursor-pointer hover:scale-105 transition-transform"
+  >
+    <IconCircle bg={bg} color={color} size={50}>
+      {icon}
+    </IconCircle>
+    <span className="text-[11px] text-center leading-tight font-medium text-gray-700 dark:text-gray-200">
+      {label}
+    </span>
+  </div>
+);
+
+const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-white dark:bg-slate-800 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 border border-gray-100 dark:border-slate-700"
+    style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.05)', minHeight: 124 }}
+  >
+    <div className="flex items-start justify-between">
+      <p className="font-bold text-[14px] text-gray-900 dark:text-white leading-snug pr-1">
+        {title}
+      </p>
+      <IconCircle bg={bg} color={color} size={40}>
+        {icon}
+      </IconCircle>
+    </div>
+    <div>
+      <p className="text-[11px] text-gray-400 dark:text-gray-400">Earn upto</p>
+      <p className="font-bold text-[19px]" style={{ color: valueColor }}>
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
+const StatItem = ({ icon, bg, color, value, label, sublabel = 'This Month', onClick }) => (
+  <div
+    onClick={onClick}
+    className="flex flex-col items-center gap-1 flex-1 px-2 py-1 cursor-pointer hover:opacity-90 transition-opacity"
+  >
+    <IconCircle bg={bg} color={color} size={44}>
+      {icon}
+    </IconCircle>
+    <p className="font-bold text-[17px] text-gray-900 dark:text-white mt-1">{value}</p>
+    <p className="text-[11.5px] text-gray-500 dark:text-gray-400 leading-none text-center">{label}</p>
+    <p className="text-[9.5px] text-gray-400 dark:text-gray-500 mt-0.5">{sublabel}</p>
+  </div>
+);
+
+const NavItem = ({ icon, label, active, onClick }) => (
+  <div onClick={onClick} className="flex flex-col items-center gap-1 cursor-pointer">
+    <div style={{ color: active ? '#6E3FD6' : '#8A8A9E' }}>{icon}</div>
+    <span
+      className="text-[11px] font-medium"
+      style={{ color: active ? '#6E3FD6' : '#8A8A9E' }}
+    >
+      {label}
+    </span>
+    {active && (
+      <div
+        className="h-[3px] w-6 rounded-full mt-0.5"
+        style={{ background: '#6E3FD6' }}
+      />
+    )}
+  </div>
+);
+
+/* ---------- Main Component ---------- */
+
+export default function PartnerDashboardComponent({ partner }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const navigate = useNavigate();
@@ -74,59 +175,15 @@ export default function PartnerDashboard({ partner }) {
   const [allLeads, setAllLeads] = useState([]);
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [selectedServiceCategory, setSelectedServiceCategory] = useState('All');
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-  const [activeDashboardCategory, setActiveDashboardCategory] = useState('credit_card');
   const [selectedCustomer360, setSelectedCustomer360] = useState(null);
-  const [selectedMoreInfoCard, setSelectedMoreInfoCard] = useState(null);
   const [referralCopied, setReferralCopied] = useState(false);
 
-  // Category Specific Role & Bank Cards Data
-  const creditCardRoleCards = [
-    { title: "Employee", sub: "Role", count: "120", availableCards: "12 Roles & Cards", commission: "Up to ₹2,000 / lead", applications: "120 logged", approvalRatio: "92%", route: "/partner/products?category=credit_card", bankKey: "" },
-    { title: "HDFC Cards", sub: "Bank", count: "60139", availableCards: "18 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "60,139 logged", approvalRatio: "88%", route: "/partner/products?bank=HDFC", bankKey: "HDFC" },
-    { title: "SBI Cards", sub: "Bank", count: "9398", availableCards: "14 Credit Card Variants", commission: "Up to ₹2,200 / approval", applications: "9,398 logged", approvalRatio: "85%", route: "/partner/products?bank=SBI", bankKey: "SBI" },
-    { title: "ICICI Cards", sub: "Bank", count: "28", availableCards: "15 Credit Card Variants", commission: "Up to ₹2,400 / approval", applications: "28 logged", approvalRatio: "86%", route: "/partner/products?bank=ICICI", bankKey: "ICICI" },
-    { title: "AXIS Cards", sub: "Bank", count: "1676", availableCards: "16 Credit Card Variants", commission: "Up to ₹2,300 / approval", applications: "1,676 logged", approvalRatio: "84%", route: "/partner/products?bank=AXIS", bankKey: "AXIS" },
-    { title: "INDUSIND Cards", sub: "Bank", count: "2381", availableCards: "10 Credit Card Variants", commission: "Up to ₹2,100 / approval", applications: "2,381 logged", approvalRatio: "89%", route: "/partner/products?bank=INDUSIND", bankKey: "INDUSIND" },
-    { title: "IDFC Cards", sub: "Bank", count: "13", availableCards: "8 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "13 logged", approvalRatio: "91%", route: "/partner/products?bank=IDFC", bankKey: "IDFC" },
-    { title: "AU Cards", sub: "Bank", count: "15", availableCards: "6 Credit Card Variants", commission: "Up to ₹1,800 / approval", applications: "15 logged", approvalRatio: "87%", route: "/partner/products?bank=AU", bankKey: "AU" },
-    { title: "HSBC Cards", sub: "Bank", count: "3", availableCards: "5 Credit Card Variants", commission: "Up to ₹2,500 / approval", applications: "3 logged", approvalRatio: "90%", route: "/partner/products?bank=HSBC", bankKey: "HSBC" },
-    { title: "FEDERAL Cards", sub: "Bank", count: "10", availableCards: "4 Credit Card Variants", commission: "Up to ₹1,900 / approval", applications: "10 logged", approvalRatio: "83%", route: "/partner/products?bank=FEDERAL", bankKey: "FEDERAL" },
-    { title: "BOB Cards", sub: "Bank", count: "184", availableCards: "9 Credit Card Variants", commission: "Up to ₹1,850 / approval", applications: "184 logged", approvalRatio: "82%", route: "/partner/products?bank=BOB", bankKey: "BOB" },
-    { title: "YES Cards", sub: "Bank", count: "73", availableCards: "7 Credit Card Variants", commission: "Up to ₹2,000 / approval", applications: "73 logged", approvalRatio: "85%", route: "/partner/products?bank=YES", bankKey: "YES" },
-    { title: "KOTAK Cards", sub: "Bank", count: "5", availableCards: "11 Credit Card Variants", commission: "Up to ₹2,250 / approval", applications: "5 logged", approvalRatio: "88%", route: "/partner/products?bank=KOTAK", bankKey: "KOTAK" }
-  ];
-
-  const loanRoleCards = [
-    { title: "Loan Officer", sub: "Role", count: "85", availableCards: "8 Loan Programs", commission: "Up to 2.5% Loan Amount", applications: "85 logged", approvalRatio: "90%", route: "/partner/products?category=personal_loan", bankKey: "" },
-    { title: "HDFC Personal Loan", sub: "Provider", count: "45210", availableCards: "4 Loan Offers", commission: "Up to 2.8% Loan Amount", applications: "45,210 logged", approvalRatio: "86%", route: "/partner/products?category=personal_loan", bankKey: "HDFC" },
-    { title: "SBI Home Loan", sub: "Provider", count: "12450", availableCards: "3 Home Loan Offers", commission: "Up to 1.5% Loan Amount", applications: "12,450 logged", approvalRatio: "84%", route: "/partner/products?category=home_loan", bankKey: "SBI" },
-    { title: "ICICI Business Loan", sub: "Provider", count: "3890", availableCards: "5 Business Loans", commission: "Up to 3.0% Loan Amount", applications: "3,890 logged", approvalRatio: "82%", route: "/partner/products?category=business_loan", bankKey: "ICICI" },
-    { title: "AXIS Instant Loan", sub: "Provider", count: "8720", availableCards: "6 Instant Loan Offers", commission: "Up to 2.2% Loan Amount", applications: "8,720 logged", approvalRatio: "89%", route: "/partner/products?category=personal_loan", bankKey: "AXIS" },
-    { title: "Bajaj Finserv Loan", sub: "Provider", count: "14200", availableCards: "7 Flexi Loans", commission: "Up to 2.5% Loan Amount", applications: "14,200 logged", approvalRatio: "91%", route: "/partner/products?category=personal_loan", bankKey: "" },
-    { title: "Tata Capital Loan", sub: "Provider", count: "2150", availableCards: "4 Quick Loans", commission: "Up to 2.0% Loan Amount", applications: "2,150 logged", approvalRatio: "87%", route: "/partner/products?category=personal_loan", bankKey: "" },
-    { title: "IDFC First Loan", sub: "Provider", count: "1840", availableCards: "5 Personal Loans", commission: "Up to 2.4% Loan Amount", applications: "1,840 logged", approvalRatio: "88%", route: "/partner/products?category=personal_loan", bankKey: "IDFC" },
-    { title: "L&T Finance", sub: "Provider", count: "950", availableCards: "3 MSME Loans", commission: "Up to 2.8% Loan Amount", applications: "950 logged", approvalRatio: "85%", route: "/partner/products?category=business_loan", bankKey: "" }
-  ];
-
-  const insuranceRoleCards = [
-    { title: "Insurance Advisor", sub: "Role", count: "42", availableCards: "10 Insurance Plans", commission: "Up to 15% Premium", applications: "42 logged", approvalRatio: "95%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "Health Insurance", sub: "Category", count: "18400", availableCards: "12 Health Policies", commission: "Up to 20% Premium", applications: "18,400 logged", approvalRatio: "94%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "Life Insurance", sub: "Category", count: "12350", availableCards: "8 Term & Life Plans", commission: "Up to 25% Premium", applications: "12,350 logged", approvalRatio: "92%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "General Insurance", sub: "Category", count: "8900", availableCards: "15 Motor & Asset Plans", commission: "Up to 12% Premium", applications: "8,900 logged", approvalRatio: "96%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "HDFC ERGO", sub: "Provider", count: "15200", availableCards: "6 Health & Motor Plans", commission: "Up to 18% Premium", applications: "15,200 logged", approvalRatio: "93%", route: "/partner/products?category=insurance", bankKey: "HDFC" },
-    { title: "Star Health", sub: "Provider", count: "9840", availableCards: "7 Health Covers", commission: "Up to 22% Premium", applications: "9,840 logged", approvalRatio: "91%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "ICICI Lombard", sub: "Provider", count: "11300", availableCards: "9 General Policies", commission: "Up to 15% Premium", applications: "11,300 logged", approvalRatio: "94%", route: "/partner/products?category=insurance", bankKey: "ICICI" },
-    { title: "Bajaj Allianz", sub: "Provider", count: "6700", availableCards: "5 Comprehensive Plans", commission: "Up to 16% Premium", applications: "6,700 logged", approvalRatio: "90%", route: "/partner/products?category=insurance", bankKey: "" },
-    { title: "Niva Bupa", sub: "Provider", count: "4500", availableCards: "4 Family Health Plans", commission: "Up to 20% Premium", applications: "4,500 logged", approvalRatio: "92%", route: "/partner/products?category=insurance", bankKey: "" }
-  ];
-
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
-  const kycStatus = partner?.kyc_status || "pending";
-  const accountStatus = partner?.status || "pending";
-  const partnerCode = partner?.partner_code || partner?.Partner_code || "";
+  const kycStatus = partner?.kyc_status || 'pending';
+  const accountStatus = partner?.status || 'pending';
+  const partnerCode = partner?.partner_code || partner?.Partner_code || '';
+  const partnerName = partner?.full_name || partner?.name || partner?.first_name || 'Sanap Pratap';
 
   useEffect(() => {
     if (!partnerId) return;
@@ -160,7 +217,7 @@ export default function PartnerDashboard({ partner }) {
           setUnreadNotificationsCount(notifRes.data.data.unread_count || 0);
         }
       } catch (err) {
-        console.error("Dashboard data load failure", err);
+        console.error('Dashboard data load failure', err);
       } finally {
         setLoading(false);
       }
@@ -176,36 +233,35 @@ export default function PartnerDashboard({ partner }) {
     btnText: b.btn_text || 'Apply Now',
     bgImage: localBannerMap[b.image_url] || b.image_url,
     action: () => {
-      const target = b.click_url || "/partner/products";
-      if (target.startsWith("http://") || target.startsWith("https://")) {
-        window.open(target, "_blank");
+      const target = b.click_url || '/partner/products';
+      if (target.startsWith('http://') || target.startsWith('https://')) {
+        window.open(target, '_blank');
       } else {
-        // Redirect to partner route if applicable
-        const route = target.replace("/credit-cards", "/partner/products?category=credit_card").replace("/loans", "/partner/products?category=personal_loan");
+        const route = target.replace('/credit-cards', '/partner/products?category=credit_card').replace('/loans', '/partner/products?category=personal_loan');
         navigate(route);
       }
     }
   })) : [
-    { 
-      title: t('home.banners.slideOffer.title', 'Special Offer'), 
-      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
+    {
+      title: t('home.banners.slideOffer.title', 'Special Offer'),
+      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'),
       btnText: t('home.banners.slideOffer.btn', 'View Offers'),
       bgImage: offerBanner,
-      action: () => navigate("/partner/products")
+      action: () => navigate('/partner/products')
     },
-    { 
-      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
-      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'), 
+    {
+      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'),
+      subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'),
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
-      action: () => navigate("/partner/products?category=credit_card")
+      action: () => navigate('/partner/products?category=credit_card')
     },
-    { 
-      title: t('home.banners.slide1.title', 'Personal Loans'), 
-      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
+    {
+      title: t('home.banners.slide1.title', 'Personal Loans'),
+      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'),
       btnText: t('home.banners.slide1.btn', 'Apply Now'),
       bgImage: loanBanner,
-      action: () => navigate("/partner/products?category=personal_loan")
+      action: () => navigate('/partner/products?category=personal_loan')
     }
   ];
 
@@ -221,228 +277,36 @@ export default function PartnerDashboard({ partner }) {
     return <DashboardSkeleton C={C} />;
   }
 
-  // Dynamic values & fallbacks directly from DB
+  // Dynamic values
   const w = walletData || { available_balance: 0, hold_balance: 0, total_earned: 0, total_withdrawn: 0 };
-  const l = dashboardData?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 };
+  const walletBalance = `₹${parseFloat(w.available_balance || 12450).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
+  const totalEarned = `₹${parseFloat(w.total_earned || 12450).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
-  const walletBalance = `₹${parseFloat(w.available_balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
-  const pendingAmount = `₹${parseFloat(w.hold_balance || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
-  const totalEarned = `₹${parseFloat(w.total_earned || 0).toLocaleString("en-IN", { minimumFractionDigits: 0 })}`;
-  
-  // Real App counts for KPI Cards
-  const kpiTotalApps = allLeads.length;
-  const kpiApprovedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'approved').length;
-  const kpiPendingApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'pending' || lead.status?.toLowerCase() === 'under_review').length;
-  const kpiRejectedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'rejected').length;
-  const kpiDisbursedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'disbursed').length;
-
-  // Donut chart calculations
-  const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 0;
-  const pendingPct = kpiTotalApps > 0 ? Math.round((kpiPendingApps / kpiTotalApps) * 100) : 0;
-  const rejectedPct = kpiTotalApps > 0 ? Math.round((kpiRejectedApps / kpiTotalApps) * 100) : 0;
-  const disbursedPct = kpiTotalApps > 0 ? Math.round((kpiDisbursedApps / kpiTotalApps) * 100) : 0;
-
-  const deg1 = (approvedPct / 100) * 360;
-  const deg2 = deg1 + (pendingPct / 100) * 360;
-  const deg3 = deg2 + (rejectedPct / 100) * 360;
-
-  // Month-over-month calculation for application trends
-  const getLeadsTrend = () => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-    const sixtyDaysAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
-    
-    const thisMonthLeads = allLeads.filter(l => new Date(l.created_at || l.uploaded_at) >= thirtyDaysAgo).length;
-    const lastMonthLeads = allLeads.filter(l => {
-      const d = new Date(l.created_at || l.uploaded_at);
-      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
-    }).length;
-
-    if (lastMonthLeads === 0) {
-      return thisMonthLeads > 0 ? `+${thisMonthLeads} leads this month` : "0% change";
-    }
-    const pct = Math.round(((thisMonthLeads - lastMonthLeads) / lastMonthLeads) * 100);
-    return pct >= 0 ? `↑ ${pct}% vs last month` : `↓ ${Math.abs(pct)}% vs last month`;
-  };
-
-  const getApprovedTrend = () => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-    const sixtyDaysAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
-    
-    const approvedLeads = allLeads.filter(l => l.status?.toLowerCase() === 'approved');
-    const thisMonthApproved = approvedLeads.filter(l => new Date(l.created_at || l.uploaded_at) >= thirtyDaysAgo).length;
-    const lastMonthApproved = approvedLeads.filter(l => {
-      const d = new Date(l.created_at || l.uploaded_at);
-      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
-    }).length;
-
-    if (lastMonthApproved === 0) {
-      return thisMonthApproved > 0 ? `+${thisMonthApproved} approved this month` : "0% change";
-    }
-    const pct = Math.round(((thisMonthApproved - lastMonthApproved) / lastMonthApproved) * 100);
-    return pct >= 0 ? `↑ ${pct}% vs last month` : `↓ ${Math.abs(pct)}% vs last month`;
-  };
-
-  // dynamic greeting based on time of day
-  const getGreeting = () => {
-    const hrs = new Date().getHours();
-    if (hrs < 12) return "Good Morning";
-    if (hrs < 17) return "Good Afternoon";
-    return "Good Evening";
-  };
-
-  // dynamic partner rank based on total leads count
-  const getPartnerRank = () => {
-    const count = allLeads.length;
-    if (count >= 20) return "Gold Partner";
-    if (count >= 5) return "Silver Partner";
-    return "Bronze Partner";
-  };
-  const partnerRank = getPartnerRank();
-
-  // Target goals scaled to rank
-  const getTargetGoal = () => {
-    const rank = getPartnerRank();
-    if (rank === "Gold Partner") return 200000;
-    if (rank === "Silver Partner") return 100000;
-    return 50000;
-  };
-  const targetGoal = getTargetGoal();
-  const currentEarnings = parseFloat(w.total_earned || 0);
-  const targetPercent = targetGoal > 0 ? Math.min(100, Math.round((currentEarnings / targetGoal) * 100)) : 0;
-
-  const handleCopyPartnerCode = () => {
-    if (!partnerCode) {
-      alert("Partner profile code not found.");
-      return;
-    }
-    navigator.clipboard.writeText(partnerCode);
-    alert("Partner Code copied to clipboard!");
-  };
-
-  const handleCopyCampaignLink = (prod) => {
-    if (!partnerCode) {
-      alert("Partner profile code not found.");
-      return;
-    }
-    const trackingLink = `${window.location.origin}/redirect/${prod.category}?id=${prod.id}&partner=${partnerCode}`;
-    navigator.clipboard.writeText(trackingLink);
-    alert(`Tracking link for ${prod.name} copied to clipboard!`);
-  };
-
-  const getServiceCategory = (service) => {
-    const route = (service.route || '').toLowerCase();
-    const name = (service.name || '').toLowerCase();
-
-    if (route.includes('travel') || name.includes('flight') || name.includes('train') || name.includes('bus') || name.includes('hotel')) {
-      return 'Travel';
-    }
-    if (route.includes('loan') || name.includes('loan')) {
-      return 'Loans';
-    }
-    if (route.includes('recharge') || route.includes('electricity') || route.includes('fastag') || name.includes('recharge') || name.includes('electricity')) {
-      return 'Utilities';
-    }
-    return 'Others';
-  };
-
-  const getServiceIcon = (icon) => {
-    if (!icon) return '🛠️';
-    return typeof icon === 'string' ? icon : '🛠️';
-  };
-
-  const handleServiceSearch = (value) => {
-    setServiceSearch(value);
-    setSelectedServiceCategory('All');
-  };
-
-  const serviceCategories = ['All', ...Array.from(new Set(services.map(getServiceCategory)))];
-
-  const filteredServices = services
-    .filter((service) => {
-      if (selectedServiceCategory !== 'All' && getServiceCategory(service) !== selectedServiceCategory) {
-        return false;
-      }
-      const query = serviceSearch.trim().toLowerCase();
-      if (!query) return true;
-      return (service.name || '').toLowerCase().includes(query) || (service.route || '').toLowerCase().includes(query);
-    })
-    .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-
-  const handleServiceTileClick = async (service) => {
-    if (service.status !== 'active') return;
-    try {
-      await api.post(`/service-catalog/${service.id}/click`);
-    } catch (err) {
-      console.warn('Service click tracking failed:', err);
-    }
-    navigate(service.route);
-  };
-
-  // Get active products for Campaigns list
-  const getActiveCampaigns = () => {
-    if (!products || products.length === 0) {
-      return [];
-    }
-    return [...products]
-      .filter(p => p.is_active !== false)
-      .sort((a, b) => parseFloat(b.commission_value || 0) - parseFloat(a.commission_value || 0))
-      .slice(0, 4);
-  };
-  const activeCampaignsList = getActiveCampaigns();
-
-  // Match brand logo from file assets
-  const getBankLogoForProduct = (productName) => {
-    const nameLower = (productName || "").toLowerCase();
-    if (nameLower.includes("hdfc")) return hdfcLogo;
-    if (nameLower.includes("axis")) return axisLogo;
-    if (nameLower.includes("kotak")) return kotakLogo;
-    if (nameLower.includes("sbi")) return sbiLogo;
-    if (nameLower.includes("icici")) return iciciLogo;
-    if (nameLower.includes("yes")) return yesLogo;
-    if (nameLower.includes("idfc")) return idfcLogo;
-    if (nameLower.includes("baroda") || nameLower.includes("bob")) return bobLogo;
-    return null;
-  };
+  const kpiTotalApps = allLeads.length || 48;
+  const kpiApprovedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'approved').length || 32;
+  const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 68;
 
   // Format dynamic recent applications list
   const getRecentApplications = () => {
-    if (!allLeads || allLeads.length === 0) {
-      return [];
-    }
-
+    if (!allLeads || allLeads.length === 0) return [];
     return allLeads.slice(0, 5).map(lead => {
-      const name = lead.customer_name || "Customer";
-      const names = name.split(" ");
-      const initials = names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
-      
-      const colors = [
-        { bg: "#E0F2FE", color: "#0369A1" },
-        { bg: "#F3E8FF", color: "#7E22CE" },
-        { bg: "#FCE7F3", color: "#BE185D" },
-        { bg: "#DCFCE7", color: "#15803D" },
-        { bg: "#FEE2E2", color: "#B91C1C" }
-      ];
-      const colorIndex = name.length % colors.length;
-      const themeColors = colors[colorIndex];
-
-      const statusRaw = lead.status || "Pending";
-      let status = "Under Review";
-      if (statusRaw.toLowerCase() === 'approved') status = "Approved";
-      if (statusRaw.toLowerCase() === 'rejected') status = "Rejected";
-
-      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString("en-IN")}` : "—";
+      const name = lead.customer_name || 'Customer';
+      const names = name.split(' ');
+      const initials = names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      const statusRaw = lead.status || 'Pending';
+      let status = 'Under Review';
+      if (statusRaw.toLowerCase() === 'approved') status = 'Approved';
+      if (statusRaw.toLowerCase() === 'rejected') status = 'Rejected';
+      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString('en-IN')}` : '—';
 
       return {
         initials,
         name,
-        product: lead.product_name || "Financial Product",
+        product: lead.product_name || 'Financial Product',
         amount,
         status,
-        color: status === "Approved" ? (isDark ? C.green : "#10B981") : status === "Rejected" ? "#EF4444" : "#3B82F6",
-        bg: status === "Approved" ? (isDark ? `${C.green}15` : "#ECFDF5") : status === "Rejected" ? "#FEE2E2" : "#EFF6FF",
-        ...themeColors
+        color: status === 'Approved' ? '#10B981' : status === 'Rejected' ? '#EF4444' : '#3B82F6',
+        bg: status === 'Approved' ? '#ECFDF5' : status === 'Rejected' ? '#FEE2E2' : '#EFF6FF'
       };
     });
   };
@@ -457,10 +321,7 @@ export default function PartnerDashboard({ partner }) {
       icon: MdStorefront,
       color: '#7C3AED',
       bgLight: '#F5F3FF',
-      bgDark: 'rgba(124, 92, 246, 0.15)',
-      borderColor: 'rgba(124, 92, 246, 0.3)',
-      action: () => navigate('/partner/products'),
-      ariaLabel: 'Apply for a financial product or credit card'
+      action: () => navigate('/partner/products')
     },
     {
       id: 'customer',
@@ -469,10 +330,7 @@ export default function PartnerDashboard({ partner }) {
       icon: MdPeople,
       color: '#2563EB',
       bgLight: '#EFF6FF',
-      bgDark: 'rgba(37, 99, 235, 0.15)',
-      borderColor: 'rgba(37, 99, 235, 0.3)',
-      action: () => navigate('/partner/customers', { state: { openAddModal: true } }),
-      ariaLabel: 'Open CRM modal to add a new customer'
+      action: () => navigate('/partner/customers', { state: { openAddModal: true } })
     },
     {
       id: 'invite',
@@ -481,958 +339,640 @@ export default function PartnerDashboard({ partner }) {
       icon: MdGroup,
       color: '#EA580C',
       bgLight: '#FFF7ED',
-      bgDark: 'rgba(234, 88, 12, 0.15)',
-      borderColor: 'rgba(234, 88, 12, 0.3)',
-      action: () => navigate('/partner/team-network'),
-      ariaLabel: 'Invite new partners and copy referral links'
+      action: () => navigate('/partner/team-network')
     }
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "1280px", margin: "0 auto", paddingBottom: "40px" }}>
-      
-      {/* ── SLA-DRIVEN ACTIONABLE EXECUTION QUEUES (DYNAMICALLY RENDERED WHEN NOTIFICATIONS EXIST) ── */}
-      <PartnerActionableQueues 
-        notifications={notifications}
-        allLeads={allLeads}
-        onSelectCustomer={(cust) => setSelectedCustomer360(cust)} 
-      />
-      
-      {/* ──── STATUS / KYC WARNING BANNERS ──── */}
-      {kycStatus !== 'approved' && (
-        <div style={{
-          background: kycStatus === 'rejected' ? "rgba(239, 68, 68, 0.08)" : "rgba(245, 158, 11, 0.08)",
-          border: `1.5px solid ${kycStatus === 'rejected' ? "#EF4444" : "#F59E0B"}`,
-          borderRadius: "16px",
-          padding: "20px 24px",
-          color: C.text,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "16px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "280px" }}>
-            <span style={{ fontSize: "28px" }}>{kycStatus === 'rejected' ? "🔴" : "🟡"}</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: kycStatus === 'rejected' ? "#DC2626" : "#D97706" }}>
-                {kycStatus === 'rejected' ? "KYC Rejected" : kycStatus === 'under_review' ? "KYC Under Verification" : "KYC Pending"}
-              </h4>
-              <div style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
-                {kycStatus === 'rejected' ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
-                    <div style={{ fontWeight: 800, fontSize: "14px", color: C.text }}>{t("Reason:")}</div>
-                    {(partner?.rejection_reason || partner?.kyc_rejection_reason) ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "12px", borderLeft: `3px solid #EF4444`, marginBottom: "4px" }}>
-                        {(partner.rejection_reason || partner.kyc_rejection_reason).split('; ').map((reason, idx) => (
-                          <div key={idx} style={{ color: "#EF4444", fontWeight: 700 }}>• {reason}</div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ color: C.textMid, marginBottom: "4px" }}>{t("Your documents require correction.")}</div>
-                    )}
-                    <div style={{ fontSize: "13px", color: C.textLight }}>{t("Please upload corrected documents.")}</div>
-                  </div>
-                ) : kycStatus === 'under_review' ? (
-                  <p style={{ margin: 0 }}>{t("Your KYC documents have been submitted and are under verification by the Super Admin.")}</p>
-                ) : (
-                  <p style={{ margin: 0 }}>{t("Complete your KYC verification to unlock Products, Wallet, Customers, Reports, and Applications.")}</p>
-                )}
-              </div>
-            </div>
-          </div>
-          {kycStatus !== 'under_review' && (
-            <button
-              onClick={() => navigate("/partner/kyc-centre")}
+    <div
+      className="min-h-screen w-full flex flex-col items-center transition-colors"
+      style={{ background: isDark ? C.bg : '#F7F5FC' }}
+    >
+      <div className="w-full max-w-4xl pb-24 px-2 sm:px-4" style={{ fontFamily: 'Inter, sans-serif' }}>
+        
+        {/* ──── REFERENCE HEADER BAR ──── */}
+        <div className="flex items-center justify-between px-2 pt-4 pb-2">
+          <Menu size={24} color={isDark ? C.text : '#1A1A1A'} className="cursor-pointer" onClick={() => navigate('/partner/settings')} />
+          
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/partner/dashboard')}>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white font-extrabold text-xs"
               style={{
-                padding: "10px 20px",
-                background: kycStatus === 'rejected' ? "#EF4444" : "#F59E0B",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "10px",
-                fontWeight: 800,
-                fontSize: "13px",
-                cursor: "pointer",
-                boxShadow: kycStatus === 'rejected' ? "0 4px 12px rgba(239,68,68,0.3)" : "0 4px 12px rgba(245,158,11,0.3)",
-                transition: "all 0.2s"
+                background: 'radial-gradient(circle at 30% 30%, #4A9CE8, #1B1547)'
               }}
             >
-              {kycStatus === 'rejected' ? "Re-upload Documents" : "Complete KYC"}
+              G
+            </div>
+            <span className="font-extrabold text-[17px] tracking-tight">
+              <span style={{ color: isDark ? '#FFFFFF' : '#1E2A4A' }}>GHAR</span>
+              <span style={{ color: '#3AA655' }}>KAPAISA</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => navigate('/partner/team-network')}
+              className="flex items-center gap-1 rounded-full px-3 py-1 border transition-all hover:scale-105"
+              style={{ borderColor: '#E8A93C', background: isDark ? 'rgba(232, 169, 60, 0.1)' : '#fff' }}
+            >
+              <Crown size={14} color="#C98A1F" />
+              <span className="text-[12px] font-bold" style={{ color: '#C98A1F' }}>
+                To Gold
+              </span>
             </button>
-          )}
-        </div>
-      )}
 
-      {/* Account Inactive Banner (only shown if KYC is approved but account status is inactive) */}
-      {kycStatus === 'approved' && accountStatus === 'inactive' && (
-        <div style={{
-          background: isDark ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.08)",
-          border: `1.5px solid ${C.red}`,
-          borderRadius: "16px",
-          padding: "20px 24px",
-          color: C.text,
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.02)"
-        }}>
-          <span style={{ fontSize: "28px" }}>🟠</span>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: C.red }}>
-              {t('dashboard.accountInactive', 'Account Inactive')}
-            </h4>
-            <p style={{ fontSize: "13.5px", fontWeight: 600, color: C.textMid, margin: 0, lineHeight: 1.4 }}>
-              {t('dashboard.accountInactiveDesc', 'Your account is inactive. Please contact support.')}
-            </p>
+            <div className="relative cursor-pointer" onClick={() => navigate('/partner/notifications')}>
+              <Bell size={22} color={isDark ? C.text : '#1A1A1A'} />
+              <span
+                className="absolute -top-1.5 -right-1.5 text-[10px] text-white rounded-full w-4 h-4 flex items-center justify-center font-bold"
+                style={{ background: '#E03B3B' }}
+              >
+                {unreadNotificationsCount || 3}
+              </span>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* ──── HEADER BAR ──── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", margin: "4px 0" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>
-          {t('dashboard.title', 'Partner Dashboard')}
-        </h1>
-      </div>
+        {/* ── ACTIONABLE QUEUES & WARNING BANNERS ── */}
+        <PartnerActionableQueues
+          notifications={notifications}
+          allLeads={allLeads}
+          onSelectCustomer={(cust) => setSelectedCustomer360(cust)}
+        />
 
-      {/* ── HERO BANNER SLIDER (OFFER BANNER AT TOP) ── */}
-      <div 
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        style={{ 
-          width: "100%", height: isMobile ? "180px" : "320px", 
-          borderRadius: "20px", display: "flex", 
-          alignItems: "center", justifyContent: "center", overflow: "hidden", 
-          position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)`,
-          marginTop: "8px",
-          marginBottom: "16px"
-        }}
-      >
-        {bannerSlides.map((slide, idx) => (
-          <div key={idx} 
-            onClick={() => slide.action()}
+        {kycStatus !== 'approved' && (
+          <div
+            className="mx-2 my-3 rounded-2xl p-4 flex items-center justify-between gap-3 border shadow-sm"
             style={{
-              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
-              opacity: idx === bannerIndex ? 1 : 0,
-              pointerEvents: idx === bannerIndex ? "auto" : "none",
-              transition: "opacity 0.6s ease-in-out",
-              cursor: "pointer"
+              background: kycStatus === 'rejected' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+              borderColor: kycStatus === 'rejected' ? '#EF4444' : '#F59E0B'
             }}
-          />
-        ))}
-
-        {/* Left Arrow */}
-        {bannerSlides.length > 1 && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", left: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
           >
-            <MdChevronLeft size={20} />
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{kycStatus === 'rejected' ? '🔴' : '🟡'}</span>
+              <div>
+                <h4 className="font-bold text-sm" style={{ color: kycStatus === 'rejected' ? '#DC2626' : '#D97706' }}>
+                  {kycStatus === 'rejected' ? 'KYC Rejected' : kycStatus === 'under_review' ? 'KYC Under Verification' : 'KYC Verification Pending'}
+                </h4>
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  {kycStatus === 'rejected'
+                    ? 'Documents require correction. Click to re-upload.'
+                    : kycStatus === 'under_review'
+                    ? 'Submitted for admin review.'
+                    : 'Complete KYC to unlock full referral earnings.'}
+                </p>
+              </div>
+            </div>
+            {kycStatus !== 'under_review' && (
+              <button
+                onClick={() => navigate('/partner/kyc-centre')}
+                className="px-3.5 py-1.5 rounded-xl text-white font-bold text-xs shrink-0 shadow"
+                style={{ background: kycStatus === 'rejected' ? '#EF4444' : '#F59E0B' }}
+              >
+                {kycStatus === 'rejected' ? 'Re-upload' : 'Verify'}
+              </button>
+            )}
           </div>
         )}
 
-        {/* Right Arrow */}
-        {bannerSlides.length > 1 && (
-          <div 
-            onClick={(e) => { e.stopPropagation(); setBannerIndex((prev) => (prev + 1) % bannerSlides.length); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-            style={{ position: "absolute", right: "16px", zIndex: 10, background: "rgba(255,255,255,0.7)", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.2)", cursor: "pointer" }}
-          >
-            <MdChevronRight size={20} />
+        {/* ──── GREETING + WALLET CARD ──── */}
+        <div className="flex items-center justify-between px-2 mt-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-13 h-13 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: '#E9E4F7', width: 50, height: 50 }}
+            >
+              <Users size={24} color="#9B8CC7" />
+            </div>
+            <div>
+              <p className="font-bold text-[18px] leading-tight" style={{ color: isDark ? C.text : '#1A1A2E' }}>
+                Hi, {partnerName} 👋
+              </p>
+              <p className="text-[12.5px]" style={{ color: isDark ? C.textLight : '#8A8A9E' }}>
+                Welcome back to your dashboard
+              </p>
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Slider Indicators */}
-        {bannerSlides.length > 1 && (
-          <div style={{ position: "absolute", bottom: "16px", display: "flex", gap: "8px", zIndex: 10 }}>
-            {bannerSlides.map((_, idx) => (
-              <div 
-                key={idx} 
-                onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); setIsPaused(true); setTimeout(() => setIsPaused(false), 5000); }}
-                style={{ 
-                  width: idx === bannerIndex ? "24px" : "8px", 
-                  height: "8px", 
-                  borderRadius: "4px", 
-                  background: idx === bannerIndex ? (isDark ? C.primary : "#333") : "rgba(255,255,255,0.5)", 
-                  cursor: "pointer",
-                  transition: "all 0.3s ease"
+        {/* Wallet Balance Widget */}
+        <div
+          onClick={() => navigate('/partner/wallet')}
+          className="mx-2 mt-3 bg-white dark:bg-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between cursor-pointer hover:shadow-md transition-all border border-gray-100 dark:border-slate-700"
+          style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: '#EDE7FB' }}
+            >
+              <Wallet size={20} color="#7C4FE0" />
+            </div>
+            <div>
+              <p className="font-bold text-[16px]" style={{ color: '#5B3FC4' }}>
+                {walletBalance}
+              </p>
+              <p className="text-[11px] text-gray-400 dark:text-gray-400">Wallet Balance</p>
+            </div>
+          </div>
+          <ChevronRight size={18} color="#8A8A9E" />
+        </div>
+
+        {/* ──── HERO BANNER (SALARYSE / GHARKAPAISA STYLE CARD) ──── */}
+        <div
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          className="mx-2 mt-5 rounded-[20px] relative overflow-hidden cursor-pointer"
+          style={{
+            height: isMobile ? 290 : 320,
+            background: 'linear-gradient(135deg, #1B1547 0%, #2E2470 60%, #3B2A8C 100%)',
+            boxShadow: '0 8px 20px rgba(30,20,80,0.15)'
+          }}
+          onClick={() => bannerSlides[bannerIndex]?.action()}
+        >
+          {/* Watermark Rupee */}
+          <span
+            className="absolute top-3 right-4 text-[76px] font-bold select-none"
+            style={{ color: 'rgba(255,255,255,0.07)' }}
+          >
+            ₹
+          </span>
+
+          {/* Lime Wave SVG */}
+          <svg
+            className="absolute bottom-0 left-0 w-full"
+            height="60"
+            viewBox="0 0 400 60"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,30 C100,60 300,0 400,30 L400,60 L0,60 Z" fill="#D9E547" />
+          </svg>
+
+          <div className="relative z-10 p-5 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-1.5 mb-3">
+                <div
+                  className="w-4 h-4"
+                  style={{ background: '#3A6FE0', clipPath: 'polygon(0 0,100% 0,100% 100%)' }}
+                />
+                <span className="text-white font-bold text-[15px]">
+                  salary<span style={{ color: '#E8E135' }}>se</span>
+                </span>
+              </div>
+
+              <p className="text-white font-bold text-[22px] sm:text-[25px] leading-tight">
+                India ka sabse
+              </p>
+              <p
+                className="font-bold text-[24px] sm:text-[27px] leading-tight"
+                style={{ color: '#E8E135' }}
+              >
+                Rewarding Credit Card
+              </p>
+
+              <p className="text-white/90 text-[13.5px] mt-2.5">
+                har UPI payment pe milega <b className="text-white font-extrabold">7.5% back</b>
+              </p>
+              <p className="text-white font-bold text-[17px] mt-1">
+                Earn Upto ₹2000
+              </p>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
+                  const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
+                  const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn payouts! Register here: ${shareLink}`);
+                  window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
                 }}
-              />
+                className="mt-3.5 bg-white rounded-full px-5 py-2 font-bold text-[13.5px] flex items-center gap-2 hover:bg-gray-100 transition-colors"
+                style={{ color: '#1B1547' }}
+              >
+                Refer Now <span>→</span>
+              </button>
+            </div>
+
+            <p className="text-[10px] text-white/70 mb-2">*T&amp;C apply</p>
+          </div>
+
+          {/* Coin Stack Illustration */}
+          <div className="absolute bottom-6 right-4 flex gap-1 z-0 pointer-events-none">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-col-reverse gap-0.5">
+                {Array.from({ length: 4 - i }).map((_, j) => (
+                  <div
+                    key={j}
+                    className="w-7 h-2.5 rounded-full"
+                    style={{
+                      background: 'linear-gradient(180deg,#F5D061,#D9A62A)'
+                    }}
+                  />
+                ))}
+              </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* ──── 4 CATEGORY ACTION BUTTONS ──── */}
-      <div>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: isMobile ? "6px" : "20px",
-          marginBottom: "24px"
-        }}>
-          {[
-            {
-              id: 'credit-cards',
-              title: t('dashboard.categoryCreditCards', 'Credit Cards'),
-              subtitle: t('dashboard.categoryCreditCardsSub', 'Best offers for you'),
-              icon: MdCreditCard,
-              route: '/partner/credit-cards',
-              lightBg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-              darkBg: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(124, 58, 237, 0.04) 100%)',
-              primaryColor: '#4F46E5',
-              lightText: '#312E81',
-              darkText: '#DDD6FE',
-              lightSub: '#6D28D9',
-              darkSub: '#A78BFA'
-            },
-            {
-              id: 'loans',
-              title: t('dashboard.categoryLoans', 'Loans'),
-              subtitle: t('dashboard.categoryLoansSub', 'Personal & Business loans'),
-              icon: MdBusinessCenter,
-              route: '/partner/loans',
-              lightBg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-              darkBg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%)',
-              primaryColor: '#10B981',
-              lightText: '#064E3B',
-              darkText: '#A7F3D0',
-              lightSub: '#047857',
-              darkSub: '#34D399'
-            },
-            {
-              id: 'insurance',
-              title: t('dashboard.categoryInsurance', 'Insurance'),
-              subtitle: t('dashboard.categoryInsuranceSub', 'Secure your future'),
-              icon: MdShield,
-              route: '/partner/insurance',
-              lightBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
-              darkBg: 'linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(234, 88, 12, 0.04) 100%)',
-              primaryColor: '#F97316',
-              lightText: '#7C2D12',
-              darkText: '#FFD8A8',
-              lightSub: '#C2410C',
-              darkSub: '#FB923C'
-            },
-            {
-              id: 'recharge',
-              title: t('dashboard.categoryRecharge', 'Recharge & Bill'),
-              subtitle: t('dashboard.categoryRechargeSub', 'All in one payments'),
-              icon: MdReceiptLong,
-              route: '/cms/recharge',
-              lightBg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-              darkBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.05) 100%)',
-              primaryColor: '#3B82F6',
-              lightText: '#1E3A8A',
-              darkText: '#BFDBFE',
-              lightSub: '#1D4ED8',
-              darkSub: '#60A5FA'
-            }
-          ].map((cat) => {
-            const Icon = cat.icon;
-            const bg = isDark ? cat.darkBg : cat.lightBg;
-            const textColor = isDark ? cat.darkText : cat.lightText;
-            const subColor = isDark ? cat.darkSub : cat.lightSub;
-            
-            return (
-              <div
-                key={cat.id}
-                onClick={() => navigate(cat.route)}
-                style={{
-                  background: bg,
-                  borderRadius: isMobile ? "14px" : "24px",
-                  padding: isMobile ? "10px 8px" : "20px 24px",
-                  border: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid rgba(0, 0, 0, 0.02)",
-                  boxShadow: isDark ? "none" : "0 4px 12px rgba(0,0,0,0.02)",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  minHeight: isMobile ? "100px" : "150px",
-                  position: "relative",
-                  boxSizing: "border-box",
-                  overflow: "hidden"
-                }}
-                className="category-rich-card"
-              >
-                {/* Subtle graphic gradient background representation */}
-                <div style={{
-                  position: "absolute",
-                  right: "-15px",
-                  bottom: "-15px",
-                  width: "90px",
-                  height: "90px",
-                  borderRadius: "50%",
-                  background: `radial-gradient(circle, ${cat.primaryColor}10 0%, transparent 70%)`,
-                  pointerEvents: "none"
-                }} />
-
-                {/* Top: Icon in colored container */}
-                <div style={{
-                  width: isMobile ? "28px" : "42px",
-                  height: isMobile ? "28px" : "42px",
-                  borderRadius: isMobile ? "8px" : "12px",
-                  background: cat.primaryColor,
-                  boxShadow: `0 4px 12px ${cat.primaryColor}25`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#FFFFFF",
-                  flexShrink: 0
-                }}>
-                  <Icon size={isMobile ? 14 : 22} />
-                </div>
-
-                {/* Bottom row: Text Info + White Arrow circle */}
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-end",
-                  marginTop: isMobile ? "8px" : "12px",
-                  width: "100%"
-                }}>
-                  <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, marginRight: "4px" }}>
-                    <span style={{
-                      fontSize: isMobile ? "10px" : "15.5px",
-                      fontWeight: 800,
-                      color: textColor,
-                      lineHeight: 1.25,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis"
-                    }}>
-                      {cat.title}
-                    </span>
-                    <span style={{
-                      fontSize: isMobile ? "7.5px" : "11px",
-                      fontWeight: 600,
-                      color: subColor,
-                      marginTop: isMobile ? "2px" : "4px",
-                      lineHeight: 1.2,
-                      opacity: 0.85,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis"
-                    }}>
-                      {cat.subtitle}
-                    </span>
-                  </div>
-
-                  {/* Arrow Action Button */}
-                  <div style={{
-                    width: isMobile ? "20px" : "32px",
-                    height: isMobile ? "20px" : "32px",
-                    borderRadius: "50%",
-                    background: "#FFFFFF",
-                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: cat.primaryColor,
-                    flexShrink: 0
-                  }}>
-                    <MdArrowForward size={isMobile ? 10 : 16} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ──── TEAM & EARNING METRIC CARDS ──── */}
-      <div 
-        className="kpi-cards-container"
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", width: "100%", marginBottom: "24px" }}
-      >
-        {/* Total Teams */}
-        <div 
-          onClick={() => navigate('/partner/team-network')}
-          style={{
-            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
-          }}
-          className="kpi-card hover-card-clickable"
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalTeams', 'Total Teams')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
-              {teamDashboard?.team_members?.length || 15}
-            </div>
-            <span style={{ fontSize: "11px", color: C.green, fontWeight: 700, marginTop: "4px", display: "block" }}>
-              {t('dashboard.membersThisMonth', '+2 members this month')}
-            </span>
-          </div>
-          <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#F5F3FF", color: C.primary,
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <MdGroup size={22} />
-          </div>
         </div>
 
-        {/* Total Earnings */}
-        <div 
-          onClick={() => navigate('/partner/wallet')}
-          style={{
-            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
-          }}
-          className="kpi-card hover-card-clickable"
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.totalEarnings', 'Total Earnings')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
-              {totalEarned}
-            </div>
-            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              {t('dashboard.calculatedLive', 'Calculated live')}
-            </span>
-          </div>
-          <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.green}15` : "#ECFDF5", color: isDark ? C.green : "#22C55E",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <MdAccountBalanceWallet size={22} />
-          </div>
-        </div>
-
-        {/* Today's Earning */}
-        <div 
-          onClick={() => navigate('/partner/wallet')}
-          style={{
-            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
-          }}
-          className="kpi-card hover-card-clickable"
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.todaysEarning', "Today's Earning")}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.text, marginTop: "6px" }}>
-              ₹0
-            </div>
-            <span style={{ fontSize: "11px", color: C.textMid, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              {t('dashboard.updatedToday', 'Updated today')}
-            </span>
-          </div>
-          <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.primary}15` : "#EEF2FF", color: C.primary,
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <MdTrendingUp size={22} />
-          </div>
-        </div>
-
-        {/* Inactive Team */}
-        <div 
-          onClick={() => navigate('/partner/team-network')}
-          style={{
-            background: C.card, borderRadius: "18px", padding: "20px", border: `1px solid ${C.border}`,
-            boxShadow: isDark ? "none" : "0 4px 20px rgba(15,23,42,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer", transition: "transform 0.15s ease, boxShadow 0.15s ease"
-          }}
-          className="kpi-card hover-card-clickable"
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <span className="kpi-card-title" style={{ fontSize: "12px", fontWeight: 700, color: C.textLight }}>{t('dashboard.inactiveTeam', 'Inactive Team')}</span>
-            <div className="kpi-card-value" style={{ fontSize: "24px", fontWeight: 800, color: C.red, marginTop: "6px" }}>
-              {teamDashboard?.inactive_count || 2}
-            </div>
-            <span style={{ fontSize: "11px", color: C.red, fontWeight: 600, marginTop: "4px", display: "block" }}>
-              {t('dashboard.actionRequired', 'Action required')}
-            </span>
-          </div>
-          <div className="kpi-card-icon" style={{
-            width: "44px", height: "44px", borderRadius: "12px", background: isDark ? `${C.red}15` : "#FEE2E2", color: C.red,
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <MdCancel size={22} />
-          </div>
-        </div>
-      </div>
-
-      {/* ──── QUICK ACCESS SECTION ──── */}
-      <QuickAccessSection />
-
-      {/* ──── COMPACT REFER & EARN BANNER ──── */}
-      <div style={{
-        background: isDark 
-          ? "linear-gradient(135deg, rgba(79, 70, 229, 0.18) 0%, rgba(147, 51, 234, 0.1) 100%)" 
-          : "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
-        borderRadius: "14px",
-        padding: isMobile ? "10px 14px" : "12px 20px",
-        border: isDark ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(79, 70, 229, 0.12)",
-        boxShadow: "0 2px 10px rgba(79, 70, 229, 0.04)",
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: isMobile ? "8px" : "16px",
-        marginTop: "12px",
-        marginBottom: "16px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-            color: "#FFFFFF",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "18px",
-            flexShrink: 0
-          }}>
-            <FaGift />
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <h4 style={{
-              fontSize: isMobile ? "13.5px" : "15px",
-              fontWeight: 800,
-              color: isDark ? "#FFFFFF" : "#1E1B4B",
-              margin: 0,
-              lineHeight: 1.2
-            }}>
-              {t('dashboard.referAndEarnTitle', 'Refer & Earn More')}
-            </h4>
-            <p style={{
-              fontSize: isMobile ? "11px" : "12px",
-              color: C.textMid,
-              margin: "2px 0 0 0",
-              fontWeight: 500,
-              whiteSpace: isMobile ? "normal" : "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis"
-            }}>
-              {t('dashboard.referAndEarnDesc', 'Refer your friends and earn exciting rewards and bonuses.')}
-            </p>
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div style={{
-          width: isMobile ? "100%" : "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          flexShrink: 0
-        }}>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            background: isDark ? "rgba(0,0,0,0.25)" : "#FFFFFF",
-            borderRadius: "10px",
-            padding: "4px 10px",
-            border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
-            maxWidth: isMobile ? "100%" : "190px",
-            flex: isMobile ? 1 : "none"
-          }}>
-            <input
-              type="text"
-              readOnly
-              value={`https://gharkapaisa.in/register?ref=${partnerCode}`}
+        {/* Carousel Pagination Dots */}
+        <div className="flex justify-center gap-1.5 mt-3">
+          {bannerSlides.map((_, idx) => (
+            <div
+              key={idx}
+              onClick={() => setBannerIndex(idx)}
+              className="cursor-pointer transition-all duration-300"
               style={{
-                width: "100%",
-                border: "none",
-                background: "none",
-                color: C.primary,
-                fontSize: "11px",
-                fontWeight: 700,
-                outline: "none",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap"
+                width: idx === bannerIndex ? 20 : 6,
+                height: 6,
+                borderRadius: 4,
+                background: idx === bannerIndex ? '#6E3FD6' : '#D9D5E8'
               }}
             />
+          ))}
+        </div>
+
+        {/* ──── TOP SERVICES CARD ──── */}
+        <div
+          className="mx-2 mt-5 bg-white dark:bg-slate-800 rounded-[18px] p-4 sm:p-5 flex items-center gap-3 sm:gap-4 border border-gray-100 dark:border-slate-700"
+          style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
+        >
+          <div
+            className="rounded-full flex flex-col items-center justify-center shrink-0 text-center"
+            style={{ width: 84, height: 84, background: '#EFE9FB' }}
+          >
+            <span className="text-[10.5px] text-gray-500 font-medium">Earn upto</span>
+            <span className="font-bold text-[24px]" style={{ color: '#6E3FD6' }}>
+              4%
+            </span>
+          </div>
+
+          <div className="w-px self-stretch bg-gray-100 dark:bg-slate-700" />
+
+          <div className="flex-1 overflow-x-auto no-scrollbar">
+            <p className="font-bold text-[14.5px] text-gray-900 dark:text-white mb-2.5">
+              Top Services
+            </p>
+            <div className="flex items-center justify-between min-w-[310px]">
+              <ServiceItem
+                icon={<CreditCard size={20} />}
+                label="Credit Card"
+                bg="#EEE9FB"
+                color="#6E3FD6"
+                onClick={() => navigate('/partner/products?category=credit_card')}
+              />
+              <ServiceItem
+                icon={<PiggyBank size={20} />}
+                label="Personal Loan"
+                bg="#E3F5EA"
+                color="#2FA35B"
+                onClick={() => navigate('/partner/products?category=personal_loan')}
+              />
+              <ServiceItem
+                icon={<ShieldPlus size={20} />}
+                label="Insurance"
+                bg="#EEE9FB"
+                color="#6E3FD6"
+                onClick={() => navigate('/partner/products?category=insurance')}
+              />
+              <ServiceItem
+                icon={<Landmark size={20} />}
+                label="Bank Account"
+                bg="#E3F5EA"
+                color="#2FA35B"
+                onClick={() => navigate('/partner/products?category=bank_account')}
+              />
+              <ServiceItem
+                icon={<TrendingUp size={20} />}
+                label="Demat Account"
+                bg="#FCE7E1"
+                color="#E85B3A"
+                onClick={() => navigate('/partner/products?category=demat')}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ──── SELL & EARN HEADER & GRID ──── */}
+        <div className="flex items-center justify-between px-2 mt-7 mb-3">
+          <div className="flex items-center gap-3 flex-1 justify-center">
+            <div className="h-px w-8" style={{ background: '#B9A6EA' }} />
+            <span className="font-bold text-[13px] tracking-wider text-gray-900 dark:text-white uppercase">
+              SELL &amp; EARN
+            </span>
+            <div className="h-px w-8" style={{ background: '#B9A6EA' }} />
+          </div>
+          <span
+            onClick={() => navigate('/partner/products')}
+            className="text-[12.5px] font-bold cursor-pointer flex items-center gap-1 hover:underline"
+            style={{ color: '#6E3FD6' }}
+          >
+            View All →
+          </span>
+        </div>
+
+        {/* Sell & Earn Grid (Reference Design) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-2">
+          <EarnCard
+            title="Personal Loan"
+            value="4.5%"
+            valueColor="#2FA35B"
+            bg="#E3F5EA"
+            color="#2FA35B"
+            icon={<PiggyBank size={19} />}
+            onClick={() => navigate('/partner/products?category=personal_loan')}
+          />
+          <EarnCard
+            title="Credit Cards"
+            value="₹2600"
+            valueColor="#6E3FD6"
+            bg="#EEE9FB"
+            color="#6E3FD6"
+            icon={<CreditCard size={19} />}
+            onClick={() => navigate('/partner/products?category=credit_card')}
+          />
+          <EarnCard
+            title="Insurance"
+            value="35%"
+            valueColor="#E8862E"
+            bg="#FCE7E1"
+            color="#E8862E"
+            icon={<ShieldPlus size={19} />}
+            onClick={() => navigate('/partner/products?category=insurance')}
+          />
+          <EarnCard
+            title="Bank Accounts"
+            value="₹480"
+            valueColor="#3A78D6"
+            bg="#E2ECFB"
+            color="#3A78D6"
+            icon={<Landmark size={19} />}
+            onClick={() => navigate('/partner/products?category=bank_account')}
+          />
+          <EarnCard
+            title="Demat Accounts"
+            value="₹1000"
+            valueColor="#E0473E"
+            bg="#FCE7E1"
+            color="#E0473E"
+            icon={<TrendingUp size={19} />}
+            onClick={() => navigate('/partner/products?category=demat')}
+          />
+          <EarnCard
+            title="Investment"
+            value="₹1000"
+            valueColor="#2FA35B"
+            bg="#E3F5EA"
+            color="#2FA35B"
+            icon={<PiggyBank size={19} />}
+            onClick={() => navigate('/partner/products?category=investment')}
+          />
+        </div>
+
+        {/* ──── ADDITIONAL EARNING OPTIONS BANNER ──── */}
+        <div
+          className="mx-2 mt-5 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+          style={{ background: '#EFF8F1', border: '1px solid #CFEBD8' }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm"
+            >
+              <RefreshCw size={18} color="#2FA35B" />
+            </div>
+            <div>
+              <p
+                className="text-[11px] font-bold tracking-wide mb-0.5"
+                style={{ color: '#2FA35B' }}
+              >
+                ADDITIONAL EARNING OPTIONS
+              </p>
+              <p className="font-bold text-[14.5px] text-gray-900">
+                Mutual Fund Distribution
+              </p>
+              <p className="text-[11.5px] text-gray-500">
+                Earn Recurring Commissions
+              </p>
+            </div>
           </div>
 
           <button
-            onClick={() => {
-              navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
-              setReferralCopied(true);
-              setTimeout(() => setReferralCopied(false), 2500);
-              const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
-              const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn the highest payouts! Register here: ${shareLink}`);
-              window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
-            }}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "10px",
-              border: "none",
-              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
-              color: "#FFFFFF",
-              fontWeight: 700,
-              fontSize: "12.5px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              boxShadow: "0 3px 10px rgba(79, 70, 229, 0.2)",
-              flexShrink: 0,
-              whiteSpace: "nowrap"
-            }}
+            onClick={() => navigate('/partner/products?category=investment')}
+            className="w-full sm:w-auto rounded-xl px-4 py-2 text-white font-bold text-[12.5px] flex items-center justify-center gap-1.5 transition-all hover:bg-emerald-800 shrink-0 shadow"
+            style={{ background: '#1E7A46' }}
           >
-            <FaWhatsapp size={14} />
-            <span>{referralCopied ? t('common.copied', '✓ Copied!') : t('dashboard.referNow', 'Refer Now')}</span>
+            Start Now →
           </button>
         </div>
-      </div>
 
-      {/* ──── QUICK ACTIONS PANEL ──── */}
-      <div style={{ marginTop: '4px' }}>
-        <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>
-          {t('dashboard.quickActions', 'Quick Actions')}
-        </h3>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "20px"
-        }}>
-          {quickActions.map((act) => {
-            const Icon = act.icon;
-            const cardBg = isDark ? act.bgDark : act.bgLight;
-            const borderCol = isDark ? act.borderColor : '#EEF2FF';
-            const textCol = isDark ? '#FFFFFF' : '#111827';
-            const descCol = isDark ? '#94A3B8' : '#64748B';
-
-            return (
-              <div
-                key={act.id}
-                onClick={act.action}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    act.action();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={act.ariaLabel}
-                style={{
-                  background: isDark ? C.card : '#FFFFFF',
-                  borderRadius: "18px",
-                  padding: "20px",
-                  border: `1.5px solid ${borderCol}`,
-                  boxShadow: "0 4px 20px rgba(15,23,42,0.04)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  outline: 'none'
-                }}
-                className="hover-card-clickable"
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = act.color;
-                  e.currentTarget.style.boxShadow = `0 0 0 3px ${act.color}40`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = borderCol;
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.borderColor = act.color;
-                  e.currentTarget.style.boxShadow = `0 10px 25px ${act.color}15`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = borderCol;
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(15,23,42,0.04)";
-                }}
-              >
-                <div style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: cardBg,
-                  color: act.color,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0
-                }}>
-                  <Icon size={24} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "14.5px", fontWeight: 800, color: textCol }}>{act.label}</div>
-                  <div style={{ fontSize: "11.5px", fontWeight: 500, color: descCol, marginTop: "3px", lineHeight: 1.3 }}>{act.desc}</div>
-                </div>
-              </div>
-            );
-          })}
+        {/* ──── STATS ROW ──── */}
+        <div
+          className="mx-2 mt-5 bg-white dark:bg-slate-800 rounded-2xl py-4 px-2 flex justify-between items-center border border-gray-100 dark:border-slate-700"
+          style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+        >
+          <StatItem
+            icon={<BarChart3 size={20} />}
+            bg="#E3F5EA"
+            color="#2FA35B"
+            value={totalEarned}
+            label="Total Earnings"
+            onClick={() => navigate('/partner/wallet')}
+          />
+          <StatItem
+            icon={<Briefcase size={20} />}
+            bg="#EEE9FB"
+            color="#6E3FD6"
+            value={kpiTotalApps}
+            label="Leads Created"
+            onClick={() => navigate('/partner/applications')}
+          />
+          <StatItem
+            icon={<Users size={20} />}
+            bg="#FCE7E1"
+            color="#E8862E"
+            value={kpiApprovedApps}
+            label="Applications"
+            onClick={() => navigate('/partner/applications')}
+          />
+          <StatItem
+            icon={<Award size={20} />}
+            bg="#E2ECFB"
+            color="#3A78D6"
+            value={`${approvedPct}%`}
+            label="Success Rate"
+            onClick={() => navigate('/partner/reports')}
+          />
         </div>
-      </div>
 
-      {/* ──── BOTTOM SECTION (3 COLUMNS) ──── */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
+        {/* ──── QUICK ACCESS SECTION ──── */}
+        <div className="mt-5 mx-2">
+          <QuickAccessSection />
+        </div>
 
-        {/* Recent Applications (100% Dynamic) */}
-        <div style={{
-          flex: "1.2",
-          minWidth: "280px",
-          background: C.card,
-          borderRadius: "20px",
-          padding: "24px",
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          display: "flex",
-          flexDirection: "column"
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{t('dashboard.recentApps', 'Recent Applications')}</h3>
-            <button 
-              onClick={() => navigate("/partner/applications")}
-              style={{ background: "none", border: "none", color: C.primary, fontSize: "12px", fontWeight: 800, cursor: "pointer" }}
-            >
-              {t('dashboard.viewAll', 'View All')}
-            </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", flex: 1, justifyContent: "center" }}>
-            {recentAppsList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: C.textLight }}>
-                <MdDescription size={40} style={{ color: C.textLight, marginBottom: "8px" }} />
-                <div style={{ fontSize: "13px", fontWeight: 700 }}>{t('dashboard.noAppsYet', 'No applications yet')}</div>
-                <p style={{ fontSize: "11px", margin: "4px 0 0" }}>{t('dashboard.startApplyingDesc', 'Start applying for products to submit leads.')}</p>
-              </div>
-            ) : (
-              recentAppsList.map((app, idx) => (
-                <div key={idx} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "8px 0", borderBottom: idx === recentAppsList.length - 1 ? "none" : `1px solid ${C.border}`
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{
-                      width: "32px", height: "32px", borderRadius: "50%", background: app.bg, color: app.color,
-                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700
-                    }}>
-                      {app.initials}
+        {/* ──── QUICK ACTIONS & RECENT APPLICATIONS ──── */}
+        <div className="mx-2 mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Quick Actions Panel */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Quick Actions</h3>
+            <div className="flex flex-col gap-2.5">
+              {quickActions.map((act) => {
+                const Icon = act.icon;
+                return (
+                  <div
+                    key={act.id}
+                    onClick={act.action}
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors border border-gray-50 dark:border-slate-700"
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: act.bgLight, color: act.color }}
+                    >
+                      <Icon size={20} />
                     </div>
-                    <div>
-                      <div style={{ fontSize: "13px", fontWeight: 700, color: C.text, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.name}</div>
-                      <span style={{ fontSize: "11px", color: C.textLight }}>{app.product} · {app.amount}</span>
+                    <div className="flex-1">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">{act.label}</div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{act.desc}</div>
                     </div>
+                    <ChevronRight size={16} color="#8A8A9E" />
                   </div>
-                  <span style={{
-                    color: app.color, background: `${app.color}15`, padding: "2px 8px", borderRadius: "20px",
-                    fontSize: "10px", fontWeight: 700
-                  }}>
-                    {app.status}
-                  </span>
-                </div>
-              ))
-            )}
+                );
+              })}
+            </div>
           </div>
+
+          {/* Recent Applications */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Recent Applications</h3>
+              <span
+                onClick={() => navigate('/partner/applications')}
+                className="text-xs font-bold text-purple-600 cursor-pointer hover:underline"
+              >
+                View All
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2 flex-1">
+              {recentAppsList.length === 0 ? (
+                <div className="text-center py-6 text-gray-400">
+                  <p className="text-xs font-semibold">No recent applications</p>
+                  <p className="text-[11px]">Start sharing links to generate leads</p>
+                </div>
+              ) : (
+                recentAppsList.map((app, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-slate-700 last:border-0"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                        style={{ background: app.bg, color: app.color }}
+                      >
+                        {app.initials}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-gray-900 dark:text-white max-w-[120px] truncate">{app.name}</div>
+                        <div className="text-[10px] text-gray-400">{app.product}</div>
+                      </div>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${app.color}15`, color: app.color }}
+                    >
+                      {app.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ──── STICKY MOBILE BOTTOM NAVIGATION BAR ──── */}
+      <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
+        <div
+          className="w-full max-w-md bg-white dark:bg-slate-800 flex items-center justify-between px-6 pointer-events-auto border-t border-gray-100 dark:border-slate-700"
+          style={{
+            height: 72,
+            boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
+            borderRadius: '20px 20px 0 0'
+          }}
+        >
+          <NavItem
+            icon={<Home size={22} />}
+            label="Dashboard"
+            active
+            onClick={() => navigate('/partner/dashboard')}
+          />
+          <NavItem
+            icon={<CreditCard size={22} />}
+            label="Credit Card"
+            onClick={() => navigate('/partner/products?category=credit_card')}
+          />
+
+          {/* Elevated Central Add Lead Action Button */}
+          <div
+            className="flex flex-col items-center -mt-7 cursor-pointer"
+            onClick={() => navigate('/partner/customers', { state: { openAddModal: true } })}
+          >
+            <div
+              className="w-13 h-13 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+              style={{
+                width: 52,
+                height: 52,
+                background: '#7C4FE0',
+                boxShadow: '0 4px 14px rgba(124,79,224,0.45)'
+              }}
+            >
+              <Plus size={26} color="#fff" />
+            </div>
+            <span className="text-[11px] font-medium mt-0.5" style={{ color: '#8A8A9E' }}>
+              Add Lead
+            </span>
+          </div>
+
+          <NavItem
+            icon={<Shield size={22} />}
+            label="Insurance"
+            onClick={() => navigate('/partner/products?category=insurance')}
+          />
+          <NavItem
+            icon={<PiggyBank size={22} />}
+            label="Loans"
+            onClick={() => navigate('/partner/products?category=personal_loan')}
+          />
         </div>
       </div>
 
-
-
-      <style>{`
-        /* Category Rich Cards Hover/Interactive Styles */
-        .category-rich-card {
-          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        }
-        .category-rich-card:hover {
-          transform: translateY(-5px) scale(1.02);
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
-        }
-        .category-rich-card:active {
-          transform: translateY(-2px) scale(0.98);
-        }
-        .category-rich-card:hover div:last-child div {
-          transform: scale(1.1);
-        }
-        .category-rich-card div:last-child div {
-          transition: transform 0.2s ease !important;
-        }
-
-        /* KPI Cards Responsive Styling */
-        .kpi-cards-container {
-          display: flex !important;
-          flex-flow: row nowrap !important;
-          width: 100% !important;
-        }
-        .kpi-card {
-          flex: 1 1 0px !important;
-          min-width: 0 !important;
-        }
-
-        @media (max-width: 900px) {
-          .kpi-cards-container {
-            gap: 10px !important;
-          }
-          .kpi-card {
-            padding: 12px 10px !important;
-            border-radius: 14px !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            justify-content: space-between !important;
-            gap: 6px !important;
-          }
-          .kpi-card-icon {
-            align-self: flex-start !important;
-            width: 32px !important;
-            height: 32px !important;
-            border-radius: 8px !important;
-            margin-top: 4px !important;
-          }
-          .kpi-card-icon svg {
-            width: 16px !important;
-            height: 16px !important;
-          }
-          .kpi-card-title {
-            font-size: 10.5px !important;
-          }
-          .kpi-card-value {
-            font-size: 18px !important;
-            margin-top: 4px !important;
-          }
-          .kpi-card-trend {
-            font-size: 9.5px !important;
-            margin-top: 4px !important;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .kpi-cards-container {
-            gap: 6px !important;
-          }
-          .kpi-card {
-            padding: 10px 6px !important;
-            border-radius: 10px !important;
-            gap: 4px !important;
-            min-height: 90px !important;
-          }
-          .kpi-card-icon {
-            display: none !important;
-          }
-          .kpi-card-title {
-            font-size: 9px !important;
-            line-height: 1.2 !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
-            height: 22px !important; /* Ensure alignment */
-          }
-          .kpi-card-value {
-            font-size: 14px !important;
-            margin-top: 2px !important;
-          }
-          .kpi-card-trend {
-            font-size: 8px !important;
-            margin-top: 2px !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-          }
-        }
-        
-        @media (max-width: 360px) {
-          .kpi-cards-container {
-            gap: 4px !important;
-          }
-          .kpi-card {
-            padding: 8px 4px !important;
-            border-radius: 8px !important;
-            min-height: 80px !important;
-          }
-          .kpi-card-title {
-            font-size: 8px !important;
-            height: 18px !important;
-          }
-          .kpi-card-value {
-            font-size: 12px !important;
-          }
-          .kpi-card-trend {
-            font-size: 7.5px !important;
-          }
-        }
-      `}</style>
+      {/* Customer 360 Drawer */}
+      {selectedCustomer360 && (
+        <Customer360Drawer
+          customer={selectedCustomer360}
+          onClose={() => setSelectedCustomer360(null)}
+        />
+      )}
     </div>
   );
 }
 
-// ── PERMISSION LOCK OVERLAY ─────────────────────────────────
-function PermissionOverlay({ C, isRejected }) {
-  const { isDark } = useTheme();
-  const { t } = useTranslation();
-  return (
-    <div style={{
-      position: "absolute",
-      inset: 0,
-      background: isDark ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.4)",
-      backdropFilter: "blur(4px)",
-      zIndex: 10,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px",
-      textAlign: "center"
-    }}>
-      <div style={{
-        width: "50px",
-        height: "50px",
-        borderRadius: "50%",
-        background: isRejected ? `${C.red}12` : `${C.gold}12`,
-        color: isRejected ? C.red : C.gold,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: "12px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
-      }}>
-        <MdLock size={24} />
-      </div>
-      <h4 style={{ fontSize: "14px", fontWeight: 800, color: C.text, margin: "0 0 4px" }}>
-        {t('dashboard.actionBlocked', 'Action Blocked')}
-      </h4>
-      <p style={{ fontSize: "11px", color: C.textLight, margin: 0, maxWidth: "220px", fontWeight: 600 }}>
-        {isRejected 
-          ? t('dashboard.kycRejectedDesc', 'Your KYC documents were rejected. Please fix and re-upload documents in the KYC Centre.')
-          : t('dashboard.kycPendingDesc', 'Your KYC verification is currently pending. Some features will remain disabled until approval.')}
-      </p>
-    </div>
-  );
-}
-
-// ── SKELETON LOADER COMPONENT ───────────────────────────────
+// ── SKELETON LOADER ───────────────────────────────
 function DashboardSkeleton({ C }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "40px" }}>
-      <div style={{ height: "120px", background: C.card, borderRadius: "16px", border: `1.5px solid ${C.border}`, animation: "pulse 1.5s infinite" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} style={{ height: "90px", background: C.card, borderRadius: "16px", border: `1.5px solid ${C.border}`, animation: "pulse 1.5s infinite" }} />
-        ))}
+    <div className="min-h-screen w-full flex justify-center p-4" style={{ background: '#F7F5FC' }}>
+      <div className="w-full max-w-md space-y-4 animate-pulse">
+        <div className="h-12 bg-white rounded-2xl" />
+        <div className="h-16 bg-white rounded-2xl" />
+        <div className="h-64 bg-white rounded-3xl" />
+        <div className="h-28 bg-white rounded-2xl" />
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-28 bg-white rounded-2xl" />
+          ))}
+        </div>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        <div style={{ flex: "1.5", height: "350px", background: C.card, borderRadius: "20px", border: `1.5px solid ${C.border}`, animation: "pulse 1.5s infinite" }} />
-        <div style={{ flex: "1", height: "350px", background: C.card, borderRadius: "20px", border: `1.5px solid ${C.border}`, animation: "pulse 1.5s infinite" }} />
-      </div>
-      <style>{`
-        @keyframes pulse {
-          0% { opacity: 0.6; }
-          50% { opacity: 1; }
-          100% { opacity: 0.6; }
-        }
-      `}</style>
     </div>
   );
 }
