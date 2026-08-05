@@ -109,7 +109,7 @@ export default function PartnerVault() {
                   boxShadow: filter === cat ? `0 4px 14px ${C.primary}30` : 'none'
                 }}
               >
-                {cat}
+                {cat === 'All' ? t('All') : cat}
               </button>
             ))}
           </div>
@@ -150,7 +150,7 @@ export default function PartnerVault() {
             ...S.btn('primary'), textDecoration: 'none',
             padding: '10px 22px', fontSize: '13px', borderRadius: '10px'
           }}>
-            Upload KYC Documents
+            {t("Upload KYC Documents")}
           </Link>
         </div>
       )}
@@ -183,7 +183,7 @@ export default function PartnerVault() {
                     background: `${C.green}15`, padding: '4px 10px', borderRadius: '20px',
                     display: 'flex', alignItems: 'center', gap: 4
                   }}>
-                    <MdVerifiedUser size={14} /> Verified
+                    <MdVerifiedUser size={14} /> {t("Verified")}
                   </span>
                 )}
               </div>
@@ -192,7 +192,7 @@ export default function PartnerVault() {
                 {doc.title}
               </h3>
               <p style={{ fontSize: '12px', color: C.textLight, margin: '0 0 16px' }}>
-                Uploaded: {doc.date}
+                {t("Uploaded")}: {doc.date}
               </p>
 
               <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
@@ -206,7 +206,7 @@ export default function PartnerVault() {
                     justifyContent: 'center', gap: '4px'
                   }}
                 >
-                  <MdVisibility size={16} /> View
+                  <MdVisibility size={16} /> {t("View")}
                 </button>
                 <button
                   onClick={() => handleViewOrDownload(doc.id, true)}
@@ -218,7 +218,7 @@ export default function PartnerVault() {
                     justifyContent: 'center', gap: '4px'
                   }}
                 >
-                  <MdDownload size={16} /> Download
+                  <MdDownload size={16} /> {t("Download")}
                 </button>
               </div>
             </div>
