@@ -118,52 +118,73 @@ export default function TravelUtilitiesPage() {
             })}
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleServiceSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
-              {activeTab.replace('_', ' ').toUpperCase()} Form
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          {/* Content Area */}
+          {UTILITIES.some(u => u.id === activeTab) ? (
+            <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: `${C.primary}15`, color: C.primary,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '32px'
+              }}>
+                ⚡
+              </div>
               <div>
-                <label style={S.label}>{getLabel1()} *</label>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '0 0 8px' }}>
+                  {allTabs.find(t => t.id === activeTab)?.label} Coming Soon
+                </h3>
+                <p style={{ fontSize: '14px', color: C.textMid, maxWidth: '440px', margin: '0 auto', lineHeight: '1.6' }}>
+                  We're currently integrating BBPS and automated payment gateway APIs for {allTabs.find(t => t.id === activeTab)?.label.toLowerCase()}. This feature will be live in an upcoming update.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleServiceSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: C.text, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
+                {activeTab.replace('_', ' ').toUpperCase()} Form
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={S.label}>{getLabel1()} *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.field1}
+                    onChange={e => setForm({ ...form, field1: e.target.value })}
+                    style={S.input}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>{getLabel2()}</label>
+                  <input
+                    type="text"
+                    value={form.field2}
+                    onChange={e => setForm({ ...form, field2: e.target.value })}
+                    style={S.input}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>{t("Transaction Amount (₹) *")}</label>
                 <input
-                  type="text"
+                  type="number"
                   required
-                  value={form.field1}
-                  onChange={e => setForm({ ...form, field1: e.target.value })}
+                  value={form.amount}
+                  onChange={e => setForm({ ...form, amount: e.target.value })}
                   style={S.input}
                 />
               </div>
-              <div>
-                <label style={S.label}>{getLabel2()}</label>
-                <input
-                  type="text"
-                  value={form.field2}
-                  onChange={e => setForm({ ...form, field2: e.target.value })}
-                  style={S.input}
-                />
-              </div>
-            </div>
 
-            <div>
-              <label style={S.label}>{t("Transaction Amount (₹) *")}</label>
-              <input
-                type="number"
-                required
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: e.target.value })}
-                style={S.input}
-              />
-            </div>
-
-            <button type="submit" style={{
-              ...S.btn('primary'), padding: '12px 24px', fontSize: '14px',
-              border: 'none', borderRadius: '10px', cursor: 'pointer', alignSelf: 'flex-start'
-            }}>
-              Submit Transaction
-            </button>
-          </form>
+              <button type="submit" style={{
+                ...S.btn('primary'), padding: '12px 24px', fontSize: '14px',
+                border: 'none', borderRadius: '10px', cursor: 'pointer', alignSelf: 'flex-start'
+              }}>
+                Submit Transaction
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Right: Ledger sidebar */}

@@ -1425,81 +1425,22 @@ function FastagPage({ onBack, C, isMobile, breadcrumbs }) {
           </h2>
         </div>
 
-        {success ? (
-          <div style={{ background: C.card, padding: "30px", borderRadius: "20px", border: `1px solid ${C.border}`, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.05)" }}>
-            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#27ae60", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px auto", fontSize: "28px" }}>✓</div>
-            <h3 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "20px", fontWeight: 800 }}>Recharge Initiated!</h3>
-            <p style={{ margin: "0 0 20px 0", color: C.textLight, fontSize: "14px" }}>Recharge of ₹{amount} for {vehicleNo.toUpperCase()} is successful.</p>
-            <button onClick={() => { setSuccess(false); setVehicleNo(""); setAmount(""); setBank(""); }} style={{ background: C.teal, color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", fontWeight: 700, cursor: "pointer" }}>
-              Recharge Another Card
-            </button>
+        <div style={{ background: C.card, padding: "48px 24px", borderRadius: "20px", border: `1px solid ${C.border}`, textAlign: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: `${C.teal}20`, color: C.teal, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px" }}>
+            🚗
           </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "3fr 2fr", gap: "24px" }}>
-            <form onSubmit={handleRecharge} style={{ background: C.card, padding: "24px", borderRadius: "20px", border: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 8px 24px rgba(0,0,0,0.02)" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Vehicle Registration Number</label>
-                <input 
-                  type="text" 
-                  value={vehicleNo}
-                  onChange={e => setVehicleNo(e.target.value)}
-                  placeholder="e.g. MH12AB1234" 
-                  required
-                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Select FASTag Bank</label>
-                <select 
-                  value={bank}
-                  onChange={e => setBank(e.target.value)}
-                  required
-                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
-                >
-                  <option value="">-- Select Bank --</option>
-                  <option value="hdfc">HDFC Bank FASTag</option>
-                  <option value="sbi">SBI FASTag</option>
-                  <option value="icici">ICICI Bank FASTag</option>
-                  <option value="idfc">IDFC First Bank FASTag</option>
-                  <option value="axis">Axis Bank FASTag</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textLight, marginBottom: "6px" }}>Recharge Amount (₹)</label>
-                <input 
-                  type="number" 
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder="Enter amount" 
-                  min="100"
-                  required
-                  style={{ width: "100%", padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "14px", fontWeight: 600, boxSizing: "border-box" }}
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading}
-                style={{ width: "100%", background: C.teal, color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 800, cursor: "pointer", marginTop: "10px", transition: "opacity 0.2s" }}
-              >
-                {loading ? "Processing Payment..." : "Proceed to Pay"}
-              </button>
-            </form>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}` }}>
-                <h4 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "14px", fontWeight: 800 }}>Instant and Secure</h4>
-                <p style={{ margin: 0, color: C.textLight, fontSize: "12px", lineHeight: 1.5 }}>Enjoy a completely automated and secure FASTag recharge experience. Receipts are generated instantly upon bank clearance.</p>
-              </div>
-              <div style={{ background: C.card, padding: "20px", borderRadius: "18px", border: `1px solid ${C.border}` }}>
-                <h4 style={{ margin: "0 0 10px 0", color: C.text, fontSize: "14px", fontWeight: 800 }}>Need Assistance?</h4>
-                <p style={{ margin: 0, color: C.textLight, fontSize: "12px", lineHeight: 1.5 }}>If your recharge fails or is delayed, contact our round-the-clock helpdesk for fast resolution.</p>
-              </div>
-            </div>
+          <div>
+            <h3 style={{ fontSize: "22px", fontWeight: 800, color: C.text, margin: "0 0 8px" }}>
+              FASTag Recharge Coming Soon
+            </h3>
+            <p style={{ fontSize: "14px", color: C.textLight, maxWidth: "460px", margin: "0 auto", lineHeight: 1.6 }}>
+              We're integrating FASTag payment gateway and NPCI NETC APIs to bring you instant automated recharges. This feature will be live soon!
+            </p>
           </div>
-        )}
+          <button onClick={onBack} style={{ background: C.teal, color: "#fff", border: "none", padding: "10px 24px", borderRadius: "10px", fontWeight: 700, cursor: "pointer", marginTop: "12px" }}>
+            Go Back
+          </button>
+        </div>
       </div>
     </div>
   );

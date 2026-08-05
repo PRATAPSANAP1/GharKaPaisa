@@ -152,11 +152,16 @@ const AppRoutes = () => {
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
         {/* Dynamic CMS Service Pages */}
-        <Route path="/cms/money-transfer" element={<MoneyTransfer />} />
-        <Route path="/cms/recharge" element={<Recharge />} />
-        <Route path="/cms/electricity" element={<Electricity />} />
-        <Route path="/cms/loan-repay" element={<LoanRepay />} />
-        <Route path="/cms/fastag" element={<Fastag />} />
+        <Route path="/recharge" element={<ComingSoon />} />
+        <Route path="/electricity" element={<ComingSoon />} />
+        <Route path="/loan-repay" element={<ComingSoon />} />
+        <Route path="/fastag" element={<ComingSoon />} />
+        <Route path="/money-transfer" element={<ComingSoon />} />
+        <Route path="/cms/money-transfer" element={<ComingSoon />} />
+        <Route path="/cms/recharge" element={<ComingSoon />} />
+        <Route path="/cms/electricity" element={<ComingSoon />} />
+        <Route path="/cms/loan-repay" element={<ComingSoon />} />
+        <Route path="/cms/fastag" element={<ComingSoon />} />
         <Route path="/cms/coming-soon" element={<ComingSoon />} />
 
         {/* Lead Gen & Dynamic Product Details Flow */}
