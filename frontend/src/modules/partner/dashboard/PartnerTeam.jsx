@@ -550,74 +550,7 @@ export default function PartnerTeam() {
         );
       })()}
 
-      {/* Conversion Funnel Visualization Widget */}
-      <div style={{ ...S.card, padding: '24px', borderRadius: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Referral Conversion Funnel Analytics</h3>
-            <p style={{ fontSize: '12px', color: C.textLight, margin: '2px 0 0 0' }}>Track drop-offs from link click to approved payouts</p>
-          </div>
-          <span style={{ background: `${C.teal}15`, color: C.teal, padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800 }}>Real-Time Funnel</span>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)', gap: '10px' }}>
-          {[
-            { label: 'Referral Clicks', count: funnel.clicks, color: C.textMid },
-            { label: 'Registrations', count: funnel.registrations, color: C.teal, rate: funnel.clicks ? `${((funnel.registrations / funnel.clicks) * 100).toFixed(1)}%` : null },
-            { label: 'KYC Approved', count: funnel.kyc_approved, color: C.purple, rate: funnel.registrations ? `${((funnel.kyc_approved / funnel.registrations) * 100).toFixed(1)}%` : null },
-            { label: 'Active Partners', count: funnel.active_partners, color: C.primary, rate: funnel.kyc_approved ? `${((funnel.active_partners / funnel.kyc_approved) * 100).toFixed(1)}%` : null },
-            { label: 'Applications', count: funnel.applications, color: C.gold },
-            { label: 'Approved Payouts', count: funnel.approved_applications, color: C.green, rate: funnel.applications ? `${((funnel.approved_applications / funnel.applications) * 100).toFixed(1)}%` : null },
-          ].map((step, idx) => (
-            <div key={idx} style={{
-              background: C.bgSecondary,
-              padding: '14px 10px',
-              borderRadius: '14px',
-              textAlign: 'center',
-              border: `1px solid ${C.border}`,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: step.color }}>{step.count}</div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, marginTop: '4px' }}>{step.label}</div>
-              </div>
-              {step.rate && (
-                <div style={{ fontSize: '10px', fontWeight: 800, color: step.color, background: C.card, padding: '2px 6px', borderRadius: '6px', marginTop: '8px', display: 'inline-block', margin: '8px auto 0 auto' }}>
-                  {step.rate} conv.
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section F: Commission Structure Explainer Banner */}
-      <div style={{
-        ...S.card,
-        padding: '18px 24px',
-        borderRadius: '16px',
-        background: 'linear-gradient(90deg, #1E1B4B 0%, #312E81 100%)',
-        color: '#FFF',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <MdMonetizationOn size={26} color="#FBBF24" />
-          </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 800 }}>Dual Earnings Policy: 90% Direct + 10% Parent Override Split</div>
-            <div style={{ fontSize: '12px', color: '#C7D2FE', marginTop: '2px' }}>
-              Your direct referrals receive 90% of loan commissions on their closed deals, while you automatically earn a 10% override payout into your wallet!
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Tabs Bar */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, paddingBottom: '2px', overflowX: 'auto' }}>
