@@ -280,7 +280,7 @@ export default function PartnerDashboardComponent({ partner }) {
       if (target.startsWith('http://') || target.startsWith('https://')) {
         window.open(target, '_blank');
       } else {
-        const route = target.replace('/credit-cards', '/partner/products?category=credit_card').replace('/loans', '/partner/products?category=personal_loan');
+        const route = target.replace('/credit-cards', '/partner/credit-cards').replace('/loans', '/partner/products?category=personal_loan');
         navigate(route);
       }
     }
@@ -297,7 +297,7 @@ export default function PartnerDashboardComponent({ partner }) {
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'),
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
       bgImage: ltfBanner,
-      action: () => navigate('/partner/products?category=credit_card')
+      action: () => navigate('/partner/credit-cards')
     },
     {
       title: t('home.banners.slide1.title', 'Personal Loans'),
@@ -635,7 +635,7 @@ export default function PartnerDashboardComponent({ partner }) {
                 label="Credit Card"
                 bg="#EEE9FB"
                 color="#6E3FD6"
-                onClick={() => navigate('/partner/products?category=credit_card')}
+                onClick={() => navigate('/partner/credit-cards')}
                 isDark={isDark}
                 C={C}
               />
@@ -724,7 +724,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#EEE9FB"
             color="#6E3FD6"
             icon={<CreditCard size={19} />}
-            onClick={() => navigate('/partner/products?category=credit_card')}
+            onClick={() => navigate('/partner/credit-cards')}
             isDark={isDark}
             C={C}
           />
@@ -1101,7 +1101,7 @@ export default function PartnerDashboardComponent({ partner }) {
           <NavItem
             icon={<CreditCard size={22} />}
             label="Credit Card"
-            onClick={() => navigate('/partner/products?category=credit_card')}
+            onClick={() => navigate('/partner/credit-cards')}
           />
 
           {/* Elevated Central Add Lead Action Button */}
