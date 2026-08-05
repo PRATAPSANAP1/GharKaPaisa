@@ -16,7 +16,7 @@ import {
   MdFlight, MdAccessTime, MdShield, MdCreditCard, MdGroup, MdEmojiEvents, MdContentCopy, MdReceiptLong,
   MdArrowForward, MdBusinessCenter
 } from "react-icons/md";
-import { FaLock, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
+import { FaLock, FaInfoCircle, FaCalendarAlt, FaGift, FaWhatsapp } from "react-icons/fa";
 
 // Bank logos
 import hdfcLogo from "../../home/components/banks/hdfc_bank.png";
@@ -965,6 +965,131 @@ export default function PartnerDashboard({ partner }) {
 
       {/* ──── QUICK ACCESS SECTION ──── */}
       <QuickAccessSection />
+
+      {/* ──── COMPACT REFER & EARN BANNER ──── */}
+      <div style={{
+        background: isDark 
+          ? "linear-gradient(135deg, rgba(79, 70, 229, 0.18) 0%, rgba(147, 51, 234, 0.1) 100%)" 
+          : "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%)",
+        borderRadius: "14px",
+        padding: isMobile ? "10px 14px" : "12px 20px",
+        border: isDark ? "1px solid rgba(139, 92, 246, 0.2)" : "1px solid rgba(79, 70, 229, 0.12)",
+        boxShadow: "0 2px 10px rgba(79, 70, 229, 0.04)",
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: isMobile ? "8px" : "16px",
+        marginTop: "12px",
+        marginBottom: "16px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+            color: "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "18px",
+            flexShrink: 0
+          }}>
+            <FaGift />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h4 style={{
+              fontSize: isMobile ? "13.5px" : "15px",
+              fontWeight: 800,
+              color: isDark ? "#FFFFFF" : "#1E1B4B",
+              margin: 0,
+              lineHeight: 1.2
+            }}>
+              Refer & Earn More
+            </h4>
+            <p style={{
+              fontSize: isMobile ? "11px" : "12px",
+              color: C.textMid,
+              margin: "2px 0 0 0",
+              fontWeight: 500,
+              whiteSpace: isMobile ? "normal" : "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}>
+              Refer your friends and earn exciting rewards and bonuses.
+            </p>
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div style={{
+          width: isMobile ? "100%" : "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          flexShrink: 0
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            background: isDark ? "rgba(0,0,0,0.25)" : "#FFFFFF",
+            borderRadius: "10px",
+            padding: "4px 10px",
+            border: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+            maxWidth: isMobile ? "100%" : "190px",
+            flex: isMobile ? 1 : "none"
+          }}>
+            <input
+              type="text"
+              readOnly
+              value={`https://gharkapaisa.in/register?ref=${partnerCode}`}
+              style={{
+                width: "100%",
+                border: "none",
+                background: "none",
+                color: C.primary,
+                fontSize: "11px",
+                fontWeight: 700,
+                outline: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            />
+          </div>
+
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`https://gharkapaisa.in/register?ref=${partnerCode}`);
+              setReferralCopied(true);
+              setTimeout(() => setReferralCopied(false), 2500);
+              const shareLink = `https://gharkapaisa.in/register?ref=${partnerCode}`;
+              const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn the highest payouts! Register here: ${shareLink}`);
+              window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+            }}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "10px",
+              border: "none",
+              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",
+              color: "#FFFFFF",
+              fontWeight: 700,
+              fontSize: "12.5px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 3px 10px rgba(79, 70, 229, 0.2)",
+              flexShrink: 0,
+              whiteSpace: "nowrap"
+            }}
+          >
+            <FaWhatsapp size={14} />
+            <span>{referralCopied ? "✓ Copied!" : "Refer Now"}</span>
+          </button>
+        </div>
+      </div>
 
       {/* ──── QUICK ACTIONS PANEL ──── */}
       <div style={{ marginTop: '4px' }}>
