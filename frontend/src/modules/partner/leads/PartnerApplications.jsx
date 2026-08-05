@@ -20,7 +20,7 @@ const STAGES = [
 
 export default function PartnerApplications() {
   const { t } = useTranslation();
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const [applications, setApplications] = useState([]);
