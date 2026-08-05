@@ -213,7 +213,7 @@ export default function PartnerSupport() {
                   transition: 'all 0.15s ease'
                 }}
               >
-                {tab.toUpperCase()}
+                {tab === 'all' ? t("support.all", "ALL") : tab === 'open' ? t("support.open", "OPEN") : t("support.resolved", "RESOLVED")}
               </button>
             ))}
           </div>
@@ -246,7 +246,7 @@ export default function PartnerSupport() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: 700, color: C.textLight }}>{formattedId}</span>
-                    <span style={S.tag(getStatusColor(tkt.status))}>{tkt.status}</span>
+                    <span style={S.tag(getStatusColor(tkt.status))}>{t(`support.status.${tkt.status}`, tkt.status)}</span>
                   </div>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: C.text, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {tkt.subject}
@@ -274,10 +274,10 @@ export default function PartnerSupport() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <h2 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{selectedTicket.subject}</h2>
-                  <span style={S.tag(getStatusColor(selectedTicket.status))}>{selectedTicket.status}</span>
+                  <span style={S.tag(getStatusColor(selectedTicket.status))}>{t(`support.status.${selectedTicket.status}`, selectedTicket.status)}</span>
                 </div>
                 <p style={{ fontSize: '12px', fontFamily: 'monospace', color: C.textLight, margin: '4px 0 0' }}>
-                  {`TKT-${selectedTicket.id.substring(0, 8).toUpperCase()}`} • Created on {new Date(selectedTicket.created_at).toLocaleString('en-IN')}
+                  {`TKT-${selectedTicket.id.substring(0, 8).toUpperCase()}`} • {t("support.createdOn", "Created on")} {new Date(selectedTicket.created_at).toLocaleString('en-IN')}
                 </p>
               </div>
               {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' && (
@@ -290,7 +290,7 @@ export default function PartnerSupport() {
                     boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
                   }}
                 >
-                  <MdCheckCircle size={20} title="Mark as Resolved" />
+                  <MdCheckCircle size={20} title={t("support.markResolved", "Mark as Resolved")} />
                 </button>
               )}
             </div>
@@ -303,7 +303,7 @@ export default function PartnerSupport() {
               {/* Original ticket request message */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>
-                  You
+                  {t("support.you", "You")}
                 </span>
                 <div style={{
                   padding: '12px 16px', borderRadius: '16px', maxWidth: '80%',
@@ -327,7 +327,7 @@ export default function PartnerSupport() {
                     alignItems: isPartner ? 'flex-end' : 'flex-start'
                   }}>
                     <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>
-                      {isPartner ? 'You' : 'Support Team'}
+                      {isPartner ? t("support.you", "You") : t("support.team", "Support Team")}
                     </span>
                     <div style={{
                       padding: '12px 16px', borderRadius: '16px', maxWidth: '80%',
@@ -417,7 +417,7 @@ export default function PartnerSupport() {
               padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
               background: C.bgSecondary, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
             }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Create New Ticket</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>{t("support.createTicket", "Create New Ticket")}</h3>
               <button 
                 type="button"
                 onClick={() => setIsNewTicketModalOpen(false)}
@@ -432,7 +432,7 @@ export default function PartnerSupport() {
 
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={S.label}>Category *</label>
+                <label style={S.label}>{t("support.category", "Category *")}</label>
                 <select 
                   id="partner-support-category-select"
                   value={category}
@@ -448,11 +448,11 @@ export default function PartnerSupport() {
               </div>
 
               <div>
-                <label style={S.label}>Subject *</label>
+                <label style={S.label}>{t("support.subject", "Subject *")}</label>
                 <input 
                   type="text" 
                   required
-                  placeholder="Brief summary of the issue" 
+                  placeholder={t("support.subjectPlaceholder", "Brief summary of the issue")} 
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   style={S.input} 
@@ -460,11 +460,11 @@ export default function PartnerSupport() {
               </div>
 
               <div>
-                <label style={S.label}>Description *</label>
+                <label style={S.label}>{t("support.description", "Description *")}</label>
                 <textarea 
                   rows="3" 
                   required
-                  placeholder="Provide details about your issue..." 
+                  placeholder={t("support.descPlaceholder", "Provide details about your issue...")} 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   style={{ ...S.input, resize: 'none' }} 
