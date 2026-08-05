@@ -138,16 +138,23 @@ const getWalletReport = async (partnerId, filters) => {
   const cached = await getCachedReport('wallet', filters, partnerId);
   if (cached) return cached;
 
-  let where = partnerId ? `WHERE wl.partner_id = $1` : `WHERE 1=1`;
+  let where = partnerId ? `WHERE wt.partner_id = $1` : `WHERE 1=1`;
   const values = partnerId ? [partnerId] : [];
 
   const { rows } = await query(`
     SELECT 
-      wl.id, wl.transaction_type, wl.credit, wl.debit, wl.balance_after,
-      wl.description, wl.reference_number, wl.status, wl.created_at
-    FROM wallet_ledger wl
+      wt.id,
+      wt.type as transaction_type,
+      CASE WHEN wt.type = 'credit' THEN wt.amount ELSE 0 END as credit,
+      CASE WHEN wt.type = 'debit' THEN wt.amount ELSE 0 END as debit,
+      wt.balance_after,
+      wt.description,
+      wt.reference_id as reference_number,
+      wt.status,
+      wt.created_at
+    FROM wallet_transactions wt
     ${where}
-    ORDER BY wl.created_at DESC LIMIT 100
+    ORDER BY wt.created_at DESC LIMIT 100
   `, values);
 
   await setCachedReport('wallet', filters, partnerId, rows);
@@ -161,18 +168,23 @@ const getCommissionReport = async (partnerId, filters) => {
   const cached = await getCachedReport('commission', filters, partnerId);
   if (cached) return cached;
 
-  let where = partnerId ? `WHERE cl.partner_id = $1` : `WHERE 1=1`;
+  let where = partnerId ? `WHERE a.partner_id = $1` : `WHERE 1=1`;
   const values = partnerId ? [partnerId] : [];
 
   const { rows } = await query(`
     SELECT 
-      cl.id, cl.commission_earned, cl.commission_rate, cl.status, cl.created_at,
-      p.name as product_name, a.app_number
-    FROM commission_ledger cl
-    LEFT JOIN applications a ON a.id = cl.application_id
-    LEFT JOIN products p ON p.id = cl.product_id
+      a.id,
+      a.app_number,
+      COALESCE(a.commission_amount, 0) as commission_earned,
+      a.commission_status as status,
+      a.created_at,
+      p.name as product_name,
+      b.name as bank_name
+    FROM applications a
+    LEFT JOIN products p ON p.id = a.product_id
+    LEFT JOIN banks b ON b.id = p.bank_id
     ${where}
-    ORDER BY cl.created_at DESC LIMIT 100
+    ORDER BY a.created_at DESC LIMIT 100
   `, values);
 
   await setCachedReport('commission', filters, partnerId, rows);
@@ -191,10 +203,9 @@ const getWithdrawalsReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      w.id, w.amount, w.status, w.utr_number, w.bank_reference, w.created_at, w.transferred_at,
-      bd.bank_name, bd.account_number
-    FROM wallet_withdrawals w
-    LEFT JOIN partner_bank_details bd ON bd.id = w.bank_detail_id
+      w.id, w.amount, w.status, w.utr_number, w.created_at,
+      w.bank_name, w.account_number
+    FROM withdrawal_requests w
     ${where}
     ORDER BY w.created_at DESC LIMIT 100
   `, values);
@@ -214,8 +225,8 @@ const getProductsReport = async (partnerId, filters) => {
     SELECT 
       p.id, p.name, p.category, b.name as bank_name,
       COUNT(a.id) as total_applications,
-      COUNT(a.id) FILTER (WHERE a.status = 'approved') as approved_applications,
-      COALESCE(SUM(a.payout_amount) FILTER (WHERE a.status = 'approved'), 0) as total_payout
+      COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_applications,
+      COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved','disbursed')), 0) as total_payout
     FROM products p
     LEFT JOIN banks b ON b.id = p.bank_id
     LEFT JOIN applications a ON a.product_id = p.id ${partnerId ? 'AND a.partner_id = $1' : ''}
@@ -237,8 +248,8 @@ const getBanksReport = async (partnerId, filters) => {
     SELECT 
       b.id, b.name,
       COUNT(a.id) as total_applications,
-      COUNT(a.id) FILTER (WHERE a.status = 'approved') as approved_applications,
-      COALESCE(ROUND((COUNT(a.id) FILTER (WHERE a.status = 'approved')::decimal / NULLIF(COUNT(a.id),0)) * 100, 2), 0) as approval_percentage
+      COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_applications,
+      COALESCE(ROUND((COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed'))::decimal / NULLIF(COUNT(a.id),0)) * 100, 2), 0) as approval_percentage
     FROM banks b
     LEFT JOIN products p ON p.bank_id = b.id
     LEFT JOIN applications a ON a.product_id = p.id ${partnerId ? 'AND a.partner_id = $1' : ''}
@@ -258,13 +269,13 @@ const getRevenueReport = async (filters) => {
 
   const { rows: [rev] } = await query(`
     SELECT 
-      COALESCE(SUM(credit), 0) as total_platform_credits,
-      COALESCE(SUM(debit), 0) as total_platform_debits
-    FROM wallet_ledger WHERE status = 'completed'
+      COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) as total_platform_credits,
+      COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) as total_platform_debits
+    FROM wallet_transactions WHERE status IN ('completed','processed','approved')
   `);
 
   const { rows: [withd] } = await query(`
-    SELECT COALESCE(SUM(amount), 0) as total_withdrawals FROM wallet_withdrawals WHERE status = 'completed'
+    SELECT COALESCE(SUM(amount), 0) as total_withdrawals FROM withdrawal_requests WHERE status IN ('completed','processed','approved')
   `);
 
   const { rows: [apps] } = await query(`

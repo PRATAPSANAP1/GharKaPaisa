@@ -1051,7 +1051,7 @@ const PartnerWallet = () => {
                 </div>
               </div>
               <div style={{ flex: 1, minHeight: '220px' }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={220} minWidth={0}>
                   <AreaChart 
                     data={
                       (dashboardData?.history && dashboardData.history.length > 0)
@@ -1793,7 +1793,7 @@ const PartnerWallet = () => {
           {dashboardData?.categories?.length > 0 && (
             <div style={{ ...S.card, padding: '24px', minHeight: '300px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, marginBottom: '16px' }}>Category Earnings Distribution</h3>
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={240} minWidth={0}>
                 <BarChart data={dashboardData.categories}>
                   <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
                   <XAxis dataKey="category" stroke={C.textLight} fontSize={11} />
