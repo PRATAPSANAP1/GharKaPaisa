@@ -26,8 +26,7 @@ import {
   Award,
   Plus,
   Shield,
-  Home,
-  Sparkles
+  Home
 } from 'lucide-react';
 
 import {
@@ -36,16 +35,6 @@ import {
   MdReceiptLong, MdChevronLeft, MdChevronRight
 } from 'react-icons/md';
 import { FaGift, FaWhatsapp } from 'react-icons/fa';
-
-// Bank logos
-import hdfcLogo from '../../home/components/banks/hdfc_bank.png';
-import axisLogo from '../../home/components/banks/axis_bank.png';
-import kotakLogo from '../../home/components/banks/kotak_bank.png';
-import sbiLogo from '../../home/components/banks/sbi_card.png';
-import iciciLogo from '../../home/components/banks/icici_bank.png';
-import yesLogo from '../../home/components/banks/yes_bank.png';
-import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
-import bobLogo from '../../home/components/banks/bank_of_baroda.png';
 
 // Banners
 import ltfBanner from '../../home/components/banner/lifetimefree card.png';
@@ -66,91 +55,156 @@ const localBannerMap = {
   'offerbanner.png': offerBanner
 };
 
-/* ---------- Reference UI Building Blocks ---------- */
+/* ---------- Reference UI Pure Styling Sub-Components ---------- */
 
 const IconCircle = ({ bg, color, size = 52, children }) => (
   <div
-    style={{ width: size, height: size, background: bg, color }}
-    className="rounded-full flex items-center justify-center shrink-0 shadow-sm"
+    style={{
+      width: size,
+      height: size,
+      background: bg,
+      color: color,
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+    }}
   >
     {children}
   </div>
 );
 
-const ServiceItem = ({ icon, label, bg, color, onClick }) => (
+const ServiceItem = ({ icon, label, bg, color, onClick, isDark, C }) => (
   <div
     onClick={onClick}
-    className="flex flex-col items-center gap-1.5 w-16 cursor-pointer hover:scale-105 transition-transform"
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '6px',
+      width: '60px',
+      cursor: 'pointer',
+      flexShrink: 0
+    }}
   >
     <IconCircle bg={bg} color={color} size={50}>
       {icon}
     </IconCircle>
-    <span className="text-[11px] text-center leading-tight font-medium text-gray-700 dark:text-gray-200">
+    <span
+      style={{
+        fontSize: '11px',
+        textAlign: 'center',
+        lineHeight: 1.2,
+        fontWeight: 600,
+        color: isDark ? C.text : '#374151',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden'
+      }}
+    >
       {label}
     </span>
   </div>
 );
 
-const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick }) => (
+const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, C }) => (
   <div
     onClick={onClick}
-    className="bg-white dark:bg-slate-800 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5 border border-gray-100 dark:border-slate-700"
-    style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.05)', minHeight: 124 }}
+    style={{
+      background: isDark ? C.card : '#FFFFFF',
+      borderRadius: '16px',
+      padding: '14px',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      cursor: 'pointer',
+      minHeight: '124px',
+      boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.05)',
+      border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`,
+      transition: 'transform 0.15s ease, boxShadow 0.15s ease'
+    }}
   >
-    <div className="flex items-start justify-between">
-      <p className="font-bold text-[14px] text-gray-900 dark:text-white leading-snug pr-1">
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <p
+        style={{
+          fontWeight: 700,
+          fontSize: '14px',
+          color: isDark ? C.text : '#111827',
+          lineHeight: 1.25,
+          paddingRight: '4px',
+          margin: 0
+        }}
+      >
         {title}
       </p>
       <IconCircle bg={bg} color={color} size={40}>
         {icon}
       </IconCircle>
     </div>
-    <div>
-      <p className="text-[11px] text-gray-400 dark:text-gray-400">Earn upto</p>
-      <p className="font-bold text-[19px]" style={{ color: valueColor }}>
+    <div style={{ marginTop: '10px' }}>
+      <p style={{ fontSize: '11px', color: isDark ? C.textLight : '#6B7280', margin: '0 0 2px 0' }}>Earn upto</p>
+      <p style={{ fontWeight: 800, fontSize: '19px', color: valueColor, margin: 0 }}>
         {value}
       </p>
     </div>
   </div>
 );
 
-const StatItem = ({ icon, bg, color, value, label, sublabel = 'This Month', onClick }) => (
+const StatItem = ({ icon, bg, color, value, label, sublabel = 'This Month', onClick, isDark, C }) => (
   <div
     onClick={onClick}
-    className="flex flex-col items-center gap-1 flex-1 px-2 py-1 cursor-pointer hover:opacity-90 transition-opacity"
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '4px',
+      flex: 1,
+      padding: '4px 6px',
+      cursor: 'pointer'
+    }}
   >
     <IconCircle bg={bg} color={color} size={44}>
       {icon}
     </IconCircle>
-    <p className="font-bold text-[17px] text-gray-900 dark:text-white mt-1">{value}</p>
-    <p className="text-[11.5px] text-gray-500 dark:text-gray-400 leading-none text-center">{label}</p>
-    <p className="text-[9.5px] text-gray-400 dark:text-gray-500 mt-0.5">{sublabel}</p>
+    <p style={{ fontWeight: 800, fontSize: '17px', color: isDark ? C.text : '#111827', margin: '4px 0 0 0' }}>{value}</p>
+    <p style={{ fontSize: '11px', color: isDark ? C.textLight : '#6B7280', margin: 0, textAlign: 'center', lineHeight: 1.1 }}>{label}</p>
+    <p style={{ fontSize: '9.5px', color: isDark ? C.textLight : '#9CA3AF', margin: '2px 0 0 0' }}>{sublabel}</p>
   </div>
 );
 
 const NavItem = ({ icon, label, active, onClick }) => (
-  <div onClick={onClick} className="flex flex-col items-center gap-1 cursor-pointer">
+  <div onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
     <div style={{ color: active ? '#6E3FD6' : '#8A8A9E' }}>{icon}</div>
     <span
-      className="text-[11px] font-medium"
-      style={{ color: active ? '#6E3FD6' : '#8A8A9E' }}
+      style={{
+        fontSize: '11px',
+        fontWeight: 600,
+        color: active ? '#6E3FD6' : '#8A8A9E'
+      }}
     >
       {label}
     </span>
     {active && (
       <div
-        className="h-[3px] w-6 rounded-full mt-0.5"
-        style={{ background: '#6E3FD6' }}
+        style={{
+          height: '3px',
+          width: '24px',
+          borderRadius: '999px',
+          background: '#6E3FD6',
+          marginTop: '2px'
+        }}
       />
     )}
   </div>
 );
 
-/* ---------- Main Component ---------- */
+/* ---------- Main Dashboard Component ---------- */
 
 export default function PartnerDashboardComponent({ partner }) {
   const { C, isDark } = useTheme();
-  const S = makeS(C);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -167,21 +221,16 @@ export default function PartnerDashboardComponent({ partner }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [walletData, setWalletData] = useState(null);
   const [teamDashboard, setTeamDashboard] = useState(null);
-  const [trainingModules, setTrainingModules] = useState([]);
   const [banners, setBanners] = useState([]);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [allLeads, setAllLeads] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [services, setServices] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [selectedCustomer360, setSelectedCustomer360] = useState(null);
-  const [referralCopied, setReferralCopied] = useState(false);
 
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
   const kycStatus = partner?.kyc_status || 'pending';
-  const accountStatus = partner?.status || 'pending';
   const partnerCode = partner?.partner_code || partner?.Partner_code || '';
   const partnerName = partner?.full_name || partner?.name || partner?.first_name || 'Sanap Pratap';
 
@@ -191,26 +240,20 @@ export default function PartnerDashboardComponent({ partner }) {
     const fetchAllDashboardData = async () => {
       setLoading(true);
       try {
-        const [dashRes, wallRes, teamRes, trainRes, bannerRes, notifRes, leadsRes, prodRes, svcRes] = await Promise.all([
+        const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
           api.get('/wallet').catch(() => null),
           api.get('/partner/team-dashboard').catch(() => null),
-          api.get('/partner/training').catch(() => null),
           api.get('/banners').catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
-          api.get('/leads', { params: { limit: 100 } }).catch(() => null),
-          api.get('/products', { params: { is_active: 'true', limit: 100 } }).catch(() => null),
-          api.get('/service-catalog').catch(() => null)
+          api.get('/leads', { params: { limit: 100 } }).catch(() => null)
         ]);
 
         if (dashRes?.data?.success) setDashboardData(dashRes.data.data);
         if (wallRes?.data?.success) setWalletData(wallRes.data.data);
         if (teamRes?.data?.success) setTeamDashboard(teamRes.data.data);
-        if (trainRes?.data?.success) setTrainingModules(trainRes.data.data || []);
         if (bannerRes?.data?.success) setBanners(bannerRes.data.data || []);
         if (leadsRes?.data?.success) setAllLeads(leadsRes.data.data || []);
-        if (prodRes?.data?.success) setProducts(prodRes.data.data || []);
-        if (svcRes?.data?.success) setServices(svcRes.data.data || []);
 
         if (notifRes?.data?.success) {
           setNotifications(notifRes.data.data.notifications || []);
@@ -286,7 +329,7 @@ export default function PartnerDashboardComponent({ partner }) {
   const kpiApprovedApps = allLeads.filter(lead => lead.status?.toLowerCase() === 'approved').length || 32;
   const approvedPct = kpiTotalApps > 0 ? Math.round((kpiApprovedApps / kpiTotalApps) * 100) : 68;
 
-  // Format dynamic recent applications list
+  // Recent applications list
   const getRecentApplications = () => {
     if (!allLeads || allLeads.length === 0) return [];
     return allLeads.slice(0, 5).map(lead => {
@@ -345,47 +388,112 @@ export default function PartnerDashboardComponent({ partner }) {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center transition-colors"
-      style={{ background: isDark ? C.bg : '#F7F5FC' }}
+      style={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        background: isDark ? C.bg : '#F7F5FC'
+      }}
     >
-      <div className="w-full max-w-4xl pb-24 px-2 sm:px-4" style={{ fontFamily: 'Inter, sans-serif' }}>
-        
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '560px',
+          paddingBottom: '96px',
+          paddingLeft: '12px',
+          paddingRight: '12px',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          boxSizing: 'border-box'
+        }}
+      >
         {/* ──── REFERENCE HEADER BAR ──── */}
-        <div className="flex items-center justify-between px-2 pt-4 pb-2">
-          <Menu size={24} color={isDark ? C.text : '#1A1A1A'} className="cursor-pointer" onClick={() => navigate('/partner/settings')} />
-          
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/partner/dashboard')}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingTop: '16px',
+            paddingBottom: '8px',
+            paddingLeft: '8px',
+            paddingRight: '8px'
+          }}
+        >
+          <Menu
+            size={24}
+            color={isDark ? C.text : '#1A1A1A'}
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/partner/settings')}
+          />
+
+          <div
+            onClick={() => navigate('/partner/dashboard')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+          >
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white font-extrabold text-xs"
               style={{
-                background: 'radial-gradient(circle at 30% 30%, #4A9CE8, #1B1547)'
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 30% 30%, #4A9CE8, #1B1547)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: '12px'
               }}
             >
               G
             </div>
-            <span className="font-extrabold text-[17px] tracking-tight">
+            <span style={{ fontWeight: 800, fontSize: '17px', letterSpacing: '-0.02em' }}>
               <span style={{ color: isDark ? '#FFFFFF' : '#1E2A4A' }}>GHAR</span>
               <span style={{ color: '#3AA655' }}>KAPAISA</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={() => navigate('/partner/team-network')}
-              className="flex items-center gap-1 rounded-full px-3 py-1 border transition-all hover:scale-105"
-              style={{ borderColor: '#E8A93C', background: isDark ? 'rgba(232, 169, 60, 0.1)' : '#fff' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                borderRadius: '999px',
+                padding: '4px 12px',
+                border: '1.5px solid #E8A93C',
+                background: isDark ? 'rgba(232, 169, 60, 0.1)' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
             >
               <Crown size={14} color="#C98A1F" />
-              <span className="text-[12px] font-bold" style={{ color: '#C98A1F' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#C98A1F' }}>
                 To Gold
               </span>
             </button>
 
-            <div className="relative cursor-pointer" onClick={() => navigate('/partner/notifications')}>
+            <div
+              onClick={() => navigate('/partner/notifications')}
+              style={{ position: 'relative', cursor: 'pointer' }}
+            >
               <Bell size={22} color={isDark ? C.text : '#1A1A1A'} />
               <span
-                className="absolute -top-1.5 -right-1.5 text-[10px] text-white rounded-full w-4 h-4 flex items-center justify-center font-bold"
-                style={{ background: '#E03B3B' }}
+                style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-6px',
+                  fontSize: '10px',
+                  color: '#FFFFFF',
+                  background: '#E03B3B',
+                  borderRadius: '50%',
+                  width: '16px',
+                  height: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700
+                }}
               >
                 {unreadNotificationsCount || 3}
               </span>
@@ -402,19 +510,25 @@ export default function PartnerDashboardComponent({ partner }) {
 
         {kycStatus !== 'approved' && (
           <div
-            className="mx-2 my-3 rounded-2xl p-4 flex items-center justify-between gap-3 border shadow-sm"
             style={{
-              background: kycStatus === 'rejected' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
-              borderColor: kycStatus === 'rejected' ? '#EF4444' : '#F59E0B'
+              margin: '12px 8px',
+              borderRadius: '16px',
+              padding: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              border: `1px solid ${kycStatus === 'rejected' ? '#EF4444' : '#F59E0B'}`,
+              background: kycStatus === 'rejected' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)'
             }}
           >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{kycStatus === 'rejected' ? '🔴' : '🟡'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>{kycStatus === 'rejected' ? '🔴' : '🟡'}</span>
               <div>
-                <h4 className="font-bold text-sm" style={{ color: kycStatus === 'rejected' ? '#DC2626' : '#D97706' }}>
+                <h4 style={{ fontWeight: 700, fontSize: '14px', margin: 0, color: kycStatus === 'rejected' ? '#DC2626' : '#D97706' }}>
                   {kycStatus === 'rejected' ? 'KYC Rejected' : kycStatus === 'under_review' ? 'KYC Under Verification' : 'KYC Verification Pending'}
                 </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-300">
+                <p style={{ fontSize: '12px', color: isDark ? C.textLight : '#4B5563', margin: '2px 0 0 0' }}>
                   {kycStatus === 'rejected'
                     ? 'Documents require correction. Click to re-upload.'
                     : kycStatus === 'under_review'
@@ -426,8 +540,17 @@ export default function PartnerDashboardComponent({ partner }) {
             {kycStatus !== 'under_review' && (
               <button
                 onClick={() => navigate('/partner/kyc-centre')}
-                className="px-3.5 py-1.5 rounded-xl text-white font-bold text-xs shrink-0 shadow"
-                style={{ background: kycStatus === 'rejected' ? '#EF4444' : '#F59E0B' }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '10px',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  border: 'none',
+                  background: kycStatus === 'rejected' ? '#EF4444' : '#F59E0B',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
               >
                 {kycStatus === 'rejected' ? 'Re-upload' : 'Verify'}
               </button>
@@ -436,19 +559,27 @@ export default function PartnerDashboardComponent({ partner }) {
         )}
 
         {/* ──── GREETING + WALLET CARD ──── */}
-        <div className="flex items-center justify-between px-2 mt-4">
-          <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', paddingRight: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
-              className="w-13 h-13 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: '#E9E4F7', width: 50, height: 50 }}
+              style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: '#E9E4F7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
             >
               <Users size={24} color="#9B8CC7" />
             </div>
             <div>
-              <p className="font-bold text-[18px] leading-tight" style={{ color: isDark ? C.text : '#1A1A2E' }}>
+              <p style={{ fontWeight: 800, fontSize: '18px', margin: 0, color: isDark ? C.text : '#1A1A2E', lineHeight: 1.2 }}>
                 Hi, {partnerName} 👋
               </p>
-              <p className="text-[12.5px]" style={{ color: isDark ? C.textLight : '#8A8A9E' }}>
+              <p style={{ fontSize: '12.5px', margin: '2px 0 0 0', color: isDark ? C.textLight : '#8A8A9E' }}>
                 Welcome back to your dashboard
               </p>
             </div>
@@ -458,21 +589,39 @@ export default function PartnerDashboardComponent({ partner }) {
         {/* Wallet Balance Widget */}
         <div
           onClick={() => navigate('/partner/wallet')}
-          className="mx-2 mt-3 bg-white dark:bg-slate-800 rounded-2xl px-4 py-3 flex items-center justify-between cursor-pointer hover:shadow-md transition-all border border-gray-100 dark:border-slate-700"
-          style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}
+          style={{
+            margin: '12px 8px 0 8px',
+            background: isDark ? C.card : '#FFFFFF',
+            borderRadius: '16px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
+          }}
         >
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: '#EDE7FB' }}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: '#EDE7FB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
             >
               <Wallet size={20} color="#7C4FE0" />
             </div>
             <div>
-              <p className="font-bold text-[16px]" style={{ color: '#5B3FC4' }}>
+              <p style={{ fontWeight: 800, fontSize: '16px', color: '#5B3FC4', margin: 0 }}>
                 {walletBalance}
               </p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-400">Wallet Balance</p>
+              <p style={{ fontSize: '11px', color: '#9CA3AF', margin: 0 }}>Wallet Balance</p>
             </div>
           </div>
           <ChevronRight size={18} color="#8A8A9E" />
@@ -482,25 +631,36 @@ export default function PartnerDashboardComponent({ partner }) {
         <div
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
-          className="mx-2 mt-5 rounded-[20px] relative overflow-hidden cursor-pointer"
+          onClick={() => bannerSlides[bannerIndex]?.action()}
           style={{
-            height: isMobile ? 290 : 320,
+            margin: '20px 8px 0 8px',
+            borderRadius: '20px',
+            position: 'relative',
+            overflow: 'hidden',
+            cursor: 'pointer',
+            height: isMobile ? '290px' : '320px',
             background: 'linear-gradient(135deg, #1B1547 0%, #2E2470 60%, #3B2A8C 100%)',
             boxShadow: '0 8px 20px rgba(30,20,80,0.15)'
           }}
-          onClick={() => bannerSlides[bannerIndex]?.action()}
         >
           {/* Watermark Rupee */}
           <span
-            className="absolute top-3 right-4 text-[76px] font-bold select-none"
-            style={{ color: 'rgba(255,255,255,0.07)' }}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '16px',
+              fontSize: '76px',
+              fontWeight: 800,
+              color: 'rgba(255,255,255,0.07)',
+              userSelect: 'none'
+            }}
           >
             ₹
           </span>
 
           {/* Lime Wave SVG */}
           <svg
-            className="absolute bottom-0 left-0 w-full"
+            style={{ position: 'absolute', bottom: 0, left: 0, width: '100%' }}
             height="60"
             viewBox="0 0 400 60"
             preserveAspectRatio="none"
@@ -508,32 +668,44 @@ export default function PartnerDashboardComponent({ partner }) {
             <path d="M0,30 C100,60 300,0 400,30 L400,60 L0,60 Z" fill="#D9E547" />
           </svg>
 
-          <div className="relative z-10 p-5 h-full flex flex-col justify-between">
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 10,
+              padding: '20px',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxSizing: 'border-box'
+            }}
+          >
             <div>
-              <div className="flex items-center gap-1.5 mb-3">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
                 <div
-                  className="w-4 h-4"
-                  style={{ background: '#3A6FE0', clipPath: 'polygon(0 0,100% 0,100% 100%)' }}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    background: '#3A6FE0',
+                    clipPath: 'polygon(0 0,100% 0,100% 100%)'
+                  }}
                 />
-                <span className="text-white font-bold text-[15px]">
+                <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '15px' }}>
                   salary<span style={{ color: '#E8E135' }}>se</span>
                 </span>
               </div>
 
-              <p className="text-white font-bold text-[22px] sm:text-[25px] leading-tight">
+              <p style={{ color: '#FFFFFF', fontWeight: 800, fontSize: isMobile ? '22px' : '25px', margin: 0, lineHeight: 1.15 }}>
                 India ka sabse
               </p>
-              <p
-                className="font-bold text-[24px] sm:text-[27px] leading-tight"
-                style={{ color: '#E8E135' }}
-              >
+              <p style={{ color: '#E8E135', fontWeight: 800, fontSize: isMobile ? '24px' : '27px', margin: 0, lineHeight: 1.15 }}>
                 Rewarding Credit Card
               </p>
 
-              <p className="text-white/90 text-[13.5px] mt-2.5">
-                har UPI payment pe milega <b className="text-white font-extrabold">7.5% back</b>
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13.5px', marginTop: '10px', margin: '10px 0 0 0' }}>
+                har UPI payment pe milega <b style={{ color: '#FFFFFF', fontWeight: 800 }}>7.5% back</b>
               </p>
-              <p className="text-white font-bold text-[17px] mt-1">
+              <p style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '17px', margin: '4px 0 0 0' }}>
                 Earn Upto ₹2000
               </p>
 
@@ -545,25 +717,39 @@ export default function PartnerDashboardComponent({ partner }) {
                   const text = encodeURIComponent(`Join my network on GharKaPaisa, refer financial products & earn payouts! Register here: ${shareLink}`);
                   window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
                 }}
-                className="mt-3.5 bg-white rounded-full px-5 py-2 font-bold text-[13.5px] flex items-center gap-2 hover:bg-gray-100 transition-colors"
-                style={{ color: '#1B1547' }}
+                style={{
+                  marginTop: '14px',
+                  background: '#FFFFFF',
+                  borderRadius: '999px',
+                  padding: '8px 20px',
+                  fontWeight: 800,
+                  fontSize: '13.5px',
+                  color: '#1B1547',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
               >
                 Refer Now <span>→</span>
               </button>
             </div>
 
-            <p className="text-[10px] text-white/70 mb-2">*T&amp;C apply</p>
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', margin: '0 0 8px 0' }}>*T&amp;C apply</p>
           </div>
 
           {/* Coin Stack Illustration */}
-          <div className="absolute bottom-6 right-4 flex gap-1 z-0 pointer-events-none">
+          <div style={{ position: 'absolute', bottom: '24px', right: '16px', display: 'flex', gap: '4px', zIndex: 0, pointerEvents: 'none' }}>
             {[0, 1, 2].map((i) => (
-              <div key={i} className="flex flex-col-reverse gap-0.5">
+              <div key={i} style={{ display: 'flex', flexDirection: 'column-reverse', gap: '2px' }}>
                 {Array.from({ length: 4 - i }).map((_, j) => (
                   <div
                     key={j}
-                    className="w-7 h-2.5 rounded-full"
                     style={{
+                      width: '28px',
+                      height: '10px',
+                      borderRadius: '999px',
                       background: 'linear-gradient(180deg,#F5D061,#D9A62A)'
                     }}
                   />
@@ -574,17 +760,18 @@ export default function PartnerDashboardComponent({ partner }) {
         </div>
 
         {/* Carousel Pagination Dots */}
-        <div className="flex justify-center gap-1.5 mt-3">
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px' }}>
           {bannerSlides.map((_, idx) => (
             <div
               key={idx}
               onClick={() => setBannerIndex(idx)}
-              className="cursor-pointer transition-all duration-300"
               style={{
-                width: idx === bannerIndex ? 20 : 6,
-                height: 6,
-                borderRadius: 4,
-                background: idx === bannerIndex ? '#6E3FD6' : '#D9D5E8'
+                cursor: 'pointer',
+                width: idx === bannerIndex ? '20px' : '6px',
+                height: '6px',
+                borderRadius: '4px',
+                background: idx === bannerIndex ? '#6E3FD6' : '#D9D5E8',
+                transition: 'all 0.3s ease'
               }}
             />
           ))}
@@ -592,32 +779,53 @@ export default function PartnerDashboardComponent({ partner }) {
 
         {/* ──── TOP SERVICES CARD ──── */}
         <div
-          className="mx-2 mt-5 bg-white dark:bg-slate-800 rounded-[18px] p-4 sm:p-5 flex items-center gap-3 sm:gap-4 border border-gray-100 dark:border-slate-700"
-          style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
+          style={{
+            margin: '20px 8px 0 8px',
+            background: isDark ? C.card : '#FFFFFF',
+            borderRadius: '18px',
+            padding: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
+          }}
         >
           <div
-            className="rounded-full flex flex-col items-center justify-center shrink-0 text-center"
-            style={{ width: 84, height: 84, background: '#EFE9FB' }}
+            style={{
+              width: '84px',
+              height: '84px',
+              borderRadius: '50%',
+              background: '#EFE9FB',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              textAlign: 'center'
+            }}
           >
-            <span className="text-[10.5px] text-gray-500 font-medium">Earn upto</span>
-            <span className="font-bold text-[24px]" style={{ color: '#6E3FD6' }}>
+            <span style={{ fontSize: '10.5px', color: '#6B7280', fontWeight: 500 }}>Earn upto</span>
+            <span style={{ fontWeight: 800, fontSize: '24px', color: '#6E3FD6', lineHeight: 1 }}>
               4%
             </span>
           </div>
 
-          <div className="w-px self-stretch bg-gray-100 dark:bg-slate-700" />
+          <div style={{ width: '1px', alignSelf: 'stretch', background: isDark ? C.border : '#F3F4F6' }} />
 
-          <div className="flex-1 overflow-x-auto no-scrollbar">
-            <p className="font-bold text-[14.5px] text-gray-900 dark:text-white mb-2.5">
+          <div style={{ flex: 1, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <p style={{ fontWeight: 700, fontSize: '14.5px', margin: '0 0 10px 0', color: isDark ? C.text : '#111827' }}>
               Top Services
             </p>
-            <div className="flex items-center justify-between min-w-[310px]">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '310px' }}>
               <ServiceItem
                 icon={<CreditCard size={20} />}
                 label="Credit Card"
                 bg="#EEE9FB"
                 color="#6E3FD6"
                 onClick={() => navigate('/partner/products?category=credit_card')}
+                isDark={isDark}
+                C={C}
               />
               <ServiceItem
                 icon={<PiggyBank size={20} />}
@@ -625,6 +833,8 @@ export default function PartnerDashboardComponent({ partner }) {
                 bg="#E3F5EA"
                 color="#2FA35B"
                 onClick={() => navigate('/partner/products?category=personal_loan')}
+                isDark={isDark}
+                C={C}
               />
               <ServiceItem
                 icon={<ShieldPlus size={20} />}
@@ -632,6 +842,8 @@ export default function PartnerDashboardComponent({ partner }) {
                 bg="#EEE9FB"
                 color="#6E3FD6"
                 onClick={() => navigate('/partner/products?category=insurance')}
+                isDark={isDark}
+                C={C}
               />
               <ServiceItem
                 icon={<Landmark size={20} />}
@@ -639,6 +851,8 @@ export default function PartnerDashboardComponent({ partner }) {
                 bg="#E3F5EA"
                 color="#2FA35B"
                 onClick={() => navigate('/partner/products?category=bank_account')}
+                isDark={isDark}
+                C={C}
               />
               <ServiceItem
                 icon={<TrendingUp size={20} />}
@@ -646,31 +860,40 @@ export default function PartnerDashboardComponent({ partner }) {
                 bg="#FCE7E1"
                 color="#E85B3A"
                 onClick={() => navigate('/partner/products?category=demat')}
+                isDark={isDark}
+                C={C}
               />
             </div>
           </div>
         </div>
 
         {/* ──── SELL & EARN HEADER & GRID ──── */}
-        <div className="flex items-center justify-between px-2 mt-7 mb-3">
-          <div className="flex items-center gap-3 flex-1 justify-center">
-            <div className="h-px w-8" style={{ background: '#B9A6EA' }} />
-            <span className="font-bold text-[13px] tracking-wider text-gray-900 dark:text-white uppercase">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', paddingRight: '8px', marginTop: '28px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'center' }}>
+            <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
+            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
               SELL &amp; EARN
             </span>
-            <div className="h-px w-8" style={{ background: '#B9A6EA' }} />
+            <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
           </div>
           <span
             onClick={() => navigate('/partner/products')}
-            className="text-[12.5px] font-bold cursor-pointer flex items-center gap-1 hover:underline"
-            style={{ color: '#6E3FD6' }}
+            style={{ fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#6E3FD6' }}
           >
             View All →
           </span>
         </div>
 
         {/* Sell & Earn Grid (Reference Design) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-2">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: '12px',
+            paddingLeft: '8px',
+            paddingRight: '8px'
+          }}
+        >
           <EarnCard
             title="Personal Loan"
             value="4.5%"
@@ -679,6 +902,8 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#2FA35B"
             icon={<PiggyBank size={19} />}
             onClick={() => navigate('/partner/products?category=personal_loan')}
+            isDark={isDark}
+            C={C}
           />
           <EarnCard
             title="Credit Cards"
@@ -688,6 +913,8 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#6E3FD6"
             icon={<CreditCard size={19} />}
             onClick={() => navigate('/partner/products?category=credit_card')}
+            isDark={isDark}
+            C={C}
           />
           <EarnCard
             title="Insurance"
@@ -697,6 +924,8 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#E8862E"
             icon={<ShieldPlus size={19} />}
             onClick={() => navigate('/partner/products?category=insurance')}
+            isDark={isDark}
+            C={C}
           />
           <EarnCard
             title="Bank Accounts"
@@ -706,6 +935,8 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#3A78D6"
             icon={<Landmark size={19} />}
             onClick={() => navigate('/partner/products?category=bank_account')}
+            isDark={isDark}
+            C={C}
           />
           <EarnCard
             title="Demat Accounts"
@@ -715,6 +946,8 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#E0473E"
             icon={<TrendingUp size={19} />}
             onClick={() => navigate('/partner/products?category=demat')}
+            isDark={isDark}
+            C={C}
           />
           <EarnCard
             title="Investment"
@@ -724,31 +957,58 @@ export default function PartnerDashboardComponent({ partner }) {
             color="#2FA35B"
             icon={<PiggyBank size={19} />}
             onClick={() => navigate('/partner/products?category=investment')}
+            isDark={isDark}
+            C={C}
           />
         </div>
 
         {/* ──── ADDITIONAL EARNING OPTIONS BANNER ──── */}
         <div
-          className="mx-2 mt-5 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-          style={{ background: '#EFF8F1', border: '1px solid #CFEBD8' }}
+          style={{
+            margin: '20px 8px 0 8px',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            background: '#EFF8F1',
+            border: '1px solid #CFEBD8'
+          }}
         >
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
-              className="w-11 h-11 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm"
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+              }}
             >
               <RefreshCw size={18} color="#2FA35B" />
             </div>
             <div>
               <p
-                className="text-[11px] font-bold tracking-wide mb-0.5"
-                style={{ color: '#2FA35B' }}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  color: '#2FA35B',
+                  margin: '0 0 2px 0'
+                }}
               >
                 ADDITIONAL EARNING OPTIONS
               </p>
-              <p className="font-bold text-[14.5px] text-gray-900">
+              <p style={{ fontWeight: 800, fontSize: '14.5px', color: '#111827', margin: 0 }}>
                 Mutual Fund Distribution
               </p>
-              <p className="text-[11.5px] text-gray-500">
+              <p style={{ fontSize: '11.5px', color: '#6B7280', margin: '2px 0 0 0' }}>
                 Earn Recurring Commissions
               </p>
             </div>
@@ -756,8 +1016,22 @@ export default function PartnerDashboardComponent({ partner }) {
 
           <button
             onClick={() => navigate('/partner/products?category=investment')}
-            className="w-full sm:w-auto rounded-xl px-4 py-2 text-white font-bold text-[12.5px] flex items-center justify-center gap-1.5 transition-all hover:bg-emerald-800 shrink-0 shadow"
-            style={{ background: '#1E7A46' }}
+            style={{
+              width: isMobile ? '100%' : 'auto',
+              borderRadius: '12px',
+              padding: '10px 18px',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              border: 'none',
+              background: '#1E7A46',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              flexShrink: 0
+            }}
           >
             Start Now →
           </button>
@@ -765,8 +1039,17 @@ export default function PartnerDashboardComponent({ partner }) {
 
         {/* ──── STATS ROW ──── */}
         <div
-          className="mx-2 mt-5 bg-white dark:bg-slate-800 rounded-2xl py-4 px-2 flex justify-between items-center border border-gray-100 dark:border-slate-700"
-          style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+          style={{
+            margin: '20px 8px 0 8px',
+            background: isDark ? C.card : '#FFFFFF',
+            borderRadius: '16px',
+            padding: '16px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
+          }}
         >
           <StatItem
             icon={<BarChart3 size={20} />}
@@ -775,6 +1058,8 @@ export default function PartnerDashboardComponent({ partner }) {
             value={totalEarned}
             label="Total Earnings"
             onClick={() => navigate('/partner/wallet')}
+            isDark={isDark}
+            C={C}
           />
           <StatItem
             icon={<Briefcase size={20} />}
@@ -783,6 +1068,8 @@ export default function PartnerDashboardComponent({ partner }) {
             value={kpiTotalApps}
             label="Leads Created"
             onClick={() => navigate('/partner/applications')}
+            isDark={isDark}
+            C={C}
           />
           <StatItem
             icon={<Users size={20} />}
@@ -791,6 +1078,8 @@ export default function PartnerDashboardComponent({ partner }) {
             value={kpiApprovedApps}
             label="Applications"
             onClick={() => navigate('/partner/applications')}
+            isDark={isDark}
+            C={C}
           />
           <StatItem
             icon={<Award size={20} />}
@@ -799,38 +1088,74 @@ export default function PartnerDashboardComponent({ partner }) {
             value={`${approvedPct}%`}
             label="Success Rate"
             onClick={() => navigate('/partner/reports')}
+            isDark={isDark}
+            C={C}
           />
         </div>
 
         {/* ──── QUICK ACCESS SECTION ──── */}
-        <div className="mt-5 mx-2">
+        <div style={{ marginTop: '20px', marginLeft: '8px', marginRight: '8px' }}>
           <QuickAccessSection />
         </div>
 
         {/* ──── QUICK ACTIONS & RECENT APPLICATIONS ──── */}
-        <div className="mx-2 mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          
+        <div
+          style={{
+            margin: '24px 8px 0 8px',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+            gap: '16px'
+          }}
+        >
           {/* Quick Actions Panel */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Quick Actions</h3>
-            <div className="flex flex-col gap-2.5">
+          <div
+            style={{
+              background: isDark ? C.card : '#FFFFFF',
+              borderRadius: '16px',
+              padding: '16px',
+              border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.04)'
+            }}
+          >
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: isDark ? C.text : '#111827', margin: '0 0 12px 0' }}>
+              Quick Actions
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {quickActions.map((act) => {
                 const Icon = act.icon;
                 return (
                   <div
                     key={act.id}
                     onClick={act.action}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors border border-gray-50 dark:border-slate-700"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      background: isDark ? 'rgba(255,255,255,0.03)' : '#FAF9FE',
+                      border: `1px solid ${isDark ? C.border : '#F3F4F6'}`
+                    }}
                   >
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ background: act.bgLight, color: act.color }}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '12px',
+                        background: act.bgLight,
+                        color: act.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
                     >
                       <Icon size={20} />
                     </div>
-                    <div className="flex-1">
-                      <div className="text-xs font-bold text-gray-900 dark:text-white">{act.label}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">{act.desc}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: isDark ? C.text : '#111827' }}>{act.label}</div>
+                      <div style={{ fontSize: '11px', color: isDark ? C.textLight : '#6B7280' }}>{act.desc}</div>
                     </div>
                     <ChevronRight size={16} color="#8A8A9E" />
                   </div>
@@ -840,44 +1165,78 @@ export default function PartnerDashboardComponent({ partner }) {
           </div>
 
           {/* Recent Applications */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Recent Applications</h3>
+          <div
+            style={{
+              background: isDark ? C.card : '#FFFFFF',
+              borderRadius: '16px',
+              padding: '16px',
+              border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: isDark ? C.text : '#111827', margin: 0 }}>Recent Applications</h3>
               <span
                 onClick={() => navigate('/partner/applications')}
-                className="text-xs font-bold text-purple-600 cursor-pointer hover:underline"
+                style={{ fontSize: '12px', fontWeight: 700, color: '#6E3FD6', cursor: 'pointer' }}
               >
                 View All
               </span>
             </div>
 
-            <div className="flex flex-col gap-2 flex-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
               {recentAppsList.length === 0 ? (
-                <div className="text-center py-6 text-gray-400">
-                  <p className="text-xs font-semibold">No recent applications</p>
-                  <p className="text-[11px]">Start sharing links to generate leads</p>
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 600, margin: 0 }}>No recent applications</p>
+                  <p style={{ fontSize: '11px', margin: '4px 0 0 0' }}>Start sharing links to generate leads</p>
                 </div>
               ) : (
                 recentAppsList.map((app, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-slate-700 last:border-0"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 0',
+                      borderBottom: idx === recentAppsList.length - 1 ? 'none' : `1px solid ${isDark ? C.border : '#F3F4F6'}`
+                    }}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
-                        style={{ background: app.bg, color: app.color }}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: app.bg,
+                          color: app.color,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '12px',
+                          flexShrink: 0
+                        }}
                       >
                         {app.initials}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-gray-900 dark:text-white max-w-[120px] truncate">{app.name}</div>
-                        <div className="text-[10px] text-gray-400">{app.product}</div>
+                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: isDark ? C.text : '#111827', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.name}</div>
+                        <div style={{ fontSize: '10.5px', color: isDark ? C.textLight : '#9CA3AF' }}>{app.product}</div>
                       </div>
                     </div>
                     <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: `${app.color}15`, color: app.color }}
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: `${app.color}15`,
+                        color: app.color
+                      }}
                     >
                       {app.status}
                     </span>
@@ -892,11 +1251,31 @@ export default function PartnerDashboardComponent({ partner }) {
       </div>
 
       {/* ──── STICKY MOBILE BOTTOM NAVIGATION BAR ──── */}
-      <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}
+      >
         <div
-          className="w-full max-w-md bg-white dark:bg-slate-800 flex items-center justify-between px-6 pointer-events-auto border-t border-gray-100 dark:border-slate-700"
           style={{
-            height: 72,
+            width: '100%',
+            maxWidth: '560px',
+            background: isDark ? C.card : '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingLeft: '24px',
+            paddingRight: '24px',
+            pointerEvents: 'auto',
+            borderTop: `1px solid ${isDark ? C.border : '#F3F4F6'}`,
+            height: '72px',
             boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
             borderRadius: '20px 20px 0 0'
           }}
@@ -915,21 +1294,30 @@ export default function PartnerDashboardComponent({ partner }) {
 
           {/* Elevated Central Add Lead Action Button */}
           <div
-            className="flex flex-col items-center -mt-7 cursor-pointer"
             onClick={() => navigate('/partner/customers', { state: { openAddModal: true } })}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              marginTop: '-28px',
+              cursor: 'pointer'
+            }}
           >
             <div
-              className="w-13 h-13 rounded-full flex items-center justify-center transition-transform hover:scale-110"
               style={{
-                width: 52,
-                height: 52,
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
                 background: '#7C4FE0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 boxShadow: '0 4px 14px rgba(124,79,224,0.45)'
               }}
             >
-              <Plus size={26} color="#fff" />
+              <Plus size={26} color="#FFFFFF" />
             </div>
-            <span className="text-[11px] font-medium mt-0.5" style={{ color: '#8A8A9E' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, marginTop: '2px', color: '#8A8A9E' }}>
               Add Lead
             </span>
           </div>
@@ -961,15 +1349,15 @@ export default function PartnerDashboardComponent({ partner }) {
 // ── SKELETON LOADER ───────────────────────────────
 function DashboardSkeleton({ C }) {
   return (
-    <div className="min-h-screen w-full flex justify-center p-4" style={{ background: '#F7F5FC' }}>
-      <div className="w-full max-w-md space-y-4 animate-pulse">
-        <div className="h-12 bg-white rounded-2xl" />
-        <div className="h-16 bg-white rounded-2xl" />
-        <div className="h-64 bg-white rounded-3xl" />
-        <div className="h-28 bg-white rounded-2xl" />
-        <div className="grid grid-cols-3 gap-3">
+    <div style={{ minHeight: '100vh', width: '100%', display: 'flex', justifyContent: 'center', padding: '16px', background: '#F7F5FC' }}>
+      <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ height: '48px', background: '#FFFFFF', borderRadius: '16px' }} />
+        <div style={{ height: '64px', background: '#FFFFFF', borderRadius: '16px' }} />
+        <div style={{ height: '260px', background: '#FFFFFF', borderRadius: '24px' }} />
+        <div style={{ height: '110px', background: '#FFFFFF', borderRadius: '16px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-28 bg-white rounded-2xl" />
+            <div key={i} style={{ height: '110px', background: '#FFFFFF', borderRadius: '16px' }} />
           ))}
         </div>
       </div>
