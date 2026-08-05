@@ -400,10 +400,10 @@ export default function PartnerDashboardComponent({ partner }) {
       <div
         style={{
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: '1200px',
           paddingBottom: '96px',
-          paddingLeft: '12px',
-          paddingRight: '12px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
           fontFamily: 'Inter, system-ui, sans-serif',
           boxSizing: 'border-box'
         }}
@@ -418,7 +418,7 @@ export default function PartnerDashboardComponent({ partner }) {
         {kycStatus !== 'approved' && (
           <div
             style={{
-              margin: '12px 8px',
+              margin: '12px 0',
               borderRadius: '16px',
               padding: '14px',
               display: 'flex',
@@ -471,12 +471,12 @@ export default function PartnerDashboardComponent({ partner }) {
           onMouseLeave={() => setIsPaused(false)}
           onClick={() => bannerSlides[bannerIndex]?.action()}
           style={{
-            margin: '20px 8px 0 8px',
+            margin: '20px 0 0 0',
             borderRadius: '20px',
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            height: isMobile ? '190px' : '230px',
+            height: isMobile ? '260px' : '340px',
             boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
             background: isDark ? C.card : '#FFFFFF',
             border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
@@ -615,7 +615,7 @@ export default function PartnerDashboardComponent({ partner }) {
         {/* ──── TOP SERVICES CARD ──── */}
         <div
           style={{
-            margin: '20px 8px 0 8px',
+            margin: '20px 0 0 0',
             background: isDark ? C.card : '#FFFFFF',
             borderRadius: '18px',
             padding: '16px',
@@ -680,7 +680,7 @@ export default function PartnerDashboardComponent({ partner }) {
         </div>
 
         {/* ──── SELL & EARN HEADER & GRID ──── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '8px', paddingRight: '8px', marginTop: '28px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '0', paddingRight: '0', marginTop: '28px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'center' }}>
             <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
             <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
@@ -700,10 +700,10 @@ export default function PartnerDashboardComponent({ partner }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: '12px',
-            paddingLeft: '8px',
-            paddingRight: '8px'
+            paddingLeft: '0',
+            paddingRight: '0'
           }}
         >
           <EarnCard
