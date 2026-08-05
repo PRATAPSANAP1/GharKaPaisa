@@ -92,6 +92,7 @@ const serviceCatalog = {
 
 /* ── Desktop Service Card ────────────────────────────────────────── */
 const ServiceCard = ({ service, onClick, C, isDark }) => {
+  const { t } = useTranslation();
   const Icon = service.icon;
 
   return (
@@ -143,6 +144,7 @@ const ServiceCard = ({ service, onClick, C, isDark }) => {
 
 /* ── Desktop Category Section ────────────────────────────────────── */
 const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
+  const { t } = useTranslation();
   const Icon = category.icon;
   if (services.length === 0) return null;
 
@@ -185,6 +187,7 @@ const CategorySection = ({ category, services, onServiceClick, C, isDark }) => {
 
 /* ── Mobile Service Item ─────────────────────────────────────────── */
 const ServiceCardMobile = ({ service, onClick, C }) => {
+  const { t } = useTranslation();
   const Icon = service.icon;
 
   return (
@@ -230,6 +233,7 @@ const ServiceCardMobile = ({ service, onClick, C }) => {
 
 /* ── Mobile Category Section (Accordion) ─────────────────────────── */
 const CategorySectionMobile = ({ category, services, onServiceClick, isExpanded, onToggle, C }) => {
+  const { t } = useTranslation();
   const Icon = category.icon;
   if (services.length === 0) return null;
 
