@@ -596,6 +596,9 @@
   },
   "partnerLayout": {
     "dashboard": "Dashboard",
+    "credit_card": "Credit Cards",
+    "loans": "Loans",
+    "insurance": "Insurance",
     "marketplace": "Marketplace",
     "creditcenter": "Credit Center",
     "leads": "Lead Management",

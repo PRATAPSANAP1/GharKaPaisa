@@ -1,6 +1,9 @@
 {
   "partnerLayout": {
     "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "credit_card": "ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್‌ಗಳು",
+    "loans": "ಸಾಲಗಳು",
+    "insurance": "ವಿಮೆ",
     "marketplace": "ಮಾರುಕಟ್ಟೆ",
     "creditcenter": "ಕ್ರೆಡಿಟ್ ಸೆಂಟರ್",
     "leads": "ಲೀಡ್ ನಿರ್ವಹಣೆ",

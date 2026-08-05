@@ -513,6 +513,9 @@
   },
   "partnerLayout": {
     "dashboard": "डॅशबोर्ड",
+    "credit_card": "क्रेडिट कार्डे",
+    "loans": "कर्ज",
+    "insurance": "विमा",
     "marketplace": "मार्केटप्लेस",
     "creditcenter": "क्रेडिट सेंटर",
     "leads": "लीड व्यवस्थापन",

@@ -1,6 +1,9 @@
 {
   "partnerLayout": {
     "dashboard": "ড্যাশবোর্ড",
+    "credit_card": "ক্রেডিট কার্ড",
+    "loans": "ঋণ",
+    "insurance": "বীমা",
     "marketplace": "মার্কেটপ্লেস",
     "creditcenter": "ক্রেডিট সেন্টার",
     "leads": "লিড পরিচালনা",

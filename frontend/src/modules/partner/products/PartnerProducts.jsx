@@ -408,7 +408,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
         <h3 style={{ fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: '18px' }}>
-          <MdFilterList size={20} style={{ color: C.primary }} /> Filter Products
+          <MdFilterList size={20} style={{ color: C.primary }} /> {t("Filter Products")}
         </h3>
         {isMobile && (
           <button 
@@ -460,10 +460,10 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 outline: 'none'
               }}
             >
-              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ All Products</option>
+              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ {t("All Products")}</option>
               {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
                 <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  {getCategoryEmoji(cat.id)} {cat.label}
+                  {getCategoryEmoji(cat.id)} {t(cat.label)}
                 </option>
               ))}
             </select>
@@ -494,7 +494,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 outline: 'none'
               }}
             >
-              <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 All Banks</option>
+              <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("All Banks")}</option>
               {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
                 <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                   🏦 {bank}
@@ -510,10 +510,10 @@ export default function PartnerProducts({ initialSearch = '' }) {
         <p style={sectionLabel}>{t("Card Features")}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
           {[
-            { id: 'all', label: 'All Cards' },
-            { id: 'ltf', label: '🎁 Lifetime Free' },
-            { id: 'high_payout', label: '🔥 High Payout (₹1000+)' },
-            { id: 'high_approval', label: '⭐ High Approval (88%+)' }
+            { id: 'all', label: t('All Cards') },
+            { id: 'ltf', label: `🎁 ${t('Lifetime Free')}` },
+            { id: 'high_payout', label: `🔥 ${t('High Payout (₹1000+)')}` },
+            { id: 'high_approval', label: `⭐ ${t('High Approval (88%+)')}` }
           ].map(feat => {
             const isActive = featureFilter === feat.id;
             return (
@@ -555,7 +555,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 }}
                 className={isActive ? "" : "hover-bg-button"}
               >
-                {val === 0 ? 'Any Payout' : `₹${val}+`}
+                {val === 0 ? t('Any Payout') : `₹${val}+`}
               </button>
             );
           })}
@@ -580,7 +580,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   color: isActive ? C.primary : C.textMid
                 }}
               >
-                {val === 'all' ? 'All' : `${val}`}
+                {val === 'all' ? t('All') : `${val}`}
               </button>
             );
           })}
@@ -621,7 +621,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               color: C.red
             }}
           >
-            Reset
+            {t("Reset")}
           </button>
           <button
             type="button"
@@ -640,7 +640,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               textAlign: 'center'
             }}
           >
-            Show {filteredProducts.length} Results
+            {t("Show {{count}} Results", { count: filteredProducts.length })}
           </button>
         </div>
       ) : (
@@ -662,7 +662,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
           }}
           className="hover-bg-button-danger"
         >
-          Reset Filters
+          {t("Reset Filters")}
         </button>
       )}
     </div>
@@ -843,10 +843,10 @@ export default function PartnerProducts({ initialSearch = '' }) {
                     outline: 'none'
                   }}
                 >
-                  <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ Products (All)</option>
+                  <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ {t("Products (All)")}</option>
                   {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
                     <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                      {getCategoryEmoji(cat.id)} {cat.label}
+                      {getCategoryEmoji(cat.id)} {t(cat.label)}
                     </option>
                   ))}
                 </select>
@@ -868,7 +868,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                     outline: 'none'
                   }}
                 >
-                  <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 Banks (All)</option>
+                  <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("Banks (All)")}</option>
                   {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
                     <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                       🏦 {bank}
@@ -895,12 +895,12 @@ export default function PartnerProducts({ initialSearch = '' }) {
                     border: `1.5px solid ${C.border}`
                   }}
                 >
-                  <option value="featured">✨ Featured</option>
-                  <option value="highest_commission">💰 Highest Commission</option>
-                  <option value="highest_approval">⭐ Highest Approval</option>
-                  <option value="newest">🆕 Newest</option>
-                  <option value="a_z">🔤 A-Z</option>
-                  <option value="popular">🔥 Popular</option>
+                  <option value="featured">✨ {t("Featured")}</option>
+                  <option value="highest_commission">💰 {t("Highest Commission")}</option>
+                  <option value="highest_approval">⭐ {t("Highest Approval")}</option>
+                  <option value="newest">🆕 {t("Newest")}</option>
+                  <option value="a_z">🔤 {t("A-Z")}</option>
+                  <option value="popular">🔥 {t("Popular")}</option>
                 </select>
 
                 <button
@@ -923,7 +923,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                     flex: 1
                   }}
                 >
-                  <MdFilterList size={18} /> Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
+                  <MdFilterList size={18} /> {t("Filters")} {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
                 </button>
               </div>
             </div>
@@ -965,7 +965,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                         }}
                       >
                         <span>{cat.id === 'all' ? '🛍️' : getCategoryEmoji(cat.id)}</span>
-                        <span>{cat.label}</span>
+                        <span>{t(cat.label)}</span>
                       </button>
                     );
                   })}
@@ -978,7 +978,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 {/* Bank Chips */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
-                    Banks:
+                    {t("Banks:")}
                   </span>
                   {banksForCategory.map(bank => {
                     const isActive = activeBank === bank;
@@ -999,7 +999,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        {bank === 'All Banks' ? '🏦 All' : bank}
+                        {bank === 'All Banks' ? `🏦 ${t('All')}` : bank}
                       </button>
                     );
                   })}
@@ -1008,13 +1008,13 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 {/* Feature Chips */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
-                    Features:
+                    {t("Features:")}
                   </span>
                   {[
-                    { id: 'all', label: 'All Cards' },
-                    { id: 'ltf', label: '🎁 Lifetime Free' },
-                    { id: 'high_payout', label: '🔥 High Payout (₹1000+)' },
-                    { id: 'high_approval', label: '⭐ High Approval (88%+)' }
+                    { id: 'all', label: t('All Cards') },
+                    { id: 'ltf', label: `🎁 ${t('Lifetime Free')}` },
+                    { id: 'high_payout', label: `🔥 ${t('High Payout (₹1000+)')}` },
+                    { id: 'high_approval', label: `⭐ ${t('High Approval (88%+)')}` }
                   ].map(feat => {
                     const isActive = featureFilter === feat.id;
                     return (
@@ -1047,7 +1047,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '6px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '12.5px', fontWeight: 700, color: C.textMid }}>
-                Showing <strong style={{ color: C.text, fontSize: '14px' }}>{filteredProducts.length}</strong> products
+                {t("Showing")} <strong style={{ color: C.text, fontSize: '14px' }}>{filteredProducts.length}</strong> {t("products")}
               </span>
 
               {/* Active Filter Removable Tags */}
@@ -1056,7 +1056,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  Category: {CATEGORIES.find(c => c.id === activeCategory)?.label}
+                  {t("Category:")} {t(CATEGORIES.find(c => c.id === activeCategory)?.label)}
                   <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveCategory('all')} />
                 </span>
               )}
@@ -1066,7 +1066,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  Bank: {activeBank}
+                  {t("Bank:")} {activeBank}
                   <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setActiveBank('All Banks')} />
                 </span>
               )}
@@ -1076,7 +1076,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  Feature: {featureFilter === 'ltf' ? 'Lifetime Free' : featureFilter === 'high_payout' ? 'High Payout' : 'High Approval'}
+                  {t("Feature:")} {featureFilter === 'ltf' ? t('Lifetime Free') : featureFilter === 'high_payout' ? t('High Payout') : t('High Approval')}
                   <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setFeatureFilter('all')} />
                 </span>
               )}
@@ -1086,7 +1086,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  Payout: ₹{minCommission}+
+                  {t("Payout:")} ₹{minCommission}+
                   <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setMinCommission(0)} />
                 </span>
               )}
@@ -1096,7 +1096,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px',
                   background: `${C.primary}18`, color: C.primary, display: 'inline-flex', alignItems: 'center', gap: '4px'
                 }}>
-                  Search: "{search}"
+                  {t("Search:")} "{search}"
                   <MdClose size={12} style={{ cursor: 'pointer' }} onClick={() => setSearch('')} />
                 </span>
               )}
@@ -1118,7 +1118,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px'
                 }}
               >
-                Clear All ✕
+                {t("Clear All")} ✕
               </button>
             )}
           </div>
@@ -1306,7 +1306,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                       {/* Payout & Commission Row */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Partner Payout
+                          {t("Partner Payout")}
                         </span>
                         <span style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: 800, color: C.green }}>
                           ₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}
@@ -1332,7 +1332,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                             fontWeight: 700
                           }}
                         >
-                          <MdShare size={isMobile ? 12 : 14} /> Share
+                          <MdShare size={isMobile ? 12 : 14} /> {t("Share")}
                         </button>
                         
                         <button
@@ -1354,7 +1354,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                             color: isSelectedForCompare ? '#fff' : C.primary
                           }}
                         >
-                          Compare
+                          {t("Compare")}
                         </button>
                       </div>
 
@@ -1379,7 +1379,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                           }}
                           className="hover-bg-button"
                         >
-                          Benefits
+                          {t("Benefits")}
                         </button>
                         
                         <button
@@ -1403,7 +1403,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                           }}
                           className="hover-scale-button"
                         >
-                          Apply <MdChevronRight size={isMobile ? 14 : 16} />
+                          {t("Apply")} <MdChevronRight size={isMobile ? 14 : 16} />
                         </button>
                       </div>
                     </div>

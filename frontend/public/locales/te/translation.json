@@ -1,6 +1,9 @@
 {
   "partnerLayout": {
-    "dashboard": "డాష్‌బోర్ด์",
+    "dashboard": "డాష్‌బోర్డ్",
+    "credit_card": "క్రెడిట్ కార్డ్‌లు",
+    "loans": "రుణాలు",
+    "insurance": "ఇన్సూరెన్స్",
     "marketplace": "మార్కెట్‌ప్లేస్",
     "creditcenter": "క్రెడిట్ సెంటర్",
     "leads": "లీడ్స్ మేనేజ్‌మెంట్",

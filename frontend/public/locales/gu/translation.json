@@ -1,6 +1,9 @@
 {
   "partnerLayout": {
     "dashboard": "ડેશબોર્ડ",
+    "credit_card": "ક્રેડિટ કાર્ડ્સ",
+    "loans": "લોન",
+    "insurance": "વીમો",
     "marketplace": "માર્કેટપ્લેસ",
     "creditcenter": "ક્રેડિટ સેન્ટર",
     "leads": "લીડ સંચાલન",
