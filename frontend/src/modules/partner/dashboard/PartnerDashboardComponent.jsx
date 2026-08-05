@@ -476,7 +476,7 @@ export default function PartnerDashboardComponent({ partner }) {
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            height: isMobile ? '260px' : '340px',
+            height: isMobile ? '180px' : '320px',
             boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
             background: isDark ? C.card : '#FFFFFF',
             border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
@@ -534,83 +534,9 @@ export default function PartnerDashboardComponent({ partner }) {
               </button>
             </div>
           )}
-
-          {/* Left / Right Arrow Controls */}
-          {bannerSlides.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setBannerIndex((prev) => (prev === 0 ? bannerSlides.length - 1 : prev - 1));
-                }}
-                style={{
-                  position: 'absolute',
-                  left: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.4)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 15,
-                  backdropFilter: 'blur(4px)'
-                }}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-                }}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.4)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 15,
-                  backdropFilter: 'blur(4px)'
-                }}
-              >
-                <ChevronRight size={20} />
-              </button>
-            </>
-          )}
         </div>
 
-        {/* Carousel Pagination Dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '12px' }}>
-          {bannerSlides.map((_, idx) => (
-            <div
-              key={idx}
-              onClick={() => setBannerIndex(idx)}
-              style={{
-                cursor: 'pointer',
-                width: idx === bannerIndex ? '20px' : '6px',
-                height: '6px',
-                borderRadius: '4px',
-                background: idx === bannerIndex ? '#6E3FD6' : '#D9D5E8',
-                transition: 'all 0.3s ease'
-              }}
-            />
-          ))}
-        </div>
+
 
         {/* ──── TOP SERVICES CARD ──── */}
         <div
