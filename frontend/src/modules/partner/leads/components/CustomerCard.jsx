@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   MdPerson, MdPhone, MdEmail, MdLocationOn, 
   MdAccessTime, MdWork, MdOpenInNew, MdTag 
 } from 'react-icons/md';
 
 export default function CustomerCard({ customer, onOpenProfile, C, S }) {
+  const { t } = useTranslation();
   if (!customer) return null;
 
   const {
@@ -25,21 +27,21 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
         return {
           bg: isThemeDark ? `${C.green}15` : '#ECFDF5',
           color: isThemeDark ? C.green : '#059669',
-          label: isThemeDark ? '🍊 Approved' : '🟢 Approved',
+          label: isThemeDark ? `🍊 ${t("crm.status.approved", "Approved")}` : `🟢 ${t("crm.status.approved", "Approved")}`,
           border: isThemeDark ? `${C.green}40` : '#10B981'
         };
       case 'interested':
         return {
           bg: isThemeDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF',
           color: isThemeDark ? '#3B82F6' : '#2563EB',
-          label: '🔵 Interested',
+          label: `🔵 ${t("crm.status.interested", "Interested")}`,
           border: isThemeDark ? '#3B82F640' : '#3B82F640'
         };
       case 'documents_pending':
         return {
           bg: isThemeDark ? 'rgba(245, 158, 11, 0.15)' : '#FFFBEB',
           color: isThemeDark ? '#F59E0B' : '#D97706',
-          label: '🟡 Docs Pending',
+          label: `🟡 ${t("crm.status.docsPending", "Docs Pending")}`,
           border: isThemeDark ? '#F59E0B40' : '#F59E0B40'
         };
       case 'lead_created':
@@ -48,21 +50,21 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
         return {
           bg: isThemeDark ? 'rgba(168, 85, 247, 0.15)' : '#F3E8FF',
           color: isThemeDark ? '#A855F7' : '#7E22CE',
-          label: '🟣 Processing',
+          label: `🟣 ${t("crm.status.processing", "Processing")}`,
           border: isThemeDark ? '#A855F740' : '#A855F740'
         };
       case 'rejected':
         return {
           bg: isThemeDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
           color: isThemeDark ? '#EF4444' : '#DC2626',
-          label: '🔴 Rejected',
+          label: `🔴 ${t("crm.status.rejected", "Rejected")}`,
           border: isThemeDark ? '#EF444440' : '#EF444440'
         };
       default:
         return {
           bg: isThemeDark ? 'rgba(148, 163, 184, 0.15)' : '#F1F5F9',
           color: isThemeDark ? '#94A3B8' : '#475569',
-          label: '⚪ New Lead',
+          label: `⚪ ${t("crm.status.newLead", "New Lead")}`,
           border: isThemeDark ? '#94A3B840' : '#94A3B840'
         };
     }
@@ -146,24 +148,24 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
             <MdEmail style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{email || 'No email'}</span>
+            <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{email || t("common.noEmail", "No email")}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <MdLocationOn style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span>{city || 'Location N/A'}</span>
+            <span>{city || t("common.locationNa", "Location N/A")}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <MdAccessTime style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span>{created_at ? new Date(created_at).toLocaleDateString() : 'Today'}</span>
+            <span>{created_at ? new Date(created_at).toLocaleDateString() : t("common.today", "Today")}</span>
           </div>
         </div>
 
         {/* Interested Products Tags */}
         <div style={{ marginBottom: '14px' }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>
-            Interested Products
+            {t("crm.interestedProducts", "Interested Products")}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {parsedInterests.length > 0 ? (
@@ -181,7 +183,7 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
                 </span>
               ))
             ) : (
-              <span style={{ fontSize: '11px', color: C.textLight, italic: 'true' }}>Credit Card & Loan Lead</span>
+              <span style={{ fontSize: '11px', color: C.textLight, italic: 'true' }}>{t("crm.defaultProductLead", "Credit Card & Loan Lead")}</span>
             )}
 
             {Array.isArray(tags) && tags.map((t, idx) => (
@@ -210,7 +212,7 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
         alignItems: 'center'
       }}>
         <div style={{ fontSize: '11px', color: C.textLight }}>
-          Partner: <strong style={{ color: C.text }}>{partner_first_name ? `${partner_first_name} ${partner_last_name || ''}` : 'Direct/Assigned'}</strong>
+          {t("crm.partner", "Partner")}: <strong style={{ color: C.text }}>{partner_first_name ? `${partner_first_name} ${partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</strong>
         </div>
 
         <button
@@ -233,7 +235,7 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
             transition: 'all 0.2s ease'
           }}
         >
-          <span>Open 360° Profile</span>
+          <span>{t("crm.open360Profile", "Open 360° Profile")}</span>
           <MdOpenInNew style={{ fontSize: '14px' }} />
         </button>
       </div>

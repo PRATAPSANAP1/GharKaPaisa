@@ -194,7 +194,7 @@ export default function PartnerCrm() {
             style={{ ...S.btn('outline'), display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
           >
             <MdMergeType style={{ fontSize: '18px', color: C.teal }} />
-            <span>Merge Duplicates</span>
+            <span>{t("crm.mergeDuplicates", "Merge Duplicates")}</span>
           </button>
 
           <button
@@ -202,7 +202,7 @@ export default function PartnerCrm() {
             style={{ ...S.btn('primary'), display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)', padding: '10px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)' }}
           >
             <MdAddBox style={{ fontSize: '20px' }} />
-            <span>Add New Customer</span>
+            <span>{t("crm.addNewCustomer", "Add New Customer")}</span>
           </button>
         </div>
       </div>
@@ -210,39 +210,39 @@ export default function PartnerCrm() {
       {/* ── CUSTOMER DASHBOARD KPI SUMMARY MATRIX ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Total Customers</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.totalCustomers", "Total Customers")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{(metrics.total_customers || customers.length || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '11px', color: C.primary, marginTop: '2px' }}>Registered in CRM</div>
+          <div style={{ fontSize: '11px', color: C.primary, marginTop: '2px' }}>{t("crm.registeredInCrm", "Registered in CRM")}</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>New Leads</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.newLeads", "New Leads")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.blue, marginTop: '4px' }}>{metrics.new_customers || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Added recently</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.addedRecently", "Added recently")}</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Interested</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.interested", "Interested")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.purple, marginTop: '4px' }}>{metrics.interested_customers || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Product shortlisted</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.productShortlisted", "Product shortlisted")}</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Applications</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.applications", "Applications")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.teal, marginTop: '4px' }}>{metrics.total_applications || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>In bank verification</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.inBankVerification", "In bank verification")}</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Approved</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.approved", "Approved")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{metrics.approved_applications || 0}</div>
-          <div style={{ fontSize: '11px', color: C.green, marginTop: '2px' }}>Success rate: {metrics.conversion_rate || 0}%</div>
+          <div style={{ fontSize: '11px', color: C.green, marginTop: '2px' }}>{t("crm.successRate", "Success rate:")} {metrics.conversion_rate || 0}%</div>
         </div>
 
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Revenue Generated</div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.revenueGenerated", "Revenue Generated")}</div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>₹{(metrics.revenue_generated || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>Total payouts</div>
+          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.totalPayouts", "Total payouts")}</div>
         </div>
       </div>
 
@@ -253,22 +253,22 @@ export default function PartnerCrm() {
             <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '18px' }} />
             <input
               style={{ ...S.input, paddingLeft: '38px' }}
-              placeholder="Search by name, phone, email, PAN, city..."
+              placeholder={t("crm.searchPlaceholder", "Search by name, phone, email, PAN, city...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <select style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Pipeline Statuses</option>
-            <option value="new">New Lead</option>
-            <option value="interested">Interested</option>
-            <option value="documents_pending">Docs Pending</option>
-            <option value="lead_created">Lead Created</option>
-            <option value="application_submitted">Application Submitted</option>
-            <option value="bank_verification">Bank Verification</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="">{t("crm.allPipelineStatuses", "All Pipeline Statuses")}</option>
+            <option value="new">{t("crm.status.newLead", "New Lead")}</option>
+            <option value="interested">{t("crm.status.interested", "Interested")}</option>
+            <option value="documents_pending">{t("crm.status.docsPending", "Docs Pending")}</option>
+            <option value="lead_created">{t("crm.status.leadCreated", "Lead Created")}</option>
+            <option value="application_submitted">{t("crm.status.appSubmitted", "Application Submitted")}</option>
+            <option value="bank_verification">{t("crm.status.bankVerification", "Bank Verification")}</option>
+            <option value="approved">{t("crm.status.approved", "Approved")}</option>
+            <option value="rejected">{t("crm.status.rejected", "Rejected")}</option>
           </select>
         </div>
 
@@ -282,7 +282,7 @@ export default function PartnerCrm() {
               color: viewMode === 'cards' ? C.text : C.textLight
             }}
           >
-            <MdViewModule style={{ fontSize: '16px' }} /> CRM Cards
+            <MdViewModule style={{ fontSize: '16px' }} /> {t("crm.crmCards", "CRM Cards")}
           </button>
           <button
             onClick={() => setViewMode('table')}
@@ -292,7 +292,7 @@ export default function PartnerCrm() {
               color: viewMode === 'table' ? C.text : C.textLight
             }}
           >
-            <MdViewList style={{ fontSize: '16px' }} /> Data List
+            <MdViewList style={{ fontSize: '16px' }} /> {t("crm.dataList", "Data List")}
           </button>
         </div>
       </div>
@@ -323,17 +323,17 @@ export default function PartnerCrm() {
               }
             }}
           >
-            {tag === 'All' ? 'All Customers' : `#${tag}`}
+            {tag === 'All' ? t("crm.allCustomers", "All Customers") : `#${t(`crm.tags.${tag}`, tag)}`}
           </button>
         ))}
       </div>
 
       {/* ── MAIN CONTENT: CRM CARDS GRID VS TABLE VIEW ── */}
       {isLoading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>Loading customer records...</div>
+        <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t("crm.loadingRecords", "Loading customer records...")}</div>
       ) : filteredCustomers.length === 0 ? (
         <div style={{ ...S.card, padding: '60px', textAlign: 'center', color: C.textLight }}>
-          No customer records match your filter criteria. Click <strong>Add New Customer</strong> to create a lead profile.
+          {t("crm.noRecords", "No customer records match your filter criteria. Click Add New Customer to create a lead profile.")}
         </div>
       ) : viewMode === 'cards' ? (
         /* CRM Cards Grid */
@@ -354,12 +354,12 @@ export default function PartnerCrm() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textLight, fontSize: '11px' }}>
-                <th style={{ padding: '12px 16px' }}>Customer Name</th>
-                <th style={{ padding: '12px 16px' }}>Mobile & Email</th>
-                <th style={{ padding: '12px 16px' }}>Location</th>
-                <th style={{ padding: '12px 16px' }}>Pipeline Status</th>
-                <th style={{ padding: '12px 16px' }}>Assigned Partner</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '12px 16px' }}>{t("crm.table.name", "Customer Name")}</th>
+                <th style={{ padding: '12px 16px' }}>{t("crm.table.mobileEmail", "Mobile & Email")}</th>
+                <th style={{ padding: '12px 16px' }}>{t("crm.table.location", "Location")}</th>
+                <th style={{ padding: '12px 16px' }}>{t("crm.table.status", "Pipeline Status")}</th>
+                <th style={{ padding: '12px 16px' }}>{t("crm.table.assignedPartner", "Assigned Partner")}</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right' }}>{t("crm.table.actions", "Actions")}</th>
               </tr>
             </thead>
             <tbody style={{ color: C.text }}>
@@ -376,13 +376,13 @@ export default function PartnerCrm() {
                       {(cust.pipeline_status || 'new').replace('_', ' ')}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : 'Direct'}</td>
+                  <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <button
                       onClick={() => setActive360CustomerId(cust.id)}
                       style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
                     >
-                      Open 360° Profile
+                      {t("crm.open360Profile", "Open 360° Profile")}
                     </button>
                   </td>
                 </tr>
@@ -415,7 +415,7 @@ export default function PartnerCrm() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ width: '100%', maxWidth: '540px', background: C.card, borderRadius: '20px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Add New Customer Profile</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>{t("crm.addProfileTitle", "Add New Customer Profile")}</h3>
               <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '20px' }}>✕</button>
             </div>
 
@@ -433,51 +433,51 @@ export default function PartnerCrm() {
 
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={S.label}>Full Name *</label>
+                <label style={S.label}>{t("crm.form.fullName", "Full Name *")}</label>
                 <input style={S.input} placeholder="e.g. Rahul Sharma" value={custForm.fullName} onChange={(e) => handleFormInputChange('fullName', e.target.value)} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Mobile Number *</label>
+                  <label style={S.label}>{t("crm.form.mobile", "Mobile Number *")}</label>
                   <input style={S.input} placeholder="98XXXXXXXX" value={custForm.mobile} onChange={(e) => handleFormInputChange('mobile', e.target.value)} />
                 </div>
                 <div>
-                  <label style={S.label}>Email Address</label>
+                  <label style={S.label}>{t("crm.form.email", "Email Address")}</label>
                   <input style={S.input} placeholder="rahul@gmail.com" value={custForm.email} onChange={(e) => handleFormInputChange('email', e.target.value)} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>PAN Number</label>
+                  <label style={S.label}>{t("crm.form.pan", "PAN Number")}</label>
                   <input style={S.input} placeholder="ABCDE1234F" value={custForm.panNumber} onChange={(e) => handleFormInputChange('panNumber', e.target.value)} />
                 </div>
                 <div>
-                  <label style={S.label}>City</label>
+                  <label style={S.label}>{t("crm.form.city", "City")}</label>
                   <input style={S.input} placeholder="Pune" value={custForm.city} onChange={(e) => handleFormInputChange('city', e.target.value)} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Employment Type</label>
+                  <label style={S.label}>{t("crm.form.employmentType", "Employment Type")}</label>
                   <select style={S.input} value={custForm.employmentType} onChange={(e) => handleFormInputChange('employmentType', e.target.value)}>
-                    <option value="Salaried">Salaried</option>
-                    <option value="Self-Employed">Self-Employed</option>
-                    <option value="Business">Business</option>
+                    <option value="Salaried">{t("crm.form.salaried", "Salaried")}</option>
+                    <option value="Self-Employed">{t("crm.form.selfEmployed", "Self-Employed")}</option>
+                    <option value="Business">{t("crm.form.business", "Business")}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={S.label}>Monthly Income (₹)</label>
+                  <label style={S.label}>{t("crm.form.monthlyIncome", "Monthly Income (₹)")}</label>
                   <input style={S.input} placeholder="70000" value={custForm.monthlyIncome} onChange={(e) => handleFormInputChange('monthlyIncome', e.target.value)} />
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>Cancel</button>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>{t("common.cancel", "Cancel")}</button>
                 <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), padding: '10px 20px' }}>
-                  {formLoading ? 'Creating Profile...' : 'Save Customer Profile'}
+                  {formLoading ? t("crm.form.creatingProfile", "Creating Profile...") : t("crm.form.saveProfile", "Save Customer Profile")}
                 </button>
               </div>
             </form>
