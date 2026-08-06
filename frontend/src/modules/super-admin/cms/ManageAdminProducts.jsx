@@ -4,6 +4,7 @@ import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useActiveBanks } from "../../../contexts/BanksContext";
 import { getCleanImageUrl } from "../../../utils/urlHelper";
+import { getBankApplyLink } from "../../home/components/CreditCards/cardLinkHelper";
 import { 
   MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility,
   MdStar, MdCheckCircle, MdCancel, MdClose, MdFileUpload,
@@ -325,8 +326,8 @@ export default function ManageAdminProducts() {
         meta_title: seo.meta_title || prod.seo_title || "",
         meta_description: seo.meta_description || prod.seo_description || "",
         slug: prod.slug || "",
-        public_url: prod.public_url || "",
-        partner_url: prod.partner_url || ""
+        public_url: prod.public_url || prod.application_url || getBankApplyLink(prod.name, prod.bank_name || prod.bank_code || prod.bank_id) || "",
+        partner_url: prod.partner_url || getBankApplyLink(prod.name, prod.bank_name || prod.bank_code || prod.bank_id) || ""
       };
     };
 
