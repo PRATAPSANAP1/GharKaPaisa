@@ -244,53 +244,65 @@ export default function ManageProducts() {
     setModalOpen(true);
   };
 
-  const openEditModal = (item) => {
+  const openEditModal = async (item) => {
     setEditItem(item);
     setModalTab("core");
-    setForm({
-      name: item.name || "",
-      short_description: item.short_description || "",
-      description: item.description || "",
-      logo: item.logo || "",
-      banner: item.banner || "",
-      image: item.image || item.image_url || "",
-      category: item.category || "credit_card",
-      bank_id: item.bank_id || "",
-      is_active: item.is_active ?? true,
-      status: item.status || "Active",
-      public_visible: item.public_visible ?? true,
-      partner_visible: item.partner_visible ?? true,
-      min_age: item.min_age ?? 18,
-      max_age: item.max_age ?? 60,
-      min_income: item.min_income ?? 0,
-      features: JSON.stringify(item.features || []),
-      benefits: item.benefits || "",
-      eligibility_criteria: item.eligibility_criteria || "",
-      documents_required: item.documents_required || "",
-      fees_charges: item.fees_charges || "",
-      annual_fee: item.annual_fee || "",
-      interest_rate: item.interest_rate || "",
-      processing_fee: item.processing_fee || "",
-      commission_enabled: item.commission_enabled ?? true,
-      commission_type: item.commission_type || "fixed",
-      commission_value: item.commission_value || 0,
-      commission_amount: item.commission_amount || 0,
-      override_percentage: item.override_percentage || 0,
-      min_commission: item.min_commission || 0,
-      max_commission: item.max_commission || 0,
-      commission_release_rule: item.commission_release_rule || "standard",
-      application_url: item.application_url || item.public_url || "",
-      partner_url: item.partner_url || "",
-      redirect_type: item.redirect_type || "new_tab",
-      tracking_enabled: item.tracking_enabled ?? true,
-      apply_button_text: item.apply_button_text || "Apply Now",
-      priority: item.priority || 0,
-      featured: item.featured ?? false,
-      seo_title: item.seo_title || "",
-      seo_description: item.seo_description || "",
-      seo_keywords: item.seo_keywords || ""
+
+    const buildFormFromItem = (prod) => ({
+      name: prod.name || "",
+      short_description: prod.short_description || "",
+      description: prod.description || "",
+      logo: prod.logo || "",
+      banner: prod.banner || "",
+      image: prod.image || prod.image_url || "",
+      category: prod.category || "credit_card",
+      bank_id: prod.bank_id || "",
+      is_active: prod.is_active ?? true,
+      status: prod.status || "Active",
+      public_visible: prod.public_visible ?? true,
+      partner_visible: prod.partner_visible ?? true,
+      min_age: prod.min_age ?? 18,
+      max_age: prod.max_age ?? 60,
+      min_income: prod.min_income ?? 0,
+      features: typeof prod.features === 'string' ? prod.features : JSON.stringify(prod.features || []),
+      benefits: typeof prod.benefits === 'object' ? JSON.stringify(prod.benefits) : (prod.benefits || ""),
+      eligibility_criteria: typeof prod.eligibility_criteria === 'object' ? JSON.stringify(prod.eligibility_criteria) : (prod.eligibility_criteria || ""),
+      documents_required: typeof prod.documents_required === 'object' ? JSON.stringify(prod.documents_required) : (prod.documents_required || ""),
+      fees_charges: typeof prod.fees_charges === 'object' ? JSON.stringify(prod.fees_charges) : (prod.fees_charges || ""),
+      annual_fee: prod.annual_fee || "",
+      interest_rate: prod.interest_rate || "",
+      processing_fee: prod.processing_fee || "",
+      commission_enabled: prod.commission_enabled ?? true,
+      commission_type: prod.commission_type || "fixed",
+      commission_value: prod.commission_value || 0,
+      commission_amount: prod.commission_amount || 0,
+      override_percentage: prod.override_percentage || 0,
+      min_commission: prod.min_commission || 0,
+      max_commission: prod.max_commission || 0,
+      commission_release_rule: prod.commission_release_rule || "standard",
+      application_url: prod.application_url || prod.public_url || "",
+      partner_url: prod.partner_url || "",
+      redirect_type: prod.redirect_type || "new_tab",
+      tracking_enabled: prod.tracking_enabled ?? true,
+      apply_button_text: prod.apply_button_text || "Apply Now",
+      priority: prod.priority || 0,
+      featured: prod.featured ?? false,
+      seo_title: prod.seo_title || "",
+      seo_description: prod.seo_description || "",
+      seo_keywords: prod.seo_keywords || ""
     });
+
+    setForm(buildFormFromItem(item));
     setModalOpen(true);
+
+    try {
+      const res = await api.get(`/products/${item.id}`);
+      if (res.data?.success && res.data.data) {
+        setForm(buildFormFromItem(res.data.data));
+      }
+    } catch (e) {
+      console.error("Error fetching product details in ManageProducts:", e);
+    }
   };
 
   const handleSubmit = async (e) => {

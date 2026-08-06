@@ -182,6 +182,23 @@ export default function ManageAdminProducts() {
     }));
   };
 
+  const parseJsonOrArray = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'object') return [val];
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'object' && parsed !== null) return [parsed];
+        if (typeof parsed === 'string') return [parsed];
+      } catch (e) {
+        if (val.trim()) return val.split('\n').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    return [];
+  };
+
   const openAddModal = () => {
     setEditItem(null);
     setCardImageFile(null);
@@ -199,26 +216,23 @@ export default function ManageAdminProducts() {
       card_variant: "Platinum",
       is_lifetime_free: false,
       best_for: "Cashback",
-      welcome_benefits: "₹500 Gift Voucher on first transaction",
+      welcome_benefits: "",
 
       joining_fee: "₹0",
-      annual_fee: "₹500 (Waived on ₹50,000 spend)",
-      interest_rate: "3.5% p.m.",
+      annual_fee: "",
+      interest_rate: "",
 
       min_age: 21,
       max_age: 60,
       min_income: 25000,
       cibil_required: 750,
 
-      features: ["5% Cashback on top merchants", "1% Fuel Surcharge Waiver", "4 Complimentary Lounge Access"],
-      benefits: [
-        { title: "Cashback Rewards", description: "Earn up to 5% cashback on online shopping" },
-        { title: "Lounge Visits", description: "4 free domestic airport lounge passes per year" }
-      ],
-      compare_reward_rate: "5% Cashback",
-      compare_lounge: "4 Visits/Year",
+      features: [],
+      benefits: [],
+      compare_reward_rate: "",
+      compare_lounge: "",
 
-      required_documents: ["PAN Card", "Aadhaar Card", "Salary Slip"],
+      required_documents: ["PAN Card", "Aadhaar Card"],
       faqs: [],
 
       show_on_website: true,
@@ -227,82 +241,107 @@ export default function ManageAdminProducts() {
       is_popular: false,
       is_recommended: false,
       is_trending: false,
-      badge: "Hot",
+      badge: "",
       display_order: 1,
 
       meta_title: "",
       meta_description: "",
-      slug: ""
+      slug: "",
+      public_url: "",
+      partner_url: ""
     });
     setModalTab("basic");
     setModalOpen(true);
   };
 
-  const openEditModal = (item) => {
+  const openEditModal = async (item) => {
     setEditItem(item);
     setCardImageFile(null);
 
-    const fees = item.fees_structure || {};
-    const elig = item.eligibility_criteria || {};
-    const compare = item.compare_specs || {};
-    const vis = item.visibility || {};
-    const seo = item.seo_metadata || {};
+    const buildFormFromItem = (prod) => {
+      const fees = prod.fees || prod.fees_structure || {};
+      const elig = prod.eligibility || prod.eligibility_criteria || {};
+      const compare = prod.compare || prod.compare_specs || {};
+      const vis = prod.visibility || {};
+      const seo = prod.seo_metadata || {};
 
-    setForm({
-      name: item.name || "",
-      bank_id: item.bank_id || "",
-      category: item.category || activeCategory,
-      sub_category: item.sub_category || "Core Cards",
-      description: item.description || "",
-      image_url: item.image_url || "",
-      status: item.status || "Active",
-      is_active: item.is_active !== undefined ? item.is_active : true,
-
-      card_network: item.card_network || "Visa",
-      card_variant: item.card_variant || "Platinum",
-      is_lifetime_free: item.is_lifetime_free || false,
-      best_for: item.best_for || "Cashback",
-      welcome_benefits: item.welcome_benefits || "",
-
-      joining_fee: fees.joining_fee || item.joining_fee || "₹0",
-      annual_fee: fees.annual_fee || item.annual_fee || "₹500",
-      interest_rate: fees.interest_rate || item.interest_rate || "3.5% p.m.",
-
-      min_age: elig.min_age || item.min_age || 21,
-      max_age: elig.max_age || item.max_age || 60,
-      min_income: elig.min_income || item.min_income || 25000,
-      cibil_required: elig.cibil_required || 750,
-
-      features: Array.isArray(item.features_list) ? item.features_list : (Array.isArray(item.features) ? item.features : []),
-      benefits: Array.isArray(item.benefits_list) ? item.benefits_list : [],
-      compare_reward_rate: compare.reward_rate || "",
-      compare_lounge: compare.lounge || "",
-
-      required_documents: Array.isArray(item.required_documents) ? item.required_documents : [],
-      faqs: [],
-
-      show_on_website: vis.show_on_website !== undefined ? vis.show_on_website : true,
-      show_in_partner: vis.show_in_partner !== undefined ? vis.show_in_partner : true,
-      is_featured: vis.is_featured || item.featured || false,
-      is_popular: vis.is_popular || false,
-      is_recommended: item.is_recommended || false,
-      is_trending: item.is_trending || false,
-      badge: item.badge || "Hot",
-      display_order: item.display_order || 1,
-
-      meta_title: seo.meta_title || item.seo_title || "",
-      meta_description: seo.meta_description || item.seo_description || "",
-      slug: item.slug || "",
-    });
-
-    api.get(`/products/${item.id}/faqs`).then(res => {
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setForm(prev => ({ ...prev, faqs: res.data.data }));
+      let featuresArr = parseJsonOrArray(prod.features_list);
+      if (!featuresArr.length) featuresArr = parseJsonOrArray(prod.features);
+      if (!featuresArr.length && Array.isArray(prod.structured_features)) {
+        featuresArr = prod.structured_features.map(f => f.title || f.description || f);
       }
-    }).catch(() => {});
 
+      let benefitsArr = parseJsonOrArray(prod.benefits_list);
+      if (!benefitsArr.length) benefitsArr = parseJsonOrArray(prod.benefits);
+
+      let docsArr = parseJsonOrArray(prod.required_documents);
+      if (!docsArr.length) docsArr = parseJsonOrArray(prod.documents_required);
+      if (!docsArr.length) docsArr = parseJsonOrArray(prod.documents);
+
+      let faqsArr = Array.isArray(prod.faqs) ? prod.faqs : [];
+
+      return {
+        name: prod.name || "",
+        bank_id: prod.bank_id || "",
+        category: prod.category || activeCategory,
+        sub_category: prod.sub_category || "Core Cards",
+        description: prod.description || "",
+        image_url: prod.image_url || "",
+        status: prod.status || "Active",
+        is_active: prod.is_active !== undefined ? prod.is_active : true,
+
+        card_network: prod.card_network || "",
+        card_variant: prod.card_variant || "",
+        is_lifetime_free: prod.is_lifetime_free !== undefined ? prod.is_lifetime_free : false,
+        best_for: prod.best_for || "",
+        welcome_benefits: prod.welcome_benefits || "",
+
+        joining_fee: fees.joining_fee || prod.joining_fee || "",
+        annual_fee: fees.annual_fee || prod.annual_fee || prod.fees_charges || "",
+        interest_rate: fees.interest_rate || prod.interest_rate || "",
+
+        min_age: elig.min_age !== undefined ? elig.min_age : (prod.min_age !== undefined ? prod.min_age : 21),
+        max_age: elig.max_age !== undefined ? elig.max_age : (prod.max_age !== undefined ? prod.max_age : 65),
+        min_income: elig.min_income !== undefined ? elig.min_income : (prod.min_income !== undefined ? prod.min_income : 0),
+        cibil_required: elig.cibil_required !== undefined ? elig.cibil_required : (prod.cibil_required !== undefined ? prod.cibil_required : 750),
+
+        features: featuresArr,
+        benefits: benefitsArr,
+        compare_reward_rate: compare.reward_rate || prod.compare_reward_rate || "",
+        compare_lounge: compare.lounge || prod.compare_lounge || "",
+
+        required_documents: docsArr,
+        faqs: faqsArr,
+
+        show_on_website: vis.show_on_website !== undefined ? vis.show_on_website : (prod.public_visible !== undefined ? prod.public_visible : true),
+        show_in_partner: vis.show_in_partner !== undefined ? vis.show_in_partner : (prod.partner_visible !== undefined ? prod.partner_visible : true),
+        is_featured: vis.is_featured !== undefined ? vis.is_featured : (prod.featured || prod.is_featured || false),
+        is_popular: vis.is_popular !== undefined ? vis.is_popular : (prod.is_popular || false),
+        is_recommended: prod.is_recommended || false,
+        is_trending: prod.is_trending || false,
+        badge: prod.badge || "",
+        display_order: prod.display_order || 1,
+
+        meta_title: seo.meta_title || prod.seo_title || "",
+        meta_description: seo.meta_description || prod.seo_description || "",
+        slug: prod.slug || "",
+        public_url: prod.public_url || "",
+        partner_url: prod.partner_url || ""
+      };
+    };
+
+    setForm(buildFormFromItem(item));
     setModalTab("basic");
     setModalOpen(true);
+
+    try {
+      const res = await api.get(`/products/${item.id}`);
+      if (res.data?.success && res.data.data) {
+        setForm(buildFormFromItem(res.data.data));
+      }
+    } catch (e) {
+      console.error("Error fetching full product details for edit:", e);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -399,7 +438,9 @@ export default function ManageAdminProducts() {
         display_order: parseInt(form.display_order) || 1,
         is_recommended: form.is_recommended,
         is_trending: form.is_trending,
-        featured: form.is_featured
+        featured: form.is_featured,
+        public_url: form.public_url,
+        partner_url: form.partner_url
       };
 
       let res;
@@ -895,6 +936,28 @@ export default function ManageAdminProducts() {
                   <div style={{ gridColumn: 'span 2' }}>
                     <label style={S.label}>Short Card Description</label>
                     <textarea rows={3} placeholder="Write 1-2 line summary of the card..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ ...S.input }} />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={S.label}>Public Application URL</label>
+                    <input
+                      type="text"
+                      placeholder="https://applyonline... (Direct customer application link)"
+                      value={form.public_url}
+                      onChange={(e) => setForm({ ...form, public_url: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={S.label}>Partner Application URL (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="https://applyonline... (Partner referral link)"
+                      value={form.partner_url}
+                      onChange={(e) => setForm({ ...form, partner_url: e.target.value })}
+                      style={{ ...S.input, height: '42px' }}
+                    />
                   </div>
                 </div>
               )}
