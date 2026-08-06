@@ -564,72 +564,7 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
 
-        {/* ──── TOP SERVICES CARD ──── */}
-        <div
-          style={{
-            margin: '20px 0 0 0',
-            background: isDark ? C.card : '#FFFFFF',
-            borderRadius: '18px',
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
-          }}
-        >
-          <div style={{ flex: 1, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <p style={{ fontWeight: 700, fontSize: '14.5px', margin: '0 0 10px 0', color: isDark ? C.text : '#111827' }}>
-              Top Services
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '310px' }}>
-              <ServiceItem
-                icon={<CreditCard size={20} />}
-                label="Credit Card"
-                bg="#EEE9FB"
-                color="#6E3FD6"
-                onClick={() => navigate('/partner/credit-cards')}
-                isDark={isDark}
-                C={C}
-              />
-              <ServiceItem
-                icon={<PiggyBank size={20} />}
-                label="Personal Loan"
-                bg="#E3F5EA"
-                color="#2FA35B"
-                onClick={() => navigate('/partner/products?category=personal_loan')}
-                isDark={isDark}
-                C={C}
-              />
-              <ServiceItem
-                icon={<ShieldPlus size={20} />}
-                label="Insurance"
-                bg="#EEE9FB"
-                color="#6E3FD6"
-                onClick={() => navigate('/partner/products?category=insurance')}
-                isDark={isDark}
-                C={C}
-              />
-              <ServiceItem
-                icon={<Landmark size={20} />}
-                label="Bank Account"
-                bg="#E3F5EA"
-                color="#2FA35B"
-                onClick={() => navigate('/partner/products?category=bank_account')}
-                isDark={isDark}
-                C={C}
-              />
-              <ServiceItem
-                icon={<TrendingUp size={20} />}
-                label="Demat Account"
-                bg="#FCE7E1"
-                color="#E85B3A"
-                onClick={() => navigate('/partner/products?category=demat')}
-                isDark={isDark}
-                C={C}
-              />
-            </div>
-          </div>
-        </div>
+
 
         {/* ──── SELL & EARN HEADER & GRID ──── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '0', paddingRight: '0', marginTop: '28px', marginBottom: '12px' }}>
