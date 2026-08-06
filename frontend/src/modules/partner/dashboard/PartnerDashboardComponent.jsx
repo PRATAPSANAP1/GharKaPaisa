@@ -6,7 +6,7 @@ import api from '../../../services/api';
 import QuickAccessSection from './QuickAccessSection';
 import PartnerActionableQueues from './PartnerActionableQueues';
 import Customer360Drawer from './Customer360Drawer';
-import PartnerSearchBar from './PartnerSearchBar';
+
 
 import {
   Menu,
@@ -387,8 +387,6 @@ export default function PartnerDashboardComponent({ partner }) {
           boxSizing: 'border-box'
         }}
       >
-        {/* ── TOP GLOBAL SEARCH BAR ── */}
-        <PartnerSearchBar />
 
         {/* ── ACTIONABLE QUEUES & WARNING BANNERS ── */}
         <PartnerActionableQueues

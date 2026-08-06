@@ -18,6 +18,7 @@ import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
 import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
+import PartnerSearchBar from '../modules/partner/dashboard/PartnerSearchBar';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
@@ -929,6 +930,9 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
           <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? '26px' : '32px', objectFit: 'contain' }} />
         )}
       </div>
+
+        {/* Center: Search Bar (desktop only) */}
+        {!isMobile && <PartnerSearchBar />}
 
       {/* Right side: Notifications + Wallet + Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>

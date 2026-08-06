@@ -25,7 +25,7 @@ const CATEGORIES = [
   { id: 'demat', label: 'Demat Accounts' },
 ];
 
-const BANKS = ['All Banks', 'HDFC', 'SBI', 'Axis', 'ICICI', 'BOB', 'IndusInd', 'AU Small Finance', 'IDFC'];
+const BANKS = ['All Banks', 'HDFC', 'SBI', 'AXIS', 'INDUSIND', 'KOTAK', 'YES', 'BOB', 'DCB', 'EQUITAS', 'FEDERAL', 'ICICI', 'IDFC', 'RBL', 'SMB'];
 
 const getCategoryEmoji = (cat) => {
   const c = cat?.toLowerCase() || '';
@@ -495,7 +495,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               }}
             >
               <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("All Banks")}</option>
-              {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
+              {BANKS.filter(b => b !== 'All Banks').map(bank => (
                 <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                   🏦 {bank}
                 </option>
@@ -869,7 +869,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   }}
                 >
                   <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("Banks (All)")}</option>
-                  {banksForCategory.filter(b => b !== 'All Banks').map(bank => (
+                  {BANKS.filter(b => b !== 'All Banks').map(bank => (
                     <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                       🏦 {bank}
                     </option>
@@ -927,121 +927,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Row 2: Horizontal Category Pills (Desktop) */}
-              <div>
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none'
-                }}>
-                  {CATEGORIES.map(cat => {
-                    const isActive = activeCategory === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setActiveCategory(cat.id)}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '30px',
-                          fontSize: '12.5px',
-                          fontWeight: isActive ? 800 : 650,
-                          border: isActive ? `1.5px solid ${C.primary}` : `1.5px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}`,
-                          background: isActive 
-                            ? `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})` 
-                            : (isDark ? '#18181B' : '#F8FAFC'),
-                          color: isActive ? '#FFFFFF' : C.text,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          boxShadow: isActive ? `0 4px 14px ${C.primary}40` : 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span>{cat.id === 'all' ? '🛍️' : getCategoryEmoji(cat.id)}</span>
-                        <span>{t(cat.label)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Row 3: Bank Quick Chips + Feature Filter Toggles (Desktop) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}` }}>
-                
-                {/* Bank Chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
-                    {t("Banks:")}
-                  </span>
-                  {banksForCategory.map(bank => {
-                    const isActive = activeBank === bank;
-                    return (
-                      <button
-                        key={bank}
-                        onClick={() => setActiveBank(bank)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: isActive ? 800 : 650,
-                          border: isActive ? `1.5px solid ${C.primary}` : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'}`,
-                          background: isActive ? `${C.primary}18` : 'transparent',
-                          color: isActive ? C.primary : C.textMid,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        {bank === 'All Banks' ? `🏦 ${t('All')}` : bank}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Feature Chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
-                    {t("Features:")}
-                  </span>
-                  {[
-                    { id: 'all', label: t('All Cards') },
-                    { id: 'ltf', label: `🎁 ${t('Lifetime Free')}` },
-                    { id: 'high_payout', label: `🔥 ${t('High Payout (₹1000+)')}` },
-                    { id: 'high_approval', label: `⭐ ${t('High Approval (88%+)')}` }
-                  ].map(feat => {
-                    const isActive = featureFilter === feat.id;
-                    return (
-                      <button
-                        key={feat.id}
-                        onClick={() => setFeatureFilter(feat.id)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: isActive ? 800 : 650,
-                          border: isActive ? `1.5px solid ${C.primary}` : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'}`,
-                          background: isActive ? `${C.primary}18` : 'transparent',
-                          color: isActive ? C.primary : C.textMid,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        {feat.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
+          ) : null}
 
           {/* Row 4: Results Count & Active Filter Tags */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '6px', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9'}` }}>

@@ -104,14 +104,7 @@ export default function PartnerSearchBar() {
     navigate(item.route);
   };
 
-  const quickTags = [
-    { label: '💳 Credit Cards', query: 'credit card' },
-    { label: '🏦 Personal Loan', query: 'personal loan' },
-    { label: '💼 Business Loan', query: 'business loan' },
-    { label: '🛡️ Insurance', query: 'insurance' },
-    { label: '🎁 Lifetime Free', query: 'lifetime free' },
-    { label: '➕ Add Lead', query: 'submit' }
-  ];
+
 
   return (
     <div
@@ -119,7 +112,9 @@ export default function PartnerSearchBar() {
       style={{
         position: 'relative',
         width: '100%',
-        margin: '12px 0 20px 0',
+        flex: 1,
+        maxWidth: '480px',
+        margin: '0 16px',
         zIndex: 40
       }}
     >
@@ -178,52 +173,7 @@ export default function PartnerSearchBar() {
         )}
       </div>
 
-      {/* Quick Suggestion Chips (Visible when not focused or query empty) */}
-      {!isOpen && searchQuery.length === 0 && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            marginTop: '10px',
-            paddingBottom: '4px',
-            scrollbarWidth: 'none'
-          }}
-        >
-          {quickTags.map((tag, idx) => (
-            <button
-              key={idx}
-              onClick={() => {
-                setQuery(tag.query);
-                setIsOpen(true);
-              }}
-              style={{
-                whiteSpace: 'nowrap',
-                fontSize: '12px',
-                fontWeight: 700,
-                color: isDark ? C.text : '#475569',
-                background: isDark ? C.bgSecondary : '#F1F5F9',
-                border: `1px solid ${C.border}`,
-                borderRadius: '20px',
-                padding: '5px 12px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = C.teal;
-                e.currentTarget.style.color = C.teal;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.color = isDark ? C.text : '#475569';
-              }}
-            >
-              {tag.label}
-            </button>
-          ))}
-        </div>
-      )}
+
 
       {/* Live Dropdown Results Modal */}
       {isOpen && (
