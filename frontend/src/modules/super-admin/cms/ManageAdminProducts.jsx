@@ -47,6 +47,15 @@ export default function ManageAdminProducts() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => prev.message === message ? { show: false, message: '', type: 'success' } : prev);
+    }, 3500);
+  };
+
   // Filters State
   const [bankFilter, setBankFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
@@ -153,6 +162,7 @@ export default function ManageAdminProducts() {
     } catch (e) {
       console.error("[ManageAdminProducts] Fetch error:", e);
       setErrorMsg("Failed to fetch products list");
+      triggerToast("Failed to fetch products list", "error");
     } finally {
       setLoading(false);
     }
@@ -301,10 +311,13 @@ export default function ManageAdminProducts() {
     try {
       const res = await api.delete(`/products/${id}`);
       if (res.data?.success) {
+        triggerToast("Product deleted successfully!", "success");
         fetchProducts();
+      } else {
+        triggerToast(res.data?.message || "Failed to delete product", "error");
       }
     } catch (e) {
-      alert(e.response?.data?.message || "Failed to delete product");
+      triggerToast(e.response?.data?.message || "Failed to delete product", "error");
     }
   };
 
@@ -319,9 +332,12 @@ export default function ManageAdminProducts() {
       });
       if (res.data?.success) {
         setProducts(products.map(p => p.id === item.id ? { ...p, status: newStatus, is_active: newIsActive } : p));
+        triggerToast(`Product status updated to ${newStatus}`, "success");
+      } else {
+        triggerToast(res.data?.message || "Failed to update product status", "error");
       }
     } catch (e) {
-      alert(e.response?.data?.message || "Failed to toggle status");
+      triggerToast(e.response?.data?.message || "Failed to toggle status", "error");
     }
   };
 
@@ -412,7 +428,7 @@ export default function ManageAdminProducts() {
       }
 
       if (res.data?.success) {
-        const productId = editItem ? editItem.id : res.data.data.id;
+        const productId = editItem ? editItem.id : res.data?.data?.id;
         // Save FAQs if any
         if (Array.isArray(form.faqs) && form.faqs.length > 0 && productId) {
           for (const f of form.faqs) {
@@ -427,10 +443,13 @@ export default function ManageAdminProducts() {
         }
 
         setModalOpen(false);
+        triggerToast(editItem ? "Product updated successfully!" : "Product created successfully!", "success");
         fetchProducts();
+      } else {
+        triggerToast(res.data?.message || "Failed to save product.", "error");
       }
     } catch (e) {
-      alert(e.response?.data?.message || "Failed to save product.");
+      triggerToast(e.response?.data?.message || "Failed to save product.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -454,7 +473,56 @@ export default function ManageAdminProducts() {
   const paginatedProducts = filteredProducts.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+      
+      {/* TOAST NOTIFICATION (TOP RIGHT CORNER) */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 100000,
+          background: toast.type === 'success' ? '#10B981' : '#EF4444',
+          color: '#FFFFFF',
+          padding: '14px 22px',
+          borderRadius: '12px',
+          fontWeight: 700,
+          fontSize: '14px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          maxWidth: '420px',
+          wordBreak: 'break-word'
+        }}>
+          <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+            {toast.type === 'success' ? <MdCheckCircle size={20} /> : <MdCancel size={20} />}
+          </span>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button
+            onClick={() => setToast({ show: false, message: '', type: 'success' })}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              opacity: 0.8
+            }}
+          >
+            <MdClose size={18} />
+          </button>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
       
       {/* HEADER */}
       <div style={{

@@ -6,7 +6,7 @@ import { useActiveBanks } from "../../../contexts/BanksContext";
 import { 
   MdSearch, MdFilterList, MdAdd, MdModeEdit, MdDelete,
   MdStar, MdVisibility, MdAttachMoney, MdSettings, MdCheck, MdClose,
-  MdDragIndicator, MdBusiness, MdCategory, MdInfo, MdLabel
+  MdDragIndicator, MdBusiness, MdCategory, MdInfo, MdLabel, MdCheckCircle, MdCancel
 } from "react-icons/md";
 
 const PRODUCT_CATEGORIES = [
@@ -50,6 +50,14 @@ export default function ManageProducts() {
   const { activeBanks: banks } = useActiveBanks();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => prev.message === message ? { show: false, message: '', type: 'success' } : prev);
+    }, 3500);
+  };
 
   // Search & Filters state
   const [searchParams] = useSearchParams();
@@ -316,10 +324,13 @@ export default function ManageProducts() {
 
       if (res.data?.success) {
         setModalOpen(false);
+        triggerToast(editItem ? "Product updated successfully!" : "Product created successfully!", "success");
         fetchProducts();
+      } else {
+        triggerToast(res.data?.message || "Failed to save product.", "error");
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to save product.");
+      triggerToast(err.response?.data?.message || "Failed to save product.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -330,8 +341,9 @@ export default function ManageProducts() {
     try {
       await api.put(`/superadmin/products/${product.id}`, { is_active: newActive });
       setProducts(products.map(p => p.id === product.id ? { ...p, is_active: newActive } : p));
+      triggerToast(`Product ${newActive ? 'activated' : 'deactivated'} successfully!`, "success");
     } catch (err) {
-      alert("Failed to toggle status");
+      triggerToast(err.response?.data?.message || "Failed to toggle status", "error");
     }
   };
 
@@ -340,8 +352,9 @@ export default function ManageProducts() {
     try {
       await api.put(`/superadmin/products/featured`, { id: product.id, featured: newFeatured });
       setProducts(products.map(p => p.id === product.id ? { ...p, featured: newFeatured } : p));
+      triggerToast(`Product featured status updated!`, "success");
     } catch (err) {
-      alert("Failed to update featured settings");
+      triggerToast(err.response?.data?.message || "Failed to update featured settings", "error");
     }
   };
 
@@ -350,16 +363,67 @@ export default function ManageProducts() {
     try {
       const res = await api.delete(`/superadmin/products/${id}`);
       if (res.data?.success) {
-        alert("Product deleted.");
+        triggerToast("Product deleted successfully!", "success");
         fetchProducts();
+      } else {
+        triggerToast(res.data?.message || "Failed to delete product", "error");
       }
     } catch (err) {
-      alert("Failed to delete product.");
+      triggerToast(err.response?.data?.message || "Failed to delete product.", "error");
     }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "60px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingBottom: "60px", position: "relative" }}>
+      
+      {/* TOAST NOTIFICATION (TOP RIGHT CORNER) */}
+      {toast.show && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 100000,
+          background: toast.type === 'success' ? '#10B981' : '#EF4444',
+          color: '#FFFFFF',
+          padding: '14px 22px',
+          borderRadius: '12px',
+          fontWeight: 700,
+          fontSize: '14px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          maxWidth: '420px',
+          wordBreak: 'break-word'
+        }}>
+          <span style={{ fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+            {toast.type === 'success' ? <MdCheckCircle size={20} /> : <MdCancel size={20} />}
+          </span>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button
+            onClick={() => setToast({ show: false, message: '', type: 'success' })}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              opacity: 0.8
+            }}
+          >
+            <MdClose size={18} />
+          </button>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
       
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
