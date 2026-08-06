@@ -6,9 +6,17 @@ const logger = require('../../config/logger');
 // GET /banners — List all active banners (public)
 const listBanners = async (req, res, next) => {
   try {
-    const { rows } = await query(
-      `SELECT * FROM banners WHERE is_active = true ORDER BY display_order ASC, created_at DESC`
-    );
+    const pageFilter = req.query.page || req.query.target_page;
+    let sql = `SELECT * FROM banners WHERE is_active = true`;
+    const params = [];
+
+    if (pageFilter) {
+      sql += ` AND (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
+      params.push(pageFilter);
+    }
+
+    sql += ` ORDER BY display_order ASC, created_at DESC`;
+    const { rows } = await query(sql, params);
     return success(res, rows);
   } catch (err) {
     next(err);
@@ -18,9 +26,17 @@ const listBanners = async (req, res, next) => {
 // GET /banners/all — List all banners including inactive ones (Admin/SuperAdmin)
 const listAllBanners = async (req, res, next) => {
   try {
-    const { rows } = await query(
-      `SELECT * FROM banners ORDER BY display_order ASC, created_at DESC`
-    );
+    const pageFilter = req.query.page || req.query.target_page;
+    let sql = `SELECT * FROM banners`;
+    const params = [];
+
+    if (pageFilter && pageFilter !== 'all') {
+      sql += ` WHERE (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
+      params.push(pageFilter);
+    }
+
+    sql += ` ORDER BY display_order ASC, created_at DESC`;
+    const { rows } = await query(sql, params);
     return success(res, rows);
   } catch (err) {
     next(err);
@@ -30,7 +46,7 @@ const listAllBanners = async (req, res, next) => {
 // POST /banners — Create a banner (SuperAdmin)
 const createBanner = async (req, res, next) => {
   try {
-    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url } = req.body;
+    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url, target_page } = req.body;
     let image_url = req.body.image_url;
 
     // Check if a file is uploaded
@@ -48,8 +64,8 @@ const createBanner = async (req, res, next) => {
     }
 
     const { rows: [b] } = await query(
-      `INSERT INTO banners (title, subtitle, btn_text, image_url, display_order, is_active, link_type, click_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      `INSERT INTO banners (title, subtitle, btn_text, image_url, display_order, is_active, link_type, click_url, target_page)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
         title, 
         subtitle || null, 
@@ -58,7 +74,8 @@ const createBanner = async (req, res, next) => {
         display_order ? parseInt(display_order) : 0, 
         is_active === undefined ? true : (is_active === 'true' || is_active === true),
         link_type || 'custom',
-        click_url || '/credit-cards'
+        click_url || '/credit-cards',
+        target_page || 'all'
       ]
     );
 
@@ -72,7 +89,7 @@ const createBanner = async (req, res, next) => {
 const updateBanner = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url } = req.body;
+    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url, target_page } = req.body;
     let image_url = req.body.image_url;
 
     const { rows: [existing] } = await query(`SELECT * FROM banners WHERE id = $1`, [id]);
@@ -107,6 +124,7 @@ const updateBanner = async (req, res, next) => {
         is_active = COALESCE($6, is_active),
         link_type = COALESCE($8, link_type),
         click_url = COALESCE($9, click_url),
+        target_page = COALESCE($10, target_page),
         updated_at = NOW()
       WHERE id = $7 RETURNING *`,
       [
@@ -118,7 +136,8 @@ const updateBanner = async (req, res, next) => {
         is_active === undefined ? existing.is_active : (is_active === 'true' || is_active === true),
         id,
         link_type || null,
-        click_url || null
+        click_url || null,
+        target_page || existing.target_page || 'all'
       ]
     );
 
