@@ -141,8 +141,8 @@ export default function ManageAdminProducts() {
   });
 
   // Fetch products
-  const fetchProducts = async () => {
-    setLoading(true);
+  const fetchProducts = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setErrorMsg("");
     try {
       const res = await api.get('/products', {
@@ -152,7 +152,6 @@ export default function ManageAdminProducts() {
                     activeCategory === 'insurance' ? '%insurance%' :
                     activeCategory,
           is_active: 'all',
-          search: search.trim() || undefined,
           limit: 1000
         }
       });
@@ -164,13 +163,13 @@ export default function ManageAdminProducts() {
       setErrorMsg("Failed to fetch products list");
       triggerToast("Failed to fetch products list", "error");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, [activeCategory, search]);
+    fetchProducts(true);
+  }, [activeCategory]);
 
   // Auto-generate slug when name changes if slug hasn't been manually edited
   const handleNameChange = (newName) => {
@@ -459,6 +458,16 @@ export default function ManageAdminProducts() {
 
   // Compute Filtered Products
   const filteredProducts = products.filter(p => {
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      const matchName = p.name?.toLowerCase().includes(q);
+      const matchBank = p.bank_name?.toLowerCase().includes(q);
+      const matchSubCat = p.sub_category?.toLowerCase().includes(q);
+      const matchDesc = p.description?.toLowerCase().includes(q);
+      const matchBadge = p.badge?.toLowerCase().includes(q);
+      const matchBestFor = p.best_for?.toLowerCase().includes(q);
+      if (!matchName && !matchBank && !matchSubCat && !matchDesc && !matchBadge && !matchBestFor) return false;
+    }
     if (bankFilter !== "All" && p.bank_id !== bankFilter) return false;
     if (typeFilter !== "All" && p.sub_category !== typeFilter) return false;
     const itemStatus = p.status || (p.is_active ? "Active" : "Inactive");
@@ -558,7 +567,7 @@ export default function ManageAdminProducts() {
 
       {/* SEARCH & FILTER CONTROLS */}
       <div style={{ background: C.card, borderRadius: '16px', padding: '16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <form onSubmit={(e) => { e.preventDefault(); fetchProducts(); }} style={{ display: 'flex', gap: '12px' }}>
+        <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', gap: '12px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <MdSearch size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
             <input
