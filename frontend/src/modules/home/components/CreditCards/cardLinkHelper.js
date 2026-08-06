@@ -7,7 +7,12 @@ export const getBankApplyLink = (cardName, bankId) => {
 
   // Axis Bank Cards (connect all to the Axis referral link)
   if (bankLower === 'axis' || nameLower.includes('axis')) {
-    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_964083";
+    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
+  }
+
+  // IndusInd Bank Cards (connect all to IndusInd link)
+  if (bankLower === 'indusind' || bankLower === 'indus' || nameLower.includes('indusind') || nameLower.includes('indus')) {
+    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
   }
 
   // SBI Bank Cards (connect all to SBI link)
@@ -17,12 +22,12 @@ export const getBankApplyLink = (cardName, bankId) => {
 
   // IDFC Bank Cards (connect all to IDFC link)
   if (bankLower === 'idfc' || nameLower.includes('idfc')) {
-    return "https://www.idfcfirst.bank.in/credit-card/ntb-diy/apply";
+    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
   }
 
   // BOB Bank Cards (connect all to the BOB link)
   if (bankLower === 'bob' || nameLower.includes('bob') || nameLower.includes('baroda')) {
-    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY30";
+    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
   }
 
   // Federal Bank / Scapia Cards (make Scapia Federal Card correct)
