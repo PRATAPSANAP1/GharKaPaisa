@@ -62,6 +62,37 @@ async function getTree(req, res, next) {
 async function getMembersList(req, res, next) {
   try {
     const partnerId = await resolvePartnerId(req);
+    
+    // If CSV export is requested
+    if (req.query.export === 'csv' || req.query.format === 'csv') {
+      const options = { ...req.query, limit: 10000, page: 1 };
+      const result = await teamService.getTeamMembersList(partnerId, options);
+      
+      const headers = ['Partner Code', 'Full Name', 'Mobile', 'Email', 'Rank', 'Level', 'KYC Status', 'Status', 'Total Business (INR)', 'Applications Count', 'Joined Date'];
+      const csvRows = [headers.join(',')];
+
+      for (const m of result.members) {
+        const row = [
+          `"${m.partner_code || ''}"`,
+          `"${m.full_name || ''}"`,
+          `"${m.mobile || ''}"`,
+          `"${m.email || ''}"`,
+          `"${m.rank || 'Partner'}"`,
+          m.level || 1,
+          `"${m.kyc_status || 'pending'}"`,
+          `"${m.status || 'active'}"`,
+          m.total_business || 0,
+          m.applications_count || 0,
+          `"${m.joined_at ? new Date(m.joined_at).toISOString().split('T')[0] : ''}"`
+        ];
+        csvRows.push(row.join(','));
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="team_members_${new Date().toISOString().split('T')[0]}.csv"`);
+      return res.status(200).send(csvRows.join('\n'));
+    }
+
     const result = await teamService.getTeamMembersList(partnerId, req.query);
     return res.json({
       success: true,
