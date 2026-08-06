@@ -465,78 +465,126 @@ export default function PartnerDashboardComponent({ partner }) {
           </div>
         )}
 
-        {/* ──── OUR OFFER BANNER SLIDER ──── */}
+        {/* ──── PREMIUM CSS-BASED HERO BANNER ──── */}
         <div
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
-          onClick={() => bannerSlides[bannerIndex]?.action()}
           style={{
-            margin: '16px 0 0 0',
-            borderRadius: '16px',
-            position: 'relative',
-            overflow: 'hidden',
-            cursor: 'pointer',
-            width: '100%',
-            aspectRatio: isMobile ? '16 / 7' : '2.6 / 1',
-            maxHeight: isMobile ? '200px' : '340px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
             background: isDark ? C.card : '#FFFFFF',
-            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
+            borderRadius: '24px',
+            padding: isMobile ? '20px' : '28px 32px',
+            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
+            boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.03)',
+            marginTop: '20px',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
+            gap: '24px',
+            alignItems: 'center'
           }}
         >
-          {bannerSlides[bannerIndex]?.bgImage ? (
-            <img
-              src={bannerSlides[bannerIndex].bgImage}
-              alt={bannerSlides[bannerIndex].title || 'Offer Banner'}
+          <div>
+            <h1 style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: 800, color: isDark ? C.text : '#111827', margin: 0, lineHeight: 1.25 }}>
+              {bannerSlides[bannerIndex]?.title || 'Lifetime Free Credit Cards & Loans'}
+            </h1>
+            <p style={{ fontSize: '13.5px', color: isDark ? C.textLight : '#4B5563', marginTop: '8px', margin: '8px 0 0 0', lineHeight: 1.5 }}>
+              {bannerSlides[bannerIndex]?.subtitle || 'Compare rates, key features, and apply online. Unlock exclusive shopping, dining, and travel rewards.'}
+            </p>
+            <button
+              onClick={() => bannerSlides[bannerIndex]?.action()}
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                display: 'block',
-                background: isDark ? C.card : '#FFFFFF'
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                background: 'linear-gradient(135deg, #7C4FE0 0%, #3B2A8C 100%)',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
+                marginTop: '16px',
+                background: 'linear-gradient(135deg, #6E3FD6 0%, #4C1D95 100%)',
                 color: '#FFFFFF',
-                boxSizing: 'border-box'
+                border: 'none',
+                borderRadius: '12px',
+                padding: '10px 20px',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(110,63,214,0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
               }}
             >
-              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '999px', alignSelf: 'flex-start' }}>
-                Special Offer
-              </span>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '10px 0 4px 0', color: '#FFFFFF' }}>
-                {bannerSlides[bannerIndex]?.title}
-              </h3>
-              <p style={{ fontSize: '13px', margin: 0, opacity: 0.9 }}>
-                {bannerSlides[bannerIndex]?.subtitle}
-              </p>
-              <button
+              {bannerSlides[bannerIndex]?.btnText || 'Explore Now'} →
+            </button>
+          </div>
+
+          {/* CSS Credit Card graphics banner */}
+          <div
+            onClick={() => bannerSlides[bannerIndex]?.action()}
+            style={{
+              width: '100%',
+              height: isMobile ? '140px' : '160px',
+              background: 'linear-gradient(135deg, #6E3FD6 0%, #1E40AF 100%)',
+              borderRadius: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            {bannerSlides[bannerIndex]?.bgImage ? (
+              <img
+                src={bannerSlides[bannerIndex].bgImage}
+                alt="Banner graphic"
                 style={{
-                  marginTop: '14px',
-                  alignSelf: 'flex-start',
-                  background: '#FFFFFF',
-                  color: '#3B2A8C',
-                  border: 'none',
-                  borderRadius: '999px',
-                  padding: '8px 18px',
-                  fontSize: '12.5px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
+                  height: '90%',
+                  width: '90%',
+                  objectFit: 'contain',
+                  borderRadius: '10px'
                 }}
-              >
-                {bannerSlides[bannerIndex]?.btnText || 'Apply Now'} →
-              </button>
-            </div>
-          )}
+              />
+            ) : (
+              <>
+                {/* Floating card 1 */}
+                <div style={{
+                  width: '140px',
+                  height: '85px',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%)',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  color: '#fff',
+                  boxShadow: '0 10px 20px rgba(0,0,0,0.25)',
+                  transform: 'rotate(-10deg) translate(-15px, 8px)',
+                  position: 'absolute',
+                  zIndex: 1,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  <div style={{ fontSize: '6px', fontWeight: 800, letterSpacing: '1px', opacity: 0.9 }}>GHARKAPAISA</div>
+                  <div style={{ fontSize: '8px', fontWeight: 700, margin: '14px 0 6px 0' }}>•••• •••• •••• 9999</div>
+                  <div style={{ fontSize: '6px', opacity: 0.8 }}>PARTNER PLATINUM</div>
+                </div>
+
+                {/* Floating card 2 */}
+                <div style={{
+                  width: '140px',
+                  height: '85px',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.08) 100%)',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  color: '#fff',
+                  boxShadow: '0 12px 25px rgba(0,0,0,0.3)',
+                  transform: 'rotate(5deg) translate(15px, -8px)',
+                  position: 'absolute',
+                  zIndex: 2,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  <div style={{ fontSize: '6px', fontWeight: 800, letterSpacing: '1px', opacity: 0.9 }}>GHARKAPAISA</div>
+                  <div style={{ fontSize: '8px', fontWeight: 700, margin: '14px 0 6px 0' }}>•••• •••• •••• 8888</div>
+                  <div style={{ fontSize: '6px', opacity: 0.8 }}>SIGNATURE REWARDS</div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
 
