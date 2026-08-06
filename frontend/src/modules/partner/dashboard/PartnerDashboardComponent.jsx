@@ -666,60 +666,7 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
         {/* ──── STATS ROW ──── */}
-        <div
-          style={{
-            margin: '20px 8px 0 8px',
-            background: isDark ? C.card : '#FFFFFF',
-            borderRadius: '16px',
-            padding: '16px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-            border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`
-          }}
-        >
-          <StatItem
-            icon={<BarChart3 size={20} />}
-            bg="#E3F5EA"
-            color="#2FA35B"
-            value={totalEarned}
-            label="Total Earnings"
-            onClick={() => navigate('/partner/wallet')}
-            isDark={isDark}
-            C={C}
-          />
-          <StatItem
-            icon={<Briefcase size={20} />}
-            bg="#EEE9FB"
-            color="#6E3FD6"
-            value={kpiTotalApps}
-            label="Leads Created"
-            onClick={() => navigate('/partner/applications')}
-            isDark={isDark}
-            C={C}
-          />
-          <StatItem
-            icon={<Users size={20} />}
-            bg="#FCE7E1"
-            color="#E8862E"
-            value={kpiApprovedApps}
-            label="Applications"
-            onClick={() => navigate('/partner/applications')}
-            isDark={isDark}
-            C={C}
-          />
-          <StatItem
-            icon={<Award size={20} />}
-            bg="#E2ECFB"
-            color="#3A78D6"
-            value={`${approvedPct}%`}
-            label="Success Rate"
-            onClick={() => navigate('/partner/reports')}
-            isDark={isDark}
-            C={C}
-          />
-        </div>
+
 
         {/* ──── QUICK ACCESS SECTION ──── */}
         <div style={{ marginTop: '20px', marginLeft: '8px', marginRight: '8px' }}>
