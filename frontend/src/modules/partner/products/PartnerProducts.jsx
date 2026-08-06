@@ -1034,8 +1034,8 @@ export default function PartnerProducts({ initialSearch = '' }) {
         {loading ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '24px'
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: isMobile ? '10px' : '20px'
           }}>
             {[1, 2, 3, 4, 5, 6].map(idx => (
               <div key={idx} style={{
@@ -1091,8 +1091,8 @@ export default function PartnerProducts({ initialSearch = '' }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: isMobile ? '12px' : '24px'
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: isMobile ? '10px' : '20px'
             }}>
               {currentCards.map((product) => {
                 const isSelectedForCompare = compareList.some(p => p.id === product.id);
@@ -1102,18 +1102,31 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 const badges = getMarketingBadges(product);
                 const emoji = getCategoryEmoji(product.category);
 
+                let keyFeatures = [];
+                if (Array.isArray(product.features) && product.features.length > 0) {
+                  keyFeatures = product.features;
+                } else if (Array.isArray(product.features_list) && product.features_list.length > 0) {
+                  keyFeatures = product.features_list;
+                } else if (product.description && typeof product.description === 'string' && product.description.includes('•')) {
+                  keyFeatures = product.description.split('•').map(s => s.trim()).filter(Boolean);
+                } else if (cardDetails.features && cardDetails.features.length > 0) {
+                  keyFeatures = cardDetails.features;
+                } else if (product.description) {
+                  keyFeatures = [product.description];
+                }
+
                 return (
                   <div 
                     key={product.id} 
                     className="gkp-product-card"
                     style={{
                       ...S.card,
-                      padding: isMobile ? '14px 12px' : '24px',
-                      borderRadius: '20px',
+                      padding: isMobile ? '12px 10px' : '20px',
+                      borderRadius: '18px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: isMobile ? '12px' : '16px',
+                      gap: isMobile ? '10px' : '14px',
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       border: isSelectedForCompare ? `2.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
                       boxShadow: isSelectedForCompare ? `0 12px 28px ${C.primary}20` : (isDark ? 'none' : '0 4px 15px rgba(0,0,0,0.02)'),
@@ -1122,7 +1135,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
                   >
                     <div>
                       {/* Top Badges Row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '4px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '4px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{
                             ...S.tag(C.primary),
@@ -1155,40 +1168,48 @@ export default function PartnerProducts({ initialSearch = '' }) {
                       </div>
 
                       {/* Product Logo & Info Header */}
-                      <div style={{ display: 'flex', gap: isMobile ? '10px' : '14px', alignItems: 'center', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', gap: isMobile ? '10px' : '12px', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{
-                          width: isMobile ? 44 : 58,
-                          height: isMobile ? 44 : 58,
+                          width: isMobile ? 40 : 52,
+                          height: isMobile ? 40 : 52,
                           flexShrink: 0,
                           background: C.bgSecondary,
-                          borderRadius: '14px',
+                          borderRadius: '12px',
                           border: `1.5px solid ${C.border}`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           overflow: 'hidden',
-                          fontSize: isMobile ? '22px' : '28px',
+                          fontSize: isMobile ? '20px' : '24px',
                           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}>
                           {product.image_url ? (
-                            <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
+                            <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
                           ) : (
                             emoji
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: 800, color: C.text, margin: '0 0 4px', lineHeight: 1.25 }}>
+                          <h3 style={{ fontSize: isMobile ? '14px' : '16.5px', fontWeight: 800, color: C.text, margin: '0 0 2px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {product.name}
                           </h3>
                         </div>
                       </div>
 
-                      {/* Description */}
-                      {product.description && (
-                        <p style={{ fontSize: isMobile ? '12px' : '13.5px', fontWeight: 500, color: C.textMid, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.45 }}>
-                          {product.description}
-                        </p>
-                      )}
+                      {/* Key Features */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                        {keyFeatures.slice(0, 3).map((feat, idx) => {
+                          const featStr = typeof feat === 'string' ? feat : (feat.title || feat.label || feat.description || '');
+                          return featStr ? (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: isMobile ? '11px' : '12px', color: C.textMid, fontWeight: 550, lineHeight: 1.3 }}>
+                              <MdCheckCircle color={C.green} size={isMobile ? 12 : 14} style={{ flexShrink: 0 }} />
+                              <span style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {featStr}
+                              </span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
                     </div>
 
                     {/* Footer Action Bar */}
