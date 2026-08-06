@@ -76,6 +76,9 @@ router.use('/sbi-credit-card-applications', sbiRouter);
 router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 
-// ── Referrals Routes ──
+const teamRoute                             = require('../modules/team/team.routes.js');
+
+// ── Referrals & Team Routes ──
+router.use('/team', teamRoute);
 
 module.exports = router;

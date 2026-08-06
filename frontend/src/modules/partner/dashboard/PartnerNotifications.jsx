@@ -136,13 +136,44 @@ export default function PartnerNotifications() {
 
   const handleMarkRead = async (id) => {
     try {
-      const res = await api.post("/notifications/read", { notification_ids: [id] });
+      const res = await api.post("/notifications/read", { id, ids: [id], notification_ids: [id] });
       if (res.data?.success) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true, status: 'read' } : n));
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (e) {
       console.error("Failed to mark notification as read", e);
+    }
+  };
+
+  const handleDeleteNotification = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await api.delete(`/notifications/${id}`);
+      if (res.data?.success) {
+        setNotifications(prev => {
+          const target = prev.find(n => n.id === id);
+          if (target && !target.is_read) {
+            setUnreadCount(count => Math.max(0, count - 1));
+          }
+          return prev.filter(n => n.id !== id);
+        });
+      }
+    } catch (e) {
+      console.error("Failed to delete notification", e);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!window.confirm(t('notifications.confirmClearAll', 'Are you sure you want to clear all notifications?'))) return;
+    try {
+      const res = await api.delete('/notifications/clear-all');
+      if (res.data?.success) {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    } catch (e) {
+      console.error("Failed to clear notifications", e);
     }
   };
 
@@ -201,6 +232,12 @@ export default function PartnerNotifications() {
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
           >
             <MdCheckCircle size={16} /> {t('notifications.markAllRead', 'Mark All as Read')}
+          </button>
+          <button
+            onClick={handleClearAll}
+            style={{ ...S.btn('outline'), color: C.red || '#EF4444', borderColor: (C.red || '#EF4444') + '40', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
+          >
+            <MdDeleteSweep size={18} /> {t('notifications.clearAll', 'Clear All')}
           </button>
         </div>
       </div>
@@ -309,14 +346,47 @@ export default function PartnerNotifications() {
                     <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>{new Date(n.created_at).toLocaleString()}</div>
                   </div>
 
-                  {!n.is_read && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {!n.is_read && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                        style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderRadius: '6px' }}
+                      >
+                        {t('notifications.markRead', 'Mark Read')}
+                      </button>
+                    )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
-                      style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderRadius: '6px' }}
+                      onClick={(e) => handleDeleteNotification(n.id, e)}
+                      title={t('notifications.remove', 'Remove Notification')}
+                      aria-label="Remove notification"
+                      style={{
+                        background: 'transparent',
+                        border: `1px solid ${C.border}`,
+                        color: C.textLight,
+                        padding: '6px 10px',
+                        fontSize: '11px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#EF4444';
+                        e.currentTarget.style.borderColor = '#EF444440';
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = C.textLight;
+                        e.currentTarget.style.borderColor = C.border;
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
-                      {t('notifications.markRead', 'Mark Read')}
+                      <MdClose size={14} />
+                      <span>{t('notifications.remove', 'Remove')}</span>
                     </button>
-                  )}
+                  </div>
                 </div>
               ))
             )}

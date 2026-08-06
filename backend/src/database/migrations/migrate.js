@@ -3796,6 +3796,79 @@ const migrate = async () => {
       logger.error('Failed to run Wallet Ledger & Transactions Column Safety Migration (Task 25):', task25Err.message);
     }
     
+    // ── TASK 26: Team Management Module Schema Enhancements ────────────────────
+    try {
+      logger.info('Running Team Management Module Schema Migration (Task 26)...');
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS team_level INT DEFAULT 1`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS rank VARCHAR(50) DEFAULT 'Partner'`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS team_enabled BOOLEAN DEFAULT TRUE`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referral_enabled BOOLEAN DEFAULT TRUE`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referral_message TEXT DEFAULT 'Join my team on GharKaPaisa and earn highest financial commission payouts!'`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS children_count INT DEFAULT 0`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS team_status VARCHAR(20) DEFAULT 'ACTIVE'`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS allow_team_creation BOOLEAN DEFAULT TRUE`);
+      await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS can_create_team BOOLEAN DEFAULT TRUE`);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_team_relationships (
+          id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          child_partner_id  UUID NOT NULL UNIQUE REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          level             INTEGER NOT NULL,
+          created_at        TIMESTAMPTZ DEFAULT NOW(),
+          status            VARCHAR(20) DEFAULT 'ACTIVE'
+        )
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_rels_parent ON partner_team_relationships(parent_partner_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_rels_child ON partner_team_relationships(child_partner_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_rels_parent_level ON partner_team_relationships(parent_partner_id, level)`);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS team_commissions (
+          id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          child_partner_id  UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          application_id    UUID REFERENCES applications(id) ON DELETE SET NULL,
+          amount            DECIMAL(12,2) NOT NULL DEFAULT 0,
+          level             INTEGER NOT NULL DEFAULT 1,
+          status            VARCHAR(20) DEFAULT 'CREDITED',
+          created_at        TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_commissions_parent ON team_commissions(parent_partner_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_commissions_child ON team_commissions(child_partner_id)`);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS team_activity (
+          id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          parent_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          child_partner_id  UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          activity_type     VARCHAR(50) NOT NULL,
+          description       TEXT NOT NULL,
+          metadata          JSONB DEFAULT '{}',
+          created_at        TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_team_activity_parent ON team_activity(parent_partner_id, created_at DESC)`);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS team_goals (
+          id                        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          partner_id                UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          monthly_member_target     INT DEFAULT 10,
+          monthly_business_target   DECIMAL(15,2) DEFAULT 100000,
+          monthly_commission_target DECIMAL(15,2) DEFAULT 25000,
+          monthly_app_target        INT DEFAULT 20,
+          created_at                TIMESTAMPTZ DEFAULT NOW(),
+          updated_at                TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+
+      logger.info('Team Management Module Schema Migration (Task 26) completed successfully.');
+    } catch (task26Err) {
+      logger.error('Failed to run Team Management Module Schema Migration (Task 26):', task26Err.message);
+    }
+
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
     throw task14Err;

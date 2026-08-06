@@ -20,6 +20,8 @@ router.patch('/:id/read', notifCtrl.markRead);
 router.post('/read-all', notifCtrl.markAllRead);
 router.put('/read-all', notifCtrl.markAllRead);
 router.patch('/read-all', notifCtrl.markAllRead);
+router.delete('/clear-all', notifCtrl.deleteNotification);
+router.delete('/all', notifCtrl.deleteNotification);
 router.delete('/:id', notifCtrl.deleteNotification);
 
 // User Preferences

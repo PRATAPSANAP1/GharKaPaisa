@@ -93,11 +93,23 @@ const getUnreadNotifications = async (req, res, next) => {
   }
 };
 
-// PUT /notifications/read (supports single ID or array of IDs)
+// PUT or POST /notifications/read (supports single ID or array of IDs under id, ids, or notification_ids)
 const markRead = async (req, res, next) => {
   try {
-    const { id, ids } = req.body;
-    const targetIds = ids || (id ? [id] : []);
+    const { id, ids, notification_ids } = req.body || {};
+    let targetIds = [];
+
+    if (Array.isArray(ids)) {
+      targetIds = [...ids];
+    } else if (Array.isArray(notification_ids)) {
+      targetIds = [...notification_ids];
+    } else if (ids) {
+      targetIds = [ids];
+    } else if (notification_ids) {
+      targetIds = [notification_ids];
+    } else if (id) {
+      targetIds = [id];
+    }
 
     if (targetIds.length === 0 && req.params.id) {
       targetIds.push(req.params.id);
@@ -136,9 +148,17 @@ const markAllRead = async (req, res, next) => {
   }
 };
 
-// DELETE /notifications/:id
+// DELETE /notifications/:id (or /notifications/clear-all)
 const deleteNotification = async (req, res, next) => {
   try {
+    if (req.params.id === 'all' || req.params.id === 'clear-all') {
+      await query(`
+        DELETE FROM notifications 
+        WHERE user_id = $1
+      `, [req.user.id]);
+      return success(res, {}, 'All notifications cleared successfully');
+    }
+
     const result = await query(`
       DELETE FROM notifications 
       WHERE id = $1 AND user_id = $2

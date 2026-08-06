@@ -47,9 +47,11 @@ router.post('/invitations', requireApprovedPartner, partnerCtrl.createInvitation
 router.post('/invitations/:id/resend', requireApprovedPartner, partnerCtrl.resendInvitation);
 router.get('/referral-campaigns', requireApprovedPartner, partnerCtrl.getReferralCampaigns);
 router.post('/referral-campaigns', requireApprovedPartner, partnerCtrl.createReferralCampaign);
-router.get('/team-tree', requireApprovedPartner, partnerCtrl.getTeamTree);
-router.get('/team-dashboard', requireApprovedPartner, partnerCtrl.getTeamDashboard);
-router.get('/team-earnings', requireApprovedPartner, partnerCtrl.getTeamEarnings);
-router.get('/team-members', requireApprovedPartner, partnerCtrl.getTeamMembers);
+const teamCtrl = require('../team/team.controller.js');
+
+router.get('/team-tree', requireApprovedPartner, teamCtrl.getTree);
+router.get('/team-dashboard', requireApprovedPartner, teamCtrl.getDashboard);
+router.get('/team-earnings', requireApprovedPartner, teamCtrl.getAnalytics);
+router.get('/team-members', requireApprovedPartner, teamCtrl.getMembersList);
 
 module.exports = router;
