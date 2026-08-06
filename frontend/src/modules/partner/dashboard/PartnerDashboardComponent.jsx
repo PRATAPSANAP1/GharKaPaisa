@@ -286,13 +286,6 @@ export default function PartnerDashboardComponent({ partner }) {
     }
   })) : [
     {
-      title: t('home.banners.slideOffer.title', 'Special Offer'),
-      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'),
-      btnText: t('home.banners.slideOffer.btn', 'View Offers'),
-      bgImage: offerBanner,
-      action: () => navigate('/partner/products')
-    },
-    {
       title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'),
       subtitle: t('home.banners.slide0.subtitle', 'Zero Joining Fee • Zero Annual Fee'),
       btnText: t('home.banners.slide0.btn', 'Explore Now'),
