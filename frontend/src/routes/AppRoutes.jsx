@@ -197,7 +197,7 @@ const AppRoutes = () => {
             <Route path="/partner/insurance/:insuranceTypeSlug" element={<PartnerEntityDetail />} />
             <Route path="/partner/insurance/:insuranceTypeSlug/product" element={<PartnerEntityDetail />} />
 
-            <Route path="/partner/leads/add" element={<PartnerAddLead />} />
+            <Route path="/partner/leads/add" element={<PartnerProducts />} />
 
             <Route path="/partner/applications" element={<PartnerApplications />} />
             <Route path="/partner/wallet" element={<PartnerWallet />} />

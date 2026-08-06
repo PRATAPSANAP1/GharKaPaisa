@@ -869,7 +869,7 @@ export default function PartnerDashboardComponent({ partner }) {
 
           {/* Elevated Central Add Lead Action Button */}
           <div
-            onClick={() => navigate('/partner/customers', { state: { openAddModal: true } })}
+            onClick={() => navigate('/partner/sell-and-earn')}
             style={{
               display: 'flex',
               flexDirection: 'column',
