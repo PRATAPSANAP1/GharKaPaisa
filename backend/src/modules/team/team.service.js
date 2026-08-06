@@ -872,6 +872,99 @@ async function getTeamMemberById(rootPartnerId, targetMemberId, isAdmin = false)
   };
 }
 
+/**
+ * 9. PROCESS TEAM OVERRIDE COMMISSION PAYOUTS (Level 1: 10%, Level 2: 5%)
+ */
+async function processTeamOverrideCommission(applicationId, childPartnerId, baseCommissionAmount) {
+  try {
+    if (!applicationId || !childPartnerId || !baseCommissionAmount || parseFloat(baseCommissionAmount) <= 0) {
+      return null;
+    }
+
+    const commVal = parseFloat(baseCommissionAmount);
+
+    // Find parent (Level 1) and grandparent (Level 2)
+    const { rows: parents } = await query(
+      `SELECT parent_partner_id, level 
+       FROM partner_team_relationships 
+       WHERE child_partner_id = $1 AND level IN (1, 2)
+       ORDER BY level ASC`,
+      [childPartnerId]
+    );
+
+    for (const p of parents) {
+      const parentPartnerId = p.parent_partner_id;
+      const levelDepth = p.level;
+
+      // 10% override for Level 1, 5% override for Level 2
+      const overridePercentage = levelDepth === 1 ? 0.10 : 0.05;
+      const overrideAmount = parseFloat((commVal * overridePercentage).toFixed(2));
+
+      if (overrideAmount <= 0) continue;
+
+      // Avoid duplicate payouts for the same application and level
+      const { rows: existing } = await query(
+        `SELECT id FROM team_commissions 
+         WHERE application_id = $1 AND parent_partner_id = $2 AND level = $3 LIMIT 1`,
+        [applicationId, parentPartnerId, levelDepth]
+      );
+      if (existing.length > 0) continue;
+
+      // 1. Insert into team_commissions table
+      await query(
+        `INSERT INTO team_commissions (
+           parent_partner_id, child_partner_id, application_id, amount, level, status
+         ) VALUES ($1, $2, $3, $4, $5, 'paid')`,
+        [parentPartnerId, childPartnerId, applicationId, overrideAmount, levelDepth]
+      );
+
+      // 2. Credit parent partner's wallet
+      await query(
+        `INSERT INTO partner_wallets (partner_id, available_balance, total_earned)
+         VALUES ($1, $2, $2)
+         ON CONFLICT (partner_id) DO UPDATE SET 
+           available_balance = partner_wallets.available_balance + EXCLUDED.available_balance,
+           total_earned = partner_wallets.total_earned + EXCLUDED.total_earned,
+           updated_at = NOW()`,
+        [parentPartnerId, overrideAmount]
+      );
+
+      // 3. Log to wallet_ledger
+      await query(
+        `INSERT INTO wallet_ledger (
+           partner_id, application_id, type, credit, debit, balance_after, status, description
+         ) VALUES (
+           $1, $2, 'team_override', $3, 0,
+           (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
+           'completed', $4
+         )`,
+        [
+          parentPartnerId, applicationId, overrideAmount,
+          `Level ${levelDepth} Team Override Commission (${(overridePercentage * 100)}%) from downline sales`
+        ]
+      );
+
+      // 4. Log to team_activity
+      await query(
+        `INSERT INTO team_activity (
+           parent_partner_id, child_partner_id, activity_type, description
+         ) VALUES ($1, $2, 'OVERRIDE_COMMISSION_EARNED', $3)`,
+        [
+          parentPartnerId, childPartnerId,
+          `Earned ₹${overrideAmount} Level ${levelDepth} team override commission on application`
+        ]
+      );
+
+      logger.info(`Successfully processed Level ${levelDepth} team override commission: ₹${overrideAmount} for partner ${parentPartnerId}`);
+    }
+
+    return true;
+  } catch (err) {
+    logger.error(`Error processing team override commission for app ${applicationId}:`, err);
+    return false;
+  }
+}
+
 module.exports = {
   getPartnerProfileIdByUserId,
   isPartnerInDownline,
@@ -883,5 +976,7 @@ module.exports = {
   getTeamGoals,
   getTeamSettings,
   updateTeamSettings,
-  getTeamMemberById
+  getTeamMemberById,
+  processTeamOverrideCommission
 };
+

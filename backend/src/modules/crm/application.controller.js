@@ -7,6 +7,7 @@ const { uploadToS3 } = require('../../services/aws/s3.service.js');
 const { success, created, error, notFound, forbidden, paginate } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
+const { processTeamOverrideCommission } = require('../team/team.service.js');
 
 // Helper to log timeline actions
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
@@ -498,6 +499,13 @@ const updateCommission = async (req, res, next) => {
         UPDATE applications SET commission_released = TRUE WHERE id = $1
       `, [id]);
 
+      // Trigger team override payouts for direct and indirect sponsor partners
+      try {
+        await processTeamOverrideCommission(id, app.partner_id, commValue);
+      } catch (teamErr) {
+        logger.error(`Failed to process team override commission for app ${id}:`, teamErr.message);
+      }
+
       // Referral clicks status update omitted
     }
 
@@ -582,6 +590,13 @@ const approveApplication = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, $5, 'approved')
     `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
 
+    // Trigger team override payouts for direct and indirect sponsor partners
+    try {
+      await processTeamOverrideCommission(id, app.partner_id, commValue);
+    } catch (teamErr) {
+      logger.error(`Failed to process team override commission for app ${id}:`, teamErr.message);
+    }
+
     await logTimeline(client, id, 'approved', 'Application Approved', 'Approved by Super Admin override.', req.user.id);
     await logAction(req, 'SUPER_ADMIN_APPROVE_APPLICATION', id, { approved_amount });
 
@@ -664,6 +679,13 @@ const manualCommission = async (req, res, next) => {
     `, [amount, id]);
 
     await creditCommission(app.partner_id, id, amount, remarks || 'Manual commission assignment', req.user.id);
+
+    // Trigger team override payouts for direct and indirect sponsor partners
+    try {
+      await processTeamOverrideCommission(id, app.partner_id, amount);
+    } catch (teamErr) {
+      logger.error(`Failed to process team override commission for app ${id}:`, teamErr.message);
+    }
     await logTimeline(client, id, app.status, 'Manual Commission Credited', remarks || 'Manual commission override applied.', req.user.id);
     await logAction(req, 'MANUAL_COMMISSION_ASSIGN', id, { amount, remarks });
 
