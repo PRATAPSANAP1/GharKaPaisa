@@ -1668,7 +1668,7 @@ export default function Home({ onNavigate }) {
         if (cachedBanners) {
           setDynamicBanners(JSON.parse(cachedBanners));
         } else {
-          const res = await fetch(`${apiBase}/banners`);
+          const res = await fetch(`${apiBase}/banners?page=home`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             setDynamicBanners(data.data);
@@ -2000,7 +2000,7 @@ export default function Home({ onNavigate }) {
   };
 
   // Auto rotate banner slides (height 320px)
-  const bannerSlides = dynamicBanners.length > 0 ? dynamicBanners.map(b => ({
+  const bannerSlides = dynamicBanners.map(b => ({
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text || 'Apply Now',
@@ -2013,64 +2013,7 @@ export default function Home({ onNavigate }) {
         navigate(target);
       }
     }
-  })) : [
-    { 
-      title: t('home.banners.slideOffer.title', 'Special Offer'), 
-      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
-      btnText: t('home.banners.slideOffer.btn', 'View Offers'),
-      bgImage: offerBanner,
-      action: () => navigate("/credit-cards")
-    },
-    { 
-      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
-      subtitle: t('home.banners.slide0.subtitle', 'Instant Approval • Exclusive Benefits'), 
-      btnText: t('home.banners.slide0.btn', 'Explore Now'),
-      bgImage: ltfBanner,
-      action: () => navigate("/credit-cards/lifetime-free-credit-cards-ltf")
-    },
-    { 
-      title: t('home.banners.slide1.title', 'Personal Loans'), 
-      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
-      btnText: t('home.banners.slide1.btn', 'Apply Now'),
-      bgImage: loanBanner,
-      action: () => navigate("/loans")
-    },
-    { 
-      title: t('home.banners.slide2.title', 'Business Loans'), 
-      subtitle: t('home.banners.slide2.subtitle', 'Flexible repayment options for growing businesses'), 
-      btnText: t('home.banners.slide2.btn', 'Check Eligibility'),
-      bgImage: loanBanner,
-      action: () => navigate("/loans")
-    },
-    { 
-      title: t('home.banners.slide3.title', 'Insurance Plans'), 
-      subtitle: t('home.banners.slide3.subtitle', 'Comprehensive health, life and general insurance cover'), 
-      btnText: t('home.banners.slide3.btn', 'Get Quotes'),
-      bgImage: insuranceBanner,
-      action: () => navigate("/insurance")
-    },
-    { 
-      title: t('home.banners.slide4.title', 'EMI Cards'), 
-      subtitle: t('home.banners.slide4.subtitle', 'Convert purchases to no-cost EMIs instantly'), 
-      btnText: t('home.banners.slide4.btn', 'Get EMI Card'),
-      bgImage: emiBanner,
-      action: () => navigate("/attractive-cards-loans/smart-emi-card")
-    },
-    { 
-      title: t('home.banners.slideEmiNew.title', 'New EMI Schemes'), 
-      subtitle: t('home.banners.slideEmiNew.subtitle', 'Convert your spends into easy EMIs'), 
-      btnText: t('home.banners.slideEmiNew.btn', 'Explore EMI'),
-      bgImage: emiNewBanner,
-      action: () => navigate("/attractive-cards-loans/smart-emi-card")
-    },
-    { 
-      title: t('home.banners.slide5.title', 'HDFC Pixel Credit Cards'), 
-      subtitle: t('home.banners.slide5.subtitle', 'Customizable rewards on dining, shopping & entertainment'), 
-      btnText: t('home.banners.slide5.btn', 'Explore Pixel Cards'),
-      bgImage: hdfcBanner,
-      action: () => navigate("/cards/hdfc")
-    }
-  ];
+  }));
 
 
   useEffect(() => {

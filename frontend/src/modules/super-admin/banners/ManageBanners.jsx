@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// d:\Internship\yohesa\frontend\src\pages\SuperAdmin\ManageBanners.jsx
-// Core Feature: Homepage Slideshow Banners Administration
+// d:\Internship\yohesa\frontend\src\modules\super-admin\banners\ManageBanners.jsx
+// Core Feature: Homepage & Partner Dashboard Slideshow Banners Administration
 // Roles: SuperAdmin (CRUD)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -20,6 +20,7 @@ export default function ManageBanners() {
   const [errorMsg, setErrorMsg] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [activeTab, setActiveTab] = useState("all");
 
   // Form Fields State
   const [form, setForm] = useState({
@@ -30,7 +31,8 @@ export default function ManageBanners() {
     display_order: 0,
     is_active: true,
     link_type: "custom",
-    click_url: "/credit-cards"
+    click_url: "/credit-cards",
+    target_page: "all" // 'all', 'home', 'partner'
   });
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +72,8 @@ export default function ManageBanners() {
       display_order: banners.length + 1,
       is_active: true,
       link_type: "custom",
-      click_url: "/credit-cards"
+      click_url: "/credit-cards",
+      target_page: "all"
     });
     setImageFile(null);
     setModalOpen(true);
@@ -86,7 +89,8 @@ export default function ManageBanners() {
       display_order: item.display_order || 0,
       is_active: item.is_active,
       link_type: item.link_type || "custom",
-      click_url: item.click_url || "/credit-cards"
+      click_url: item.click_url || "/credit-cards",
+      target_page: item.target_page || "all"
     });
     setImageFile(null);
     setModalOpen(true);
@@ -122,6 +126,7 @@ export default function ManageBanners() {
       formData.append("is_active", form.is_active.toString());
       formData.append("link_type", form.link_type);
       formData.append("click_url", form.click_url);
+      formData.append("target_page", form.target_page);
 
       if (imageFile) {
         formData.append("image", imageFile);
@@ -150,20 +155,26 @@ export default function ManageBanners() {
         fetchBanners();
       }
     } catch (e) {
-      alert(e.response?.data?.message || "Failed to save banner slide. Note: Direct file uploads fail if S3 service settings are unconfigured — please try specifying a local asset string path (e.g. 'offerbanner.png') instead.");
+      alert(e.response?.data?.message || "Failed to save banner slide.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Filter Banners by Active Tab
+  const filteredBanners = banners.filter(item => {
+    if (activeTab === "all") return true;
+    return item.target_page === activeTab || item.target_page === "all" || !item.target_page;
+  });
+
   // ─── RENDER BLOCKS ─────────────────────────────────────────────────────────
   return (
     <div>
       {/* ─── PAGE HEADER SECTION ─── */}
-      <div className="responsive-header" style={{ marginBottom: "24px", width: "100%" }}>
+      <div className="responsive-header" style={{ marginBottom: "20px", width: "100%" }}>
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Homepage Banners</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and order active promotional slide cards featured on the customer dashboard slideshow</p>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Banner Management</h2>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and manage promotional banner slides for the Homepage and Partner Dashboard dynamically</p>
         </div>
         <button
           onClick={openAddModal}
@@ -180,6 +191,33 @@ export default function ManageBanners() {
         </button>
       </div>
 
+      {/* Placement Filter Tabs */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        {[
+          { key: "all", label: "All Banners" },
+          { key: "home", label: "Home Page Banners" },
+          { key: "partner", label: "Partner Dashboard Banners" }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              border: `1px solid ${activeTab === tab.key ? C.teal : C.border}`,
+              background: activeTab === tab.key ? `${C.teal}15` : C.card,
+              color: activeTab === tab.key ? C.teal : C.text,
+              transition: "all 0.2s ease"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Error alert wrapper */}
       {errorMsg && (
         <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
@@ -193,13 +231,13 @@ export default function ManageBanners() {
           <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
           Loading banners catalog...
         </div>
-      ) : banners.length === 0 ? (
+      ) : filteredBanners.length === 0 ? (
         <div style={{ ...S.card, textAlign: "center", padding: "48px", color: C.textLight }}>
-          No banners found. Click the button to add your first promo slide!
+          No banners found for this filter tab. Click 'Add Banner Slide' to create one!
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-          {banners.map((item) => (
+          {filteredBanners.map((item) => (
             <div
               key={item.id}
               style={{
@@ -225,9 +263,21 @@ export default function ManageBanners() {
                   padding: "16px",
                   zIndex: 2
                 }}>
-                  <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
-                    Order: {item.display_order}
-                  </span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, textTransform: "uppercase", letterSpacing: "1px" }}>
+                      Order: {item.display_order}
+                    </span>
+                    <span style={{
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      background: item.target_page === 'home' ? '#3B82F6' : item.target_page === 'partner' ? '#8B5CF6' : '#10B981',
+                      color: '#FFFFFF'
+                    }}>
+                      {item.target_page === 'home' ? 'Home Page' : item.target_page === 'partner' ? 'Partner Dashboard' : 'Both Pages'}
+                    </span>
+                  </div>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{item.title}</h3>
                   <p style={{ fontSize: "12px", color: C.textLight, margin: "4px 0 0 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                     {item.subtitle}
@@ -259,7 +309,8 @@ export default function ManageBanners() {
               {/* Banner Details & Parameters */}
               <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", background: C.card }}>
                 <div style={{ fontSize: "12px", color: C.textLight, wordBreak: "break-all", marginBottom: "16px" }}>
-                  <strong>Source Path:</strong> <code>{item.image_url}</code>
+                  <div><strong>Image Asset:</strong> <code>{item.image_url}</code></div>
+                  <div><strong>Redirect URL:</strong> <code>{item.click_url}</code></div>
                 </div>
 
                 {/* CRUD Action Buttons */}
@@ -328,7 +379,9 @@ export default function ManageBanners() {
           <div style={{
             ...S.card,
             width: "100%",
-            maxWidth: "500px",
+            maxWidth: "520px",
+            maxHeight: "90vh",
+            overflowY: "auto",
             padding: "24px",
             boxShadow: "0 12px 36px rgba(0,0,0,0.15)",
             position: "relative"
@@ -338,6 +391,20 @@ export default function ManageBanners() {
             </h3>
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Target Page Placement Option */}
+              <div>
+                <label style={S.label}>Display Location (Target Page) *</label>
+                <select
+                  style={S.input}
+                  value={form.target_page}
+                  onChange={(e) => setForm({ ...form, target_page: e.target.value })}
+                >
+                  <option value="all">Both (Home Page & Partner Dashboard)</option>
+                  <option value="home">Home Page Only</option>
+                  <option value="partner">Partner Dashboard Only</option>
+                </select>
+              </div>
+
               {/* Form Input fields */}
               <div>
                 <label style={S.label}>Banner Title *</label>
@@ -382,7 +449,7 @@ export default function ManageBanners() {
                 </div>
               </div>
 
-              {/* Multimodal Image Picker Configuration */}
+              {/* Image Picker Configuration */}
               <div>
                 <label style={S.label}>Image Configuration</label>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: C.bgSecondary, padding: "10px", borderRadius: "8px", border: `1px solid ${C.border}` }}>
@@ -448,6 +515,8 @@ export default function ManageBanners() {
                     <option value="/credit-cards/hdfc-bank">HDFC Credit Cards</option>
                     <option value="/attractive-cards-loans/smart-emi-card">Smart EMI Card</option>
                     <option value="/credit-cards/lifetime-free-credit-cards-ltf">Lifetime Free Credit Cards</option>
+                    <option value="/partner/credit-cards">Partner Credit Cards</option>
+                    <option value="/partner/products?category=personal_loan">Partner Personal Loans</option>
                   </select>
                 ) : (
                   <input

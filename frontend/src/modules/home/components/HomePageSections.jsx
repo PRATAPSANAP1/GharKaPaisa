@@ -174,7 +174,7 @@ export function HeroBannerCarousel({ C, navigate }) {
         if (cachedBanners) {
           setDynamicBanners(JSON.parse(cachedBanners));
         } else {
-          const res = await fetch(`${apiBase}/banners`);
+          const res = await fetch(`${apiBase}/banners?page=home`);
           const data = await res.json();
           if (data && data.success && data.data?.length > 0) {
             setDynamicBanners(data.data);
@@ -188,7 +188,7 @@ export function HeroBannerCarousel({ C, navigate }) {
     fetchBanners();
   }, []);
 
-  const bannerSlides = dynamicBanners.length > 0 ? dynamicBanners.map(b => ({
+  const bannerSlides = dynamicBanners.map(b => ({
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text || 'Apply Now',
@@ -201,36 +201,7 @@ export function HeroBannerCarousel({ C, navigate }) {
         navigate(target);
       }
     }
-  })) : [
-    { 
-      title: t('home.banners.slideOffer.title', 'Special Offer'), 
-      subtitle: t('home.banners.slideOffer.subtitle', 'Exclusive credit card and loan deals'), 
-      btnText: t('home.banners.slideOffer.btn', 'View Offers'),
-      bgImage: offerBanner,
-      action: () => navigate("/credit-cards")
-    },
-    { 
-      title: t('home.banners.slide0.title', 'Lifetime Free Credit Cards'), 
-      subtitle: t('home.banners.slide0.subtitle', 'Instant Approval • Exclusive Benefits'), 
-      btnText: t('home.banners.slide0.btn', 'Explore Now'),
-      bgImage: ltfBanner,
-      action: () => navigate("/credit-cards/lifetime-free-credit-cards-ltf")
-    },
-    { 
-      title: t('home.banners.slide1.title', 'Personal Loans'), 
-      subtitle: t('home.banners.slide1.subtitle', 'Low Interest Rates • Quick Disbursal'), 
-      btnText: t('home.banners.slide1.btn', 'Apply Now'),
-      bgImage: loanBanner,
-      action: () => navigate("/loans")
-    },
-    { 
-      title: t('home.banners.slide3.title', 'Insurance Plans'), 
-      subtitle: t('home.banners.slide3.subtitle', 'Comprehensive health, life and general insurance cover'), 
-      btnText: t('home.banners.slide3.btn', 'Get Quotes'),
-      bgImage: insuranceBanner,
-      action: () => navigate("/insurance")
-    }
-  ];
+  }));
 
   useEffect(() => {
     if (isPaused) return;
