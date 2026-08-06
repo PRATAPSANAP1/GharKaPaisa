@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
@@ -27,16 +27,10 @@ const NAV_ITEMS = [
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
-  { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
   { id: 'team-network', path: '/partner/team-network', label: 'Refers', icon: MdDeviceHub },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
   { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
-  { id: 'notifications', path: '/partner/notifications', label: 'Notifications', icon: MdNotifications },
-  { id: 'support', path: '/partner/support', label: 'Support', icon: MdSupportAgent },
-  { id: 'kyc-centre', path: '/partner/kyc-centre', label: 'KYC Centre', icon: MdVerifiedUser },
-  { id: 'profile', path: '/partner/profile', label: 'Profile', icon: MdAccountCircle },
-  { id: 'settings', path: '/partner/settings', label: 'Settings', icon: MdSettings },
 ];
 
 const MOBILE_BOTTOM_NAV = [
@@ -177,7 +171,7 @@ export default function PartnerLayout() {
 
   const filteredNavItems = NAV_ITEMS.filter((item) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
-      return ['dashboard', 'kyc-centre', 'training', 'notifications', 'profile', 'settings'].includes(item.id);
+      return ['dashboard', 'training'].includes(item.id);
     }
     return true; // Approved / Active gets all items
   });
@@ -885,6 +879,32 @@ export default function PartnerLayout() {
 
 // ── RESPONSIVE NAV BAR HEADER COMPONENT ──────────────────────
 function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen }) {
+  const location = useLocation();
+  const dropdownRef = useRef(null);
+  const { isDark } = useTheme();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    if (profileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownOpen, setProfileDropdownOpen]);
+
+  const profileMenuItems = [
+    { id: 'profile', label: 'Profile Hub', path: '/partner/profile', icon: MdAccountCircle },
+    { id: 'kyc-centre', label: 'KYC Centre', path: '/partner/kyc-centre', icon: MdVerifiedUser },
+    { id: 'wallet', label: 'Wallet', path: '/partner/wallet', icon: MdAccountBalanceWallet },
+    { id: 'support', label: 'Support Center', path: '/partner/support', icon: MdSupportAgent },
+    { id: 'settings', label: 'Settings', path: '/partner/settings', icon: MdSettings },
+  ];
+
   return (
     <header style={{
       display: 'flex',
@@ -931,8 +951,8 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
         )}
       </div>
 
-        {/* Center: Search Bar (desktop only) */}
-        {!isMobile && <PartnerSearchBar />}
+      {/* Center: Search Bar (desktop only) */}
+      {!isMobile && <PartnerSearchBar />}
 
       {/* Right side: Notifications + Wallet + Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
@@ -1005,7 +1025,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
         </div>
 
         {/* Profile Dropdown */}
-        <div style={{ position: 'relative' }}>
+        <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             aria-expanded={profileDropdownOpen}
@@ -1046,63 +1066,93 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
                 <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.partner_code || user?.Partner_code || "GKP000"}</div>
               </div>
             )}
-            <span style={{ fontSize: '9px', color: C.textLight }}>▼</span>
+            <span style={{ fontSize: '9px', color: C.textLight, transform: profileDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
           </button>
 
           {profileDropdownOpen && (
             <div style={{
               position: 'absolute',
-              top: isMobile ? '40px' : '46px',
+              top: isMobile ? '44px' : '52px',
               right: 0,
-              width: '160px',
+              width: '210px',
               background: C.card,
-              border: `1.5px solid ${C.border}`,
-              borderRadius: '12px',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              border: `1px solid ${C.border}`,
+              borderRadius: '14px',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
               zIndex: 100,
-              padding: '6px',
+              padding: '8px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '2px',
+              gap: '3px',
               boxSizing: 'border-box'
             }}>
+              {/* Profile Card Header */}
               <div style={{
-                padding: '6px 10px 8px 10px',
-                borderBottom: `1.5px solid ${C.border}`,
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                 marginBottom: '4px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '2px'
               }}>
-                <span style={{ fontSize: '9px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('partnerLayout.partnerCode', 'Partner Code')}
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name || t('partnerLayout.partner', 'Partner')}
                 </span>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: C.primary, wordBreak: 'break-all' }}>
-                  {user?.partner_code || user?.Partner_code || "—"}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {t('partnerLayout.partnerCode', 'Code')}:
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.primary }}>
+                    {user?.partner_code || user?.Partner_code || "—"}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  setProfileDropdownOpen(false);
-                  navigate('/partner/profile');
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: C.text,
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s'
-                }}
-                className="dropdown-item-hover"
-              >
-                👤 Profile Settings
-              </button>
+
+              {/* Menu Items */}
+              {profileMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <button
+                    key={item.id}
+                    id={`partner-profile-menu-${item.id}`}
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      navigate(item.path);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '9px 12px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: isActive ? (isDark ? 'rgba(59, 130, 246, 0.18)' : '#EFF6FF') : 'transparent',
+                      color: isActive ? C.primary : C.text,
+                      fontSize: '13px',
+                      fontWeight: isActive ? 700 : 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Icon size={18} style={{ color: isActive ? C.primary : SIDEBAR_TEXT }} />
+                    <span>{t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}</span>
+                  </button>
+                );
+              })}
+
+              <div style={{ height: '1px', background: C.border, margin: '4px 0' }} />
+
+              {/* Logout */}
               <button
                 id="partner-dropdown-logout-btn"
                 onClick={() => {
@@ -1110,21 +1160,26 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
                   handleLogout();
                 }}
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
                   width: '100%',
                   textAlign: 'left',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
+                  padding: '9px 12px',
+                  borderRadius: '10px',
                   border: 'none',
                   background: 'transparent',
-                  color: C.red || '#EF4444',
-                  fontSize: '12.5px',
+                  color: '#EF4444',
+                  fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  transition: 'background 0.15s'
+                  transition: 'all 0.15s ease'
                 }}
-                className="dropdown-item-hover-danger"
+                onMouseEnter={(e) => e.currentTarget.style.background = isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                🚪 Logout
+                <MdLogout size={18} style={{ color: '#EF4444' }} />
+                <span>{t('partnerLayout.logout', 'Logout')}</span>
               </button>
             </div>
           )}

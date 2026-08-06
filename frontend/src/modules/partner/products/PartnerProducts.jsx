@@ -18,20 +18,19 @@ import { getCardDetails } from '../../home/components/CreditCards/CardDetailsDat
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
   { id: 'credit_card', label: 'Credit Cards' },
-  { id: 'personal_loan', label: 'Personal Loans' },
-  { id: 'business_loan', label: 'Business Loans' },
-  { id: 'home_loan', label: 'Home Loans' },
+  { id: 'loans', label: 'Loans' },
   { id: 'insurance', label: 'Insurance' },
-  { id: 'demat', label: 'Demat Accounts' },
+  { id: 'others', label: 'Others' },
 ];
 
 const BANKS = ['All Banks', 'HDFC', 'SBI', 'AXIS', 'INDUSIND', 'KOTAK', 'YES', 'BOB', 'DCB', 'EQUITAS', 'FEDERAL', 'ICICI', 'IDFC', 'RBL', 'SMB'];
 
 const getCategoryEmoji = (cat) => {
   const c = cat?.toLowerCase() || '';
-  if (c.includes('card')) return '💳';
-  if (c.includes('loan')) return '🏦';
+  if (c.includes('card') || c === 'credit_card') return '💳';
+  if (c.includes('loan') || c === 'loans') return '🏦';
   if (c.includes('insurance')) return '🛡';
+  if (c === 'others') return '📦';
   if (c.includes('savings')) return '🏛';
   if (c.includes('fastag')) return '🚗';
   if (c.includes('demat')) return '📈';
@@ -297,10 +296,21 @@ export default function PartnerProducts({ initialSearch = '' }) {
                         p.commission_value?.toString().includes(query) ||
                         eligibilityText.toLowerCase().includes(query);
                         
-    const matchCategory = activeCategory === 'all' || 
-                        p.category === activeCategory ||
-                        (activeCategory === 'personal_loan' && p.category?.toLowerCase().includes('loan')) ||
-                        (activeCategory === 'credit_card' && p.category?.toLowerCase().includes('card'));
+    const pCat = (p.category || '').toLowerCase();
+    let matchCategory = false;
+    if (activeCategory === 'all') {
+      matchCategory = true;
+    } else if (activeCategory === 'credit_card') {
+      matchCategory = pCat.includes('card') || pCat.includes('credit');
+    } else if (activeCategory === 'loans' || activeCategory === 'personal_loan' || activeCategory === 'business_loan' || activeCategory === 'home_loan') {
+      matchCategory = pCat.includes('loan');
+    } else if (activeCategory === 'insurance') {
+      matchCategory = pCat.includes('insurance');
+    } else if (activeCategory === 'others') {
+      matchCategory = !pCat.includes('card') && !pCat.includes('credit') && !pCat.includes('loan') && !pCat.includes('insurance');
+    } else {
+      matchCategory = pCat === activeCategory;
+    }
     const matchBank = activeBank === 'All Banks' || p.bank_code === activeBank || p.name.includes(activeBank);
     
     // Commission Filter
