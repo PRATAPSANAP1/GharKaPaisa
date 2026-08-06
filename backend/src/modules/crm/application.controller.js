@@ -492,7 +492,7 @@ const updateCommission = async (req, res, next) => {
       await client.query(`
         INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
         VALUES ($1, $2, $3, $4, $5, 'approved')
-      `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+      `, [id, app.partner_id, app.parent_partner_id, commValue, commValue * 0.15]);
 
       // Set commission_released flag on the application itself
       await client.query(`
@@ -588,7 +588,7 @@ const approveApplication = async (req, res, next) => {
     await client.query(`
       INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
       VALUES ($1, $2, $3, $4, $5, 'approved')
-    `, [id, app.partner_id, app.parent_partner_id, commValue * 0.9, commValue * 0.1]);
+    `, [id, app.partner_id, app.parent_partner_id, commValue, commValue * 0.15]);
 
     // Trigger team override payouts for direct and indirect sponsor partners
     try {
@@ -1123,6 +1123,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
           `Approved commission for application ${app.app_number || app.id}`, 
           req.user ? req.user.id : null
         );
+        await processTeamOverrideCommission(app.id, app.partner_id, app.commission_amount);
         await query(`UPDATE applications SET commission_status = 'approved' WHERE id = $1`, [id]);
       } catch (commErr) {
         logger.error('Failed to credit commission on status change:', commErr);
