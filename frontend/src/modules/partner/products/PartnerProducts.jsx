@@ -13,6 +13,7 @@ import {
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
   MdAccessTime, MdInfoOutline, MdClose, MdShare, MdChevronRight 
 } from 'react-icons/md';
+import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
 
 const CATEGORIES = [
@@ -1244,12 +1245,13 @@ export default function PartnerProducts({ initialSearch = '' }) {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '4px',
+                            gap: '6px',
                             fontWeight: 700,
                             borderColor: isSelectedForCompare ? 'transparent' : C.primary,
                             color: isSelectedForCompare ? '#fff' : C.primary
                           }}
                         >
+                          <FaBalanceScale size={isMobile ? 13 : 15} />
                           {t("Compare")}
                         </button>
                       </div>
@@ -1797,9 +1799,13 @@ export default function PartnerProducts({ initialSearch = '' }) {
                 borderRadius: '10px',
                 fontWeight: 750,
                 cursor: compareList.length < 2 ? 'not-allowed' : 'pointer',
-                opacity: compareList.length < 2 ? 0.5 : 1
+                opacity: compareList.length < 2 ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
+              <FaBalanceScale size={15} />
               Compare
             </button>
             <button
@@ -1845,7 +1851,8 @@ export default function PartnerProducts({ initialSearch = '' }) {
             </button>
 
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaBalanceScale size={22} style={{ color: C.primary }} />
                 Product Comparison
               </h3>
               <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>

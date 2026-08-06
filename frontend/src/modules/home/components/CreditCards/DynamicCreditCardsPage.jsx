@@ -7,7 +7,7 @@ import {
   FaCheckCircle, FaArrowRight, FaQuestionCircle, 
   FaChevronDown, FaChevronUp, FaTimes, FaLock, 
   FaPlane, FaShoppingBag, FaBriefcase, FaRegCreditCard,
-  FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp, FaUniversity
+  FaMobileAlt, FaInfoCircle, FaStar, FaWhatsapp, FaUniversity, FaBalanceScale
 } from 'react-icons/fa';
 import { getApiV1Url } from '../../../../config/api';
 import CardApplyVerificationModal from './CardApplyVerificationModal';
@@ -412,13 +412,18 @@ export default function DynamicCreditCardsPage() {
                                 background: 'transparent',
                                 color: isDark ? '#94a3b8' : '#64748b',
                                 border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
                                 borderRadius: '8px',
                                 fontSize: '12px',
                                 fontWeight: 700,
                                 cursor: 'pointer'
                               }}
                             >
-                              + Compare
+                              <FaBalanceScale size={13} />
+                              Compare
                             </button>
                           </div>
 
@@ -617,7 +622,10 @@ export default function DynamicCreditCardsPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '12px' : '20px' }}>
           <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '24px', maxWidth: '900px', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', padding: isMobile ? '16px' : '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
-              <h3 style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: 800, margin: 0 }}>Compare Credit Cards</h3>
+              <h3 style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaBalanceScale size={isMobile ? 20 : 24} style={{ color: bankThemeColor }} />
+                Compare Credit Cards
+              </h3>
               <button onClick={() => { setIsCompareOpen(false); setShowCardBSelector(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#94a3b8' : '#64748b' }}><FaTimes size={18} /></button>
             </div>
 
