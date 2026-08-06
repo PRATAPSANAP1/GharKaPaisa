@@ -3778,6 +3778,23 @@ const migrate = async () => {
     } catch (task24Err) {
       logger.error('Failed to run CloudFront URL Sanitization Migration (Task 24):', task24Err.message);
     }
+
+    // ── TASK 25: Ensure wallet_ledger & wallet_transactions balance_after column safety ────
+    try {
+      logger.info('Running Wallet Ledger & Transactions Column Safety Migration (Task 25)...');
+      await query(`ALTER TABLE wallet_ledger ADD COLUMN IF NOT EXISTS balance_after DECIMAL(15,2) DEFAULT 0.00`);
+      await query(`ALTER TABLE wallet_ledger ADD COLUMN IF NOT EXISTS balance_after_transaction DECIMAL(15,2) DEFAULT 0.00`);
+      await query(`UPDATE wallet_ledger SET balance_after = COALESCE(balance_after, balance_after_transaction, 0.00) WHERE balance_after IS NULL`);
+      await query(`UPDATE wallet_ledger SET balance_after_transaction = COALESCE(balance_after_transaction, balance_after, 0.00) WHERE balance_after_transaction IS NULL`);
+
+      await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS balance_after DECIMAL(15,2) DEFAULT 0.00`);
+      await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS balance_after_transaction DECIMAL(15,2) DEFAULT 0.00`);
+      await query(`UPDATE wallet_transactions SET balance_after = COALESCE(balance_after, balance_after_transaction, 0.00) WHERE balance_after IS NULL`);
+      await query(`UPDATE wallet_transactions SET balance_after_transaction = COALESCE(balance_after_transaction, balance_after, 0.00) WHERE balance_after_transaction IS NULL`);
+      logger.info('Wallet Ledger & Transactions Column Safety Migration (Task 25) completed successfully.');
+    } catch (task25Err) {
+      logger.error('Failed to run Wallet Ledger & Transactions Column Safety Migration (Task 25):', task25Err.message);
+    }
     
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);

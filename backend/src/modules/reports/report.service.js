@@ -147,7 +147,7 @@ const getWalletReport = async (partnerId, filters) => {
       wt.type as transaction_type,
       CASE WHEN wt.type = 'credit' THEN wt.amount ELSE 0 END as credit,
       CASE WHEN wt.type = 'debit' THEN wt.amount ELSE 0 END as debit,
-      wt.balance_after,
+      COALESCE(wt.balance_after, wt.balance_after_transaction, 0) as balance_after,
       wt.description,
       wt.reference_id as reference_number,
       wt.status,
