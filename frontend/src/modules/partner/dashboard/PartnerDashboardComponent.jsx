@@ -471,13 +471,15 @@ export default function PartnerDashboardComponent({ partner }) {
           onMouseLeave={() => setIsPaused(false)}
           onClick={() => bannerSlides[bannerIndex]?.action()}
           style={{
-            margin: '20px 0 0 0',
-            borderRadius: '20px',
+            margin: '16px 0 0 0',
+            borderRadius: '16px',
             position: 'relative',
             overflow: 'hidden',
             cursor: 'pointer',
-            height: isMobile ? '180px' : '320px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+            width: '100%',
+            aspectRatio: isMobile ? '16 / 7' : '2.6 / 1',
+            maxHeight: isMobile ? '200px' : '340px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
             background: isDark ? C.card : '#FFFFFF',
             border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
           }}
@@ -489,8 +491,9 @@ export default function PartnerDashboardComponent({ partner }) {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                display: 'block'
+                objectFit: 'contain',
+                display: 'block',
+                background: isDark ? C.card : '#FFFFFF'
               }}
             />
           ) : (
