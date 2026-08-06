@@ -40,30 +40,40 @@ export const getBankApplyLink = (cardName, bankId) => {
     return "https://get.novio.in/j84P/7tnakuu8";
   }
 
-  const floatLink = "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558";
+  const defaultHdfcLink = "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
 
   // HDFC Card specific links mapping
   const hdfcLinks = {
-    "freedom": floatLink,
-    "regaliagold": floatLink,
-    "moneyback": floatLink,
-    "bizgrow": floatLink,
-    "shoppersstopblack": floatLink,
-    "shoppersstop": floatLink,
-    "bizpower": floatLink,
-    "bizfirst": floatLink,
-    "pixelplay": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "pixelgo": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "tataneuplus": "https://www.tataneu.com/creditcard/",
-    "tataneuinfinity": "https://www.tataneu.com/creditcard/",
-    "swiggy": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "indianoil": "https://applyonline.hdfcbank.com/cards/credit-cards.html?FUNC=FLOAT&CHANNEL=DSA&DSACODE=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "irctc": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=IRCT&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "dinersprivilege": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "dinersblack": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "marriott": "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb",
-    "securedexistingfd": "https://applyonline.hdfcbank.com/digital/etb-fixed-deposit-cc?Channel=DSA&LGCode=XYOH&SMCode=SS4558&LC1=GHAR01&LC2=GHAR01&DSACode=XYOH#nbb",
-    "securednewfd": "https://pixel.hdfcbank.in/pixel-onboard/landing/?flow=FDLien&sourcing.assist.channelCode=DSA&sourcing.assist.branchCode=XYOH&sourcing.assist.employeeCode=S54558&sourcing.assist.dsaCode=XYOH&sourcing.assist.lgCode=GHAR01&sourcing.assist.lc1Code=GHAR01&sourcing.assist.lc2Code=GHAR01&sourcing.assist.dsaCode=XYOH"
+    // Standard / Core Cards
+    "freedom": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "indianoil": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "swiggy": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "tataneuplus": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "pixelplay": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "bizgrow": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "bizfirst": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "bizpower": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "moneyback": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
+    "giga": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=GIGA#nbb&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX11&LC2=DIGIX1&SMcode=S54558%23nbb",
+    "irctc": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=IRCT&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+
+    // Premium Cards
+    "millennia": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
+    "dinersprivilege": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "tataneuinfinity": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "pixelgo": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+
+    // Super Premium Cards
+    "regaliagold": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
+    "regalia": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
+    "marriott": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "marriot": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "dinersblack": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+    "dinnerblack": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
+
+    // Secured Cards
+    "securedexistingfd": "https://applyonline.hdfc.bank.in/digital/etb-fixed-deposit-cc?Channel=DSA&LGCode=XYOH&SMCode=SS4558&LC1=GHAR01&LC2=GHAR01&DSACode=XYOH#nbb",
+    "securednewfd": "https://pixel.hdfc.bank.in/pixel-onboard/landing/?flow=FDLien&sourcing.assist.channelCode=DSA&sourcing.assist.branchCode=XYOH&sourcing.assist.employeeCode=S54558&sourcing.assist.dsaCode=XYOH&sourcing.assist.lgCode=GHAR01&sourcing.assist.lc1Code=GHAR01&sourcing.assist.lc2Code=GHAR01&sourcing.assist.dsaCode=XYOH"
   };
 
   // Check matching HDFC card names
@@ -74,7 +84,7 @@ export const getBankApplyLink = (cardName, bankId) => {
 
   // Fallback HDFC link
   if (bankLower === 'hdfc' || nameLower.includes('hdfc')) {
-    return "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb";
+    return defaultHdfcLink;
   }
 
   return null;

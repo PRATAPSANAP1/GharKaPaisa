@@ -56,12 +56,12 @@ const ltfCards = [
   { 
     name: "HDFC Pixel Go Credit Card", 
     desc: "Digital-first customizable credit card",
-    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
+    link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
   },
   { 
     name: "HDFC Pixel Play Credit Card", 
     desc: "Custom rewards on shopping and dining apps",
-    link: "https://applyonline.hdfcbank.com/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=GHAR01&LCcode=GHAR01&LC2=GHAR01&SMcode=S54558#nbb"
+    link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
   },
   { 
     name: "Axis Bank Neo Credit Card", 
