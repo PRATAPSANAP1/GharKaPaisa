@@ -469,6 +469,7 @@ export default function PartnerDashboardComponent({ partner }) {
             border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
             boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.03)',
             marginTop: '20px',
+            minHeight: isMobile ? 'auto' : '320px',
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
             gap: '24px',
@@ -510,7 +511,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => bannerSlides[bannerIndex]?.action()}
             style={{
               width: '100%',
-              height: isMobile ? '140px' : '160px',
+              height: isMobile ? '140px' : '220px',
               background: 'linear-gradient(135deg, #6E3FD6 0%, #1E40AF 100%)',
               borderRadius: '16px',
               position: 'relative',
