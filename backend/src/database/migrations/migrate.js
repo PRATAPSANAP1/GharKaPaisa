@@ -1097,11 +1097,12 @@ const migrate = async () => {
     logger.warn('Failed to encrypt existing bank details:', cryptoErr.message);
   }
 
-  // Banner redirect columns
+  // Banner redirect & target page placement columns
   try {
     await query(`ALTER TABLE banners ADD COLUMN IF NOT EXISTS link_type VARCHAR(50) DEFAULT 'custom'`);
     await query(`ALTER TABLE banners ADD COLUMN IF NOT EXISTS click_url VARCHAR(500) DEFAULT '/credit-cards'`);
-    logger.info('Banner redirect columns migration completed successfully');
+    await query(`ALTER TABLE banners ADD COLUMN IF NOT EXISTS target_page VARCHAR(50) DEFAULT 'all'`);
+    logger.info('Banner redirect and target_page columns migration completed successfully');
   } catch (bannerErr) {
     logger.warn('Failed to add banner redirect columns:', bannerErr.message);
   }
