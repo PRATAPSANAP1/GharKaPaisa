@@ -5,26 +5,34 @@ const logger = require('../../config/logger');
  * 360 Customer Profile Service
  */
 
-// Helper to log customer timeline event
+// Helper to log customer timeline event (resilient to errors)
 const logCustomerTimeline = async (clientOrDb, customerId, eventType, eventTitle, eventDescription, referenceType = null, referenceId = null, createdBy = null) => {
-  const db = clientOrDb || { query };
-  await db.query(`
-    INSERT INTO customer_timeline (
-      customer_id, event_type, event_title, event_description, reference_type, reference_id, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-  `, [customerId, eventType, eventTitle, eventDescription, referenceType, referenceId, createdBy]);
+  try {
+    const db = clientOrDb || { query };
+    await db.query(`
+      INSERT INTO customer_timeline (
+        customer_id, event_type, event_title, event_description, reference_type, reference_id, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [customerId, eventType, eventTitle, eventDescription, referenceType, referenceId, createdBy || null]);
+  } catch (err) {
+    logger.warn(`Failed to log customer timeline event for ${customerId}:`, err.message);
+  }
 };
 
-// Helper to log customer activity
+// Helper to log customer activity (resilient to errors)
 const logCustomerActivity = async (clientOrDb, customerId, activityType, performedBy, referenceType = null, referenceId = null, req = null) => {
-  const db = clientOrDb || { query };
-  const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
-  const device = req ? req.headers['user-agent'] : null;
-  await db.query(`
-    INSERT INTO customer_activity_logs (
-      customer_id, activity_type, performed_by, reference_type, reference_id, ip_address, device
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-  `, [customerId, activityType, performedBy, referenceType, referenceId, ip, device]);
+  try {
+    const db = clientOrDb || { query };
+    const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
+    const device = req ? req.headers['user-agent'] : null;
+    await db.query(`
+      INSERT INTO customer_activity_logs (
+        customer_id, activity_type, performed_by, reference_type, reference_id, ip_address, device
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [customerId, activityType, performedBy || null, referenceType, referenceId, ip, device]);
+  } catch (err) {
+    logger.warn(`Failed to log customer activity for ${customerId}:`, err.message);
+  }
 };
 
 // Get Dashboard Metrics for Customer CRM Header
@@ -52,19 +60,19 @@ const getCustomerDashboardMetrics = async (partnerId = null, userId = null) => {
     ${where}
   `, values);
 
-  const totalApps = parseInt(metrics.total_applications || 0);
-  const approvedApps = parseInt(metrics.approved_applications || 0);
+  const totalApps = parseInt(metrics?.total_applications || 0);
+  const approvedApps = parseInt(metrics?.approved_applications || 0);
   const conversionRate = totalApps > 0 ? parseFloat(((approvedApps / totalApps) * 100).toFixed(1)) : 0;
 
   return {
-    total_customers: parseInt(metrics.total_customers || 0),
-    new_customers: parseInt(metrics.new_customers || 0),
-    interested_customers: parseInt(metrics.interested_customers || 0),
+    total_customers: parseInt(metrics?.total_customers || 0),
+    new_customers: parseInt(metrics?.new_customers || 0),
+    interested_customers: parseInt(metrics?.interested_customers || 0),
     total_applications: totalApps,
     approved_applications: approvedApps,
-    rejected_applications: parseInt(metrics.rejected_applications || 0),
+    rejected_applications: parseInt(metrics?.rejected_applications || 0),
     conversion_rate: conversionRate,
-    revenue_generated: parseFloat(metrics.revenue_generated || 0)
+    revenue_generated: parseFloat(metrics?.revenue_generated || 0)
   };
 };
 
@@ -101,7 +109,7 @@ const checkDuplicateCustomer = async (mobile, email = null, panNumber = null, ex
   return rows;
 };
 
-// Get Full 360 Degree Customer Profile
+// Get Full 360 Degree Customer Profile with resilient sub-resource queries
 const get360CustomerProfile = async (customerId, currentUserId = null) => {
   const { rows: [customer] } = await query(`
     SELECT c.*, 
@@ -115,17 +123,20 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
 
   if (!customer) return null;
 
-  // Parallel fetch for all 360 sub-resources
+  // Parallel fetch for all 360 sub-resources with individual fallback handling
   const [appsRes, docsRes, timelineRes, notesRes, followupsRes, commsRes, tagsRes, activityRes] = await Promise.all([
-    // Applications grouped with product & bank info
+    // Applications grouped with product & bank info (LEFT JOINs for max safety)
     query(`
       SELECT a.*, p.name as product_name, p.category as product_category, b.name as bank_name, b.short_code as bank_code
       FROM applications a
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
       WHERE a.customer_id = $1
       ORDER BY a.created_at DESC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching applications for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Documents
     query(`
@@ -134,7 +145,10 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       LEFT JOIN users u ON u.id = cd.verified_by
       WHERE cd.customer_id = $1
       ORDER BY cd.uploaded_at DESC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching documents for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Timeline
     query(`
@@ -143,7 +157,10 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       LEFT JOIN users u ON u.id = ct.created_by
       WHERE ct.customer_id = $1
       ORDER BY ct.created_at DESC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching timeline for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Notes
     query(`
@@ -152,7 +169,10 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       LEFT JOIN users u ON u.id = cn.user_id
       WHERE cn.customer_id = $1
       ORDER BY cn.is_pinned DESC, cn.created_at DESC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching notes for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Followups
     query(`
@@ -161,7 +181,10 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       LEFT JOIN users u ON u.id = cf.user_id
       WHERE cf.customer_id = $1
       ORDER BY cf.followup_date ASC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching followups for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Communications
     query(`
@@ -170,10 +193,16 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       LEFT JOIN users u ON u.id = cc.sent_by
       WHERE cc.customer_id = $1
       ORDER BY cc.sent_at DESC
-    `, [customerId]),
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching communications for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Tags
-    query(`SELECT tag_name, tag_color FROM customer_tags WHERE customer_id = $1`, [customerId]),
+    query(`SELECT tag_name, tag_color FROM customer_tags WHERE customer_id = $1`, [customerId]).catch(err => {
+      logger.warn(`Error fetching tags for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
 
     // Activity Logs
     query(`
@@ -183,7 +212,10 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       WHERE cal.customer_id = $1
       ORDER BY cal.created_at DESC
       LIMIT 20
-    `, [customerId])
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching activity_logs for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    })
   ]);
 
   // Group applications by Category (Credit Cards, Personal Loan, Home Loan, etc.)
@@ -196,7 +228,7 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
     other: []
   };
 
-  appsRes.rows.forEach(app => {
+  (appsRes?.rows || []).forEach(app => {
     const cat = app.product_category || 'other';
     if (applicationsByCategory[cat]) {
       applicationsByCategory[cat].push(app);
@@ -207,15 +239,15 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
 
   return {
     overview: customer,
-    applications: appsRes.rows,
+    applications: appsRes?.rows || [],
     applications_by_category: applicationsByCategory,
-    documents: docsRes.rows,
-    timeline: timelineRes.rows,
-    notes: notesRes.rows,
-    followups: followupsRes.rows,
-    communications: commsRes.rows,
-    tags: tagsRes.rows,
-    activity_logs: activityRes.rows
+    documents: docsRes?.rows || [],
+    timeline: timelineRes?.rows || [],
+    notes: notesRes?.rows || [],
+    followups: followupsRes?.rows || [],
+    communications: commsRes?.rows || [],
+    tags: tagsRes?.rows || [],
+    activity_logs: activityRes?.rows || []
   };
 };
 

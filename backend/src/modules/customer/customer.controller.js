@@ -170,12 +170,20 @@ const createCustomer = async (req, res, next) => {
 const getCustomerProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!id) return error(res, 'Customer ID is required', 400);
+
     const profile = await get360CustomerProfile(id, req.user?.id);
     if (!profile) return notFound(res, 'Customer profile not found');
 
-    await logCustomerActivity(null, id, 'view_360_profile', req.user.id, 'customer', id, req);
+    try {
+      await logCustomerActivity(null, id, 'view_360_profile', req.user?.id, 'customer', id, req);
+    } catch (logErr) {
+      logger.warn(`Activity logging failed for customer ${id}:`, logErr.message);
+    }
+
     return success(res, profile, 'Customer 360 profile loaded');
   } catch (err) {
+    logger.error(`Failed to fetch 360 profile for customer ${req.params.id}:`, err);
     next(err);
   }
 };
