@@ -204,15 +204,15 @@ const getDashboardStats = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
         FROM applications WHERE partner_id = $1
       `, [PartnerId]),
-      query(`SELECT * FROM wallets WHERE partner_id = $1`, [PartnerId]),
+      query(`SELECT * FROM partner_wallets WHERE partner_id = $1`, [PartnerId]),
       query(`
         SELECT a.app_number, a.status, a.commission_amount, a.created_at,
-          c.full_name as customer_name,
-          p.name as product_name, b.short_code as bank_code
+          COALESCE(c.full_name, 'Customer') as customer_name,
+          COALESCE(p.name, 'Product') as product_name, COALESCE(b.short_code, b.name, 'GKP') as bank_code
         FROM applications a
-        JOIN customers c ON c.id = a.customer_id
-        JOIN products p ON p.id = a.product_id
-        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN customers c ON c.id = a.customer_id
+        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
         WHERE a.partner_id = $1
         ORDER BY a.created_at DESC LIMIT 5
       `, [PartnerId]),
@@ -225,11 +225,11 @@ const getDashboardStats = async (req, res, next) => {
         FROM leads WHERE partner_id = $1
       `, [PartnerId]),
       query(`
-        SELECT p.id, p.name, p.image_url, b.short_code as bank_code, COUNT(l.id) as sales_count
+        SELECT p.id, p.name, p.image_url, COALESCE(b.short_code, b.name, 'GKP') as bank_code, COUNT(l.id) as sales_count
         FROM products p
-        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN leads l ON l.product_id = p.id AND l.partner_id = $1 AND l.status IN ('approved', 'confirmed')
-        GROUP BY p.id, p.name, p.image_url, b.short_code
+        GROUP BY p.id, p.name, p.image_url, b.short_code, b.name
         ORDER BY sales_count DESC
         LIMIT 5
       `, [PartnerId])
@@ -237,7 +237,8 @@ const getDashboardStats = async (req, res, next) => {
 
     const walletData = wallet.rows[0] ? {
       ...wallet.rows[0],
-      pending_amount: wallet.rows[0].hold_balance
+      available_balance: wallet.rows[0].available_balance || wallet.rows[0].balance || 0,
+      pending_amount: wallet.rows[0].hold_balance || 0
     } : { total_earned: 0, available_balance: 0, hold_balance: 0, pending_amount: 0, total_withdrawn: 0 };
 
     return success(res, {
