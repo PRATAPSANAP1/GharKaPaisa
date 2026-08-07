@@ -464,6 +464,37 @@ const SuperAdminLayout = () => {
             {loadingPrivacy ? '...' : privacyMode ? 'ON' : 'OFF'}
           </button>
         </div>
+
+        {/* Sidebar Log Out Button (Visible in Desktop & Mobile Sidebar) */}
+        <div style={{ padding: '8px 10px', marginTop: '4px' }}>
+          <button
+            id="super-admin-sidebar-logout"
+            onClick={() => {
+              if (onLinkClick) onLinkClick();
+              handleLogout();
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#EF4444',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              outline: 'none'
+            }}
+          >
+            <Icons.logout size={18} />
+            <span>Log Out</span>
+          </button>
+        </div>
       </div>
     );
   };
