@@ -146,12 +146,8 @@ const viewDocument = async (req, res, next) => {
       }
     }
 
-    if (!doc) {
-      return notFound(res, 'Document or Video not found.');
-    }
-
-    if (!doc.s3_key) {
-      return error(res, 'File key is missing or not yet uploaded.', 400);
+    if (!doc || !doc.s3_key) {
+      return success(res, { url: null, uploaded: false, message: 'Document or Video not yet uploaded.' });
     }
 
     // Authorization check: Admin/Superadmin or document owner
