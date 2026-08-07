@@ -1428,5 +1428,6 @@ module.exports = {
   uploadVideo,
   submitKyc,
   getKycStatus,
-  getKycDetails
+  getKycDetails,
+  updatePartnerKYCStatus: approvePartnerKYC
 };

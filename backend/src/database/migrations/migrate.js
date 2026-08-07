@@ -3850,6 +3850,8 @@ const migrate = async () => {
           created_at        TIMESTAMPTZ DEFAULT NOW()
         )
       `);
+      await query(`ALTER TABLE team_activity ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE`);
+      await query(`ALTER TABLE team_activity ADD COLUMN IF NOT EXISTS child_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE`);
       await query(`CREATE INDEX IF NOT EXISTS idx_team_activity_parent ON team_activity(parent_partner_id, created_at DESC)`);
 
       await query(`
