@@ -59,10 +59,10 @@ const listProducts = async (req, res, next) => {
       values.push(sub_category);
     }
     if (is_popular === 'true' || is_popular === true) {
-      where += ` AND (p.visibility->>'is_popular')::boolean = true`;
+      where += ` AND (COALESCE(p.visibility->>'is_popular', 'false') = 'true' OR p.is_recommended = true OR p.featured = true)`;
     }
     if (search) { 
-      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx} OR p.rewards ILIKE $${idx} OR p.cashback ILIKE $${idx})`; 
+      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx} OR COALESCE(p.rewards, '') ILIKE $${idx} OR COALESCE(p.cashback, '') ILIKE $${idx} OR COALESCE(p.description, '') ILIKE $${idx})`; 
       values.push(`%${search}%`); 
       idx++; 
     }
@@ -81,7 +81,7 @@ const listProducts = async (req, res, next) => {
       values.push(parseInt(max_age));
     }
     if (joining_fee_type === 'free') {
-      where += ` AND (p.joining_fee IS NULL OR LOWER(p.joining_fee) IN ('0', 'free', 'nil', 'waived'))`;
+      where += ` AND (p.annual_fee IS NULL OR LOWER(p.annual_fee) IN ('0', 'free', 'nil', 'waived', 'lifetime free', 'zero') OR p.is_lifetime_free = true)`;
     }
 
     // Sort options
@@ -89,7 +89,7 @@ const listProducts = async (req, res, next) => {
     if (sort_by === 'commission_high') orderBy = 'ORDER BY p.commission_value DESC';
     if (sort_by === 'commission_low') orderBy = 'ORDER BY p.commission_value ASC';
     if (sort_by === 'newest') orderBy = 'ORDER BY p.created_at DESC';
-    if (sort_by === 'popular') orderBy = 'ORDER BY p.approval_rate DESC, p.commission_value DESC';
+    if (sort_by === 'popular') orderBy = 'ORDER BY COALESCE(p.approval_rate, 85) DESC, p.commission_value DESC';
 
     const [count, data] = await Promise.all([
       query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id ${where}`, values),

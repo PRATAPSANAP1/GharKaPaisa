@@ -372,6 +372,9 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS badge VARCHAR(50)`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_recommended BOOLEAN DEFAULT FALSE`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_trending BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS rewards TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cashback TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_rate INT DEFAULT 85`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
