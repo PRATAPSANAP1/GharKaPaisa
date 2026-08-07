@@ -85,14 +85,14 @@ export default function PartnerKyc() {
           setPanNumber(panDoc.doc_number);
         }
 
-        if (data.video) {
+        if (data.video && data.video.storage_key) {
           try {
             const viewRes = await api.get('/partner/kyc/documents/video/view');
             if (viewRes.data?.success && viewRes.data?.data?.url) {
               setVideoPlayUrl(viewRes.data.data.url);
             }
           } catch (videoErr) {
-            console.error('Failed to load video signed url:', videoErr);
+            // Silently handle if video is not yet accessible
           }
         }
       }
