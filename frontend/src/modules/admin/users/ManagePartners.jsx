@@ -152,16 +152,23 @@ export default function ManagePartners() {
         
         setVideoPlayUrl('');
         if (videoDoc) {
-          if (videoDoc.video_url) {
-            setVideoPlayUrl(videoDoc.video_url);
-          } else if (videoDoc.id) {
+          const vUrl = videoDoc.signed_url || videoDoc.video_url;
+          if (vUrl && (vUrl.includes('X-Amz-Signature=') || vUrl.includes('AWSAccessKeyId='))) {
+            setVideoPlayUrl(vUrl);
+          } else {
+            const targetVidId = (videoDoc.id && videoDoc.id !== 'undefined') ? videoDoc.id : 'video';
             try {
-              const videoViewRes = await api.get(`/partner/kyc/documents/${videoDoc.id}/view`);
+              const videoViewRes = await api.get(`/partner/kyc/documents/${targetVidId}/view`, {
+                params: { partnerId: p.id }
+              });
               if (videoViewRes.data?.success && videoViewRes.data?.data?.url) {
                 setVideoPlayUrl(videoViewRes.data.data.url);
+              } else if (vUrl) {
+                setVideoPlayUrl(vUrl);
               }
             } catch (vidErr) {
               console.error("Failed to generate secure video link", vidErr);
+              if (vUrl) setVideoPlayUrl(vUrl);
             }
           }
         }
@@ -339,33 +346,31 @@ export default function ManagePartners() {
   };
 
   const handleViewDocument = async (docId, fallbackUrl = null) => {
-    if (fallbackUrl && (fallbackUrl.startsWith('http://') || fallbackUrl.startsWith('https://'))) {
+    // 1. If fallbackUrl is already a presigned S3 URL with AWS signatures, open directly
+    if (fallbackUrl && (fallbackUrl.includes('X-Amz-Signature=') || fallbackUrl.includes('AWSAccessKeyId='))) {
       window.open(fallbackUrl, '_blank');
       return;
     }
-    if (!docId || docId === 'undefined') {
-      if (fallbackUrl) {
-        window.open(fallbackUrl, '_blank');
-        return;
-      }
-      alert("Document not available.");
-      return;
-    }
+
+    // 2. Fetch presigned S3 download URL from backend API
+    const targetId = (docId && docId !== 'undefined') ? docId : 'view';
     try {
-      const res = await api.get(`/partner/kyc/documents/${docId}/view`);
+      const res = await api.get(`/partner/kyc/documents/${targetId}/view`, {
+        params: { partnerId: profile?.id }
+      });
       if (res.data?.success && res.data?.data?.url) {
         window.open(res.data.data.url, '_blank');
-      } else if (fallbackUrl) {
-        window.open(fallbackUrl, '_blank');
-      } else {
-        alert("Failed to generate secure view link.");
-      }
-    } catch (e) {
-      if (fallbackUrl) {
-        window.open(fallbackUrl, '_blank');
         return;
       }
-      alert(e.response?.data?.message || "Error generating secure view link.");
+    } catch (e) {
+      console.warn("Failed to get presigned URL via view endpoint, attempting fallback", e);
+    }
+
+    // 3. Fallback to raw URL if backend call failed
+    if (fallbackUrl) {
+      window.open(fallbackUrl, '_blank');
+    } else {
+      alert("Document file not available.");
     }
   };
 
