@@ -62,32 +62,38 @@ const allowedOrigins = [
   ...envOrigins
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin) {
       return callback(null, true);
     }
+    const normalizedOrigin = origin.trim();
     try {
-      const hostname = new URL(origin).hostname;
+      const hostname = new URL(normalizedOrigin).hostname;
       if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.gharkapaisa.in')) {
         return callback(null, true);
       }
     } catch (e) {}
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
-    return callback(null, true); // Fallback allow to avoid unexpected CORS blocks on 500/502 errors
+    return callback(new Error(`CORS origin not allowed: ${normalizedOrigin}`), false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'X-Requested-With', 'Accept', '*'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'X-Requested-With', 'Accept'],
   credentials: true,
-}));
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Dynamic CORS header reflection middleware to guarantee CORS headers on all responses (including 500/502 errors)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   const reqHeaders = req.headers['access-control-request-headers'];

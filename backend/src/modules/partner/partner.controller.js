@@ -514,7 +514,7 @@ const addTeamMember = async (req, res, next) => {
     // Insert user (must_change_password = true)
     const { rows: [user] } = await client.query(
       `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, must_change_password)
-       VALUES ($1, $2, $3, 'PARTNER'::user_role, 'active'::user_status, true, true) RETURNING id`,
+       VALUES ($1, $2, $3, 'TEAM_MEMBER'::user_role, 'active'::user_status, true, true) RETURNING id`,
       [email, mobile, passwordHash]
     );
 
@@ -523,13 +523,20 @@ const addTeamMember = async (req, res, next) => {
     const { generatePartnerCode } = require('../../utils/helpers/helpers');
     const partnerCode = generatePartnerCode(parseInt(nextval));
 
-    // Create child partner profile
+    // Create child partner profile setting both partner_id and parent_partner_id
     const { rows: [childPartner] } = await client.query(`
       INSERT INTO partner_profiles (
-        user_id, partner_code, first_name, last_name, parent_partner_id, kyc_status
+        user_id, partner_code, first_name, last_name, parent_partner_id, partner_id, kyc_status
       )
-      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id
+      VALUES ($1, $2, $3, $4, $5, $5, 'pending') RETURNING id
     `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
+
+    // Track team relationship
+    await client.query(`
+      INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
+      VALUES ($1, $2, 1)
+      ON CONFLICT (child_partner_id) DO UPDATE SET parent_partner_id = EXCLUDED.parent_partner_id
+    `, [PartnerId, childPartner.id]);
 
     // Create wallet
     await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
