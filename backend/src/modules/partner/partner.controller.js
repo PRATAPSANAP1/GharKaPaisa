@@ -923,7 +923,7 @@ const invitePartnerClick = async (req, res, next) => {
     const utmMedium = data.utm_medium || data.medium || null;
     const utmCampaign = data.utm_campaign || data.campaign || null;
 
-    if (!referralCode) return error(res, 'Referral code is required', 400);
+    if (!referralCode) return success(res, { tracked: false }, 'No referral code provided');
 
     const visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     const userAgent = req.headers['user-agent'] || null;
@@ -939,7 +939,7 @@ const invitePartnerClick = async (req, res, next) => {
     `, [referralCode]);
 
     if (!partner) {
-      return error(res, 'Invalid referral code or partner profile not found', 404);
+      return success(res, { tracked: false }, 'Referral code not found');
     }
 
     // Generate unique session ID for the click

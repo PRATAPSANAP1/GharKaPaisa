@@ -556,6 +556,7 @@ const register = async (req, res, next) => {
     const client = await getClient();
     let committed = false;
     let parentPartnerId = null;
+    let parentTeamLevel = 0;
     let invite = [];
     let Partner = null;
 
