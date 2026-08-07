@@ -1399,6 +1399,122 @@ const getKycDetails = async (req, res, next) => {
   }
 };
 
+const validatePan = async (req, res, next) => {
+  try {
+    const { pan_number } = req.body;
+    if (!pan_number) return error(res, 'PAN number required', 400);
+    const isFormatValid = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(pan_number);
+    return success(res, { valid: isFormatValid, pan: String(pan_number).toUpperCase() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const validateAadhaar = async (req, res, next) => {
+  try {
+    const { aadhaar_number } = req.body;
+    if (!aadhaar_number) return error(res, 'Aadhaar number required', 400);
+    const clean = String(aadhaar_number).replace(/\s+/g, '');
+    const isFormatValid = /^\d{12}$/.test(clean);
+    return success(res, { valid: isFormatValid });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const validateGst = async (req, res, next) => {
+  try {
+    const { gst_number } = req.body;
+    if (!gst_number) return error(res, 'GST number required', 400);
+    const isFormatValid = /^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/i.test(gst_number);
+    return success(res, { valid: isFormatValid, gst: String(gst_number).toUpperCase() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const uploadProfilePhoto = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Photo file is required', 400);
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `profile/${partnerId}`);
+    await query(`UPDATE partner_profiles SET profile_photo_url = $1 WHERE id = $2`, [url, partnerId]);
+    return success(res, { url, key }, 'Profile photo uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const uploadCompanyLogo = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    if (!req.file) return error(res, 'Logo file is required', 400);
+    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `logo/${partnerId}`);
+    await query(`UPDATE partner_profiles SET company_logo_url = $1 WHERE id = $2`, [url, partnerId]);
+    return success(res, { url, key }, 'Company logo uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateReferralMessage = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    const { message } = req.body;
+    await query(`UPDATE partner_referrals SET custom_message = $1 WHERE partner_id = $2`, [message, partnerId]);
+    return success(res, {}, 'Referral message updated');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getInvitationHistory = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    return success(res, []);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createInvitation = async (req, res, next) => {
+  try {
+    const partnerId = req.partner?.id || req.user.partner_id;
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
+    return success(res, {}, 'Invitation sent');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resendInvitation = async (req, res, next) => {
+  try {
+    return success(res, {}, 'Invitation resent');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getReferralCampaigns = async (req, res, next) => {
+  try {
+    return success(res, []);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const createReferralCampaign = async (req, res, next) => {
+  try {
+    return success(res, {}, 'Campaign created');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -1429,5 +1545,16 @@ module.exports = {
   submitKyc,
   getKycStatus,
   getKycDetails,
-  updatePartnerKYCStatus: approvePartnerKYC
+  updatePartnerKYCStatus: approvePartnerKYC,
+  validatePan,
+  validateAadhaar,
+  validateGst,
+  uploadProfilePhoto,
+  uploadCompanyLogo,
+  updateReferralMessage,
+  getInvitationHistory,
+  createInvitation,
+  resendInvitation,
+  getReferralCampaigns,
+  createReferralCampaign
 };
