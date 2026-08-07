@@ -36,7 +36,6 @@ export default function PartnerKyc() {
 
   const user = useAuthStore((state) => state.user);
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
-  const profile = usePartnerStore((state) => state.profile);
 
   // KYC details fetched from our backend
   const [kycData, setKycData] = useState({
@@ -86,17 +85,13 @@ export default function PartnerKyc() {
         }
 
         if (data.video) {
-          if (data.video.video_url) {
-            setVideoPlayUrl(data.video.video_url);
-          } else if (data.video.storage_key) {
-            try {
-              const viewRes = await api.get('/partner/kyc/documents/video/view');
-              if (viewRes.data?.success && viewRes.data?.data?.url) {
-                setVideoPlayUrl(viewRes.data.data.url);
-              }
-            } catch (videoErr) {
-              // Silently handle if video is not yet accessible
+          try {
+            const viewRes = await api.get('/partner/kyc/documents/video/view');
+            if (viewRes.data?.success && viewRes.data?.data?.url) {
+              setVideoPlayUrl(viewRes.data.data.url);
             }
+          } catch (videoErr) {
+            console.error('Failed to load video signed url:', videoErr);
           }
         }
       }
@@ -880,7 +875,7 @@ export default function PartnerKyc() {
             }}>
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Please read this statement aloud:</span>
               <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
-                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.PartnerCode || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
+                "I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
               </p>
             </div>
 

@@ -88,56 +88,26 @@ const uploadVideo = multer({
   limits: { fileSize: MAX_VIDEO_SIZE },
 });
 
-const genericFileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
-  const FORBIDDEN_EXTS = ['.exe', '.bat', '.js', '.zip', '.rar', '.sh'];
-
-  if (FORBIDDEN_EXTS.includes(ext)) {
-    return cb(new Error('Forbidden file type detected'), false);
-  }
-  cb(null, true);
-};
-
-const uploadGeneric = multer({
-  storage,
-  fileFilter: genericFileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-});
-
-// Helper to convert an S3 key to CloudFront public CDN URL
-const getCloudFrontUrl = (urlOrKey) => {
-  if (!urlOrKey) return urlOrKey;
-  const domain = (process.env.AWS_CLOUDFRONT_URL || 'https://d18qh1l6j6vziz.cloudfront.net').replace(/\/+$/, '');
-  const cleanKey = String(urlOrKey)
-    .replace(/^https?:\/\/[^\/]+\//, '')
-    .replace(/^\/+/, '')
-    .replace(/^public\//, '');
-  return `${domain}/${cleanKey}`;
-};
-
 // Upload a buffer to S3
-const uploadToS3 = async (buffer, originalName, folder = 'kyc', customFileName = null) => {
+const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
   let ext = path.extname(originalName).toLowerCase();
   if (!ext || ext === '') {
     ext = '.mp4'; // Default to mp4 if extension is missing (e.g. raw iOS Safari blob upload)
   }
-  const fileName = customFileName ? (customFileName.endsWith(ext) ? customFileName : `${customFileName}${ext}`) : `${uuidv4()}${ext}`;
-  const key = `${folder}/${fileName}`;
+  const key = `${folder}/${uuidv4()}${ext}`;
 
   await s3Client.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
-    ContentType: MIME_MAP[ext] || (ext === '.webp' ? 'image/webp' : 'application/octet-stream'),
+    ContentType: MIME_MAP[ext] || 'video/mp4',
     ServerSideEncryption: 'AES256',
   }));
 
-  const isPublicAsset = folder.startsWith('public') || folder.startsWith('banks') || folder.startsWith('banners') || folder.startsWith('products');
-  const url = isPublicAsset ? getCloudFrontUrl(key) : (
-    (process.env.AWS_REGION || 'ap-south-1') === 'us-east-1'
-      ? `https://${BUCKET}.s3.amazonaws.com/${key}`
-      : `https://${BUCKET}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`
-  );
+  const region = process.env.AWS_REGION || 'ap-south-1';
+  const url = region === 'us-east-1'
+    ? `https://${BUCKET}.s3.amazonaws.com/${key}`
+    : `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`;
 
   logger.info(`Uploaded to S3: ${key}`);
   return { url, key };
@@ -155,5 +125,4 @@ const deleteFromS3 = async (key) => {
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadVideo, uploadGeneric, uploadToS3, getSignedDownloadUrl, deleteFromS3, getCloudFrontUrl };
-
+module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
