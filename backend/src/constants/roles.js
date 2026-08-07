@@ -4,6 +4,7 @@ const ROLES = {
   ADMIN: 'ADMIN',
   EMPLOYEE: 'EMPLOYEE',
   PARTNER: 'PARTNER',
+  TEAM_MEMBER: 'TEAM_MEMBER',
 };
 
 const normalizeRole = (role) => String(role || '').trim().toUpperCase();

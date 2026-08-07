@@ -173,16 +173,21 @@ export default function PartnerRegister() {
   const mobileVerifyTimeoutRef = useRef(null);
   
   const [referralCode, setReferralCode] = useState("");
+  const [teamCode, setTeamCode] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
+    const team = params.get("team");
     if (ref) {
       setReferralCode(ref);
       // Track referral click (non-blocking)
       api.post(`/partner/referral-click?ref=${encodeURIComponent(ref)}`).catch(err => {
         console.error("Failed to track referral click:", err);
       });
+    }
+    if (team) {
+      setTeamCode(team);
     }
   }, []);
 
@@ -258,6 +263,15 @@ export default function PartnerRegister() {
     if (mobileOtpTimer > 0) t = setTimeout(() => setMobileOtpTimer(mobileOtpTimer - 1), 1000);
     return () => clearTimeout(t);
   }, [mobileOtpTimer]);
+
+  useEffect(() => {
+    if (infoMsg) {
+      const timer = setTimeout(() => {
+        setInfoMsg("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [infoMsg]);
 
   // ── MSG91 OTP SDK readiness ─────────
   const { sdkReady } = useMsg91OTP();
@@ -543,6 +557,7 @@ export default function PartnerRegister() {
         aadhaar: form.aadhaar.replace(/[\s-]/g, ""),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
         referral_code: referralCode,
+        team_code: teamCode,
         role: "PARTNER",
       };
       const res = await registerPartner(payload);

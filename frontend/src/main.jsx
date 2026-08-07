@@ -1,3 +1,12 @@
+// Polyfill/stub window.TraceIQ for MSG91 SDK optional chaining support
+if (typeof window !== 'undefined' && typeof window.TraceIQ === 'undefined') {
+  window.TraceIQ = {
+    track: function () {},
+    page: function () {},
+    identify: function () {},
+  };
+}
+
 // Silence known third-party widget spam/harmless warnings in console
 const origLog = console.log;
 const origWarn = console.warn;
@@ -16,7 +25,9 @@ const SPAM_PATTERNS = [
   'MSG91_Captcha_Verify',
   'AxiosError: Request failed with status code 401',
   'status code 401',
-  'Unauthorized'
+  'Unauthorized',
+  'TraceIQ is not defined',
+  'TraceIQ'
 ];
 
 const shouldSuppress = (args) => {

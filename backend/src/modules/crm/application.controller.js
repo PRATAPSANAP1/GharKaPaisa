@@ -79,7 +79,7 @@ const submitApplication = async (req, res, next) => {
 
     // Calculate expected commission
     const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
-    
+
     // Generate unique app number
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
@@ -169,7 +169,7 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [existingCust] } = await client.query(
       `SELECT id FROM customers WHERE mobile = $1`, [customer.mobile]
     );
-    
+
     const salaryVal = parseFloat(monthly_salary || loan_amount || 0);
 
     if (existingCust) {
@@ -186,7 +186,7 @@ const submitPublicApplication = async (req, res, next) => {
     }
 
     const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal);
-    
+
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
@@ -207,7 +207,7 @@ const submitPublicApplication = async (req, res, next) => {
     // Public referral clicks updates omitted
 
     await client.query('COMMIT');
-    
+
     logger.info(`Public application ${appNumber} submitted routing to Partner ${partnerId}`);
     return created(res, { application_id: app.id, app_number: app.app_number, commission }, 'Application submitted successfully');
   } catch (err) {
@@ -400,17 +400,70 @@ const updateStatus = async (req, res, next) => {
     if (partner) {
       if (status === 'approved') {
         await notify.applicationApproved(partner.user_id, app.app_number, app.commission_amount);
-        
-        // Parent team notifications
+
+        // Referral Bonus & Commission Distribution (Task 27)
         try {
           const { query: queryDB } = require('../../config/database');
           const { createNotification } = require('../notifications/service.js');
-          
+          const teamService = require('../team/team.service.js');
+
+          // 1. Process Product Commission & Team Override
+          const baseComm = parseFloat(app.commission_amount || 0);
+          if (baseComm > 0) {
+            await teamService.processTeamOverrideCommission(app.id, app.partner_id, baseComm);
+          }
+
+          // 2. Referral Bonus Check (Requirement 1: 3 Approved Credit Card Applications -> ₹500 Bonus)
+          const { rows: [pProfile] } = await queryDB(`
+            UPDATE partner_profiles
+            SET approved_credit_cards = approved_credit_cards + 1
+            WHERE id = $1
+            RETURNING id, user_id, approved_credit_cards, referral_bonus_paid, referred_by_id, parent_partner_id
+          `, [app.partner_id]);
+
+          if (pProfile && pProfile.approved_credit_cards >= 3 && !pProfile.referral_bonus_paid) {
+            const referrerId = pProfile.referred_by_id || pProfile.parent_partner_id;
+            if (referrerId) {
+              await queryDB(`UPDATE partner_profiles SET referral_bonus_paid = TRUE WHERE id = $1`, [app.partner_id]);
+
+              await queryDB(`
+                INSERT INTO partner_wallets (partner_id, available_balance, total_earned)
+                VALUES ($1, 500, 500)
+                ON CONFLICT (partner_id) DO UPDATE SET
+                  available_balance = partner_wallets.available_balance + 500,
+                  total_earned = partner_wallets.total_earned + 500,
+                  updated_at = NOW()
+              `, [referrerId]);
+
+              await queryDB(`
+                INSERT INTO wallet_ledger (
+                  partner_id, application_id, type, credit, debit, balance_after, status, description
+                ) VALUES (
+                  $1, $2, 'referral_bonus', 500, 0,
+                  (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
+                  'completed', '₹500 Referral bonus credited for referred partner completing 3 approved applications'
+                )
+              `, [referrerId, app.id]);
+
+              const { rows: [refUser] } = await queryDB(`SELECT user_id FROM partner_profiles WHERE id = $1`, [referrerId]);
+              if (refUser && refUser.user_id) {
+                await createNotification(
+                  refUser.user_id,
+                  '🎉 ₹500 Referral Bonus Credited!',
+                  'Your referred partner completed 3 approved applications! ₹500 referral bonus has been added to your wallet.',
+                  'success',
+                  '/partner/wallet'
+                );
+              }
+            }
+          }
+
+          // Parent team notifications
           const { rows: [{ count }] } = await queryDB(`
             SELECT COUNT(*)::int FROM applications 
             WHERE partner_id = $1 AND status = 'approved'
           `, [app.partner_id]);
-          
+
           const { rows: [childProfile] } = await queryDB(`
             SELECT first_name, last_name, parent_partner_id FROM partner_profiles WHERE id = $1
           `, [app.partner_id]);
@@ -419,7 +472,7 @@ const updateStatus = async (req, res, next) => {
             const { rows: [parentProfile] } = await queryDB(`
               SELECT user_id FROM partner_profiles WHERE id = $1
             `, [childProfile.parent_partner_id]);
-            
+
             if (parentProfile && parentProfile.user_id) {
               if (count === 1) {
                 await createNotification(
@@ -1117,10 +1170,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
     if ((isDisbursed || isApprovedForNonLoan) && app.commission_amount > 0 && app.partner_id) {
       try {
         await creditCommission(
-          app.partner_id, 
-          app.id, 
-          app.commission_amount, 
-          `Approved commission for application ${app.app_number || app.id}`, 
+          app.partner_id,
+          app.id,
+          app.commission_amount,
+          `Approved commission for application ${app.app_number || app.id}`,
           req.user ? req.user.id : null
         );
         await processTeamOverrideCommission(app.id, app.partner_id, app.commission_amount);
@@ -1330,7 +1383,7 @@ const submitPartnerApplication = async (req, res, next) => {
 
     if (!is_draft) {
       const { sendEmail } = require('../../services/email/email.service');
-      
+
       if (trimmedEmail) {
         sendEmail({
           to: trimmedEmail,
@@ -1471,7 +1524,7 @@ const exportApplicationsCSV = async (req, res, next) => {
   try {
     const PartnerId = req.partner?.id;
     const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
-    
+
     let queryStr = `SELECT a.app_number, a.customer_name, a.customer_mobile, a.product_name, a.status, 
                     a.bank_status, a.source, a.created_at, a.updated_at
                     FROM applications a`;
@@ -1489,7 +1542,7 @@ const exportApplicationsCSV = async (req, res, next) => {
     // Build CSV
     const csvHeaders = ['App Number', 'Customer Name', 'Mobile', 'Product', 'Status', 'Bank Status', 'Source', 'Created At', 'Updated At'];
     const csvLines = [csvHeaders.join(',')];
-    
+
     for (const row of rows) {
       csvLines.push([
         row.app_number || '',
@@ -1512,12 +1565,12 @@ const exportApplicationsCSV = async (req, res, next) => {
   }
 };
 
-module.exports = { 
-  submitApplication, 
-  submitPublicApplication, 
-  updateStatus, 
-  listApplications, 
-  getApplication, 
+module.exports = {
+  submitApplication,
+  submitPublicApplication,
+  updateStatus,
+  listApplications,
+  getApplication,
   uploadApplicationDoc,
   getApplicationsDashboard,
   getTimeline,

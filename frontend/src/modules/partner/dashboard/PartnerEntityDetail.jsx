@@ -12,6 +12,7 @@ import {
   MdShare, MdSwapHoriz, MdInfo, MdContentCopy
 } from 'react-icons/md';
 import { useAuthStore } from '../../../app/store/authStore';
+import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 
 const getBankName = (slug) => {
   if (!slug) return 'Bank Workspace';
@@ -132,7 +133,7 @@ export default function PartnerEntityDetail() {
 
   const handleShareCard = (card) => {
     const code = user?.partner_code || 'PARTNER';
-    const bankUrl = card.apply_url || card.redirect_url || card.bank_link || `${window.location.origin}/redirect/${card.category || 'credit_card'}?id=${card.id || card.slug}&partner=${code}`;
+    const bankUrl = card.application_url || card.apply_url || card.public_url || card.partner_url || card.redirect_url || card.bank_link || card.tracking_url || getBankApplyLink(card.name, card.bank_code || card.bank_name || bankName) || `${window.location.origin}/redirect/${card.category || 'credit_card'}?id=${card.id || card.slug}&partner=${code}`;
     
     if (navigator.share) {
       navigator.share({
@@ -203,7 +204,16 @@ export default function PartnerEntityDetail() {
     }
 
     if (applyProcessBy === 'direct_bank') {
-      const targetUrl = selectedProductWorkspace.apply_url || selectedProductWorkspace.tracking_url || `https://www.google.com/search?q=${encodeURIComponent(selectedProductWorkspace.name + ' apply')}`;
+      const code = user?.partner_code || 'PARTNER';
+      const targetUrl = selectedProductWorkspace.application_url || 
+                        selectedProductWorkspace.apply_url || 
+                        selectedProductWorkspace.public_url || 
+                        selectedProductWorkspace.partner_url || 
+                        selectedProductWorkspace.redirect_url || 
+                        selectedProductWorkspace.bank_link || 
+                        selectedProductWorkspace.tracking_url || 
+                        getBankApplyLink(selectedProductWorkspace.name, selectedProductWorkspace.bank_code || selectedProductWorkspace.bank_name || bankName) || 
+                        `${window.location.origin}/redirect/${selectedProductWorkspace.category || 'credit_card'}?id=${selectedProductWorkspace.id}&partner=${code}`;
       window.open(targetUrl, '_blank');
     }
 

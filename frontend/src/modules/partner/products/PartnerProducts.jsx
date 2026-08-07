@@ -15,6 +15,7 @@ import {
 } from 'react-icons/md';
 import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
+import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
@@ -78,7 +79,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
 
   const handleCopyLink = (product) => {
     const code = partnerCode || user?.partner_code || 'PARTNER';
-    const bankUrl = product.apply_url || product.redirect_url || product.bank_link || `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${code}`;
+    const bankUrl = product.application_url || product.apply_url || product.public_url || product.partner_url || product.redirect_url || product.bank_link || product.tracking_url || getBankApplyLink(product.name, product.bank_code || product.bank_name) || `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${code}`;
     const shareText = `Apply for ${product.name} directly on official bank portal: ${bankUrl}`;
     
     if (navigator.share) {
@@ -228,7 +229,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
 
     try {
       const code = partnerCode || user?.partner_code || 'PARTNER';
-      const directBankUrl = selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
+      const directBankUrl = selectedProduct.application_url || selectedProduct.apply_url || selectedProduct.public_url || selectedProduct.partner_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name) || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
 
       const payload = {
         product_id: selectedProduct.id,

@@ -123,6 +123,8 @@ export default function ManageProducts() {
     commission_enabled: true,
     commission_type: "fixed", // fixed, percentage
     commission_value: 0,
+    partner_share_value: 0,
+    team_member_share_value: 0,
     commission_amount: 0,
     override_percentage: 0, // Parent override %
     min_commission: 0,
@@ -809,8 +811,19 @@ export default function ManageProducts() {
                           </select>
                         </div>
                         <div>
-                          <label style={S.label}>Commission Value *</label>
+                          <label style={S.label}>Total Commission Value *</label>
                           <input type="number" step="0.01" style={S.input} value={form.commission_value} onChange={e => setForm({ ...form, commission_value: e.target.value })} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                          <label style={S.label}>Partner Share (₹) *</label>
+                          <input type="number" step="0.01" style={S.input} value={form.partner_share_value} onChange={e => setForm({ ...form, partner_share_value: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={S.label}>Team Member Share (₹) *</label>
+                          <input type="number" step="0.01" style={S.input} value={form.team_member_share_value} onChange={e => setForm({ ...form, team_member_share_value: e.target.value })} />
                         </div>
                       </div>
 

@@ -7,6 +7,9 @@ const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 router.use(jwtAuth);
 
 // Team endpoints
+router.get('/info', ctrl.getTeamInfo);
+router.post('/upgrade-request', ctrl.requestUpgrade);
+router.get('/upgrade-status', ctrl.getUpgradeStatus);
 router.get('/dashboard', ctrl.getDashboard);
 router.get('/tree', ctrl.getTree);
 router.get('/list', ctrl.getMembersList);

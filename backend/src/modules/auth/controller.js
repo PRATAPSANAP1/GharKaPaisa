@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { query, getClient } = require('../../config/database');
-const { generatePartnerCode } = require('../../utils/helpers/helpers');
+const { generatePartnerCode, generateRandomReferralCode, generateTeamCode } = require('../../utils/helpers/helpers');
 const { success, created, error } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 const { sendOtpEmail, sendVerificationEmail, sendEmail } = require('../../services/email/email.service.js');
@@ -640,15 +640,67 @@ const register = async (req, res, next) => {
       const verificationToken = crypto.randomBytes(32).toString('hex');
       const verificationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
 
-      // Insert User
-      // Check if email was pre-verified via registration OTP
-      const { rows: [pre] } = await client.query(`SELECT email FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
-      const emailVerified = !!pre;
+      // Determine registration parameters
+      const team_code = (req.body.team_code || req.body.team || '').trim();
+      const raw_referral_code = (req.body.referral_code || req.body.ref || '').trim();
+
+      let targetRole = 'PARTNER';
+      let referredById = null;
+
+      // 1. Resolve Team Code if provided
+      if (team_code) {
+        const { rows: [teamMatch] } = await client.query(`
+          SELECT pt.partner_id, pp.team_status, pp.allow_team_creation, pp.can_create_team
+          FROM partner_teams pt
+          JOIN partner_profiles pp ON pp.id = pt.partner_id
+          WHERE pt.team_code = $1
+          UNION ALL
+          SELECT pp.id AS partner_id, pp.team_status, pp.allow_team_creation, pp.can_create_team
+          FROM partner_profiles pp
+          WHERE pp.partner_code = $1
+          LIMIT 1
+        `, [team_code]);
+
+        if (teamMatch) {
+          if (teamMatch.team_status !== 'ACTIVE' || teamMatch.allow_team_creation === false || teamMatch.can_create_team === false) {
+            await client.query('ROLLBACK');
+            const reason = 'This team is currently not accepting new members.';
+            await logRegistrationAttempt('FAILED', reason);
+            return error(res, reason, 403);
+          }
+          parentPartnerId = teamMatch.partner_id;
+          targetRole = 'TEAM_MEMBER';
+        }
+      }
+
+      // 2. Resolve Referral Code if provided
+      const codeToResolve = raw_referral_code;
+      if (codeToResolve) {
+        const { rows: [refMatch] } = await client.query(`
+          SELECT pr.partner_id, pp.id AS profile_id, pp.team_level
+          FROM partner_referrals pr
+          JOIN partner_profiles pp ON pp.id = pr.partner_id
+          WHERE pr.referral_code = $1
+          UNION ALL
+          SELECT pp.id AS partner_id, pp.id AS profile_id, pp.team_level
+          FROM partner_profiles pp
+          WHERE pp.partner_code = $1 OR pp.id::text = $1
+          LIMIT 1
+        `, [codeToResolve]);
+
+        if (refMatch) {
+          referredById = refMatch.partner_id || refMatch.profile_id;
+          if (!parentPartnerId && targetRole === 'PARTNER') {
+            parentPartnerId = referredById;
+            parentTeamLevel = parseInt(refMatch.team_level || 1);
+          }
+        }
+      }
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
          VALUES ($1, $2, $3, $4::user_role, CASE WHEN $4 = 'PARTNER' THEN 'inactive'::user_status WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
-        [email, mobile, passwordHash, role, verificationToken, verificationTokenExpiresAt, emailVerified]
+        [email, mobile, passwordHash, targetRole, verificationToken, verificationTokenExpiresAt, emailVerified]
       );
 
       if (emailVerified) {
@@ -656,130 +708,9 @@ const register = async (req, res, next) => {
         await client.query(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [email]);
       }
 
-      let parentTeamLevel = 0;
-      let referralClickRecord = null;
-      let resolvedCampaignId = null;
-
-      const referralSession = req.cookies?.referral_session || null;
-
-      if (role === 'PARTNER') {
-        // 4. Try to find the referral click by session_id first
-        if (referralSession) {
-          const { rows: [click] } = await client.query(`
-            SELECT id, partner_id, referral_code, campaign_id FROM referral_clicks 
-            WHERE session_id = $1 LIMIT 1
-          `, [referralSession]);
-          if (click) {
-            referralClickRecord = click;
-          }
-        }
-
-        // 5. Fall back to finding click by referral_code and registrant IP if no session cookie matched
-        const effectiveCode = referralClickRecord ? referralClickRecord.referral_code : referral_code;
-        if (!referralClickRecord && effectiveCode) {
-          const registrantIp = ip;
-          const { rows: [click] } = await client.query(`
-            SELECT id, partner_id, referral_code, campaign_id FROM referral_clicks 
-            WHERE referral_code = $1 AND visitor_ip = $2 AND status = 'CLICKED'
-            ORDER BY clicked_at DESC LIMIT 1
-          `, [effectiveCode, registrantIp]);
-          if (click) {
-            referralClickRecord = click;
-          }
-        }
-
-        // 6. Campaign validation check
-        if (referralClickRecord && referralClickRecord.campaign_id) {
-          const { rows: [campaign] } = await client.query(`
-            SELECT id, status, start_date, end_date FROM referral_campaigns 
-            WHERE id = $1
-          `, [referralClickRecord.campaign_id]);
-          if (campaign) {
-            if (campaign.status !== 'ACTIVE' || new Date() < new Date(campaign.start_date) || new Date() > new Date(campaign.end_date)) {
-              await client.query('ROLLBACK');
-              const reason = 'Referral campaign is inactive or expired.';
-              await logRegistrationAttempt('FAILED', reason);
-              return error(res, reason, 400);
-            }
-            resolvedCampaignId = campaign.id;
-          }
-        }
-
-        // 7. Resolve parent partner details and enforce team/rank constraints
-        const codeToResolve = referralClickRecord ? referralClickRecord.referral_code : referral_code;
-        if (!codeToResolve) {
-          await client.query('ROLLBACK');
-          const reason = 'Referral code is required for registration.';
-          await logRegistrationAttempt('FAILED', reason);
-          return error(res, reason, 400);
-        }
-
-        const { rows: [parentPartner] } = await client.query(`
-          SELECT id, team_level, allow_team_creation, team_status, rank, can_create_team FROM partner_profiles 
-          WHERE partner_code = $1 OR id::text = $1 OR user_id::text = $1
-        `, [codeToResolve]);
-
-        if (parentPartner) {
-          // Parent status check
-          if (parentPartner.team_status !== 'ACTIVE') {
-            await client.query('ROLLBACK');
-            const reason = 'Parent partner is inactive or suspended.';
-            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
-            return error(res, reason, 403);
-          }
-          // Team permission check
-          if (parentPartner.allow_team_creation === false || parentPartner.can_create_team === false) {
-            await client.query('ROLLBACK');
-            const reason = 'The referring partner is currently not accepting new team members.';
-            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
-            return error(res, reason, 403);
-          }
-          // Rank check
-          const parentRank = parentPartner.rank || 'Silver';
-          const { rows: [{ count: currentTeamSize }] } = await client.query(`
-            SELECT COUNT(*)::int AS count FROM partner_team_relationships 
-            WHERE parent_partner_id = $1 AND level = 1
-          `, [parentPartner.id]);
-
-          let limit = 50;
-          if (parentRank === 'Gold') limit = 200;
-          if (parentRank === 'Diamond') limit = 999999999; // Unlimited
-
-          if (currentTeamSize >= limit) {
-            await client.query('ROLLBACK');
-            const reason = 'Registration blocked after team size limit.';
-            await logRegistrationAttempt('FAILED', reason, parentPartner.id);
-            return error(res, reason, 403);
-          }
-
-          parentPartnerId = parentPartner.id;
-          parentTeamLevel = parseInt(parentPartner.team_level || 1);
-        } else {
-          await client.query('ROLLBACK');
-          const reason = 'Invalid Referral Code';
-          await logRegistrationAttempt('FAILED', reason);
-          return error(res, reason, 400);
-        }
-
-        // 8. Invitation History and Referral Expiry Check
-        const { rows: inviteRows } = await client.query(`
-          SELECT id, expired_at FROM invitation_history 
-          WHERE (LOWER(recipient_email) = LOWER($1) OR recipient_mobile = $2) AND status = 'PENDING'
-          ORDER BY sent_at DESC LIMIT 1
-        `, [email, mobile]);
-        invite = inviteRows;
-
-        if (invite.length > 0 && invite[0].expired_at && new Date(invite[0].expired_at) < new Date()) {
-          await client.query('ROLLBACK');
-          const reason = 'Referral expired.';
-          await logRegistrationAttempt('FAILED', reason, parentPartnerId);
-          return error(res, reason, 400);
-        }
-      }
-
       let PartnerCode = null;
 
-      if (role === 'PARTNER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      if (targetRole === 'PARTNER' || targetRole === 'TEAM_MEMBER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
         // Generate Partner code using atomic sequence
         const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
         PartnerCode = generatePartnerCode(parseInt(nextval));
@@ -789,26 +720,17 @@ const register = async (req, res, next) => {
           INSERT INTO partner_profiles (
             user_id, partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
-            parent_partner_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number
+            parent_partner_id, referred_by_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number,
+            allow_team_creation
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'pending', $13, $14) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12::uuid, $13, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'pending', $14, $15, $16) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
           business_location || '', company_name, company_type, gst_number || null, pincode || null,
-          parentPartnerId, parentTeamLevel + 1, panVal, aadhaarVal
+          parentPartnerId, referredById, parentTeamLevel + 1, panVal, aadhaarVal,
+          targetRole === 'PARTNER'
         ]);
         Partner = insertedPartner;
-
-        // Update referral clicks conversion status
-        if (referralClickRecord) {
-          await client.query(`
-            UPDATE referral_clicks 
-            SET converted = TRUE,
-                converted_partner_id = $1,
-                converted_at = NOW()
-            WHERE id = $2
-          `, [Partner.id, referralClickRecord.id]);
-        }
 
         // Create team relationships recursively
         if (parentPartnerId) {
@@ -818,17 +740,12 @@ const register = async (req, res, next) => {
             await client.query(`
               INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
               VALUES ($1, $2, $3)
+              ON CONFLICT DO NOTHING
             `, [currentParentId, Partner.id, currentLevel]);
 
-            // Update parent's children count
             if (currentLevel === 1) {
               await client.query(`
                 UPDATE partner_profiles SET children_count = children_count + 1 WHERE id = $1
-              `, [currentParentId]);
-              
-              // Increment total_registered on partner_referrals for parent
-              await client.query(`
-                UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
               `, [currentParentId]);
             }
 
@@ -840,12 +757,24 @@ const register = async (req, res, next) => {
           }
         }
 
-        // Create referrals record
-        const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${PartnerCode}`;
+        // Generate secure 12-16 uppercase random referral code
+        const secureReferralCode = generateRandomReferralCode(12);
+        const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${secureReferralCode}`;
         await client.query(`
           INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
           VALUES ($1, $2, $3)
-        `, [Partner.id, PartnerCode, referralLink]);
+        `, [Partner.id, secureReferralCode, referralLink]);
+
+        // If PARTNER role, create default team entry in partner_teams
+        if (targetRole === 'PARTNER') {
+          const defaultTeamName = `${first_name || 'Partner'}'s Team`;
+          const defaultTeamCode = generateTeamCode(11);
+          await client.query(`
+            INSERT INTO partner_teams (partner_id, team_name, team_code)
+            VALUES ($1, $2, $3)
+            ON CONFLICT DO NOTHING
+          `, [Partner.id, defaultTeamName, defaultTeamCode]);
+        }
 
         // Create bank details
         const encryptedAccountNumber = encrypt(account_number);

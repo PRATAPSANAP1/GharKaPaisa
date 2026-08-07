@@ -965,6 +965,166 @@ async function processTeamOverrideCommission(applicationId, childPartnerId, base
   }
 }
 
+const { generateTeamCode, generateRandomReferralCode } = require('../../utils/helpers/helpers');
+
+/**
+ * 10. GET OR CREATE PARTNER TEAM INFO (Team Name, Team Code, Team Link)
+ */
+async function getPartnerTeamInfo(partnerId) {
+  const { rows: [p] } = await query(
+    `SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`,
+    [partnerId]
+  );
+  if (!p) throw new Error('Partner profile not found');
+
+  const { rows: [existingTeam] } = await query(
+    `SELECT * FROM partner_teams WHERE partner_id = $1`,
+    [partnerId]
+  );
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+
+  if (existingTeam) {
+    return {
+      team_id: existingTeam.id,
+      team_name: existingTeam.team_name,
+      team_code: existingTeam.team_code,
+      team_link: `${frontendUrl}/register?team=${existingTeam.team_code}`
+    };
+  }
+
+  // Create team entry
+  const defaultTeamName = `${p.first_name || 'Partner'}'s Team`;
+  const newTeamCode = generateTeamCode(11);
+
+  const { rows: [newTeam] } = await query(
+    `INSERT INTO partner_teams (partner_id, team_name, team_code)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (partner_id) DO UPDATE SET team_name = EXCLUDED.team_name RETURNING *`,
+    [partnerId, defaultTeamName, newTeamCode]
+  );
+
+  return {
+    team_id: newTeam.id,
+    team_name: newTeam.team_name,
+    team_code: newTeam.team_code,
+    team_link: `${frontendUrl}/register?team=${newTeam.team_code}`
+  };
+}
+
+/**
+ * 11. SUBMIT PARTNER UPGRADE REQUEST (Team Member -> Partner)
+ */
+async function requestPartnerUpgrade(userId, partnerId) {
+  const { rows: [user] } = await query(`SELECT role FROM users WHERE id = $1`, [userId]);
+  if (!user) throw new Error('User not found');
+
+  const { rows: [pending] } = await query(
+    `SELECT id FROM partner_upgrade_requests WHERE user_id = $1 AND status = 'PENDING'`,
+    [userId]
+  );
+  if (pending) {
+    return { status: 'PENDING', message: 'An upgrade request is already pending review.' };
+  }
+
+  const { rows: [reqRow] } = await query(
+    `INSERT INTO partner_upgrade_requests (user_id, partner_id, status)
+     VALUES ($1, $2, 'PENDING') RETURNING *`,
+    [userId, partnerId || null]
+  );
+
+  return { status: 'PENDING', request: reqRow, message: 'Upgrade request submitted successfully.' };
+}
+
+/**
+ * 12. GET UPGRADE REQUEST STATUS
+ */
+async function getUpgradeStatus(userId) {
+  const { rows: [reqRow] } = await query(
+    `SELECT * FROM partner_upgrade_requests WHERE user_id = $1 ORDER BY requested_at DESC LIMIT 1`,
+    [userId]
+  );
+  return reqRow || null;
+}
+
+/**
+ * 13. SUPER ADMIN - LIST UPGRADE REQUESTS
+ */
+async function getAllUpgradeRequests(statusFilter = null) {
+  let whereStr = '';
+  const params = [];
+  if (statusFilter) {
+    whereStr = 'WHERE r.status = $1';
+    params.push(statusFilter);
+  }
+
+  const { rows } = await query(
+    `SELECT r.*, u.email, u.mobile, u.full_name, u.role, p.partner_code, p.first_name, p.last_name
+     FROM partner_upgrade_requests r
+     JOIN users u ON u.id = r.user_id
+     LEFT JOIN partner_profiles p ON p.user_id = u.id
+     ${whereStr}
+     ORDER BY r.requested_at DESC`,
+    params
+  );
+  return rows;
+}
+
+/**
+ * 14. SUPER ADMIN - APPROVE UPGRADE REQUEST
+ */
+async function approveUpgradeRequest(requestId, adminUserId) {
+  const { rows: [reqRow] } = await query(
+    `SELECT * FROM partner_upgrade_requests WHERE id = $1`,
+    [requestId]
+  );
+  if (!reqRow) throw new Error('Upgrade request not found');
+
+  if (reqRow.status === 'APPROVED') {
+    return { success: true, message: 'Already approved' };
+  }
+
+  // Update request
+  await query(
+    `UPDATE partner_upgrade_requests 
+     SET status = 'APPROVED', reviewed_at = NOW(), reviewed_by = $1 WHERE id = $2`,
+    [adminUserId, requestId]
+  );
+
+  // Upgrade user role to PARTNER
+  await query(
+    `UPDATE users SET role = 'PARTNER' WHERE id = $1`,
+    [reqRow.user_id]
+  );
+
+  // Enable team creation
+  await query(
+    `UPDATE partner_profiles SET allow_team_creation = TRUE WHERE user_id = $1`,
+    [reqRow.user_id]
+  );
+
+  return { success: true, message: 'User successfully upgraded to PARTNER' };
+}
+
+/**
+ * 15. SUPER ADMIN - REJECT UPGRADE REQUEST
+ */
+async function rejectUpgradeRequest(requestId, adminUserId, reason) {
+  const { rows: [reqRow] } = await query(
+    `SELECT * FROM partner_upgrade_requests WHERE id = $1`,
+    [requestId]
+  );
+  if (!reqRow) throw new Error('Upgrade request not found');
+
+  await query(
+    `UPDATE partner_upgrade_requests 
+     SET status = 'REJECTED', rejection_reason = $1, reviewed_at = NOW(), reviewed_by = $2 WHERE id = $3`,
+    [reason || 'Request rejected by admin', adminUserId, requestId]
+  );
+
+  return { success: true, message: 'Upgrade request rejected' };
+}
+
 module.exports = {
   getPartnerProfileIdByUserId,
   isPartnerInDownline,
@@ -977,6 +1137,12 @@ module.exports = {
   getTeamSettings,
   updateTeamSettings,
   getTeamMemberById,
-  processTeamOverrideCommission
+  processTeamOverrideCommission,
+  getPartnerTeamInfo,
+  requestPartnerUpgrade,
+  getUpgradeStatus,
+  getAllUpgradeRequests,
+  approveUpgradeRequest,
+  rejectUpgradeRequest
 };
 

@@ -61,6 +61,7 @@ const migrate = async () => {
   await renameEnumValue('user_role', 'admin', 'ADMIN');
   await renameEnumValue('user_role', 'employee', 'EMPLOYEE');
   await renameEnumValue('user_role', 'Partner', 'PARTNER');
+  await addEnumValue('user_role', 'TEAM_MEMBER');
   try { await query(`ALTER TABLE users ALTER COLUMN role SET DEFAULT 'PARTNER'`); } catch (err) {}
   await query(`
     DO $$ BEGIN
@@ -3867,6 +3868,53 @@ const migrate = async () => {
       logger.info('Team Management Module Schema Migration (Task 26) completed successfully.');
     } catch (task26Err) {
       logger.error('Failed to run Team Management Module Schema Migration (Task 26):', task26Err.message);
+    }
+
+    // ── Referral & Team Business Rules (v2) Migration ──────────────────────────
+    try {
+      await query(`
+        ALTER TABLE partner_profiles
+        ADD COLUMN IF NOT EXISTS referral_bonus_paid BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS approved_credit_cards INTEGER DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS referred_by_id UUID REFERENCES partner_profiles(id)
+      `);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_teams (
+          id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          partner_id        UUID UNIQUE NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          team_name         VARCHAR(255) NOT NULL,
+          team_code         VARCHAR(50) UNIQUE NOT NULL,
+          created_at        TIMESTAMPTZ DEFAULT NOW(),
+          updated_at        TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_partner_teams_code ON partner_teams(team_code)`);
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_upgrade_requests (
+          id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          partner_id        UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+          status            VARCHAR(50) DEFAULT 'PENDING',
+          requested_at      TIMESTAMPTZ DEFAULT NOW(),
+          reviewed_at       TIMESTAMPTZ,
+          reviewed_by       UUID REFERENCES users(id),
+          rejection_reason  TEXT
+        )
+      `);
+      await query(`CREATE INDEX IF NOT EXISTS idx_upgrade_requests_user ON partner_upgrade_requests(user_id)`);
+      await query(`CREATE INDEX IF NOT EXISTS idx_upgrade_requests_status ON partner_upgrade_requests(status)`);
+
+      await query(`
+        ALTER TABLE products
+        ADD COLUMN IF NOT EXISTS partner_share_value DECIMAL(12,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS team_member_share_value DECIMAL(12,2) DEFAULT 0
+      `);
+
+      logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');
+    } catch (v2Err) {
+      logger.error('Failed to run Referral & Team Business Rules (v2) Schema Migration:', v2Err.message);
     }
 
   } catch (task14Err) {

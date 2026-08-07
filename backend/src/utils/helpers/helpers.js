@@ -60,9 +60,27 @@ const sanitizeMobile = (mobile) => {
   return mobile;
 };
 
+// Generate secure random referral code (12-16 uppercase alphanumeric chars)
+const generateRandomReferralCode = (length = 12) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  const bytes = crypto.randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return result;
+};
+
+// Generate Team Code (starts with TM + 11 random uppercase alphanumeric chars)
+const generateTeamCode = (length = 11) => {
+  return 'TM' + generateRandomReferralCode(length);
+};
+
 module.exports = {
   generateAppNumber,
   generatePartnerCode,
+  generateRandomReferralCode,
+  generateTeamCode,
   hashOTP,
   generateOTP,
   calculateCommission,

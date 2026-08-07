@@ -188,6 +188,45 @@ async function getMemberById(req, res, next) {
   }
 }
 
+/**
+ * GET /api/v1/team/info
+ */
+async function getTeamInfo(req, res, next) {
+  try {
+    const partnerId = await resolvePartnerId(req);
+    const data = await teamService.getPartnerTeamInfo(partnerId);
+    return res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/team/upgrade-request
+ */
+async function requestUpgrade(req, res, next) {
+  try {
+    let partnerId = null;
+    try { partnerId = await resolvePartnerId(req); } catch (e) {}
+    const data = await teamService.requestPartnerUpgrade(req.user.id, partnerId);
+    return res.json({ success: true, ...data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/v1/team/upgrade-status
+ */
+async function getUpgradeStatus(req, res, next) {
+  try {
+    const data = await teamService.getUpgradeStatus(req.user.id);
+    return res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
@@ -197,5 +236,8 @@ module.exports = {
   getGoals,
   getSettings,
   updateSettings,
-  getMemberById
+  getMemberById,
+  getTeamInfo,
+  requestUpgrade,
+  getUpgradeStatus
 };

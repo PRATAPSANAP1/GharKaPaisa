@@ -5,6 +5,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── Module-level singleton state ─────────────────────────────────────────────
+if (typeof window !== 'undefined' && typeof window.TraceIQ === 'undefined') {
+  window.TraceIQ = {
+    track: function () {},
+    page: function () {},
+    identify: function () {},
+  };
+}
+
 let scriptLoaded = false;
 let scriptLoading = false;
 let widgetInitialized = false;

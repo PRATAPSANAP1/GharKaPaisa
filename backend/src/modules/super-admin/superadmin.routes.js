@@ -71,4 +71,30 @@ router.delete('/products/:id', productCtrl.deleteProduct);
 // CRM Bulk Export
 router.get('/crm/bulk-export', appCtrl.exportApplicationsCSV);
 
+// Upgrade Requests (Task 27)
+const teamService = require('../team/team.service.js');
+
+router.get('/upgrade-requests', async (req, res, next) => {
+  try {
+    const status = req.query.status || null;
+    const data = await teamService.getAllUpgradeRequests(status);
+    return res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+router.post('/upgrade-requests/:id/approve', async (req, res, next) => {
+  try {
+    const data = await teamService.approveUpgradeRequest(req.params.id, req.user.id);
+    return res.json({ success: true, ...data });
+  } catch (err) { next(err); }
+});
+
+router.post('/upgrade-requests/:id/reject', async (req, res, next) => {
+  try {
+    const reason = req.body.reason || 'Rejected by super admin';
+    const data = await teamService.rejectUpgradeRequest(req.params.id, req.user.id, reason);
+    return res.json({ success: true, ...data });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
