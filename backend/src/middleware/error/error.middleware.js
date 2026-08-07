@@ -53,6 +53,11 @@ const errorHandler = (err, req, res, next) => {
     return error(res, 'Database connection unavailable. Please check AWS RDS connectivity.', 503);
   }
 
+  // Custom status code error handling
+  if (err.statusCode) {
+    return error(res, err.message, err.statusCode);
+  }
+
   // Default
   if (process.env.NODE_ENV === 'development') {
     return res.status(500).json({ success: false, message: err.message, stack: err.stack });
