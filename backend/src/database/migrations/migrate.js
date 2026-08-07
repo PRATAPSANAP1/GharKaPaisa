@@ -91,6 +91,7 @@ const migrate = async () => {
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await addEnumValue('product_category', 'card_on_loan');
+  await addEnumValue('product_category', 'insurance');
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_type AS ENUM ('credit','debit');

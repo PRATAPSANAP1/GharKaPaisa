@@ -14,15 +14,15 @@ const processCommissionHoldReleases = async () => {
     // Find all wallet_ledger entries pending approval older than 7 days
     const { rows: pendingHolds } = await query(`
       SELECT l.id, l.partner_id, l.application_id, l.credit, l.transaction_type, l.created_at,
-             p.category as product_category
+             p.category::text as product_category
       FROM wallet_ledger l
       LEFT JOIN applications a ON a.id = l.application_id
       LEFT JOIN products p ON p.id = a.product_id
       WHERE l.status = 'Pending Approval'
         AND l.credit > 0
         AND (
-          (COALESCE(p.category, 'credit_card') IN ('credit_card', 'insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
-          OR (COALESCE(p.category, 'credit_card') NOT IN ('credit_card', 'insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
+          (COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
+          OR (COALESCE(p.category::text, 'credit_card') NOT IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
         )
     `);
 
