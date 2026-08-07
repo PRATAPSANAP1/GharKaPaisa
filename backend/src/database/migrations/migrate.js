@@ -3842,8 +3842,6 @@ const migrate = async () => {
       await query(`
         CREATE TABLE IF NOT EXISTS team_activity (
           id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-          parent_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
-          child_partner_id  UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
           activity_type     VARCHAR(50) NOT NULL,
           description       TEXT NOT NULL,
           metadata          JSONB DEFAULT '{}',
