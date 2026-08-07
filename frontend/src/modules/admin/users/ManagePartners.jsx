@@ -151,14 +151,18 @@ export default function ManagePartners() {
         const videoDoc = p.partner_video;
         
         setVideoPlayUrl('');
-        if (videoDoc && videoDoc.id) {
-          try {
-            const videoViewRes = await api.get(`/partner/kyc/documents/${videoDoc.id}/view`);
-            if (videoViewRes.data?.success && videoViewRes.data?.data?.url) {
-              setVideoPlayUrl(videoViewRes.data.data.url);
+        if (videoDoc) {
+          if (videoDoc.video_url) {
+            setVideoPlayUrl(videoDoc.video_url);
+          } else if (videoDoc.id) {
+            try {
+              const videoViewRes = await api.get(`/partner/kyc/documents/${videoDoc.id}/view`);
+              if (videoViewRes.data?.success && videoViewRes.data?.data?.url) {
+                setVideoPlayUrl(videoViewRes.data.data.url);
+              }
+            } catch (vidErr) {
+              console.error("Failed to generate secure video link", vidErr);
             }
-          } catch (vidErr) {
-            console.error("Failed to generate secure video link", vidErr);
           }
         }
 
@@ -334,8 +338,16 @@ export default function ManagePartners() {
     }
   };
 
-  const handleViewDocument = async (docId) => {
+  const handleViewDocument = async (docId, fallbackUrl = null) => {
+    if (fallbackUrl && (fallbackUrl.startsWith('http://') || fallbackUrl.startsWith('https://'))) {
+      window.open(fallbackUrl, '_blank');
+      return;
+    }
     if (!docId || docId === 'undefined') {
+      if (fallbackUrl) {
+        window.open(fallbackUrl, '_blank');
+        return;
+      }
       alert("Document not available.");
       return;
     }
@@ -343,10 +355,16 @@ export default function ManagePartners() {
       const res = await api.get(`/partner/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
         window.open(res.data.data.url, '_blank');
+      } else if (fallbackUrl) {
+        window.open(fallbackUrl, '_blank');
       } else {
         alert("Failed to generate secure view link.");
       }
     } catch (e) {
+      if (fallbackUrl) {
+        window.open(fallbackUrl, '_blank');
+        return;
+      }
       alert(e.response?.data?.message || "Error generating secure view link.");
     }
   };
@@ -752,9 +770,9 @@ export default function ManagePartners() {
                               </div>
                               <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                                 <button
-                                  onClick={() => handleViewDocument(doc.id)}
-                                  disabled={!doc.id || doc.id === 'undefined'}
-                                  style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: (!doc.id || doc.id === 'undefined') ? C.textLight : C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: (!doc.id || doc.id === 'undefined') ? "not-allowed" : "pointer", marginRight: "12px" }}
+                                  onClick={() => handleViewDocument(doc.id, doc.file_url)}
+                                  disabled={(!doc.id || doc.id === 'undefined') && !doc.file_url}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: ((!doc.id || doc.id === 'undefined') && !doc.file_url) ? C.textLight : C.teal, fontWeight: 700, textDecoration: "none", background: "transparent", border: "none", cursor: ((!doc.id || doc.id === 'undefined') && !doc.file_url) ? "not-allowed" : "pointer", marginRight: "12px" }}
                                 >
                                   <Icons.eye size={14} /> View File
                                 </button>

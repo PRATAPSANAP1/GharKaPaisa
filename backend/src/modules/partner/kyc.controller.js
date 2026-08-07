@@ -94,19 +94,19 @@ const viewDocument = async (req, res, next) => {
       return error(res, 'User account is inactive or suspended.', 403);
     }
 
-    // Fetch the document details from kyc_documents
+    // Fetch document details from kyc_documents or partner_videos
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docId);
     let doc;
     if (isUuid) {
       const { rows: [result] } = await query(
-        `SELECT s3_key, partner_id FROM kyc_documents WHERE id = $1`,
+        `SELECT s3_key, file_url, partner_id FROM kyc_documents WHERE id = $1`,
         [docId]
       );
       doc = result;
       if (!doc) {
         // Fallback: check partner_videos (by id or partner_id)
         const { rows: [videoResult] } = await query(
-          `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE id = $1 OR partner_id = $1`,
+          `SELECT storage_key AS s3_key, video_url AS file_url, partner_id FROM partner_videos WHERE id = $1 OR partner_id = $1 ORDER BY uploaded_at DESC LIMIT 1`,
           [docId]
         );
         doc = videoResult;
@@ -125,20 +125,20 @@ const viewDocument = async (req, res, next) => {
       if (targetPartnerId) {
         if (docId === 'video') {
           const { rows: [videoResult] } = await query(
-            `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE partner_id = $1`,
+            `SELECT storage_key AS s3_key, video_url AS file_url, partner_id FROM partner_videos WHERE partner_id = $1 ORDER BY uploaded_at DESC LIMIT 1`,
             [targetPartnerId]
           );
           doc = videoResult;
           if (!doc) {
             const { rows: [kycVideo] } = await query(
-              `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'video'`,
+              `SELECT s3_key, file_url, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'video' ORDER BY uploaded_at DESC LIMIT 1`,
               [targetPartnerId]
             );
             doc = kycVideo;
           }
         } else {
           const { rows: [result] } = await query(
-            `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
+            `SELECT s3_key, file_url, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2 ORDER BY uploaded_at DESC LIMIT 1`,
             [targetPartnerId, docId]
           );
           doc = result;
@@ -146,7 +146,8 @@ const viewDocument = async (req, res, next) => {
       }
     }
 
-    if (!doc || !doc.s3_key) {
+    const rawKey = doc?.s3_key || doc?.file_url;
+    if (!doc || !rawKey) {
       return success(res, { url: null, uploaded: false, message: 'Document or Video not yet uploaded.' });
     }
 
@@ -169,8 +170,17 @@ const viewDocument = async (req, res, next) => {
       return error(res, 'Access denied. You do not have permission to view this document.', 403);
     }
 
-    // Generate S3 signed URL
-    const signedUrl = await getSignedDownloadUrl(doc.s3_key);
+    // Generate signed URL if s3 key or generate direct URL
+    let signedUrl = rawKey;
+    if (rawKey.startsWith('http://') || rawKey.startsWith('https://')) {
+      signedUrl = rawKey;
+    } else {
+      try {
+        signedUrl = await getSignedDownloadUrl(rawKey);
+      } catch (s3Err) {
+        signedUrl = rawKey;
+      }
+    }
 
     // Support both redirect and JSON output depending on query parameter
     if (req.query.redirect === 'true') {
