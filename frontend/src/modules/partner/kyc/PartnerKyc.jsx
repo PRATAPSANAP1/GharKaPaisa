@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../app/store/authStore';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -32,7 +31,6 @@ function useIsMobile() {
 }
 
 export default function PartnerKyc() {
-  const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const { isMobile, isTablet } = useIsMobile();
 
@@ -45,8 +43,7 @@ export default function PartnerKyc() {
     kyc_status: 'draft',
     rejection_reason: null,
     documents: [],
-    video: null,
-    timeline: []
+    video: null
   });
 
   const [loading, setLoading] = useState(false);
@@ -57,16 +54,8 @@ export default function PartnerKyc() {
 
   // File uploads
   const [panFile, setPanFile] = useState(null);
-  const [aadhaarFile, setAadhaarFile] = useState(null);
-  const [selfieFile, setSelfieFile] = useState(null);
   const [chequeFile, setChequeFile] = useState(null);
   const [panNumber, setPanNumber] = useState('');
-  const [aadhaarNumber, setAadhaarNumber] = useState('');
-
-  // OCR state
-  const [ocrLoading, setOcrLoading] = useState({ pan: false, aadhaar: false });
-  // Face Match state
-  const [faceMatchLoading, setFaceMatchLoading] = useState(false);
 
   // Video recording states
   const [cameraActive, setCameraActive] = useState(false);
@@ -95,14 +84,10 @@ export default function PartnerKyc() {
         if (panDoc?.doc_number) {
           setPanNumber(panDoc.doc_number);
         }
-        const aadhaarDoc = data.documents?.find(d => d.doc_type === 'aadhaar');
-        if (aadhaarDoc?.doc_number) {
-          setAadhaarNumber(aadhaarDoc.doc_number);
-        }
 
         if (data.video) {
           try {
-            const viewRes = await api.get('/kyc/documents/video/view');
+            const viewRes = await api.get('/partner/kyc/documents/video/view');
             if (viewRes.data?.success && viewRes.data?.data?.url) {
               setVideoPlayUrl(viewRes.data.data.url);
             }
@@ -123,22 +108,21 @@ export default function PartnerKyc() {
     fetchProfile();
   }, []);
 
-  // Compute progress percentage based on 5 parts (PAN, Aadhaar, Selfie, Cheque, Video)
+  // Compute progress percentage
   const getProgress = () => {
     const hasPan = kycData.documents?.some(d => d.doc_type === 'pan' && d.verification_status !== 'rejected');
-    const hasAadhaar = kycData.documents?.some(d => d.doc_type === 'aadhaar' && d.verification_status !== 'rejected');
-    const hasSelfie = kycData.documents?.some(d => d.doc_type === 'selfie' && d.verification_status !== 'rejected');
     const hasCheque = kycData.documents?.some(d => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
     const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
     
     let count = 0;
     if (hasPan) count++;
-    if (hasAadhaar) count++;
-    if (hasSelfie) count++;
     if (hasCheque) count++;
     if (hasVideo) count++;
 
-    return Math.round((count / 5) * 100);
+    if (count === 0) return 0;
+    if (count === 1) return 33;
+    if (count === 2) return 66;
+    return 100;
   };
 
   // Document Helpers
@@ -309,98 +293,6 @@ export default function PartnerKyc() {
     }
   };
 
-  const handleUploadAadhaar = async (selectedFile) => {
-    const fileToUpload = selectedFile || aadhaarFile;
-    if (!fileToUpload && !isDocApproved('aadhaar')) return setErrorMsg('Please choose a file for Aadhaar Card.');
-    if (!aadhaarNumber.trim()) return setErrorMsg('Please enter your Aadhaar Card number.');
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    
-    try {
-      const formData = new FormData();
-      if (fileToUpload) formData.append('document', fileToUpload);
-      formData.append('aadhaar_number', aadhaarNumber.trim());
-
-      const res = await api.post('/partner/kyc/upload-aadhaar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (res.data?.success) {
-        setSuccessMsg('Aadhaar Card uploaded successfully!');
-        setAadhaarFile(null);
-        loadKycDetails();
-      }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Aadhaar Card upload failed.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleUploadSelfie = async (selectedFile) => {
-    const fileToUpload = selectedFile || selfieFile;
-    if (!fileToUpload) return setErrorMsg('Please choose a selfie image.');
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    try {
-      const formData = new FormData();
-      formData.append('selfie', fileToUpload);
-
-      const res = await api.post('/partner/kyc/upload-selfie', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (res.data?.success) {
-        setSuccessMsg('Selfie uploaded successfully!');
-        setSelfieFile(null);
-        loadKycDetails();
-      }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Selfie upload failed.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRunOCR = async (docType) => {
-    setOcrLoading(prev => ({ ...prev, [docType]: true }));
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      // Add simulated loading delay of 1.5s
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const res = await api.post('/partner/kyc/ocr-scan', { doc_type: docType });
-      if (res.data?.success) {
-        setSuccessMsg(`OCR scan completed for ${docType.toUpperCase()} Card!`);
-        loadKycDetails();
-      }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'OCR scanning failed.');
-    } finally {
-      setOcrLoading(prev => ({ ...prev, [docType]: false }));
-    }
-  };
-
-  const handleRunFaceMatch = async () => {
-    setFaceMatchLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      // Add simulated loading delay of 2s
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const res = await api.post('/partner/kyc/face-match');
-      if (res.data?.success) {
-        setSuccessMsg(`Face match check completed! Score: ${res.data.data.match_score}%`);
-        loadKycDetails();
-      }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Face match verification failed.');
-    } finally {
-      setFaceMatchLoading(false);
-    }
-  };
-
   const handleUploadCheque = async (selectedFile) => {
     const fileToUpload = selectedFile || chequeFile;
     if (!fileToUpload) return setErrorMsg('Please choose a file for Cancelled Cheque.');
@@ -433,7 +325,7 @@ export default function PartnerKyc() {
       return;
     }
     try {
-      const res = await api.get(`/kyc/documents/${docId}/view`);
+      const res = await api.get(`/partner/kyc/documents/${docId}/view`);
       if (res.data?.success && res.data?.data?.url) {
         window.open(res.data.data.url, '_blank');
       } else {
@@ -532,8 +424,8 @@ export default function PartnerKyc() {
         gap: isMobile ? '12px' : '16px'
       }}>
         <div>
-          <h1 style={{ fontSize: isMobile ? '22px' : isTablet ? '26px' : '32px', fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>{t("KYC Center")}</h1>
-          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: '4px 0 0 0', wordBreak: 'break-word' }}>{t("Complete verification to unlock full dashboard capabilities.")}</p>
+          <h1 style={{ fontSize: isMobile ? '22px' : isTablet ? '26px' : '32px', fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>KYC Center</h1>
+          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: '4px 0 0 0', wordBreak: 'break-word' }}>Complete verification to unlock full dashboard capabilities.</p>
         </div>
         <button 
           onClick={() => setShowGuidelines(true)}
@@ -603,7 +495,7 @@ export default function PartnerKyc() {
         boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 700 }}>{t("Verification Completion Progress")}</span>
+          <span style={{ fontSize: isMobile ? '12.5px' : '13.5px', fontWeight: 700 }}>Verification Completion Progress</span>
           <span style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: 800, color: '#2563EB' }}>{getProgress()}%</span>
         </div>
         <div style={{ background: isDark ? '#334155' : '#E2E8F0', height: isMobile ? '8px' : '10px', borderRadius: '5px', overflow: 'hidden' }}>
@@ -634,28 +526,28 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("1. PAN Card")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>1. PAN Card</h3>
               {isDocApproved('pan') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : getDoc('pan') ? (
                 <span style={{ color: isDocRejected('pan') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('pan') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isDocRejected('pan') ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload clear digital photo or PDF of your PAN Card. Max 5MB.")}</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload clear digital photo or PDF of your PAN Card. Max 5MB.</p>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>{t("PAN Card Number")}</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
               <input 
                 type="text"
                 disabled={isDocApproved('pan') || isUnderReview}
                 value={panNumber}
                 onChange={(e) => setPanNumber(e.target.value)}
-                placeholder={t("Enter 10-digit PAN")}
+                placeholder="Enter 10-digit PAN"
                 maxLength={10}
                 style={{
                   width: '100%',
@@ -711,69 +603,40 @@ export default function PartnerKyc() {
                 </label>
               </div>
             )}
-
-            {/* OCR Scanned Results display */}
-            {getDoc('pan')?.ocr_data && (
-              <div style={{ background: isDark ? '#0F172A' : '#F0FDF4', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BBF7D0'}`, fontSize: '12px', marginTop: '12px' }}>
-                <div style={{ fontWeight: 'bold', color: '#16A34A', marginBottom: '6px' }}>⚡ OCR Read Results:</div>
-                <div>Name: <strong>{getDoc('pan').ocr_data.name}</strong></div>
-                <div>DOB: <strong>{getDoc('pan').ocr_data.date_of_birth}</strong></div>
-                <div>PAN: <strong>{getDoc('pan').ocr_data.pan_number}</strong></div>
-              </div>
-            )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginTop: '16px' }}>
             {getDoc('pan') && (
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <button 
-                  onClick={() => handleViewFile(getDoc('pan').id)}
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: `1px solid ${cardBorder}`,
-                    color: textPrimary,
-                    borderRadius: '10px',
-                    padding: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  View
-                </button>
-                {!isDocApproved('pan') && !isUnderReview && (
-                  <button 
-                    onClick={() => handleRunOCR('pan')}
-                    disabled={ocrLoading.pan}
-                    style={{
-                      flex: 1.5,
-                      background: '#0D9488',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {ocrLoading.pan ? 'Scanning...' : 'Scan PAN (OCR)'}
-                  </button>
-                )}
-              </div>
+              <button 
+                onClick={() => handleViewFile(getDoc('pan').id)}
+                style={{
+                  flex: isMobile ? 'unset' : 1,
+                  width: isMobile ? '100%' : 'auto',
+                  background: 'transparent',
+                  border: `1px solid ${cardBorder}`,
+                  color: textPrimary,
+                  borderRadius: '10px',
+                  padding: isMobile ? '10px' : '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                View Upload
+              </button>
             )}
-            {!isDocApproved('pan') && !isUnderReview && !getDoc('pan') && (
+            {!isDocApproved('pan') && !isUnderReview && (
               <button 
                 onClick={handleUploadPan}
                 disabled={actionLoading}
                 style={{
-                  width: '100%',
+                  flex: isMobile ? 'unset' : 2,
+                  width: isMobile ? '100%' : 'auto',
                   background: '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '10px',
-                  padding: '10px',
+                  padding: isMobile ? '10px' : '8px',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer'
@@ -785,318 +648,7 @@ export default function PartnerKyc() {
           </div>
         </div>
 
-        {/* Card 2: Aadhaar Card */}
-        <div style={{
-          background: cardBg,
-          border: `1px solid ${isDocRejected('aadhaar') ? '#EF4444' : cardBorder}`,
-          borderRadius: isMobile ? '12px' : '16px',
-          padding: isMobile ? '16px' : '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
-          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
-          wordBreak: 'break-word'
-        }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("2. Aadhaar Card")}</h3>
-              {isDocApproved('aadhaar') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
-              ) : getDoc('aadhaar') ? (
-                <span style={{ color: isDocRejected('aadhaar') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('aadhaar') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
-                  {isDocRejected('aadhaar') ? 'Rejected' : 'Uploaded'}
-                </span>
-              ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
-              )}
-            </div>
-
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload clear digital photo or PDF of your Aadhaar. Max 5MB.")}</p>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>{t("Aadhaar Number")}</label>
-              <input 
-                type="text"
-                disabled={isDocApproved('aadhaar') || isUnderReview}
-                value={aadhaarNumber}
-                onChange={(e) => setAadhaarNumber(e.target.value)}
-                placeholder={t("Enter Aadhaar number")}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '10px',
-                  background: isDark ? '#0F172A' : '#F8FAFC',
-                  border: `1px solid ${cardBorder}`,
-                  borderRadius: '8px',
-                  color: textPrimary,
-                  fontWeight: 600
-                }}
-              />
-            </div>
-
-            {!isDocApproved('aadhaar') && !isUnderReview && (
-              <div style={{ marginBottom: '16px' }}>
-                <input 
-                  type="file"
-                  id="aadhaar-file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      setAadhaarFile(file);
-                      if (aadhaarNumber.trim()) {
-                        handleUploadAadhaar(file);
-                      } else {
-                        setErrorMsg('Please enter your Aadhaar number first.');
-                      }
-                    }
-                  }}
-                  style={{ display: 'none' }}
-                />
-                <label 
-                  htmlFor="aadhaar-file"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px',
-                    border: `2px dashed ${cardBorder}`,
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: isDark ? '#1E293B' : '#F8FAFC'
-                  }}
-                >
-                  <MdUploadFile size={24} color="#2563EB" />
-                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
-                    {aadhaarFile ? aadhaarFile.name : 'Choose File'}
-                  </span>
-                </label>
-              </div>
-            )}
-
-            {/* OCR Scanned Results display */}
-            {getDoc('aadhaar')?.ocr_data && (
-              <div style={{ background: isDark ? '#0F172A' : '#F0FDF4', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BBF7D0'}`, fontSize: '12px', marginTop: '12px' }}>
-                <div style={{ fontWeight: 'bold', color: '#16A34A', marginBottom: '6px' }}>⚡ OCR Read Results:</div>
-                <div>Name: <strong>{getDoc('aadhaar').ocr_data.name}</strong></div>
-                <div>Number: <strong>{getDoc('aadhaar').ocr_data.aadhaar_number}</strong></div>
-                <div>Address: <strong>{getDoc('aadhaar').ocr_data.address}</strong></div>
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-            {getDoc('aadhaar') && (
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <button 
-                  onClick={() => handleViewFile(getDoc('aadhaar').id)}
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: `1px solid ${cardBorder}`,
-                    color: textPrimary,
-                    borderRadius: '10px',
-                    padding: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  View
-                </button>
-                {!isDocApproved('aadhaar') && !isUnderReview && (
-                  <button 
-                    onClick={() => handleRunOCR('aadhaar')}
-                    disabled={ocrLoading.aadhaar}
-                    style={{
-                      flex: 1.5,
-                      background: '#0D9488',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {ocrLoading.aadhaar ? 'Scanning...' : 'Scan Aadhaar (OCR)'}
-                  </button>
-                )}
-              </div>
-            )}
-            {!isDocApproved('aadhaar') && !isUnderReview && !getDoc('aadhaar') && (
-              <button 
-                onClick={handleUploadAadhaar}
-                disabled={actionLoading}
-                style={{
-                  width: '100%',
-                  background: '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                {actionLoading ? 'Uploading...' : 'Upload Aadhaar'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Card 3: Selfie Verification */}
-        <div style={{
-          background: cardBg,
-          border: `1px solid ${isDocRejected('selfie') ? '#EF4444' : cardBorder}`,
-          borderRadius: isMobile ? '12px' : '16px',
-          padding: isMobile ? '16px' : '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          opacity: (isApproved || isUnderReview) ? 0.75 : 1,
-          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
-          wordBreak: 'break-word'
-        }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("3. Selfie Verification")}</h3>
-              {isDocApproved('selfie') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
-              ) : getDoc('selfie') ? (
-                <span style={{ color: isDocRejected('selfie') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('selfie') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
-                  {isDocRejected('selfie') ? 'Rejected' : 'Uploaded'}
-                </span>
-              ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
-              )}
-            </div>
-
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload a close-up passport size selfie photo for face match validation. Max 5MB.")}</p>
-
-            {!isDocApproved('selfie') && !isUnderReview && (
-              <div style={{ marginBottom: '16px' }}>
-                <input 
-                  type="file"
-                  id="selfie-file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      setSelfieFile(file);
-                      handleUploadSelfie(file);
-                    }
-                  }}
-                  style={{ display: 'none' }}
-                />
-                <label 
-                  htmlFor="selfie-file"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px',
-                    border: `2px dashed ${cardBorder}`,
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: isDark ? '#1E293B' : '#F8FAFC'
-                  }}
-                >
-                  <MdUploadFile size={24} color="#2563EB" />
-                  <span style={{ fontSize: '12px', fontWeight: 600, marginTop: '8px', wordBreak: 'break-all', textAlign: 'center', maxWidth: '100%' }}>
-                    {selfieFile ? selfieFile.name : 'Choose File'}
-                  </span>
-                </label>
-              </div>
-            )}
-
-            {/* Face Match Scorecard */}
-            {kycData.face_match_score !== null && (
-              <div style={{ background: isDark ? '#0F172A' : '#EFF6FF', padding: '12px', borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#BFDBFE'}`, fontSize: '12px', marginTop: '12px' }}>
-                <div style={{ fontWeight: 'bold', color: '#1D4ED8', marginBottom: '6px' }}>🧬 Similarity Scorecard:</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Face Similarity Match:</span>
-                  <strong style={{ fontSize: '14px', color: kycData.face_match_score >= 80 ? '#16A34A' : '#DC2626' }}>
-                    {kycData.face_match_score}%
-                  </strong>
-                </div>
-                <div style={{ fontSize: '11px', color: textSecondary, marginTop: '4px' }}>
-                  {kycData.face_match_score >= 80 ? '✓ Verification threshold passed' : '✗ Manual compliance review required'}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-            {getDoc('selfie') && (
-              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                <button 
-                  onClick={() => handleViewFile(getDoc('selfie').id)}
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: `1px solid ${cardBorder}`,
-                    color: textPrimary,
-                    borderRadius: '10px',
-                    padding: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  View
-                </button>
-                {!isDocApproved('selfie') && !isUnderReview && (
-                  <button 
-                    onClick={handleRunFaceMatch}
-                    disabled={faceMatchLoading || !getDoc('pan')}
-                    style={{
-                      flex: 1.5,
-                      background: '#1D4ED8',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '8px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      opacity: !getDoc('pan') ? 0.6 : 1
-                    }}
-                    title={!getDoc('pan') ? 'Upload PAN Card first' : ''}
-                  >
-                    {faceMatchLoading ? 'Verifying...' : 'Face Match'}
-                  </button>
-                )}
-              </div>
-            )}
-            {!isDocApproved('selfie') && !isUnderReview && !getDoc('selfie') && (
-              <button 
-                onClick={handleUploadSelfie}
-                disabled={actionLoading}
-                style={{
-                  width: '100%',
-                  background: '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '10px',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                {actionLoading ? 'Uploading...' : 'Upload Selfie'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Card 4: Cancelled Cheque */}
+        {/* Card 2: Cancelled Cheque */}
         <div style={{
           background: cardBg,
           border: `1px solid ${isDocRejected('cancelled_cheque') ? '#EF4444' : cardBorder}`,
@@ -1111,19 +663,19 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("4. Bank Account Proof")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>2. Bank Account Proof</h3>
               {isDocApproved('cancelled_cheque') ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : getDoc('cancelled_cheque') ? (
                 <span style={{ color: isDocRejected('cancelled_cheque') ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isDocRejected('cancelled_cheque') ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isDocRejected('cancelled_cheque') ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Upload cancelled cheque or latest bank account statement. Max 5MB.")}</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Upload cancelled cheque or latest bank account statement. Max 5MB.</p>
 
             {!isDocApproved('cancelled_cheque') && !isUnderReview && (
               <div style={{ marginBottom: '16px' }}>
@@ -1206,7 +758,7 @@ export default function PartnerKyc() {
           </div>
         </div>
 
-        {/* Card 5: Video Verification */}
+        {/* Card 3: Video Verification */}
         <div style={{
           background: cardBg,
           border: `1px solid ${isVideoRejected() ? '#EF4444' : cardBorder}`,
@@ -1221,19 +773,19 @@ export default function PartnerKyc() {
         }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("5. Video Verification")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>3. Video Verification</h3>
               {isVideoApproved() ? (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>{t("Verified")}</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', background: '#ECFDF5', padding: '4px 8px', borderRadius: '6px' }}>Verified</span>
               ) : kycData.video ? (
                 <span style={{ color: isVideoRejected() ? '#EF4444' : '#F59E0B', fontWeight: 700, fontSize: '12px', background: isVideoRejected() ? '#FEF2F2' : '#FFFBEB', padding: '4px 8px', borderRadius: '6px' }}>
                   {isVideoRejected() ? 'Rejected' : 'Uploaded'}
                 </span>
               ) : (
-                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>{t("Pending")}</span>
+                <span style={{ color: '#64748B', fontWeight: 700, fontSize: '12px', background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px' }}>Pending</span>
               )}
             </div>
 
-            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>{t("Record a short browser video reading the official compliance declaration. Max 100MB.")}</p>
+            <p style={{ fontSize: isMobile ? '12px' : '13px', color: textSecondary, margin: '0 0 16px 0', lineHeight: 1.5 }}>Record a short browser video reading the official compliance declaration. Max 100MB.</p>
 
             {kycData.video && (
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${cardBorder}`, background: '#000000', height: isMobile ? '180px' : '140px', position: 'relative' }}>
@@ -1275,47 +827,6 @@ export default function PartnerKyc() {
 
       </div>
 
-      {/* KYC Stepper Timeline Milestone Tracker */}
-      {kycData.timeline && kycData.timeline.length > 0 && (
-        <div style={{
-          background: cardBg,
-          border: `1px solid ${cardBorder}`,
-          borderRadius: isMobile ? '12px' : '16px',
-          padding: isMobile ? '20px' : '28px',
-          marginBottom: isMobile ? '24px' : '32px',
-          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
-        }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <MdTimeline style={{ color: '#2563EB' }} /> KYC Verification Timeline
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '24px' }}>
-            <div style={{ position: 'absolute', left: '7px', top: '8px', bottom: '8px', width: '2px', background: isDark ? '#334155' : '#E2E8F0' }} />
-            {kycData.timeline.map((step, idx) => (
-              <div key={idx} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {/* Node */}
-                <div style={{
-                  position: 'absolute', left: '-23px', top: '4px',
-                  width: '12px', height: '12px', borderRadius: '50%',
-                  background: step.status === 'completed' ? '#10B981' : step.status === 'rejected' ? '#EF4444' : '#64748B',
-                  border: `2px solid ${cardBg}`
-                }} />
-                <div style={{ fontSize: '14px', fontWeight: 700, color: textPrimary }}>{step.step}</div>
-                {step.date && (
-                  <div style={{ fontSize: '11px', color: textSecondary }}>
-                    {new Date(step.date).toLocaleString('en-IN')}
-                  </div>
-                )}
-                {step.reason && (
-                  <div style={{ fontSize: '12px', color: '#EF4444', background: '#FEF2F2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #FEE2E2', marginTop: '4px', display: 'inline-block', width: 'fit-content' }}>
-                    Reason: {step.reason}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Video Recording Modal / Panel overlay if cameraActive */}
       {cameraActive && (
         <div style={{
@@ -1347,7 +858,7 @@ export default function PartnerKyc() {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>{t("Record Verification Video")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '16px' : '18px', fontWeight: 800 }}>Record Verification Video</h3>
               <button 
                 onClick={() => { stopCamera(); deleteRecording(); }}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -1363,9 +874,9 @@ export default function PartnerKyc() {
               padding: isMobile ? '12px' : '16px',
               borderRadius: '8px'
             }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t("Please read this statement aloud:")}</span>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Please read this statement aloud:</span>
               <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
-                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.partner_code || user?.Partner_code || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
+                "My name is {profile ? `${profile.first_name} ${profile.last_name}` : (user ? `${user.first_name} ${user.last_name || ''}` : 'Partner')} and my partner code is {profile?.partner_code || user?.PartnerCode || 'GKP'}. I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
               </p>
             </div>
 
@@ -1551,8 +1062,8 @@ export default function PartnerKyc() {
           boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
         }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>{t("Submit KYC for Approval")}</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>{t("Ensure all three sections show \"Uploaded\" or \"Verified\" before clicking submit.")}</p>
+            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC for Approval</h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>Ensure all three sections show "Uploaded" or "Verified" before clicking submit.</p>
           </div>
           <button 
             onClick={handleSubmitKyc}
@@ -1605,7 +1116,7 @@ export default function PartnerKyc() {
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? '17px' : '20px', fontWeight: 800 }}>{t("KYC Guidelines")}</h3>
+              <h3 style={{ margin: 0, fontSize: isMobile ? '17px' : '20px', fontWeight: 800 }}>KYC Guidelines</h3>
               <button 
                 onClick={() => setShowGuidelines(false)}
                 style={{ background: 'transparent', border: 'none', color: textSecondary, cursor: 'pointer' }}
@@ -1614,11 +1125,11 @@ export default function PartnerKyc() {
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: isMobile ? '12.5px' : '13.5px', color: textSecondary, lineHeight: 1.6, wordBreak: 'break-word' }}>
-              <p style={{ margin: 0 }}>{t("To ensure quick verification, please verify the following instructions:")}</p>
+              <p style={{ margin: 0 }}>To ensure quick verification, please verify the following instructions:</p>
               <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <li><strong>{t("PAN Card:")}</strong> Make sure the text, photo, and signature are completely visible. No corners of the card should be cropped out.</li>
-                <li><strong>{t("Cancelled Cheque:")}</strong> Your printed name, account number, and IFSC code must be completely readable. Draw two parallel diagonal lines across the cheque writing "CANCELLED" clearly.</li>
-                <li><strong>{t("Video Declaration:")}</strong> Read the printed statement in a clear voice. Ensure your face is fully lit, looking straight at the camera. Do not wear sunglasses or hats.</li>
+                <li><strong>PAN Card:</strong> Make sure the text, photo, and signature are completely visible. No corners of the card should be cropped out.</li>
+                <li><strong>Cancelled Cheque:</strong> Your printed name, account number, and IFSC code must be completely readable. Draw two parallel diagonal lines across the cheque writing "CANCELLED" clearly.</li>
+                <li><strong>Video Declaration:</strong> Read the printed statement in a clear voice. Ensure your face is fully lit, looking straight at the camera. Do not wear sunglasses or hats.</li>
               </ul>
             </div>
           </div>

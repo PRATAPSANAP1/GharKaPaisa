@@ -1,5 +1,4 @@
 const { query, getClient } = require('../../config/database');
-const crypto = require('crypto');
 const { uploadToS3, getSignedDownloadUrl } = require('../../services/aws/s3.service.js');
 const { ensureWallet } = require('../wallet/service.js');
 const { notify } = require('../notifications/service.js');
@@ -14,11 +13,10 @@ const getProfile = async (req, res, next) => {
     const { PartnerId } = req.params;
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
-        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified,
-        abd.is_primary as bank_is_primary
+        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id AND abd.is_primary = true
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
       WHERE ap.id::text = $1
     `, [PartnerId]);
     if (!Partner) return notFound(res);
@@ -77,18 +75,11 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-// PUT /Partners/:PartnerId/profile (Update partner profile & bank details)
+// PUT /Partners/:PartnerId/profile (Update partner profile)
 const updateProfile = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
-    const { 
-      first_name, last_name, current_address, business_location, 
-      company_name, company_type, gst_number, pincode,
-      account_holder_name, bank_name, account_number, ifsc_code, upi_id,
-      nominee_name, nominee_relation, nominee_dob,
-      emergency_contact_name, emergency_contact_phone
-    } = req.body;
-
+    const { first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode } = req.body;
     await query(`
       UPDATE partner_profiles SET
         first_name = COALESCE($1, first_name),
@@ -99,38 +90,10 @@ const updateProfile = async (req, res, next) => {
         company_type = COALESCE($6, company_type),
         gst_number = COALESCE($7, gst_number),
         pincode = COALESCE($8, pincode),
-        nominee_name = COALESCE($10, nominee_name),
-        nominee_relation = COALESCE($11, nominee_relation),
-        nominee_dob = COALESCE($12, nominee_dob),
-        emergency_contact_name = COALESCE($13, emergency_contact_name),
-        emergency_contact_phone = COALESCE($14, emergency_contact_phone),
         updated_at = NOW()
       WHERE id = $9
-    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId, nominee_name || null, nominee_relation || null, nominee_dob || null, emergency_contact_name || null, emergency_contact_phone || null]);
-
-    if (bank_name || account_number || ifsc_code || account_holder_name || upi_id) {
-      let encryptedAccount = account_number || null;
-      if (encryptedAccount) {
-        const { encrypt } = require('../../utils/helpers/crypto');
-        try {
-          encryptedAccount = encrypt(encryptedAccount);
-        } catch (_) {}
-      }
-
-      await query(`
-        INSERT INTO partner_bank_details (partner_id, account_holder_name, bank_name, account_number, ifsc_code, upi_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (partner_id) DO UPDATE SET
-          account_holder_name = COALESCE($2, partner_bank_details.account_holder_name),
-          bank_name = COALESCE($3, partner_bank_details.bank_name),
-          account_number = CASE WHEN $4 IS NOT NULL THEN $4 ELSE partner_bank_details.account_number END,
-          ifsc_code = COALESCE($5, partner_bank_details.ifsc_code),
-          upi_id = COALESCE($6, partner_bank_details.upi_id),
-          updated_at = NOW()
-      `, [PartnerId, account_holder_name || null, bank_name || null, encryptedAccount, ifsc_code || null, upi_id || null]);
-    }
-
-    return success(res, {}, 'Profile and bank details updated successfully');
+    `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId]);
+    return success(res, {}, 'Profile updated');
   } catch (err) {
     next(err);
   }
@@ -214,7 +177,7 @@ const getDashboardStats = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
         FROM applications WHERE partner_id = $1
       `, [PartnerId]),
-      query(`SELECT * FROM partner_wallets WHERE partner_id = $1`, [PartnerId]),
+      query(`SELECT * FROM wallets WHERE partner_id = $1`, [PartnerId]),
       query(`
         SELECT a.app_number, a.status, a.commission_amount, a.created_at,
           c.full_name as customer_name,
@@ -361,12 +324,9 @@ const approvePartner = async (req, res, next) => {
       `, [req.user.id, PartnerId]);
       await client.query(`UPDATE users SET status = 'active'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query(`
-        INSERT INTO partner_wallets (partner_id) VALUES ($1)
+        INSERT INTO wallets (partner_id) VALUES ($1)
         ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
-
-      // Referral click status update to KYC_COMPLETED omitted
-
       await client.query('COMMIT');
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
@@ -396,11 +356,10 @@ const getSelfProfile = async (req, res, next) => {
     // Find the partner profile associated with the user
     const { rows: [Partner] } = await query(`
       SELECT ap.*, u.email, u.mobile, u.status as account_status, u.last_login,
-        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified,
-        abd.is_primary as bank_is_primary
+        abd.bank_name, abd.account_number, abd.ifsc_code, abd.account_holder_name, abd.is_verified as bank_verified
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id AND abd.is_primary = true
+      LEFT JOIN partner_bank_details abd ON abd.partner_id = ap.id
       WHERE ap.user_id = $1
     `, [userId]);
     if (!Partner) return notFound(res, 'Partner profile not found');
@@ -408,34 +367,20 @@ const getSelfProfile = async (req, res, next) => {
     // Mask bank account number
     if (Partner && Partner.account_number) {
       const { decrypt } = require('../../utils/helpers/crypto');
-      try {
-        const decrypted = decrypt(Partner.account_number);
-        const accLen = decrypted.length;
-        if (accLen > 4) {
-          Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
-        } else {
-          Partner.account_number = '*'.repeat(accLen);
-        }
-      } catch (e) {
-        logger.error('Failed to decrypt bank account number:', e.message);
+      const decrypted = decrypt(Partner.account_number);
+      const accLen = decrypted.length;
+      if (accLen > 4) {
+        Partner.account_number = '*'.repeat(accLen - 4) + decrypted.slice(-4);
+      } else {
+        Partner.account_number = '*'.repeat(accLen);
       }
     }
 
     const { rows: kyc } = await query(
-      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at, ocr_data FROM kyc_documents WHERE partner_id = $1`, [Partner.id]
+      `SELECT id, doc_type, doc_number, file_url, s3_key, verified, uploaded_at FROM kyc_documents WHERE partner_id = $1`, [Partner.id]
     );
 
-    // Compute profile completion %
-    let completionPoints = 0;
-    const totalPoints = 5;
-    if (Partner.first_name && Partner.last_name) completionPoints++;
-    if (Partner.nominee_name && Partner.nominee_relation) completionPoints++;
-    if (Partner.emergency_contact_name && Partner.emergency_contact_phone) completionPoints++;
-    if (Partner.company_name || Partner.gst_number) completionPoints++;
-    if (Partner.profile_photo_url) completionPoints++;
-    const profile_completion_percent = Math.round((completionPoints / totalPoints) * 100);
-
-    return success(res, { ...Partner, kyc_documents: kyc, profile_completion_percent });
+    return success(res, { ...Partner, kyc_documents: kyc });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message, stack: err.stack });
   }
@@ -587,7 +532,7 @@ const addTeamMember = async (req, res, next) => {
     `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
 
     // Create wallet
-    await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1)`, [childPartner.id]);
+    await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
 
     await client.query('COMMIT');
     return created(res, { partner_code: partnerCode }, 'Team member created successfully. They can now log in using their email and password.');
@@ -621,65 +566,30 @@ const listPartnerCustomers = async (req, res, next) => {
         c.employment_type,
         c.monthly_income,
         c.employer,
-        COALESCE(MIN(a.created_at), MIN(l.created_at), c.created_at) AS first_application_at,
-        (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
+        MIN(a.created_at) AS first_application_at,
+        COUNT(a.id)::int AS application_count,
         COALESCE(
-          (
-            SELECT json_agg(row_to_json(item) ORDER BY item.created_at DESC)
-            FROM (
-              SELECT 
-                a.id,
-                a.app_number,
-                a.status::text,
-                p.name AS product_name,
-                b.name AS bank_name,
-                b.short_code AS bank_code,
-                a.commission_amount,
-                a.created_at
-              FROM applications a
-              JOIN products p ON p.id = a.product_id
-              LEFT JOIN banks b ON b.id = p.bank_id
-              WHERE a.customer_id = c.id AND a.partner_id = $1
-
-              UNION ALL
-
-              SELECT
-                l.id,
-                CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) AS app_number,
-                l.status::text,
-                p.name AS product_name,
-                COALESCE(b.name, 'Partner Lead') AS bank_name,
-                COALESCE(b.short_code, 'LEAD') AS bank_code,
-                p.commission_value AS commission_amount,
-                l.created_at
-              FROM leads l
-              JOIN products p ON p.id = l.product_id
-              LEFT JOIN banks b ON b.id = p.bank_id
-              WHERE l.mobile = c.mobile AND l.partner_id = $1
-            ) item
-          ),
+          json_agg(
+            json_build_object(
+              'id', a.id,
+              'app_number', a.app_number,
+              'status', a.status,
+              'product_name', p.name,
+              'bank_name', b.name,
+              'bank_code', b.short_code,
+              'commission_amount', a.commission_amount,
+              'created_at', a.created_at
+            ) ORDER BY a.created_at DESC
+          ) FILTER (WHERE a.id IS NOT NULL),
           '[]'::json
         ) AS applications
       FROM customers c
       LEFT JOIN applications a ON a.customer_id = c.id AND a.partner_id = $1
-      LEFT JOIN leads l ON l.mobile = c.mobile AND l.partner_id = $1
-      WHERE a.partner_id = $1 
-         OR l.partner_id = $1 
-         OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
-      GROUP BY 
-        c.id, 
-        c.full_name, 
-        c.mobile, 
-        c.email, 
-        c.pan_number, 
-        c.aadhaar_last4, 
-        c.city, 
-        c.state, 
-        c.employment_type, 
-        c.monthly_income, 
-        c.employer, 
-        c.created_at
-      ORDER BY COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) DESC
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
+      GROUP BY c.id
+      ORDER BY COALESCE(MAX(a.created_at), c.created_at) DESC
     `, [partnerId]);
 
     return success(res, rows);
@@ -846,12 +756,10 @@ const completeTrainingModule = async (req, res, next) => {
   }
 };
 
+// GET /partner/:PartnerId/team (List child partners)
 const getTeamMembers = async (req, res, next) => {
   try {
-    const partnerId = req.params.PartnerId || req.params.partnerId || req.partner?.id;
-    if (!partnerId) {
-      return error(res, 'Partner ID is required', 400);
-    }
+    const { PartnerId } = req.params;
     
     // Check if parent_partner_id column exists safely (in case migration is pending)
     let hasParentCol = true;
@@ -871,14 +779,14 @@ const getTeamMembers = async (req, res, next) => {
              (SELECT COUNT(*)::int FROM applications WHERE partner_id = ap.id) as applications_count,
              (SELECT COALESCE(SUM(wt.amount), 0)::float 
               FROM wallet_transactions wt 
-              JOIN partner_wallets w ON w.id = wt.wallet_id 
+              JOIN wallets w ON w.id = wt.wallet_id 
               WHERE w.partner_id = ap.id AND wt.reference_type = 'commission') as commission_amount,
-              (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
+             (SELECT COALESCE(available_balance, 0)::float FROM wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1
       ORDER BY u.created_at DESC
-    `, [partnerId]);
+    `, [PartnerId]);
 
     return success(res, team);
   } catch (err) {
@@ -886,94 +794,18 @@ const getTeamMembers = async (req, res, next) => {
   }
 };
 
-const parseUserAgent = (ua) => {
-  if (!ua) return { deviceType: 'desktop', browser: 'unknown', os: 'unknown' };
-  
-  let deviceType = 'desktop';
-  if (/mobile|android|iphone|ipad|phone/i.test(ua)) {
-    deviceType = 'mobile';
-  } else if (/tablet|ipad|playbook|silk/i.test(ua)) {
-    deviceType = 'tablet';
-  }
-
-  let browser = 'other';
-  if (/chrome|crios/i.test(ua) && !/edge|opr|opios|ucbrowser/i.test(ua)) browser = 'Chrome';
-  else if (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua)) browser = 'Safari';
-  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
-  else if (/edge|edg/i.test(ua)) browser = 'Edge';
-  else if (/opera|opr/i.test(ua)) browser = 'Opera';
-
-  let os = 'other';
-  if (/windows/i.test(ua)) os = 'Windows';
-  else if (/macintosh|mac os x/i.test(ua) && !/iphone|ipad|ipod/i.test(ua)) os = 'macOS';
-  else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
-  else if (/android/i.test(ua)) os = 'Android';
-  else if (/linux/i.test(ua)) os = 'Linux';
-
-  return { deviceType, browser, os };
-};
-
 const invitePartnerClick = async (req, res, next) => {
   try {
-    const data = { ...req.query, ...req.body };
-    const referralCode = data.referral_code || data.ref;
-    const landingPage = data.landing_page || '/register';
-    const referrer = data.referrer || req.headers['referer'] || null;
-    const utmSource = data.utm_source || data.source || 'direct';
-    const utmMedium = data.utm_medium || data.medium || null;
-    const utmCampaign = data.utm_campaign || data.campaign || null;
+    const { ref } = req.query;
+    if (!ref) return error(res, 'Referral code is required', 400);
 
-    if (!referralCode) return success(res, { tracked: false }, 'No referral code provided');
-
-    const visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
-    const userAgent = req.headers['user-agent'] || null;
-    const { deviceType, browser, os } = parseUserAgent(userAgent);
-
-    // Find the partner ID corresponding to the referral code/ID
-    const { rows: [partner] } = await query(`
-      SELECT id, partner_code FROM partner_profiles 
-      WHERE partner_code = $1 
-         OR id::text = $1 
-         OR user_id::text = $1
-      LIMIT 1
-    `, [referralCode]);
-
-    if (!partner) {
-      return success(res, { tracked: false }, 'Referral code not found');
-    }
-
-    // Generate unique session ID for the click
-    const sessionId = crypto.randomUUID();
-
-    // Insert click record
-    await query(`
-      INSERT INTO referral_clicks (
-        partner_id, partner_code, referral_code, session_id, visitor_ip, user_agent,
-        device_type, browser, os, utm_source, utm_medium, utm_campaign, referrer, landing_page, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'CLICKED')
-    `, [
-      partner.id, partner.partner_code, referralCode, sessionId, visitorIp, userAgent,
-      deviceType, browser, os, utmSource, utmMedium, utmCampaign, referrer, landingPage
-    ]);
-
-    // Update total_invites in partner_referrals (backward compatibility)
     await query(`
       UPDATE partner_referrals 
       SET total_invites = total_invites + 1 
-      WHERE partner_id = $1
-    `, [partner.id]);
+      WHERE referral_code = $1
+    `, [ref]);
 
-    // Set cookie referral_session=sessionId with 30-day expiry
-    const cookieOptions = {
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' || req.secure,
-      sameSite: 'lax',
-      path: '/'
-    };
-    res.cookie('referral_session', sessionId, cookieOptions);
-
-    return success(res, { session_id: sessionId }, 'Referral click recorded and session created');
+    return success(res, {}, 'Invite recorded');
   } catch (err) {
     next(err);
   }
@@ -1065,15 +897,10 @@ const getTeamDashboard = async (req, res, next) => {
     const { rows: summary } = await query(`
       SELECT 
         COUNT(*)::int as total_members,
-        COUNT(CASE WHEN r.level = 1 THEN 1 END)::int as level_1_members,
-        COUNT(CASE WHEN r.level = 2 THEN 1 END)::int as level_2_members,
-        COUNT(CASE WHEN r.level >= 3 THEN 1 END)::int as level_3_members,
         COUNT(CASE WHEN ap.team_joined_at >= CURRENT_DATE THEN 1 END)::int as joined_today,
         COUNT(CASE WHEN ap.kyc_status = 'pending' THEN 1 END)::int as pending_kyc,
         COUNT(CASE WHEN ap.kyc_status = 'approved' THEN 1 END)::int as approved_partners,
         COUNT(CASE WHEN ap.kyc_status = 'rejected' THEN 1 END)::int as rejected_partners,
-        COUNT(CASE WHEN u.status = 'active' THEN 1 END)::int as active_members,
-        COUNT(CASE WHEN u.status = 'inactive' THEN 1 END)::int as inactive_members,
         COUNT(CASE WHEN u.status = 'suspended' THEN 1 END)::int as suspended_partners,
         COUNT(CASE WHEN u.status = 'blocked' THEN 1 END)::int as blocked_partners
       FROM partner_team_relationships r
@@ -1086,7 +913,7 @@ const getTeamDashboard = async (req, res, next) => {
       SELECT
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0)::float as monthly_earnings,
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0)::float as today_earnings
-      FROM partner_wallets w
+      FROM wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
     `, [partnerId]);
@@ -1122,7 +949,7 @@ const getTeamEarnings = async (req, res, next) => {
 
     const { rows: earnings } = await query(`
       SELECT wt.*, p.name as product_name
-      FROM partner_wallets w
+      FROM wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       LEFT JOIN applications a ON a.id = wt.reference_id::uuid
       LEFT JOIN products p ON p.id = a.product_id
@@ -1141,238 +968,36 @@ const getReferralInfo = async (req, res, next) => {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    const { rows: [partner] } = await query(`
-      SELECT user_id, partner_code, referral_message FROM partner_profiles WHERE id = $1
-    `, [partnerId]);
-    
+    if (req.kycUnapproved) {
+      return success(res, {
+        referral_code: '',
+        referral_link: '',
+        total_invites: 0,
+        total_registered: 0
+      });
+    }
+
     let { rows: [referral] } = await query(`
       SELECT * FROM partner_referrals WHERE partner_id = $1
     `, [partnerId]);
 
-    const code = partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
-    const codeReferralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${partner?.partner_code || partnerId}`;
-
     if (!referral) {
+      const { rows: [partner] } = await query(`
+        SELECT partner_code FROM partner_profiles WHERE id = $1
+      `, [partnerId]);
+      
+      const code = partner?.partner_code || partner?.partner_code || 'GKP' + Math.floor(100000 + Math.random() * 900000);
+      const referralLink = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/register?ref=${code}`;
+      
       const { rows: [newRef] } = await query(`
         INSERT INTO partner_referrals (partner_id, referral_code, referral_link)
         VALUES ($1, $2, $3)
         ON CONFLICT (partner_id) DO UPDATE SET referral_code = EXCLUDED.referral_code RETURNING *
-      `, [partnerId, code, codeReferralLink]);
-      referral = newRef || {};
+      `, [partnerId, code, referralLink]);
+      referral = newRef;
     }
-
-    referral.referral_link = codeReferralLink;
-    referral.referral_message = partner?.referral_message || 'Join my team on GharKaPaisa and earn highest financial commission payouts!';
-
-    // Compute detailed conversion funnel analytics for this partner
-    const { rows: [clicksRow] } = await query(`
-      SELECT COUNT(*)::int as count FROM referral_clicks WHERE partner_id = $1
-    `, [partnerId]);
-    const clicks = clicksRow?.count || 0;
-
-    const { rows: [regsRow] } = await query(`
-      SELECT COUNT(*)::int as count FROM partner_team_relationships WHERE parent_partner_id = $1 AND level = 1
-    `, [partnerId]);
-    const registrations = regsRow?.count || 0;
-
-    const { rows: [kycRow] } = await query(`
-      SELECT COUNT(*)::int as count FROM partner_team_relationships r
-      JOIN partner_profiles ap ON ap.id = r.child_partner_id
-      WHERE r.parent_partner_id = $1 AND r.level = 1 AND ap.kyc_status = 'approved'
-    `, [partnerId]);
-    const kyc_approved = kycRow?.count || 0;
-
-    const { rows: [activeRow] } = await query(`
-      SELECT COUNT(*)::int as count FROM partner_team_relationships r
-      JOIN partner_profiles ap ON ap.id = r.child_partner_id
-      JOIN users u ON u.id = ap.user_id
-      WHERE r.parent_partner_id = $1 AND r.level = 1 AND u.status = 'active'
-    `, [partnerId]);
-    const active_partners = activeRow?.count || 0;
-
-    const { rows: [appsRow] } = await query(`
-      SELECT COUNT(a.id)::int as count,
-             COUNT(CASE WHEN a.status = 'approved' THEN 1 END)::int as approved_count
-      FROM partner_team_relationships r
-      JOIN applications a ON a.partner_id = r.child_partner_id
-      WHERE r.parent_parent_id = $1
-    `, [partnerId]);
-    const applications = appsRow?.count || 0;
-    const approved_applications = appsRow?.approved_count || 0;
-
-    const { rows: [commRow] } = await query(`
-      SELECT COALESCE(SUM(wt.amount), 0)::float as total
-      FROM partner_wallets w
-      JOIN wallet_transactions wt ON wt.wallet_id = w.id
-      WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
-    `, [partnerId]);
-    const commission_earned = commRow?.total || 0;
-
-    referral.funnel = {
-      clicks,
-      registrations,
-      kyc_approved,
-      active_partners,
-      applications,
-      approved_applications,
-      commission_earned
-    };
 
     return success(res, referral);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const updateReferralMessage = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { referral_message } = req.body;
-    if (!referral_message || typeof referral_message !== 'string') {
-      return error(res, 'Custom referral message is required', 400);
-    }
-
-    await query(`
-      UPDATE partner_profiles SET referral_message = $1, updated_at = NOW() WHERE id = $2
-    `, [referral_message.trim(), partnerId]);
-
-    return success(res, { referral_message: referral_message.trim() }, 'Referral message updated successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const createInvitation = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { recipient_name, recipient_email, recipient_mobile, invite_type } = req.body;
-    if (!recipient_name || (!recipient_email && !recipient_mobile)) {
-      return error(res, 'Recipient name and at least an email or mobile number are required', 400);
-    }
-
-    const { rows: [partner] } = await query(`
-      SELECT partner_code FROM partner_profiles WHERE id = $1
-    `, [partnerId]);
-
-    const code = partner?.partner_code || '';
-    const expiredAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    const { rows: [invitation] } = await query(`
-      INSERT INTO invitation_history (
-        partner_id, invite_type, recipient_name, recipient_email, recipient_mobile,
-        referral_code, status, sent_at, expired_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', NOW(), $7)
-      RETURNING *
-    `, [
-      partnerId,
-      (invite_type || 'EMAIL').toUpperCase(),
-      recipient_name.trim(),
-      recipient_email ? recipient_email.trim().toLowerCase() : null,
-      recipient_mobile ? recipient_mobile.trim() : null,
-      code,
-      expiredAt
-    ]);
-
-    return created(res, invitation, 'Direct invitation sent successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getInvitationHistory = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { rows } = await query(`
-      SELECT * FROM invitation_history
-      WHERE partner_id = $1
-      ORDER BY sent_at DESC
-    `, [partnerId]);
-
-    return success(res, rows);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const resendInvitation = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-    const { id } = req.params;
-
-    const { rows: [inv] } = await query(`
-      SELECT * FROM invitation_history WHERE id = $1 AND partner_id = $2
-    `, [id, partnerId]);
-
-    if (!inv) return error(res, 'Invitation record not found', 404);
-
-    const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const { rows: [updated] } = await query(`
-      UPDATE invitation_history
-      SET sent_at = NOW(), expired_at = $1, status = 'PENDING'
-      WHERE id = $2
-      RETURNING *
-    `, [newExpiry, id]);
-
-    return success(res, updated, 'Invitation resent successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getReferralCampaigns = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { rows } = await query(`
-      SELECT * FROM referral_campaigns
-      WHERE partner_id = $1
-      ORDER BY created_at DESC
-    `, [partnerId]);
-
-    return success(res, rows);
-  } catch (err) {
-    next(err);
-  }
-};
-
-const createReferralCampaign = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { campaign_name, platform, start_date, end_date, budget, target, bonus_type, bonus_amount } = req.body;
-    if (!campaign_name) return error(res, 'Campaign name is required', 400);
-
-    const campaignCode = 'CAMP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    const { rows: [campaign] } = await query(`
-      INSERT INTO referral_campaigns (
-        partner_id, campaign_name, campaign_code, platform, start_date, end_date,
-        budget, target, bonus_type, bonus_amount, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'ACTIVE', NOW())
-      RETURNING *
-    `, [
-      partnerId,
-      campaign_name.trim(),
-      campaignCode,
-      platform || 'WhatsApp',
-      start_date || new Date(),
-      end_date || null,
-      budget ? parseFloat(budget) : 0,
-      target ? parseInt(target) : 0,
-      bonus_type || 'FIXED',
-      bonus_amount ? parseFloat(bonus_amount) : 0
-    ]);
-
-    return created(res, campaign, 'Referral campaign created successfully');
   } catch (err) {
     next(err);
   }
@@ -1593,34 +1218,6 @@ const uploadPan = async (req, res, next) => {
   }
 };
 
-const uploadAadhaar = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'File is required', 400);
-
-    const { aadhaar_number } = req.body;
-    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
-
-    const { rows: [doc] } = await query(`
-      INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
-      VALUES ($1, 'aadhaar', $2, $3, $4, 'pending', false)
-      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
-        doc_number = COALESCE(EXCLUDED.doc_number, kyc_documents.doc_number),
-        file_url = EXCLUDED.file_url,
-        s3_key = EXCLUDED.s3_key,
-        verification_status = 'pending',
-        verified = false,
-        uploaded_at = NOW()
-      RETURNING *
-    `, [partnerId, aadhaar_number || null, url, key]);
-
-    return success(res, doc, 'Aadhaar document uploaded successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
 const uploadCheque = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
@@ -1774,11 +1371,11 @@ const getKycDetails = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [partner] } = await query(`
-      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at, face_match_score FROM partner_profiles WHERE id = $1
+      SELECT kyc_status, kyc_rejection_reason, rejection_reason, kyc_submitted_at, kyc_reviewed_at FROM partner_profiles WHERE id = $1
     `, [partnerId]);
 
     const { rows: documents } = await query(`
-      SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at, ocr_data 
+      SELECT id, doc_type, doc_number, file_url, s3_key, verification_status, verified, uploaded_at 
       FROM kyc_documents 
       WHERE partner_id = $1
     `, [partnerId]);
@@ -1789,199 +1386,14 @@ const getKycDetails = async (req, res, next) => {
       WHERE partner_id = $1
     `, [partnerId]);
 
-    // Build KYC timeline
-    const timeline = [];
-    if (documents.length > 0 || video) {
-      const firstUpload = documents.reduce((earliest, doc) => {
-        if (!earliest || (doc.uploaded_at && new Date(doc.uploaded_at) < new Date(earliest))) return doc.uploaded_at;
-        return earliest;
-      }, null);
-      timeline.push({ step: 'Documents Uploaded', date: firstUpload, status: 'completed' });
-    }
-    if (partner?.kyc_submitted_at) {
-      timeline.push({ step: 'Submitted for Review', date: partner.kyc_submitted_at, status: 'completed' });
-    }
-    if (partner?.kyc_reviewed_at) {
-      timeline.push({ step: 'Reviewed', date: partner.kyc_reviewed_at, status: 'completed' });
-    }
-    if (partner?.kyc_status === 'approved') {
-      timeline.push({ step: 'Approved', date: partner.kyc_reviewed_at, status: 'completed' });
-    } else if (partner?.kyc_status === 'rejected') {
-      timeline.push({ step: 'Rejected', date: partner.kyc_reviewed_at, status: 'rejected', reason: partner.kyc_rejection_reason || partner.rejection_reason });
-    } else if (partner?.kyc_submitted_at) {
-      timeline.push({ step: 'Pending Approval', date: null, status: 'pending' });
-    }
-
     return success(res, {
       kyc_status: partner?.kyc_status || 'draft',
       rejection_reason: partner?.kyc_rejection_reason || partner?.rejection_reason || null,
       kyc_submitted_at: partner?.kyc_submitted_at,
       kyc_reviewed_at: partner?.kyc_reviewed_at,
-      face_match_score: partner?.face_match_score || null,
       documents,
-      video,
-      timeline
+      video
     });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /partner/profile/photo (Upload profile picture)
-const uploadProfilePhoto = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'Profile photo file is required', 400);
-
-    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      return error(res, 'Only PNG, JPEG and WebP images are allowed', 400);
-    }
-    if (req.file.size > 2 * 1024 * 1024) {
-      return error(res, 'Profile photo must be under 2MB', 400);
-    }
-
-    const { url } = await uploadToS3(req.file.buffer, req.file.originalname, `profiles/${partnerId}`);
-    await query(`UPDATE partner_profiles SET profile_photo_url = $1 WHERE id = $2`, [url, partnerId]);
-
-    return success(res, { profile_photo_url: url }, 'Profile photo uploaded successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /partner/profile/logo (Upload business logo)
-const uploadCompanyLogo = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'Logo file is required', 400);
-
-    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      return error(res, 'Only PNG, JPEG and WebP images are allowed', 400);
-    }
-    if (req.file.size > 2 * 1024 * 1024) {
-      return error(res, 'Logo must be under 2MB', 400);
-    }
-
-    const { url } = await uploadToS3(req.file.buffer, req.file.originalname, `logos/${partnerId}`);
-    await query(`UPDATE partner_profiles SET company_logo_url = $1 WHERE id = $2`, [url, partnerId]);
-
-    return success(res, { company_logo_url: url }, 'Company logo uploaded successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /partner/kyc/upload-selfie (Selfie for face match)
-const uploadSelfie = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'Selfie file is required', 400);
-
-    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
-
-    const { rows: [doc] } = await query(`
-      INSERT INTO kyc_documents (partner_id, doc_type, file_url, s3_key, verification_status, verified)
-      VALUES ($1, 'selfie', $2, $3, 'pending', false)
-      ON CONFLICT (partner_id, doc_type) DO UPDATE SET
-        file_url = EXCLUDED.file_url,
-        s3_key = EXCLUDED.s3_key,
-        verification_status = 'pending',
-        verified = false,
-        uploaded_at = NOW()
-      RETURNING *
-    `, [partnerId, url, key]);
-
-    return success(res, doc, 'Selfie uploaded successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /partner/kyc/ocr-scan (Simulated OCR extraction)
-const simulateOCR = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { doc_type } = req.body; // 'pan' or 'aadhaar'
-    if (!doc_type || !['pan', 'aadhaar'].includes(doc_type)) {
-      return error(res, 'doc_type must be pan or aadhaar', 400);
-    }
-
-    // Verify the document was uploaded
-    const { rows: [doc] } = await query(
-      `SELECT id, doc_number FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
-      [partnerId, doc_type]
-    );
-    if (!doc) return error(res, `No ${doc_type} document found. Please upload first.`, 404);
-
-    // Fetch partner info to build simulated OCR data
-    const { rows: [profile] } = await query(
-      `SELECT first_name, last_name, date_of_birth FROM partner_profiles WHERE id = $1`,
-      [partnerId]
-    );
-
-    let ocrResult = {};
-    if (doc_type === 'pan') {
-      ocrResult = {
-        name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A',
-        pan_number: doc.doc_number || 'ABCDE1234F',
-        date_of_birth: profile?.date_of_birth || '1990-01-01',
-        father_name: 'N/A'
-      };
-    } else {
-      ocrResult = {
-        name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'N/A',
-        aadhaar_number: doc.doc_number || 'XXXX XXXX 1234',
-        date_of_birth: profile?.date_of_birth || '1990-01-01',
-        address: 'Address extracted from Aadhaar'
-      };
-    }
-
-    // Store OCR result in the document record
-    await query(`UPDATE kyc_documents SET ocr_data = $1 WHERE id = $2`, [JSON.stringify(ocrResult), doc.id]);
-
-    return success(res, { doc_type, ocr_data: ocrResult }, `OCR extraction completed for ${doc_type.toUpperCase()}`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /partner/kyc/face-match (Simulated face match comparison)
-const simulateFaceMatch = async (req, res, next) => {
-  try {
-    const partnerId = req.partner?.id || req.user.partner_id;
-    if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    // Check selfie and PAN are uploaded
-    const { rows: [selfie] } = await query(
-      `SELECT id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'selfie'`, [partnerId]
-    );
-    const { rows: [pan] } = await query(
-      `SELECT id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`, [partnerId]
-    );
-
-    if (!selfie) return error(res, 'Please upload a selfie first', 400);
-    if (!pan) return error(res, 'Please upload PAN card first', 400);
-
-    // Simulate face match score (random realistic score between 75-99)
-    const matchScore = parseFloat((Math.random() * 24 + 75).toFixed(2));
-    const isMatch = matchScore >= 80;
-
-    await query(`UPDATE partner_profiles SET face_match_score = $1 WHERE id = $2`, [matchScore, partnerId]);
-
-    return success(res, {
-      match_score: matchScore,
-      is_match: isMatch,
-      selfie_id: selfie.id,
-      pan_id: pan.id,
-      verdict: isMatch ? 'Face verified successfully' : 'Face match below threshold. Manual review required.'
-    }, `Face match score: ${matchScore}%`);
   } catch (err) {
     next(err);
   }
@@ -2008,380 +1420,13 @@ module.exports = {
   getTeamDashboard,
   getTeamEarnings,
   getReferralInfo,
-  updateReferralMessage,
-  createInvitation,
-  getInvitationHistory,
-  resendInvitation,
-  getReferralCampaigns,
-  createReferralCampaign,
   changeParentPartner,
   deactivateTeam,
   getWholeNetwork,
   uploadPan,
-  uploadAadhaar,
   uploadCheque,
   uploadVideo,
   submitKyc,
   getKycStatus,
-  getKycDetails,
-  uploadProfilePhoto,
-  uploadCompanyLogo,
-  uploadSelfie,
-  simulateOCR,
-  simulateFaceMatch,
+  getKycDetails
 };
-
-// ── Bulk Partner Action ──────────────────────────────────────────────
-const bulkPartnerAction = async (req, res, next) => {
-  try {
-    const { partner_ids, action, reason } = req.body;
-    if (!Array.isArray(partner_ids) || partner_ids.length === 0 || !action) {
-      return error(res, 'partner_ids array and action are required', 400);
-    }
-
-    let targetKycStatus = null;
-    let targetUserStatus = null;
-
-    if (action === 'approve') {
-      targetKycStatus = 'approved';
-      targetUserStatus = 'active';
-    } else if (action === 'suspend') {
-      targetUserStatus = 'suspended';
-    } else if (action === 'activate') {
-      targetUserStatus = 'active';
-    } else if (action === 'reject') {
-      targetKycStatus = 'rejected';
-    }
-
-    if (targetKycStatus) {
-      await query(
-        `UPDATE partner_profiles SET kyc_status = $1, rejection_reason = $2, updated_at = NOW() WHERE id = ANY($3::uuid[])`,
-        [targetKycStatus, reason || null, partner_ids]
-      );
-      if (targetKycStatus === 'approved') {
-        for (const pid of partner_ids) {
-          await ensureWallet(pid);
-        }
-      }
-    }
-
-    if (targetUserStatus) {
-      await query(
-        `UPDATE users SET status = $1::user_status, updated_at = NOW()
-         FROM partner_profiles ap WHERE ap.user_id = users.id AND ap.id = ANY($2::uuid[])`,
-        [targetUserStatus, partner_ids]
-      );
-      await query(
-        `UPDATE partner_profiles SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`,
-        [targetUserStatus, partner_ids]
-      );
-    }
-
-    await logAction(req, 'BULK_PARTNER_ACTION', null, { action, count: partner_ids.length, reason });
-
-    return success(res, { count: partner_ids.length }, `Bulk ${action} executed successfully on ${partner_ids.length} partner(s)`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Update Single Partner Status ─────────────────────────────────────
-const updatePartnerStatus = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    if (!status) return error(res, 'Status is required', 400);
-
-    const { rows: [partner] } = await query(
-      `SELECT ap.id, ap.user_id FROM partner_profiles ap WHERE ap.id = $1 OR ap.user_id::text = $1`,
-      [id]
-    );
-    if (!partner) return error(res, 'Partner profile not found', 404);
-
-    await query(`UPDATE partner_profiles SET status = $1, updated_at = NOW() WHERE id = $2`, [status, partner.id]);
-    await query(`UPDATE users SET status = $1::user_status, updated_at = NOW() WHERE id = $2`, [status, partner.user_id]);
-
-    // Revoke all refresh tokens when partner is blocked or suspended
-    if (status === 'blocked' || status === 'suspended') {
-      await query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [partner.user_id]);
-    }
-
-    await logAction(req, 'UPDATE_PARTNER_STATUS', partner.id, { status });
-
-    return success(res, { partner_id: partner.id, status }, `Partner status updated to ${status}`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Reset Partner Password ──────────────────────────────────────────
-const resetPartnerPassword = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!new_password || new_password.length < 8) {
-      return error(res, 'Password must be at least 8 characters', 400);
-    }
-    if (new_password.length > 128) {
-      return error(res, 'Password cannot exceed 128 characters', 400);
-    }
-
-    const { rows: [partner] } = await query(
-      `SELECT ap.id, ap.user_id, u.email FROM partner_profiles ap JOIN users u ON u.id = ap.user_id WHERE ap.id = $1 OR ap.user_id::text = $1`,
-      [id]
-    );
-    if (!partner) return error(res, 'Partner profile not found', 404);
-
-    const bcrypt = require('bcryptjs');
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(new_password, salt);
-
-    await query(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, [passwordHash, partner.user_id]);
-
-    await logAction(req, 'RESET_PARTNER_PASSWORD', partner.id, { email: partner.email });
-
-    return success(res, { partner_id: partner.id }, `Partner password reset successfully`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Impersonate Partner Login ─────────────────────────────────────────
-const impersonatePartner = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { rows: [partner] } = await query(
-      `SELECT ap.id as partner_id, u.id as user_id, u.email, u.mobile, u.role, ap.partner_code
-       FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
-       WHERE ap.id = $1 OR ap.user_id::text = $1 OR ap.partner_code ILIKE $1`,
-      [id]
-    );
-    if (!partner) return error(res, 'Partner profile not found', 404);
-
-    const jwt = require('jsonwebtoken');
-    const { JWT_SECRET } = require('../../config/jwt.js');
-
-    const payload = {
-      id: partner.user_id,
-      email: partner.email,
-      phone: partner.mobile,
-      role: 'PARTNER',
-      partner_id: partner.partner_id,
-      impersonated_by: req.user.id
-    };
-
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
-
-    await logAction(req, 'IMPERSONATE_PARTNER', partner.partner_id, { partner_code: partner.partner_code });
-
-    return success(res, { token, user: payload }, `Impersonation token generated for ${partner.partner_code}`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Direct KYC Status Update ─────────────────────────────────────────
-const updatePartnerKYCStatus = async (req, res, next) => {
-  try {
-    const partnerId = req.params.PartnerId || req.params.id || req.body.partnerId;
-    const { status, reason } = req.body;
-    if (!partnerId || !status) return error(res, 'Partner ID and status are required', 400);
-
-    const { rows: [partner] } = await query(`SELECT id, user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
-    if (!partner) return error(res, 'Partner profile not found', 404);
-
-    await query(
-      `UPDATE partner_profiles SET kyc_status = $1, rejection_reason = $2, updated_at = NOW() WHERE id = $3`,
-      [status, reason || null, partner.id]
-    );
-
-    if (status === 'approved') {
-      await ensureWallet(partner.id);
-    }
-
-    await logAction(req, 'UPDATE_PARTNER_KYC_STATUS', partner.id, { status, reason });
-
-    return success(res, { partner_id: partner.id, kyc_status: status }, `Partner KYC status updated to ${status}`);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Team Metrics Automation Helper ────────────────────────────────────
-const recalculateTeamMetrics = async (parentPartnerId, existingClient = null) => {
-  if (!parentPartnerId) return;
-  const db = existingClient || { query };
-
-  try {
-    await db.query(`
-      WITH child_stats AS (
-        SELECT 
-          COUNT(pp.id) as children_count,
-          COUNT(pp.id) FILTER (WHERE u.status = 'active') as active_children,
-          COUNT(pp.id) FILTER (WHERE u.status IN ('inactive', 'pending')) as inactive_children,
-          COUNT(pp.id) FILTER (WHERE u.status = 'blocked' OR u.status = 'suspended' OR u.status = 'rejected') as blocked_children,
-          COUNT(pp.id) FILTER (WHERE pp.kyc_status = 'approved') as verified_children,
-          COUNT(pp.id) FILTER (WHERE pp.kyc_status IN ('pending', 'under_review')) as pending_children
-        FROM partner_profiles pp
-        JOIN users u ON u.id = pp.user_id
-        WHERE pp.parent_partner_id = $1
-      ),
-      lead_stats AS (
-        SELECT COUNT(l.id) as total_leads
-        FROM leads l
-        WHERE l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR id = $1)
-      ),
-      app_stats AS (
-        SELECT 
-          COUNT(a.id) as total_applications,
-          COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'disbursed', 'confirmed')) as total_approved
-        FROM applications a
-        WHERE a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR id = $1)
-      ),
-      comm_stats AS (
-        SELECT COALESCE(SUM(credit), 0) as team_commission
-        FROM wallet_ledger
-        WHERE partner_id = $1 AND transaction_type = 'TEAM_COMMISSION' AND status = 'completed'
-      )
-      UPDATE partner_profiles SET
-        children_count = cs.children_count,
-        active_children = cs.active_children,
-        inactive_children = cs.inactive_children,
-        blocked_children = cs.blocked_children,
-        verified_children = cs.verified_children,
-        pending_children = cs.pending_children,
-        total_leads = ls.total_leads,
-        total_applications = aps.total_applications,
-        total_approved = aps.total_approved,
-        team_commission = cm.team_commission,
-        updated_at = NOW()
-      FROM child_stats cs, lead_stats ls, app_stats aps, comm_stats cm
-      WHERE partner_profiles.id = $1
-    `, [parentPartnerId]);
-  } catch (err) {
-    logger.error('Failed to recalculate team metrics for parent:', parentPartnerId, err.message);
-  }
-};
-
-// Validate PAN Format, Uniqueness, and Blacklist
-const validatePan = async (req, res, next) => {
-  try {
-    const { pan_number } = req.body;
-    if (!pan_number) {
-      return error(res, 'PAN number required', 400);
-    }
-    const cleanPan = pan_number.trim().toUpperCase();
-
-    // format validation
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (!panRegex.test(cleanPan)) {
-      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Invalid PAN number format' });
-    }
-
-    // blacklist check
-    const { rows: blacklisted } = await query('SELECT 1 FROM blacklist WHERE type = \'PAN\' AND value = $1', [cleanPan]);
-    if (blacklisted.length > 0) {
-      return res.status(200).json({ success: true, valid: false, exists: false, message: 'PAN is blacklisted' });
-    }
-
-    // uniqueness check
-    const { rows: existing } = await query('SELECT id FROM partner_profiles WHERE pan_number = $1', [cleanPan]);
-    if (existing.length > 0) {
-      return res.status(200).json({ success: true, valid: true, exists: true, message: 'PAN already registered. Please contact support.' });
-    }
-
-    return res.status(200).json({ success: true, valid: true, exists: false });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// Validate Aadhaar Format, Uniqueness, and Blacklist
-const validateAadhaar = async (req, res, next) => {
-  try {
-    const { aadhaar_number } = req.body;
-    if (!aadhaar_number) {
-      return error(res, 'Aadhaar number required', 400);
-    }
-    const cleanAadhaar = aadhaar_number.trim();
-
-    // format validation (12 numeric digits)
-    const aadhaarRegex = /^\d{12}$/;
-    if (!aadhaarRegex.test(cleanAadhaar)) {
-      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Aadhaar number must be exactly 12 numeric digits' });
-    }
-
-    // blacklist check
-    const { rows: blacklisted } = await query('SELECT 1 FROM blacklist WHERE type = \'AADHAAR\' AND value = $1', [cleanAadhaar]);
-    if (blacklisted.length > 0) {
-      return res.status(200).json({ success: true, valid: false, exists: false, message: 'Aadhaar is blacklisted' });
-    }
-
-    // uniqueness check
-    const { rows: existing } = await query('SELECT id FROM partner_profiles WHERE aadhaar_number = $1', [cleanAadhaar]);
-    if (existing.length > 0) {
-      return res.status(200).json({ success: true, valid: true, exists: true, message: 'Aadhaar already registered.' });
-    }
-
-    return res.status(200).json({ success: true, valid: true, exists: false });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// Validate GST Format and State Code consistency
-const validateGst = async (req, res, next) => {
-  try {
-    const { gst_number, state } = req.body;
-    if (!gst_number) {
-      return error(res, 'GST number required', 400);
-    }
-    const cleanGst = gst_number.trim().toUpperCase();
-
-    // format validation
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (!gstRegex.test(cleanGst)) {
-      return res.status(200).json({ success: true, valid: false, message: 'Invalid GSTIN format' });
-    }
-
-    if (state) {
-      // Indian GST State Codes Map
-      const gstStateCodes = {
-        '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
-        '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
-        '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
-        '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
-        '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
-        '25': 'Daman & Diu', '26': 'Dadra & Nagar Haveli', '27': 'Maharashtra', '28': 'Andhra Pradesh',
-        '29': 'Karnataka', '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu',
-        '34': 'Puducherry', '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh',
-        '38': 'Ladakh'
-      };
-
-      const code = cleanGst.substring(0, 2);
-      const mappedState = gstStateCodes[code];
-
-      if (!mappedState || mappedState.toLowerCase() !== state.trim().toLowerCase()) {
-        return res.status(200).json({ 
-          success: true, 
-          valid: false, 
-          message: `GST state code '${code}' does not match the selected state '${state}'.` 
-        });
-      }
-    }
-
-    return res.status(200).json({ success: true, valid: true });
-  } catch (err) {
-    next(err);
-  }
-};
-
-module.exports.bulkPartnerAction = bulkPartnerAction;
-module.exports.updatePartnerStatus = updatePartnerStatus;
-module.exports.resetPartnerPassword = resetPartnerPassword;
-module.exports.impersonatePartner = impersonatePartner;
-module.exports.updatePartnerKYCStatus = updatePartnerKYCStatus;
-module.exports.recalculateTeamMetrics = recalculateTeamMetrics;
-module.exports.validatePan = validatePan;
-module.exports.validateAadhaar = validateAadhaar;
-module.exports.validateGst = validateGst;
-
