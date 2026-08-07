@@ -112,22 +112,34 @@ const viewDocument = async (req, res, next) => {
         doc = videoResult;
       }
     } else {
-      // Fallback: fetch using partner's profile ID and doc_type
-      const { rows: [partner] } = await query(
-        `SELECT id FROM partner_profiles WHERE user_id = $1`,
-        [user.id]
-      );
-      if (partner) {
+      // Resolve target partner profile ID (from query param if admin, or logged-in user profile)
+      let targetPartnerId = req.query.partnerId || req.query.partner_id;
+      if (!targetPartnerId) {
+        const { rows: [partner] } = await query(
+          `SELECT id FROM partner_profiles WHERE user_id = $1`,
+          [user.id]
+        );
+        if (partner) targetPartnerId = partner.id;
+      }
+
+      if (targetPartnerId) {
         if (docId === 'video') {
           const { rows: [videoResult] } = await query(
             `SELECT storage_key AS s3_key, partner_id FROM partner_videos WHERE partner_id = $1`,
-            [partner.id]
+            [targetPartnerId]
           );
           doc = videoResult;
+          if (!doc) {
+            const { rows: [kycVideo] } = await query(
+              `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'video'`,
+              [targetPartnerId]
+            );
+            doc = kycVideo;
+          }
         } else {
           const { rows: [result] } = await query(
             `SELECT s3_key, partner_id FROM kyc_documents WHERE partner_id = $1 AND doc_type = $2`,
-            [partner.id, docId]
+            [targetPartnerId, docId]
           );
           doc = result;
         }

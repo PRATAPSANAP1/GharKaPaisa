@@ -28,10 +28,13 @@ router.use(jwtAuth);
 router.post('/register', registerRules, validate, authCtrl.register);
 router.post('/upload-docs', requirePartner, kycUpload, partnerCtrl.uploadSelfKYC);
 
+const kycCtrl = require('./kyc.controller.js');
+
 // Unified KYC upload is handled by POST Partners/:id/kyc 
 router.post('/kyc/submit', requirePartner, partnerCtrl.submitKyc);
 router.get('/kyc/status', requirePartner, partnerCtrl.getKycStatus);
 router.get('/kyc/details', requirePartner, partnerCtrl.getKycDetails);
+router.get('/kyc/documents/:docId/view', kycCtrl.viewDocument);
 router.get('/profile', requirePartner, partnerCtrl.getSelfProfile);
 router.post('/profile/photo', requirePartner, upload.single('photo'), partnerCtrl.uploadProfilePhoto);
 router.post('/profile/logo', requirePartner, upload.single('logo'), partnerCtrl.uploadCompanyLogo);
