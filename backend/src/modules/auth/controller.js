@@ -648,17 +648,13 @@ const register = async (req, res, next) => {
       let targetRole = 'PARTNER';
       let referredById = null;
 
-      // 1. Resolve Team Code if provided
+      // 1. Resolve Team Code (used ONLY for joining teams)
       if (team_code) {
         const { rows: [teamMatch] } = await client.query(`
           SELECT pt.partner_id, pp.team_status, pp.allow_team_creation, pp.can_create_team
           FROM partner_teams pt
           JOIN partner_profiles pp ON pp.id = pt.partner_id
           WHERE pt.team_code = $1
-          UNION ALL
-          SELECT pp.id AS partner_id, pp.team_status, pp.allow_team_creation, pp.can_create_team
-          FROM partner_profiles pp
-          WHERE pp.partner_code = $1
           LIMIT 1
         `, [team_code]);
 
@@ -674,23 +670,18 @@ const register = async (req, res, next) => {
         }
       }
 
-      // 2. Resolve Referral Code if provided
-      const codeToResolve = raw_referral_code;
-      if (codeToResolve) {
+      // 2. Resolve Referral Code (used ONLY for referral links)
+      if (raw_referral_code) {
         const { rows: [refMatch] } = await client.query(`
-          SELECT pr.partner_id, pp.id AS profile_id, pp.team_level
+          SELECT pr.partner_id, pp.team_level
           FROM partner_referrals pr
           JOIN partner_profiles pp ON pp.id = pr.partner_id
           WHERE pr.referral_code = $1
-          UNION ALL
-          SELECT pp.id AS partner_id, pp.id AS profile_id, pp.team_level
-          FROM partner_profiles pp
-          WHERE pp.partner_code = $1 OR pp.id::text = $1
           LIMIT 1
-        `, [codeToResolve]);
+        `, [raw_referral_code]);
 
         if (refMatch) {
-          referredById = refMatch.partner_id || refMatch.profile_id;
+          referredById = refMatch.partner_id;
           if (!parentPartnerId && targetRole === 'PARTNER') {
             parentPartnerId = referredById;
             parentTeamLevel = parseInt(refMatch.team_level || 1);
