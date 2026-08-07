@@ -227,6 +227,36 @@ async function getUpgradeStatus(req, res, next) {
   }
 }
 
+/**
+ * POST /api/v1/team/invite
+ */
+async function sendInvite(req, res, next) {
+  try {
+    const partnerId = await resolvePartnerId(req);
+    const { name, mobile, email } = req.body;
+    if (!mobile && !email) {
+      return res.status(400).json({ success: false, message: 'Provide at least a mobile number or email.' });
+    }
+    const data = await teamService.sendTeamInvitation(partnerId, { name, mobile, email });
+    return res.json({ success: true, message: 'Invitation sent successfully', data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/v1/team/refers
+ */
+async function getRefersList(req, res, next) {
+  try {
+    const partnerId = await resolvePartnerId(req);
+    const data = await teamService.getRefersList(partnerId);
+    return res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
@@ -239,5 +269,7 @@ module.exports = {
   getMemberById,
   getTeamInfo,
   requestUpgrade,
-  getUpgradeStatus
+  getUpgradeStatus,
+  sendInvite,
+  getRefersList
 };

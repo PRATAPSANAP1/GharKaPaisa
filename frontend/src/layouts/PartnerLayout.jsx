@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
   { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
   { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
-  { id: 'team-network', path: '/partner/team-network', label: 'Refers', icon: MdDeviceHub },
+  { id: 'team-network', path: '/partner/team', label: 'Team', icon: MdDeviceHub },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
   { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
@@ -901,6 +901,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
     { id: 'profile', label: 'Profile Hub', path: '/partner/profile', icon: MdAccountCircle },
     { id: 'kyc-centre', label: 'KYC Centre', path: '/partner/kyc-centre', icon: MdVerifiedUser },
     { id: 'wallet', label: 'Wallet', path: '/partner/wallet', icon: MdAccountBalanceWallet },
+    { id: 'refers', label: 'My Referrals', path: '/partner/refers', icon: MdDeviceHub },
     { id: 'support', label: 'Support Center', path: '/partner/support', icon: MdSupportAgent },
     { id: 'settings', label: 'Settings', path: '/partner/settings', icon: MdSettings },
   ];

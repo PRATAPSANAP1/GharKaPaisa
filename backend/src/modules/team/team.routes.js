@@ -22,6 +22,9 @@ router.get('/settings', ctrl.getSettings);
 router.patch('/settings', ctrl.updateSettings);
 router.put('/settings', ctrl.updateSettings);
 
+router.post('/invite', ctrl.sendInvite);
+router.get('/refers', ctrl.getRefersList);
+
 router.get('/:id', ctrl.getMemberById);
 
 module.exports = router;

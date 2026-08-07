@@ -14,9 +14,17 @@ export default function ManageCommissions() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   
-  // Tab control: 'base', 'overrides', or 'team-splits'
+  // Tab control: 'overrides', 'partners', 'base', 'team-splits'
   const [activeTab, setActiveTab] = useState("overrides");
   
+  // Search & Filter State for Partners/Team Members
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Selection State (for Bulk Actions)
+  const [selectedPartnerIds, setSelectedPartnerIds] = useState([]);
+
   // Splits Config State
   const [childPct, setChildPct] = useState(90);
   const [parentPct, setParentPct] = useState(10);
@@ -24,11 +32,12 @@ export default function ManageCommissions() {
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
   const [form, setForm] = useState({
     product_id: "",
-    Partner_id: "", // empty means Global Override
+    Partner_id: "", // empty or 'global' means Global Override
     commission_type: "fixed",
     commission_value: "",
     effective_from: new Date().toISOString().split("T")[0],
@@ -47,8 +56,8 @@ export default function ManageCommissions() {
       ]);
       
       if (prodRes.data?.success) setProducts(prodRes.data.data);
-      if (partnerRes.data?.success) setPartners(partnerRes.data.data);
-      if (rulesRes.data?.success) setRules(rulesRes.data.data);
+      if (partnerRes.data?.success) setPartners(partnerRes.data.data || []);
+      if (rulesRes.data?.success) setRules(rulesRes.data.data || []);
       
       if (settingsRes.data?.success) {
         const settings = settingsRes.data.data;
@@ -66,6 +75,10 @@ export default function ManageCommissions() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleSaveSplits = async (e) => {
     e.preventDefault();
@@ -89,14 +102,10 @@ export default function ManageCommissions() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleOpenModal = () => {
+  const handleOpenModal = (targetPartnerId = "") => {
     setForm({
       product_id: products[0]?.id || "",
-      Partner_id: "", // default: Global
+      Partner_id: targetPartnerId || "",
       commission_type: "fixed",
       commission_value: "",
       effective_from: new Date().toISOString().split("T")[0],
@@ -121,7 +130,6 @@ export default function ManageCommissions() {
       effective_to: form.effective_to || null,
     };
 
-    // If Partner_id is specified and not empty, include it
     if (form.Partner_id && form.Partner_id !== "global" && form.Partner_id !== "") {
       payload.Partner_id = form.Partner_id;
     }
@@ -137,6 +145,51 @@ export default function ManageCommissions() {
       setErrorMsg(err.response?.data?.message || "Failed to set commission rule");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Bulk Override creation for selected partners
+  const handleBulkCreateRules = async (e) => {
+    e.preventDefault();
+    if (selectedPartnerIds.length === 0) {
+      alert("Please select at least one partner or team member.");
+      return;
+    }
+    setSubmitting(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const pId of selectedPartnerIds) {
+      const payload = {
+        product_id: form.product_id,
+        Partner_id: pId,
+        commission_type: form.commission_type,
+        commission_value: parseFloat(form.commission_value),
+        effective_from: form.effective_from,
+        effective_to: form.effective_to || null,
+      };
+
+      try {
+        await api.post("/admin/commission-rule", payload);
+        successCount++;
+      } catch (err) {
+        console.error(`Bulk override failed for partner ${pId}`, err);
+        failCount++;
+      }
+    }
+
+    setSubmitting(false);
+    setBulkModalOpen(false);
+
+    if (successCount > 0) {
+      setSuccessMsg(`Bulk commission override successfully applied to ${successCount} partners/team members.${failCount > 0 ? ` (${failCount} failed)` : ''}`);
+      setSelectedPartnerIds([]);
+      fetchData();
+    } else {
+      setErrorMsg("Failed to apply bulk commission overrides.");
     }
   };
 
@@ -162,6 +215,45 @@ export default function ManageCommissions() {
     return cat.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   };
 
+  // Filtered partners/team members list
+  const filteredPartners = partners.filter(p => {
+    const q = searchQuery.toLowerCase().trim();
+    const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+    const code = (p.Partner_code || p.partner_code || '').toLowerCase();
+    const email = (p.email || '').toLowerCase();
+    const mobile = (p.mobile || '').toLowerCase();
+
+    const matchesQuery = !q || fullName.includes(q) || code.includes(q) || email.includes(q) || mobile.includes(q);
+
+    const userRole = (p.role || p.user_role || 'PARTNER').toUpperCase();
+    const matchesRole = roleFilter === 'all' || 
+                        (roleFilter === 'partner' && userRole === 'PARTNER') || 
+                        (roleFilter === 'team' && (userRole === 'TEAM_MEMBER' || p.parent_partner_id));
+
+    const status = (p.status || p.user_status || 'ACTIVE').toUpperCase();
+    const matchesStatus = statusFilter === 'all' || statusFilter.toUpperCase() === status;
+
+    return matchesQuery && matchesRole && matchesStatus;
+  });
+
+  const isAllSelected = filteredPartners.length > 0 && filteredPartners.every(p => selectedPartnerIds.includes(p.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedPartnerIds([]);
+    } else {
+      setSelectedPartnerIds(filteredPartners.map(p => p.id));
+    }
+  };
+
+  const toggleSelectPartner = (id) => {
+    if (selectedPartnerIds.includes(id)) {
+      setSelectedPartnerIds(selectedPartnerIds.filter(item => item !== id));
+    } else {
+      setSelectedPartnerIds([...selectedPartnerIds, id]);
+    }
+  };
+
   return (
     <div style={{ boxSizing: "border-box", minHeight: "100%" }}>
       {/* Title Header */}
@@ -169,21 +261,50 @@ export default function ManageCommissions() {
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 900, color: C.text, margin: 0 }}>Commission Manager</h1>
           <p style={{ fontSize: "14px", color: C.textMid, marginTop: "4px", marginBottom: 0 }}>
-            Configure default payouts and set partner-specific commission overrides.
+            Configure default payouts, set partner & team member overrides, and manage DSA commission splits.
           </p>
         </div>
-        <button
-          onClick={handleOpenModal}
-          style={{
-            ...S.btn("primary"),
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 18px",
-          }}
-        >
-          <Icons.gift size={16} /> Set Override Rule
-        </button>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          {selectedPartnerIds.length > 0 && (
+            <button
+              onClick={() => {
+                setForm({
+                  product_id: products[0]?.id || "",
+                  Partner_id: "",
+                  commission_type: "fixed",
+                  commission_value: "",
+                  effective_from: new Date().toISOString().split("T")[0],
+                  effective_to: "",
+                });
+                setBulkModalOpen(true);
+              }}
+              style={{
+                ...S.btn("secondary"),
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 18px",
+                background: C.teal,
+                color: "#fff",
+                border: "none"
+              }}
+            >
+              <Icons.gift size={16} /> Apply Bulk Override ({selectedPartnerIds.length})
+            </button>
+          )}
+          <button
+            onClick={() => handleOpenModal()}
+            style={{
+              ...S.btn("primary"),
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 18px",
+            }}
+          >
+            <Icons.gift size={16} /> Set Override Rule
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -221,8 +342,8 @@ export default function ManageCommissions() {
         </div>
       )}
 
-      {/* Tabs Layout */}
-      <div style={{ display: "flex", gap: "12px", borderBottom: `1px solid ${C.border}`, marginBottom: "20px", paddingBottom: "1px" }}>
+      {/* Navigation Tabs */}
+      <div style={{ display: "flex", gap: "12px", borderBottom: `1px solid ${C.border}`, marginBottom: "20px", paddingBottom: "1px", flexWrap: "wrap" }}>
         <button
           onClick={() => setActiveTab("overrides")}
           style={{
@@ -237,7 +358,23 @@ export default function ManageCommissions() {
             transition: "all 0.2s"
           }}
         >
-          Custom Overrides ({rules.length})
+          Active Custom Overrides ({rules.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("partners")}
+          style={{
+            background: "none",
+            border: "none",
+            borderBottom: activeTab === "partners" ? `3px solid ${C.teal}` : "3px solid transparent",
+            color: activeTab === "partners" ? C.text : C.textMid,
+            fontSize: "15px",
+            fontWeight: 700,
+            padding: "10px 16px",
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          Partner & Team Commissions ({partners.length})
         </button>
         <button
           onClick={() => setActiveTab("base")}
@@ -284,6 +421,196 @@ export default function ManageCommissions() {
             animation: "spin 1s linear infinite"
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : activeTab === "partners" ? (
+        /* TAB: PARTNER & TEAM COMMISSIONS SEARCH & BULK SETTINGS */
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Search & Filter Toolbar */}
+          <div style={{ ...S.card, padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+              
+              {/* Search Bar */}
+              <div style={{ flex: 1, minWidth: "260px", position: "relative" }}>
+                <input
+                  type="text"
+                  placeholder="Search by Partner / Team Member Name, Code, Email, Mobile..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ ...S.input, width: "100%", paddingLeft: "36px" }}
+                />
+                <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight }}>
+                  🔍
+                </span>
+              </div>
+
+              {/* Role Filter */}
+              <div style={{ minWidth: "160px" }}>
+                <select
+                  value={roleFilter}
+                  onChange={e => setRoleFilter(e.target.value)}
+                  style={S.input}
+                >
+                  <option value="all">👥 All Roles (Partner & Team)</option>
+                  <option value="partner">⭐ Primary Partners</option>
+                  <option value="team">🤝 Team Members (Downlines)</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div style={{ minWidth: "140px" }}>
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  style={S.input}
+                >
+                  <option value="all">⚡ All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              {/* Apply Filter / Select All Helper */}
+              {selectedPartnerIds.length > 0 && (
+                <button
+                  onClick={() => setSelectedPartnerIds([])}
+                  style={{ ...S.btn("outline"), padding: "8px 14px", fontSize: "12px" }}
+                >
+                  Clear Selection ({selectedPartnerIds.length})
+                </button>
+              )}
+
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px", color: C.textMid, paddingTop: "8px", borderTop: `1px solid ${C.border}` }}>
+              <div>
+                Showing <strong>{filteredPartners.length}</strong> of <strong>{partners.length}</strong> partners & team members
+              </div>
+              {selectedPartnerIds.length > 0 && (
+                <div style={{ color: C.teal, fontWeight: 700 }}>
+                  ✓ {selectedPartnerIds.length} Selected for Bulk Commission Override
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Table of Partners & Team Members */}
+          <div style={S.card}>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: "12px 16px", width: "40px" }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                        style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: C.teal }}
+                      />
+                    </th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Member Details</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Role / Network</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Code</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Status</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Overrides</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", textAlign: "center" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPartners.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: C.textLight }}>
+                        No partners or team members match your filter criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPartners.map(p => {
+                      const isSelected = selectedPartnerIds.includes(p.id);
+                      const isTeam = p.parent_partner_id || (p.role && p.role.toUpperCase() === 'TEAM_MEMBER');
+                      const partnerOverrides = rules.filter(r => r.Partner_id === p.id || r.partner_id === p.id);
+
+                      return (
+                        <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}`, background: isSelected ? `${C.teal}08` : "none" }}>
+                          <td style={{ padding: "14px 16px" }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectPartner(p.id)}
+                              style={{ width: "16px", height: "16px", cursor: "pointer", accentColor: C.teal }}
+                            />
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ fontWeight: 700, color: C.text }}>{p.first_name} {p.last_name}</div>
+                            <div style={{ fontSize: "11px", color: C.textLight, marginTop: "2px" }}>{p.mobile} • {p.email}</div>
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              background: isTeam ? `${C.primary}15` : `${C.teal}15`,
+                              color: isTeam ? C.primary : C.teal,
+                              textTransform: "uppercase"
+                            }}>
+                              {isTeam ? "Team Member" : "Partner"}
+                            </span>
+                            {p.parent_name && (
+                              <div style={{ fontSize: "10.5px", color: C.textMid, marginTop: "4px" }}>
+                                Downline of: {p.parent_name}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{ fontSize: "12px", fontWeight: 700, background: `${C.teal}12`, color: C.teal, padding: "2px 8px", borderRadius: "6px" }}>
+                              {p.Partner_code || p.partner_code || "N/A"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <span style={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              background: (p.status || p.user_status) === "ACTIVE" ? `${C.green}15` : `${C.gold}15`,
+                              color: (p.status || p.user_status) === "ACTIVE" ? C.green : C.gold
+                            }}>
+                              {p.status || p.user_status || "ACTIVE"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            {partnerOverrides.length > 0 ? (
+                              <span style={{ fontSize: "11px", fontWeight: 800, color: C.green, background: `${C.green}15`, padding: "4px 8px", borderRadius: "6px" }}>
+                                {partnerOverrides.length} Custom Rule(s)
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "11px", color: C.textLight }}>Default Standard</span>
+                            )}
+                          </td>
+                          <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                            <button
+                              onClick={() => handleOpenModal(p.id)}
+                              style={{
+                                border: `1.5px solid ${C.teal}`,
+                                background: `${C.teal}10`,
+                                color: C.teal,
+                                padding: "6px 12px",
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                cursor: "pointer"
+                              }}
+                            >
+                              Set Override
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : activeTab === "team-splits" ? (
         /* TAB: TEAM SPLITS */
@@ -390,7 +717,7 @@ export default function ManageCommissions() {
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${C.border}` }}>
                     <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Product</th>
-                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Partner</th>
+                    <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Target Member</th>
                     <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Type</th>
                     <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Payout Value</th>
                     <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Effective Period</th>
@@ -528,7 +855,7 @@ export default function ManageCommissions() {
         </div>
       )}
 
-      {/* OVERRIDE CREATION MODAL */}
+      {/* INDIVIDUAL OVERRIDE CREATION MODAL */}
       {modalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
           <div style={{ ...S.card, width: "100%", maxWidth: "520px", maxHeight: "90vh", overflowY: "auto", padding: "24px" }}>
@@ -558,18 +885,18 @@ export default function ManageCommissions() {
                 </select>
               </div>
 
-              {/* Partner */}
+              {/* Target Partner / Team Member */}
               <div>
-                <label style={S.label}>Select Target Partner (Leave as Global for all Partners)</label>
+                <label style={S.label}>Select Target Partner or Team Member (Leave as Global for all)</label>
                 <select
                   style={S.input}
                   value={form.Partner_id}
                   onChange={e => setForm({ ...form, Partner_id: e.target.value })}
                 >
-                  <option value="global">🌐 Apply globally (All Partners)</option>
+                  <option value="global">🌐 Apply globally (All Partners & Team Members)</option>
                   {partners.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name} ({p.Partner_code}) - {p.company_name}
+                      {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code || 'N/A'}) - {p.parent_name ? `Downline of ${p.parent_name}` : (p.company_name || 'Primary Partner')}
                     </option>
                   ))}
                 </select>
@@ -642,6 +969,116 @@ export default function ManageCommissions() {
                   style={{ ...S.btn("primary"), padding: "10px 24px", opacity: submitting ? 0.7 : 1 }}
                 >
                   {submitting ? "Applying..." : "Save Override"}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* BULK OVERRIDE CREATION MODAL */}
+      {bulkModalOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
+          <div style={{ ...S.card, width: "100%", maxWidth: "520px", maxHeight: "90vh", overflowY: "auto", padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px", borderBottom: `1px solid ${C.border}`, paddingBottom: "12px" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: 0 }}>Apply Bulk Commission Override</h3>
+                <span style={{ fontSize: "12px", color: C.teal, fontWeight: 700 }}>
+                  Applying override rule to {selectedPartnerIds.length} selected member(s)
+                </span>
+              </div>
+              <button onClick={() => setBulkModalOpen(false)} style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", padding: "4px" }}>
+                <Icons.x size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleBulkCreateRules} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              
+              {/* Product */}
+              <div>
+                <label style={S.label}>Select Product *</label>
+                <select
+                  required
+                  style={S.input}
+                  value={form.product_id}
+                  onChange={e => setForm({ ...form, product_id: e.target.value })}
+                >
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Commission Config (Split Row) */}
+              <div className="responsive-split-row">
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Payout Type *</label>
+                  <select
+                    required
+                    style={S.input}
+                    value={form.commission_type}
+                    onChange={e => setForm({ ...form, commission_type: e.target.value })}
+                  >
+                    <option value="fixed">Fixed Flat Payout (₹)</option>
+                    <option value="percentage">Percentage (%)</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Value *</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 500 or 2.5"
+                    style={S.input}
+                    value={form.commission_value}
+                    onChange={e => setForm({ ...form, commission_value: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Effective Dates (Split Row) */}
+              <div className="responsive-split-row">
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Effective From *</label>
+                  <input
+                    required
+                    type="date"
+                    style={S.input}
+                    value={form.effective_from}
+                    onChange={e => setForm({ ...form, effective_from: e.target.value })}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={S.label}>Effective To (Optional)</label>
+                  <input
+                    type="date"
+                    style={S.input}
+                    value={form.effective_to}
+                    onChange={e => setForm({ ...form, effective_to: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px", borderTop: `1px solid ${C.border}`, paddingTop: "16px" }}>
+                <button
+                  type="button"
+                  onClick={() => setBulkModalOpen(false)}
+                  style={{ ...S.btn("outline"), padding: "10px 20px" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{ ...S.btn("primary"), padding: "10px 24px", opacity: submitting ? 0.7 : 1 }}
+                >
+                  {submitting ? "Applying to All..." : `Apply to ${selectedPartnerIds.length} Members`}
                 </button>
               </div>
 

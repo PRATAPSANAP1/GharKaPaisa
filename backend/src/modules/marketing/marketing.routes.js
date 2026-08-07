@@ -4,7 +4,7 @@ const ctrl = require('./marketing.controller.js');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const roleCheck = require('../../middleware/authorization/role.middleware.js');
 
-const { uploadGeneric } = require('../../services/aws/s3.service.js');
+const { upload: uploadGeneric } = require('../../services/aws/s3.service.js');
 
 // List materials (accessible to Partner, Admin, Super Admin)
 router.get('/', jwtAuth, ctrl.listMarketingMaterials);

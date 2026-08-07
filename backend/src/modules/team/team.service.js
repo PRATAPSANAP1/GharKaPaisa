@@ -968,6 +968,118 @@ async function processTeamOverrideCommission(applicationId, childPartnerId, base
 const { generateTeamCode, generateRandomReferralCode } = require('../../utils/helpers/helpers');
 
 /**
+ * 16. SEND TEAM INVITATION (WhatsApp / SMS / Email)
+ */
+async function sendTeamInvitation(partnerId, { name, mobile, email }) {
+  const { rows: [p] } = await query(
+    `SELECT first_name, partner_code FROM partner_profiles WHERE id = $1`,
+    [partnerId]
+  );
+  if (!p) throw new Error('Partner profile not found');
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+  const referralLink = `${frontendUrl}/register?ref=${p.partner_code}`;
+  const inviterName = p.first_name || 'Your Partner';
+  const message = `Hi ${name || 'there'}! ${inviterName} has invited you to join GharKaPaisa — India's top credit card & loan referral platform. Earn commissions on every approved application! Register here: ${referralLink}`;
+
+  const channels = [];
+
+  // WhatsApp deep link
+  if (mobile) {
+    const cleaned = mobile.replace(/\D/g, '');
+    const waLink = `https://wa.me/91${cleaned}?text=${encodeURIComponent(message)}`;
+    channels.push({ channel: 'whatsapp', link: waLink });
+
+    // SMS via MSG91 if configured
+    if (process.env.MSG91_AUTH_KEY) {
+      try {
+        const axios = require('axios');
+        await axios.post('https://api.msg91.com/api/v5/flow/', {
+          template_id: process.env.MSG91_INVITE_TEMPLATE_ID || '',
+          short_url: '0',
+          mobiles: `91${cleaned}`,
+          VAR1: name || 'there',
+          VAR2: inviterName,
+          VAR3: referralLink,
+        }, {
+          headers: { authkey: process.env.MSG91_AUTH_KEY, 'Content-Type': 'application/json' }
+        });
+        channels.push({ channel: 'sms', status: 'sent' });
+      } catch (smsErr) {
+        logger.warn('SMS invite failed:', smsErr.message);
+        channels.push({ channel: 'sms', status: 'failed' });
+      }
+    }
+  }
+
+  // Email via nodemailer if configured
+  if (email && process.env.SMTP_HOST) {
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await transporter.sendMail({
+        from: `"GharKaPaisa" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        to: email,
+        subject: `${inviterName} invited you to join GharKaPaisa`,
+        html: `<p>Hi ${name || 'there'},</p><p>${inviterName} has invited you to join <strong>GharKaPaisa</strong> — India's top credit card &amp; loan referral platform.</p><p>Earn commissions on every approved application!</p><p><a href="${referralLink}" style="background:#0D5CAB;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Register Now</a></p>`,
+      });
+      channels.push({ channel: 'email', status: 'sent' });
+    } catch (emailErr) {
+      logger.warn('Email invite failed:', emailErr.message);
+      channels.push({ channel: 'email', status: 'failed' });
+    }
+  }
+
+  // Log invitation
+  await query(
+    `INSERT INTO invitation_history (partner_id, invite_type, recipient_name, recipient_email, recipient_mobile, referral_code, status, sent_at)
+     VALUES ($1, 'manual', $2, $3, $4, $5, 'SENT', NOW())`,
+    [partnerId, name || null, email || null, mobile || null, p.partner_code]
+  ).catch(() => {});
+
+  return { success: true, referral_link: referralLink, whatsapp_link: channels.find(c => c.channel === 'whatsapp')?.link, channels };
+}
+
+/**
+ * 17. GET REFERS LIST (invitation history + referral stats)
+ */
+async function getRefersList(partnerId) {
+  const { rows: [p] } = await query(
+    `SELECT partner_code FROM partner_profiles WHERE id = $1`,
+    [partnerId]
+  );
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+  const referralLink = `${frontendUrl}/register?ref=${p?.partner_code}`;
+
+  const { rows: invites } = await query(
+    `SELECT id, recipient_name, recipient_email, recipient_mobile, status, sent_at, registered_at
+     FROM invitation_history WHERE partner_id = $1 ORDER BY sent_at DESC LIMIT 50`,
+    [partnerId]
+  );
+
+  const { rows: [stats] } = await query(
+    `SELECT 
+       COALESCE(total_invites, 0) AS total_invites,
+       COALESCE(total_registered, 0) AS total_registered
+     FROM partner_referrals WHERE partner_id = $1`,
+    [partnerId]
+  );
+
+  return {
+    referral_code: p?.partner_code,
+    referral_link: referralLink,
+    total_invites: parseInt(stats?.total_invites) || invites.length,
+    total_registered: parseInt(stats?.total_registered) || 0,
+    invites,
+  };
+}
+
+/**
  * 10. GET OR CREATE PARTNER TEAM INFO (Team Name, Team Code, Team Link)
  */
 async function getPartnerTeamInfo(partnerId) {
@@ -1143,6 +1255,8 @@ module.exports = {
   getUpgradeStatus,
   getAllUpgradeRequests,
   approveUpgradeRequest,
-  rejectUpgradeRequest
+  rejectUpgradeRequest,
+  sendTeamInvitation,
+  getRefersList
 };
 
