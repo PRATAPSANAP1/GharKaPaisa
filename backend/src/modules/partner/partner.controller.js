@@ -475,17 +475,25 @@ const approvePartnerKYC = async (req, res, next) => {
 const addTeamMember = async (req, res, next) => {
   const client = await getClient();
   try {
-    const { PartnerId } = req.params;
-    const { first_name, last_name, email, mobile, password } = req.body;
+    let partnerId = req.params.PartnerId;
+    if (!partnerId || partnerId === 'self' || partnerId === 'me') {
+      const p = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      partnerId = p.rows[0]?.id;
+    }
+    if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    if (!first_name || !email || !mobile || !password) {
-      return error(res, 'First name, email, mobile, and password are required', 400);
+    const { first_name, last_name, name, email, mobile, password } = req.body;
+    const memberFirstName = first_name || (name ? name.trim().split(' ')[0] : '');
+    const memberLastName = last_name || (name ? name.trim().split(' ').slice(1).join(' ') : '');
+
+    if (!memberFirstName || !email || !mobile) {
+      return error(res, 'Name, email, and mobile are required', 400);
     }
 
     // Check if parent exists and allows team creation
     const { rows: [parentPartner] } = await client.query(`
-      SELECT id, allow_team_creation, team_status FROM partner_profiles WHERE id = $1
-    `, [PartnerId]);
+      SELECT id, partner_code, allow_team_creation, team_status FROM partner_profiles WHERE id = $1
+    `, [partnerId]);
     if (!parentPartner) return error(res, 'Parent partner not found', 404);
     if (parentPartner.allow_team_creation === false) {
       return error(res, 'Your profile does not allow team creation. Please contact support.', 403);
@@ -507,9 +515,10 @@ const addTeamMember = async (req, res, next) => {
       return error(res, 'User with this email or mobile already exists', 409);
     }
 
+    const tempPassword = password || `GKP@${Math.floor(100000 + Math.random() * 900000)}`;
     const bcrypt = require('bcryptjs');
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
 
     // Insert user (must_change_password = true)
     const { rows: [user] } = await client.query(
@@ -529,20 +538,34 @@ const addTeamMember = async (req, res, next) => {
         user_id, partner_code, first_name, last_name, parent_partner_id, partner_id, kyc_status
       )
       VALUES ($1, $2, $3, $4, $5, $5, 'pending') RETURNING id
-    `, [user.id, partnerCode, first_name, last_name || '', PartnerId]);
+    `, [user.id, partnerCode, memberFirstName, memberLastName || '', partnerId]);
 
     // Track team relationship
     await client.query(`
       INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
       VALUES ($1, $2, 1)
       ON CONFLICT (child_partner_id) DO UPDATE SET parent_partner_id = EXCLUDED.parent_partner_id
-    `, [PartnerId, childPartner.id]);
+    `, [partnerId, childPartner.id]);
 
     // Create wallet
     await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
 
     await client.query('COMMIT');
-    return created(res, { partner_code: partnerCode }, 'Team member created successfully. They can now log in using their email and password.');
+
+    const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+    const inviteLink = `${appUrl}/register?ref=${parentPartner.partner_code}&role=TEAM_MEMBER`;
+    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nStep 1: Open the link: ${inviteLink}\nStep 2: Login using Email: ${email} & Temp Password: ${tempPassword}\nStep 3: Complete your KYC verification.\n\nWelcome aboard!`;
+
+    const cleanMobile = String(mobile).replace(/\D/g, '');
+
+    return created(res, {
+      partner_code: partnerCode,
+      invite_link: inviteLink,
+      temp_password: tempPassword,
+      whatsapp_link: `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(messageText)}`,
+      sms_link: `sms:+91${cleanMobile}?body=${encodeURIComponent(messageText)}`,
+      email_link: `mailto:${email}?subject=${encodeURIComponent("Invitation to Join GharKaPaisa Team")}&body=${encodeURIComponent(messageText)}`
+    }, 'Team member created successfully. Invitation links generated.');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);

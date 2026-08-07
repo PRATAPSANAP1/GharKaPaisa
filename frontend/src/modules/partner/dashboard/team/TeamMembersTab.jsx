@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Search, Filter, Download, ChevronLeft, ChevronRight, 
-  Eye, RefreshCw, UserCheck, ShieldAlert, CheckCircle, Clock
+  Eye, RefreshCw, UserCheck, ShieldAlert, CheckCircle, Clock,
+  UserPlus, X, Copy, Check, MessageSquare, Mail, Send
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
@@ -19,8 +20,53 @@ export default function TeamMembersTab({ onSelectMember }) {
   const [kycFilter, setKycFilter] = useState('');
   const [periodFilter, setPeriodFilter] = useState('');
 
+  // Invite Modal States
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ name: '', mobile: '', email: '' });
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteResult, setInviteResult] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const getAuthToken = () => {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
+  };
+
+  const handleSendInvite = async (e) => {
+    e.preventDefault();
+    setInviting(true);
+    setInviteError(null);
+    try {
+      const token = getAuthToken();
+      const res = await axios.post(`${API_URL}/partner/team/invite`, inviteForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setInviteResult(res.data.data);
+        fetchMembers(1);
+      } else {
+        setInviteError(res.data.message || 'Failed to send invitation');
+      }
+    } catch (err) {
+      console.error('Invite error:', err);
+      setInviteError(err.response?.data?.message || 'Error creating invitation');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const resetInviteModal = () => {
+    setShowInviteModal(false);
+    setInviteForm({ name: '', mobile: '', email: '' });
+    setInviteResult(null);
+    setInviteError(null);
+    setCopiedLink(false);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
   };
 
   useEffect(() => {
@@ -106,12 +152,21 @@ export default function TeamMembersTab({ onSelectMember }) {
             <p className="text-xs text-slate-400">Total {pagination.total} registered members in your downline network</p>
           </div>
 
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all"
-          >
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all"
+            >
+              <UserPlus className="w-4 h-4" /> Invite Team Member
+            </button>
+
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+          </div>
         </div>
 
         {/* Filter Inputs Grid */}
@@ -303,6 +358,177 @@ export default function TeamMembersTab({ onSelectMember }) {
           </div>
         )}
       </div>
+
+      {/* Invite Team Member Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-6">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Invite New Team Member</h3>
+                  <p className="text-xs text-slate-400">Send an invitation via WhatsApp, SMS, or Email</p>
+                </div>
+              </div>
+              <button
+                onClick={resetInviteModal}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Banner */}
+            {inviteError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                <span>{inviteError}</span>
+              </div>
+            )}
+
+            {!inviteResult ? (
+              /* Invitation Form */
+              <form onSubmit={handleSendInvite} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Member Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={inviteForm.name}
+                    onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
+                    placeholder="Enter full name"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Mobile Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={10}
+                    value={inviteForm.mobile}
+                    onChange={(e) => setInviteForm({ ...inviteForm, mobile: e.target.value.replace(/\D/g, '') })}
+                    placeholder="10-digit mobile number"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                    Email Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={inviteForm.email}
+                    onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                    placeholder="name@example.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={resetInviteModal}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inviting}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
+                  >
+                    {inviting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Create & Generate Invite
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Invitation Success & Sharing Options */
+              <div className="space-y-5">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-1">
+                  <div className="flex items-center gap-2 font-bold text-xs">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    Team Member Created & Invited!
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Partner Code: <strong className="text-white font-mono">{inviteResult.partner_code}</strong> | Temp Password: <strong className="text-white font-mono">{inviteResult.temp_password}</strong>
+                  </p>
+                </div>
+
+                {/* Copy Link Input Bar */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300">Invitation & Registration Link</label>
+                  <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-950 border border-slate-800">
+                    <input
+                      type="text"
+                      readOnly
+                      value={inviteResult.invite_link}
+                      className="flex-1 bg-transparent px-3 py-1 text-xs text-indigo-300 font-mono outline-none"
+                    />
+                    <button
+                      onClick={() => copyToClipboard(inviteResult.invite_link)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedLink ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct Invite Channels */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <label className="block text-xs font-bold text-slate-300">Send Invite Directly Via:</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <a
+                      href={inviteResult.whatsapp_link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-1.5 p-3 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all text-center"
+                    >
+                      <MessageSquare className="w-4 h-4" /> WhatsApp
+                    </a>
+
+                    <a
+                      href={inviteResult.sms_link}
+                      className="flex items-center justify-center gap-1.5 p-3 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-bold hover:bg-blue-600 hover:text-white transition-all text-center"
+                    >
+                      <Send className="w-4 h-4" /> SMS
+                    </a>
+
+                    <a
+                      href={inviteResult.email_link}
+                      className="flex items-center justify-center gap-1.5 p-3 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/30 text-xs font-bold hover:bg-rose-600 hover:text-white transition-all text-center"
+                    >
+                      <Mail className="w-4 h-4" /> Email
+                    </a>
+                  </div>
+                </div>
+
+                <div className="pt-2 text-right border-t border-slate-800">
+                  <button
+                    onClick={resetInviteModal}
+                    className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

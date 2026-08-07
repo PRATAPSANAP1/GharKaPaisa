@@ -56,5 +56,6 @@ router.get('/team-tree', requireApprovedPartner, teamCtrl.getTree);
 router.get('/team-dashboard', requireApprovedPartner, teamCtrl.getDashboard);
 router.get('/team-earnings', requireApprovedPartner, teamCtrl.getAnalytics);
 router.get('/team-members', requireApprovedPartner, teamCtrl.getMembersList);
+router.post('/team/invite', requireApprovedPartner, partnerCtrl.addTeamMember);
 
 module.exports = router;
