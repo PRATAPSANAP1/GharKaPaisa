@@ -85,14 +85,18 @@ export default function PartnerKyc() {
           setPanNumber(panDoc.doc_number);
         }
 
-        if (data.video && data.video.storage_key) {
-          try {
-            const viewRes = await api.get('/partner/kyc/documents/video/view');
-            if (viewRes.data?.success && viewRes.data?.data?.url) {
-              setVideoPlayUrl(viewRes.data.data.url);
+        if (data.video) {
+          if (data.video.video_url) {
+            setVideoPlayUrl(data.video.video_url);
+          } else if (data.video.storage_key) {
+            try {
+              const viewRes = await api.get('/partner/kyc/documents/video/view');
+              if (viewRes.data?.success && viewRes.data?.data?.url) {
+                setVideoPlayUrl(viewRes.data.data.url);
+              }
+            } catch (videoErr) {
+              // Silently handle if video is not yet accessible
             }
-          } catch (videoErr) {
-            // Silently handle if video is not yet accessible
           }
         }
       }
