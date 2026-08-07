@@ -119,10 +119,25 @@ const getSignedDownloadUrl = async (key, expiresInSeconds = 3600) => {
   return getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
 };
 
+// Get CloudFront / Public S3 URL for images & media
+const getCloudFrontUrl = (urlOrKey) => {
+  if (!urlOrKey) return null;
+  const cfDomain = process.env.AWS_CLOUDFRONT_DOMAIN || process.env.CLOUDFRONT_DOMAIN;
+  if (cfDomain) {
+    const key = urlOrKey.startsWith('http') ? urlOrKey.split('.com/')[1] : urlOrKey;
+    if (key) return `https://${cfDomain.replace(/^https?:\/\//, '')}/${key}`;
+  }
+  if (urlOrKey.startsWith('http://') || urlOrKey.startsWith('https://')) {
+    return urlOrKey;
+  }
+  const region = process.env.AWS_REGION || 'ap-south-1';
+  return BUCKET ? `https://${BUCKET}.s3.${region}.amazonaws.com/${urlOrKey}` : urlOrKey;
+};
+
 // Delete from S3
 const deleteFromS3 = async (key) => {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, deleteFromS3 };
+module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, getCloudFrontUrl, deleteFromS3 };
