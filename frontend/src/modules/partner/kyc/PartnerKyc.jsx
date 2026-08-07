@@ -85,13 +85,18 @@ export default function PartnerKyc() {
         }
 
         if (data.video) {
-          try {
-            const viewRes = await api.get('/partner/kyc/documents/video/view');
-            if (viewRes.data?.success && viewRes.data?.data?.url) {
-              setVideoPlayUrl(viewRes.data.data.url);
+          if (data.video.video_url) {
+            setVideoPlayUrl(data.video.video_url);
+          }
+          if (data.video.storage_key) {
+            try {
+              const viewRes = await api.get('/partner/kyc/documents/video/view');
+              if (viewRes.data?.success && viewRes.data?.data?.url) {
+                setVideoPlayUrl(viewRes.data.data.url);
+              }
+            } catch (videoErr) {
+              // Silently handle video view url error
             }
-          } catch (videoErr) {
-            console.error('Failed to load video signed url:', videoErr);
           }
         }
       }
