@@ -90,9 +90,9 @@ async function getTeamDashboard(partnerId) {
   // Commissions Metrics (10% override earnings for team)
   const { rows: [{ today_commission, monthly_commission, lifetime_commission }] } = await query(
     `SELECT 
-       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN amount ELSE 0 END), 0)::numeric AS today_commission,
-       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN amount ELSE 0 END), 0)::numeric AS monthly_commission,
-       COALESCE(SUM(amount), 0)::numeric AS lifetime_commission
+       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN COALESCE(amount, commission_amount, 0) ELSE 0 END), 0)::numeric AS today_commission,
+       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(amount, commission_amount, 0) ELSE 0 END), 0)::numeric AS monthly_commission,
+       COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric AS lifetime_commission
      FROM team_commissions
      WHERE parent_partner_id = $1`,
     [partnerId]
@@ -235,7 +235,7 @@ async function getTeamTree(rootPartnerId, targetParentId = null) {
       );
       // Calculate root commission
       const { rows: [{ commission }] } = await query(
-        `SELECT COALESCE(SUM(amount), 0)::numeric AS commission FROM team_commissions WHERE parent_partner_id = $1`,
+        `SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric AS commission FROM team_commissions WHERE parent_partner_id = $1`,
         [rootPartnerId]
       );
 
@@ -267,7 +267,7 @@ async function getTeamTree(rootPartnerId, targetParentId = null) {
        (SELECT COALESCE(SUM(COALESCE(a.approved_amount, a.loan_amount, a.credit_limit, 0)), 0)::numeric 
         FROM partner_team_relationships r JOIN applications a ON a.partner_id = r.child_partner_id 
         WHERE r.parent_partner_id = cp.id AND a.status IN ('approved', 'disbursed', 'confirmed')) AS team_business,
-       (SELECT COALESCE(SUM(amount), 0)::numeric FROM team_commissions WHERE parent_partner_id = cp.id) AS team_commission,
+       (SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric FROM team_commissions WHERE parent_partner_id = cp.id) AS team_commission,
        rel.level AS relative_level
      FROM partner_team_relationships rel
      JOIN partner_profiles cp ON cp.id = rel.child_partner_id
@@ -379,7 +379,7 @@ async function getTeamMembersList(partnerId, options = {}) {
       (SELECT COUNT(*)::int FROM applications WHERE partner_id = cp.id) AS applications_count,
       (SELECT COALESCE(SUM(COALESCE(approved_amount, loan_amount, credit_limit, 0)), 0)::numeric 
        FROM applications WHERE partner_id = cp.id AND status IN ('approved', 'disbursed', 'confirmed')) AS total_business,
-      (SELECT COALESCE(SUM(amount), 0)::numeric FROM team_commissions WHERE child_partner_id = cp.id) AS total_commission
+      (SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric FROM team_commissions WHERE child_partner_id = cp.id) AS total_commission
     FROM partner_team_relationships r
     JOIN partner_profiles cp ON cp.id = r.child_partner_id
     JOIN users u ON u.id = cp.user_id

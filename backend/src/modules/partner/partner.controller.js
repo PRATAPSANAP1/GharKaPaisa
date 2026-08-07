@@ -66,8 +66,35 @@ const getProfile = async (req, res, next) => {
       `SELECT id, video_url, video_duration, video_size, storage_key, uploaded_at, verification_status FROM partner_videos WHERE partner_id = $1`, [PartnerId]
     );
 
-    const processedKyc = shouldMask ? [] : kyc;
-    const processedVideo = shouldMask ? null : video;
+    const { getSignedDownloadUrl } = require('../../services/aws/s3.service.js');
+
+    const processedKyc = shouldMask ? [] : await Promise.all(kyc.map(async (doc) => {
+      let key = doc.s3_key || doc.file_url;
+      if (key) {
+        if (key.includes('.amazonaws.com/')) key = key.split('.amazonaws.com/')[1];
+        key = key.replace(/^\//, '');
+        try {
+          const signed = await getSignedDownloadUrl(key);
+          doc.file_url = signed;
+          doc.signed_url = signed;
+        } catch (e) {}
+      }
+      return doc;
+    }));
+
+    let processedVideo = shouldMask ? null : video;
+    if (processedVideo) {
+      let vKey = processedVideo.storage_key || processedVideo.video_url;
+      if (vKey) {
+        if (vKey.includes('.amazonaws.com/')) vKey = vKey.split('.amazonaws.com/')[1];
+        vKey = vKey.replace(/^\//, '');
+        try {
+          const signed = await getSignedDownloadUrl(vKey);
+          processedVideo.video_url = signed;
+          processedVideo.signed_url = signed;
+        } catch (e) {}
+      }
+    }
 
     return success(res, { ...Partner, kyc_documents: processedKyc, partner_video: processedVideo });
   } catch (err) {

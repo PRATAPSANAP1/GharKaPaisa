@@ -150,9 +150,19 @@ const viewDocument = async (req, res, next) => {
       return notFound(res, 'Document or Video not found.');
     }
 
-    if (!doc.s3_key) {
+    const rawKey = doc.s3_key || doc.file_url;
+    if (!rawKey) {
       return error(res, 'File key is missing or not yet uploaded.', 400);
     }
+
+    let key = rawKey;
+    if (key.includes('.amazonaws.com/')) {
+      key = key.split('.amazonaws.com/')[1];
+    } else if (key.startsWith('http://') || key.startsWith('https://')) {
+      const parts = key.split('/');
+      key = parts.slice(3).join('/');
+    }
+    key = key.replace(/^\//, '');
 
     // Authorization check: Admin/Superadmin or document owner
     const userRole = (user.role || '').toUpperCase();
@@ -173,8 +183,8 @@ const viewDocument = async (req, res, next) => {
       return error(res, 'Access denied. You do not have permission to view this document.', 403);
     }
 
-    // Generate S3 signed URL using s3_key
-    const signedUrl = await getSignedDownloadUrl(doc.s3_key);
+    // Generate S3 signed URL using parsed key
+    const signedUrl = await getSignedDownloadUrl(key);
 
     // Support both redirect and JSON output depending on query parameter
     if (req.query.redirect === 'true') {
