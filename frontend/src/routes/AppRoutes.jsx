@@ -83,6 +83,7 @@ import PartnerVault from '../modules/partner/profile/PartnerVault';
 import PartnerMarketing from '../modules/partner/dashboard/PartnerMarketing';
 import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
 import PartnerReports from '../modules/partner/dashboard/PartnerReports';
+import PartnerRefers from '../modules/partner/dashboard/PartnerRefers';
 import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
 import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
@@ -180,7 +181,7 @@ const AppRoutes = () => {
 
       {/* Partner Protected Routes */}
       <Route element={<ProtectedRoute />}>
-        <Route element={<RoleRoute allowedRoles={['PARTNER']} />}>
+        <Route element={<RoleRoute allowedRoles={['PARTNER', 'TEAM_MEMBER']} />}>
           <Route element={<PartnerLayout />}>
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
             
@@ -209,6 +210,7 @@ const AppRoutes = () => {
             <Route path="/partner/kyc-centre" element={<PartnerKyc />} />
             <Route path="/partner/team" element={<PartnerTeam />} />
             <Route path="/partner/team-network" element={<PartnerTeam />} />
+            <Route path="/partner/refers" element={<PartnerRefers />} />
             <Route path="/partner/leads" element={<PartnerCrm />} />
             <Route path="/partner/crm" element={<PartnerCrm />} />
             <Route path="/partner/customers" element={<PartnerCrm />} />

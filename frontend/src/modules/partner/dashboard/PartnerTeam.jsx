@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  Users, Layers, List, TrendingUp, Activity, Target, 
-  Settings, RefreshCw, AlertCircle 
+  Users, Layers, List, TrendingUp, Activity, Target,
+  RefreshCw, AlertCircle 
 } from 'lucide-react';
 
 import TeamDashboardTab from './team/TeamDashboardTab';
@@ -11,7 +11,6 @@ import TeamMembersTab from './team/TeamMembersTab';
 import TeamAnalyticsTab from './team/TeamAnalyticsTab';
 import TeamActivityTab from './team/TeamActivityTab';
 import TeamGoalsTab from './team/TeamGoalsTab';
-import TeamSettingsTab from './team/TeamSettingsTab';
 import TeamMemberDrawer from './team/TeamMemberDrawer';
 
 import { useAuthStore } from '../../../app/store/authStore';
@@ -105,7 +104,6 @@ export default function PartnerTeam() {
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'activity', label: 'Activity Stream', icon: Activity },
     { id: 'goals', label: 'Goals & Leaderboard', icon: Target },
-    { id: 'settings', label: 'Referral & Settings', icon: Settings },
   ];
 
   if (isTeamMember) {
@@ -253,10 +251,6 @@ export default function PartnerTeam() {
           <TeamGoalsTab 
             onSelectMember={(id) => setSelectedMemberId(id)} 
           />
-        )}
-
-        {activeTab === 'settings' && (
-          <TeamSettingsTab />
         )}
       </div>
 

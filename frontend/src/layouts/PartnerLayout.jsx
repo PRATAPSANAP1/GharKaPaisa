@@ -167,13 +167,26 @@ export default function PartnerLayout() {
         navigate('/partner/dashboard');
       }
     }
-  }, [accountStatus, location.pathname, navigate, logout]);
+
+    // Team members cannot access Team management or Reports pages
+    if (user?.role === 'TEAM_MEMBER') {
+      const blockedPaths = ['/partner/team', '/partner/team-network', '/partner/reports'];
+      if (blockedPaths.some(p => currentPath.startsWith(p))) {
+        navigate('/partner/dashboard');
+      }
+    }
+  }, [accountStatus, user?.role, location.pathname, navigate, logout]);
+
+  const isTeamMember = user?.role === 'TEAM_MEMBER';
 
   const filteredNavItems = NAV_ITEMS.filter((item) => {
     if (accountStatus === 'pending' || accountStatus === 'inactive' || accountStatus === 'rejected') {
       return ['dashboard', 'training'].includes(item.id);
     }
-    return true; // Approved / Active gets all items
+    if (isTeamMember) {
+      return !['team-network', 'reports'].includes(item.id);
+    }
+    return true;
   });
 
   const filteredMobileBottomNav = MOBILE_BOTTOM_NAV.filter((nav) => {
