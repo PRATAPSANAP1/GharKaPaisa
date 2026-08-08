@@ -1,21 +1,54 @@
 import React from 'react';
-import { 
-  Users, UserCheck, UserPlus, TrendingUp, DollarSign, Award, 
-  CheckCircle2, Clock, FileText, Activity, AlertCircle, ArrowUpRight, Crown, ShieldAlert
+import {
+  Users, UserCheck, UserPlus, TrendingUp, DollarSign,
+  CheckCircle2, FileText, Activity, ArrowUpRight, Crown, ShieldAlert
 } from 'lucide-react';
+import { useTheme } from '../../../../contexts/ThemeContext';
+
+const KPI_CONFIGS = [
+  { key: 'downline', color: '#6366f1', label: 'Total Downline', icon: Users },
+  { key: 'joinings', color: '#10b981', label: 'New Joinings', icon: UserPlus },
+  { key: 'business', color: '#3b82f6', label: 'Team Business', icon: TrendingUp },
+  { key: 'commission', color: '#f59e0b', label: 'Team Commission', icon: DollarSign },
+];
+
+function SkeletonCard({ isDark, border }) {
+  return (
+    <div style={{
+      height: 120, borderRadius: 18,
+      background: isDark ? '#111' : '#f1f5f9',
+      border: `1px solid ${border}`,
+      animation: 'shimmer 1.5s infinite'
+    }} />
+  );
+}
 
 export default function TeamDashboardTab({ data, loading, onSelectMember }) {
+  const { C, isDark } = useTheme();
+  const border = isDark ? '#1f1f1f' : C.border;
+  const cardBg = isDark ? '#0f0f0f' : '#fff';
+  const textPrimary = C.text;
+  const textMuted = C.textMid;
+  const accent = C.primary;
+
+  const fmt = (v) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v || 0);
+
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-32 bg-slate-800/50 rounded-2xl border border-slate-700/50"></div>
-          ))}
+      <div>
+        <style>{`
+          @keyframes shimmer {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.4; }
+          }
+        `}</style>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14, marginBottom: 20 }}>
+          {[...Array(8)].map((_, i) => <SkeletonCard key={i} isDark={isDark} border={border} />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="h-64 bg-slate-800/50 rounded-2xl border border-slate-700/50 lg:col-span-2"></div>
-          <div className="h-64 bg-slate-800/50 rounded-2xl border border-slate-700/50"></div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 14 }}>
+          {[...Array(2)].map((_, i) => (
+            <div key={i} style={{ height: 240, borderRadius: 18, background: isDark ? '#111' : '#f1f5f9', border: `1px solid ${border}`, animation: 'shimmer 1.5s infinite' }} />
+          ))}
         </div>
       </div>
     );
@@ -23,288 +56,254 @@ export default function TeamDashboardTab({ data, loading, onSelectMember }) {
 
   if (!data) return null;
 
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(val || 0);
-  };
+  const kpiCards = [
+    {
+      color: '#6366f1', icon: Users, label: 'Total Downline',
+      value: data.total_members,
+      badge: `${data.direct_members} Direct / ${data.indirect_members} Indirect`,
+      sub: 'Entire team hierarchy count'
+    },
+    {
+      color: '#10b981', icon: UserPlus, label: 'New Joinings',
+      value: data.today_joinings,
+      badge: `+${data.this_month_joinings} This Month`,
+      sub: 'Active recruits growth rate'
+    },
+    {
+      color: '#3b82f6', icon: TrendingUp, label: 'Team Business',
+      value: fmt(data.team_business),
+      badge: `${data.applications_approved} Approved`,
+      sub: 'Total disbursals & credit limits'
+    },
+    {
+      color: '#f59e0b', icon: DollarSign, label: 'Team Commission',
+      value: fmt(data.monthly_commission),
+      badge: `${fmt(data.lifetime_commission)} Total`,
+      sub: `Today: ${fmt(data.today_commission)}`
+    },
+  ];
+
+  const statCards = [
+    {
+      label: 'Member Status', icon: UserCheck, iconColor: '#94a3b8',
+      items: [
+        { val: data.active_members, label: 'Active', color: '#10b981' },
+        { val: data.inactive_members, label: 'Inactive', color: '#ef4444' },
+      ]
+    },
+    {
+      label: 'KYC Verification', icon: CheckCircle2, iconColor: '#10b981',
+      items: [
+        { val: data.verified_members, label: 'Verified', color: '#10b981' },
+        { val: data.pending_kyc, label: 'Pending', color: '#f59e0b' },
+      ]
+    },
+    {
+      label: 'Applications Status', icon: FileText, iconColor: '#3b82f6',
+      items: [
+        { val: data.applications_submitted, label: 'Total', color: textPrimary },
+        { val: data.applications_pending, label: 'Pending', color: '#f59e0b' },
+        { val: data.applications_approved, label: 'Approved', color: '#10b981' },
+      ]
+    },
+    {
+      label: 'Conversion Rate', icon: Activity, iconColor: '#a855f7',
+      custom: (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 26, fontWeight: 900, color: '#a855f7' }}>{data.average_conversion_rate}%</span>
+            <span style={{ fontSize: 11, color: '#a855f7' }}>Apps to Disbursal</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 99, background: isDark ? '#1f1f1f' : '#e5e7eb', marginTop: 12, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 99,
+              background: 'linear-gradient(90deg,#a855f7,#7c3aed)',
+              width: `${Math.min(100, data.average_conversion_rate)}%`,
+              transition: 'width 1s ease'
+            }} />
+          </div>
+        </div>
+      )
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Members */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-indigo-950/40 border border-slate-700/60 shadow-xl backdrop-blur-xl group hover:border-indigo-500/50 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">Total Downline</span>
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <h3 className="text-3xl font-extrabold text-white tracking-tight">{data.total_members}</h3>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              {data.direct_members} Direct / {data.indirect_members} Indirect
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Entire team hierarchy count</p>
-        </div>
+    <div>
+      <style>{`
+        @keyframes countUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .kpi-card:hover { transform: translateY(-3px) !important; }
+        .member-row:hover { background: ${isDark ? '#1a1a1a' : '#f8faff'} !important; }
+      `}</style>
 
-        {/* Joinings (Today & Month) */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-emerald-950/40 border border-slate-700/60 shadow-xl backdrop-blur-xl group hover:border-emerald-500/50 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">New Joinings</span>
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-              <UserPlus className="w-5 h-5" />
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14, marginBottom: 16 }}>
+        {kpiCards.map((k, i) => {
+          const Icon = k.icon;
+          return (
+            <div key={i} className="kpi-card" style={{
+              padding: '18px 20px', borderRadius: 18,
+              background: isDark ? `linear-gradient(135deg,#0f0f0f,${k.color}08)` : `linear-gradient(135deg,#fff,${k.color}08)`,
+              border: `1px solid ${isDark ? k.color + '20' : k.color + '30'}`,
+              boxShadow: isDark ? `0 4px 24px rgba(0,0,0,0.4)` : `0 4px 20px ${k.color}10`,
+              transition: 'all 0.3s ease',
+              animation: `countUp 0.4s ease ${i * 80}ms both`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: k.color }}>{k.label}</span>
+                <div style={{ padding: 8, borderRadius: 10, background: k.color + '15', border: `1px solid ${k.color}25` }}>
+                  <Icon size={16} color={k.color} />
+                </div>
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: textPrimary, marginBottom: 6 }}>{k.value}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 11, color: textMuted }}>{k.sub}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: k.color + '15', color: k.color, border: `1px solid ${k.color}25` }}>{k.badge}</span>
+              </div>
             </div>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <h3 className="text-3xl font-extrabold text-white tracking-tight">{data.today_joinings}</h3>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              +{data.this_month_joinings} This Month
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Active recruits growth rate</p>
-        </div>
-
-        {/* Team Business */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-blue-950/40 border border-slate-700/60 shadow-xl backdrop-blur-xl group hover:border-blue-500/50 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">Team Business</span>
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(data.team_business)}</h3>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-              {data.applications_approved} Approved
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Total disbursals & credit limits</p>
-        </div>
-
-        {/* Team Commission Override */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-amber-950/40 border border-slate-700/60 shadow-xl backdrop-blur-xl group hover:border-amber-500/50 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">Team Commission</span>
-            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between">
-            <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(data.monthly_commission)}</h3>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              {formatCurrency(data.lifetime_commission)} Total
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Today: {formatCurrency(data.today_commission)}</p>
-        </div>
-
-        {/* Active vs Inactive */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>Member Status</span>
-            <UserCheck className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-2xl font-bold text-emerald-400">{data.active_members}</span>
-              <p className="text-xs text-slate-400">Active</p>
-            </div>
-            <div className="h-8 w-px bg-slate-800"></div>
-            <div>
-              <span className="text-2xl font-bold text-rose-400">{data.inactive_members}</span>
-              <p className="text-xs text-slate-400">Inactive</p>
-            </div>
-          </div>
-        </div>
-
-        {/* KYC Verification */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>KYC Verification</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-2xl font-bold text-emerald-400">{data.verified_members}</span>
-              <p className="text-xs text-slate-400">Verified</p>
-            </div>
-            <div className="h-8 w-px bg-slate-800"></div>
-            <div>
-              <span className="text-2xl font-bold text-amber-400">{data.pending_kyc}</span>
-              <p className="text-xs text-slate-400">Pending</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Applications Breakdown */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>Applications Status</span>
-            <FileText className="w-4 h-4 text-blue-400" />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xl font-bold text-white">{data.applications_submitted}</span>
-              <p className="text-xs text-slate-400">Total</p>
-            </div>
-            <div>
-              <span className="text-xl font-bold text-amber-400">{data.applications_pending}</span>
-              <p className="text-xs text-slate-400">Pending</p>
-            </div>
-            <div>
-              <span className="text-xl font-bold text-emerald-400">{data.applications_approved}</span>
-              <p className="text-xs text-slate-400">Approved</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Conversion Rate */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>Conversion Rate</span>
-            <Activity className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-purple-300">{data.average_conversion_rate}%</span>
-            <span className="text-xs text-purple-400/80">Apps to Disbursal</span>
-          </div>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, data.average_conversion_rate)}%` }}></div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Top / Lowest Performers & Recent Joinings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Performers Overview */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Top Performer Card */}
-          {data.top_performer ? (
-            <div 
-              onClick={() => onSelectMember(data.top_performer.id)}
-              className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 border border-amber-500/30 shadow-lg cursor-pointer hover:border-amber-500/60 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider">
-                  <Crown className="w-4 h-4 text-amber-400" /> Top Performer
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {data.top_performer.rank}
-                </span>
+      {/* Stat Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14, marginBottom: 20 }}>
+        {statCards.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <div key={i} style={{
+              padding: '18px 20px', borderRadius: 18,
+              background: cardBg, border: `1px solid ${border}`,
+              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 2px 12px rgba(0,0,0,0.06)',
+              animation: `countUp 0.4s ease ${(i + 4) * 80}ms both`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: textMuted }}>{s.label}</span>
+                <Icon size={15} color={s.iconColor} />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center overflow-hidden font-bold text-amber-400">
-                  {data.top_performer.photo ? (
-                    <img src={data.top_performer.photo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    data.top_performer.name?.slice(0, 2).toUpperCase()
-                  )}
+              {s.custom ? s.custom : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  {s.items.map((item, j) => (
+                    <React.Fragment key={j}>
+                      {j > 0 && <div style={{ width: 1, height: 32, background: border }} />}
+                      <div>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: item.color }}>{item.val}</div>
+                        <div style={{ fontSize: 11, color: textMuted }}>{item.label}</div>
+                      </div>
+                    </React.Fragment>
+                  ))}
                 </div>
-                <div>
-                  <h4 className="font-bold text-white group-hover:text-amber-300 transition-colors">{data.top_performer.name}</h4>
-                  <p className="text-xs text-slate-400">Code: {data.top_performer.code}</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-400">Business:</span>
-                  <span className="ml-1.5 font-bold text-white">{formatCurrency(data.top_performer.business)}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Approved Apps:</span>
-                  <span className="ml-1.5 font-bold text-emerald-400">{data.top_performer.apps}</span>
-                </div>
-              </div>
+              )}
             </div>
-          ) : (
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-400">
-              No top performer data available yet
+          );
+        })}
+      </div>
+
+      {/* Performers + Recent Joinings */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
+        {/* Performers */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {data.top_performer && (
+            <div onClick={() => onSelectMember(data.top_performer.id)}
+              style={{
+                padding: 20, borderRadius: 18, cursor: 'pointer',
+                background: isDark ? 'linear-gradient(135deg,#1a1200,#0f0f0f)' : 'linear-gradient(135deg,#fffbeb,#fff)',
+                border: '1px solid #f59e0b40',
+                boxShadow: '0 4px 20px rgba(245,158,11,0.1)',
+                transition: 'all 0.25s'
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>
+                  <Crown size={14} color="#f59e0b" /> Top Performer
+                </span>
+                <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b30', fontWeight: 700 }}>{data.top_performer.rank}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f59e0b15', border: '2px solid #f59e0b40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#f59e0b', overflow: 'hidden', fontSize: 14 }}>
+                  {data.top_performer.photo ? <img src={data.top_performer.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : data.top_performer.name?.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: textPrimary, fontSize: 14 }}>{data.top_performer.name}</div>
+                  <div style={{ fontSize: 11, color: textMuted }}>Code: {data.top_performer.code}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: `1px solid ${border}`, fontSize: 12 }}>
+                <span style={{ color: textMuted }}>Business: <strong style={{ color: textPrimary }}>{fmt(data.top_performer.business)}</strong></span>
+                <span style={{ color: textMuted }}>Apps: <strong style={{ color: '#10b981' }}>{data.top_performer.apps}</strong></span>
+              </div>
             </div>
           )}
 
-          {/* Lowest Performer Card */}
           {data.lowest_performer && (
-            <div 
-              onClick={() => onSelectMember(data.lowest_performer.id)}
-              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg cursor-pointer hover:border-slate-700 transition-all group"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <ShieldAlert className="w-4 h-4 text-slate-400" /> Needs Support
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                  {data.lowest_performer.rank}
+            <div onClick={() => onSelectMember(data.lowest_performer.id)}
+              style={{
+                padding: 18, borderRadius: 18, cursor: 'pointer',
+                background: cardBg, border: `1px solid ${border}`,
+                transition: 'all 0.25s'
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: textMuted, textTransform: 'uppercase' }}>
+                  <ShieldAlert size={13} /> Needs Support
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden font-bold text-slate-400">
-                  {data.lowest_performer.photo ? (
-                    <img src={data.lowest_performer.photo} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    data.lowest_performer.name?.slice(0, 2).toUpperCase()
-                  )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: isDark ? '#1f1f1f' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: textMuted, overflow: 'hidden', fontSize: 12 }}>
+                  {data.lowest_performer.photo ? <img src={data.lowest_performer.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : data.lowest_performer.name?.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white text-sm group-hover:text-indigo-300 transition-colors">{data.lowest_performer.name}</h4>
-                  <p className="text-xs text-slate-400">Code: {data.lowest_performer.code}</p>
+                  <div style={{ fontWeight: 700, color: textPrimary, fontSize: 13 }}>{data.lowest_performer.name}</div>
+                  <div style={{ fontSize: 11, color: textMuted }}>Code: {data.lowest_performer.code}</div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Recent Joinings List */}
-        <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <UserPlus className="w-4 h-4 text-emerald-400" />
-              Recent Team Joinings
+        {/* Recent Joinings */}
+        <div style={{
+          padding: 20, borderRadius: 18,
+          background: cardBg, border: `1px solid ${border}`,
+          boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 800, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserPlus size={15} color="#10b981" /> Recent Joinings
             </h3>
-            <span className="text-xs text-slate-400">Latest 5 recruits</span>
+            <span style={{ fontSize: 11, color: textMuted }}>Latest 5</span>
           </div>
 
-          <div className="divide-y divide-slate-800/60">
-            {data.recent_joinings && data.recent_joinings.length > 0 ? (
-              data.recent_joinings.map((member) => (
-                <div 
-                  key={member.id}
-                  onClick={() => onSelectMember(member.id)}
-                  className="py-3.5 flex items-center justify-between hover:bg-slate-800/40 px-3 rounded-xl transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm overflow-hidden">
-                      {member.photo ? <img src={member.photo} alt="" className="w-full h-full object-cover" /> : member.name?.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors">{member.name}</h4>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                          L{member.level}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400">Code: {member.code} • Joined {new Date(member.joined_at).toLocaleDateString()}</p>
-                    </div>
+          <div>
+            {data.recent_joinings?.length > 0 ? data.recent_joinings.map((m, i) => (
+              <div key={m.id} className="member-row" onClick={() => onSelectMember(m.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 8px', borderRadius: 12, cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  borderBottom: i < data.recent_joinings.length - 1 ? `1px solid ${border}` : 'none',
+                  animation: `countUp 0.3s ease ${i * 60}ms both`
+                }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: accent + '15', border: `1px solid ${accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: accent, overflow: 'hidden', fontSize: 12, flexShrink: 0 }}>
+                    {m.photo ? <img src={m.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : m.name?.slice(0, 2).toUpperCase()}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
-                      member.kyc_status === 'approved' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                        : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    }`}>
-                      {member.kyc_status === 'approved' ? 'Verified' : 'Pending KYC'}
-                    </span>
-                    <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 700, color: textPrimary, fontSize: 13 }}>{m.name}</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: isDark ? '#1f1f1f' : '#f1f5f9', color: textMuted, fontWeight: 700 }}>L{m.level}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: textMuted }}>Code: {m.code} • {new Date(m.joined_at).toLocaleDateString()}</div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="py-8 text-center text-xs text-slate-400">No recent team members found</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 700,
+                    background: m.kyc_status === 'approved' ? '#10b98115' : '#f59e0b15',
+                    color: m.kyc_status === 'approved' ? '#10b981' : '#f59e0b',
+                    border: `1px solid ${m.kyc_status === 'approved' ? '#10b98130' : '#f59e0b30'}`
+                  }}>{m.kyc_status === 'approved' ? 'Verified' : 'Pending'}</span>
+                  <ArrowUpRight size={14} color={textMuted} />
+                </div>
+              </div>
+            )) : (
+              <div style={{ padding: '32px 0', textAlign: 'center', color: textMuted, fontSize: 13 }}>No recent team members found</div>
             )}
           </div>
         </div>
