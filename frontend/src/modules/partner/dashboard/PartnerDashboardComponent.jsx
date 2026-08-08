@@ -597,7 +597,7 @@ export default function PartnerDashboardComponent({ partner }) {
         >
           <EarnCard
             title="Personal Loan"
-            value="4.5%"
+            value="₹5 Lakh"
             valueColor="#2FA35B"
             bg="#E3F5EA"
             color="#2FA35B"
@@ -608,7 +608,7 @@ export default function PartnerDashboardComponent({ partner }) {
           />
           <EarnCard
             title="Credit Cards"
-            value="₹2600"
+            value="₹1 Lakh"
             valueColor="#6E3FD6"
             bg="#EEE9FB"
             color="#6E3FD6"
@@ -619,7 +619,7 @@ export default function PartnerDashboardComponent({ partner }) {
           />
           <EarnCard
             title="Insurance"
-            value="35%"
+            value="₹5 Lakh"
             valueColor="#E8862E"
             bg="#FCE7E1"
             color="#E8862E"
@@ -630,7 +630,7 @@ export default function PartnerDashboardComponent({ partner }) {
           />
           <EarnCard
             title="Bank Accounts"
-            value="₹480"
+            value="₹10k"
             valueColor="#3A78D6"
             bg="#E2ECFB"
             color="#3A78D6"
@@ -641,7 +641,7 @@ export default function PartnerDashboardComponent({ partner }) {
           />
           <EarnCard
             title="Demat Accounts"
-            value="₹1000"
+            value="₹10k"
             valueColor="#E0473E"
             bg="#FCE7E1"
             color="#E0473E"
@@ -652,7 +652,7 @@ export default function PartnerDashboardComponent({ partner }) {
           />
           <EarnCard
             title="Investment"
-            value="₹1000"
+            value="₹1 Cr"
             valueColor="#2FA35B"
             bg="#E3F5EA"
             color="#2FA35B"
