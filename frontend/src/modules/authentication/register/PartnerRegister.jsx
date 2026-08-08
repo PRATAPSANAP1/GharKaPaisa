@@ -578,6 +578,20 @@ export default function PartnerRegister() {
       };
       const res = await registerPartner(payload);
       if (res.success) {
+        const partnerId = res.data?.partner_id || res.data?.id || res.data?.user_id;
+        if (partnerId && (form.panFile || form.aadhaarFile || form.chequeFile)) {
+          try {
+            const formData = new FormData();
+            if (form.panFile) formData.append('pan', form.panFile);
+            if (form.aadhaarFile) formData.append('aadhaar', form.aadhaarFile);
+            if (form.chequeFile) formData.append('cancelled_cheque', form.chequeFile);
+            await api.post(`/partner/${partnerId}/kyc`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+          } catch (uploadErr) {
+            console.warn("[Register] KYC document upload warning:", uploadErr.message);
+          }
+        }
         setSuccess({ ...res.data, email: form.email });
       } else {
         if (res.errors && Array.isArray(res.errors)) {
@@ -1672,18 +1686,54 @@ export default function PartnerRegister() {
                 </div>
               )}
 
-              {/* ── STEP 4: KYC Details ── */}
+              {/* ── STEP 4: KYC Details & Documents ── */}
               {step === 3 && (
                 <div className="form-grid-layout">
                   {/* PAN Number */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label id="label-pan" style={S.label}>{t("onboarding.panNumber", "PAN Number")}</label>
+                    <label id="label-pan" style={S.label}>{t("onboarding.panNumber", "PAN Number *")}</label>
                     <input {...inputProps("pan")} placeholder={t("onboarding.panPlaceholder", "Enter 10-char PAN")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
                     {fieldErrors.pan && (
                       <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
                         {fieldErrors.pan}
                       </div>
                     )}
+                  </div>
+
+                  {/* PAN Card Document File Upload */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>Upload PAN Card (JPG, PNG or PDF)</label>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={e => setForm(f => ({ ...f, panFile: e.target.files[0] }))}
+                      style={{ ...S.input, padding: "8px" }}
+                    />
+                    {form.panFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.panFile.name}</span>}
+                  </div>
+
+                  {/* Aadhaar Document File Upload */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>Upload Aadhaar Card (JPG, PNG or PDF)</label>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={e => setForm(f => ({ ...f, aadhaarFile: e.target.files[0] }))}
+                      style={{ ...S.input, padding: "8px" }}
+                    />
+                    {form.aadhaarFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.aadhaarFile.name}</span>}
+                  </div>
+
+                  {/* Cancelled Cheque / Bank Proof Upload */}
+                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label style={S.label}>Upload Cancelled Cheque / Bank Passbook Copy (Optional)</label>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={e => setForm(f => ({ ...f, chequeFile: e.target.files[0] }))}
+                      style={{ ...S.input, padding: "8px" }}
+                    />
+                    {form.chequeFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.chequeFile.name}</span>}
                   </div>
 
                   {/* Info callout card */}
@@ -1696,7 +1746,7 @@ export default function PartnerRegister() {
                     color: C.textMid,
                     lineHeight: 1.4
                   }}>
-                    <strong id="label-note-prefix">{t("onboarding.notePrefix", "Note:")}</strong> <span id="label-note-message">{t("onboarding.noteMessage", "Document uploads (PAN card copy & cancelled cheque copy) can be completed from your dashboard after our team reviews your partner profile (takes 24-48 hours).")}</span>
+                    <strong id="label-note-prefix">{t("onboarding.notePrefix", "Note:")}</strong> <span id="label-note-message">{t("onboarding.noteMessage", "You can attach your KYC documents now or complete them anytime from your partner dashboard.")}</span>
                   </div>
 
                   {/* Terms Checkbox */}
@@ -1782,7 +1832,7 @@ export default function PartnerRegister() {
                     {t("onboarding.submitting", "Submitting...")}
                   </span>
                 ) : step === STEPS.length - 1 ? (
-                  <><span id="label-register-create-account">{t("onboarding.createAccount", "Create Account")}</span> <Icons.check size={14} /></>
+                  <><span id="label-register-create-account">{teamCode || referralCode ? t("onboarding.completeKycBtn", "Complete Registration & KYC") : t("onboarding.createAccount", "Create Account")}</span> <Icons.check size={14} /></>
                 ) : (
                   <><span id="label-register-continue">{t("onboarding.continue", "Continue")}</span> <Icons.arrowRight size={14} /></>
                 )}
