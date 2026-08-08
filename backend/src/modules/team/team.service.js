@@ -2,6 +2,22 @@ const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 const qrcode = require('qrcode');
 
+let columnsEnsured = false;
+async function ensureTeamCommissionsColumns() {
+  if (columnsEnsured) return;
+  try {
+    await query(`
+      ALTER TABLE team_commissions ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2) DEFAULT 0.00;
+      ALTER TABLE team_commissions ADD COLUMN IF NOT EXISTS commission_amount DECIMAL(15,2) DEFAULT 0.00;
+      UPDATE team_commissions SET amount = commission_amount WHERE (amount IS NULL OR amount = 0) AND commission_amount > 0;
+      UPDATE team_commissions SET commission_amount = amount WHERE (commission_amount IS NULL OR commission_amount = 0) AND amount > 0;
+    `);
+    columnsEnsured = true;
+  } catch (e) {
+    console.warn('ensureTeamCommissionsColumns warning:', e.message);
+  }
+}
+
 /**
  * Get logged-in partner profile ID for a user ID
  */
@@ -87,12 +103,14 @@ async function getTeamDashboard(partnerId) {
     [partnerId]
   );
 
+  await ensureTeamCommissionsColumns();
+
   // Commissions Metrics (10% override earnings for team)
   const { rows: [{ today_commission, monthly_commission, lifetime_commission }] } = await query(
     `SELECT 
-       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN COALESCE(commission_amount, 0) ELSE 0 END), 0)::numeric AS today_commission,
-       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(commission_amount, 0) ELSE 0 END), 0)::numeric AS monthly_commission,
-       COALESCE(SUM(COALESCE(commission_amount, 0)), 0)::numeric AS lifetime_commission
+       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN COALESCE(commission_amount, amount, 0) ELSE 0 END), 0)::numeric AS today_commission,
+       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(commission_amount, amount, 0) ELSE 0 END), 0)::numeric AS monthly_commission,
+       COALESCE(SUM(COALESCE(commission_amount, amount, 0)), 0)::numeric AS lifetime_commission
      FROM team_commissions
      WHERE parent_partner_id = $1`,
     [partnerId]
