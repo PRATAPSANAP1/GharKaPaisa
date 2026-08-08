@@ -692,6 +692,7 @@ export default function PartnerLayout() {
           walletBalance={walletBalance}
           profileDropdownOpen={profileDropdownOpen}
           setProfileDropdownOpen={setProfileDropdownOpen}
+          unreadNotifCount={unreadNotifCount}
         />
         {/* Status Banners */}
         {accountStatus === 'inactive' && (
@@ -938,7 +939,7 @@ export default function PartnerLayout() {
 }
 
 // ── RESPONSIVE NAV BAR HEADER COMPONENT ──────────────────────
-function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen }) {
+function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen, unreadNotifCount }) {
   const location = useLocation();
   const dropdownRef = useRef(null);
   const { isDark } = useTheme();
