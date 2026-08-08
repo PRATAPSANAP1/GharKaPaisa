@@ -86,9 +86,9 @@ export default function PartnerTeam() {
   const handleInviteSubmit = async (e) => {
     e.preventDefault();
     setInviteLoading(true);
-    setInviteMessage('');
     try {
-      const res = await api.post('/partner/team/invite', inviteForm);
+      const payload = { ...inviteForm, name: inviteForm.fullName };
+      const res = await api.post('/partner/team/invite', payload);
       if (res.data?.success) {
         setInviteMessage('✅ Invite sent successfully!');
         setInviteForm({ fullName: '', email: '', mobile: '' });

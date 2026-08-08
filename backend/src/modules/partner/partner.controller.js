@@ -534,9 +534,10 @@ const addTeamMember = async (req, res, next) => {
     }
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    const { first_name, last_name, name, email, mobile, password } = req.body;
-    const memberFirstName = first_name || (name ? name.trim().split(' ')[0] : '');
-    const memberLastName = last_name || (name ? name.trim().split(' ').slice(1).join(' ') : '');
+    const { first_name, last_name, name, fullName, full_name, email, mobile, password } = req.body;
+    const inputName = fullName || full_name || name || '';
+    const memberFirstName = first_name || (inputName ? inputName.trim().split(' ')[0] : '');
+    const memberLastName = last_name || (inputName ? inputName.trim().split(' ').slice(1).join(' ') : '');
 
     if (!memberFirstName || !email || !mobile) {
       return error(res, 'Name, email, and mobile are required', 400);
