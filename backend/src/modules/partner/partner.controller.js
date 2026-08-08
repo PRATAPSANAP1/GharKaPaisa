@@ -191,20 +191,52 @@ const uploadKYCDocuments = async (req, res, next) => {
   }
 };
 
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
 const getDashboardStats = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
 
-    const [appStats, wallet, recentApps, leadStats, topProducts] = await Promise.all([
+    let targetPartnerId = null;
+    let targetUserId = req.user?.id || null;
+
+    if (PartnerId && PartnerId !== 'me' && isUuid(PartnerId)) {
+      const { rows: [pProf] } = await query(
+        `SELECT id, user_id FROM partner_profiles WHERE id = $1 OR user_id = $1 LIMIT 1`,
+        [PartnerId]
+      );
+      if (pProf) {
+        targetPartnerId = pProf.id;
+        targetUserId = pProf.user_id;
+      }
+    }
+
+    if (!targetPartnerId && req.user?.id) {
+      const { rows: [pProf] } = await query(
+        `SELECT id, user_id FROM partner_profiles WHERE user_id = $1 LIMIT 1`,
+        [req.user.id]
+      );
+      if (pProf) {
+        targetPartnerId = pProf.id;
+        targetUserId = pProf.user_id;
+      }
+    }
+
+    // Safety fallback UUID if neither partner profile nor user ID was resolved
+    const fallbackId = '00000000-0000-0000-0000-000000000000';
+    const finalPartnerId = targetPartnerId || fallbackId;
+    const finalUserId = targetUserId || fallbackId;
+
+    const [appStats, wallet, recentApps, topProducts] = await Promise.all([
       query(`
         SELECT
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE status = 'approved' OR status = 'disbursed') as approved,
           COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
-        FROM applications WHERE partner_id = $1
-      `, [PartnerId]),
-      query(`SELECT * FROM partner_wallets WHERE partner_id = $1`, [PartnerId]),
+        FROM applications WHERE partner_id = $1 OR partner_id = $2
+      `, [finalPartnerId, finalUserId]),
+      query(`SELECT * FROM partner_wallets WHERE partner_id = $1 OR partner_id = $2`, [finalPartnerId, finalUserId]),
       query(`
         SELECT a.app_number, a.status, a.commission_amount, a.created_at,
           COALESCE(c.full_name, 'Customer') as customer_name,
@@ -213,26 +245,18 @@ const getDashboardStats = async (req, res, next) => {
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE a.partner_id = $1
+        WHERE a.partner_id = $1 OR a.partner_id = $2
         ORDER BY a.created_at DESC LIMIT 5
-      `, [PartnerId]),
+      `, [finalPartnerId, finalUserId]),
       query(`
-        SELECT
-          COUNT(*) as total_leads,
-          COUNT(*) FILTER (WHERE status = 'approved') as approved_leads,
-          COUNT(*) FILTER (WHERE status = 'rejected') as rejected_leads,
-          COUNT(*) FILTER (WHERE status = 'pending') as pending_leads
-        FROM leads WHERE partner_id = $1
-      `, [PartnerId]),
-      query(`
-        SELECT p.id, p.name, p.image_url, COALESCE(b.short_code, b.name, 'GKP') as bank_code, COUNT(l.id) as sales_count
+        SELECT p.id, p.name, p.image_url, COALESCE(MAX(b.short_code), MAX(b.name), 'GKP') as bank_code, COUNT(a.id) as sales_count
         FROM products p
         LEFT JOIN banks b ON b.id = p.bank_id
-        LEFT JOIN leads l ON l.product_id = p.id AND l.partner_id = $1 AND l.status IN ('approved', 'confirmed')
-        GROUP BY p.id, p.name, p.image_url, b.short_code, b.name
+        LEFT JOIN applications a ON a.product_id = p.id AND (a.partner_id = $1 OR a.partner_id = $2) AND a.status IN ('approved', 'disbursed')
+        GROUP BY p.id, p.name, p.image_url
         ORDER BY sales_count DESC
         LIMIT 5
-      `, [PartnerId])
+      `, [finalPartnerId, finalUserId])
     ]);
 
     const walletData = wallet.rows[0] ? {
@@ -245,7 +269,7 @@ const getDashboardStats = async (req, res, next) => {
       applications: appStats.rows[0],
       wallet: walletData,
       recent_applications: recentApps.rows,
-      leads: leadStats.rows[0] || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0 },
+      leads: appStats.rows[0],
       top_products: topProducts.rows
     });
   } catch (err) {
@@ -352,7 +376,7 @@ const approvePartner = async (req, res, next) => {
       `, [req.user.id, PartnerId]);
       await client.query(`UPDATE users SET status = 'active'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query(`
-        INSERT INTO wallets (partner_id) VALUES ($1)
+        INSERT INTO partner_wallets (partner_id) VALUES ($1)
         ON CONFLICT (partner_id) DO NOTHING
       `, [PartnerId]);
       await client.query('COMMIT');
@@ -576,7 +600,7 @@ const addTeamMember = async (req, res, next) => {
     `, [partnerId, childPartner.id]);
 
     // Create wallet
-    await client.query(`INSERT INTO wallets (partner_id) VALUES ($1)`, [childPartner.id]);
+    await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [childPartner.id]);
 
     await client.query('COMMIT');
 
@@ -837,9 +861,9 @@ const getTeamMembers = async (req, res, next) => {
              (SELECT COUNT(*)::int FROM applications WHERE partner_id = ap.id) as applications_count,
              (SELECT COALESCE(SUM(wt.amount), 0)::float 
               FROM wallet_transactions wt 
-              JOIN wallets w ON w.id = wt.wallet_id 
+              JOIN partner_wallets w ON w.id = wt.wallet_id 
               WHERE w.partner_id = ap.id AND wt.reference_type = 'commission') as commission_amount,
-             (SELECT COALESCE(available_balance, 0)::float FROM wallets WHERE partner_id = ap.id) as wallet_balance
+             (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       WHERE ap.parent_partner_id = $1
@@ -955,7 +979,7 @@ const getTeamDashboard = async (req, res, next) => {
     const { rows: summary } = await query(`
       SELECT 
         COUNT(*)::int as total_members,
-        COUNT(CASE WHEN ap.team_joined_at >= CURRENT_DATE THEN 1 END)::int as joined_today,
+        COUNT(CASE WHEN ap.created_at >= CURRENT_DATE THEN 1 END)::int as joined_today,
         COUNT(CASE WHEN ap.kyc_status = 'pending' THEN 1 END)::int as pending_kyc,
         COUNT(CASE WHEN ap.kyc_status = 'approved' THEN 1 END)::int as approved_partners,
         COUNT(CASE WHEN ap.kyc_status = 'rejected' THEN 1 END)::int as rejected_partners,
@@ -971,7 +995,7 @@ const getTeamDashboard = async (req, res, next) => {
       SELECT
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0)::float as monthly_earnings,
         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0)::float as today_earnings
-      FROM wallets w
+      FROM partner_wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       WHERE w.partner_id = $1 AND wt.reference_type = 'team_commission'
     `, [partnerId]);
@@ -1007,7 +1031,7 @@ const getTeamEarnings = async (req, res, next) => {
 
     const { rows: earnings } = await query(`
       SELECT wt.*, p.name as product_name
-      FROM wallets w
+      FROM partner_wallets w
       JOIN wallet_transactions wt ON wt.wallet_id = w.id
       LEFT JOIN applications a ON a.id = wt.reference_id::uuid
       LEFT JOIN products p ON p.id = a.product_id

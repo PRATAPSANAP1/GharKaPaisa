@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useAuthStore } from '../../../app/store/authStore';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdPendingActions, 
   MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
@@ -22,6 +23,7 @@ export default function PartnerApplications() {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
+  const isTeamMember = useAuthStore((state) => state.user?.role === 'TEAM_MEMBER');
 
   const [applications, setApplications] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -113,6 +115,18 @@ export default function PartnerApplications() {
       }
     } catch (_) {}
   };
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    const actionParam = searchParams.get('action');
+
+    if (statusParam && statusParam !== statusFilter) {
+      setStatusFilter(statusParam);
+    }
+    if (actionParam === 'export') {
+      handleExportCSV();
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -360,17 +374,21 @@ export default function PartnerApplications() {
 
         {/* Bulk & CSV Action Buttons */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {selectedAppIds.length > 0 && (
+          {!isTeamMember && selectedAppIds.length > 0 && (
             <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <MdDoneAll size={18} /> {t('partnerApplications.bulkUpdate', 'Bulk Update')} ({selectedAppIds.length})
             </button>
           )}
-          <button onClick={() => setShowImportModal(true)} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdFileUpload size={18} /> {t('partnerApplications.importCsv', 'Import CSV')}
-          </button>
-          <button onClick={handleExportCSV} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdFileDownload size={18} style={{ color: C.green }} /> {t('partnerApplications.exportCsv', 'Export CSV')}
-          </button>
+          {!isTeamMember && (
+            <button onClick={() => setShowImportModal(true)} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MdFileUpload size={18} /> {t('partnerApplications.importCsv', 'Import CSV')}
+            </button>
+          )}
+          {!isTeamMember && (
+            <button onClick={handleExportCSV} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MdFileDownload size={18} style={{ color: C.green }} /> {t('partnerApplications.exportCsv', 'Export CSV')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -518,9 +536,11 @@ export default function PartnerApplications() {
                   {/* Actions row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-                        <MdAssignmentInd size={16} /> {t('partnerApplications.assign', 'Assign')}
-                      </button>
+                      {!isTeamMember && (
+                        <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
+                          <MdAssignmentInd size={16} /> {t('partnerApplications.assign', 'Assign')}
+                        </button>
+                      )}
                     </div>
                     <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('primary'), padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
                       {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
@@ -652,9 +672,11 @@ export default function PartnerApplications() {
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
-                              <MdAssignmentInd size={16} />
-                            </button>
+                            {!isTeamMember && (
+                              <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
+                                <MdAssignmentInd size={16} />
+                              </button>
+                            )}
                             <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
                               {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
                             </button>

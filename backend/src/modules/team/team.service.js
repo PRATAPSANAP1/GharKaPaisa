@@ -90,9 +90,9 @@ async function getTeamDashboard(partnerId) {
   // Commissions Metrics (10% override earnings for team)
   const { rows: [{ today_commission, monthly_commission, lifetime_commission }] } = await query(
     `SELECT 
-       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN COALESCE(amount, commission_amount, 0) ELSE 0 END), 0)::numeric AS today_commission,
-       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(amount, commission_amount, 0) ELSE 0 END), 0)::numeric AS monthly_commission,
-       COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric AS lifetime_commission
+       COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN COALESCE(commission_amount, 0) ELSE 0 END), 0)::numeric AS today_commission,
+       COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(commission_amount, 0) ELSE 0 END), 0)::numeric AS monthly_commission,
+       COALESCE(SUM(COALESCE(commission_amount, 0)), 0)::numeric AS lifetime_commission
      FROM team_commissions
      WHERE parent_partner_id = $1`,
     [partnerId]
@@ -235,7 +235,7 @@ async function getTeamTree(rootPartnerId, targetParentId = null) {
       );
       // Calculate root commission
       const { rows: [{ commission }] } = await query(
-        `SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric AS commission FROM team_commissions WHERE parent_partner_id = $1`,
+        `SELECT COALESCE(SUM(COALESCE(commission_amount, 0)), 0)::numeric AS commission FROM team_commissions WHERE parent_partner_id = $1`,
         [rootPartnerId]
       );
 
@@ -267,7 +267,7 @@ async function getTeamTree(rootPartnerId, targetParentId = null) {
        (SELECT COALESCE(SUM(COALESCE(a.approved_amount, a.loan_amount, a.credit_limit, 0)), 0)::numeric 
         FROM partner_team_relationships r JOIN applications a ON a.partner_id = r.child_partner_id 
         WHERE r.parent_partner_id = cp.id AND a.status IN ('approved', 'disbursed', 'confirmed')) AS team_business,
-       (SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric FROM team_commissions WHERE parent_partner_id = cp.id) AS team_commission,
+       (SELECT COALESCE(SUM(COALESCE(commission_amount, 0)), 0)::numeric FROM team_commissions WHERE parent_partner_id = cp.id) AS team_commission,
        rel.level AS relative_level
      FROM partner_team_relationships rel
      JOIN partner_profiles cp ON cp.id = rel.child_partner_id
@@ -379,7 +379,7 @@ async function getTeamMembersList(partnerId, options = {}) {
       (SELECT COUNT(*)::int FROM applications WHERE partner_id = cp.id) AS applications_count,
       (SELECT COALESCE(SUM(COALESCE(approved_amount, loan_amount, credit_limit, 0)), 0)::numeric 
        FROM applications WHERE partner_id = cp.id AND status IN ('approved', 'disbursed', 'confirmed')) AS total_business,
-      (SELECT COALESCE(SUM(COALESCE(amount, commission_amount, 0)), 0)::numeric FROM team_commissions WHERE child_partner_id = cp.id) AS total_commission
+      (SELECT COALESCE(SUM(COALESCE(commission_amount, 0)), 0)::numeric FROM team_commissions WHERE child_partner_id = cp.id) AS total_commission
     FROM partner_team_relationships r
     JOIN partner_profiles cp ON cp.id = r.child_partner_id
     JOIN users u ON u.id = cp.user_id
@@ -483,7 +483,7 @@ async function getTeamAnalytics(partnerId, period = '30d') {
   const { rows: commissionTrend } = await query(
     `SELECT 
        TO_CHAR(d.month, 'Mon YYYY') AS month,
-       COALESCE(SUM(COALESCE(tc.amount, tc.commission_amount, 0)), 0)::numeric AS commission
+       COALESCE(SUM(COALESCE(tc.commission_amount, 0)), 0)::numeric AS commission
      FROM GENERATE_SERIES(DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months'), DATE_TRUNC('month', CURRENT_DATE), '1 month'::interval) d(month)
      LEFT JOIN team_commissions tc ON tc.parent_partner_id = $1 AND DATE_TRUNC('month', tc.created_at) = d.month
      GROUP BY d.month
@@ -517,19 +517,25 @@ async function getTeamAnalytics(partnerId, period = '30d') {
   );
   const ref = referralRows[0] || { total_invites: 0, total_registrations: 0 };
 
-  const { rows: [{ kyc_approved_count, apps_submitted_count, apps_approved_count, total_commission_earned }] } = await query(
+  const { rows: funnelRows } = await query(
     `SELECT 
        COUNT(DISTINCT CASE WHEN cp.kyc_status = 'approved' THEN cp.id END)::int AS kyc_approved_count,
        COUNT(DISTINCT a.id)::int AS apps_submitted_count,
        COUNT(DISTINCT CASE WHEN a.status IN ('approved', 'disbursed', 'confirmed') THEN a.id END)::int AS apps_approved_count,
-       COALESCE(SUM(COALESCE(tc.amount, tc.commission_amount, 0)), 0)::numeric AS total_commission_earned
+       COALESCE(SUM(COALESCE(tc.commission_amount, 0)), 0)::numeric AS total_commission_earned
      FROM partner_team_relationships r
      JOIN partner_profiles cp ON cp.id = r.child_partner_id
      LEFT JOIN applications a ON a.partner_id = cp.id
-     LEFT JOIN team_commissions tc ON tc.parent_partner_id = $1
+     LEFT JOIN team_commissions tc ON tc.parent_partner_id = $1 AND tc.child_partner_id = cp.id
      WHERE r.parent_partner_id = $1`,
     [partnerId]
   );
+
+  const funnelRes = funnelRows[0] || {};
+  const kyc_approved_count = funnelRes.kyc_approved_count || 0;
+  const apps_submitted_count = funnelRes.apps_submitted_count || 0;
+  const apps_approved_count = funnelRes.apps_approved_count || 0;
+  const total_commission_earned = funnelRes.total_commission_earned || 0;
 
   const clicks = Math.max(parseInt(ref.total_invites) || 0, parseInt(ref.total_registrations) || 0);
   const funnel = {
@@ -592,7 +598,7 @@ async function getTeamActivity(partnerId, options = {}) {
       JOIN applications a ON a.partner_id = cp.id
       WHERE r.parent_partner_id = $1
     ) act
-    JOIN partner_profiles child ON child.id = act.child_partner_id
+    LEFT JOIN partner_profiles child ON child.id = act.child_partner_id
     ORDER BY act.created_at DESC
     LIMIT $2 OFFSET $3
   `;
@@ -633,7 +639,7 @@ async function getTeamGoals(partnerId) {
        COUNT(DISTINCT cp.id)::int AS current_month_members,
        COALESCE(SUM(CASE WHEN a.status IN ('approved', 'disbursed', 'confirmed') 
          THEN COALESCE(a.approved_amount, a.loan_amount, a.credit_limit, 0) ELSE 0 END), 0)::numeric AS current_month_business,
-       COALESCE(SUM(COALESCE(tc.amount, tc.commission_amount, 0)), 0)::numeric AS current_month_commission,
+       COALESCE(SUM(COALESCE(tc.commission_amount, 0)), 0)::numeric AS current_month_commission,
        COUNT(DISTINCT a.id)::int AS current_month_apps
      FROM partner_team_relationships r
      JOIN partner_profiles cp ON cp.id = r.child_partner_id AND cp.created_at >= DATE_TRUNC('month', CURRENT_DATE)
@@ -649,7 +655,7 @@ async function getTeamGoals(partnerId) {
        COUNT(CASE WHEN a.status IN ('approved', 'disbursed', 'confirmed') THEN 1 END)::int AS approved_apps,
        COALESCE(SUM(CASE WHEN a.status IN ('approved', 'disbursed', 'confirmed') 
          THEN COALESCE(a.approved_amount, a.loan_amount, a.credit_limit, 0) ELSE 0 END), 0)::numeric AS total_business,
-       COALESCE(SUM(COALESCE(tc.amount, tc.commission_amount, 0)), 0)::numeric AS total_commission
+       COALESCE(SUM(COALESCE(tc.commission_amount, 0)), 0)::numeric AS total_commission
      FROM partner_team_relationships r
      JOIN partner_profiles cp ON cp.id = r.child_partner_id
      LEFT JOIN applications a ON a.partner_id = cp.id
@@ -798,7 +804,7 @@ async function getTeamMemberById(rootPartnerId, targetMemberId, isAdmin = false)
 
   // Commissions
   const { rows: commissions } = await query(
-    `SELECT COALESCE(amount, commission_amount, 0) as amount, level, status, created_at FROM team_commissions WHERE child_partner_id = $1 ORDER BY created_at DESC`,
+    `SELECT COALESCE(commission_amount, 0) as amount, level, status, created_at FROM team_commissions WHERE child_partner_id = $1 ORDER BY created_at DESC`,
     [targetMemberId]
   );
 
@@ -932,9 +938,10 @@ async function processTeamOverrideCommission(applicationId, childPartnerId, base
       // 3. Log to wallet_ledger
       await query(
         `INSERT INTO wallet_ledger (
-           partner_id, application_id, type, credit, debit, balance_after, status, description
+           partner_id, application_id, type, credit, debit, balance_after, balance_after_transaction, status, description
          ) VALUES (
            $1, $2, 'team_override', $3, 0,
+           (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
            (SELECT available_balance FROM partner_wallets WHERE partner_id = $1),
            'completed', $4
          )`,
@@ -1034,14 +1041,20 @@ async function sendTeamInvitation(partnerId, { name, mobile, email }) {
     }
   }
 
-  // Log invitation
-  await query(
-    `INSERT INTO invitation_history (partner_id, invite_type, recipient_name, recipient_email, recipient_mobile, referral_code, status, sent_at)
-     VALUES ($1, 'manual', $2, $3, $4, $5, 'SENT', NOW())`,
-    [partnerId, name || null, email || null, mobile || null, p.partner_code]
-  ).catch(() => {});
+  const smsLink = mobile ? `sms:91${mobile.replace(/\D/g, '')}?body=${encodeURIComponent(message)}` : null;
+  const emailLink = email ? `mailto:${email}?subject=${encodeURIComponent(`${inviterName} invited you to join GharKaPaisa`)}&body=${encodeURIComponent(message)}` : null;
+  const waLink = channels.find(c => c.channel === 'whatsapp')?.link || (mobile ? `https://wa.me/91${mobile.replace(/\D/g, '')}?text=${encodeURIComponent(message)}` : null);
 
-  return { success: true, referral_link: referralLink, whatsapp_link: channels.find(c => c.channel === 'whatsapp')?.link, channels };
+  return {
+    success: true,
+    partner_code: p.partner_code,
+    invite_link: referralLink,
+    referral_link: referralLink,
+    whatsapp_link: waLink,
+    sms_link: smsLink,
+    email_link: emailLink,
+    channels
+  };
 }
 
 /**

@@ -34,11 +34,15 @@ export default function TeamMembersTab({ onSelectMember }) {
 
   const handleSendInvite = async (e) => {
     e.preventDefault();
+    if (!inviteForm.mobile && !inviteForm.email) {
+      setInviteError('Please provide at least a mobile number or email address.');
+      return;
+    }
     setInviting(true);
     setInviteError(null);
     try {
       const token = getAuthToken();
-      const res = await axios.post(`${API_URL}/partner/team/invite`, inviteForm, {
+      const res = await axios.post(`${API_URL}/team/invite`, inviteForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -395,25 +399,23 @@ export default function TeamMembersTab({ onSelectMember }) {
               <form onSubmit={handleSendInvite} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    Member Name <span className="text-rose-500">*</span>
+                    Member Name
                   </label>
                   <input
                     type="text"
-                    required
                     value={inviteForm.name}
                     onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })}
-                    placeholder="Enter full name"
+                    placeholder="Enter full name (optional)"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    Mobile Number <span className="text-rose-500">*</span>
+                    Mobile Number <span className="text-slate-400 font-normal">(or Email)</span>
                   </label>
                   <input
                     type="tel"
-                    required
                     maxLength={10}
                     value={inviteForm.mobile}
                     onChange={(e) => setInviteForm({ ...inviteForm, mobile: e.target.value.replace(/\D/g, '') })}
@@ -424,11 +426,10 @@ export default function TeamMembersTab({ onSelectMember }) {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    Email Address <span className="text-rose-500">*</span>
+                    Email Address <span className="text-slate-400 font-normal">(or Mobile)</span>
                   </label>
                   <input
                     type="email"
-                    required
                     value={inviteForm.email}
                     onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                     placeholder="name@example.com"
@@ -450,7 +451,7 @@ export default function TeamMembersTab({ onSelectMember }) {
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
                   >
                     {inviting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Create & Generate Invite
+                    Generate Invite Link
                   </button>
                 </div>
               </form>
@@ -460,10 +461,13 @@ export default function TeamMembersTab({ onSelectMember }) {
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 space-y-1">
                   <div className="flex items-center gap-2 font-bold text-xs">
                     <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    Team Member Created & Invited!
+                    Invitation Link Created Successfully!
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    Partner Code: <strong className="text-white font-mono">{inviteResult.partner_code}</strong> | Temp Password: <strong className="text-white font-mono">{inviteResult.temp_password}</strong>
+                    Partner Referral Code: <strong className="text-white font-mono">{inviteResult.partner_code}</strong>
+                    {inviteResult.temp_password && (
+                      <> | Temp Password: <strong className="text-white font-mono">{inviteResult.temp_password}</strong></>
+                    )}
                   </p>
                 </div>
 

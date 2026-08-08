@@ -2,7 +2,10 @@ const { query } = require('../../config/database');
 const { getPaginationParams } = require('../../utils/helpers/helpers');
 const { success, created, error, notFound, paginate, forbidden } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
-const { uploadToS3, deleteFromS3, getCloudFrontUrl } = require('../../services/aws/s3.service.js');
+const s3Service = require('../../services/aws/s3.service.js');
+const uploadToS3 = s3Service.uploadToS3;
+const deleteFromS3 = s3Service.deleteFromS3;
+const getCloudFrontUrl = typeof s3Service.getCloudFrontUrl === 'function' ? s3Service.getCloudFrontUrl : ((url) => url);
 const appSettingsService = require('./application-settings.service');
 const logger = require('../../config/logger');
 
@@ -47,8 +50,9 @@ const listProducts = async (req, res, next) => {
       values.push(featured === 'true' || featured === true);
     }
     if (trending) {
-      where += ` AND p.trending = $${idx++}`;
+      where += ` AND (p.trending = $${idx} OR p.is_trending = $${idx})`;
       values.push(trending === 'true' || trending === true);
+      idx++;
     }
     if (status) {
       where += ` AND p.status = $${idx++}`;
@@ -59,10 +63,10 @@ const listProducts = async (req, res, next) => {
       values.push(sub_category);
     }
     if (is_popular === 'true' || is_popular === true) {
-      where += ` AND (COALESCE(p.visibility->>'is_popular', 'false') = 'true' OR p.is_recommended = true OR p.featured = true)`;
+      where += ` AND (COALESCE(p.is_recommended, false) = true OR COALESCE(p.featured, false) = true OR COALESCE(p.is_trending, false) = true)`;
     }
     if (search) { 
-      where += ` AND (p.name ILIKE $${idx} OR b.name ILIKE $${idx} OR COALESCE(p.rewards, '') ILIKE $${idx} OR COALESCE(p.cashback, '') ILIKE $${idx} OR COALESCE(p.description, '') ILIKE $${idx})`; 
+      where += ` AND (p.name ILIKE $${idx} OR COALESCE(b.name, '') ILIKE $${idx} OR COALESCE(p.rewards, '') ILIKE $${idx} OR COALESCE(p.cashback, '') ILIKE $${idx} OR COALESCE(p.description, '') ILIKE $${idx})`; 
       values.push(`%${search}%`); 
       idx++; 
     }
@@ -85,17 +89,17 @@ const listProducts = async (req, res, next) => {
     }
 
     // Sort options
-    let orderBy = 'ORDER BY p.display_order ASC, p.commission_value DESC';
-    if (sort_by === 'commission_high') orderBy = 'ORDER BY p.commission_value DESC';
-    if (sort_by === 'commission_low') orderBy = 'ORDER BY p.commission_value ASC';
+    let orderBy = 'ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC';
+    if (sort_by === 'commission_high') orderBy = 'ORDER BY COALESCE(p.commission_value, 0) DESC';
+    if (sort_by === 'commission_low') orderBy = 'ORDER BY COALESCE(p.commission_value, 0) ASC';
     if (sort_by === 'newest') orderBy = 'ORDER BY p.created_at DESC';
-    if (sort_by === 'popular') orderBy = 'ORDER BY COALESCE(p.approval_rate, 85) DESC, p.commission_value DESC';
+    if (sort_by === 'popular') orderBy = 'ORDER BY COALESCE(p.approval_rate, 85) DESC, COALESCE(p.commission_value, 0) DESC';
 
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id ${where}`, values),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id ${where}`, values),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
         ${where}
         ${orderBy}
         LIMIT $${idx} OFFSET $${idx + 1}
@@ -105,7 +109,7 @@ const listProducts = async (req, res, next) => {
     const isPartnerOrAdmin = req.user && ['PARTNER', 'ADMIN', 'SUPER_ADMIN'].includes(req.user.role);
 
     const sanitizedRows = data.rows.map(prod => {
-      const { ...prodData } = prod;
+      const prodData = { ...prod };
       
       // Default metadata
       prodData.hold_days = prodData.hold_days || 7;
@@ -126,6 +130,7 @@ const listProducts = async (req, res, next) => {
 
     return paginate(res, sanitizedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
+    logger.error('listProducts error:', err);
     next(err);
   }
 };
@@ -571,12 +576,12 @@ const getCards = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
-        ORDER BY p.display_order ASC, p.commission_value DESC
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('credit_card', 'co_branded_card', 'fd_card')
+        ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);
@@ -591,12 +596,12 @@ const getLoans = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
-        ORDER BY p.display_order ASC, p.commission_value DESC
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('personal_loan', 'business_loan', 'home_loan', 'instant_loan', 'used_car_loan', 'education_loan')
+        ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);
@@ -611,12 +616,12 @@ const getInsurance = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
     const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
+      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')`),
       query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id
-        WHERE p.is_active = true AND b.is_active = true AND b.status = 'Active' AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
-        ORDER BY p.display_order ASC, p.commission_value DESC
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE (p.is_active = true OR p.status = 'Active') AND p.category IN ('health_insurance', 'life_insurance', 'general_insurance')
+        ORDER BY COALESCE(p.display_order, 0) ASC, COALESCE(p.commission_value, 0) DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);

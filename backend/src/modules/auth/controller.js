@@ -757,6 +757,12 @@ const register = async (req, res, next) => {
           VALUES ($1, $2, $3)
         `, [Partner.id, secureReferralCode, referralLink]);
 
+        if (referredById) {
+          await client.query(`
+            UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
+          `, [referredById]).catch(() => {});
+        }
+
         // If PARTNER role, create default team entry in partner_teams
         if (targetRole === 'PARTNER') {
           const defaultTeamName = `${first_name || 'Partner'}'s Team`;

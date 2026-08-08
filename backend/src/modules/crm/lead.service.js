@@ -128,6 +128,14 @@ const triggerAutomaticCommissionPayout = async (leadId, approvedAmount = null, c
     await logLeadTimeline(client, leadId, 'Commission Generated', `₹${calculatedCommission.toLocaleString()} commission credited to partner held balance`, 'commission_ledger', ledger.id, changedBy);
     await logLeadTimeline(client, leadId, 'Wallet Updated', `₹${calculatedCommission.toLocaleString()} added to partner held balance (Pending admin approval)`, 'wallet', lead.partner_profile_id, changedBy);
 
+    // 7. Process Team Override Commission (10% L1, 5% L2)
+    try {
+      const { processTeamOverrideCommission } = require('../team/team.service.js');
+      await processTeamOverrideCommission(leadId, lead.partner_profile_id, calculatedCommission);
+    } catch (teamErr) {
+      logger.warn(`Failed to process team override for lead ${leadId}:`, teamErr.message);
+    }
+
     await client.query('COMMIT');
     logger.info(`Successfully triggered automatic commission payout of ₹${calculatedCommission} for lead ${leadId}`);
     return ledger;

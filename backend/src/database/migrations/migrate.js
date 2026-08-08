@@ -375,6 +375,32 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS rewards TEXT`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS cashback TEXT`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS approval_rate INT DEFAULT 85`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sub_category VARCHAR(100)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS trending BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_enabled BOOLEAN DEFAULT TRUE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS visibility JSONB DEFAULT '{}'`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS short_description TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS logo VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS banner VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_amount DECIMAL(12,2) DEFAULT 0`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS override_percentage DECIMAL(5,2) DEFAULT 0`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS public_visible BOOLEAN DEFAULT TRUE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS partner_visible BOOLEAN DEFAULT TRUE`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS eligibility_criteria TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS documents_required TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS benefits TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS fees_charges TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS apply_button_text VARCHAR(100) DEFAULT 'Apply Now'`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_title VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_description TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS seo_keywords TEXT`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS slug VARCHAR(255)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS public_url VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS partner_url VARCHAR(500)`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS created_by UUID`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_by UUID`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`
@@ -3874,6 +3900,10 @@ const migrate = async () => {
           updated_at                TIMESTAMPTZ DEFAULT NOW()
         )
       `);
+      await query(`ALTER TABLE team_goals ADD COLUMN IF NOT EXISTS monthly_member_target INT DEFAULT 10`);
+      await query(`ALTER TABLE team_goals ADD COLUMN IF NOT EXISTS monthly_business_target DECIMAL(15,2) DEFAULT 100000`);
+      await query(`ALTER TABLE team_goals ADD COLUMN IF NOT EXISTS monthly_commission_target DECIMAL(15,2) DEFAULT 25000`);
+      await query(`ALTER TABLE team_goals ADD COLUMN IF NOT EXISTS monthly_app_target INT DEFAULT 20`);
 
       logger.info('Team Management Module Schema Migration (Task 26) completed successfully.');
     } catch (task26Err) {

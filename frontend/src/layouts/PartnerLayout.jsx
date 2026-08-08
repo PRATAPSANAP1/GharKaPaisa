@@ -10,7 +10,8 @@ import {
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
   MdAccountBalanceWallet, MdDeviceHub, MdSchool, MdCampaign,
   MdFlight, MdSupportAgent, MdSettings, MdMenu, MdClose, MdLogout,
-  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd, MdArrowForward
+  MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd, MdArrowForward,
+  MdPerson, MdAssignmentInd, MdGroup, MdAnalytics, MdFileDownload, MdPendingActions, MdCheckCircle, MdCancel, MdReceipt
 } from 'react-icons/md';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
@@ -25,12 +26,39 @@ const NAV_ITEMS = [
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Cards', icon: MdCreditCard },
   { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
   { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
-  { id: 'applications', path: '/partner/applications', label: 'Leads', icon: MdLeaderboard },
-  { id: 'customers', path: '/partner/customers', label: 'Customers', icon: MdPeople },
-  { id: 'team-network', path: '/partner/team', label: 'Team', icon: MdDeviceHub },
-  { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart },
+  {
+    id: 'applications',
+    label: 'Applications',
+    icon: MdLeaderboard,
+    isModule: true,
+    subItems: [
+      { id: 'app_my', label: 'My Applications', path: '/partner/applications?scope=my', icon: MdLeaderboard },
+      { id: 'app_team', label: 'Team Applications', path: '/partner/applications?scope=team', icon: MdGroup, partnerOnly: true },
+      { id: 'app_pending', label: 'Pending', path: '/partner/applications?status=under_review', icon: MdPendingActions },
+      { id: 'app_approved', label: 'Approved', path: '/partner/applications?status=approved', icon: MdCheckCircle },
+      { id: 'app_rejected', label: 'Rejected', path: '/partner/applications?status=rejected', icon: MdCancel },
+      { id: 'app_export', label: 'Export Applications', path: '/partner/applications?action=export', icon: MdFileDownload, partnerOnly: true }
+    ]
+  },
+  {
+    id: 'customers',
+    label: 'Customers',
+    icon: MdPeople,
+    isModule: true,
+    subItems: [
+      { id: 'cust_all', label: 'All Customers', path: '/partner/customers?view=all', icon: MdPeople, partnerOnly: true },
+      { id: 'cust_my', label: 'My Customers', path: '/partner/customers?view=my', icon: MdPerson },
+      { id: 'cust_add', label: 'Add Customer', path: '/partner/customers?action=add', icon: MdAdd },
+      { id: 'cust_assign', label: 'Assign Lead', path: '/partner/customers?view=assign', icon: MdAssignmentInd, partnerOnly: true },
+      { id: 'cust_team', label: 'View Team Customers', path: '/partner/customers?view=team', icon: MdGroup, partnerOnly: true },
+      { id: 'cust_analytics', label: 'Customer Analytics', path: '/partner/customers?view=analytics', icon: MdAnalytics, partnerOnly: true },
+      { id: 'cust_export', label: 'Export Customers', path: '/partner/customers?action=export', icon: MdFileDownload, partnerOnly: true }
+    ]
+  },
+  { id: 'team-network', path: '/partner/team', label: 'My Team', icon: MdGroup },
+  { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
-  { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
+  { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool }
 ];
 
 const MOBILE_BOTTOM_NAV = [
@@ -61,16 +89,21 @@ export default function PartnerLayout() {
     credit_card: false,
     loans: false,
     insurance: false,
+    applications: false,
+    customers: false,
   });
 
   useEffect(() => {
-    const fullPath = location.pathname + location.search;
     if (location.pathname.startsWith('/partner/credit-cards') || location.search.includes('category=credit_card')) {
       setOpenModules(prev => ({ ...prev, credit_card: true }));
     } else if (location.pathname.startsWith('/partner/loans') || location.search.includes('category=loans') || location.search.includes('category=personal_loan')) {
       setOpenModules(prev => ({ ...prev, loans: true }));
     } else if (location.pathname.startsWith('/partner/insurance') || location.search.includes('category=insurance')) {
       setOpenModules(prev => ({ ...prev, insurance: true }));
+    } else if (location.pathname.startsWith('/partner/applications')) {
+      setOpenModules(prev => ({ ...prev, applications: true }));
+    } else if (location.pathname.startsWith('/partner/customers')) {
+      setOpenModules(prev => ({ ...prev, customers: true }));
     }
   }, [location.pathname, location.search]);
 
@@ -168,9 +201,9 @@ export default function PartnerLayout() {
       }
     }
 
-    // Team members cannot access Team management or Reports pages
+    // Team members cannot access Admin-level Reports pages
     if (user?.role === 'TEAM_MEMBER') {
-      const blockedPaths = ['/partner/team', '/partner/team-network', '/partner/reports'];
+      const blockedPaths = ['/partner/reports'];
       if (blockedPaths.some(p => currentPath.startsWith(p))) {
         navigate('/partner/dashboard');
       }
@@ -184,7 +217,7 @@ export default function PartnerLayout() {
       return ['dashboard', 'training'].includes(item.id);
     }
     if (isTeamMember) {
-      return !['team-network', 'reports'].includes(item.id);
+      return !['reports'].includes(item.id);
     }
     return true;
   });
@@ -258,7 +291,7 @@ export default function PartnerLayout() {
               borderLeft: `2px solid ${isChildActive ? C.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}`,
               marginLeft: '20px',
             }}>
-              {item.subItems.map((sub) => {
+              {item.subItems.filter(sub => !(isTeamMember && sub.partnerOnly)).map((sub) => {
                 const SubIcon = sub.icon;
                 const isSubActive = sub.path.includes('?')
                   ? currentPathAndQuery === sub.path

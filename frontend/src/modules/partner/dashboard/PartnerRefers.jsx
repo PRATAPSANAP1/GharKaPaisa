@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Share2, MessageCircle, Mail, Phone, Send, CheckCircle, Users, Link, QrCode } from 'lucide-react';
+import { useAuthStore } from '../../../app/store/authStore';
 import api from '../../../services/api';
 
 export default function PartnerRefers() {
+  const isTeamMember = useAuthStore((state) => state.user?.role === 'TEAM_MEMBER');
   const [refersData, setRefersData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: '', mobile: '', email: '' });
@@ -122,7 +124,8 @@ export default function PartnerRefers() {
         </div>
       </div>
 
-      {/* Invite Form */}
+      {/* Invite Form — Partners only */}
+      {!isTeamMember && (
       <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
           <Users className="w-4 h-4 text-indigo-400" /> Invite a Team Member
@@ -183,6 +186,7 @@ export default function PartnerRefers() {
           </button>
         </form>
       </div>
+      )}
 
       {/* Invites History */}
       {refersData?.invites?.length > 0 && (

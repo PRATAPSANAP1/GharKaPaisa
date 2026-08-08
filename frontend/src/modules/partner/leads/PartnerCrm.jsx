@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useAuthStore } from '../../../app/store/authStore';
 import api from '../../../services/api';
 import {
   MdSearch, MdPerson, MdPhone, MdEmail, MdWork,
@@ -25,12 +26,14 @@ export default function PartnerCrm() {
   const { C } = useTheme();
   const S = makeS(C);
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isTeamMember = useAuthStore((state) => state.user?.role === 'TEAM_MEMBER');
 
   useEffect(() => {
-    if (location.state?.openAddModal) {
+    if (location.state?.openAddModal || searchParams.get('action') === 'add') {
       setShowAddModal(true);
     }
-  }, [location.state]);
+  }, [location.state, searchParams]);
 
   const fetchCustomers = usePartnerStore((state) => state.fetchCustomers);
   const customers = usePartnerStore((state) => state.customers);
@@ -182,6 +185,36 @@ export default function PartnerCrm() {
     return matchesSearch && matchesStatus && matchesTag;
   });
 
+  const exportCustomersCSV = () => {
+    if (!customers || !customers.length) return alert('No customers found to export');
+    const headers = ['Full Name', 'Mobile', 'Email', 'PAN', 'City', 'State', 'Monthly Income', 'Employment Type', 'Tag', 'Created At'];
+    const rows = (filteredCustomers || []).map(c => [
+      `"${(c.full_name || '').replace(/"/g, '""')}"`,
+      `"${c.mobile || ''}"`,
+      `"${c.email || ''}"`,
+      `"${c.pan_number || ''}"`,
+      `"${c.city || ''}"`,
+      `"${c.state || ''}"`,
+      c.monthly_income || 0,
+      `"${c.employment_type || ''}"`,
+      `"${c.tag || 'General'}"`,
+      c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : ''
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const link = document.createElement('a');
+    link.href = encodeURI(csvContent);
+    link.download = `customers_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'export') {
+      exportCustomersCSV();
+    }
+  }, [searchParams]);
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", paddingBottom: '40px' }}>
       
@@ -189,13 +222,24 @@ export default function PartnerCrm() {
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setShowMergeModal(true)}
-            style={{ ...S.btn('outline'), display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
-          >
-            <MdMergeType style={{ fontSize: '18px', color: C.teal }} />
-            <span>{t("crm.mergeDuplicates", "Merge Duplicates")}</span>
-          </button>
+          {!isTeamMember && (
+            <>
+              <button
+                onClick={exportCustomersCSV}
+                style={{ ...S.btn('outline'), display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
+              >
+                <MdFileDownload style={{ fontSize: '18px', color: C.primary }} />
+                <span>{t("crm.exportCustomers", "Export Customers")}</span>
+              </button>
+              <button
+                onClick={() => setShowMergeModal(true)}
+                style={{ ...S.btn('outline'), display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', fontWeight: 700 }}
+              >
+                <MdMergeType style={{ fontSize: '18px', color: C.teal }} />
+                <span>{t("crm.mergeDuplicates", "Merge Duplicates")}</span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => setShowAddModal(true)}
@@ -358,7 +402,7 @@ export default function PartnerCrm() {
                 <th style={{ padding: '12px 16px' }}>{t("crm.table.mobileEmail", "Mobile & Email")}</th>
                 <th style={{ padding: '12px 16px' }}>{t("crm.table.location", "Location")}</th>
                 <th style={{ padding: '12px 16px' }}>{t("crm.table.status", "Pipeline Status")}</th>
-                <th style={{ padding: '12px 16px' }}>{t("crm.table.assignedPartner", "Assigned Partner")}</th>
+                {!isTeamMember && <th style={{ padding: '12px 16px' }}>{t("crm.table.assignedPartner", "Assigned Partner")}</th>}
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>{t("crm.table.actions", "Actions")}</th>
               </tr>
             </thead>
@@ -376,7 +420,7 @@ export default function PartnerCrm() {
                       {(cust.pipeline_status || 'new').replace('_', ' ')}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</td>
+                  {!isTeamMember && <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</td>}
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                     <button
                       onClick={() => setActive360CustomerId(cust.id)}

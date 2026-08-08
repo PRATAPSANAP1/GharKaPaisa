@@ -10,12 +10,7 @@ async function resolvePartnerId(req) {
     return req.query.partner_id;
   }
   const partnerId = await teamService.getPartnerProfileIdByUserId(req.user.id);
-  if (!partnerId) {
-    const err = new Error('Partner profile not found for the logged in user.');
-    err.statusCode = 404;
-    throw err;
-  }
-  return partnerId;
+  return partnerId || req.user.id;
 }
 
 /**

@@ -47,6 +47,7 @@ const PartnerWallet = () => {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
+  const isTeamMember = user?.role === 'TEAM_MEMBER';
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1181,8 +1182,8 @@ const PartnerWallet = () => {
             <select style={{ ...S.input, width: '150px', margin: 0 }} value={txType} onChange={e => setTxType(e.target.value)}>
               <option value="">{t("All Types")}</option>
               <option value="PERSONAL_COMMISSION">{t("Personal Commission")}</option>
-              <option value="TEAM_COMMISSION">{t("Team Commission")}</option>
-              <option value="OVERRIDE_COMMISSION">{t("Override Commission")}</option>
+              {!isTeamMember && <option value="TEAM_COMMISSION">{t("Team Commission")}</option>}
+              {!isTeamMember && <option value="OVERRIDE_COMMISSION">{t("Override Commission")}</option>}
               <option value="WITHDRAWAL">{t("Withdrawal")}</option>
               <option value="REFERRAL_BONUS">{t("Referral Bonus")}</option>
               <option value="ADJUSTMENT">{t("Adjustment")}</option>

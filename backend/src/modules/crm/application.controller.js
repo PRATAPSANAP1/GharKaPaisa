@@ -223,7 +223,7 @@ const getApplicationsDashboard = async (req, res, next) => {
   try {
     let partnerId = null;
     let userId = req.user?.id || null;
-    if (req.user.role === 'PARTNER') {
+    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       partnerId = partner ? partner.id : req.user.id;
     }
@@ -762,7 +762,7 @@ const listApplications = async (req, res, next) => {
     const targetPartnerId = q_partner_id || partner_id;
 
     let partnerId = null;
-    if (req.user.role === 'PARTNER') {
+    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       partnerId = partner ? partner.id : req.user.id;
     } else if (targetPartnerId) {
