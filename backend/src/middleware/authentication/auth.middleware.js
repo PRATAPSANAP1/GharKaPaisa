@@ -154,30 +154,66 @@ const requireApprovedPartnerOrAdmin = (req, res, next) => {
 
 const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
   try {
-    const targetId = req.params[paramName];
-    const userRole = (req.user.role || '').toUpperCase();
-    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
-    if (req.user.id && req.user.id.toString() === targetId) return next();
-    if (req.user.PartnerId && req.user.PartnerId.toString() === targetId) return next();
-    if (req.user.partner_id && req.user.partner_id.toString() === targetId) return next();
+    const rawTargetId = req.params[paramName];
+    if (!rawTargetId || rawTargetId.toLowerCase() === 'me') return next();
 
-    const { rows: [userProfile] } = await query(
-      `SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`,
-      [req.user.id]
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
+
+    const targetId = String(rawTargetId).toLowerCase();
+    const userId = String(req.user?.id || '').toLowerCase();
+    const userPartnerId = String(req.user?.PartnerId || req.user?.partner_id || '').toLowerCase();
+
+    // Direct match with user ID or partner ID on req.user
+    if (userId && userId === targetId) return next();
+    if (userPartnerId && userPartnerId === targetId) return next();
+
+    // Fetch partner profile for current user
+    const { rows: [currentUserProfile] } = await query(
+      `SELECT id, user_id, parent_partner_id FROM partner_profiles WHERE user_id = $1 OR id = $1 LIMIT 1`,
+      [req.user?.id]
     );
 
-    if (userProfile) {
-      if (userProfile.id.toString() === targetId) return next();
-      if (userProfile.parent_partner_id && userProfile.parent_partner_id.toString() === targetId) return next();
+    if (currentUserProfile) {
+      const pId = String(currentUserProfile.id).toLowerCase();
+      const pUserId = String(currentUserProfile.user_id).toLowerCase();
+      const pParentId = currentUserProfile.parent_partner_id ? String(currentUserProfile.parent_partner_id).toLowerCase() : null;
+
+      if (pId === targetId || pUserId === targetId) return next();
+      if (pParentId && pParentId === targetId) return next();
     }
 
-    const currentPartnerId = req.user.PartnerId || userProfile?.id;
-    if (currentPartnerId) {
-      const { rows } = await query(`
-        SELECT 1 FROM partner_team_relationships
-        WHERE parent_partner_id = $1 AND child_partner_id = $2
-      `, [currentPartnerId, targetId]);
-      if (rows.length > 0) return next();
+    // Fetch partner profile for target ID (target could be user_id or partner_profiles.id)
+    const { rows: [targetProfile] } = await query(
+      `SELECT id, user_id, parent_partner_id FROM partner_profiles WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [rawTargetId]
+    );
+
+    if (targetProfile) {
+      const tId = String(targetProfile.id).toLowerCase();
+      const tUserId = String(targetProfile.user_id).toLowerCase();
+      const tParentId = targetProfile.parent_partner_id ? String(targetProfile.parent_partner_id).toLowerCase() : null;
+
+      if (userId && (userId === tUserId || userId === tId)) return next();
+      if (userPartnerId && (userPartnerId === tId || userPartnerId === tUserId)) return next();
+
+      if (currentUserProfile) {
+        const cId = String(currentUserProfile.id).toLowerCase();
+        if (cId === tId || cId === tUserId) return next();
+        if (cId === tParentId || (cId && String(currentUserProfile.parent_partner_id).toLowerCase() === tId)) return next();
+      }
+
+      // Check team relationships in both directions
+      const cPartnerId = currentUserProfile?.id || req.user?.PartnerId || req.user?.partner_id;
+      if (cPartnerId && targetProfile.id) {
+        const { rows } = await query(`
+          SELECT 1 FROM partner_team_relationships
+          WHERE (parent_partner_id = $1 AND child_partner_id = $2)
+             OR (parent_partner_id = $2 AND child_partner_id = $1)
+          LIMIT 1
+        `, [cPartnerId, targetProfile.id]);
+        if (rows.length > 0) return next();
+      }
     }
 
     return forbidden(res);
