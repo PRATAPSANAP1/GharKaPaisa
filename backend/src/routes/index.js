@@ -80,5 +80,6 @@ const teamRoute                             = require('../modules/team/team.rout
 
 // ── Referrals & Team Routes ──
 router.use('/team', teamRoute);
+router.use('/partner/team-dashboard', teamRoute);
 
 module.exports = router;

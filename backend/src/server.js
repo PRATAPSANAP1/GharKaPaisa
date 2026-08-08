@@ -222,6 +222,7 @@ app.post('/api/v1/payment/verify-payment', paymentCtrl.verifyPayment);
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
 app.use('/api/v1', apiRouter);
+app.use('/team', apiRouter);
 
 // ── Test Routes ────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_EMAIL_ROUTE === 'true') {

@@ -11,6 +11,7 @@ router.get('/info', ctrl.getTeamInfo);
 router.post('/upgrade-request', ctrl.requestUpgrade);
 router.get('/upgrade-status', ctrl.getUpgradeStatus);
 router.get('/dashboard', ctrl.getDashboard);
+router.get('/team-dashboard', ctrl.getDashboard);
 router.get('/tree', ctrl.getTree);
 router.get('/list', ctrl.getMembersList);
 router.get('/members', ctrl.getMembersList);
