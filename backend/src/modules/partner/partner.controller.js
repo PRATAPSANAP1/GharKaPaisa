@@ -601,7 +601,8 @@ const addTeamMember = async (req, res, next) => {
     // Send automated SMS to the invitee's mobile number
     try {
       const { sendSms } = require('../../services/sms/sms.service');
-      await sendSms(cleanMobile, messageText);
+      const smsTo = cleanMobile.startsWith('91') ? `+${cleanMobile}` : `+91${cleanMobile}`;
+      await sendSms(smsTo, messageText);
     } catch (smsErr) {
       console.warn('[addTeamMember] SMS send error:', smsErr.message);
     }
