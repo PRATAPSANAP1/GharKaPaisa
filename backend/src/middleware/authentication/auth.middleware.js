@@ -60,7 +60,8 @@ const syncUser = async (req, res, next) => {
     req.user = safeUser;
 
     // Attach partner profile for Partner role
-    if ((user.role || '').toUpperCase() === 'PARTNER') {
+    // Attach partner profile for Partner and Team Member roles
+    if (['PARTNER', 'TEAM_MEMBER'].includes((user.role || '').toUpperCase())) {
       let { rows: [partner] } = await query(
         `SELECT id, kyc_status, first_name, last_name, partner_code
          FROM partner_profiles WHERE user_id = $1`,
@@ -69,11 +70,11 @@ const syncUser = async (req, res, next) => {
       if (!partner) {
         const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
         const { rows: [newP] } = await query(
-          `INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
-           VALUES ($1, $2, $3, $4, 'active', 'pending')
+          `INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status, partner_type)
+           VALUES ($1, $2, $3, $4, 'active', 'pending', $5)
            ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
            RETURNING id, kyc_status, first_name, last_name, partner_code`,
-          [user.id, partnerCode, user.first_name || 'Partner', user.last_name || '']
+          [user.id, partnerCode, user.first_name || 'Partner', user.last_name || '', (user.role || '').toUpperCase()]
         );
         partner = newP;
       }
@@ -156,16 +157,26 @@ const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
     const targetId = req.params[paramName];
     const userRole = (req.user.role || '').toUpperCase();
     if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') return next();
-    if (req.user.id.toString() === targetId) return next();
+    if (req.user.id && req.user.id.toString() === targetId) return next();
     if (req.user.PartnerId && req.user.PartnerId.toString() === targetId) return next();
     if (req.user.partner_id && req.user.partner_id.toString() === targetId) return next();
 
-    // Check if current user is parent/ancestor of target partner
-    if (req.user.PartnerId) {
+    const { rows: [userProfile] } = await query(
+      `SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`,
+      [req.user.id]
+    );
+
+    if (userProfile) {
+      if (userProfile.id.toString() === targetId) return next();
+      if (userProfile.parent_partner_id && userProfile.parent_partner_id.toString() === targetId) return next();
+    }
+
+    const currentPartnerId = req.user.PartnerId || userProfile?.id;
+    if (currentPartnerId) {
       const { rows } = await query(`
         SELECT 1 FROM partner_team_relationships
         WHERE parent_partner_id = $1 AND child_partner_id = $2
-      `, [req.user.PartnerId, targetId]);
+      `, [currentPartnerId, targetId]);
       if (rows.length > 0) return next();
     }
 
@@ -192,7 +203,7 @@ const optionalAuth = async (req, res, next) => {
     if (user) {
       const { password_hash, verification_token, ...safeUser } = user;
       req.user = safeUser;
-      if ((user.role || '').toUpperCase() === 'PARTNER') {
+      if (['PARTNER', 'TEAM_MEMBER'].includes((user.role || '').toUpperCase())) {
         const { rows: [partner] } = await query(
           `SELECT id, kyc_status, first_name, last_name, partner_code
            FROM partner_profiles WHERE user_id = $1`,
