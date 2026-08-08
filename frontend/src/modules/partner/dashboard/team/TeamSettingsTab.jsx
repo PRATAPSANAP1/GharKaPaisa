@@ -1,25 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Settings, Copy, Check, QrCode, Download, Share2, 
-  MessageSquare, ToggleLeft, ToggleRight, Save, RefreshCw 
-} from 'lucide-react';
+import { Settings, Copy, Check, QrCode, Download, Share2, MessageSquare, Save, RefreshCw } from 'lucide-react';
+import { useTheme } from '../../../../contexts/ThemeContext';
 import api from '../../../../services/api';
 
+function Toggle({ value, onChange, accent }) {
+  return (
+    <div onClick={onChange} style={{
+      width: 48, height: 26, borderRadius: 99, cursor: 'pointer', position: 'relative',
+      background: value ? `linear-gradient(135deg,${accent},${accent}cc)` : '#374151',
+      transition: 'background 0.3s', boxShadow: value ? `0 0 12px ${accent}40` : 'none'
+    }}>
+      <div style={{
+        position: 'absolute', top: 3, left: value ? 25 : 3,
+        width: 20, height: 20, borderRadius: '50%', background: '#fff',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        transition: 'left 0.3s cubic-bezier(0.4,0,0.2,1)'
+      }} />
+    </div>
+  );
+}
+
 export default function TeamSettingsTab() {
+  const { C, isDark } = useTheme();
+  const border = isDark ? '#1f1f1f' : C.border;
+  const cardBg = isDark ? '#0f0f0f' : '#fff';
+  const textPrimary = C.text;
+  const textMuted = C.textMid;
+  const accent = C.primary;
+  const inputBg = isDark ? '#1a1a1a' : '#f8faff';
+
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [msgSuccess, setMsgSuccess] = useState(null);
-
-  // Form state
   const [teamEnabled, setTeamEnabled] = useState(true);
   const [referralEnabled, setReferralEnabled] = useState(true);
   const [referralMessage, setReferralMessage] = useState('');
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  useEffect(() => { fetchSettings(); }, []);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -32,52 +51,40 @@ export default function TeamSettingsTab() {
         setReferralEnabled(d.referral_enabled);
         setReferralMessage(d.referral_message || '');
       }
-    } catch (err) {
-      console.error('Failed to fetch team settings:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   };
 
-  const handleSaveSettings = async () => {
-    setSaving(true);
-    setMsgSuccess(null);
+  const handleSave = async () => {
+    setSaving(true); setMsgSuccess(null);
     try {
-      const res = await api.patch('/team/settings', {
-        team_enabled: teamEnabled,
-        referral_enabled: referralEnabled,
-        referral_message: referralMessage
-      });
-      if (res.data?.success) {
-        setMsgSuccess('Settings updated successfully');
-        setTimeout(() => setMsgSuccess(null), 3000);
-      }
-    } catch (err) {
-      console.error('Failed to save settings:', err);
-    } finally {
-      setSaving(false);
-    }
+      const res = await api.patch('/team/settings', { team_enabled: teamEnabled, referral_enabled: referralEnabled, referral_message: referralMessage });
+      if (res.data?.success) { setMsgSuccess('Settings saved successfully!'); setTimeout(() => setMsgSuccess(null), 3000); }
+    } catch { /* silent */ } finally { setSaving(false); }
   };
 
-  const handleCopyLink = () => {
+  const handleCopy = () => {
     if (!settings?.referral_link) return;
     navigator.clipboard.writeText(settings.referral_link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setCopied(true); setTimeout(() => setCopied(false), 2500);
   };
 
   const handleDownloadQR = () => {
     if (!settings?.qr_code_data_url) return;
-    const link = document.createElement('a');
-    link.href = settings.qr_code_data_url;
-    link.download = `referral_qr_${settings.referral_code}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = settings.qr_code_data_url;
+    a.download = `referral_qr_${settings.referral_code}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-400">Loading settings & referral tools...</div>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <style>{`@keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+        {[200, 280].map((h, i) => (
+          <div key={i} style={{ height: h, borderRadius: 18, background: isDark ? '#111' : '#f1f5f9', border: `1px solid ${border}`, animation: 'shimmer 1.5s infinite' }} />
+        ))}
+      </div>
+    );
   }
 
   if (!settings) return null;
@@ -85,156 +92,118 @@ export default function TeamSettingsTab() {
   const shareText = encodeURIComponent(`${settings.referral_message}\nRegister here: ${settings.referral_link}`);
 
   return (
-    <div className="space-y-6">
-      {/* Referral Link & QR Code Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-900 border border-indigo-500/40 shadow-xl space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+
+      {/* Referral Link & QR */}
+      <div style={{
+        padding: '22px', borderRadius: 18,
+        background: isDark ? 'linear-gradient(135deg,#0d0d1a,#0f0f0f)' : 'linear-gradient(135deg,#f0f4ff,#fff)',
+        border: `1px solid ${accent}25`,
+        boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.4)' : `0 8px 40px ${accent}10`,
+        animation: 'fadeIn 0.3s ease'
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
           <div>
-            <h3 className="text-base font-extrabold text-white">Your Partner Referral Link & QR Code</h3>
-            <p className="text-xs text-slate-300 mt-1">Share your unique code to automatically register partners into your downline</p>
+            <h3 style={{ fontSize: 15, fontWeight: 900, color: textPrimary, margin: 0 }}>Your Referral Link & QR Code</h3>
+            <p style={{ fontSize: 12, color: textMuted, margin: '4px 0 0' }}>Share to automatically register partners into your downline</p>
           </div>
-          <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold">
+          <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 99, background: accent + '15', color: accent, border: `1px solid ${accent}25`, fontWeight: 700 }}>
             Code: {settings.referral_code}
           </span>
         </div>
 
-        {/* Copy Link Bar */}
-        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/80 border border-slate-800">
-          <input
-            type="text"
-            readOnly
-            value={settings.referral_link}
-            className="flex-1 bg-transparent px-3 py-1 text-xs text-indigo-300 font-mono outline-none"
-          />
-          <button
-            onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy Link'}
+        {/* Copy Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 14, background: isDark ? '#0a0a0a' : '#f1f5f9', border: `1px solid ${border}`, marginBottom: 20 }}>
+          <input readOnly value={settings.referral_link}
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: accent, fontFamily: 'monospace', padding: '4px 10px' }} />
+          <button onClick={handleCopy}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: `0 4px 12px ${accent}40` }}>
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
 
-        {/* QR Code & Social Sharing Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
-          {/* QR Code */}
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+        {/* QR + Social */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 14, background: isDark ? '#111' : '#fff', border: `1px solid ${border}` }}>
             {settings.qr_code_data_url ? (
-              <img src={settings.qr_code_data_url} alt="QR Code" className="w-24 h-24 rounded-lg bg-white p-1" />
+              <img src={settings.qr_code_data_url} alt="QR" style={{ width: 88, height: 88, borderRadius: 10, background: '#fff', padding: 4 }} />
             ) : (
-              <div className="w-24 h-24 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500">
-                <QrCode className="w-8 h-8" />
+              <div style={{ width: 88, height: 88, borderRadius: 10, background: isDark ? '#1a1a1a' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <QrCode size={32} color={textMuted} />
               </div>
             )}
             <div>
-              <h4 className="text-xs font-bold text-white">Referral QR Code</h4>
-              <p className="text-[11px] text-slate-400 mt-1">Scan or download QR code for offline promotional banners</p>
-              <button
-                onClick={handleDownloadQR}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" /> Download QR
+              <div style={{ fontSize: 13, fontWeight: 800, color: textPrimary, marginBottom: 4 }}>Referral QR Code</div>
+              <div style={{ fontSize: 11, color: textMuted, marginBottom: 12 }}>Scan or download for offline banners</div>
+              <button onClick={handleDownloadQR}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                <Download size={12} /> Download QR
               </button>
             </div>
           </div>
 
-          {/* Social Share Buttons */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Share2 className="w-4 h-4 text-indigo-400" /> Instant Share Options
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={`https://wa.me/?text=${shareText}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-2 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition-all"
-              >
-                WhatsApp
-              </a>
-              <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(settings.referral_link)}&text=${encodeURIComponent(settings.referral_message)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-semibold hover:bg-blue-600 hover:text-white transition-all"
-              >
-                Telegram
-              </a>
-              <a
-                href={`mailto:?subject=Join my GharKaPaisa Team&body=${shareText}`}
-                className="px-3 py-2 rounded-lg bg-rose-600/20 text-rose-400 border border-rose-500/30 text-xs font-semibold hover:bg-rose-600 hover:text-white transition-all"
-              >
-                Email
-              </a>
+          <div style={{ padding: '16px', borderRadius: 14, background: isDark ? '#111' : '#fff', border: `1px solid ${border}` }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: textPrimary, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Share2 size={14} color={accent} /> Share Options
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                { href: `https://wa.me/?text=${shareText}`, label: 'WhatsApp', color: '#10b981' },
+                { href: `https://t.me/share/url?url=${encodeURIComponent(settings.referral_link)}&text=${encodeURIComponent(settings.referral_message)}`, label: 'Telegram', color: '#3b82f6' },
+                { href: `mailto:?subject=Join my GharKaPaisa Team&body=${shareText}`, label: 'Email', color: '#ef4444' },
+              ].map(({ href, label, color }) => (
+                <a key={label} href={href} target="_blank" rel="noreferrer"
+                  style={{ padding: '7px 14px', borderRadius: 10, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
+                  {label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Control Toggles & Custom Message */}
-      <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-6">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Settings className="w-4 h-4 text-indigo-400" />
-          Team Module Preferences & Custom Message
+      {/* Preferences */}
+      <div style={{ padding: '22px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)', animation: 'fadeIn 0.4s ease' }}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: textPrimary, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Settings size={16} color={accent} /> Team Preferences
         </h3>
 
         {msgSuccess && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-            {msgSuccess}
+          <div style={{ padding: '10px 16px', borderRadius: 12, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+            ✅ {msgSuccess}
           </div>
         )}
 
-        <div className="space-y-4 divide-y divide-slate-800">
-          {/* Enable Team */}
-          <div className="pt-4 flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-bold text-white">Enable Team Management Layer</h4>
-              <p className="text-[11px] text-slate-400">Allow team overriding earnings and downline metrics visualization</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {[
+            { label: 'Enable Team Management', desc: 'Allow team overriding earnings and downline metrics', value: teamEnabled, onChange: () => setTeamEnabled(v => !v) },
+            { label: 'Allow Referral Registrations', desc: 'Permit new partner registrations via your referral code', value: referralEnabled, onChange: () => setReferralEnabled(v => !v) },
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: `1px solid ${border}` }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>{item.desc}</div>
+              </div>
+              <Toggle value={item.value} onChange={item.onChange} accent={accent} />
             </div>
-            <button
-              onClick={() => setTeamEnabled(!teamEnabled)}
-              className={`p-1.5 rounded-xl transition-colors ${teamEnabled ? 'text-indigo-400' : 'text-slate-600'}`}
-            >
-              {teamEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-            </button>
-          </div>
+          ))}
 
-          {/* Enable Referral */}
-          <div className="pt-4 flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-bold text-white">Allow Referral Registrations</h4>
-              <p className="text-[11px] text-slate-400">Permit new partner registrations via your referral code</p>
-            </div>
-            <button
-              onClick={() => setReferralEnabled(!referralEnabled)}
-              className={`p-1.5 rounded-xl transition-colors ${referralEnabled ? 'text-indigo-400' : 'text-slate-600'}`}
-            >
-              {referralEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-            </button>
-          </div>
-
-          {/* Custom Message */}
-          <div className="pt-4 space-y-2">
-            <label className="text-xs font-bold text-white flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-indigo-400" /> Custom Referral Invitation Message
+          <div style={{ paddingTop: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <MessageSquare size={13} color={accent} /> Custom Referral Message
             </label>
-            <textarea
-              rows={3}
-              value={referralMessage}
-              onChange={(e) => setReferralMessage(e.target.value)}
-              className="w-full p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-            />
+            <textarea rows={3} value={referralMessage} onChange={e => setReferralMessage(e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 12, fontSize: 13, border: `1.5px solid ${border}`, background: inputBg, color: textPrimary, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
           </div>
         </div>
 
-        <div className="pt-4 text-right">
-          <button
-            onClick={handleSaveSettings}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 ml-auto"
-          >
-            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Preferences
+        <div style={{ paddingTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: `0 4px 16px ${accent}40`, opacity: saving ? 0.6 : 1 }}>
+            {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Saving...' : 'Save Preferences'}
           </button>
         </div>
       </div>

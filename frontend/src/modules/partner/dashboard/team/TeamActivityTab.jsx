@@ -1,87 +1,87 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, UserPlus, FileCheck, CheckCircle2, DollarSign, Clock } from 'lucide-react';
+import { useTheme } from '../../../../contexts/ThemeContext';
 import api from '../../../../services/api';
 
+const ICON_MAP = {
+  MEMBER_JOINED: { icon: UserPlus, color: '#10b981' },
+  APPLICATION_SUBMITTED: { icon: FileCheck, color: '#f59e0b' },
+  APPLICATION_APPROVED: { icon: CheckCircle2, color: '#10b981' },
+  COMMISSION_EARNED: { icon: DollarSign, color: '#f59e0b' },
+};
+
 export default function TeamActivityTab({ onSelectMember }) {
+  const { C, isDark } = useTheme();
+  const border = isDark ? '#1f1f1f' : C.border;
+  const cardBg = isDark ? '#0f0f0f' : '#fff';
+  const textPrimary = C.text;
+  const textMuted = C.textMid;
+  const accent = C.primary;
+
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchActivity();
-  }, []);
+  useEffect(() => { fetchActivity(); }, []);
 
   const fetchActivity = async () => {
     setLoading(true);
     try {
       const res = await api.get('/team/activity');
-      if (res.data?.success) {
-        setActivities(res.data.data || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch team activity:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'MEMBER_JOINED':
-        return <UserPlus className="w-4 h-4 text-emerald-400" />;
-      case 'APPLICATION_SUBMITTED':
-        return <FileCheck className="w-4 h-4 text-amber-400" />;
-      case 'APPLICATION_APPROVED':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-      case 'COMMISSION_EARNED':
-        return <DollarSign className="w-4 h-4 text-amber-300" />;
-      default:
-        return <Activity className="w-4 h-4 text-indigo-400" />;
-    }
+      if (res.data?.success) setActivities(res.data.data || []);
+    } catch { /* silent */ } finally { setLoading(false); }
   };
 
   return (
-    <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+    <div style={{ padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)' }}>
+      <style>{`
+        @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes shimmer { 0%,100%{opacity:1}50%{opacity:0.4} }
+      `}</style>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${border}` }}>
         <div>
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Activity className="w-4 h-4 text-indigo-400" />
-            Live Team Activity Stream
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Activity size={16} color={accent} /> Live Activity Stream
           </h3>
-          <p className="text-xs text-slate-400">Real-time updates on team recruitments, sales, and milestone approvals</p>
+          <p style={{ fontSize: 12, color: textMuted, margin: '3px 0 0' }}>Real-time team recruitments, sales & milestone approvals</p>
         </div>
       </div>
 
-      <div className="relative pl-6 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+      {/* Timeline */}
+      <div style={{ position: 'relative', paddingLeft: 32 }}>
+        {/* Vertical line */}
+        <div style={{ position: 'absolute', left: 11, top: 0, bottom: 0, width: 2, background: isDark ? '#1f1f1f' : '#e5e7eb', borderRadius: 2 }} />
+
         {loading ? (
           [...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-slate-800/40 rounded-xl animate-pulse"></div>
+            <div key={i} style={{ height: 72, borderRadius: 14, background: isDark ? '#111' : '#f1f5f9', marginBottom: 16, animation: 'shimmer 1.5s infinite' }} />
           ))
-        ) : activities.length > 0 ? (
-          activities.map((act) => (
-            <div key={act.id} className="relative flex items-start gap-4 group">
-              {/* Activity Dot */}
-              <div className="absolute -left-6 top-1 p-1.5 rounded-full bg-slate-900 border border-slate-700 shadow-md">
-                {getActivityIcon(act.type)}
+        ) : activities.length > 0 ? activities.map((act, i) => {
+          const cfg = ICON_MAP[act.type] || { icon: Activity, color: accent };
+          const Icon = cfg.icon;
+          return (
+            <div key={act.id} style={{ position: 'relative', marginBottom: 16, animation: `slideIn 0.3s ease ${i * 60}ms both` }}>
+              {/* Dot */}
+              <div style={{ position: 'absolute', left: -32, top: 14, width: 24, height: 24, borderRadius: '50%', background: isDark ? '#0f0f0f' : '#fff', border: `2px solid ${cfg.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 4px ${cfg.color}10` }}>
+                <Icon size={11} color={cfg.color} />
               </div>
 
-              {/* Activity Content */}
-              <div className="flex-1 p-4 rounded-xl bg-slate-800/50 border border-slate-700/60 hover:border-indigo-500/40 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-white">{act.description}</span>
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-500" />
-                    {new Date(act.created_at).toLocaleString()}
+              <div style={{ padding: '12px 16px', borderRadius: 14, background: isDark ? '#111' : '#f8faff', border: `1px solid ${border}`, transition: 'border-color 0.2s' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>{act.description}</span>
+                  <span style={{ fontSize: 11, color: textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Clock size={11} /> {new Date(act.created_at).toLocaleString()}
                   </span>
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-                  <span>Actor: <strong className="text-indigo-300">{act.actor_name}</strong></span>
-                  <span>({act.actor_code})</span>
+                <div style={{ marginTop: 6, fontSize: 12, color: textMuted }}>
+                  Actor: <strong style={{ color: accent }}>{act.actor_name}</strong>
+                  <span style={{ marginLeft: 6, fontSize: 11 }}>({act.actor_code})</span>
                 </div>
               </div>
             </div>
-          ))
-        ) : (
-          <div className="py-8 text-center text-xs text-slate-400">No activity recorded yet</div>
+          );
+        }) : (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: textMuted, fontSize: 13 }}>No activity recorded yet</div>
         )}
       </div>
     </div>
