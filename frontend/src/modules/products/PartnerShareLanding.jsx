@@ -72,6 +72,7 @@ export default function PartnerShareLanding() {
 
     setSubmitting(true);
     try {
+      console.log('Submitting lead:', { trackingToken, customerName, customerMobile });
       const res = await fetch(`${getApiV1Url()}/public/share/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,11 +82,15 @@ export default function PartnerShareLanding() {
           customerMobile: customerMobile.trim().replace(/\D/g, '').slice(-10)
         })
       });
+      console.log('Response status:', res.status);
       const json = await res.json();
+      console.log('Response data:', json);
       if (json && json.success) {
+        console.log('Redirect URL:', json.data?.redirect_url);
         setRedirectUrl(json.data?.redirect_url || '');
         setSubmitted(true);
       } else {
+        console.error('Submit failed:', json);
         alert(json.message || 'Something went wrong. Please try again.');
       }
     } catch (err) {
