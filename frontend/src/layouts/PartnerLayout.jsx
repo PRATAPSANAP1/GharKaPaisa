@@ -120,6 +120,19 @@ export default function PartnerLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  const fetchUnreadNotifs = async () => {
+    try {
+      const res = await api.get('/notifications', { params: { unread_only: 'true' } });
+      if (res.data?.success) {
+        setUnreadNotifCount(res.data.data?.unread_count ?? (res.data.data?.notifications?.length || 0));
+      }
+    } catch (e) {
+      /* silent */
+    }
+  };
+
   const fetchWallet = async () => {
     try {
       const res = await api.get('/wallet');
@@ -135,6 +148,7 @@ export default function PartnerLayout() {
   useEffect(() => {
     if (user?.id) {
       fetchWallet();
+      fetchUnreadNotifs();
     }
   }, [user?.id]);
 
@@ -1012,25 +1026,28 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
           tabIndex={0}
         >
           <MdNotifications size={isMobile ? 22 : 24} style={{ color: C.text }} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '2px',
-              right: '2px',
-              fontSize: '10px',
-              color: '#FFFFFF',
-              background: '#E03B3B',
-              borderRadius: '50%',
-              width: '16px',
-              height: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700
-            }}
-          >
-            3
-          </span>
+          {unreadNotifCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '2px',
+                right: '2px',
+                fontSize: '10px',
+                color: '#FFFFFF',
+                background: '#E03B3B',
+                borderRadius: '50%',
+                minWidth: '16px',
+                height: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                padding: '0 3px'
+              }}
+            >
+              {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+            </span>
+          )}
         </div>
 
         {/* Wallet Balance */}

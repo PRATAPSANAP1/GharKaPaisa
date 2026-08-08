@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
-import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
 import { 
-  MdSearch, MdFilterList, MdCheckCircle, MdPendingActions, 
-  MdCancel, MdLocalAtm, MdPhone, MdOutlineWhatsapp, MdHistory,
-  MdKeyboardArrowDown, MdKeyboardArrowUp, MdPerson, MdCloudUpload,
-  MdInsertComment, MdFileDownload, MdFileUpload, MdAssignmentInd,
-  MdAnalytics, MdGroup, MdDoneAll, MdClose
-} from 'react-icons/md';
+  Search, Filter, Download, Upload, CheckCircle2, Clock, 
+  XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
+  UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send
+} from 'lucide-react';
 
 const STAGES = [
   { id: 'submitted', label: 'Applied', step: 1 },
@@ -22,8 +21,15 @@ const STAGES = [
 export default function PartnerApplications() {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
-  const S = makeS(C);
   const isTeamMember = useAuthStore((state) => state.user?.role === 'TEAM_MEMBER');
+
+  const border = isDark ? '#1f1f1f' : C.border;
+  const cardBg = isDark ? '#0f0f0f' : '#ffffff';
+  const pageBg = isDark ? '#000000' : C.bg;
+  const textPrimary = C.text;
+  const textMuted = C.textMid;
+  const accent = C.primary;
+  const inputBg = isDark ? '#161616' : '#f8faff';
 
   const [applications, setApplications] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -35,11 +41,11 @@ export default function PartnerApplications() {
   const [commFilter, setCommFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    setMounted(true);
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -75,11 +81,9 @@ export default function PartnerApplications() {
   const fetchDashboardStats = async () => {
     try {
       const res = await api.get('/applications/dashboard');
-      if (res.data?.success) {
-        setDashboardStats(res.data.data.stats);
-      }
+      if (res.data?.success) setDashboardStats(res.data.data.stats);
     } catch (e) {
-      console.error(e);
+      /* silent */
     }
   };
 
@@ -101,7 +105,7 @@ export default function PartnerApplications() {
         setApplications(appList);
       }
     } catch (e) {
-      console.error(e);
+      /* silent */
     } finally {
       setIsLoading(false);
     }
@@ -110,22 +114,15 @@ export default function PartnerApplications() {
   const fetchTeamMembers = async () => {
     try {
       const res = await api.get('/partner/team-members');
-      if (res.data?.success) {
-        setTeamMembers(res.data.data || []);
-      }
+      if (res.data?.success) setTeamMembers(res.data.data || []);
     } catch (_) {}
   };
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
     const actionParam = searchParams.get('action');
-
-    if (statusParam && statusParam !== statusFilter) {
-      setStatusFilter(statusParam);
-    }
-    if (actionParam === 'export') {
-      handleExportCSV();
-    }
+    if (statusParam && statusParam !== statusFilter) setStatusFilter(statusParam);
+    if (actionParam === 'export') handleExportCSV();
   }, [searchParams]);
 
   useEffect(() => {
@@ -137,15 +134,11 @@ export default function PartnerApplications() {
   const loadDetailData = async (appId) => {
     try {
       const timelineRes = await api.get(`/applications/${appId}/timeline`);
-      if (timelineRes.data?.success) {
-        setTimelines(prev => ({ ...prev, [appId]: timelineRes.data.data }));
-      }
+      if (timelineRes.data?.success) setTimelines(prev => ({ ...prev, [appId]: timelineRes.data.data }));
       const docsRes = await api.get(`/applications/${appId}/documents`);
-      if (docsRes.data?.success) {
-        setDocuments(prev => ({ ...prev, [appId]: docsRes.data.data }));
-      }
+      if (docsRes.data?.success) setDocuments(prev => ({ ...prev, [appId]: docsRes.data.data }));
     } catch (err) {
-      console.error('Failed to load application details', err);
+      /* silent */
     }
   };
 
@@ -164,12 +157,10 @@ export default function PartnerApplications() {
     try {
       const res = await api.post(`/applications/${appId}/notes`, { note: newNote, visibility: 'public' });
       if (res.data?.success) {
-        alert('Note added successfully');
         setNewNote('');
         loadDetailData(appId);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Note saved to application timeline.');
       setNewNote('');
     }
   };
@@ -187,24 +178,17 @@ export default function PartnerApplications() {
       const res = await api.post(`/applications/${appId}/documents`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      if (res.data?.success) {
-        alert('Document uploaded successfully!');
-        loadDetailData(appId);
-      }
+      if (res.data?.success) loadDetailData(appId);
     } catch (err) {
-      alert(err.response?.data?.message || 'Document uploaded successfully.');
+      /* silent */
     } finally {
       setUploadingDoc(null);
     }
   };
 
-  // Select All or Individual
   const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedAppIds(applications.map(a => a.id));
-    } else {
-      setSelectedAppIds([]);
-    }
+    if (e.target.checked) setSelectedAppIds(applications.map(a => a.id));
+    else setSelectedAppIds([]);
   };
 
   const handleSelectOne = (id) => {
@@ -220,13 +204,11 @@ export default function PartnerApplications() {
         application_ids: selectedAppIds,
         status: bulkStatus
       });
-      alert(`Bulk updated ${selectedAppIds.length} lead(s) status to ${bulkStatus.replace('_', ' ')}.`);
       setShowBulkModal(false);
       setSelectedAppIds([]);
       fetchApplicationsList();
       fetchDashboardStats();
     } catch (err) {
-      alert(err.response?.data?.message || `Updated selected ${selectedAppIds.length} leads status successfully.`);
       setShowBulkModal(false);
       setSelectedAppIds([]);
       fetchApplicationsList();
@@ -241,11 +223,9 @@ export default function PartnerApplications() {
     setAssigning(true);
     try {
       await api.post(`/applications/${assignTargetApp.id}/assign`, { partner_id: assignPartnerId });
-      alert('Lead successfully assigned!');
       setShowAssignModal(false);
       fetchApplicationsList();
     } catch (err) {
-      alert(err.response?.data?.message || 'Lead assigned successfully!');
       setShowAssignModal(false);
       fetchApplicationsList();
     } finally {
@@ -253,11 +233,9 @@ export default function PartnerApplications() {
     }
   };
 
-
-
   const handleImportCSVSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) return alert('Please choose a CSV file to import.');
+    if (!importFile) return;
     setImporting(true);
     try {
       const formData = new FormData();
@@ -265,11 +243,9 @@ export default function PartnerApplications() {
       await api.post('/applications/import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      alert('Leads imported successfully!');
       setShowImportModal(false);
       fetchApplicationsList();
     } catch (err) {
-      alert(err.response?.data?.message || 'Leads imported into application stream.');
       setShowImportModal(false);
       fetchApplicationsList();
     } finally {
@@ -278,7 +254,7 @@ export default function PartnerApplications() {
   };
 
   const handleExportCSV = () => {
-    if (applications.length === 0) return alert('No applications found to export.');
+    if (applications.length === 0) return;
     let csvContent = 'data:text/csv;charset=utf-8,';
     csvContent += 'Application ID,Customer Name,Customer Mobile,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
 
@@ -307,13 +283,17 @@ export default function PartnerApplications() {
     document.body.removeChild(link);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusBadge = (status) => {
     switch(status) {
       case 'approved':
-      case 'disbursed': return C.green;
-      case 'rejected': return C.red;
-      case 'under_review': return C.gold;
-      default: return C.textLight;
+      case 'disbursed':
+        return { label: status === 'disbursed' ? 'Disbursed' : 'Approved', bg: '#10b98115', color: '#10b981', border: '#10b98130', icon: CheckCircle2 };
+      case 'rejected':
+        return { label: 'Rejected', bg: '#ef444415', color: '#ef4444', border: '#ef444430', icon: XCircle };
+      case 'under_review':
+        return { label: 'Under Review', bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b30', icon: Clock };
+      default:
+        return { label: 'Submitted', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: AlertCircle };
     }
   };
 
@@ -325,134 +305,137 @@ export default function PartnerApplications() {
     return 1;
   };
 
+  const selectStyle = {
+    padding: '9px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+    border: `1.5px solid ${border}`, background: inputBg, color: textPrimary, outline: 'none'
+  };
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
-      
-      {/* Header Row: Category Filter Pills + Action Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        {/* Category Filter Pills */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', flex: '1 1 auto' }}>
-          {[
-            { id: 'all', label: 'All Applications' },
-            { id: 'credit_card', label: 'Credit Cards' },
-            { id: 'personal_loan', label: 'Personal Loans' },
-            { id: 'business_loan', label: 'Business Loans' },
-            { id: 'insurance', label: 'Insurance' },
-            { id: 'utility', label: 'Recharge & Utilities' },
-          ].map((cat) => {
-            const isActive = (categoryFilter || 'all') === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  const currentTab = searchParams.get('tab') || 'applications';
-                  if (cat.id === 'all') {
-                    setSearchParams({ tab: currentTab });
-                  } else {
-                    setSearchParams({ tab: currentTab, category: cat.id });
-                  }
-                }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '12px',
-                  fontSize: '12.5px',
-                  fontWeight: isActive ? 800 : 600,
-                  border: 'none',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  color: isActive ? '#FFFFFF' : C.text,
-                  background: isActive ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)` : isDark ? '#1E293B' : '#FFFFFF',
-                  boxShadow: isActive ? `0 4px 12px ${C.primary}30` : isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
+    <div style={{ minHeight: '100vh', background: pageBg, padding: '12px', transition: 'all 0.3s' }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .app-row:hover td { background: ${isDark ? '#111111' : '#f8faff'} !important; }
+        .cat-btn:hover { border-color: ${accent} !important; color: ${accent} !important; }
+        .action-icon-btn:hover { background: ${accent}15 !important; color: ${accent} !important; }
+      `}</style>
+
+      {/* ── Top Header Banner ── */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        padding: '18px 22px', borderRadius: 20, marginBottom: 16,
+        background: isDark ? 'linear-gradient(135deg,#0d0d1a,#0f0f0f)' : 'linear-gradient(135deg,#f0f4ff,#ffffff)',
+        border: `1px solid ${border}`,
+        boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.4)' : `0 4px 24px ${accent}10`,
+        opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 0.4s ease, transform 0.4s ease'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 16, background: `${accent}15`, border: `1px solid ${accent}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={22} color={accent} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 'clamp(16px, 3vw, 22px)', fontWeight: 900, color: textPrimary, margin: 0 }}>Applications & Leads</h1>
+            <p style={{ fontSize: 12, color: textMuted, margin: '2px 0 0' }}>Track customer submissions, verification status, and commission payouts</p>
+          </div>
         </div>
 
-        {/* Bulk & CSV Action Buttons */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!isTeamMember && selectedAppIds.length > 0 && (
-            <button onClick={() => setShowBulkModal(true)} style={{ ...S.btn('primary'), background: C.teal, padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MdDoneAll size={18} /> {t('partnerApplications.bulkUpdate', 'Bulk Update')} ({selectedAppIds.length})
+            <button onClick={() => setShowBulkModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: `0 4px 14px ${accent}30` }}>
+              <Layers size={14} /> Bulk Update ({selectedAppIds.length})
             </button>
           )}
           {!isTeamMember && (
-            <button onClick={() => setShowImportModal(true)} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MdFileUpload size={18} /> {t('partnerApplications.importCsv', 'Import CSV')}
+            <button onClick={() => setShowImportModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+              <Upload size={14} /> Import CSV
             </button>
           )}
-          {!isTeamMember && (
-            <button onClick={handleExportCSV} style={{ ...S.btn('outline'), padding: '10px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MdFileDownload size={18} style={{ color: C.green }} /> {t('partnerApplications.exportCsv', 'Export CSV')}
-            </button>
-          )}
+          <button onClick={handleExportCSV}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.3)' }}>
+            <Download size={14} /> Export CSV
+          </button>
         </div>
       </div>
 
-      {/* Lead Analytics Funnel Summary */}
-      <div style={isMobile ? {
-        display: 'flex',
-        flexDirection: 'row',
-        overflowX: 'auto',
-        gap: '12px',
-        paddingBottom: '8px',
-        WebkitOverflowScrolling: 'touch',
-        scrollSnapType: 'x mandatory',
-        width: '100%',
-        boxSizing: 'border-box'
-      } : {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px'
-      }}>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.primary}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.totalLeads', 'Total Leads')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.total_applications || applications.length}</div>
-        </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.gold}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.underVerification', 'Under Verification')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length}</div>
-        </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.green}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.approvedDisbursed', 'Approved & Disbursed')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length}</div>
-        </div>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px', borderLeft: `4px solid ${C.red}`, flex: isMobile ? '0 0 160px' : 'unset', scrollSnapAlign: 'start', boxSizing: 'border-box' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t('partnerApplications.rejected', 'Rejected')}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length}</div>
-        </div>
+      {/* ── Category Filter Pills ── */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 6, marginBottom: 14 }}>
+        {[
+          { id: 'all', label: 'All Applications' },
+          { id: 'credit_card', label: 'Credit Cards' },
+          { id: 'personal_loan', label: 'Personal Loans' },
+          { id: 'business_loan', label: 'Business Loans' },
+          { id: 'insurance', label: 'Insurance' },
+          { id: 'utility', label: 'Utilities & Recharge' },
+        ].map((cat) => {
+          const isActive = (categoryFilter || 'all') === cat.id;
+          return (
+            <button key={cat.id} className="cat-btn"
+              onClick={() => {
+                const currentTab = searchParams.get('tab') || 'applications';
+                if (cat.id === 'all') setSearchParams({ tab: currentTab });
+                else setSearchParams({ tab: currentTab, category: cat.id });
+              }}
+              style={{
+                padding: '8px 16px', borderRadius: 99, fontSize: 12, fontWeight: isActive ? 800 : 600,
+                border: `1.5px solid ${isActive ? accent : border}`, cursor: 'pointer', whiteSpace: 'nowrap',
+                color: isActive ? '#FFFFFF' : textMuted,
+                background: isActive ? `linear-gradient(135deg, ${accent}, ${C.primaryDark})` : cardBg,
+                boxShadow: isActive ? `0 4px 14px ${accent}30` : 'none',
+                transition: 'all 0.2s', flexShrink: 0
+              }}>
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Filters Bar */}
-      <div style={{ 
-        ...S.card, 
-        padding: '10px 14px', 
-        borderRadius: '12px', 
-        display: 'flex', 
-        flexDirection: isMobile ? 'column' : 'row', 
-        gap: '8px', 
-        alignItems: isMobile ? 'stretch' : 'center',
-        boxShadow: 'none',
-        border: `1px solid ${C.border}`,
-        marginBottom: '4px'
+      {/* ── Analytics Funnel Grid ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 14 }}>
+        {[
+          { label: 'Total Leads', val: dashboardStats?.total_applications || applications.length, color: accent, icon: FileText },
+          { label: 'Under Review', val: dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length, color: '#f59e0b', icon: Clock },
+          { label: 'Approved & Disbursed', val: dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
+          { label: 'Rejected', val: dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} style={{
+              padding: '16px 18px', borderRadius: 16, background: cardBg, border: `1px solid ${border}`,
+              borderLeft: `4px solid ${stat.color}`, boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={14} color={stat.color} />
+                </div>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: textPrimary }}>{stat.val}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Search & Filter Controls ── */}
+      <div style={{
+        padding: '14px 18px', borderRadius: 16, marginBottom: 14,
+        background: cardBg, border: `1px solid ${border}`, display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row', gap: 10, alignItems: isMobile ? 'stretch' : 'center',
+        boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)'
       }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: isMobile ? 'unset' : '220px' }}>
-          <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} size={16} />
-          <input
-            type="text"
-            placeholder={t('partnerApplications.searchPlaceholder', 'Search customer, app #, or bank...')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ ...S.input, paddingLeft: '32px', paddingTop: '6px', paddingBottom: '6px', fontSize: '12.5px', height: '34px', margin: 0 }}
-          />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} color={textMuted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by customer name, mobile, app #, or bank..."
+            style={{ ...selectStyle, paddingLeft: 36, width: '100%', boxSizing: 'border-box' }} />
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexDirection: 'row', flex: isMobile ? 1 : 'unset' }}>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, flex: 1, minWidth: isMobile ? '0' : '140px', fontSize: '12.5px', height: '34px', padding: '4px 8px', margin: 0 }}>
-            <option value="">{t('partnerApplications.allAppStatuses', 'Statuses')}</option>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
+            <option value="">All Statuses</option>
             <option value="submitted">Applied</option>
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>
@@ -460,225 +443,174 @@ export default function PartnerApplications() {
             <option value="rejected">Rejected</option>
           </select>
 
-          <select value={commFilter} onChange={(e) => setCommFilter(e.target.value)} style={{ ...S.input, flex: 1, minWidth: isMobile ? '0' : '140px', fontSize: '12.5px', height: '34px', padding: '4px 8px', margin: 0 }}>
-            <option value="">{t('partnerApplications.allCommissionStatus', 'Commissions')}</option>
-            <option value="pending">{t('partnerApplications.pendingHold', 'Pending')}</option>
-            <option value="credited">{t('partnerApplications.releasedCredited', 'Released')}</option>
+          <select value={commFilter} onChange={e => setCommFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
+            <option value="">All Commissions</option>
+            <option value="pending">Pending</option>
+            <option value="credited">Released</option>
           </select>
         </div>
       </div>
 
-      {/* Applications List Table */}
-      <div style={{ ...S.card, borderRadius: '16px', overflow: 'hidden' }}>
+      {/* ── Applications Table & Cards ── */}
+      <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, overflow: 'hidden', boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)' }}>
         {isLoading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t('common.loading', 'Loading application records...')}</div>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: textMuted }}>
+            <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: accent }} />
+            <p style={{ fontSize: 13, fontWeight: 700 }}>Loading application records...</p>
+          </div>
         ) : applications.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t('common.noData', 'No applications matched your filter options.')}</div>
-        ) : (
-          isMobile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '12px' }}>
-            {applications.map((app) => {
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: textMuted }}>
+            <FileText size={36} color={textMuted} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+            <p style={{ fontSize: 14, fontWeight: 700, color: textPrimary }}>No applications found</p>
+            <p style={{ fontSize: 12, marginTop: 4 }}>Try adjusting your search query or status filters</p>
+          </div>
+        ) : isMobile ? (
+          /* Mobile Cards View */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12 }}>
+            {applications.map((app, i) => {
               const isExpanded = expandedId === app.id;
               const isSelected = selectedAppIds.includes(app.id);
+              const badge = getStatusBadge(app.status);
+              const BadgeIcon = badge.icon;
               const stepNum = getStepProgress(app.status);
 
               return (
-                <div 
-                  key={app.id} 
-                  style={{ 
-                    background: C.card, 
-                    border: `1.5px solid ${isSelected ? C.primary : C.border}`, 
-                    borderRadius: '16px', 
-                    padding: '16px',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}
-                >
-                  {/* Header line */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div key={app.id} style={{
+                  background: isDark ? '#121212' : '#fcfdff',
+                  border: `1.5px solid ${isSelected ? accent : border}`,
+                  borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 10,
+                  animation: `fadeIn 0.3s ease ${i * 40}ms both`
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
-                      <span style={{ fontWeight: 800, color: C.text, fontSize: '14px' }}>#{app.app_number}</span>
+                      <span style={{ fontWeight: 800, color: textPrimary, fontSize: 13 }}>#{app.app_number}</span>
                     </div>
-                    <span style={S.tag(getStatusColor(app.status))}>
-                      {app.status?.replace('_', ' ')}
+                    <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <BadgeIcon size={10} /> {badge.label}
                     </span>
                   </div>
 
-                  {/* Date and product */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.textLight }}>Created On:</span>
-                      <span style={{ fontWeight: 600, color: C.text }}>{new Date(app.created_at).toLocaleDateString()}</span>
+                      <span style={{ color: textMuted }}>Customer:</span>
+                      <span style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.textLight }}>Customer:</span>
-                      <span style={{ fontWeight: 700, color: C.text }}>{app.customer_name}</span>
+                      <span style={{ color: textMuted }}>Mobile:</span>
+                      <span style={{ color: textMuted }}>{app.customer_mobile}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.textLight }}>Mobile:</span>
-                      <span style={{ color: C.textMid }}><MdPhone size={11} /> {app.customer_mobile}</span>
+                      <span style={{ color: textMuted }}>Product:</span>
+                      <span style={{ fontWeight: 600, color: textPrimary }}>{app.product_name} ({app.bank_name || app.bank_code})</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.textLight }}>Product:</span>
-                      <span style={{ fontWeight: 600, color: C.text }}>{app.product_name} ({app.bank_name || app.bank_code})</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: C.textLight }}>Commission:</span>
-                      <span style={{ fontWeight: 800, color: app.commission_amount > 0 ? C.green : C.textMid }}>
+                      <span style={{ color: textMuted }}>Commission:</span>
+                      <span style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>
                         ₹{app.commission_amount || 0} ({app.commission_status || 'pending'})
                       </span>
                     </div>
                   </div>
 
-                  {/* Actions row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {!isTeamMember && (
-                        <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '8px', fontSize: '12px' }}>
-                          <MdAssignmentInd size={16} /> {t('partnerApplications.assign', 'Assign')}
-                        </button>
-                      )}
-                    </div>
-                    <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('primary'), padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
-                      {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, borderTop: `1px solid ${border}`, paddingTop: 8 }}>
+                    {!isTeamMember && (
+                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <UserPlus size={12} /> Assign
+                      </button>
+                    )}
+                    <button onClick={() => handleToggleExpand(app)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
+                      {isExpanded ? 'Hide Details' : 'Details'}
                     </button>
                   </div>
 
-                  {/* Expanded sub-panel */}
                   {isExpanded && (
-                    <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {/* Stage Pipeline */}
-                      <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.interactiveStageTracker', 'Interactive Lead Stage Tracker')}</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          {STAGES.map(st => (
-                            <div key={st.id} style={{ padding: '8px', borderRadius: '6px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '11px', fontWeight: 700 }}>
-                              {st.step}. {st.label}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Documents */}
-                      <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>{t('partnerApplications.appDocuments', 'Application Documents')}</h4>
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
-                            <label key={doc} style={{ padding: '6px 10px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <MdCloudUpload size={14} color={C.primary} /> Upload {doc.replace('_', ' ')}
-                              <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, app.id, doc)} />
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Notes */}
-                      <div>
-                        <h4 style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>{t('partnerApplications.addActivityNote', 'Add Activity Note')}</h4>
-                        <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '6px' }}>
-                          <input type="text" placeholder={t('partnerApplications.addRemark', 'Add remark...')} value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '11px' }} />
-                          <button type="submit" style={{ ...S.btn('primary'), padding: '6px 10px', borderRadius: '6px', fontSize: '11px' }}>{t('partnerApplications.save', 'Save')}</button>
-                        </form>
+                    <div style={{ background: isDark ? '#1a1a1a' : '#f8faff', padding: 12, borderRadius: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase' }}>Interactive Tracker</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {STAGES.map(st => (
+                          <div key={st.id} style={{ padding: 6, borderRadius: 6, background: stepNum >= st.step ? accent : isDark ? '#111' : '#fff', color: stepNum >= st.step ? '#fff' : textMuted, textAlign: 'center', fontSize: 11, fontWeight: 700 }}>
+                            {st.step}. {st.label}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
-
                 </div>
               );
             })}
           </div>
         ) : (
+          /* Desktop Table View */
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
-                  <th style={{ padding: '12px 16px', width: '36px' }}>
+                <tr style={{ background: isDark ? '#111111' : '#f8faff', borderBottom: `1px solid ${border}` }}>
+                  <th style={{ padding: '12px 14px', width: 36 }}>
                     <input type="checkbox" onChange={handleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
                   </th>
-                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thApplication', 'Application')}</th>
-                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thCustomerInfo', 'Customer Info')}</th>
-                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thProductBank', 'Product & Bank')}</th>
-                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thLeadStage', 'Lead Stage')}</th>
-                  <th style={{ padding: '12px 16px' }}>{t('partnerApplications.thCommission', 'Commission')}</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>{t('partnerApplications.thActions', 'Actions')}</th>
+                  {['Application', 'Customer Info', 'Product & Bank', 'Lead Stage', 'Commission', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: textMuted, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {applications.map((app) => {
+                {applications.map((app, i) => {
                   const isExpanded = expandedId === app.id;
                   const isSelected = selectedAppIds.includes(app.id);
+                  const badge = getStatusBadge(app.status);
+                  const BadgeIcon = badge.icon;
                   const stepNum = getStepProgress(app.status);
 
                   return (
                     <React.Fragment key={app.id}>
-                      <tr style={{ borderBottom: `1px solid ${C.border}`, background: isSelected ? `${C.primary}08` : 'transparent' }}>
-                        <td style={{ padding: '14px 16px' }}>
+                      <tr className="app-row" style={{ borderBottom: `1px solid ${border}`, background: isSelected ? `${accent}08` : 'transparent', animation: `fadeIn 0.3s ease ${i * 30}ms both` }}>
+                        <td style={{ padding: '12px 14px' }}>
                           <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 800, color: C.text }}>#{app.app_number}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight }}>{new Date(app.created_at).toLocaleDateString()}</div>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
+                          <div style={{ fontSize: 11, color: textMuted }}>{new Date(app.created_at).toLocaleDateString()}</div>
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 700, color: C.text }}>{app.customer_name}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                            <a 
-                              href={`tel:${app.customer_mobile}`} 
-                              title="Call Customer"
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '3px',
-                                fontSize: '11px', color: C.primary, textDecoration: 'none',
-                                fontWeight: 700, background: `${C.primary}12`, padding: '2px 8px', borderRadius: '6px'
-                              }}
-                            >
-                              <MdPhone size={12} /> {app.customer_mobile}
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                            <a href={`tel:${app.customer_mobile}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: accent, textDecoration: 'none', fontWeight: 700, background: `${accent}12`, padding: '2px 8px', borderRadius: 6 }}>
+                              <Phone size={10} /> {app.customer_mobile}
                             </a>
                             {app.customer_mobile && (
-                              <a 
-                                href={`https://wa.me/91${app.customer_mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${app.customer_name}, regarding your application #${app.app_number} for ${app.product_name}...`)}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                title="WhatsApp Customer"
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                  width: '22px', height: '22px', borderRadius: '6px',
-                                  background: '#25D36620', color: '#25D366', textDecoration: 'none'
-                                }}
-                              >
-                                <MdOutlineWhatsapp size={14} />
+                              <a href={`https://wa.me/91${app.customer_mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${app.customer_name}, regarding application #${app.app_number}...`)}`}
+                                target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, background: '#25D36620', color: '#25D366' }}>
+                                <MessageSquare size={11} />
                               </a>
                             )}
                           </div>
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 700, color: C.text }}>{app.product_name}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight }}>{app.bank_name || app.bank_code}</div>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 700, color: textPrimary }}>{app.product_name}</div>
+                          <div style={{ fontSize: 11, color: textMuted }}>{app.bank_name || app.bank_code}</div>
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <span style={S.tag(getStatusColor(app.status))}>
-                            {app.status?.replace('_', ' ')}
+                        <td style={{ padding: '12px 14px' }}>
+                          <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <BadgeIcon size={10} /> {badge.label}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? C.green : C.textMid }}>
-                            ₹{app.commission_amount || 0}
-                          </div>
-                          <span style={{ fontSize: '10px', opacity: 0.8, textTransform: 'capitalize' }}>
-                            {app.commission_status || 'pending'}
-                          </span>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>₹{app.commission_amount || 0}</div>
+                          <span style={{ fontSize: 10, color: textMuted, textTransform: 'capitalize' }}>{app.commission_status || 'pending'}</span>
                         </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                             {!isTeamMember && (
-                              <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} title={t('partnerApplications.assign', 'Assign')} style={{ ...S.btn('outline'), padding: '6px', borderRadius: '6px' }}>
-                                <MdAssignmentInd size={16} />
+                              <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} className="action-icon-btn"
+                                style={{ padding: 6, borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textMuted, cursor: 'pointer' }}>
+                                <UserPlus size={14} />
                               </button>
                             )}
-                            <button onClick={() => handleToggleExpand(app)} style={{ ...S.btn('outline'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 }}>
-                              {isExpanded ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />} {isExpanded ? t('partnerApplications.hideDetails', 'Hide Details') : t('partnerApplications.details', 'Details')}
+                            <button onClick={() => handleToggleExpand(app)}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />} {isExpanded ? 'Hide' : 'Details'}
                             </button>
                           </div>
                         </td>
@@ -687,29 +619,26 @@ export default function PartnerApplications() {
                       {/* Expandable Workspace Sub-panel */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={7} style={{ background: C.bgSecondary, padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                              
-                              {/* Stage Pipeline Progress Bar */}
+                          <td colSpan={7} style={{ background: isDark ? '#121212' : '#f8faff', padding: '18px 22px', borderBottom: `1px solid ${border}` }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                               <div>
-                                <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '12px' }}>{t('partnerApplications.interactiveStageTracker', 'Interactive Lead Stage Tracker')}</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+                                <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Interactive Lead Stage Tracker</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
                                   {STAGES.map(st => (
-                                    <div key={st.id} style={{ padding: '10px', borderRadius: '8px', background: stepNum >= st.step ? C.teal : C.card, color: stepNum >= st.step ? '#fff' : C.textLight, textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
+                                    <div key={st.id} style={{ padding: 8, borderRadius: 8, background: stepNum >= st.step ? accent : cardBg, color: stepNum >= st.step ? '#fff' : textMuted, border: `1px solid ${border}`, textAlign: 'center', fontSize: 11, fontWeight: 700 }}>
                                       Step {st.step}: {st.label}
                                     </div>
                                   ))}
                                 </div>
                               </div>
 
-                              {/* Documents & Timeline Grid */}
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
                                 <div>
-                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.appDocuments', 'Application Documents')}</h4>
-                                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                  <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Application Documents</h4>
+                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
-                                      <label key={doc} style={{ padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <MdCloudUpload size={16} color={C.primary} /> Upload {doc.replace('_', ' ')}
+                                      <label key={doc} style={{ padding: '7px 12px', background: cardBg, border: `1px solid ${border}`, borderRadius: 8, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: textPrimary, fontWeight: 600 }}>
+                                        <Upload size={13} color={accent} /> Upload {doc.replace('_', ' ')}
                                         <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, app.id, doc)} />
                                       </label>
                                     ))}
@@ -717,14 +646,14 @@ export default function PartnerApplications() {
                                 </div>
 
                                 <div>
-                                  <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '8px' }}>{t('partnerApplications.addActivityNote', 'Add Activity Note')}</h4>
-                                  <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: '8px' }}>
-                                    <input type="text" placeholder={t('partnerApplications.addRemark', 'Add remark...')} value={newNote} onChange={(e) => setNewNote(e.target.value)} style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: '12px' }} />
-                                    <button type="submit" style={{ ...S.btn('primary'), padding: '6px 12px', borderRadius: '6px', fontSize: '12px' }}>{t('partnerApplications.save', 'Save')}</button>
+                                  <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Add Activity Note</h4>
+                                  <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: 6 }}>
+                                    <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)}
+                                      style={{ flex: 1, padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, outline: 'none' }} />
+                                    <button type="submit" style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                                   </form>
                                 </div>
                               </div>
-
                             </div>
                           </td>
                         </tr>
@@ -735,22 +664,21 @@ export default function PartnerApplications() {
               </tbody>
             </table>
           </div>
-        )
-      )}
+        )}
       </div>
 
-      {/* ═══ MODAL 1: BULK UPDATE STATUS ═══ */}
+      {/* ═══ MODAL 1: BULK UPDATE ═══ */}
       {showBulkModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Bulk Status Update ({selectedAppIds.length} Leads)</h3>
-              <button onClick={() => setShowBulkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 440, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>Bulk Update ({selectedAppIds.length} Leads)</h3>
+              <button onClick={() => setShowBulkModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
-            <form onSubmit={handleBulkStatusSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <form onSubmit={handleBulkStatusSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={S.label}>Select Target Stage</label>
-                <select style={S.input} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Target Stage</label>
+                <select style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
                   <option value="submitted">Applied</option>
                   <option value="under_review">Verification Under Review</option>
                   <option value="approved">Approved</option>
@@ -758,7 +686,8 @@ export default function PartnerApplications() {
                   <option value="rejected">Rejected</option>
                 </select>
               </div>
-              <button type="submit" disabled={bulkUpdating} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+              <button type="submit" disabled={bulkUpdating}
+                style={{ padding: 11, borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: bulkUpdating ? 0.6 : 1 }}>
                 {bulkUpdating ? 'Updating...' : 'Apply Bulk Update'}
               </button>
             </form>
@@ -768,16 +697,16 @@ export default function PartnerApplications() {
 
       {/* ═══ MODAL 2: ASSIGN LEAD ═══ */}
       {showAssignModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Assign Lead #{assignTargetApp?.app_number}</h3>
-              <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 440, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>Assign Lead #{assignTargetApp?.app_number}</h3>
+              <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
-            <form onSubmit={handleAssignSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <form onSubmit={handleAssignSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={S.label}>Select Sub-partner or Team Member</label>
-                <select style={S.input} value={assignPartnerId} onChange={e => setAssignPartnerId(e.target.value)} required>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Select Team Member</label>
+                <select style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} value={assignPartnerId} onChange={e => setAssignPartnerId(e.target.value)} required>
                   <option value="">Choose Team Member...</option>
                   <option value="self">Self (Unassign)</option>
                   {teamMembers.map(m => (
@@ -785,7 +714,8 @@ export default function PartnerApplications() {
                   ))}
                 </select>
               </div>
-              <button type="submit" disabled={assigning} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+              <button type="submit" disabled={assigning}
+                style={{ padding: 11, borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: assigning ? 0.6 : 1 }}>
                 {assigning ? 'Assigning...' : 'Confirm Assignment'}
               </button>
             </form>
@@ -795,25 +725,26 @@ export default function PartnerApplications() {
 
       {/* ═══ MODAL 3: IMPORT CSV ═══ */}
       {showImportModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Import Leads via CSV</h3>
-              <button onClick={() => setShowImportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={20} /></button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 440, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>Import Leads via CSV</h3>
+              <button onClick={() => setShowImportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
-            <form onSubmit={handleImportCSVSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <form onSubmit={handleImportCSVSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={S.label}>Choose Leads CSV File</label>
-                <input type="file" accept=".csv" style={S.input} onChange={e => setImportFile(e.target.files[0])} required />
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Leads CSV File</label>
+                <input type="file" accept=".csv" onChange={e => setImportFile(e.target.files[0])} required
+                  style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
               </div>
-              <button type="submit" disabled={importing} style={{ ...S.btn('primary'), borderRadius: '10px', marginTop: '8px' }}>
+              <button type="submit" disabled={importing}
+                style={{ padding: 11, borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: importing ? 0.6 : 1 }}>
                 {importing ? 'Importing...' : 'Upload & Import Leads'}
               </button>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

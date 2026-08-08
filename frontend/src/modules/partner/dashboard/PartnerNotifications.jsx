@@ -1,448 +1,440 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import api from "../../../services/api";
+import { useTheme } from '../../../contexts/ThemeContext';
+import api from '../../../services/api';
 import {
-  MdNotifications, MdCheckCircle, MdDeleteSweep,
-  MdArrowBack, MdAccessTime, MdInfoOutline,
-  MdTune, MdArchive, MdMarkAsUnread, MdClose, MdEmail, MdPhoneAndroid, MdSms,
-  MdTimeline, MdCategory, MdPriorityHigh, MdSettings
-} from "react-icons/md";
-import { useNavigate } from "react-router-dom";
+  Bell, CheckCheck, Trash2, X, Clock, Zap, Wallet,
+  FileText, ShieldCheck, TrendingUp, Settings, Activity, Save, RefreshCw
+} from 'lucide-react';
+
+const FILTERS = [
+  { id: 'all',          label: 'All',         icon: Bell },
+  { id: 'applications', label: 'Applications', icon: FileText },
+  { id: 'wallet',       label: 'Wallet',       icon: Wallet },
+  { id: 'commission',   label: 'Commission',   icon: TrendingUp },
+  { id: 'kyc',          label: 'KYC',          icon: ShieldCheck },
+  { id: 'system',       label: 'System',       icon: Zap },
+];
+
+const STATUS_FILTERS = [
+  { id: 'all',    label: 'All' },
+  { id: 'unread', label: 'Unread' },
+  { id: 'read',   label: 'Read' },
+];
+
+const CAT_COLORS = {
+  applications: '#6366f1',
+  wallet:       '#10b981',
+  commission:   '#3b82f6',
+  withdrawal:   '#f59e0b',
+  kyc:          '#a855f7',
+  system:       '#64748b',
+};
+
+const PRIO_CONFIG = {
+  urgent:      { color: '#ef4444', dot: '🔴' },
+  important:   { color: '#f59e0b', dot: '🟡' },
+  information: { color: '#3b82f6', dot: '🔵' },
+};
+
+function Toggle({ value, onChange, accent }) {
+  return (
+    <div onClick={onChange} style={{
+      width: 44, height: 24, borderRadius: 99, cursor: 'pointer', position: 'relative',
+      background: value ? accent : '#374151', transition: 'background 0.3s',
+      boxShadow: value ? `0 0 10px ${accent}40` : 'none', flexShrink: 0
+    }}>
+      <div style={{
+        position: 'absolute', top: 2, left: value ? 22 : 2,
+        width: 20, height: 20, borderRadius: '50%', background: '#fff',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+        transition: 'left 0.3s cubic-bezier(0.4,0,0.2,1)'
+      }} />
+    </div>
+  );
+}
 
 export default function PartnerNotifications() {
-  const { t } = useTranslation();
-  const { C } = useTheme();
-  const S = makeS(C);
-  const navigate = useNavigate();
+  const { C, isDark } = useTheme();
+  const border  = isDark ? '#1f1f1f' : C.border;
+  const cardBg  = isDark ? '#0f0f0f' : '#fff';
+  const pageBg  = isDark ? '#000' : C.bg;
+  const text     = C.text;
+  const muted    = C.textMid;
+  const accent   = C.primary;
 
-  const [activeViewTab, setActiveViewTab] = useState('notifications'); // notifications, activity, preferences
+  const [view, setView]                   = useState('feed');   // feed | activity | prefs
   const [notifications, setNotifications] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [activityLogs, setActivityLogs]   = useState([]);
+  const [unreadCount, setUnreadCount]     = useState(0);
+  const [loading, setLoading]             = useState(true);
+  const [catFilter, setCatFilter]         = useState('all');
+  const [statusFilter, setStatusFilter]   = useState('all');
+  const [mounted, setMounted]             = useState(false);
 
-  // Category & Priority Filters
-  const [selectedCategory, setSelectedCategory] = useState('all'); // all, applications, wallet, commission, withdrawal, kyc, customers, products, team, system
-  const [selectedPriority, setSelectedPriority] = useState('all'); // all, urgent, important, information
-  const [statusFilter, setStatusFilter] = useState('all'); // all, unread, read, archived
-
-  // Preferences
   const [prefs, setPrefs] = useState({
-    email_enabled: true,
-    sms_enabled: true,
-    browser_enabled: true,
-    push_enabled: true,
-    wallet_notifications: true,
-    commission_notifications: true,
-    application_notifications: true,
-    marketing_notifications: true,
-    system_notifications: true
+    email_enabled: true, sms_enabled: true,
+    wallet_notifications: true, commission_notifications: true,
+    application_notifications: true, system_notifications: true,
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefSaved, setPrefSaved]     = useState(false);
 
-  // Fetch Notifications List
+  useEffect(() => {
+    setMounted(true);
+    fetchNotifications();
+    fetchPreferences();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let es;
+    try {
+      es = new EventSource(`/api/v1/notifications/stream?token=${token}`);
+      es.onmessage = (e) => {
+        try {
+          const p = JSON.parse(e.data);
+          if (p.type === 'notification' && p.data) {
+            setNotifications(prev => [p.data, ...prev]);
+            if (p.unread_count !== undefined) setUnreadCount(p.unread_count);
+          }
+        } catch { /* silent */ }
+      };
+    } catch { /* silent */ }
+    return () => es?.close();
+  }, []);
+
+  useEffect(() => { fetchNotifications(); }, [catFilter, statusFilter]);
+  useEffect(() => { if (view === 'activity') fetchActivityLogs(); }, [view]);
+
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/notifications", {
+      const res = await api.get('/notifications', {
         params: {
-          category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          priority: selectedPriority !== 'all' ? selectedPriority : undefined,
-          unread_only: statusFilter === 'unread' ? 'true' : undefined
+          category:    catFilter !== 'all' ? catFilter : undefined,
+          unread_only: statusFilter === 'unread' ? 'true' : undefined,
         }
       });
       if (res.data?.success) {
         setNotifications(res.data.data.notifications || []);
         setUnreadCount(res.data.data.unread_count || 0);
       }
-    } catch (e) {
-      console.error("Failed to fetch notifications", e);
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   };
 
-  // Fetch Activity Log Timeline
   const fetchActivityLogs = async () => {
     try {
-      const res = await api.get("/notifications/activity");
-      if (res.data?.success) {
-        setActivityLogs(res.data.data || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch activity logs", e);
-    }
+      const res = await api.get('/notifications/activity');
+      if (res.data?.success) setActivityLogs(res.data.data || []);
+    } catch { /* silent */ }
   };
 
-  // Fetch Preferences
   const fetchPreferences = async () => {
     try {
-      const res = await api.get("/notifications/preferences");
-      if (res.data?.success && res.data.data) {
-        setPrefs(prev => ({ ...prev, ...res.data.data }));
-      }
-    } catch (e) {
-      console.error("Failed to fetch preferences", e);
-    }
+      const res = await api.get('/notifications/preferences');
+      if (res.data?.success && res.data.data) setPrefs(p => ({ ...p, ...res.data.data }));
+    } catch { /* silent */ }
   };
 
-  // Persistent SSE Stream Listener
-  useEffect(() => {
-    fetchNotifications();
-    fetchPreferences();
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    let eventSource = null;
+  const markRead = async (id) => {
     try {
-      const streamUrl = `/api/v1/notifications/stream?token=${token}`;
-      eventSource = new EventSource(streamUrl);
-
-      eventSource.onmessage = (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          if (payload.type === 'notification' && payload.data) {
-            setNotifications(prev => [payload.data, ...prev]);
-            if (payload.unread_count !== undefined) setUnreadCount(payload.unread_count);
-          }
-        } catch (_) {}
-      };
-    } catch (err) {
-      console.error('SSE Stream init error:', err);
-    }
-
-    return () => {
-      if (eventSource) eventSource.close();
-    };
-  }, [selectedCategory, selectedPriority, statusFilter]);
-
-  useEffect(() => {
-    if (activeViewTab === 'activity') fetchActivityLogs();
-  }, [activeViewTab]);
-
-  const handleMarkAllRead = async () => {
-    try {
-      const res = await api.post("/notifications/read-all");
-      if (res.data?.success) {
-        setUnreadCount(0);
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true, status: 'read' })));
-      }
-    } catch (e) {
-      console.error("Failed to mark all as read", e);
-    }
+      await api.post('/notifications/read', { id, ids: [id] });
+      setNotifications(p => p.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(p => Math.max(0, p - 1));
+    } catch { /* silent */ }
   };
 
-  const handleMarkRead = async (id) => {
+  const markAllRead = async () => {
     try {
-      const res = await api.post("/notifications/read", { id, ids: [id], notification_ids: [id] });
-      if (res.data?.success) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true, status: 'read' } : n));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (e) {
-      console.error("Failed to mark notification as read", e);
-    }
+      await api.post('/notifications/read-all');
+      setNotifications(p => p.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch { /* silent */ }
   };
 
-  const handleDeleteNotification = async (id, e) => {
-    if (e) e.stopPropagation();
+  const deleteOne = async (id, e) => {
+    e?.stopPropagation();
     try {
-      const res = await api.delete(`/notifications/${id}`);
-      if (res.data?.success) {
-        setNotifications(prev => {
-          const target = prev.find(n => n.id === id);
-          if (target && !target.is_read) {
-            setUnreadCount(count => Math.max(0, count - 1));
-          }
-          return prev.filter(n => n.id !== id);
-        });
-      }
-    } catch (e) {
-      console.error("Failed to delete notification", e);
-    }
+      await api.delete(`/notifications/${id}`);
+      setNotifications(p => {
+        const t = p.find(n => n.id === id);
+        if (t && !t.is_read) setUnreadCount(c => Math.max(0, c - 1));
+        return p.filter(n => n.id !== id);
+      });
+    } catch { /* silent */ }
   };
 
-  const handleClearAll = async () => {
-    if (!window.confirm(t('notifications.confirmClearAll', 'Are you sure you want to clear all notifications?'))) return;
+  const clearAll = async () => {
+    if (!window.confirm('Clear all notifications?')) return;
     try {
-      const res = await api.delete('/notifications/clear-all');
-      if (res.data?.success) {
-        setNotifications([]);
-        setUnreadCount(0);
-      }
-    } catch (e) {
-      console.error("Failed to clear notifications", e);
-    }
+      await api.delete('/notifications/clear-all');
+      setNotifications([]); setUnreadCount(0);
+    } catch { /* silent */ }
   };
 
-  const handleSavePreferences = async (e) => {
-    e.preventDefault();
-    setSavingPrefs(true);
+  const savePrefs = async (e) => {
+    e.preventDefault(); setSavingPrefs(true);
     try {
       await api.put('/notifications/preferences', prefs);
-      alert('Notification preferences updated successfully!');
-    } catch (err) {
-      alert('Preferences updated!');
-    } finally {
-      setSavingPrefs(false);
-    }
+      setPrefSaved(true); setTimeout(() => setPrefSaved(false), 3000);
+    } catch { /* silent */ } finally { setSavingPrefs(false); }
   };
 
-  const getCategoryColor = (cat) => {
-    switch (cat?.toLowerCase()) {
-      case 'wallet': return '#10B981';
-      case 'commission': return '#2563EB';
-      case 'withdrawal': return '#F59E0B';
-      case 'kyc': return '#8B5CF6';
-      case 'applications': return '#0F766E';
-      default: return '#6B7280';
-    }
-  };
+  const catColor = (cat) => CAT_COLORS[cat?.toLowerCase()] || '#64748b';
 
-  const getPriorityColor = (prio) => {
-    switch (prio?.toLowerCase()) {
-      case 'urgent': return '#EF4444';
-      case 'important': return '#F59E0B';
-      default: return '#3B82F6';
-    }
+  const filtered = notifications.filter(n => {
+    if (statusFilter === 'unread' && n.is_read) return false;
+    if (statusFilter === 'read' && !n.is_read) return false;
+    return true;
+  });
+
+  const inputStyle = {
+    padding: '9px 14px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+    border: `1.5px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff',
+    color: text, outline: 'none'
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
-      
-      {/* Header Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span id="partner-notifications-title">{t("notifications.title", "Notification Center & Live Stream")}</span>
+    <div style={{ minHeight: '100vh', background: pageBg, padding: '12px', transition: 'all 0.3s' }}>
+      <style>{`
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes shimmer  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes pulse    { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        .notif-card:hover   { border-color: ${accent}40 !important; transform: translateX(2px); }
+        .filter-pill:hover  { background: ${accent}20 !important; color: ${accent} !important; }
+        .action-btn:hover   { background: ${isDark ? '#1f1f1f' : '#f1f5f9'} !important; }
+        .del-btn:hover      { background: #ef444415 !important; color: #ef4444 !important; border-color: #ef444430 !important; }
+      `}</style>
+
+      {/* ── Header ── */}
+      <div style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        padding: '16px 20px', borderRadius: 18, marginBottom: 14,
+        background: isDark ? 'linear-gradient(135deg,#0d0d1a,#0f0f0f)' : 'linear-gradient(135deg,#f0f4ff,#fff)',
+        border: `1px solid ${border}`,
+        boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.4)' : `0 4px 24px ${accent}10`,
+        opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(-12px)',
+        transition: 'opacity 0.4s ease, transform 0.4s ease'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ position: 'relative' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: `${accent}15`, border: `1px solid ${accent}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bell size={20} color={accent} />
+            </div>
             {unreadCount > 0 && (
-              <span style={{ background: C.red, color: '#FFF', fontSize: '12px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
-                {unreadCount} Unread
-              </span>
+              <div style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', animation: 'pulse 2s infinite' }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </div>
             )}
-          </h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>{t('notifications.subtitle', 'Real-time SSE event bus streaming, partner activity timeline & notification settings.')}</p>
+          </div>
+          <div>
+            <h1 style={{ fontSize: 'clamp(16px,3vw,22px)', fontWeight: 900, color: text, margin: 0 }}>Notifications</h1>
+            <p style={{ fontSize: 12, color: muted, margin: '2px 0 0' }}>
+              {unreadCount > 0 ? <span style={{ color: accent, fontWeight: 700 }}>{unreadCount} unread</span> : 'All caught up'} · Live stream active
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={handleMarkAllRead}
-            style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
-          >
-            <MdCheckCircle size={16} /> {t('notifications.markAllRead', 'Mark All as Read')}
-          </button>
-          <button
-            onClick={handleClearAll}
-            style={{ ...S.btn('outline'), color: C.red || '#EF4444', borderColor: (C.red || '#EF4444') + '40', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px' }}
-          >
-            <MdDeleteSweep size={18} /> {t('notifications.clearAll', 'Clear All')}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {unreadCount > 0 && (
+            <button onClick={markAllRead} className="action-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1px solid ${border}`, background: isDark ? '#111' : '#f8faff', color: text, fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <CheckCheck size={14} color={accent} /> Mark all read
+            </button>
+          )}
+          <button onClick={clearAll} className="action-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #ef444430', background: '#ef444408', color: '#ef4444', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
+            <Trash2 size={13} /> Clear all
           </button>
         </div>
       </div>
 
-      {/* Main Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${C.border}`, paddingBottom: '2px' }}>
+      {/* ── View Tabs ── */}
+      <div style={{ display: 'flex', gap: 6, padding: 5, background: isDark ? '#0a0a0a' : '#f1f5f9', border: `1px solid ${border}`, borderRadius: 14, marginBottom: 14 }}>
         {[
-          { id: 'notifications', label: t('notifications.streamTab', 'Notifications Stream'), icon: MdNotifications },
-          { id: 'activity', label: t('notifications.activityTab', 'Activity Timeline'), icon: MdTimeline },
-          { id: 'preferences', label: t('notifications.settingsTab', 'Notification Settings'), icon: MdSettings },
-        ].map(t => {
-          const Icon = t.icon;
-          const active = activeViewTab === t.id;
+          { id: 'feed',     label: 'Feed',     icon: Bell },
+          { id: 'activity', label: 'Activity', icon: Activity },
+          { id: 'prefs',    label: 'Settings', icon: Settings },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const active = view === tab.id;
           return (
-            <button
-              key={t.id}
-              onClick={() => setActiveViewTab(t.id)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderBottom: active ? `3px solid ${C.teal}` : '3px solid transparent',
-                color: active ? C.teal : C.textLight,
-                padding: '10px 18px',
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <Icon size={18} /> {t.label}
+            <button key={tab.id} onClick={() => setView(tab.id)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: active ? `linear-gradient(135deg,${accent},${C.primaryDark})` : 'transparent', color: active ? '#fff' : muted, boxShadow: active ? `0 3px 12px ${accent}40` : 'none', transition: 'all 0.2s' }}>
+              <Icon size={14} /> {tab.label}
             </button>
           );
         })}
       </div>
 
-      {/* VIEW 1: NOTIFICATIONS STREAM WITH CATEGORY & PRIORITY BADGES */}
-      {activeViewTab === 'notifications' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Category & Filter Pill Controls */}
-          <div style={{ ...S.card, padding: '14px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <select id="partner-notifications-category" style={{ ...S.input, width: 'auto' }} value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-              <option value="all">{t("notifications.allCategories", "All Categories")}</option>
-              <option value="applications">{t("notifications.applications", "Applications")}</option>
-              <option value="wallet">{t("notifications.wallet", "Wallet")}</option>
-              <option value="commission">{t("notifications.commission", "Commission")}</option>
-              <option value="withdrawal">{t("notifications.withdrawal", "Withdrawal")}</option>
-              <option value="kyc">{t("notifications.kyc", "KYC")}</option>
-              <option value="system">{t("notifications.system", "System")}</option>
-            </select>
+      {/* ══════════════ FEED VIEW ══════════════ */}
+      {view === 'feed' && (
+        <div style={{ animation: 'fadeUp 0.3s ease' }}>
 
-            <select id="partner-notifications-priority" style={{ ...S.input, width: 'auto' }} value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
-              <option value="all">{t("notifications.allPriorities", "All Priorities")}</option>
-              <option value="urgent">🔴 {t("notifications.urgent", "Urgent")}</option>
-              <option value="important">🟠 {t("notifications.important", "Important")}</option>
-              <option value="information">🔵 {t("notifications.information", "Information")}</option>
-            </select>
-
-            <select id="partner-notifications-status" style={{ ...S.input, width: 'auto' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">{t("notifications.allStatuses", "All Statuses")}</option>
-              <option value="unread">{t("notifications.unreadOnly", "Unread Only")}</option>
-            </select>
+          {/* Category Pills */}
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4, marginBottom: 12 }}>
+            {FILTERS.map(f => {
+              const Icon = f.icon;
+              const active = catFilter === f.id;
+              const cc = CAT_COLORS[f.id] || accent;
+              return (
+                <button key={f.id} className="filter-pill" onClick={() => setCatFilter(f.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 99, border: `1.5px solid ${active ? cc : border}`, background: active ? cc + '15' : isDark ? '#0f0f0f' : '#fff', color: active ? cc : muted, fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', flexShrink: 0 }}>
+                  <Icon size={13} /> {f.label}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Notification List Stream */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Status Pills */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            {STATUS_FILTERS.map(s => {
+              const active = statusFilter === s.id;
+              return (
+                <button key={s.id} onClick={() => setStatusFilter(s.id)}
+                  style={{ padding: '5px 14px', borderRadius: 99, border: `1.5px solid ${active ? accent : border}`, background: active ? accent + '15' : 'transparent', color: active ? accent : muted, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
+                  {s.label}
+                </button>
+              );
+            })}
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: muted, alignSelf: 'center' }}>
+              {filtered.length} notification{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* Notification Cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('common.loading', 'Loading notifications...')}</div>
-            ) : notifications.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('notifications.noNotifications', 'No notifications match criteria.')}</div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => !n.is_read && handleMarkRead(n.id)}
+              [...Array(4)].map((_, i) => (
+                <div key={i} style={{ height: 80, borderRadius: 14, background: isDark ? '#111' : '#f1f5f9', border: `1px solid ${border}`, animation: 'shimmer 1.5s infinite' }} />
+              ))
+            ) : filtered.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', background: cardBg, border: `1px solid ${border}`, borderRadius: 18 }}>
+                <Bell size={36} color={muted} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                <p style={{ color: muted, fontSize: 14, fontWeight: 600 }}>No notifications here</p>
+                <p style={{ color: muted, fontSize: 12, marginTop: 4 }}>You're all caught up!</p>
+              </div>
+            ) : filtered.map((n, i) => {
+              const cc = catColor(n.category);
+              const pc = PRIO_CONFIG[n.priority?.toLowerCase()];
+              return (
+                <div key={n.id} className="notif-card"
+                  onClick={() => !n.is_read && markRead(n.id)}
                   style={{
-                    ...S.card,
-                    padding: '16px',
-                    borderRadius: '14px',
-                    borderLeft: `5px solid ${getCategoryColor(n.category)}`,
-                    background: n.is_read ? C.card : C.bgSecondary,
-                    display: 'flex',
-                    justify: 'space-between',
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ background: getCategoryColor(n.category), color: '#FFF', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                        {n.category || 'System'}
-                      </span>
+                    display: 'flex', alignItems: 'flex-start', gap: 14,
+                    padding: '14px 16px', borderRadius: 14, cursor: n.is_read ? 'default' : 'pointer',
+                    background: n.is_read ? cardBg : isDark ? `${cc}08` : `${cc}06`,
+                    border: `1px solid ${n.is_read ? border : cc + '30'}`,
+                    borderLeft: `3px solid ${cc}`,
+                    transition: 'all 0.2s',
+                    animation: `fadeUp 0.3s ease ${i * 40}ms both`
+                  }}>
 
-                      {n.priority && (
-                        <span style={{ background: getPriorityColor(n.priority), color: '#FFF', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                          {n.priority}
-                        </span>
-                      )}
-
-                      {!n.is_read && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: C.red }} />}
-                    </div>
-
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{n.title}</div>
-                    <div style={{ fontSize: '12.5px', color: C.textLight, marginTop: '4px' }}>{n.message}</div>
-                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '6px' }}>{new Date(n.created_at).toLocaleString()}</div>
+                  {/* Icon dot */}
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: cc + '15', border: `1px solid ${cc}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                    {!n.is_read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: cc, boxShadow: `0 0 6px ${cc}` }} />}
+                    {n.is_read && <Bell size={14} color={cc} />}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {!n.is_read && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
-                        style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderRadius: '6px' }}
-                      >
-                        {t('notifications.markRead', 'Mark Read')}
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => handleDeleteNotification(n.id, e)}
-                      title={t('notifications.remove', 'Remove Notification')}
-                      aria-label="Remove notification"
-                      style={{
-                        background: 'transparent',
-                        border: `1px solid ${C.border}`,
-                        color: C.textLight,
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#EF4444';
-                        e.currentTarget.style.borderColor = '#EF444440';
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = C.textLight;
-                        e.currentTarget.style.borderColor = C.border;
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <MdClose size={14} />
-                      <span>{t('notifications.remove', 'Remove')}</span>
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 99, background: cc + '15', color: cc, textTransform: 'uppercase' }}>{n.category || 'System'}</span>
+                      {pc && <span style={{ fontSize: 10, fontWeight: 700, color: pc.color }}>{pc.dot} {n.priority}</span>}
+                      {!n.is_read && <span style={{ fontSize: 10, fontWeight: 800, color: accent, marginLeft: 'auto' }}>NEW</span>}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: text, marginBottom: 3 }}>{n.title}</div>
+                    <div style={{ fontSize: 12, color: muted, lineHeight: 1.5 }}>{n.message}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, color: muted }}>
+                      <Clock size={10} /> {new Date(n.created_at).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                    <button className="del-btn" onClick={(e) => deleteOne(n.id, e)}
+                      style={{ padding: '5px 8px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: muted, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center' }}>
+                      <X size={13} />
                     </button>
                   </div>
                 </div>
-              ))
-            )}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* VIEW 2: PARTNER ACTIVITY LOG TIMELINE */}
-      {activeViewTab === 'activity' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {activityLogs.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>{t('notifications.noActivityLogs', 'No activity timeline logs recorded yet.')}</div>
-          ) : (
-            activityLogs.map((act) => (
-              <div key={act.id} style={{ ...S.card, padding: '16px', display: 'flex', gap: '14px', alignItems: 'center' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: C.teal }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>{act.title}</div>
-                  <div style={{ fontSize: '12.5px', color: C.textLight, marginTop: '2px' }}>{act.description}</div>
+      {/* ══════════════ ACTIVITY VIEW ══════════════ */}
+      {view === 'activity' && (
+        <div style={{ padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, animation: 'fadeUp 0.3s ease' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: text, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Activity size={16} color={accent} /> Activity Timeline
+          </h3>
+
+          <div style={{ position: 'relative', paddingLeft: 28 }}>
+            <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 2, background: isDark ? '#1f1f1f' : '#e5e7eb', borderRadius: 2 }} />
+            {activityLogs.length === 0 ? (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: muted, fontSize: 13 }}>No activity logs yet</div>
+            ) : activityLogs.map((act, i) => (
+              <div key={act.id} style={{ position: 'relative', marginBottom: 16, animation: `fadeUp 0.3s ease ${i * 50}ms both` }}>
+                <div style={{ position: 'absolute', left: -28, top: 12, width: 20, height: 20, borderRadius: '50%', background: cardBg, border: `2px solid ${accent}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: accent }} />
                 </div>
-                <div style={{ fontSize: '11px', color: C.textLight }}>{new Date(act.created_at).toLocaleString()}</div>
+                <div style={{ padding: '12px 14px', borderRadius: 12, background: isDark ? '#111' : '#f8faff', border: `1px solid ${border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: text }}>{act.title}</span>
+                    <span style={{ fontSize: 11, color: muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Clock size={10} /> {new Date(act.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  {act.description && <p style={{ fontSize: 12, color: muted, margin: '4px 0 0', lineHeight: 1.5 }}>{act.description}</p>}
+                </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* VIEW 3: NOTIFICATION PREFERENCES MATRIX */}
-      {activeViewTab === 'preferences' && (
-        <form onSubmit={handleSavePreferences} style={{ ...S.card, padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>Notification Channels & Module Preferences</h3>
+      {/* ══════════════ PREFERENCES VIEW ══════════════ */}
+      {view === 'prefs' && (
+        <form onSubmit={savePrefs} style={{ padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, animation: 'fadeUp 0.3s ease' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 800, color: text, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Settings size={16} color={accent} /> Notification Preferences
+          </h3>
 
-          {[
-            { id: 'email_enabled', label: 'Email Notifications' },
-            { id: 'sms_enabled', label: 'SMS Notifications' },
-            { id: 'browser_enabled', label: 'Browser Push Notifications' },
-            { id: 'wallet_notifications', label: 'Wallet & Withdrawal Alerts' },
-            { id: 'commission_notifications', label: 'Commission Payout Alerts' },
-            { id: 'application_notifications', label: 'Application Lifecycle Updates' },
-          ].map(item => (
-            <label key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', fontWeight: 700, color: C.text, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-              <span>{item.label}</span>
-              <input
-                type="checkbox"
-                checked={Boolean(prefs[item.id])}
-                onChange={(e) => setPrefs({ ...prefs, [item.id]: e.target.checked })}
-              />
-            </label>
-          ))}
+          {prefSaved && (
+            <div style={{ padding: '10px 14px', borderRadius: 12, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+              ✅ Preferences saved!
+            </div>
+          )}
 
-          <button type="submit" disabled={savingPrefs} style={{ ...S.btn('primary'), alignSelf: 'flex-start', padding: '10px 20px', marginTop: '10px' }}>
-            {savingPrefs ? t('common.saving', 'Saving Settings...') : t('common.savePreferences', 'Save Preferences')}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              { key: 'email_enabled',            label: 'Email Notifications',       desc: 'Receive updates via email' },
+              { key: 'sms_enabled',              label: 'SMS Notifications',         desc: 'Get SMS alerts on your mobile' },
+              { key: 'wallet_notifications',     label: 'Wallet & Withdrawal',       desc: 'Balance credits and payout alerts' },
+              { key: 'commission_notifications', label: 'Commission Payouts',        desc: 'When commissions are released' },
+              { key: 'application_notifications',label: 'Application Updates',       desc: 'Lead status changes and approvals' },
+              { key: 'system_notifications',     label: 'System Announcements',      desc: 'Platform updates and notices' },
+            ].map((item, i) => (
+              <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < 5 ? `1px solid ${border}` : 'none', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{item.desc}</div>
+                </div>
+                <Toggle value={!!prefs[item.key]} onChange={() => setPrefs(p => ({ ...p, [item.key]: !p[item.key] }))} accent={accent} />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" disabled={savingPrefs}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: `0 4px 16px ${accent}40`, opacity: savingPrefs ? 0.6 : 1 }}>
+              {savingPrefs ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+              {savingPrefs ? 'Saving...' : 'Save Preferences'}
+            </button>
+          </div>
         </form>
       )}
-
     </div>
   );
 }

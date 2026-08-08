@@ -136,29 +136,26 @@ export default function TeamDashboardTab({ data, loading, onSelectMember }) {
       `}</style>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
         {kpiCards.map((k, i) => {
           const Icon = k.icon;
           return (
             <div key={i} className="kpi-card" style={{
-              padding: '18px 20px', borderRadius: 18,
+              padding: 'clamp(10px,2vw,18px) clamp(10px,2vw,20px)', borderRadius: 14,
               background: isDark ? `linear-gradient(135deg,#0f0f0f,${k.color}08)` : `linear-gradient(135deg,#fff,${k.color}08)`,
               border: `1px solid ${isDark ? k.color + '20' : k.color + '30'}`,
               boxShadow: isDark ? `0 4px 24px rgba(0,0,0,0.4)` : `0 4px 20px ${k.color}10`,
               transition: 'all 0.3s ease',
               animation: `countUp 0.4s ease ${i * 80}ms both`
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: k.color }}>{k.label}</span>
-                <div style={{ padding: 8, borderRadius: 10, background: k.color + '15', border: `1px solid ${k.color}25` }}>
-                  <Icon size={16} color={k.color} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 'clamp(8px,1.2vw,11px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: k.color }}>{k.label}</span>
+                <div style={{ padding: 'clamp(4px,1vw,8px)', borderRadius: 8, background: k.color + '15', border: `1px solid ${k.color}25` }}>
+                  <Icon size={14} color={k.color} />
                 </div>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: textPrimary, marginBottom: 6 }}>{k.value}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 11, color: textMuted }}>{k.sub}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99, background: k.color + '15', color: k.color, border: `1px solid ${k.color}25` }}>{k.badge}</span>
-              </div>
+              <div style={{ fontSize: 'clamp(14px,3vw,26px)', fontWeight: 900, color: textPrimary, marginBottom: 4 }}>{k.value}</div>
+              <div style={{ fontSize: 'clamp(8px,1.1vw,10px)', fontWeight: 700, padding: '2px 6px', borderRadius: 99, background: k.color + '15', color: k.color, border: `1px solid ${k.color}25`, display: 'inline-block' }}>{k.badge}</div>
             </div>
           );
         })}

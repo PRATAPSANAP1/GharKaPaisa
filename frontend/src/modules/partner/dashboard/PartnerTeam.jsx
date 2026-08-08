@@ -36,7 +36,7 @@ export default function PartnerTeam() {
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [error, setError] = useState(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', mobile: '', designation: '' });
+  const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', mobile: '' });
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [upgradeStatus, setUpgradeStatus] = useState(null);
@@ -91,7 +91,7 @@ export default function PartnerTeam() {
       const res = await api.post('/partner/team/invite', inviteForm);
       if (res.data?.success) {
         setInviteMessage('✅ Invite sent successfully!');
-        setInviteForm({ fullName: '', email: '', mobile: '', designation: '' });
+        setInviteForm({ fullName: '', email: '', mobile: '' });
         setTimeout(() => { setInviteModalOpen(false); setInviteMessage(''); fetchDashboard(); }, 1500);
       }
     } catch (err) {
@@ -334,22 +334,6 @@ export default function PartnerTeam() {
                 </div>
               ))}
 
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Designation</label>
-                <select name="designation" value={inviteForm.designation}
-                  onChange={e => setInviteForm(p => ({ ...p, designation: e.target.value }))}
-                  style={{
-                    width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13,
-                    border: `1.5px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff',
-                    color: textPrimary, outline: 'none'
-                  }}>
-                  <option value="">Select Designation</option>
-                  {['Sales Executive', 'Sales Manager', 'Area Manager', 'Regional Manager', 'Business Partner'].map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-
               {inviteMessage && (
                 <div style={{
                   padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600,
@@ -360,7 +344,7 @@ export default function PartnerTeam() {
               )}
 
               <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
-                <button type="button" onClick={() => { setInviteModalOpen(false); setInviteMessage(''); setInviteForm({ fullName: '', email: '', mobile: '', designation: '' }); }}
+                <button type="button" onClick={() => { setInviteModalOpen(false); setInviteMessage(''); setInviteForm({ fullName: '', email: '', mobile: '' }); }}
                   style={{
                     flex: 1, padding: '11px', borderRadius: 12, border: `1px solid ${border}`,
                     background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary,
