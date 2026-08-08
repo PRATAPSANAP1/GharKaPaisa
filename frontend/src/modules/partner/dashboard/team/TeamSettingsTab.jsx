@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   Settings, Copy, Check, QrCode, Download, Share2, 
   MessageSquare, ToggleLeft, ToggleRight, Save, RefreshCw 
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamSettingsTab() {
   const [settings, setSettings] = useState(null);
@@ -19,10 +17,6 @@ export default function TeamSettingsTab() {
   const [referralEnabled, setReferralEnabled] = useState(true);
   const [referralMessage, setReferralMessage] = useState('');
 
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
-
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -30,11 +24,8 @@ export default function TeamSettingsTab() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/settings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get('/team/settings');
+      if (res.data?.success) {
         const d = res.data.data;
         setSettings(d);
         setTeamEnabled(d.team_enabled);
@@ -52,15 +43,12 @@ export default function TeamSettingsTab() {
     setSaving(true);
     setMsgSuccess(null);
     try {
-      const token = getAuthToken();
-      const res = await axios.patch(`${API_URL}/team/settings`, {
+      const res = await api.patch('/team/settings', {
         team_enabled: teamEnabled,
         referral_enabled: referralEnabled,
         referral_message: referralMessage
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.data.success) {
+      if (res.data?.success) {
         setMsgSuccess('Settings updated successfully');
         setTimeout(() => setMsgSuccess(null), 3000);
       }

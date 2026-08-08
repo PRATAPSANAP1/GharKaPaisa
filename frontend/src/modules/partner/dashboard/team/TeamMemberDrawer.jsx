@@ -1,21 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   X, User, Phone, Mail, Building, MapPin, ShieldCheck, 
   CreditCard, FileText, DollarSign, Users, Clock, ExternalLink, RefreshCw 
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamMemberDrawer({ memberId, onClose, onSelectSubMember }) {
   const [memberData, setMemberData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [error, setError] = useState(null);
-
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
 
   useEffect(() => {
     if (memberId) {
@@ -27,11 +21,8 @@ export default function TeamMemberDrawer({ memberId, onClose, onSelectSubMember 
     setLoading(true);
     setError(null);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/${memberId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get(`/team/${memberId}`);
+      if (res.data?.success) {
         setMemberData(res.data.data);
       }
     } catch (err) {

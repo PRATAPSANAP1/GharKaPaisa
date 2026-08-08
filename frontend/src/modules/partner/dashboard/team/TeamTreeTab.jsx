@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   ChevronRight, ChevronDown, User, ShieldCheck, Clock, 
   TrendingUp, Award, Layers, RefreshCw, Eye
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamTreeTab({ onSelectMember }) {
   const [rootNode, setRootNode] = useState(null);
@@ -15,10 +13,6 @@ export default function TeamTreeTab({ onSelectMember }) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
-
   useEffect(() => {
     fetchRootTree();
   }, []);
@@ -27,11 +21,8 @@ export default function TeamTreeTab({ onSelectMember }) {
     setInitialLoading(true);
     setError(null);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/tree`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get('/team/tree');
+      if (res.data?.success) {
         const root = res.data.root;
         const initialChildren = res.data.data || [];
         setRootNode(root);
@@ -63,11 +54,8 @@ export default function TeamTreeTab({ onSelectMember }) {
     if (!childrenMap[nodeId]) {
       setLoadingMap(prev => ({ ...prev, [nodeId]: true }));
       try {
-        const token = getAuthToken();
-        const res = await axios.get(`${API_URL}/team/tree?parent_id=${nodeId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.data.success) {
+        const res = await api.get(`/team/tree?parent_id=${nodeId}`);
+        if (res.data?.success) {
           setChildrenMap(prev => ({ ...prev, [nodeId]: res.data.data || [] }));
         }
       } catch (err) {

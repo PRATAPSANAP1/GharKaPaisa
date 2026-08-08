@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   AreaChart, Area, CartesianGrid 
@@ -8,17 +7,12 @@ import {
   TrendingUp, Users, DollarSign, Filter, Layers, 
   ArrowRight, ShieldCheck, FileCheck, CheckCircle2
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamAnalyticsTab() {
   const [analytics, setAnalytics] = useState(null);
   const [period, setPeriod] = useState('30d');
   const [loading, setLoading] = useState(true);
-
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
 
   useEffect(() => {
     fetchAnalytics();
@@ -27,11 +21,8 @@ export default function TeamAnalyticsTab() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/analytics?period=${period}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get(`/team/analytics?period=${period}`);
+      if (res.data?.success) {
         setAnalytics(res.data.data);
       }
     } catch (err) {

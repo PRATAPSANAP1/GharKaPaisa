@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Activity, UserPlus, FileCheck, CheckCircle2, DollarSign, Clock } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamActivityTab({ onSelectMember }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
 
   useEffect(() => {
     fetchActivity();
@@ -19,11 +13,8 @@ export default function TeamActivityTab({ onSelectMember }) {
   const fetchActivity = async () => {
     setLoading(true);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/activity`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get('/team/activity');
+      if (res.data?.success) {
         setActivities(res.data.data || []);
       }
     } catch (err) {

@@ -16,7 +16,7 @@ import TeamMemberDrawer from './team/TeamMemberDrawer';
 import { useAuthStore } from '../../../app/store/authStore';
 import { useTheme } from '../../../contexts/ThemeContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../services/api';
 
 export default function PartnerTeam() {
   const { C, isDark } = useTheme();
@@ -33,10 +33,6 @@ export default function PartnerTeam() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
 
-  const getAuthToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
-
   useEffect(() => {
     if (isTeamMember) {
       checkUpgradeStatus();
@@ -47,11 +43,8 @@ export default function PartnerTeam() {
 
   const checkUpgradeStatus = async () => {
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/upgrade-status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success && res.data.data) {
+      const res = await api.get('/team/upgrade-status');
+      if (res.data?.success && res.data?.data) {
         setUpgradeStatus(res.data.data.status);
       }
     } catch (err) {
@@ -65,11 +58,8 @@ export default function PartnerTeam() {
     setUpgradeLoading(true);
     setUpgradeMsg('');
     try {
-      const token = getAuthToken();
-      const res = await axios.post(`${API_URL}/team/upgrade-request`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.post('/team/upgrade-request', {});
+      if (res.data?.success) {
         setUpgradeStatus('PENDING');
         setUpgradeMsg(res.data.message || 'Upgrade request submitted to Super Admin.');
       }
@@ -84,11 +74,8 @@ export default function PartnerTeam() {
     setLoadingDashboard(true);
     setError(null);
     try {
-      const token = getAuthToken();
-      const res = await axios.get(`${API_URL}/team/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.get('/team/dashboard');
+      if (res.data?.success) {
         setDashboardData(res.data.data);
       }
     } catch (err) {

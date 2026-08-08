@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   Search, Filter, Download, ChevronLeft, ChevronRight, 
   Eye, RefreshCw, UserCheck, ShieldAlert, CheckCircle, Clock,
   UserPlus, X, Copy, Check, MessageSquare, Mail, Send
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
+import api from '../../../../services/api';
 
 export default function TeamMembersTab({ onSelectMember }) {
   const [members, setMembers] = useState([]);
@@ -41,15 +39,12 @@ export default function TeamMembersTab({ onSelectMember }) {
     setInviting(true);
     setInviteError(null);
     try {
-      const token = getAuthToken();
-      const res = await axios.post(`${API_URL}/team/invite`, inviteForm, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
+      const res = await api.post('/team/invite', inviteForm);
+      if (res.data?.success) {
         setInviteResult(res.data.data);
         fetchMembers(1);
       } else {
-        setInviteError(res.data.message || 'Failed to send invitation');
+        setInviteError(res.data?.message || 'Failed to send invitation');
       }
     } catch (err) {
       console.error('Invite error:', err);
@@ -80,7 +75,6 @@ export default function TeamMembersTab({ onSelectMember }) {
   const fetchMembers = async (page = 1) => {
     setLoading(true);
     try {
-      const token = getAuthToken();
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '20'
@@ -92,11 +86,9 @@ export default function TeamMembersTab({ onSelectMember }) {
       if (kycFilter) params.append('kyc_status', kycFilter);
       if (periodFilter) params.append('joined_period', periodFilter);
 
-      const res = await axios.get(`${API_URL}/team/members?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/team/members?${params.toString()}`);
 
-      if (res.data.success) {
+      if (res.data?.success) {
         setMembers(res.data.data || []);
         setPagination(res.data.pagination || { page: 1, limit: 20, total: 0, total_pages: 1 });
       }
