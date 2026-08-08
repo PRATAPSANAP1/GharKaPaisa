@@ -13,12 +13,13 @@ import TeamActivityTab from './team/TeamActivityTab';
 import TeamGoalsTab from './team/TeamGoalsTab';
 import TeamSettingsTab from './team/TeamSettingsTab';
 import TeamMemberDrawer from './team/TeamMemberDrawer';
-
 import { useAuthStore } from '../../../app/store/authStore';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://gharkapaisa.in/api/v1';
 
 export default function PartnerTeam() {
+  const { C, isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const isTeamMember = user?.role === 'TEAM_MEMBER';
 
@@ -166,7 +167,7 @@ export default function PartnerTeam() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className={`min-h-screen ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'} p-4 sm:p-6 lg:p-8 space-y-6`}>
       {/* Module Title Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/60 border border-slate-800 shadow-2xl backdrop-blur-xl">
         <div>
