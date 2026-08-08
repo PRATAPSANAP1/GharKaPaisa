@@ -557,16 +557,28 @@ const addTeamMember = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    // Check if user already exists
-    const { rows: existingUser } = await client.query(
-      `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
-      [email, mobile]
-    );
+    // Create user record for invited team member
+    const bcrypt = require('bcryptjs');
+    const tempPassword = password || Math.random().toString(36).slice(-8);
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(tempPassword, salt);
 
-    if (existingUser.length) {
-      await client.query('ROLLBACK');
-      return error(res, 'A registered user with this email or mobile already exists', 409);
-    }
+    const { rows: [newUser] } = await client.query(`
+      INSERT INTO users (email, mobile, password_hash, role, status)
+      VALUES ($1, $2, $3, 'TEAM_MEMBER', 'pending')
+      RETURNING id
+    `, [email, mobile, passwordHash]);
+
+    // Generate unique partner code
+    const partnerCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
+
+    // Create partner profile for team member
+    await client.query(`
+      INSERT INTO partner_profiles (
+        user_id, parent_partner_id, first_name, last_name, partner_code, partner_type, kyc_status
+      )
+      VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'PENDING')
+    `, [newUser.id, partnerId, memberFirstName, memberLastName, partnerCode]);
 
     // Save invitation record to invitation_history table
     await client.query(`

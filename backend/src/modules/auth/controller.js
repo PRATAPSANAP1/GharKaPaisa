@@ -644,15 +644,61 @@ const register = async (req, res, next) => {
 
       // Check if user exists
       const { rows: existingUser } = await client.query(
-        `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
+        `SELECT id, status, role FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
         [email, mobile]
       );
 
       if (existingUser.length) {
-        await client.query('ROLLBACK');
-        const reason = 'User with this email or mobile already exists';
-        await logRegistrationAttempt('FAILED', reason);
-        return error(res, reason, 409);
+        const u = existingUser[0];
+        if (u.status === 'pending' || u.status === 'inactive' || u.role === 'TEAM_MEMBER') {
+          let passwordHash = null;
+          if (password) {
+            const salt = await bcrypt.genSalt(10);
+            passwordHash = await bcrypt.hash(password, salt);
+          }
+
+          await client.query(`
+            UPDATE users SET 
+              password_hash = COALESCE($1, password_hash),
+              status = 'active',
+              email_verified = true,
+              updated_at = NOW()
+            WHERE id = $2
+          `, [passwordHash, u.id]);
+
+          const { rows: [pProf] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [u.id]);
+          if (pProf) {
+            await client.query(`
+              UPDATE partner_profiles SET
+                first_name = COALESCE(NULLIF($1, ''), first_name),
+                last_name = COALESCE(NULLIF($2, ''), last_name),
+                company_name = COALESCE(NULLIF($3, ''), company_name),
+                updated_at = NOW()
+              WHERE id = $4
+            `, [first_name, last_name, company_name, pProf.id]);
+          } else {
+            const secureCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
+            await client.query(`
+              INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
+              VALUES ($1, $2, $3, $4, $5, 'PENDING')
+            `, [u.id, first_name || '', last_name || '', secureCode, u.role || 'TEAM_MEMBER']);
+          }
+
+          await client.query(`
+            UPDATE invitation_history SET status = 'ACCEPTED', accepted_at = NOW()
+            WHERE (LOWER(recipient_email) = LOWER($1) OR recipient_mobile = $2) AND status = 'SENT'
+          `, [email, mobile]);
+
+          await client.query('COMMIT');
+          committed = true;
+
+          return success(res, { user_id: u.id }, 'Registration completed successfully!');
+        } else {
+          await client.query('ROLLBACK');
+          const reason = 'User with this email or mobile already exists';
+          await logRegistrationAttempt('FAILED', reason);
+          return error(res, reason, 409);
+        }
       }
 
       // Hash password if provided (for backward compat); otherwise set null
