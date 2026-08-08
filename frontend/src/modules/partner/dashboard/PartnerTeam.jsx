@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import {
   Users, Layers, List, TrendingUp, Activity, Target, Settings,
   RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail, Share2
