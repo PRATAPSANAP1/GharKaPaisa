@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
 import {
   Search, Download, ChevronLeft, ChevronRight,
   UserPlus, X, Copy, Check, MessageSquare, Mail, Send,
-  RefreshCw, ShieldAlert, CheckCircle
+  RefreshCw, ShieldAlert, CheckCircle, Share2, UserX, UserCheck
 } from 'lucide-react';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import api from '../../../../services/api';
@@ -70,6 +69,37 @@ export default function TeamMembersTab({ onSelectMember }) {
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleNativeShare = async () => {
+    if (inviteResult?.invite_link && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join GharKaPaisa Team',
+          text: `Hi! Join my team on GharKaPaisa using this referral link. Partner Code: ${inviteResult.partner_code}`,
+          url: inviteResult.invite_link,
+        });
+      } catch (err) { /* silent cancel */ }
+    } else if (inviteResult?.invite_link) {
+      copyLink(inviteResult.invite_link);
+    }
+  };
+
+  const handleToggleMemberStatus = async (memberId, currentStatus) => {
+    const isCurrentlyActive = currentStatus === 'active';
+    const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+    const actionLabel = isCurrentlyActive ? 'remove/deactivate' : 'reactivate';
+    
+    if (!window.confirm(`Are you sure you want to ${actionLabel} this team member?`)) return;
+
+    try {
+      const res = await api.patch(`/team/${memberId}/status`, { status: newStatus });
+      if (res.data?.success) {
+        fetchMembers(pagination.page);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update member status');
+    }
   };
 
   const handleExportCSV = () => {
@@ -207,10 +237,25 @@ export default function TeamMembersTab({ onSelectMember }) {
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>{fmt(m.total_business)}</td>
                   <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>{fmt(m.total_commission)}</td>
                   <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                    <button className="btn-view" onClick={() => onSelectMember(m.id)}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      View 360°
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <button className="btn-view" onClick={() => onSelectMember(m.id)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
+                        360°
+                      </button>
+                      {m.status === 'active' ? (
+                        <button onClick={() => handleToggleMemberStatus(m.id, m.status)}
+                          title="Remove / Deactivate Member"
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid #ef444430', background: '#ef444415', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
+                          <UserX size={12} /> Remove
+                        </button>
+                      ) : (
+                        <button onClick={() => handleToggleMemberStatus(m.id, m.status)}
+                          title="Reactivate Member"
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid #10b98130', background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
+                          <UserCheck size={12} /> Reactivate
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )) : (
@@ -309,17 +354,21 @@ export default function TeamMembersTab({ onSelectMember }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
                     {[
                       { href: inviteResult.whatsapp_link, label: 'WhatsApp', icon: MessageSquare, color: '#10b981' },
                       { href: inviteResult.sms_link, label: 'SMS', icon: Send, color: '#3b82f6' },
                       { href: inviteResult.email_link, label: 'Email', icon: Mail, color: '#ef4444' },
                     ].map(({ href, label, icon: Icon, color }) => (
                       <a key={label} href={href} target="_blank" rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 8px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 11, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
                         <Icon size={13} /> {label}
                       </a>
                     ))}
+                    <button onClick={handleNativeShare}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: accent + '15', color: accent, border: `1px solid ${accent}30`, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <Share2 size={13} /> Share
+                    </button>
                   </div>
 
                   <button onClick={resetInviteModal}

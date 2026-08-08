@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
 import {
   Users, Layers, List, TrendingUp, Activity, Target, Settings,
-  RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail
+  RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail, Share2
 } from 'lucide-react';
 import TeamDashboardTab from './team/TeamDashboardTab';
 import TeamTreeTab from './team/TeamTreeTab';
@@ -89,6 +88,20 @@ export default function PartnerTeam() {
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleNativeShare = async () => {
+    if (inviteResult?.invite_link && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join GharKaPaisa Team',
+          text: `Hi! Join my team on GharKaPaisa using this referral link. Partner Code: ${inviteResult.partner_code}`,
+          url: inviteResult.invite_link,
+        });
+      } catch (err) { /* silent cancel */ }
+    } else if (inviteResult?.invite_link) {
+      copyLink(inviteResult.invite_link);
+    }
   };
 
   const resetInviteModal = () => {
@@ -408,17 +421,21 @@ export default function PartnerTeam() {
 
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 8 }}>Send Instantly via</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                     {[
                       { href: inviteResult.whatsapp_link, label: 'WhatsApp', icon: MessageSquare, color: '#10b981' },
-                      { href: inviteResult.sms_link, label: 'Mobile SMS', icon: Send, color: '#3b82f6' },
+                      { href: inviteResult.sms_link, label: 'SMS', icon: Send, color: '#3b82f6' },
                       { href: inviteResult.email_link, label: 'Email', icon: Mail, color: '#ef4444' },
                     ].map(({ href, label, icon: Icon, color }) => (
                       <a key={label} href={href} target="_blank" rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 8px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
-                        <Icon size={14} /> {label}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 11, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
+                        <Icon size={13} /> {label}
                       </a>
                     ))}
+                    <button onClick={handleNativeShare}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: accent + '15', color: accent, border: `1px solid ${accent}30`, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <Share2 size={13} /> Share
+                    </button>
                   </div>
                 </div>
 

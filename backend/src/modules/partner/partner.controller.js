@@ -611,6 +611,50 @@ const addTeamMember = async (req, res, next) => {
 
     const cleanMobile = String(mobile).replace(/\D/g, '');
 
+    // Send automated SMS to the invitee's mobile number
+    try {
+      const { sendSms } = require('../../services/sms/sms.service');
+      await sendSms(cleanMobile, messageText);
+    } catch (smsErr) {
+      console.warn('[addTeamMember] SMS send error:', smsErr.message);
+    }
+
+    // Send automated Email to the invitee's email address
+    try {
+      const { sendEmail } = require('../../services/email/email.service');
+      await sendEmail({
+        to: email,
+        subject: 'Invitation to Join GharKaPaisa Team',
+        text: messageText,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #0D5CAB; margin: 0;">Welcome to GharKaPaisa Team</h2>
+              <p style="color: #64748B; font-size: 14px; margin-top: 4px;">India's Premier Financial Partner Network</p>
+            </div>
+            <p style="font-size: 15px; color: #1e293b;">Hi <strong>${memberFirstName}</strong>,</p>
+            <p style="font-size: 14px; color: #334155; line-height: 1.6;">
+              You have been invited to join the GharKaPaisa Partner Network! Start earning lucrative commissions by referring credit cards, loans, and financial products.
+            </p>
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Partner Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${partnerCode}</span></p>
+              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Temporary Password:</strong> <span style="font-family: monospace; color: #0D5CAB;">${tempPassword}</span></p>
+              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Email:</strong> ${email}</p>
+            </div>
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${inviteLink}" style="background: linear-gradient(135deg, #0D5CAB 0%, #083E7A 100%); color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(13, 92, 171, 0.3);">
+                Complete Registration & KYC
+              </a>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">If you did not request this invite, please contact support@gharkapaisa.in</p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.warn('[addTeamMember] Email send error:', emailErr.message);
+    }
+
     return created(res, {
       partner_code: partnerCode,
       invite_link: inviteLink,
@@ -618,7 +662,7 @@ const addTeamMember = async (req, res, next) => {
       whatsapp_link: `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(messageText)}`,
       sms_link: `sms:+91${cleanMobile}?body=${encodeURIComponent(messageText)}`,
       email_link: `mailto:${email}?subject=${encodeURIComponent("Invitation to Join GharKaPaisa Team")}&body=${encodeURIComponent(messageText)}`
-    }, 'Team member created successfully. Invitation links generated.');
+    }, 'Team member created successfully. Automated SMS & Email invitation sent.');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);

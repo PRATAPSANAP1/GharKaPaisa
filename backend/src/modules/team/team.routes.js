@@ -26,6 +26,10 @@ router.put('/settings', ctrl.updateSettings);
 router.post('/invite', ctrl.sendInvite);
 router.get('/refers', ctrl.getRefersList);
 
+router.patch('/:id/status', ctrl.updateMemberStatus);
+router.post('/:id/reactivate', (req, res, next) => { req.body.status = 'active'; ctrl.updateMemberStatus(req, res, next); });
+router.delete('/:id', (req, res, next) => { req.body.status = 'inactive'; ctrl.updateMemberStatus(req, res, next); });
+
 router.get('/:id', ctrl.getMemberById);
 
 module.exports = router;

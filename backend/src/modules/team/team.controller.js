@@ -252,6 +252,23 @@ async function getRefersList(req, res, next) {
   }
 }
 
+async function updateMemberStatus(req, res, next) {
+  try {
+    const partnerId = await resolvePartnerId(req);
+    const { id } = req.params;
+    const { status } = req.body;
+    const newStatus = status || 'inactive';
+    const data = await teamService.updateTeamMemberStatus(partnerId, id, newStatus);
+    return res.json({
+      success: true,
+      message: `Team member status updated to ${newStatus} successfully`,
+      data
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
@@ -266,5 +283,6 @@ module.exports = {
   requestUpgrade,
   getUpgradeStatus,
   sendInvite,
-  getRefersList
+  getRefersList,
+  updateMemberStatus
 };

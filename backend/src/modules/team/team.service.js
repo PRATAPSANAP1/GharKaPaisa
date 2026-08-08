@@ -1268,6 +1268,32 @@ async function rejectUpgradeRequest(requestId, adminUserId, reason) {
   return { success: true, message: 'Upgrade request rejected' };
 }
 
+async function updateTeamMemberStatus(parentPartnerId, memberId, status) {
+  const allowedStatuses = ['active', 'inactive', 'suspended', 'blocked', 'pending'];
+  if (!allowedStatuses.includes(status)) {
+    throw new Error(`Invalid status: ${status}`);
+  }
+
+  // Verify child exists in partner_profiles or user_id
+  const { rows: [targetMember] } = await query(
+    `SELECT ap.id, ap.user_id, ap.parent_partner_id 
+     FROM partner_profiles ap 
+     WHERE ap.id = $1 OR ap.user_id = $1`,
+    [memberId]
+  );
+
+  if (!targetMember) {
+    throw new Error('Team member not found');
+  }
+
+  await query(
+    `UPDATE users SET status = $1::user_status WHERE id = $2`,
+    [status, targetMember.user_id]
+  );
+
+  return { id: targetMember.id, user_id: targetMember.user_id, status };
+}
+
 module.exports = {
   getPartnerProfileIdByUserId,
   isPartnerInDownline,
@@ -1288,6 +1314,7 @@ module.exports = {
   approveUpgradeRequest,
   rejectUpgradeRequest,
   sendTeamInvitation,
-  getRefersList
+  getRefersList,
+  updateTeamMemberStatus
 };
 
