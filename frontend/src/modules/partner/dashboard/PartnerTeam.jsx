@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Users, Layers, List, TrendingUp, Activity, Target, Settings,
-  RefreshCw, AlertCircle 
+  RefreshCw, AlertCircle, UserPlus, Send 
 } from 'lucide-react';
 
 import TeamDashboardTab from './team/TeamDashboardTab';
@@ -28,6 +28,15 @@ export default function PartnerTeam() {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [error, setError] = useState(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    fullName: '',
+    email: '',
+    mobile: '',
+    designation: ''
+  });
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
 
   const [upgradeStatus, setUpgradeStatus] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);

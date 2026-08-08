@@ -335,7 +335,7 @@ export default function PartnerLayout() {
 
     const isActive = item.path.includes('?')
       ? currentPathAndQuery === item.path
-      : location.pathname === item.path;
+      : location.pathname === item.path || (item.path === '/partner/team' && location.pathname === '/partner/team-network');
 
     return (
       <NavLink
@@ -947,6 +947,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
     { id: 'profile', label: 'Profile Hub', path: '/partner/profile', icon: MdAccountCircle },
     { id: 'kyc-centre', label: 'KYC Centre', path: '/partner/kyc-centre', icon: MdVerifiedUser },
     { id: 'wallet', label: 'Wallet', path: '/partner/wallet', icon: MdAccountBalanceWallet },
+    { id: 'team-network', label: 'Manage Team', path: '/partner/team', icon: MdGroup },
     { id: 'refers', label: 'My Referrals', path: '/partner/refers', icon: MdDeviceHub },
     { id: 'support', label: 'Support Center', path: '/partner/support', icon: MdSupportAgent },
     { id: 'settings', label: 'Settings', path: '/partner/settings', icon: MdSettings },
