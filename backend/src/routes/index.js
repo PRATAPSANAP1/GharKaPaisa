@@ -24,6 +24,7 @@ const locationRoute                         = require('../modules/location/locat
 
 const walletCtrl = require('../modules/wallet/controller.js');
 const partnerCtrl = require('../modules/partner/partner.controller.js');
+const partnerShareCtrl = require('../modules/partner/partner-share.controller.js');
 
 const customerRoute = require('../modules/customer/customer.routes.js');
 const customerPortalRoute = require('../modules/customer/customer_portal.routes.js');
@@ -40,6 +41,10 @@ router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/settings',         settingsRouter);
 router.use('/customer-portal',  customerPortalRoute);
+
+// ── Public Share Link Routes (No auth required) ─────────────────
+router.get('/public/share/:trackingToken', partnerShareCtrl.getShareLinkDetails);
+router.post('/public/share/submit', partnerShareCtrl.submitShareLead);
 
 // ── Redirects & Analytics ──────────────────────────────────────
 router.get('/redirect/:productId', redirectCtrl.handleRedirect);

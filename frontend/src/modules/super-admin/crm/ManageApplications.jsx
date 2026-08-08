@@ -4,7 +4,8 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
-  MdModeEdit, MdSwapHoriz, MdAssignment, MdVisibility
+  MdModeEdit, MdSwapHoriz, MdAssignment, MdVisibility,
+  MdShare, MdTrackChanges
 } from 'react-icons/md';
 
 const VISIBILITY_OPTIONS = [
@@ -16,6 +17,9 @@ const VISIBILITY_OPTIONS = [
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+
+  // ── Active Tab ──
+  const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'partner_share'
 
   const [applications, setApplications] = useState([]);
   const [partners, setPartners] = useState([]);
@@ -53,6 +57,56 @@ export default function ManageApplications() {
 
   // Create Application / Lead Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // ── Partner Share Tracking State ──
+  const [shareLeads, setShareLeads] = useState([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareSearch, setShareSearch] = useState('');
+  const [sharePartnerCode, setSharePartnerCode] = useState('');
+  const [sharePage, setSharePage] = useState(1);
+  const [shareTotalPages, setShareTotalPages] = useState(1);
+
+  const fetchShareLeads = async () => {
+    setShareLoading(true);
+    try {
+      const res = await api.get('/leads/partner-share-tracking', {
+        params: {
+          page: sharePage,
+          limit: 15,
+          search: shareSearch.trim() || undefined,
+          partner_code: sharePartnerCode.trim() || undefined
+        }
+      });
+      if (res.data?.success) {
+        setShareLeads(res.data.data || []);
+        setShareTotalPages(res.data.pagination?.pages || 1);
+      }
+    } catch (e) {
+      console.error('Failed to load partner share leads', e);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'partner_share') fetchShareLeads();
+  }, [activeTab, sharePage]);
+
+  const handleExportShareLeads = () => {
+    if (!shareLeads.length) return;
+    let csv = 'data:text/csv;charset=utf-8,Customer Name,Mobile,Product,Bank,Partner Code,Status,Date\n';
+    shareLeads.forEach(l => {
+      csv += [
+        `"${l.customer_name}"`, `"${l.customer_mobile}"`, `"${l.product_name}"`,
+        `"${l.bank_name}"`, `"${l.partner_code || 'Direct'}"`, `"${l.status}"`,
+        `"${new Date(l.created_at).toLocaleDateString()}"`
+      ].join(',') + '\n';
+    });
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csv));
+    link.setAttribute('download', 'GKP_Partner_Share_Leads.csv');
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
   const [leadCategory, setLeadCategory] = useState('credit_card'); // 'credit_card' | 'loan' | 'insurance'
   const [submittingLead, setSubmittingLead] = useState(false);
   const [createForm, setCreateForm] = useState({

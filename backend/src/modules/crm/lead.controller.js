@@ -397,6 +397,57 @@ const addLeadFollowUp = async (req, res, next) => {
   }
 };
 
+// GET /leads/partner-share-tracking — Super Admin: all leads from partner share landing page
+const listPartnerShareLeads = async (req, res, next) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    const { search, partner_code, product_id, from_date, to_date } = req.query;
+
+    let where = `WHERE l.source = 'partner_share'`;
+    const values = [];
+    let idx = 1;
+
+    if (search) {
+      where += ` AND (l.customer_name ILIKE $${idx} OR l.customer_mobile ILIKE $${idx} OR l.mobile ILIKE $${idx})`;
+      values.push(`%${search}%`); idx++;
+    }
+    if (partner_code) {
+      where += ` AND pp.partner_code ILIKE $${idx++}`;
+      values.push(`%${partner_code}%`);
+    }
+    if (product_id) {
+      where += ` AND l.product_id = $${idx++}`;
+      values.push(product_id);
+    }
+    if (from_date) { where += ` AND l.created_at >= $${idx++}`; values.push(from_date); }
+    if (to_date) { where += ` AND l.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
+
+    const mobileCol = `COALESCE(l.customer_mobile, l.mobile)`;
+
+    const [countRes, dataRes] = await Promise.all([
+      query(`SELECT COUNT(*) FROM leads l LEFT JOIN partner_profiles pp ON pp.id = l.partner_id ${where}`, values),
+      query(`
+        SELECT l.id, l.customer_name, ${mobileCol} as customer_mobile,
+               l.status, l.source, l.created_at,
+               p.name as product_name, p.category,
+               b.name as bank_name, b.short_code as bank_code,
+               pp.partner_code, pp.first_name as partner_first_name, pp.last_name as partner_last_name
+        FROM leads l
+        LEFT JOIN products p ON p.id = l.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles pp ON pp.id = l.partner_id
+        ${where}
+        ORDER BY l.created_at DESC
+        LIMIT $${idx++} OFFSET $${idx++}
+      `, [...values, limit, offset])
+    ]);
+
+    return paginate(res, dataRes.rows, parseInt(countRes.rows[0].count), page, limit);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listLeads,
   get360LeadDetails,
@@ -408,5 +459,6 @@ module.exports = {
   assignBankExecutive,
   updateLeadChecklist,
   bulkAssignLeads,
-  addLeadFollowUp
+  addLeadFollowUp,
+  listPartnerShareLeads
 };

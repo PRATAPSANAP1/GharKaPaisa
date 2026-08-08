@@ -207,6 +207,7 @@ export default function ManageLeads() {
           <select style={{ ...S.input, width: "auto" }} value={source} onChange={(e) => setSource(e.target.value)}>
             <option value="">All Sources</option>
             <option value="partner">Partner</option>
+            <option value="partner_share">Partner Share Link</option>
             <option value="website">Website Direct</option>
             <option value="referral">Referral Link</option>
             <option value="campaign">Campaign QR</option>

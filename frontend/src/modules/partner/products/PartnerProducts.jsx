@@ -76,23 +76,35 @@ export default function PartnerProducts({ initialSearch = '' }) {
 
   const [shareModalProduct, setShareModalProduct] = useState(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [generatingShareLink, setGeneratingShareLink] = useState(false);
 
-  const handleCopyLink = (product) => {
-    const code = partnerCode || user?.partner_code || 'PARTNER';
-    // Generate landing page URL that captures customer info before redirecting to bank
-    const landingUrl = `${window.location.origin}/apply/${code}/${product.id}`;
-    const shareText = `Apply for ${product.name} on GharKaPaisa! Click here to apply: ${landingUrl}`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: product.name,
-        text: shareText,
-        url: landingUrl
-      }).catch(() => {
-        setShareModalProduct({ ...product, bankUrl: landingUrl });
-      });
-    } else {
-      setShareModalProduct({ ...product, bankUrl: landingUrl });
+  const handleCopyLink = async (product) => {
+    setGeneratingShareLink(true);
+    try {
+      const res = await api.post('/partner/share-link', { productId: product.id });
+      if (res.data?.success && res.data?.data) {
+        const shareLink = res.data.data.share_link;
+        const shareText = `Apply for ${product.name} on GharKaPaisa! Click here to apply: ${shareLink}`;
+        
+        if (navigator.share) {
+          navigator.share({
+            title: product.name,
+            text: shareText,
+            url: shareLink
+          }).catch(() => {
+            setShareModalProduct({ ...product, shareLink, trackingToken: res.data.data.tracking_token });
+          });
+        } else {
+          setShareModalProduct({ ...product, shareLink, trackingToken: res.data.data.tracking_token });
+        }
+      } else {
+        alert('Failed to generate share link. Please try again.');
+      }
+    } catch (err) {
+      console.error('Share link generation error:', err);
+      alert('Failed to generate share link. Please try again.');
+    } finally {
+      setGeneratingShareLink(false);
     }
   };
 
@@ -2087,13 +2099,13 @@ export default function PartnerProducts({ initialSearch = '' }) {
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
-                Direct Bank Link Share
+                Partner Share Link
               </span>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '8px 0 4px' }}>
                 Share {shareModalProduct.name}
               </h3>
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-                Official Bank Application Link:
+                Tracked referral link - captures customer info before redirecting to bank:
               </p>
             </div>
 
@@ -2106,7 +2118,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <input
                 type="text"
                 readOnly
-                value={shareModalProduct.bankUrl}
+                value={shareModalProduct.shareLink}
                 style={{
                   flex: 1, background: 'none', border: 'none', color: C.primary,
                   fontSize: '12.5px', fontWeight: 700, outline: 'none',
@@ -2116,7 +2128,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(shareModalProduct.bankUrl);
+                  navigator.clipboard.writeText(shareModalProduct.shareLink);
                   setCopiedNotice(true);
                   setTimeout(() => setCopiedNotice(false), 2500);
                 }}
@@ -2136,7 +2148,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <button
                 type="button"
                 onClick={() => {
-                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal: ${shareModalProduct.bankUrl}`)}`;
+                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa! Click here: ${shareModalProduct.shareLink}`)}`;
                   window.open(url, '_blank');
                 }}
                 style={{
@@ -2153,7 +2165,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <button
                 type="button"
                 onClick={() => {
-                  const url = `sms:?body=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal: ${shareModalProduct.bankUrl}`)}`;
+                  const url = `sms:?body=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa! Click here: ${shareModalProduct.shareLink}`)}`;
                   window.open(url, '_blank');
                 }}
                 style={{
@@ -2170,7 +2182,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <button
                 type="button"
                 onClick={() => {
-                  const url = `https://t.me/share/url?url=${encodeURIComponent(shareModalProduct.bankUrl)}&text=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal:`)}`;
+                  const url = `https://t.me/share/url?url=${encodeURIComponent(shareModalProduct.shareLink)}&text=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa!`)}`;
                   window.open(url, '_blank');
                 }}
                 style={{
@@ -2187,7 +2199,7 @@ export default function PartnerProducts({ initialSearch = '' }) {
               <button
                 type="button"
                 onClick={() => {
-                  const url = `mailto:?subject=${encodeURIComponent(`Official Bank Application: ${shareModalProduct.name}`)}&body=${encodeURIComponent(`Apply for ${shareModalProduct.name} directly on official bank portal:\n${shareModalProduct.bankUrl}`)}`;
+                  const url = `mailto:?subject=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa`)}&body=${encodeURIComponent(`Click here to apply for ${shareModalProduct.name}:\n${shareModalProduct.shareLink}`)}`;
                   window.open(url, '_blank');
                 }}
                 style={{

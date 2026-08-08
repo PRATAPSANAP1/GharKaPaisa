@@ -2366,7 +2366,23 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS pipeline_stage VARCHAR(50) DEFAULT 'created',
         ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
         ADD COLUMN IF NOT EXISTS sla_status VARCHAR(20) DEFAULT 'on_track',
-        ADD COLUMN IF NOT EXISTS expected_completion_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS expected_completion_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS tracking_token VARCHAR(100) UNIQUE,
+        ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(15);
+    `);
+
+    // Partner Share Links Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_share_links (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        tracking_token VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days'
+      );
+      CREATE INDEX IF NOT EXISTS idx_partner_share_links_token ON partner_share_links(tracking_token);
+      CREATE INDEX IF NOT EXISTS idx_partner_share_links_partner ON partner_share_links(partner_id);
     `);
 
     // 2. Lead Documents

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const partnerCtrl = require('./partner.controller.js');
+const partnerShareCtrl = require('./partner-share.controller.js');
 const authCtrl = require('../auth/controller.js');
 const { upload, uploadVideo } = require('../../services/aws/s3.service.js');
 const { validate, registerRules } = require('../../middleware/validation/validation.middleware.js');
@@ -60,5 +61,9 @@ router.get('/team-dashboard', requireApprovedPartner, teamCtrl.getDashboard);
 router.get('/team-earnings', requireApprovedPartner, teamCtrl.getAnalytics);
 router.get('/team-members', requireApprovedPartner, teamCtrl.getMembersList);
 router.post('/team/invite', requireApprovedPartner, partnerCtrl.addTeamMember);
+
+// Partner Share Link Routes
+router.post('/share-link', requireApprovedPartner, partnerShareCtrl.generateShareLink);
+router.get('/share-tracking', requireApprovedPartner, partnerShareCtrl.getPartnerShareTracking);
 
 module.exports = router;

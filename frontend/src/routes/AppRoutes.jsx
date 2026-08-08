@@ -35,6 +35,7 @@ import ProductDetails from '../modules/products/ProductDetails';
 import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
 import ProductApplyLanding from '../modules/products/ProductApplyLanding';
+import PartnerShareLanding from '../modules/products/PartnerShareLanding';
 import DynamicCreditCardsPage from '../modules/home/components/CreditCards/DynamicCreditCardsPage';
 
 // Admin Pages
@@ -86,6 +87,7 @@ import PartnerTraining from '../modules/partner/dashboard/PartnerTraining';
 import PartnerReports from '../modules/partner/dashboard/PartnerReports';
 import PartnerRefers from '../modules/partner/dashboard/PartnerRefers';
 import PartnerNotifications from '../modules/partner/dashboard/PartnerNotifications';
+import PartnerShareTracking from '../modules/partner/leads/PartnerShareTracking';
 import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
 import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
@@ -178,6 +180,7 @@ const AppRoutes = () => {
 
         {/* Partner-Shared Product Landing Page (public, captures customer before redirect) */}
         <Route path="/apply/:partnerCode/:productId" element={<ProductApplyLanding />} />
+        <Route path="/share/:trackingToken" element={<PartnerShareLanding />} />
       </Route>
 
       {/* Customer Secure Upload Portal (Standalone Public Route) */}
@@ -219,6 +222,7 @@ const AppRoutes = () => {
             <Route path="/partner/leads" element={<PartnerCrm />} />
             <Route path="/partner/crm" element={<PartnerCrm />} />
             <Route path="/partner/customers" element={<PartnerCrm />} />
+            <Route path="/partner/share-tracking" element={<PartnerShareTracking />} />
             <Route path="/partner/support" element={<PartnerSupport />} />
             <Route path="/partner/vault" element={<PartnerVault />} />
             <Route path="/partner/documents" element={<PartnerVault />} />

@@ -8,6 +8,9 @@ const { requireApprovedPartner, requireApprovedPartnerOrAdmin } = require('../..
 // Require authentication for all lead endpoints
 router.use(jwtAuth);
 
+// Partner Share Tracking Leads (Super Admin only)
+router.get('/partner-share-tracking', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.listPartnerShareLeads);
+
 // Core Lead Listing, Creation, & Bulk Actions
 router.get('/', requireApprovedPartnerOrAdmin, ctrl.listLeads);
 router.post('/', requireApprovedPartner, ctrl.createLead);
