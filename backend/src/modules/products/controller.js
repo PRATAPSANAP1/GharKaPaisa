@@ -128,7 +128,9 @@ const listProducts = async (req, res, next) => {
       return prodData;
     });
 
-    return paginate(res, sanitizedRows, parseInt(count.rows[0].count), page, limit);
+    const resolvedRows = await resolvePartnerCommissions(sanitizedRows, req);
+
+    return paginate(res, resolvedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     logger.error('listProducts error:', err);
     next(err);
@@ -537,25 +539,168 @@ const getProductsByCategory = async (req, res, next) => {
 };
 
 // POST /products/:id/commission (Super Admin — set commission)
+// Helper to dynamically resolve partner-specific / team-member-specific commission rates
+const resolvePartnerCommissions = async (productsList, req) => {
+  if (!productsList || productsList.length === 0) return productsList;
+
+  let partnerId = req?.partner?.id || req?.partner?.Partner_id;
+  
+  if (!partnerId && req?.user && ['PARTNER', 'TEAM_MEMBER'].includes(req.user.role?.toUpperCase())) {
+    const { rows: [pProfile] } = await query(
+      `SELECT id FROM partner_profiles WHERE user_id = $1 LIMIT 1`,
+      [req.user.id]
+    );
+    if (pProfile) partnerId = pProfile.id;
+  }
+
+  const isPartnerOrTeam = req?.user && ['PARTNER', 'TEAM_MEMBER'].includes(req.user.role?.toUpperCase());
+
+  if (partnerId || isPartnerOrTeam) {
+    const productIds = productsList.map(p => p.id).filter(Boolean);
+    let rulesMap = {};
+    
+    if (productIds.length > 0) {
+      let rulesQuery = `
+        SELECT product_id, partner_id, commission_type, commission_value
+        FROM commission_structures
+        WHERE product_id = ANY($1::uuid[])
+          AND (effective_from IS NULL OR effective_from <= CURRENT_DATE)
+          AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+      `;
+      let queryParams = [productIds];
+
+      if (partnerId) {
+        rulesQuery += ` AND (partner_id = $2 OR partner_id IS NULL)`;
+        queryParams.push(partnerId);
+      } else {
+        rulesQuery += ` AND partner_id IS NULL`;
+      }
+
+      rulesQuery += ` ORDER BY partner_id DESC NULLS LAST, created_at DESC`;
+
+      const { rows: rules } = await query(rulesQuery, queryParams);
+
+      rules.forEach(r => {
+        if (!rulesMap[r.product_id]) {
+          rulesMap[r.product_id] = r;
+        }
+      });
+    }
+
+    return productsList.map(prod => {
+      const rule = rulesMap[prod.id];
+      if (rule) {
+        return {
+          ...prod,
+          commission_type: rule.commission_type || 'fixed',
+          commission_value: parseFloat(rule.commission_value || 0)
+        };
+      } else {
+        // Default to 0 payout for new partner or team member until Super Admin sets/changes it
+        return {
+          ...prod,
+          commission_value: 0
+        };
+      }
+    });
+  }
+
+  return productsList;
+};
+
+// POST /products/:id/commission (Super Admin — set commission)
 const setCommission = async (req, res, next) => {
   try {
-    const { product_id, partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
+    const { product_id, partner_id, Partner_id, commission_type, commission_value, effective_from, effective_to } = req.body;
 
     if (effective_to && new Date(effective_from) > new Date(effective_to)) {
       return error(res, 'effective_from cannot be greater than effective_to', 400);
     }
 
-    const finalPartnerId = partner_id || null;
+    const targetPartnerId = (partner_id && partner_id !== 'global') ? partner_id : ((Partner_id && Partner_id !== 'global') ? Partner_id : null);
+
+    if (targetPartnerId) {
+      await query(`DELETE FROM commission_structures WHERE product_id = $1 AND partner_id = $2`, [product_id, targetPartnerId]);
+    } else {
+      await query(`DELETE FROM commission_structures WHERE product_id = $1 AND partner_id IS NULL`, [product_id]);
+    }
 
     await query(`
       INSERT INTO commission_structures (product_id, partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
       VALUES ($1,$2,$3,$4,$5,$6,$7)
-    `, [product_id, finalPartnerId, commission_type, commission_value, effective_from, effective_to || null, req.user.id]);
+    `, [product_id, targetPartnerId, commission_type || 'fixed', commission_value, effective_from || new Date(), effective_to || null, req.user.id]);
 
-    // Log setting of commission rule
-    await logAction(req, 'SET_COMMISSION_RULE', product_id, { partner_id: finalPartnerId, commission_type, commission_value });
+    await logAction(req, 'SET_COMMISSION_RULE', product_id, { partner_id: targetPartnerId, commission_type, commission_value });
 
     return created(res, {}, 'Commission structure set');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /admin/commission-rules/bulk (Super Admin — set bulk commissions)
+const bulkSetCommission = async (req, res, next) => {
+  try {
+    const { product_ids, partner_ids, commission_type, commission_value, effective_from, effective_to } = req.body;
+
+    if (commission_value === undefined || commission_value === null) {
+      return error(res, 'commission_value is required', 400);
+    }
+
+    let targetProductIds = [];
+    if (product_ids === 'all' || !product_ids) {
+      const { rows: allProds } = await query(`SELECT id FROM products WHERE is_active = true OR status = 'Active'`);
+      targetProductIds = allProds.map(p => p.id);
+    } else if (Array.isArray(product_ids)) {
+      targetProductIds = product_ids;
+    } else {
+      targetProductIds = [product_ids];
+    }
+
+    let targetPartnerIds = [];
+    if (partner_ids === 'global') {
+      targetPartnerIds = [null];
+    } else if (partner_ids === 'all' || !partner_ids) {
+      const { rows: allPartners } = await query(`SELECT id FROM partner_profiles`);
+      targetPartnerIds = allPartners.map(p => p.id);
+    } else if (Array.isArray(partner_ids)) {
+      targetPartnerIds = partner_ids;
+    } else {
+      targetPartnerIds = [partner_ids];
+    }
+
+    const type = commission_type || 'fixed';
+    const val = parseFloat(commission_value);
+    const fromDate = effective_from || new Date().toISOString().split('T')[0];
+    const toDate = effective_to || null;
+    const userId = req.user.id;
+
+    for (const pId of targetProductIds) {
+      for (const partnerId of targetPartnerIds) {
+        if (partnerId) {
+          await query(`DELETE FROM commission_structures WHERE product_id = $1 AND partner_id = $2`, [pId, partnerId]);
+        } else {
+          await query(`DELETE FROM commission_structures WHERE product_id = $1 AND partner_id IS NULL`, [pId]);
+        }
+
+        await query(`
+          INSERT INTO commission_structures (product_id, partner_id, commission_type, commission_value, effective_from, effective_to, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [pId, partnerId, type, val, fromDate, toDate, userId]);
+      }
+    }
+
+    await logAction(req, 'BULK_SET_COMMISSION_RULE', targetProductIds[0] || null, {
+      productCount: targetProductIds.length,
+      partnerCount: targetPartnerIds.length,
+      commission_type: type,
+      commission_value: val
+    });
+
+    return created(res, {
+      applied_products: targetProductIds.length,
+      applied_partners: targetPartnerIds.length
+    }, `Commission rules updated for ${targetPartnerIds.length} partner(s) across ${targetProductIds.length} product(s).`);
   } catch (err) {
     next(err);
   }
@@ -585,7 +730,8 @@ const getCards = async (req, res, next) => {
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const resolvedRows = await resolvePartnerCommissions(data.rows, req);
+    return paginate(res, resolvedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }
@@ -605,7 +751,8 @@ const getLoans = async (req, res, next) => {
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const resolvedRows = await resolvePartnerCommissions(data.rows, req);
+    return paginate(res, resolvedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }
@@ -625,7 +772,8 @@ const getInsurance = async (req, res, next) => {
         LIMIT $1 OFFSET $2
       `, [limit, offset])
     ]);
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    const resolvedRows = await resolvePartnerCommissions(data.rows, req);
+    return paginate(res, resolvedRows, parseInt(count.rows[0].count), page, limit);
   } catch (err) {
     next(err);
   }
@@ -966,6 +1114,7 @@ module.exports = {
   getClickAnalytics,
   updateStatus,
   updateFeatured,
-  duplicateProduct
+  duplicateProduct,
+  bulkSetCommission
 };
 

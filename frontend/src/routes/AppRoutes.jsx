@@ -89,6 +89,7 @@ import ManageAdminLoans from '../modules/admin/loans/ManageAdminLoans';
 import ManageAdminInsurance from '../modules/admin/insurance/ManageAdminInsurance';
 import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBankCardApplications';
 import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
+import ManageSupportTickets from '../modules/super-admin/support/ManageSupportTickets';
 
 const AppRoutes = () => {
   const isInitializing = useAuthStore((state) => state.isInitializing);
@@ -288,6 +289,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
+            <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 
             {/* Legacy /superadmin/ URL Redirect Compatibility */}
             <Route path="/superadmin/dashboard" element={<Navigate to="/super-admin/dashboard" replace />} />

@@ -123,21 +123,18 @@ export default function ManageCommissions() {
     setSuccessMsg("");
 
     const payload = {
-      product_id: form.product_id,
+      product_ids: form.product_id || "all",
+      partner_ids: form.Partner_id || "global",
       commission_type: form.commission_type,
-      commission_value: parseFloat(form.commission_value),
+      commission_value: parseFloat(form.commission_value || 0),
       effective_from: form.effective_from,
       effective_to: form.effective_to || null,
     };
 
-    if (form.Partner_id && form.Partner_id !== "global" && form.Partner_id !== "") {
-      payload.Partner_id = form.Partner_id;
-    }
-
     try {
-      const res = await api.post("/admin/commission-rule", payload);
+      const res = await api.post("/admin/commission-rules/bulk", payload);
       if (res.data?.success) {
-        setSuccessMsg("Commission rule applied successfully.");
+        setSuccessMsg(res.data?.message || "Commission rule applied successfully.");
         setModalOpen(false);
         fetchData();
       }
@@ -151,45 +148,31 @@ export default function ManageCommissions() {
   // Bulk Override creation for selected partners
   const handleBulkCreateRules = async (e) => {
     e.preventDefault();
-    if (selectedPartnerIds.length === 0) {
-      alert("Please select at least one partner or team member.");
-      return;
-    }
     setSubmitting(true);
     setErrorMsg("");
     setSuccessMsg("");
 
-    let successCount = 0;
-    let failCount = 0;
+    const payload = {
+      product_ids: form.product_id || "all",
+      partner_ids: selectedPartnerIds.length > 0 ? selectedPartnerIds : (form.Partner_id || "all"),
+      commission_type: form.commission_type,
+      commission_value: parseFloat(form.commission_value || 0),
+      effective_from: form.effective_from,
+      effective_to: form.effective_to || null,
+    };
 
-    for (const pId of selectedPartnerIds) {
-      const payload = {
-        product_id: form.product_id,
-        Partner_id: pId,
-        commission_type: form.commission_type,
-        commission_value: parseFloat(form.commission_value),
-        effective_from: form.effective_from,
-        effective_to: form.effective_to || null,
-      };
-
-      try {
-        await api.post("/admin/commission-rule", payload);
-        successCount++;
-      } catch (err) {
-        console.error(`Bulk override failed for partner ${pId}`, err);
-        failCount++;
+    try {
+      const res = await api.post("/admin/commission-rules/bulk", payload);
+      if (res.data?.success) {
+        setSuccessMsg(res.data?.message || "Bulk commission override successfully applied.");
+        setBulkModalOpen(false);
+        setSelectedPartnerIds([]);
+        fetchData();
       }
-    }
-
-    setSubmitting(false);
-    setBulkModalOpen(false);
-
-    if (successCount > 0) {
-      setSuccessMsg(`Bulk commission override successfully applied to ${successCount} partners/team members.${failCount > 0 ? ` (${failCount} failed)` : ''}`);
-      setSelectedPartnerIds([]);
-      fetchData();
-    } else {
-      setErrorMsg("Failed to apply bulk commission overrides.");
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Failed to apply bulk commission overrides.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -870,13 +853,14 @@ export default function ManageCommissions() {
               
               {/* Product */}
               <div>
-                <label style={S.label}>Select Product *</label>
+                <label style={S.label}>Select Product or Cards *</label>
                 <select
                   required
                   style={S.input}
                   value={form.product_id}
                   onChange={e => setForm({ ...form, product_id: e.target.value })}
                 >
+                  <option value="all">🌟 All Cards & Products (Apply same payout to all products)</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})
@@ -887,13 +871,14 @@ export default function ManageCommissions() {
 
               {/* Target Partner / Team Member */}
               <div>
-                <label style={S.label}>Select Target Partner or Team Member (Leave as Global for all)</label>
+                <label style={S.label}>Select Target Partner or Team Member</label>
                 <select
                   style={S.input}
                   value={form.Partner_id}
                   onChange={e => setForm({ ...form, Partner_id: e.target.value })}
                 >
-                  <option value="global">🌐 Apply globally (All Partners & Team Members)</option>
+                  <option value="global">🌐 Global Override (All Partners & Team Members)</option>
+                  <option value="all">👥 All Active Partners & Team Members</option>
                   {partners.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code || 'N/A'}) - {p.parent_name ? `Downline of ${p.parent_name}` : (p.company_name || 'Primary Partner')}
@@ -997,13 +982,14 @@ export default function ManageCommissions() {
               
               {/* Product */}
               <div>
-                <label style={S.label}>Select Product *</label>
+                <label style={S.label}>Select Product or Cards *</label>
                 <select
                   required
                   style={S.input}
                   value={form.product_id}
                   onChange={e => setForm({ ...form, product_id: e.target.value })}
                 >
+                  <option value="all">🌟 All Cards & Products (Apply same payout to all products)</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})

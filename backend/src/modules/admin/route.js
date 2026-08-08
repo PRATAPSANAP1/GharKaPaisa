@@ -28,6 +28,7 @@ router.get('/applications', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCt
 
 // ── POST /admin/commission-rule ──────────────────────────────────────────────
 router.post('/commission-rule', roleCheck('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
+router.post('/commission-rules/bulk', roleCheck('SUPER_ADMIN'), productCtrl.bulkSetCommission);
 
 // ── GET /admin/commission-rules ──────────────────────────────────────────────
 router.get('/commission-rules', roleCheck('SUPER_ADMIN'), productCtrl.listCommissionRules);
