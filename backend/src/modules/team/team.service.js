@@ -1002,8 +1002,10 @@ async function sendTeamInvitation(partnerId, { name, mobile, email }) {
   );
   if (!p) throw new Error('Partner profile not found');
 
+  const { generateInviteToken } = require('../../utils/helpers/inviteToken');
   const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-  const referralLink = `${frontendUrl}/register?ref=${p.partner_code}`;
+  const inviteToken = generateInviteToken({ partnerCode: p.partner_code, role: 'TEAM_MEMBER' });
+  const referralLink = `${frontendUrl}/register?token=${inviteToken}`;
   const inviterName = p.first_name || 'Your Partner';
   const message = `Hi ${name || 'there'}! ${inviterName} has invited you to join GharKaPaisa — India's top credit card & loan referral platform. Earn commissions on every approved application! Register here: ${referralLink}`;
 

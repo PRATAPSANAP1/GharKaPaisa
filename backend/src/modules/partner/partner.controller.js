@@ -605,8 +605,10 @@ const addTeamMember = async (req, res, next) => {
 
     await client.query('COMMIT');
 
+    const { generateInviteToken } = require('../../utils/helpers/inviteToken');
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-    const inviteLink = `${appUrl}/register?ref=${parentPartner.partner_code}&role=TEAM_MEMBER`;
+    const inviteToken = generateInviteToken({ partnerCode: parentPartner.partner_code, role: 'TEAM_MEMBER' });
+    const inviteLink = `${appUrl}/register?token=${inviteToken}`;
     const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nStep 1: Open the link: ${inviteLink}\nStep 2: Login using Email: ${email} & Temp Password: ${tempPassword}\nStep 3: Complete your KYC verification.\n\nWelcome aboard!`;
 
     const cleanMobile = String(mobile).replace(/\D/g, '');

@@ -177,11 +177,27 @@ export default function PartnerRegister() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const token = params.get("token") || params.get("invite");
     const ref = params.get("ref");
     const team = params.get("team");
-    if (ref) {
+
+    if (token) {
+      api.get(`/auth/resolve-invite?token=${encodeURIComponent(token)}`)
+        .then(res => {
+          if (res.data?.success && res.data.data?.ref) {
+            const resolvedRef = res.data.data.ref;
+            setReferralCode(resolvedRef);
+            if (res.data.data.role === 'TEAM_MEMBER') {
+              setTeamCode(resolvedRef);
+            }
+            api.post(`/partner/referral-click?ref=${encodeURIComponent(resolvedRef)}`).catch(() => {});
+          }
+        })
+        .catch(err => {
+          console.warn("Could not resolve secure invite token:", err.message);
+        });
+    } else if (ref) {
       setReferralCode(ref);
-      // Track referral click (non-blocking)
       api.post(`/partner/referral-click?ref=${encodeURIComponent(ref)}`).catch(err => {
         console.error("Failed to track referral click:", err);
       });

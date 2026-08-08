@@ -305,6 +305,30 @@ const verifyRegistrationOtp = async (req, res, next) => {
   }
 };
 
+// ── GET /auth/resolve-invite ──────────────────────────────────────────────────
+const resolveInviteToken = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return error(res, 'Invite token is required', 400);
+    }
+    const { decodeInviteToken } = require('../../utils/helpers/inviteToken');
+    const decoded = decodeInviteToken(token);
+    if (!decoded || !decoded.ref) {
+      return error(res, 'Invalid or expired invitation token', 400);
+    }
+    return res.json({
+      success: true,
+      data: {
+        ref: decoded.ref,
+        role: decoded.role || 'TEAM_MEMBER'
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 
 // ── POST /auth/login ──────────────────────────────────────────────────────────
@@ -1370,6 +1394,7 @@ module.exports = {
   sendOtp,
   sendRegistrationOtp,
   verifyRegistrationOtp,
+  resolveInviteToken,
   login,
   loginWithMsg91,
   loginPassword,
