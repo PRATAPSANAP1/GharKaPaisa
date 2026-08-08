@@ -316,8 +316,8 @@ export default function PartnerTeam() {
 
             <form onSubmit={handleInviteSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { label: 'Full Name *', name: 'fullName', type: 'text', placeholder: 'E.g., Rajesh Kumar' },
-                { label: 'Email Address *', name: 'email', type: 'email', placeholder: 'rajesh@example.com' },
+                { label: 'Full Name *', name: 'fullName', type: 'text', placeholder: 'E.g., Pratap Sanap' },
+                { label: 'Email Address *', name: 'email', type: 'email', placeholder: 'team@example.com' },
                 { label: 'Mobile Number *', name: 'mobile', type: 'tel', placeholder: '9876543210' },
               ].map(f => (
                 <div key={f.name}>
