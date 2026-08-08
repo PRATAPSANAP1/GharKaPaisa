@@ -33,7 +33,7 @@ const generateShareLink = async (req, res, next) => {
 
     // Verify product exists
     const { rows: [product] } = await query(
-      `SELECT id, name, bank_link, category FROM products WHERE id = $1`,
+      `SELECT id, name, application_url, category FROM products WHERE id = $1`,
       [productId]
     );
 
@@ -151,13 +151,13 @@ const submitShareLead = async (req, res, next) => {
 
       // Get product bank link
       const { rows: [product] } = await query(
-        `SELECT bank_link FROM products WHERE id = $1`,
+        `SELECT application_url FROM products WHERE id = $1`,
         [shareLinkData.product_id]
       );
 
       return success(res, {
         lead_id: updatedLead.id,
-        redirect_url: product?.bank_link || null,
+        redirect_url: product?.application_url || null,
         message: 'Lead updated successfully'
       });
     }
@@ -181,13 +181,13 @@ const submitShareLead = async (req, res, next) => {
 
     // Get product bank link for redirect
     const { rows: [product] } = await query(
-      `SELECT bank_link, name FROM products WHERE id = $1`,
+      `SELECT application_url, name FROM products WHERE id = $1`,
       [shareLinkData.product_id]
     );
 
     return created(res, {
       lead_id: lead.id,
-      redirect_url: product?.bank_link || null,
+      redirect_url: product?.application_url || null,
       product_name: product?.name,
       message: 'Lead created successfully'
     });
