@@ -557,7 +557,7 @@ const addTeamMember = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    // Check if user exists
+    // Check if user already exists
     const { rows: existingUser } = await client.query(
       `SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2`,
       [email, mobile]
@@ -565,43 +565,16 @@ const addTeamMember = async (req, res, next) => {
 
     if (existingUser.length) {
       await client.query('ROLLBACK');
-      return error(res, 'User with this email or mobile already exists', 409);
+      return error(res, 'A registered user with this email or mobile already exists', 409);
     }
 
-    const tempPassword = password || `GKP@${Math.floor(100000 + Math.random() * 900000)}`;
-    const bcrypt = require('bcryptjs');
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(tempPassword, salt);
-
-    // Insert user (must_change_password = true)
-    const { rows: [user] } = await client.query(
-      `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, must_change_password)
-       VALUES ($1, $2, $3, 'TEAM_MEMBER'::user_role, 'active'::user_status, true, true) RETURNING id`,
-      [email, mobile, passwordHash]
-    );
-
-    // Generate Partner code
-    const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
-    const { generatePartnerCode } = require('../../utils/helpers/helpers');
-    const partnerCode = generatePartnerCode(parseInt(nextval));
-
-    // Create child partner profile setting both partner_id and parent_partner_id
-    const { rows: [childPartner] } = await client.query(`
-      INSERT INTO partner_profiles (
-        user_id, partner_code, first_name, last_name, parent_partner_id, partner_id, kyc_status
-      )
-      VALUES ($1, $2, $3, $4, $5, $5, 'pending') RETURNING id
-    `, [user.id, partnerCode, memberFirstName, memberLastName || '', partnerId]);
-
-    // Track team relationship
+    // Save invitation record to invitation_history table
     await client.query(`
-      INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
-      VALUES ($1, $2, 1)
-      ON CONFLICT (child_partner_id) DO UPDATE SET parent_partner_id = EXCLUDED.parent_partner_id
-    `, [partnerId, childPartner.id]);
-
-    // Create wallet
-    await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [childPartner.id]);
+      INSERT INTO invitation_history (
+        partner_id, invite_type, recipient_name, recipient_email, recipient_mobile, referral_code, status, sent_at
+      )
+      VALUES ($1, 'TEAM_MEMBER', $2, $3, $4, $5, 'SENT', NOW())
+    `, [partnerId, `${memberFirstName} ${memberLastName}`.trim(), email, mobile, parentPartner.partner_code]);
 
     await client.query('COMMIT');
 
@@ -609,7 +582,7 @@ const addTeamMember = async (req, res, next) => {
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
     const inviteToken = generateInviteToken({ partnerCode: parentPartner.partner_code, role: 'TEAM_MEMBER' });
     const inviteLink = `${appUrl}/register?token=${inviteToken}`;
-    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nStep 1: Open the link: ${inviteLink}\nStep 2: Login using Email: ${email} & Temp Password: ${tempPassword}\nStep 3: Complete your KYC verification.\n\nWelcome aboard!`;
+    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nClick the link to complete your registration and KYC verification: ${inviteLink}\n\nWelcome aboard!`;
 
     const cleanMobile = String(mobile).replace(/\D/g, '');
 
@@ -639,8 +612,7 @@ const addTeamMember = async (req, res, next) => {
               You have been invited to join the GharKaPaisa Partner Network! Start earning lucrative commissions by referring credit cards, loans, and financial products.
             </p>
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Partner Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${partnerCode}</span></p>
-              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Temporary Password:</strong> <span style="font-family: monospace; color: #0D5CAB;">${tempPassword}</span></p>
+              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Inviter Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${parentPartner.partner_code}</span></p>
               <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Email:</strong> ${email}</p>
             </div>
             <div style="text-align: center; margin: 25px 0;">
@@ -658,13 +630,12 @@ const addTeamMember = async (req, res, next) => {
     }
 
     return created(res, {
-      partner_code: partnerCode,
+      partner_code: parentPartner.partner_code,
       invite_link: inviteLink,
-      temp_password: tempPassword,
       whatsapp_link: `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(messageText)}`,
       sms_link: `sms:+91${cleanMobile}?body=${encodeURIComponent(messageText)}`,
       email_link: `mailto:${email}?subject=${encodeURIComponent("Invitation to Join GharKaPaisa Team")}&body=${encodeURIComponent(messageText)}`
-    }, 'Team member created successfully. Automated SMS & Email invitation sent.');
+    }, 'Invitation sent successfully. Invitee can complete registration using the invitation link.');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
