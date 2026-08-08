@@ -55,7 +55,7 @@ const NAV_ITEMS = [
       { id: 'cust_export', label: 'Export Customers', path: '/partner/customers?action=export', icon: MdFileDownload, partnerOnly: true }
     ]
   },
-  { id: 'team-network', path: '/partner/team', label: 'My Team', icon: MdGroup },
+  { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
   { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool }
