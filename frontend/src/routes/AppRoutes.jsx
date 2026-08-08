@@ -34,6 +34,7 @@ import ComingSoon from '../modules/cms/ComingSoon';
 import ProductDetails from '../modules/products/ProductDetails';
 import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
+import ProductApplyLanding from '../modules/products/ProductApplyLanding';
 import DynamicCreditCardsPage from '../modules/home/components/CreditCards/DynamicCreditCardsPage';
 
 // Admin Pages
@@ -174,6 +175,9 @@ const AppRoutes = () => {
         <Route path="/product/:slug/apply" element={<ApplyForm />} />
         <Route path="/card-benefits/:bankId/:cardId" element={<CardBenefitsPage />} />
         <Route path="/cards/:bankSlug" element={<DynamicCreditCardsPage />} />
+
+        {/* Partner-Shared Product Landing Page (public, captures customer before redirect) */}
+        <Route path="/apply/:partnerCode/:productId" element={<ProductApplyLanding />} />
       </Route>
 
       {/* Customer Secure Upload Portal (Standalone Public Route) */}

@@ -79,19 +79,20 @@ export default function PartnerProducts({ initialSearch = '' }) {
 
   const handleCopyLink = (product) => {
     const code = partnerCode || user?.partner_code || 'PARTNER';
-    const bankUrl = product.application_url || product.apply_url || product.public_url || product.partner_url || product.redirect_url || product.bank_link || product.tracking_url || getBankApplyLink(product.name, product.bank_code || product.bank_name) || `${window.location.origin}/redirect/${product.category}?id=${product.id}&partner=${code}`;
-    const shareText = `Apply for ${product.name} directly on official bank portal: ${bankUrl}`;
+    // Generate landing page URL that captures customer info before redirecting to bank
+    const landingUrl = `${window.location.origin}/apply/${code}/${product.id}`;
+    const shareText = `Apply for ${product.name} on GharKaPaisa! Click here to apply: ${landingUrl}`;
     
     if (navigator.share) {
       navigator.share({
         title: product.name,
         text: shareText,
-        url: bankUrl
+        url: landingUrl
       }).catch(() => {
-        setShareModalProduct({ ...product, bankUrl });
+        setShareModalProduct({ ...product, bankUrl: landingUrl });
       });
     } else {
-      setShareModalProduct({ ...product, bankUrl });
+      setShareModalProduct({ ...product, bankUrl: landingUrl });
     }
   };
 

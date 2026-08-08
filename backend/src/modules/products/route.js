@@ -11,6 +11,12 @@ const linkCtrl = require('./link-management.controller.js');
 // ═══════════════════════════════════════════════════════════════════
 // Public Routes (no auth required)
 // ═══════════════════════════════════════════════════════════════════
+
+// Partner-Shared Product Landing Page (public, no auth)
+const landingCtrl = require('./landing.controller.js');
+router.get('/landing/:id', landingCtrl.getProductLanding);
+router.post('/landing/:id/apply', landingCtrl.applyProductLanding);
+
 router.get('/categories', productCtrl.getProductsByCategory);
 router.get('/banks', productCtrl.listBanks);
 router.get('/cards', productCtrl.getCards);
