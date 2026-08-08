@@ -2833,7 +2833,7 @@ const migrate = async () => {
         parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
         child_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
         application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
-        commission_amount DECIMAL(15,2) DEFAULT 0.00,
+        amount DECIMAL(15,2) DEFAULT 0.00,
         level INT DEFAULT 1,
         released BOOLEAN DEFAULT FALSE,
         status VARCHAR(20) DEFAULT 'pending',
@@ -2841,10 +2841,6 @@ const migrate = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_team_comm_parent ON team_commissions(parent_partner_id);
-      ALTER TABLE team_commissions ADD COLUMN IF NOT EXISTS amount DECIMAL(15,2) DEFAULT 0.00;
-      ALTER TABLE team_commissions ADD COLUMN IF NOT EXISTS commission_amount DECIMAL(15,2) DEFAULT 0.00;
-      UPDATE team_commissions SET amount = commission_amount WHERE amount = 0 AND commission_amount > 0;
-      UPDATE team_commissions SET commission_amount = amount WHERE commission_amount = 0 AND amount > 0;
       CREATE OR REPLACE VIEW wallets AS SELECT id, partner_id, available_balance, hold_balance, total_earned, total_withdrawn, updated_at FROM partner_wallets;
     `);
 
