@@ -129,6 +129,8 @@ const requireApprovedPartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
     if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+    // TEAM_MEMBER role bypasses KYC approval check
+    if (role === 'TEAM_MEMBER') return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
