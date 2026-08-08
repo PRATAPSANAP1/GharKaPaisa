@@ -760,10 +760,10 @@ export default function PartnerLayout() {
 
         {kycStatus === 'rejected' && (
           <div style={{
-            background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+            background: 'linear-gradient(135deg, #F59E0B, #D97706)',
             color: '#fff',
             padding: '14px 20px',
-            boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+            boxShadow: '0 2px 8px rgba(245,158,11,0.25)',
             display: 'flex',
             alignItems: isMobile ? 'flex-start' : 'center',
             justifyContent: 'space-between',
@@ -774,8 +774,7 @@ export default function PartnerLayout() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
               <MdVerifiedUser size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                <strong>{t('partnerLayout.kycRejected', 'KYC Rejected:')}</strong>{' '}
-                {t('partnerLayout.kycRejectedMsg', 'Your KYC verification was rejected. Please re-upload your documents.')}
+                {t('partnerLayout.kycCorrectionMsg', 'Documents require correction. Click to re-upload.')}
                 {user?.rejection_reason && (
                   <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
                     <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}
@@ -788,7 +787,7 @@ export default function PartnerLayout() {
                 onClick={() => navigate('/partner/kyc')}
                 style={{
                   background: '#fff',
-                  color: '#DC2626',
+                  color: '#D97706',
                   padding: '8px 16px',
                   borderRadius: '8px',
                   fontSize: '13px',
