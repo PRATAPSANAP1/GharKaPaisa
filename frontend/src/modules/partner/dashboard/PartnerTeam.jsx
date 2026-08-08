@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Users, Layers, List, TrendingUp, Activity, Target, Settings,
-  RefreshCw, AlertCircle, UserPlus, Send
+  RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail
 } from 'lucide-react';
 import TeamDashboardTab from './team/TeamDashboardTab';
 import TeamTreeTab from './team/TeamTreeTab';
@@ -39,6 +39,8 @@ export default function PartnerTeam() {
   const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', mobile: '' });
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteResult, setInviteResult] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [upgradeStatus, setUpgradeStatus] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState('');
@@ -83,16 +85,32 @@ export default function PartnerTeam() {
     } finally { setLoadingDashboard(false); }
   };
 
+  const copyLink = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const resetInviteModal = () => {
+    setInviteModalOpen(false);
+    setInviteForm({ fullName: '', email: '', mobile: '' });
+    setInviteMessage('');
+    setInviteResult(null);
+    setCopiedLink(false);
+  };
+
   const handleInviteSubmit = async (e) => {
     e.preventDefault();
     setInviteLoading(true);
+    setInviteMessage('');
     try {
       const payload = { ...inviteForm, name: inviteForm.fullName };
       const res = await api.post('/partner/team/invite', payload);
       if (res.data?.success) {
-        setInviteMessage('✅ Invite sent successfully!');
+        setInviteResult(res.data.data);
+        setInviteMessage('✅ Team member created successfully!');
         setInviteForm({ fullName: '', email: '', mobile: '' });
-        setTimeout(() => { setInviteModalOpen(false); setInviteMessage(''); fetchDashboard(); }, 1500);
+        fetchDashboard();
       }
     } catch (err) {
       setInviteMessage(err.response?.data?.message || '❌ Failed to send invite');
@@ -314,58 +332,105 @@ export default function PartnerTeam() {
               </div>
             </div>
 
-            <form onSubmit={handleInviteSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {[
-                { label: 'Full Name *', name: 'fullName', type: 'text', placeholder: 'E.g., Pratap Sanap' },
-                { label: 'Email Address *', name: 'email', type: 'email', placeholder: 'team@example.com' },
-                { label: 'Mobile Number *', name: 'mobile', type: 'tel', placeholder: '9876543210' },
-              ].map(f => (
-                <div key={f.name}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                  <input type={f.type} name={f.name} required placeholder={f.placeholder}
-                    value={inviteForm[f.name]}
-                    onChange={e => setInviteForm(p => ({ ...p, [f.name]: e.target.value }))}
+            {!inviteResult ? (
+              <form onSubmit={handleInviteSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {[
+                  { label: 'Full Name *', name: 'fullName', type: 'text', placeholder: 'E.g., Pratap Sanap' },
+                  { label: 'Email Address *', name: 'email', type: 'email', placeholder: 'team@example.com' },
+                  { label: 'Mobile Number *', name: 'mobile', type: 'tel', placeholder: '9876543210' },
+                ].map(f => (
+                  <div key={f.name}>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>{f.label}</label>
+                    <input type={f.type} name={f.name} required placeholder={f.placeholder}
+                      value={inviteForm[f.name]}
+                      onChange={e => setInviteForm(p => ({ ...p, [f.name]: e.target.value }))}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13,
+                        border: `1.5px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff',
+                        color: textPrimary, outline: 'none', boxSizing: 'border-box',
+                        transition: 'border-color 0.2s'
+                      }} />
+                  </div>
+                ))}
+
+                {inviteMessage && (
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600,
+                    background: inviteMessage.includes('✅') ? '#10b98115' : '#ef444415',
+                    border: `1px solid ${inviteMessage.includes('✅') ? '#10b98140' : '#ef444440'}`,
+                    color: inviteMessage.includes('✅') ? '#10b981' : '#ef4444'
+                  }}>{inviteMessage}</div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
+                  <button type="button" onClick={resetInviteModal}
                     style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13,
-                      border: `1.5px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff',
-                      color: textPrimary, outline: 'none', boxSizing: 'border-box',
-                      transition: 'border-color 0.2s'
-                    }} />
+                      flex: 1, padding: '11px', borderRadius: 12, border: `1px solid ${border}`,
+                      background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary,
+                      fontWeight: 700, fontSize: 13, cursor: 'pointer'
+                    }}>Cancel</button>
+                  <button type="submit" disabled={inviteLoading}
+                    style={{
+                      flex: 1, padding: '11px', borderRadius: 12, border: 'none',
+                      background: `linear-gradient(135deg, ${accent}, ${C.primaryDark})`,
+                      color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      opacity: inviteLoading ? 0.6 : 1, boxShadow: `0 4px 16px ${accent}40`
+                    }}>
+                    {inviteLoading ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                    {inviteLoading ? 'Sending...' : 'Send Invite'}
+                  </button>
                 </div>
-              ))}
+              </form>
+            ) : (
+              <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ padding: '14px 16px', borderRadius: 14, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 14, marginBottom: 4 }}>
+                    <CheckCircle size={16} /> Team Member Created Successfully!
+                  </div>
+                  <p style={{ fontSize: 12, color: textMuted, margin: 0 }}>
+                    Partner Code: <strong style={{ color: textPrimary, fontFamily: 'monospace' }}>{inviteResult.partner_code}</strong>
+                    {inviteResult.temp_password && <> | Temp Pass: <strong style={{ color: textPrimary, fontFamily: 'monospace' }}>{inviteResult.temp_password}</strong></>}
+                  </p>
+                </div>
 
-              {inviteMessage && (
-                <div style={{
-                  padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600,
-                  background: inviteMessage.includes('✅') ? '#10b98115' : '#ef444415',
-                  border: `1px solid ${inviteMessage.includes('✅') ? '#10b98140' : '#ef444440'}`,
-                  color: inviteMessage.includes('✅') ? '#10b981' : '#ef4444'
-                }}>{inviteMessage}</div>
-              )}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Invitation Link</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 12, background: isDark ? '#0a0a0a' : '#f1f5f9', border: `1px solid ${border}` }}>
+                    <input readOnly value={inviteResult.invite_link} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 11, color: accent, fontFamily: 'monospace', padding: '4px 8px' }} />
+                    <button onClick={() => copyLink(inviteResult.invite_link)}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedLink ? 'Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                </div>
 
-              <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
-                <button type="button" onClick={() => { setInviteModalOpen(false); setInviteMessage(''); setInviteForm({ fullName: '', email: '', mobile: '' }); }}
-                  style={{
-                    flex: 1, padding: '11px', borderRadius: 12, border: `1px solid ${border}`,
-                    background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary,
-                    fontWeight: 700, fontSize: 13, cursor: 'pointer'
-                  }}>Cancel</button>
-                <button type="submit" disabled={inviteLoading}
-                  style={{
-                    flex: 1, padding: '11px', borderRadius: 12, border: 'none',
-                    background: `linear-gradient(135deg, ${accent}, ${C.primaryDark})`,
-                    color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    opacity: inviteLoading ? 0.6 : 1, boxShadow: `0 4px 16px ${accent}40`
-                  }}>
-                  {inviteLoading ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
-                  {inviteLoading ? 'Sending...' : 'Send Invite'}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 8 }}>Send Instantly via</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    {[
+                      { href: inviteResult.whatsapp_link, label: 'WhatsApp', icon: MessageSquare, color: '#10b981' },
+                      { href: inviteResult.sms_link, label: 'Mobile SMS', icon: Send, color: '#3b82f6' },
+                      { href: inviteResult.email_link, label: 'Email', icon: Mail, color: '#ef4444' },
+                    ].map(({ href, label, icon: Icon, color }) => (
+                      <a key={label} href={href} target="_blank" rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 8px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
+                        <Icon size={14} /> {label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={resetInviteModal}
+                  style={{ width: '100%', padding: '11px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary, fontWeight: 700, fontSize: 13, cursor: 'pointer', marginTop: 4 }}>
+                  Done & Close
                 </button>
               </div>
-            </form>
+            )}
 
             <div style={{ padding: '12px 24px', background: isDark ? '#0a0a0a' : '#f8faff', borderTop: `1px solid ${border}`, fontSize: 11, color: textMuted }}>
-              Invitation sent via email and SMS with registration link and team join code.
+              Instant invitation links generated for WhatsApp, Mobile SMS, and Email.
             </div>
           </div>
         </div>
