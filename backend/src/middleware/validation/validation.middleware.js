@@ -15,6 +15,18 @@ const validate = (req, res, next) => {
   next();
 };
 
+const isOptionalFieldValid = (pattern, msg) => {
+  return (value) => {
+    if (!value || typeof value !== 'string' || value.trim() === '') {
+      return true;
+    }
+    if (!pattern.test(value.trim())) {
+      throw new Error(msg);
+    }
+    return true;
+  };
+};
+
 // ── Registration: business/bank profile fields ─────────────────────────────
 const registerRules = [
   body('email')
@@ -26,21 +38,17 @@ const registerRules = [
     .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').optional({ checkFalsy: true }).trim(),
-  body('aadhaar').optional({ checkFalsy: true }).trim().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
-  body('pan').optional({ checkFalsy: true }).trim().toUpperCase()
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
+  body('aadhaar').custom(isOptionalFieldValid(/^\d{12}$/, 'Valid 12-digit Aadhaar number required')),
+  body('pan').custom(isOptionalFieldValid(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Valid PAN number required')),
   body('current_address').optional({ checkFalsy: true }).trim(),
-  body('pincode').optional({ checkFalsy: true }).trim().matches(/^\d{6}$/).withMessage('Valid 6-digit Pincode required'),
+  body('pincode').custom(isOptionalFieldValid(/^\d{6}$/, 'Valid 6-digit Pincode required')),
   body('bank_name').optional({ checkFalsy: true }).trim(),
   body('account_number').optional({ checkFalsy: true }).trim(),
-  body('ifsc_code').optional({ checkFalsy: true }).trim().toUpperCase()
-    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
+  body('ifsc_code').custom(isOptionalFieldValid(/^[A-Z]{4}0[A-Z0-9]{6}$/i, 'Valid IFSC code required')),
   body('account_holder_name').optional({ checkFalsy: true }).trim(),
   body('company_name').optional({ checkFalsy: true }).trim(),
   body('company_type').optional({ checkFalsy: true }).trim(),
-  body('gst_number').optional({ checkFalsy: true }).trim().toUpperCase()
-    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
-    .withMessage('Valid GST number required'),
+  body('gst_number').custom(isOptionalFieldValid(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i, 'Valid GST number required')),
   body('business_location').optional({ checkFalsy: true }).trim(),
 ];
 
