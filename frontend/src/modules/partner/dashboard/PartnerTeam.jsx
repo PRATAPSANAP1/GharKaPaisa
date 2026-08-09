@@ -309,7 +309,7 @@ export default function PartnerTeam() {
         `}</style>
         {activeTab === 'dashboard' && <TeamDashboardTab data={dashboardData} loading={loadingDashboard} onSelectMember={setSelectedMemberId} />}
         {activeTab === 'tree' && <TeamTreeTab onSelectMember={setSelectedMemberId} />}
-        {activeTab === 'members' && <TeamMembersTab onSelectMember={setSelectedMemberId} />}
+        {activeTab === 'members' && <TeamMembersTab onSelectMember={setSelectedMemberId} onOpenInvite={() => setInviteModalOpen(true)} />}
         {activeTab === 'analytics' && <TeamAnalyticsTab />}
         {activeTab === 'activity' && <TeamActivityTab onSelectMember={setSelectedMemberId} />}
         {activeTab === 'goals' && <TeamGoalsTab onSelectMember={setSelectedMemberId} />}

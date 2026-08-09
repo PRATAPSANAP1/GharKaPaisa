@@ -7,7 +7,7 @@ import {
 import { useTheme } from '../../../../contexts/ThemeContext';
 import api from '../../../../services/api';
 
-export default function TeamMembersTab({ onSelectMember }) {
+export default function TeamMembersTab({ onSelectMember, onOpenInvite }) {
   const { C, isDark } = useTheme();
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#fff';
@@ -23,12 +23,6 @@ export default function TeamMembersTab({ onSelectMember }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [rankFilter, setRankFilter] = useState('');
   const [kycFilter, setKycFilter] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ name: '', mobile: '', email: '' });
-  const [inviting, setInviting] = useState(false);
-  const [inviteError, setInviteError] = useState(null);
-  const [inviteResult, setInviteResult] = useState(null);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [view, setView] = useState('active'); // 'active' or 'deleted'
   const [deletedMembers, setDeletedMembers] = useState([]);
   const [loadingDeleted, setLoadingDeleted] = useState(false);
@@ -199,7 +193,7 @@ export default function TeamMembersTab({ onSelectMember }) {
             </button>
             {view === 'active' && (
               <>
-                <button onClick={() => setShowInviteModal(true)}
+                <button onClick={onOpenInvite}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
                     background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12,
@@ -375,106 +369,6 @@ export default function TeamMembersTab({ onSelectMember }) {
           </div>
         )}
       </div>
-
-      {/* Invite Modal */}
-      {showInviteModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 460, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
-            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ padding: 10, borderRadius: 12, background: accent + '15', border: `1px solid ${accent}25` }}>
-                  <UserPlus size={16} color={accent} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 800, color: textPrimary, margin: 0 }}>Invite Team Member</h3>
-                  <p style={{ fontSize: 11, color: textMuted, margin: '2px 0 0' }}>Send via WhatsApp, SMS, or Email</p>
-                </div>
-              </div>
-              <button onClick={resetInviteModal} style={{ padding: 6, borderRadius: 8, border: 'none', background: isDark ? '#1a1a1a' : '#f1f5f9', cursor: 'pointer', color: textMuted }}>
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ padding: 22 }}>
-              {inviteError && (
-                <div style={{ padding: '10px 14px', borderRadius: 12, background: '#ef444415', border: '1px solid #ef444430', color: '#ef4444', fontSize: 12, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ShieldAlert size={14} /> {inviteError}
-                </div>
-              )}
-
-              {!inviteResult ? (
-                <form onSubmit={handleSendInvite} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {[
-                    { label: 'Member Name', key: 'name', type: 'text', placeholder: 'Full name (optional)' },
-                    { label: 'Mobile Number', key: 'mobile', type: 'tel', placeholder: '10-digit mobile' },
-                    { label: 'Email Address', key: 'email', type: 'email', placeholder: 'name@example.com' },
-                  ].map(f => (
-                    <div key={f.key}>
-                      <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                      <input type={f.type} value={inviteForm[f.key]} placeholder={f.placeholder}
-                        onChange={e => setInviteForm(p => ({ ...p, [f.key]: e.target.value }))}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13, border: `1.5px solid ${border}`, background: inputBg, color: textPrimary, outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                  ))}
-                  <div style={{ display: 'flex', gap: 10, paddingTop: 8, borderTop: `1px solid ${border}` }}>
-                    <button type="button" onClick={resetInviteModal}
-                      style={{ flex: 1, padding: '10px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                    <button type="submit" disabled={inviting}
-                      style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: inviting ? 0.6 : 1, boxShadow: `0 4px 14px ${accent}40` }}>
-                      {inviting ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
-                      Generate Link
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ padding: '12px 16px', borderRadius: 12, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                      <CheckCircle size={15} /> Invitation Created!
-                    </div>
-                    <p style={{ fontSize: 12, color: textMuted, margin: 0 }}>
-                      Code: <strong style={{ color: textPrimary, fontFamily: 'monospace' }}>{inviteResult.partner_code}</strong>
-                      {inviteResult.temp_password && <> | Pass: <strong style={{ color: textPrimary, fontFamily: 'monospace' }}>{inviteResult.temp_password}</strong></>}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Invitation Link</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 12, background: isDark ? '#0a0a0a' : '#f1f5f9', border: `1px solid ${border}` }}>
-                      <input readOnly value={inviteResult.invite_link} style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 11, color: accent, fontFamily: 'monospace', padding: '4px 8px' }} />
-                      <button onClick={() => copyLink(inviteResult.invite_link)}
-                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {copiedLink ? <Check size={12} /> : <Copy size={12} />}
-                        {copiedLink ? 'Copied!' : 'Copy'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
-                    {[
-                      { href: inviteResult.whatsapp_link, label: 'WhatsApp', icon: MessageSquare, color: '#10b981' },
-                      { href: inviteResult.sms_link, label: 'SMS', icon: Send, color: '#3b82f6' },
-                      { href: inviteResult.email_link, label: 'Email', icon: Mail, color: '#ef4444' },
-                    ].map(({ href, label, icon: Icon, color }) => (
-                      <a key={label} href={href} target="_blank" rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: color + '15', color, border: `1px solid ${color}30`, fontSize: 11, fontWeight: 700, textDecoration: 'none', transition: 'all 0.2s' }}>
-                        <Icon size={13} /> {label}
-                      </a>
-                    ))}
-                    <button onClick={handleNativeShare}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 4px', borderRadius: 12, background: accent + '15', color: accent, border: `1px solid ${accent}30`, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      <Share2 size={13} /> Share
-                    </button>
-                  </div>
-
-                  <button onClick={resetInviteModal}
-                    style={{ padding: '10px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9', color: textPrimary, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Done</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
