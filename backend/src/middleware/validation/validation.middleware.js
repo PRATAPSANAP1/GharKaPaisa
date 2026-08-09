@@ -17,10 +17,14 @@ const validate = (req, res, next) => {
 
 const isOptionalFieldValid = (pattern, msg) => {
   return (value) => {
-    if (!value || typeof value !== 'string' || value.trim() === '') {
+    if (value === undefined || value === null) {
       return true;
     }
-    if (!pattern.test(value.trim())) {
+    const strVal = String(value).trim();
+    if (strVal === '' || strVal === 'null' || strVal === 'undefined') {
+      return true;
+    }
+    if (!pattern.test(strVal)) {
       throw new Error(msg);
     }
     return true;
