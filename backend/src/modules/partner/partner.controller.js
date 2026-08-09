@@ -25,7 +25,15 @@ const getProfile = async (req, res, next) => {
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
     const isSuperAdmin = req.user && req.user.role === 'SUPER_ADMIN';
     const isAdmin = req.user && req.user.role === 'ADMIN';
-    const shouldMask = (isAdmin && isPrivacyOn) || (!isSuperAdmin && !isAdmin);
+    const isTeamMember = req.user && req.user.role === 'TEAM_MEMBER';
+    const isPartner = req.user && req.user.role === 'PARTNER';
+    
+    // Check if viewer is a team member viewing a partner (not themselves)
+    const isTeamMemberViewingPartner = isTeamMember && Partner.user_id !== req.user.id;
+    // Check if viewer is a partner viewing a team member (not themselves)
+    const isPartnerViewingTeamMember = isPartner && Partner.user_id !== req.user.id;
+
+    const shouldMask = (isAdmin && isPrivacyOn) || (!isSuperAdmin && !isAdmin) || isTeamMemberViewingPartner || isPartnerViewingTeamMember;
 
     // Decrypt bank account number
     if (Partner && Partner.account_number) {
@@ -593,8 +601,8 @@ const addTeamMember = async (req, res, next) => {
     const { generateInviteToken } = require('../../utils/helpers/inviteToken');
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
     const inviteToken = generateInviteToken({ partnerCode: parentPartner.partner_code, role: 'TEAM_MEMBER' });
-    const inviteLink = `${appUrl}/register?token=${inviteToken}`;
-    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nClick the link to complete your registration and KYC verification: ${inviteLink}\n\nWelcome aboard!`;
+    const inviteLink = `${appUrl}/login?token=${inviteToken}`;
+    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nClick the link to login and complete your KYC verification: ${inviteLink}\n\nWelcome aboard!`;
 
     const cleanMobile = String(mobile).replace(/\D/g, '');
 
@@ -883,6 +891,7 @@ const completeTrainingModule = async (req, res, next) => {
 const getTeamMembers = async (req, res, next) => {
   try {
     const { PartnerId } = req.params;
+    const isPartner = req.user && req.user.role === 'PARTNER';
     
     // Check if parent_partner_id column exists safely (in case migration is pending)
     let hasParentCol = true;
@@ -910,6 +919,14 @@ const getTeamMembers = async (req, res, next) => {
       WHERE ap.parent_partner_id = $1
       ORDER BY u.created_at DESC
     `, [PartnerId]);
+
+    // Mask personal details for partners viewing team members
+    if (isPartner) {
+      team.forEach(member => {
+        member.email = '***@***.***';
+        member.mobile = '******';
+      });
+    }
 
     return success(res, team);
   } catch (err) {

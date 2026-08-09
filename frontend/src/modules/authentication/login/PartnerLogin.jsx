@@ -123,6 +123,16 @@ export default function PartnerLogin() {
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [forgotError, setForgotError] = useState("");
 
+  // Check for invitation token in URL
+  const [inviteToken, setInviteToken] = useState(null);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    if (token && token.startsWith('inv_')) {
+      setInviteToken(token);
+    }
+  }, [location.search]);
+
   // Handle forgot password submit
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
@@ -569,6 +579,10 @@ export default function PartnerLogin() {
       const profile = await getMe();
       loginStore(profile, loginRes.idToken);
 
+      // Check if team member needs to complete profile (from invitation)
+      const needsProfileCompletion = inviteToken && profile.role?.toUpperCase() === 'TEAM_MEMBER' && 
+        (!profile.first_name || !profile.last_name || !profile.mobile || !profile.email);
+
       if (loginRes.redirect) {
         if (loginRes.redirect.startsWith('http')) {
           window.location.href = loginRes.redirect;
@@ -577,6 +591,9 @@ export default function PartnerLogin() {
           const targetRedirect = loginRes.redirect === '/superadmin/dashboard' ? '/super-admin/dashboard' : loginRes.redirect;
           navigate(location.state?.from?.pathname || targetRedirect);
         }
+      } else if (needsProfileCompletion) {
+        // Redirect to profile page for team members to complete registration
+        navigate('/partner/profile');
       } else {
         const role = profile.role?.toUpperCase();
         if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/dashboard');

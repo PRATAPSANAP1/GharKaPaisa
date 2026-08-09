@@ -58,9 +58,16 @@ async function getMembersList(req, res, next) {
   try {
     const partnerId = await resolvePartnerId(req);
     
+    // Pass viewer role for masking personal details
+    const options = { 
+      ...req.query, 
+      viewerRole: req.user?.role 
+    };
+    
     // If CSV export is requested
     if (req.query.export === 'csv' || req.query.format === 'csv') {
-      const options = { ...req.query, limit: 10000, page: 1 };
+      options.limit = 10000;
+      options.page = 1;
       const result = await teamService.getTeamMembersList(partnerId, options);
       
       const headers = ['Partner Code', 'Full Name', 'Mobile', 'Email', 'Rank', 'Level', 'KYC Status', 'Status', 'Total Business (INR)', 'Applications Count', 'Joined Date'];
@@ -88,7 +95,7 @@ async function getMembersList(req, res, next) {
       return res.status(200).send(csvRows.join('\n'));
     }
 
-    const result = await teamService.getTeamMembersList(partnerId, req.query);
+    const result = await teamService.getTeamMembersList(partnerId, options);
     return res.json({
       success: true,
       data: result.members,

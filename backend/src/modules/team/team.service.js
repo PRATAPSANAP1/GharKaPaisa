@@ -327,6 +327,9 @@ async function getTeamMembersList(partnerId, options = {}) {
   const page = Math.max(1, parseInt(options.page) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(options.limit) || 20));
   const offset = (page - 1) * limit;
+  
+  // Check if viewer is a partner (not admin/super_admin)
+  const isPartner = options.viewerRole === 'PARTNER';
 
   let whereClauses = [`r.parent_partner_id = $1`];
   let params = [partnerId];
@@ -419,8 +422,8 @@ async function getTeamMembersList(partnerId, options = {}) {
     first_name: m.first_name,
     last_name: m.last_name,
     profile_photo_url: m.profile_photo_url,
-    mobile: m.mobile || 'N/A',
-    email: m.email || 'N/A',
+    mobile: isPartner ? '******' : (m.mobile || 'N/A'),
+    email: isPartner ? '***@***.***' : (m.email || 'N/A'),
     rank: m.rank || 'Partner',
     status: m.user_status,
     kyc_status: m.kyc_status,
@@ -1005,9 +1008,9 @@ async function sendTeamInvitation(partnerId, { name, mobile, email }) {
   const { generateInviteToken } = require('../../utils/helpers/inviteToken');
   const frontendUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
   const inviteToken = generateInviteToken({ partnerCode: p.partner_code, role: 'TEAM_MEMBER' });
-  const referralLink = `${frontendUrl}/register?token=${inviteToken}`;
+  const referralLink = `${frontendUrl}/login?token=${inviteToken}`;
   const inviterName = p.first_name || 'Your Partner';
-  const message = `Hi ${name || 'there'}! ${inviterName} has invited you to join GharKaPaisa — India's top credit card & loan referral platform. Earn commissions on every approved application! Register here: ${referralLink}`;
+  const message = `Hi ${name || 'there'}! ${inviterName} has invited you to join GharKaPaisa — India's top credit card & loan referral platform. Earn commissions on every approved application! Login here: ${referralLink}`;
 
   const channels = [];
 

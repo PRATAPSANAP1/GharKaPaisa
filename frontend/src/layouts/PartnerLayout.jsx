@@ -956,11 +956,16 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
     };
   }, [profileDropdownOpen, setProfileDropdownOpen]);
 
+  const isTeamMember = user?.role === 'TEAM_MEMBER';
+
   const profileMenuItems = [
     { id: 'profile', label: 'Profile Hub', path: '/partner/profile', icon: MdAccountCircle },
     { id: 'kyc-centre', label: 'KYC Centre', path: '/partner/kyc-centre', icon: MdVerifiedUser },
     { id: 'wallet', label: 'Wallet', path: '/partner/wallet', icon: MdAccountBalanceWallet },
-    { id: 'team-network', label: 'Manage Team', path: '/partner/team', icon: MdGroup },
+    ...(isTeamMember 
+      ? [{ id: 'referral', label: 'Refer', path: '/partner/referral', icon: MdGroup }]
+      : [{ id: 'team-network', label: 'Manage Team', path: '/partner/team', icon: MdGroup }]
+    ),
     { id: 'support', label: 'Support Center', path: '/partner/support', icon: MdSupportAgent },
     { id: 'settings', label: 'Settings', path: '/partner/settings', icon: MdSettings },
   ];
