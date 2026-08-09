@@ -367,6 +367,75 @@ const sendPartnerStatusUpdateEmail = async (email, firstName, lastName, accountS
   });
 };
 
+const sendTeamInvitationEmail = async ({ email, firstName, inviterCode, tempPassword, inviteLink }) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f4f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px; background:#ffffff; border-radius:16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow:hidden;">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #0d9488, #0f766e); padding: 32px 40px; text-align: center;">
+                  <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:800; letter-spacing:-0.5px;">GharKaPaisa</h1>
+                  <p style="margin:6px 0 0 0; color:rgba(255,255,255,0.85); font-size:13px; font-weight:500;">Team Member Invitation</p>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding: 36px 40px 20px;">
+                  <h2 style="margin:0 0 12px 0; color:#1a202c; font-size:18px; font-weight:700;">Hi ${firstName || 'Partner'},</h2>
+                  <p style="margin:0 0 20px 0; color:#4a5568; font-size:14px; line-height:1.6;">
+                    You have been invited to join the <strong>GharKaPaisa Partner Network</strong> as a Team Member! Below are your temporary login credentials. Please log in using your email and temporary password to set your new password, verify your contacts, and complete your profile & KYC setup.
+                  </p>
+                  
+                  <!-- Credentials Box -->
+                  <div style="background:#f8fafc; border: 1.5px dashed #0d9488; border-radius:12px; padding: 20px; margin: 24px 0;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;"><strong>Inviter Code:</strong> <span style="font-family: monospace; color: #0d9488; font-weight: bold;">${inviterCode || ''}</span></p>
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;"><strong>Login Email:</strong> <span style="font-family: monospace; color: #0f172a; font-weight: bold;">${email}</span></p>
+                    <p style="margin: 0; font-size: 14px; color: #334155;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-weight: bold; color: #0d9488; background: #ccfbf1; padding: 4px 10px; border-radius: 6px; font-size: 16px;">${tempPassword}</span></p>
+                  </div>
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center; margin: 28px 0 12px 0;">
+                    <a href="${inviteLink}" target="_blank" style="display:inline-block; background:#0d9488; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none; padding: 14px 32px; border-radius:8px; box-shadow: 0 4px 12px rgba(13,148,136,0.35);">Log In & Complete Setup</a>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
+                  <p style="margin:0; color:#a0aec0; font-size:11px;">
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
+                    <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Invitation to Join GharKaPaisa Team - Login Credentials`,
+    html,
+    text: `Hi ${firstName}, you are invited to join GharKaPaisa Team!\nEmail: ${email}\nTemporary Password: ${tempPassword}\nLogin link: ${inviteLink}`
+  });
+};
+
 module.exports = {
   sendEmail,
   sendOtpEmail,
@@ -375,5 +444,7 @@ module.exports = {
   sendKycUnderReviewEmail,
   sendKycApprovedEmail,
   sendKycRejectedEmail,
-  sendPartnerStatusUpdateEmail
+  sendPartnerStatusUpdateEmail,
+  sendTeamInvitationEmail
 };
+

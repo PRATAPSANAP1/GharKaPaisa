@@ -624,37 +624,15 @@ const addTeamMember = async (req, res, next) => {
       console.warn('[addTeamMember] SMS send error:', smsErr.message);
     }
 
-    // Send automated Email to the invitee's email address
+    // Send automated Email to the invitee's email address with temporary password and login email
     try {
-      const { sendEmail } = require('../../services/email/email.service');
-      await sendEmail({
-        to: email,
-        subject: 'Invitation to Join GharKaPaisa Team - Login Credentials',
-        text: messageText,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #0D5CAB; margin: 0;">Welcome to GharKaPaisa Team</h2>
-              <p style="color: #64748B; font-size: 14px; margin-top: 4px;">India's Premier Financial Partner Network</p>
-            </div>
-            <p style="font-size: 15px; color: #1e293b;">Hi <strong>${memberFirstName}</strong>,</p>
-            <p style="font-size: 14px; color: #334155; line-height: 1.6;">
-              You have been invited to join the GharKaPaisa Partner Network as a Team Member! Use the temporary login credentials below to log in, set your new password, verify your details, and complete your KYC setup.
-            </p>
-            <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 18px; margin: 20px 0;">
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;"><strong>Inviter Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${parentPartner.partner_code}</span></p>
-              <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;"><strong>Login Email:</strong> <span style="font-family: monospace; color: #0F172A; font-weight: bold;">${email}</span></p>
-              <p style="margin: 0; font-size: 14px; color: #334155;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-weight: bold; color: #0D6EFD; background: #E0F2FE; padding: 3px 8px; border-radius: 4px; font-size: 15px;">${tempPassword}</span></p>
-            </div>
-            <div style="text-align: center; margin: 25px 0;">
-              <a href="${inviteLink}" style="background: linear-gradient(135deg, #0D5CAB 0%, #083E7A 100%); color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(13, 92, 171, 0.3);">
-                Log In & Complete Setup
-              </a>
-            </div>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">If you did not request this invite, please contact support@gharkapaisa.in</p>
-          </div>
-        `
+      const { sendTeamInvitationEmail } = require('../../services/email/email.service');
+      await sendTeamInvitationEmail({
+        email,
+        firstName: memberFirstName,
+        inviterCode: parentPartner.partner_code,
+        tempPassword,
+        inviteLink
       });
     } catch (emailErr) {
       console.warn('[addTeamMember] Email send error:', emailErr.message);
