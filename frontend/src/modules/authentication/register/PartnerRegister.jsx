@@ -82,6 +82,21 @@ const LANGUAGES = [
   { code: 'or', flag: '🇮🇳', label: 'ଓଡ଼ିଆ' }
 ];
 
+const DRAFT_STORAGE_KEY = 'partner_registration_draft_v1';
+
+const loadSavedDraft = () => {
+  try {
+    const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (e) {
+    console.warn("Failed to load registration draft:", e);
+  }
+  return null;
+};
+
 export default function PartnerRegister() {
   const navigate = useNavigate();
   const onBack = () => navigate('/login');
@@ -90,24 +105,26 @@ export default function PartnerRegister() {
   const { C, isDark, toggle } = useTheme();
   const S = makeS(C);
 
+  const savedDraft = loadSavedDraft();
+
   // Onboarding Screen Steps: 1 = Welcome, 2 = Preferences, 3 = Register Forms
-  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingStep, setOnboardingStep] = useState(savedDraft?.onboardingStep ?? 1);
   const [selectedLang, setSelectedLang] = useState(i18n.language || "en");
 
-  const [step, setStep] = useState(0); // 0 = Personal, 1 = Business, 2 = Bank, 3 = KYC
+  const [step, setStep] = useState(savedDraft?.step ?? 0); // 0 = Personal, 1 = Business, 2 = Bank, 3 = KYC
   const [err, setErr] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null); // { Partner_code }
 
   const [fieldErrors, setFieldErrors] = useState({});
-  const [fullName, setFullName] = useState("");
+  const [fullName, setFullName] = useState(savedDraft?.fullName ?? "");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Flat form state for all steps
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     // Step 0 – Personal
     firstName: "", lastName: "", mobile: "",
     email: "", password: "", confirmPassword: "",
@@ -126,7 +143,29 @@ export default function PartnerRegister() {
     // Step 3 – KYC text
     pan: "",
     termsAgreed: false,
-  });
+    ...(savedDraft?.form || {})
+  }));
+
+  // Auto-save form draft to localStorage on change
+  useEffect(() => {
+    if (success) {
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch (e) {}
+      return;
+    }
+    try {
+      const { panFile, chequeFile, ...formToSave } = form;
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        onboardingStep,
+        step,
+        fullName,
+        form: formToSave,
+      }));
+    } catch (e) {
+      console.warn("Failed to persist registration draft:", e);
+    }
+  }, [onboardingStep, step, fullName, form, success]);
 
   const set = (key) => (e) => {
     setForm(f => ({ ...f, [key]: e.target.value }));
