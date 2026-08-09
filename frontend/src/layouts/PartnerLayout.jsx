@@ -6,7 +6,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import PartnerMobileBottomNav from '../components/PartnerMobileBottomNav';
-import PartnerBannerCarousel from '../components/PartnerBannerCarousel';
 import {
   MdDashboard, MdStorefront, MdCreditCard, MdLeaderboard,
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
@@ -806,13 +805,7 @@ export default function PartnerLayout() {
           </div>
         )}
 
-        {/* Promotion Banner Carousel */}
-        <div style={{
-          padding: isMobile ? '12px 16px' : '16px 24px',
-          flexShrink: 0,
-        }}>
-          <PartnerBannerCarousel showOnlyRefer={user?.role === 'TEAM_MEMBER'} />
-        </div>
+        {/* Main Content Body */}
 
         <div style={{
           flex: 1,
