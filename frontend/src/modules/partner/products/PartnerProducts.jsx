@@ -56,7 +56,7 @@ const getMarketingBadges = (p) => {
   return badges.slice(0, 2);
 };
 
-export default function PartnerProducts({ initialSearch = '' }) {
+export default function PartnerProducts({ initialSearch = '', initialBank = '', initialCategory = '' }) {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -117,8 +117,8 @@ export default function PartnerProducts({ initialSearch = '' }) {
   const location = useLocation();
 
   const [search, setSearch] = useState(() => initialSearch || searchParams.get('q') || searchParams.get('search') || "");
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [activeBank, setActiveBank] = useState("All Banks");
+  const [activeCategory, setActiveCategory] = useState(() => initialCategory || searchParams.get('category') || "all");
+  const [activeBank, setActiveBank] = useState(() => initialBank || searchParams.get('bank') || "All Banks");
   const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
   const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
   const [sortBy, setSortBy] = useState("featured");
@@ -127,7 +127,15 @@ export default function PartnerProducts({ initialSearch = '' }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [cardsPerPage, setCardsPerPage] = useState(12);
 
-  // Sync initialSearch or URL q param
+  // Sync initialBank, initialCategory, or initialSearch props
+  useEffect(() => {
+    if (initialBank) setActiveBank(initialBank);
+  }, [initialBank]);
+
+  useEffect(() => {
+    if (initialCategory) setActiveCategory(initialCategory);
+  }, [initialCategory]);
+
   useEffect(() => {
     if (initialSearch) {
       setSearch(initialSearch);
@@ -326,7 +334,12 @@ export default function PartnerProducts({ initialSearch = '' }) {
     } else {
       matchCategory = pCat === activeCategory;
     }
-    const matchBank = activeBank === 'All Banks' || p.bank_code === activeBank || p.name.includes(activeBank);
+    const activeBankLower = (activeBank || '').toLowerCase().trim();
+    const matchBank = !activeBank || activeBankLower === 'all banks' || activeBankLower === 'all' ||
+      (p.bank_code && p.bank_code.toLowerCase() === activeBankLower) ||
+      (p.bank_name && p.bank_name.toLowerCase().includes(activeBankLower)) ||
+      (p.bank_slug && p.bank_slug.toLowerCase() === activeBankLower) ||
+      (p.name && p.name.toLowerCase().includes(activeBankLower));
     
     // Commission Filter
     const matchCommission = parseFloat(p.commission_value || 0) >= minCommission;

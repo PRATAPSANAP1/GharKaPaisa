@@ -56,8 +56,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
         overflow: 'hidden',
         borderRadius: '12px',
         cursor: 'pointer',
-        minHeight: '80px',
-        maxHeight: '120px',
+        height: '100px',
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -86,7 +85,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
+                objectPosition: 'center',
                 display: 'block',
               }}
             />

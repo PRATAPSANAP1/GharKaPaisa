@@ -916,7 +916,7 @@ const getTeamMembers = async (req, res, next) => {
              (SELECT COALESCE(available_balance, 0)::float FROM partner_wallets WHERE partner_id = ap.id) as wallet_balance
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
-      WHERE ap.parent_partner_id = $1
+      WHERE ap.parent_partner_id = $1 AND ap.deleted_at IS NULL
       ORDER BY u.created_at DESC
     `, [PartnerId]);
 
@@ -929,6 +929,102 @@ const getTeamMembers = async (req, res, next) => {
     }
 
     return success(res, team);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /partner/:PartnerId/team/:TeamMemberId (Soft delete team member)
+const removeTeamMember = async (req, res, next) => {
+  try {
+    const { PartnerId, TeamMemberId } = req.params;
+    
+    // Verify the team member belongs to this partner
+    const { rows: [member] } = await query(`
+      SELECT id FROM partner_profiles 
+      WHERE id = $1 AND parent_partner_id = $2 AND deleted_at IS NULL
+    `, [TeamMemberId, PartnerId]);
+    
+    if (!member) {
+      return notFound(res, 'Team member not found or already removed');
+    }
+    
+    // Soft delete by setting deleted_at timestamp
+    await query(`
+      UPDATE partner_profiles 
+      SET deleted_at = NOW(), 
+          parent_partner_id = NULL
+      WHERE id = $1
+    `, [TeamMemberId]);
+    
+    return success(res, {}, 'Team member removed successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /partner/:PartnerId/team/deleted (List deleted team members)
+const getDeletedTeamMembers = async (req, res, next) => {
+  try {
+    const { PartnerId } = req.params;
+    const isPartner = req.user && req.user.role === 'PARTNER';
+    
+    const { rows: deletedTeam } = await query(`
+      SELECT ap.id, ap.partner_code, ap.first_name, ap.last_name, ap.kyc_status,
+             u.email, u.mobile, u.status, u.created_at, ap.deleted_at,
+             (SELECT COUNT(*)::int FROM applications WHERE partner_id = ap.id) as applications_count
+      FROM partner_profiles ap
+      JOIN users u ON u.id = ap.user_id
+      WHERE ap.id IN (
+        SELECT child_partner_id FROM partner_team_relationships 
+        WHERE parent_partner_id = $1
+      ) AND ap.deleted_at IS NOT NULL
+      ORDER BY ap.deleted_at DESC
+    `, [PartnerId]);
+
+    // Mask personal details for partners viewing team members
+    if (isPartner) {
+      deletedTeam.forEach(member => {
+        member.email = '***@***.***';
+        member.mobile = '******';
+      });
+    }
+
+    return success(res, deletedTeam);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /partner/:PartnerId/team/:TeamMemberId/reactivate (Reactivate deleted team member)
+const reactivateTeamMember = async (req, res, next) => {
+  try {
+    const { PartnerId, TeamMemberId } = req.params;
+    
+    // Verify the team member was previously under this partner
+    const { rows: [member] } = await query(`
+      SELECT ap.id FROM partner_profiles ap
+      WHERE ap.id = $1 
+        AND ap.deleted_at IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM partner_team_relationships ptr
+          WHERE ptr.child_partner_id = $1 AND ptr.parent_partner_id = $2
+        )
+    `, [TeamMemberId, PartnerId]);
+    
+    if (!member) {
+      return notFound(res, 'Deleted team member not found');
+    }
+    
+    // Reactivate by clearing deleted_at and restoring parent relationship
+    await query(`
+      UPDATE partner_profiles 
+      SET deleted_at = NULL, 
+          parent_partner_id = $2
+      WHERE id = $1
+    `, [TeamMemberId, PartnerId]);
+    
+    return success(res, {}, 'Team member reactivated successfully');
   } catch (err) {
     next(err);
   }
@@ -1667,6 +1763,9 @@ module.exports = {
   approvePartnerKYC,
   addTeamMember,
   getTeamMembers,
+  removeTeamMember,
+  getDeletedTeamMembers,
+  reactivateTeamMember,
   listPartnerCustomers,
   createPartnerCustomer,
   getTrainingModules,

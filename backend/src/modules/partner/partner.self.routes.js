@@ -66,4 +66,27 @@ router.post('/team/invite', requireApprovedPartner, partnerCtrl.addTeamMember);
 router.post('/share-link', requireApprovedPartner, partnerShareCtrl.generateShareLink);
 router.get('/share-tracking', requireApprovedPartner, partnerShareCtrl.getPartnerShareTracking);
 
+// Wallet Routes
+const walletCtrl = require('../wallet/controller.js');
+router.get('/wallet', requirePartner, walletCtrl.getWallet);
+router.get('/wallet/transactions', requirePartner, walletCtrl.getTransactions);
+router.post('/wallet/withdraw', requireApprovedPartner, walletCtrl.requestWithdrawal);
+
+// Notifications Routes
+const notifCtrl = require('../notifications/controller.js');
+router.get('/notifications', requirePartner, notifCtrl.getNotifications);
+router.patch('/notifications/:id/read', requirePartner, notifCtrl.markRead);
+router.patch('/notifications/read-all', requirePartner, notifCtrl.markAllRead);
+
+// Support Routes
+const supportCtrl = require('../support/support.controller.js');
+router.get('/support-tickets', requirePartner, supportCtrl.listTickets);
+router.post('/support-tickets', requirePartner, supportCtrl.createTicket);
+router.get('/support-tickets/:id', requirePartner, supportCtrl.getTicketDetail);
+router.post('/support-tickets/:id/reply', requirePartner, supportCtrl.addReply);
+
+// Settings Routes (Profile, Password, Bank Details)
+router.put('/profile', requirePartner, partnerCtrl.updateProfile);
+router.post('/change-password', requirePartner, partnerCtrl.changePassword);
+
 module.exports = router;

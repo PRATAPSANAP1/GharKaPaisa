@@ -29,8 +29,12 @@ export default function TeamMembersTab({ onSelectMember }) {
   const [inviteError, setInviteError] = useState(null);
   const [inviteResult, setInviteResult] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [view, setView] = useState('active'); // 'active' or 'deleted'
+  const [deletedMembers, setDeletedMembers] = useState([]);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
 
   useEffect(() => { fetchMembers(1); }, [search, statusFilter, rankFilter, kycFilter]);
+  useEffect(() => { if (view === 'deleted') fetchDeletedMembers(); }, [view]);
 
   const fetchMembers = async (page = 1) => {
     setLoading(true);
@@ -46,6 +50,42 @@ export default function TeamMembersTab({ onSelectMember }) {
         setPagination(res.data.pagination || { page: 1, limit: 20, total: 0, total_pages: 1 });
       }
     } catch { /* silent */ } finally { setLoading(false); }
+  };
+
+  const fetchDeletedMembers = async () => {
+    setLoadingDeleted(true);
+    try {
+      const res = await api.get(`/team/deleted`);
+      if (res.data?.success) {
+        setDeletedMembers(res.data.data || []);
+      }
+    } catch { /* silent */ } finally { setLoadingDeleted(false); }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    if (!window.confirm('Are you sure you want to remove this team member? They will be moved to deleted accounts and can be reactivated later.')) return;
+
+    try {
+      const res = await api.delete(`/team/${memberId}`);
+      if (res.data?.success) {
+        fetchMembers(pagination.page);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove team member');
+    }
+  };
+
+  const handleReactivateMember = async (memberId) => {
+    if (!window.confirm('Are you sure you want to reactivate this team member?')) return;
+
+    try {
+      const res = await api.post(`/team/${memberId}/reactivate`);
+      if (res.data?.success) {
+        fetchDeletedMembers();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reactivate team member');
+    }
   };
 
   const handleSendInvite = async (e) => {
@@ -141,26 +181,42 @@ export default function TeamMembersTab({ onSelectMember }) {
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
           <div>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: textPrimary, margin: 0 }}>Team Members</h3>
-            <p style={{ fontSize: 12, color: textMuted, margin: '3px 0 0' }}>Total {pagination.total} members in your downline</p>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: textPrimary, margin: 0 }}>
+              {view === 'active' ? 'Team Members' : 'Deleted Team Members'}
+            </h3>
+            <p style={{ fontSize: 12, color: textMuted, margin: '3px 0 0' }}>
+              {view === 'active' ? `Total ${pagination.total} members in your downline` : `${deletedMembers.length} deleted team members`}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => setShowInviteModal(true)}
+            <button onClick={() => setView(view === 'active' ? 'deleted' : 'active')}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12,
-                boxShadow: `0 4px 14px ${accent}40`
+                display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, cursor: 'pointer',
+                background: view === 'active' ? inputBg : accent + '15', color: view === 'active' ? textPrimary : accent, fontWeight: 700, fontSize: 12,
               }}>
-              <UserPlus size={14} /> Invite Member
+              {view === 'active' ? <UserX size={14} /> : <UserCheck size={14} />}
+              {view === 'active' ? 'View Deleted' : 'View Active'}
             </button>
-            <button onClick={handleExportCSV}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 700, fontSize: 12,
-                boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
-              }}>
-              <Download size={14} /> Export CSV
-            </button>
+            {view === 'active' && (
+              <>
+                <button onClick={() => setShowInviteModal(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12,
+                    boxShadow: `0 4px 14px ${accent}40`
+                  }}>
+                  <UserPlus size={14} /> Invite Member
+                </button>
+                <button onClick={handleExportCSV}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 700, fontSize: 12,
+                    boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                  }}>
+                  <Download size={14} /> Export CSV
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -199,7 +255,7 @@ export default function TeamMembersTab({ onSelectMember }) {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading || (view === 'deleted' && loadingDeleted) ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
                     <td colSpan={8} style={{ padding: 12 }}>
@@ -207,60 +263,99 @@ export default function TeamMembersTab({ onSelectMember }) {
                     </td>
                   </tr>
                 ))
-              ) : members.length > 0 ? members.map((m, i) => (
-                <tr key={m.id} className="member-tr" style={{ borderBottom: `1px solid ${border}`, animation: `fadeIn 0.3s ease ${i * 40}ms both` }}>
-                  <td style={{ padding: '12px 14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '15', border: `1px solid ${accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: accent, overflow: 'hidden', fontSize: 11, flexShrink: 0 }}>
-                        {m.profile_photo_url ? <img src={m.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : m.full_name?.slice(0, 2).toUpperCase()}
+              ) : view === 'active' ? (
+                members.length > 0 ? members.map((m, i) => (
+                  <tr key={m.id} className="member-tr" style={{ borderBottom: `1px solid ${border}`, animation: `fadeIn 0.3s ease ${i * 40}ms both` }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '15', border: `1px solid ${accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: accent, overflow: 'hidden', fontSize: 11, flexShrink: 0 }}>
+                          {m.profile_photo_url ? <img src={m.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : m.full_name?.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div onClick={() => onSelectMember(m.id)} style={{ fontWeight: 700, color: textPrimary, cursor: 'pointer', fontSize: 13 }}>{m.full_name}</div>
+                          <div style={{ fontSize: 11, color: textMuted }}>{m.mobile}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div onClick={() => onSelectMember(m.id)} style={{ fontWeight: 700, color: textPrimary, cursor: 'pointer', fontSize: 13 }}>{m.full_name}</div>
-                        <div style={{ fontSize: 11, color: textMuted }}>{m.mobile}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 14px' }}>
-                    <div style={{ fontWeight: 700, color: textPrimary }}>{m.partner_code}</div>
-                    <div style={{ fontSize: 11, color: textMuted }}>Level {m.level}</div>
-                  </td>
-                  <td style={{ padding: '12px 14px' }}>
-                    <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 700, background: accent + '15', color: accent, border: `1px solid ${accent}25` }}>{m.rank}</span>
-                  </td>
-                  <td style={{ padding: '12px 14px' }}>
-                    <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', background: m.status === 'active' ? '#10b98115' : '#ef444415', color: m.status === 'active' ? '#10b981' : '#ef4444', border: `1px solid ${m.status === 'active' ? '#10b98130' : '#ef444430'}` }}>{m.status}</span>
-                  </td>
-                  <td style={{ padding: '12px 14px' }}>
-                    <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, background: m.kyc_status === 'approved' ? '#10b98115' : '#f59e0b15', color: m.kyc_status === 'approved' ? '#10b981' : '#f59e0b' }}>
-                      {m.kyc_status === 'approved' ? 'Verified' : 'Pending'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>{fmt(m.total_business)}</td>
-                  <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>{fmt(m.total_commission)}</td>
-                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <button className="btn-view" onClick={() => onSelectMember(m.id)}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
-                        360°
-                      </button>
-                      {m.status === 'active' ? (
-                        <button onClick={() => handleToggleMemberStatus(m.id, m.status)}
-                          title="Remove / Deactivate Member"
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{m.partner_code}</div>
+                      <div style={{ fontSize: 11, color: textMuted }}>Level {m.level}</div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 700, background: accent + '15', color: accent, border: `1px solid ${accent}25` }}>{m.rank}</span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', background: m.status === 'active' ? '#10b98115' : '#ef444415', color: m.status === 'active' ? '#10b981' : '#ef4444', border: `1px solid ${m.status === 'active' ? '#10b98130' : '#ef444430'}` }}>{m.status}</span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, background: m.kyc_status === 'approved' ? '#10b98115' : '#f59e0b15', color: m.kyc_status === 'approved' ? '#10b981' : '#f59e0b' }}>
+                        {m.kyc_status === 'approved' ? 'Verified' : 'Pending'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>{fmt(m.total_business)}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>{fmt(m.total_commission)}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <button className="btn-view" onClick={() => onSelectMember(m.id)}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
+                          360°
+                        </button>
+                        <button onClick={() => handleRemoveMember(m.id)}
+                          title="Remove Team Member"
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid #ef444430', background: '#ef444415', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
                           <UserX size={12} /> Remove
                         </button>
-                      ) : (
-                        <button onClick={() => handleToggleMemberStatus(m.id, m.status)}
-                          title="Reactivate Member"
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={8} style={{ padding: '40px 0', textAlign: 'center', color: textMuted, fontSize: 13 }}>No team members match the filters</td></tr>
+                )
+              ) : (
+                // Deleted members view
+                deletedMembers.length > 0 ? deletedMembers.map((m, i) => (
+                  <tr key={m.id} className="member-tr" style={{ borderBottom: `1px solid ${border}`, animation: `fadeIn 0.3s ease ${i * 40}ms both` }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#ef444415', border: `1px solid #ef444430`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#ef4444', fontSize: 11, flexShrink: 0 }}>
+                          {m.full_name?.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: textPrimary, fontSize: 13 }}>{m.full_name}</div>
+                          <div style={{ fontSize: 11, color: textMuted }}>{m.mobile}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{m.partner_code}</div>
+                      <div style={{ fontSize: 11, color: textMuted }}>Deleted: {m.deleted_at ? new Date(m.deleted_at).toLocaleDateString() : 'N/A'}</div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 700, background: '#ef444415', color: '#ef4444', border: `1px solid #ef444430` }}>{m.rank}</span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', background: '#ef444415', color: '#ef4444', border: `1px solid #ef444430` }}>Deleted</span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, background: m.kyc_status === 'approved' ? '#10b98115' : '#f59e0b15', color: m.kyc_status === 'approved' ? '#10b981' : '#f59e0b' }}>
+                        {m.kyc_status === 'approved' ? 'Verified' : 'Pending'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#ef4444' }}>{fmt(m.total_business || 0)}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#ef4444' }}>{fmt(m.total_commission || 0)}</td>
+                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <button onClick={() => handleReactivateMember(m.id)}
+                          title="Reactivate Team Member"
                           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, border: '1px solid #10b98130', background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
                           <UserCheck size={12} /> Reactivate
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr><td colSpan={8} style={{ padding: '40px 0', textAlign: 'center', color: textMuted, fontSize: 13 }}>No team members match the filters</td></tr>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={8} style={{ padding: '40px 0', textAlign: 'center', color: textMuted, fontSize: 13 }}>No deleted team members</td></tr>
+                )
               )}
             </tbody>
           </table>

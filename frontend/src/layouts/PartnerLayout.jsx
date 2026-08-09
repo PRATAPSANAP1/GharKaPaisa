@@ -60,7 +60,12 @@ const NAV_ITEMS = [
   { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup, partnerOnly: true },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
-  { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool }
+  { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
+  { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
+  { id: 'referral', path: '/partner/referral', label: 'Referral', icon: MdGroup },
+  { id: 'notifications', path: '/partner/notifications', label: 'Notifications', icon: MdNotifications },
+  { id: 'support', path: '/partner/support', label: 'Support', icon: MdSupportAgent },
+  { id: 'settings', path: '/partner/settings', label: 'Settings', icon: MdSettings }
 ];
 
 const MOBILE_BOTTOM_NAV = [

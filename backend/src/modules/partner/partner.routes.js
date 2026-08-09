@@ -54,5 +54,8 @@ router.patch('/:PartnerId/deactivate-team', authorize('ADMIN', 'SUPER_ADMIN'), c
 // Team management
 router.post('/:PartnerId/team', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.addTeamMember);
 router.get('/:PartnerId/team', selfOrAdmin('PartnerId'), ctrl.getTeamMembers);
+router.delete('/:PartnerId/team/:TeamMemberId', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.removeTeamMember);
+router.get('/:PartnerId/team/deleted', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.getDeletedTeamMembers);
+router.post('/:PartnerId/team/:TeamMemberId/reactivate', selfOrAdmin('PartnerId'), requireApprovedPartner, ctrl.reactivateTeamMember);
 
 module.exports = router;

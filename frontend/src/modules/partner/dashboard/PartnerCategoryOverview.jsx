@@ -306,19 +306,85 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
     navigate(`/partner/credit-cards/${bank.slug}`);
   };
 
+  const loanCategoriesList = useMemo(() => {
+    const categories = [
+      { title: "Personal Loan", sub: "Loan Category", slug: "personal-loan", accent: "#2563EB", emoji: "💰", defaultOffers: 12 },
+      { title: "Home Loan", sub: "Loan Category", slug: "home-loan", accent: "#059669", emoji: "🏠", defaultOffers: 8 },
+      { title: "Business Loan", sub: "Loan Category", slug: "business-loan", accent: "#7C3AED", emoji: "💼", defaultOffers: 10 },
+      { title: "Loan Against Property", sub: "Loan Category", slug: "loan-against-property", accent: "#D97706", emoji: "🏢", defaultOffers: 6 },
+      { title: "Gold Loan", sub: "Loan Category", slug: "gold-loan", accent: "#EA580C", emoji: "🪙", defaultOffers: 5 },
+      { title: "Vehicle Loan", sub: "Loan Category", slug: "vehicle-loan", accent: "#0284C7", emoji: "🚗", defaultOffers: 7 }
+    ];
+
+    return categories.map(cat => {
+      const dbMatchCount = (allProducts || []).filter(p => {
+        const pCat = (p.category || '').toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        const target = cat.slug.replace(/-/g, ' ');
+        return pCat.includes('loan') && (pCat.includes(target) || pSub.includes(target) || pName.includes(target) || pCat.includes(cat.title.toLowerCase()));
+      }).length;
+
+      const offerCount = dbMatchCount > 0 ? dbMatchCount : cat.defaultOffers;
+      return {
+        ...cat,
+        rawCount: offerCount,
+        availableOffers: `${offerCount} Active ${cat.title} Offers`
+      };
+    });
+  }, [allProducts]);
+
+  const insuranceCategoriesList = useMemo(() => {
+    const categories = [
+      { title: "Health Insurance", sub: "Insurance Policy", slug: "health-insurance", accent: "#059669", emoji: "🏥", defaultOffers: 12 },
+      { title: "Life Insurance", sub: "Insurance Policy", slug: "life-insurance", accent: "#2563EB", emoji: "🛡️", defaultOffers: 8 },
+      { title: "General Insurance", sub: "Insurance Policy", slug: "general-insurance", accent: "#D97706", emoji: "📋", defaultOffers: 15 },
+      { title: "Motor Insurance", sub: "Insurance Policy", slug: "motor-insurance", accent: "#E11D48", emoji: "🏎️", defaultOffers: 9 },
+      { title: "Term Insurance", sub: "Insurance Policy", slug: "term-insurance", accent: "#7C3AED", emoji: "📜", defaultOffers: 7 }
+    ];
+
+    return categories.map(cat => {
+      const dbMatchCount = (allProducts || []).filter(p => {
+        const pCat = (p.category || '').toLowerCase();
+        const pSub = (p.sub_category || '').toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        const target = cat.slug.replace(/-/g, ' ');
+        return pCat.includes('insurance') && (pCat.includes(target) || pSub.includes(target) || pName.includes(target) || pCat.includes(cat.title.toLowerCase()));
+      }).length;
+
+      const offerCount = dbMatchCount > 0 ? dbMatchCount : cat.defaultOffers;
+      return {
+        ...cat,
+        rawCount: offerCount,
+        availableOffers: `${offerCount} Active ${cat.title} Plans`
+      };
+    });
+  }, [allProducts]);
+
   const rawCards = useMemo(() => {
-    if (activeCategory === 'loans') return loanRoleCards;
-    if (activeCategory === 'insurance') return insuranceRoleCards;
+    if (activeCategory === 'loans') return loanCategoriesList;
+    if (activeCategory === 'insurance') return insuranceCategoriesList;
     return [];
-  }, [activeCategory]);
+  }, [activeCategory, loanCategoriesList, insuranceCategoriesList]);
 
   const filteredNonCcCards = useMemo(() => {
-    return rawCards.filter(card => {
-      return !searchQuery || 
-        card.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        card.availableCards.toLowerCase().includes(searchQuery.toLowerCase());
+    let list = rawCards.filter(card => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesQuery = !q || card.title.toLowerCase().includes(q) || card.slug.toLowerCase().includes(q);
+      const matchesCategory = bankCategoryFilter === 'all' || card.slug === bankCategoryFilter;
+      return matchesQuery && matchesCategory;
     });
-  }, [rawCards, searchQuery]);
+
+    if (sortBy === 'most') {
+      list = [...list].sort((a, b) => b.rawCount - a.rawCount);
+    } else if (sortBy === 'name-asc') {
+      list = [...list].sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'name-desc') {
+      list = [...list].sort((a, b) => b.title.localeCompare(a.title));
+    }
+
+    return list;
+  }, [rawCards, searchQuery, bankCategoryFilter, sortBy]);
 
   // Compute dynamic header title based on active sub-module tab
   const headerTitle = useMemo(() => {
@@ -488,6 +554,107 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                   <option value="most">{t('categoryOverview.mostCardVariants', 'Most Card Variants')}</option>
                   <option value="name-asc">{t('categoryOverview.nameAsc', 'Name A-Z')}</option>
                   <option value="name-desc">{t('categoryOverview.nameDesc', 'Name Z-A')}</option>
+                </select>
+              </>
+            )}
+
+            {activeCategory === 'loans' && (
+              <>
+                <select
+                  value={bankCategoryFilter}
+                  onChange={(e) => setBankCategoryFilter(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '14px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="all">All Loan Categories</option>
+                  <option value="personal-loan">Personal Loan</option>
+                  <option value="home-loan">Home Loan</option>
+                  <option value="business-loan">Business Loan</option>
+                  <option value="loan-against-property">Loan Against Property</option>
+                  <option value="gold-loan">Gold Loan</option>
+                  <option value="vehicle-loan">Vehicle Loan</option>
+                </select>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '14px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="default">Sort By</option>
+                  <option value="most">Most Active Offers</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                </select>
+              </>
+            )}
+
+            {activeCategory === 'insurance' && (
+              <>
+                <select
+                  value={bankCategoryFilter}
+                  onChange={(e) => setBankCategoryFilter(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '14px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="all">All Insurance Types</option>
+                  <option value="health-insurance">Health Insurance</option>
+                  <option value="life-insurance">Life Insurance</option>
+                  <option value="general-insurance">General Insurance</option>
+                  <option value="motor-insurance">Motor Insurance</option>
+                  <option value="term-insurance">Term Insurance</option>
+                </select>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: '9px 14px',
+                    borderRadius: '14px',
+                    border: `1px solid ${C.border}`,
+                    background: isDark ? '#1E293B' : '#FFFFFF',
+                    color: C.text,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="default">Sort By</option>
+                  <option value="most">Most Active Plans</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
                 </select>
               </>
             )}
@@ -767,47 +934,137 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
             {activeCategory !== 'credit_card' && (
               <div style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(260px, 1fr))",
+                gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(230px, 1fr))",
                 gap: "16px"
               }}>
-                {filteredNonCcCards.map((card, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => navigate(`${location.pathname}/${card.slug}`)}
-                    style={{
-                      background: isDark ? '#1E293B' : '#FFFFFF',
-                      borderRadius: "18px",
-                      padding: "20px",
-                      border: `1px solid ${C.border}`,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      gap: '14px',
-                      cursor: 'pointer',
-                      boxShadow: isDark ? 'none' : '0 4px 18px rgba(0,0,0,0.03)'
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: C.primary, textTransform: "uppercase" }}>
-                        {card.sub}
-                      </span>
-                      <h4 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: "6px 0 4px" }}>
-                        {card.title}
-                      </h4>
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: C.textMid }}>
-                        {card.availableCards}
-                      </span>
-                    </div>
-                    <button
+                {filteredNonCcCards.map((card) => {
+                  const accentColor = card.accent || C.primary;
+                  const bgGradient = isDark 
+                    ? `linear-gradient(145deg, ${accentColor}25 0%, ${accentColor}0D 100%)`
+                    : `linear-gradient(145deg, ${accentColor}14 0%, ${accentColor}05 100%)`;
+                  const cardBorderColor = isDark ? `${accentColor}45` : `${accentColor}35`;
+
+                  return (
+                    <div
+                      key={`cat-${card.slug}`}
+                      onClick={() => navigate(`${location.pathname}/${card.slug}`)}
                       style={{
-                        padding: '10px', borderRadius: '10px', border: 'none',
-                        background: C.primary, color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                        background: bgGradient,
+                        borderRadius: '20px',
+                        padding: '20px',
+                        border: `1.5px solid ${cardBorderColor}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                        cursor: 'pointer',
+                        boxShadow: isDark ? `0 4px 20px ${accentColor}15` : `0 4px 18px ${accentColor}10`,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-5px)';
+                        e.currentTarget.style.borderColor = accentColor;
+                        e.currentTarget.style.boxShadow = `0 12px 30px ${accentColor}35`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = cardBorderColor;
+                        e.currentTarget.style.boxShadow = isDark ? `0 4px 20px ${accentColor}15` : `0 4px 18px ${accentColor}10`;
                       }}
                     >
-                      More Info
-                    </button>
-                  </div>
-                ))}
+                      {/* Top Part: Icon/Emoji & Name */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '14px',
+                          background: `${accentColor}22`,
+                          color: accentColor,
+                          border: `1.5px solid ${accentColor}40`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '22px',
+                          fontWeight: 900,
+                          flexShrink: 0,
+                          boxShadow: `0 2px 8px ${accentColor}20`
+                        }}>
+                          {card.emoji}
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: accentColor, textTransform: 'uppercase' }}>
+                            {card.sub}
+                          </span>
+                          <h3 style={{
+                            fontSize: '16px',
+                            fontWeight: 900,
+                            color: isDark ? '#FFFFFF' : accentColor,
+                            margin: '2px 0 0',
+                            lineHeight: 1.25
+                          }}>
+                            {card.title}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Middle Part: Active Offers Count */}
+                      <div>
+                        <div style={{
+                          fontSize: '28px',
+                          fontWeight: 900,
+                          color: accentColor,
+                          letterSpacing: '-0.5px',
+                          lineHeight: 1
+                        }}>
+                          {card.rawCount}
+                        </div>
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          color: isDark ? 'rgba(255,255,255,0.75)' : `${accentColor}DD`,
+                          marginTop: '4px',
+                          display: 'block'
+                        }}>
+                          {card.availableOffers}
+                        </span>
+                      </div>
+
+                      {/* Bottom Part: Explore Offers Link */}
+                      <div style={{
+                        paddingTop: '10px',
+                        borderTop: `1px solid ${accentColor}30`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span style={{
+                          fontSize: '13px',
+                          fontWeight: 900,
+                          color: accentColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {activeCategory === 'loans' ? 'Explore Offers' : 'Explore Plans'} <MdArrowForward size={16} />
+                        </span>
+                      </div>
+
+                      {/* Bottom Color Accent Line */}
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: '4px',
+                        background: accentColor,
+                        boxShadow: `0 0 10px ${accentColor}`
+                      }} />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>

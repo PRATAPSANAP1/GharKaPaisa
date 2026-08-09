@@ -776,7 +776,7 @@ const listApplications = async (req, res, next) => {
 
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
     const validProductId = isUuid(product_id) ? product_id : null;
-    const validBankId = isUuid(bankId) ? bank_id : null;
+    const validBankId = isUuid(bank_id) ? bank_id : null;
     const validStatus = status && status.trim() ? status.trim() : null;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
 
