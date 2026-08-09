@@ -680,7 +680,7 @@ const register = async (req, res, next) => {
             const secureCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
             await client.query(`
               INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
-              VALUES ($1, $2, $3, $4, $5, 'PENDING')
+              VALUES ($1, $2, $3, $4, $5, 'pending')
             `, [u.id, first_name || '', last_name || '', secureCode, u.role || 'TEAM_MEMBER']);
           }
 

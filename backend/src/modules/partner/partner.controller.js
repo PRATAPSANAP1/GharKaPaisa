@@ -585,7 +585,7 @@ const addTeamMember = async (req, res, next) => {
       INSERT INTO partner_profiles (
         user_id, parent_partner_id, first_name, last_name, partner_code, partner_type, kyc_status
       )
-      VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'PENDING')
+      VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'pending')
     `, [newUser.id, partnerId, memberFirstName, memberLastName, partnerCode]);
 
     // Save invitation record to invitation_history table

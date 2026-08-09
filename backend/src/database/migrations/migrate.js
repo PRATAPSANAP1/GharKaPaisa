@@ -207,6 +207,8 @@ const migrate = async () => {
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id)`);
+  await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_type VARCHAR(50) DEFAULT 'PARTNER'`);
+  await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`);
 
 
   // ── Partner Bank Details ────────────────────────────────────────
