@@ -298,7 +298,7 @@ export default function TeamMembersTab({ onSelectMember }) {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                         <button className="btn-view" onClick={() => onSelectMember(m.id)}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.2s' }}>
-                          360°
+                          View
                         </button>
                         <button onClick={() => handleRemoveMember(m.id)}
                           title="Remove Team Member"

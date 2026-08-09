@@ -111,7 +111,7 @@ export default function TeamMemberDrawer({ memberId, onClose, onSelectSubMember 
           {loading ? (
             <div style={{ padding: '60px 0', textAlign: 'center' }}>
               <RefreshCw size={32} color={accent} className="animate-spin" style={{ margin: '0 auto 12px' }} />
-              <p style={{ color: textMuted, fontSize: 14 }}>Fetching member 360° profile...</p>
+              <p style={{ color: textMuted, fontSize: 14 }}>Fetching member profile...</p>
             </div>
           ) : error ? (
             <div style={{ padding: '16px', borderRadius: 14, background: '#ef444415', border: '1px solid #ef444430', color: '#ef4444', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>{error}</div>
