@@ -26,7 +26,7 @@ const registerRules = [
     .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
   body('last_name').trim().notEmpty().withMessage('Last name required'),
-  body('aadhaar').trim().notEmpty().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
+  body('aadhaar').optional({ checkFalsy: true }).trim().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
   body('pan').trim().toUpperCase().notEmpty()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
   body('current_address').trim().notEmpty().withMessage('Address required'),
@@ -37,9 +37,7 @@ const registerRules = [
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
   body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
   body('company_name').trim().notEmpty().withMessage('Company name required'),
-  body('company_type')
-    .isIn(['individual', 'proprietorship', 'partnership', 'pvt_ltd', 'llp', 'other'])
-    .withMessage('Valid company type required'),
+  body('company_type').trim().notEmpty().withMessage('Company type required'),
   body('gst_number').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
     .withMessage('Valid GST number required'),

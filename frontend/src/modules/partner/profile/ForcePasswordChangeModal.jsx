@@ -4,19 +4,20 @@ import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 
-export default function ForcePasswordChangeModal({ isOpen }) {
+import TeamMemberOnboardingModal from './TeamMemberOnboardingModal';
+
+export default function ForcePasswordChangeModal({ isOpen, onClose }) {
   const { C } = useTheme();
   const S = makeS(C);
 
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
-  const [step, setStep] = useState(1); // 1: Info, 2: OTP Sent, 3: Success
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   if (!isOpen) return null;
+
+  if (user?.role === 'TEAM_MEMBER' || user?.onboarding_required) {
+    return <TeamMemberOnboardingModal isOpen={isOpen} onClose={onClose} />;
+  }
 
   const handleSendOtp = async () => {
     setLoading(true);

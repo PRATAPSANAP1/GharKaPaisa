@@ -567,15 +567,15 @@ const addTeamMember = async (req, res, next) => {
 
     // Create user record for invited team member
     const bcrypt = require('bcryptjs');
-    const tempPassword = password || Math.random().toString(36).slice(-8);
+    const tempPassword = password || ('GKP' + Math.floor(100000 + Math.random() * 900000));
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(tempPassword, salt);
 
     const { rows: [newUser] } = await client.query(`
-      INSERT INTO users (email, mobile, password_hash, role, status)
-      VALUES ($1, $2, $3, 'TEAM_MEMBER', 'pending')
+      INSERT INTO users (email, mobile, password_hash, role, status, must_change_password, full_name)
+      VALUES ($1, $2, $3, 'TEAM_MEMBER', 'pending', true, $4)
       RETURNING id
-    `, [email, mobile, passwordHash]);
+    `, [email, mobile, passwordHash, `${memberFirstName} ${memberLastName}`.trim()]);
 
     // Generate unique partner code
     const partnerCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
@@ -602,7 +602,7 @@ const addTeamMember = async (req, res, next) => {
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
     const inviteToken = generateInviteToken({ partnerCode: parentPartner.partner_code, role: 'TEAM_MEMBER' });
     const inviteLink = `${appUrl}/login?token=${inviteToken}`;
-    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nClick the link to login and complete your KYC verification: ${inviteLink}\n\nWelcome aboard!`;
+    const messageText = `Hi ${memberFirstName}, you have been invited to join the GharKaPaisa Team!\n\nYour Login Credentials:\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nClick the link to login, set your new password, and complete your KYC verification: ${inviteLink}\n\nWelcome aboard!`;
 
     const cleanMobile = String(mobile).replace(/\D/g, '');
 
@@ -620,7 +620,7 @@ const addTeamMember = async (req, res, next) => {
       const { sendEmail } = require('../../services/email/email.service');
       await sendEmail({
         to: email,
-        subject: 'Invitation to Join GharKaPaisa Team',
+        subject: 'Invitation to Join GharKaPaisa Team - Login Credentials',
         text: messageText,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
@@ -630,15 +630,16 @@ const addTeamMember = async (req, res, next) => {
             </div>
             <p style="font-size: 15px; color: #1e293b;">Hi <strong>${memberFirstName}</strong>,</p>
             <p style="font-size: 14px; color: #334155; line-height: 1.6;">
-              You have been invited to join the GharKaPaisa Partner Network! Start earning lucrative commissions by referring credit cards, loans, and financial products.
+              You have been invited to join the GharKaPaisa Partner Network as a Team Member! Use the temporary login credentials below to log in, set your new password, verify your details, and complete your KYC setup.
             </p>
-            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Inviter Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${parentPartner.partner_code}</span></p>
-              <p style="margin: 4px 0; font-size: 13px; color: #334155;"><strong>Email:</strong> ${email}</p>
+            <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 18px; margin: 20px 0;">
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;"><strong>Inviter Code:</strong> <span style="font-family: monospace; color: #0D5CAB;">${parentPartner.partner_code}</span></p>
+              <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;"><strong>Login Email:</strong> <span style="font-family: monospace; color: #0F172A; font-weight: bold;">${email}</span></p>
+              <p style="margin: 0; font-size: 14px; color: #334155;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-weight: bold; color: #0D6EFD; background: #E0F2FE; padding: 3px 8px; border-radius: 4px; font-size: 15px;">${tempPassword}</span></p>
             </div>
             <div style="text-align: center; margin: 25px 0;">
               <a href="${inviteLink}" style="background: linear-gradient(135deg, #0D5CAB 0%, #083E7A 100%); color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(13, 92, 171, 0.3);">
-                Complete Registration & KYC
+                Log In & Complete Setup
               </a>
             </div>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
@@ -1751,6 +1752,118 @@ const createReferralCampaign = async (req, res, next) => {
   }
 };
 
+const completeTeamOnboarding = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const userId = req.user.id;
+    const {
+      newPassword,
+      first_name, last_name, mobile, email,
+      company_name, company_type, current_address, pincode, business_location, gst_number,
+      bank_name, account_number, ifsc_code, account_holder_name,
+      pan_number
+    } = req.body;
+
+    await client.query('BEGIN');
+
+    // 1. Update password if newPassword provided
+    if (newPassword) {
+      if (newPassword.length < 8) return error(res, 'Password must be at least 8 characters long', 400);
+      const bcrypt = require('bcryptjs');
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+      await client.query(`
+        UPDATE users SET password_hash = $1, must_change_password = false WHERE id = $2
+      `, [passwordHash, userId]);
+    } else {
+      await client.query(`
+        UPDATE users SET must_change_password = false WHERE id = $1
+      `, [userId]);
+    }
+
+    // 2. Mark user active and email verified
+    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+    await client.query(`
+      UPDATE users 
+      SET status = 'active', email_verified = true, full_name = COALESCE(NULLIF($1, ''), full_name), updated_at = NOW()
+      WHERE id = $2
+    `, [fullName, userId]);
+
+    // 3. Find partner profile for this team member
+    const { rows: [partnerProfile] } = await client.query(`
+      SELECT id FROM partner_profiles WHERE user_id = $1
+    `, [userId]);
+
+    let partnerId = partnerProfile?.id;
+    const cleanPan = (pan_number || '').toUpperCase().trim();
+
+    if (partnerId) {
+      await client.query(`
+        UPDATE partner_profiles SET
+          first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          company_name = COALESCE($3, company_name),
+          company_type = COALESCE($4, company_type),
+          current_address = COALESCE($5, current_address),
+          pincode = COALESCE($6, pincode),
+          business_location = COALESCE($7, business_location),
+          gst_number = COALESCE($8, gst_number),
+          pan_number = COALESCE(NULLIF($9, ''), pan_number),
+          kyc_status = 'pending',
+          updated_at = NOW()
+        WHERE id = $10
+      `, [first_name, last_name, company_name, company_type, current_address, pincode, business_location, gst_number || null, cleanPan || null, partnerId]);
+    } else {
+      const { generatePartnerCode } = require('../../utils/helpers/partnerCode');
+      const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
+      const partnerCode = generatePartnerCode(parseInt(nextval));
+
+      const { rows: [newProf] } = await client.query(`
+        INSERT INTO partner_profiles (
+          user_id, partner_code, first_name, last_name, company_name, company_type,
+          current_address, pincode, business_location, gst_number, pan_number, partner_type, kyc_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'TEAM_MEMBER', 'pending')
+        RETURNING id
+      `, [userId, partnerCode, first_name, last_name, company_name, company_type, current_address, pincode, business_location, gst_number || null, cleanPan || null]);
+      partnerId = newProf.id;
+    }
+
+    // 4. Save bank details if provided
+    if (account_number && bank_name && ifsc_code) {
+      const { encrypt } = require('../../utils/crypto/encryption');
+      const encryptedAccountNumber = encrypt(account_number);
+      await client.query(`
+        INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (partner_id) DO UPDATE SET
+          bank_name = EXCLUDED.bank_name,
+          account_number = EXCLUDED.account_number,
+          ifsc_code = EXCLUDED.ifsc_code,
+          account_holder_name = EXCLUDED.account_holder_name,
+          updated_at = NOW()
+      `, [partnerId, bank_name, encryptedAccountNumber, ifsc_code.toUpperCase(), account_holder_name || `${first_name} ${last_name}`]);
+    }
+
+    // 5. Create wallet if missing
+    await client.query(`
+      INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING
+    `, [partnerId]);
+
+    await client.query('COMMIT');
+
+    return success(res, {
+      partner_id: partnerId,
+      kyc_status: 'pending',
+      message: 'Team member onboarding and profile completed successfully'
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -1795,5 +1908,6 @@ module.exports = {
   createInvitation,
   resendInvitation,
   getReferralCampaigns,
-  createReferralCampaign
+  createReferralCampaign,
+  completeTeamOnboarding
 };

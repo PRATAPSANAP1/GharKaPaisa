@@ -961,7 +961,7 @@ const loginPassword = async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) { await security.recordFailedLogin(user, req, 'invalid_password'); return error(res, 'Invalid credentials', 401); }
 
-    if (!user.email_verified) {
+    if (!user.email_verified && user.role !== 'TEAM_MEMBER') {
       return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
     }
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
@@ -981,12 +981,12 @@ const loginPassword = async (req, res, next) => {
     await security.loginRecord(user.id, req, 'success');
     await security.audit(user.id, 'login_success', req);
 
-    // Fetch KYC status for partner users
+    // Fetch KYC status for partner and team member users
     let kycStatus = null;
     let rejectionReason = null;
-    if ((user.role || '').toUpperCase() === 'PARTNER') {
+    if (['PARTNER', 'TEAM_MEMBER'].includes((user.role || '').toUpperCase())) {
       const { rows: [partner] } = await query(
-        `SELECT kyc_status, rejection_reason FROM Partner_profiles WHERE user_id = $1`, [user.id]
+        `SELECT kyc_status, rejection_reason FROM partner_profiles WHERE user_id = $1`, [user.id]
       );
       if (partner) {
         kycStatus = partner.kyc_status;
@@ -1005,13 +1005,15 @@ const loginPassword = async (req, res, next) => {
       token,
       redirect: redirectUrl,
       user: {
-        id:         user.id,
-        email:      user.email,
-        mobile:     user.mobile,
-        role:       user.role,
-        status:     user.status,
-        first_name: user.first_name,
-        last_name:  user.last_name,
+        id:                   user.id,
+        email:                user.email,
+        mobile:               user.mobile,
+        role:                 user.role,
+        status:               user.status,
+        first_name:           user.first_name,
+        last_name:            user.last_name,
+        must_change_password: !!user.must_change_password,
+        onboarding_required:  user.role === 'TEAM_MEMBER' && (user.must_change_password || user.status === 'pending' || kycStatus === 'pending'),
       },
       partner: kycStatus !== null ? {
         kyc_status:       kycStatus,

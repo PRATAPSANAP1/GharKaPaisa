@@ -61,6 +61,7 @@ router.get('/team-dashboard', requireApprovedPartner, teamCtrl.getDashboard);
 router.get('/team-earnings', requireApprovedPartner, teamCtrl.getAnalytics);
 router.get('/team-members', requireApprovedPartner, teamCtrl.getMembersList);
 router.post('/team/invite', requireApprovedPartner, partnerCtrl.addTeamMember);
+router.post('/team/complete-onboarding', requirePartner, partnerCtrl.completeTeamOnboarding);
 
 // Partner Share Link Routes
 router.post('/share-link', requireApprovedPartner, partnerShareCtrl.generateShareLink);

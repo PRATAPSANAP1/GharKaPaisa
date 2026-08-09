@@ -399,7 +399,7 @@ export default function PartnerLayout() {
       color: C.text,
       overflow: 'hidden',
     }}>
-      <ForcePasswordChangeModal isOpen={user?.must_change_password} />
+      <ForcePasswordChangeModal isOpen={user?.must_change_password || user?.onboarding_required || (user?.role === 'TEAM_MEMBER' && user?.status === 'pending')} />
 
       {/* ──── DESKTOP SIDEBAR ──── */}
       {!isMobile && sidebarOpen && (
