@@ -218,7 +218,8 @@ const AppRoutes = () => {
             <Route path="/partner/kyc-centre" element={<PartnerKyc />} />
             <Route path="/partner/team" element={<PartnerTeam />} />
             <Route path="/partner/team-network" element={<PartnerTeam />} />
-            <Route path="/partner/refers" element={<Navigate to="/partner/team" replace />} />
+            <Route path="/partner/referral" element={<PartnerRefers />} />
+            <Route path="/partner/refers" element={<Navigate to="/partner/referral" replace />} />
             <Route path="/partner/leads" element={<PartnerCrm />} />
             <Route path="/partner/crm" element={<PartnerCrm />} />
             <Route path="/partner/customers" element={<PartnerCrm />} />
