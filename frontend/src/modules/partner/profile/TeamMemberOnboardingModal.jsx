@@ -694,10 +694,10 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 4. KYC Details & Document Upload */}
+              {/* 4. KYC Details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <h5 style={{ fontSize: '13px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', margin: 0 }}>
-                  📄 KYC Details & Document Upload
+                  📄 KYC Details
                 </h5>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>PAN Card Number *</label>
@@ -710,27 +710,6 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
                     maxLength={10}
                     required
                   />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Upload PAN Document</label>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={e => setPanFile(e.target.files[0])}
-                      style={{ ...S.input, padding: '8px', borderRadius: '10px', fontSize: '12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Upload Cancelled Cheque (Optional)</label>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={e => setChequeFile(e.target.files[0])}
-                      style={{ ...S.input, padding: '8px', borderRadius: '10px', fontSize: '12px' }}
-                    />
-                  </div>
                 </div>
               </div>
 

@@ -628,7 +628,8 @@ export default function PartnerRegister() {
           if (firstErrStep !== null) {
             setStep(firstErrStep);
           }
-          setErr(res.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
+          const detailedErrStr = res.errors.map(errObj => `${errObj.field || 'Field'}: ${errObj.message}`).join(' | ');
+          setErr(detailedErrStr || res.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
         } else {
           setErr(res.message || t("partner.errors.registrationFailed", "Registration failed. Please try again."));
         }
@@ -652,9 +653,10 @@ export default function PartnerRegister() {
         if (firstErrStep !== null) {
           setStep(firstErrStep);
         }
-        setErr(resData.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
+        const detailedErrStr = resData.errors.map(errObj => `${errObj.field || 'Field'}: ${errObj.message}`).join(' | ');
+        setErr(detailedErrStr || resData.message || t("partner.errors.validationFailed", "Validation failed. Please correct the highlighted errors."));
       } else {
-        setErr(e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
+        setErr(resData?.message || e.message || t("partner.errors.registrationFailedDetails", "Registration failed. Please check your details."));
       }
     } finally {
       setLoading(false);
