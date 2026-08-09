@@ -6,6 +6,7 @@ import api from '../../../services/api';
 import QuickAccessSection from './QuickAccessSection';
 import PartnerActionableQueues from './PartnerActionableQueues';
 import Customer360Drawer from './Customer360Drawer';
+import PartnerBannerCarousel from '../../../components/PartnerBannerCarousel';
 
 
 import {
@@ -665,8 +666,10 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
 
-        {/* ──── STATS ROW ──── */}
-
+        {/* ──── PARTNER BANNER CAROUSEL ──── */}
+        <div style={{ marginTop: '16px' }}>
+          <PartnerBannerCarousel />
+        </div>
 
         {/* ──── QUICK ACCESS SECTION ──── */}
         <div style={{ marginTop: '20px', marginLeft: '8px', marginRight: '8px' }}>

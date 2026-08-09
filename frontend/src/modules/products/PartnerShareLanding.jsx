@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function PartnerShareLanding() {
   const { trackingToken } = useParams();
+  const { C, isDark } = useTheme();
 
   const [product, setProduct] = useState(null);
   const [partner, setPartner] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   // Form
   const [customerName, setCustomerName] = useState('');
@@ -30,6 +33,8 @@ export default function PartnerShareLanding() {
 
   // Active tab for product details
   const [activeTab, setActiveTab] = useState('features');
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Fetch share link details
   useEffect(() => {
@@ -109,18 +114,19 @@ export default function PartnerShareLanding() {
     }
   };
 
-  // Colors
-  const themeColor = product?.bank_code ? '#2563EB' : '#0D5CAB';
-  const bgPrimary = '#0F172A';
-  const bgCard = '#1E293B';
-  const textPrimary = '#F1F5F9';
-  const textSecondary = '#94A3B8';
-  const borderColor = '#334155';
+  // Colors from theme context
+  const bg = isDark ? '#000' : C.bg;
+  const cardBg = isDark ? '#0f0f0f' : '#fff';
+  const border = isDark ? '#1f1f1f' : C.border;
+  const textPrimary = C.text;
+  const textSecondary = C.textMid;
+  const accent = C.primary;
+  const themeColor = product?.bank_code ? accent : accent;
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div style={{ width: '48px', height: '48px', border: '4px solid #334155', borderTopColor: themeColor, borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div style={{ width: '48px', height: '48px', border: `4px solid ${border}`, borderTopColor: themeColor, borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
         <p style={{ fontSize: '15px', fontWeight: 600 }}>Loading product details...</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -129,7 +135,7 @@ export default function PartnerShareLanding() {
 
   if (error || !product) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔗</div>
         <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 8px' }}>{error || 'Link Not Found'}</h2>
         <p style={{ fontSize: '14px', color: textSecondary, marginBottom: '24px' }}>This share link may have expired or is invalid.</p>
@@ -144,7 +150,7 @@ export default function PartnerShareLanding() {
   if (submitted) {
     const isBankRedirect = redirectUrl && redirectUrl !== 'https://gharkapaisa.in';
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
         <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'pulse 1.5s ease-in-out infinite' }}>
           <span style={{ fontSize: '36px' }}>✅</span>
         </div>
@@ -166,7 +172,7 @@ export default function PartnerShareLanding() {
           <a
             href={redirectUrl}
             style={{
-              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, color: '#fff',
+              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`, color: '#fff',
               border: 'none', borderRadius: '14px', fontWeight: 800, textDecoration: 'none', fontSize: '15px',
               boxShadow: `0 8px 24px ${themeColor}40`, transition: 'all 0.2s'
             }}
@@ -177,7 +183,7 @@ export default function PartnerShareLanding() {
           <a
             href="https://gharkapaisa.in"
             style={{
-              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, color: '#fff',
+              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`, color: '#fff',
               border: 'none', borderRadius: '14px', fontWeight: 800, textDecoration: 'none', fontSize: '15px',
               boxShadow: `0 8px 24px ${themeColor}40`, transition: 'all 0.2s'
             }}
@@ -195,11 +201,11 @@ export default function PartnerShareLanding() {
   const requiredDocs = Array.isArray(product.required_documents) && product.required_documents.length > 0 ? product.required_documents : ['PAN Card', 'Aadhaar Card', 'Income Proof / Salary Slip'];
 
   return (
-    <div style={{ minHeight: '100vh', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
       
       {/* ── TOP BAR ── */}
       <div style={{
-        background: `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}CC 100%)`,
+        background: `linear-gradient(135deg, ${themeColor} 0%, ${C.primaryDark} 100%)`,
         padding: '14px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
@@ -216,15 +222,17 @@ export default function PartnerShareLanding() {
 
         {/* ── PRODUCT HERO CARD ── */}
         <div style={{
-          background: bgCard, borderRadius: '24px', border: `1px solid ${borderColor}`,
+          background: cardBg, borderRadius: '24px', border: `1px solid ${border}`,
           padding: isMobile ? '20px' : '28px', marginBottom: '24px',
-          boxShadow: `0 8px 30px rgba(0,0,0,0.3)`
+          boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.5)' : '0 8px 30px rgba(0,0,0,0.1)',
+          opacity: mounted ? 1 : 0, transform: mounted ? 'translateY(0)' : 'translateY(-16px)',
+          transition: 'opacity 0.4s ease, transform 0.4s ease'
         }}>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
             <div style={{
-              width: '72px', height: '48px', borderRadius: '12px', background: '#0F172A',
+              width: '72px', height: '48px', borderRadius: '12px', background: isDark ? '#1a1a1a' : '#f8faff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px',
-              border: `1px solid ${borderColor}`, flexShrink: 0
+              border: `1px solid ${border}`, flexShrink: 0
             }}>
               <img
                 src={getCleanImageUrl(product.card_image_url || product.image_url || product.thumbnail_url) || (product.bank_logo)}
@@ -288,13 +296,13 @@ export default function PartnerShareLanding() {
 
           {/* LEFT: Product Details Tabs */}
           <div style={{
-            background: bgCard, borderRadius: '24px', border: `1px solid ${borderColor}`,
+            background: cardBg, borderRadius: '24px', border: `1px solid ${border}`,
             padding: isMobile ? '16px' : '24px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+            boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.05)',
             order: isMobile ? 2 : 1
           }}>
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '6px', borderBottom: `1px solid ${borderColor}`, paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: '6px', borderBottom: `1px solid ${border}`, paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
               {[
                 { id: 'features', label: '✨ Features' },
                 { id: 'eligibility', label: '📋 Eligibility' },
@@ -344,7 +352,7 @@ export default function PartnerShareLanding() {
                     {product.min_income && <div><strong style={{ color: textPrimary }}>Min Monthly Income:</strong> ₹{Number(product.min_income).toLocaleString('en-IN')}</div>}
                     {product.eligibility_criteria && (
                       typeof product.eligibility_criteria === 'string' ? (
-                        <div style={{ padding: '12px', background: '#0F172A', borderRadius: '10px', border: `1px solid ${borderColor}`, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{product.eligibility_criteria}</div>
+                        <div style={{ padding: '12px', background: isDark ? '#1a1a1a' : '#f8faff', borderRadius: '10px', border: `1px solid ${border}`, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{product.eligibility_criteria}</div>
                       ) : (
                         Object.entries(product.eligibility_criteria).map(([k, v]) => (
                           <div key={k} style={{ textTransform: 'capitalize' }}>
@@ -378,9 +386,9 @@ export default function PartnerShareLanding() {
 
           {/* RIGHT: Apply Form */}
           <div style={{
-            background: bgCard, borderRadius: '24px', border: `1px solid ${themeColor}40`,
+            background: cardBg, borderRadius: '24px', border: `1px solid ${themeColor}40`,
             padding: isMobile ? '20px' : '28px',
-            boxShadow: `0 8px 30px ${themeColor}15`,
+            boxShadow: isDark ? 'none' : `0 8px 30px ${themeColor}15`,
             position: isMobile ? 'static' : 'sticky', top: '24px',
             order: isMobile ? 1 : 2
           }}>
@@ -403,19 +411,19 @@ export default function PartnerShareLanding() {
                   required
                   style={{
                     width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                    background: '#0F172A', border: `1.5px solid ${borderColor}`, borderRadius: '12px',
+                    background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
                     color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none',
                     transition: 'border-color 0.2s'
                   }}
                   onFocus={(e) => e.target.style.borderColor = themeColor}
-                  onBlur={(e) => e.target.style.borderColor = borderColor}
+                  onBlur={(e) => e.target.style.borderColor = border}
                 />
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Mobile Number *</label>
-                <div style={{ display: 'flex', alignItems: 'center', background: '#0F172A', border: `1.5px solid ${borderColor}`, borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                  <span style={{ padding: '12px 10px 12px 14px', fontSize: '14px', fontWeight: 700, color: textSecondary, borderRight: `1px solid ${borderColor}` }}>+91</span>
+                <div style={{ display: 'flex', alignItems: 'center', background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
+                  <span style={{ padding: '12px 10px 12px 14px', fontSize: '14px', fontWeight: 700, color: textSecondary, borderRight: `1px solid ${border}` }}>+91</span>
                   <input
                     type="tel"
                     value={customerMobile}
@@ -436,7 +444,7 @@ export default function PartnerShareLanding() {
                 disabled={submitting}
                 style={{
                   width: '100%', padding: '14px', border: 'none', borderRadius: '14px',
-                  background: submitting ? '#475569' : `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`,
+                  background: submitting ? '#475569' : `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`,
                   color: '#fff', fontSize: '15px', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer',
                   boxShadow: submitting ? 'none' : `0 8px 24px ${themeColor}40`,
                   transition: 'all 0.2s', marginTop: '4px'
@@ -451,7 +459,7 @@ export default function PartnerShareLanding() {
             </form>
 
             {/* Trust Badges */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${borderColor}` }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: textSecondary }}>
                 <span>🔒</span> Secure
               </div>
