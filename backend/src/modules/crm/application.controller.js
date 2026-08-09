@@ -762,21 +762,32 @@ const listApplications = async (req, res, next) => {
     const targetPartnerId = q_partner_id || partner_id;
 
     let partnerId = null;
+    let userId = null;
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isTeamMember = userRole === 'TEAM_MEMBER';
+
     if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       partnerId = partner ? partner.id : req.user.id;
+      userId = req.user.id;
     } else if (targetPartnerId) {
       partnerId = targetPartnerId;
     }
 
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
     const validProductId = isUuid(product_id) ? product_id : null;
-    const validBankId = isUuid(bank_id) ? bank_id : null;
+    const validBankId = isUuid(bankId) ? bank_id : null;
     const validStatus = status && status.trim() ? status.trim() : null;
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
 
-    const userId = req.user?.id || null;
     const validUserId = isUuid(userId) ? userId : null;
+
+    // For team members, add submitted_by filter
+    const submittedByFilter = isTeamMember && validUserId ? `AND combined.submitted_by = $9::uuid` : '';
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId];
+    if (isTeamMember && validUserId) {
+      queryParams.push(validUserId);
+    }
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -795,6 +806,7 @@ const listApplications = async (req, res, next) => {
           a.approved_at,
           a.commission_received_at,
           a.commission_paid_at,
+          a.submitted_by,
           COALESCE(c.full_name, 'Customer') as customer_name,
           c.mobile as customer_mobile,
           c.email as customer_email,
@@ -836,6 +848,7 @@ const listApplications = async (req, res, next) => {
           NULL as approved_at,
           NULL as commission_received_at,
           NULL as commission_paid_at,
+          l.created_by as submitted_by,
           COALESCE(c.full_name, l.customer_name) as customer_name,
           COALESCE(c.mobile, l.mobile) as customer_mobile,
           c.email as customer_email,
@@ -865,18 +878,25 @@ const listApplications = async (req, res, next) => {
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
+        ${submittedByFilter}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
-    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId]);
+    `, queryParams);
+
+    // Count query with same filter
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validUserId];
+    if (isTeamMember && validUserId) {
+      countQueryParams.push(validUserId);
+    }
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile
+        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile, a.submitted_by
         FROM applications a
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile, l.created_by as submitted_by
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
@@ -886,7 +906,8 @@ const listApplications = async (req, res, next) => {
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
-    `, [validPartnerId, validStatus, validProductId, validBankId, validSearch, validUserId]);
+        ${submittedByFilter}
+    `, countQueryParams);
 
     return paginate(res, rows, parseInt(count), page, limit);
   } catch (err) {

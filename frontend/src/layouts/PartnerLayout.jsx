@@ -55,7 +55,7 @@ const NAV_ITEMS = [
       { id: 'cust_export', label: 'Export Customers', path: '/partner/customers?action=export', icon: MdFileDownload, partnerOnly: true }
     ]
   },
-  { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup },
+  { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup, partnerOnly: true },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
   { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
   { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool }
@@ -215,9 +215,9 @@ export default function PartnerLayout() {
       }
     }
 
-    // Team members cannot access Admin-level Reports pages
+    // Team members cannot access Admin-level Reports and Team Management pages
     if (user?.role === 'TEAM_MEMBER') {
-      const blockedPaths = ['/partner/reports'];
+      const blockedPaths = ['/partner/reports', '/partner/team'];
       if (blockedPaths.some(p => currentPath.startsWith(p))) {
         navigate('/partner/dashboard');
       }
@@ -231,7 +231,7 @@ export default function PartnerLayout() {
       return ['dashboard', 'training'].includes(item.id);
     }
     if (isTeamMember) {
-      return !['reports'].includes(item.id);
+      return !item.partnerOnly;
     }
     return true;
   });
@@ -774,7 +774,6 @@ export default function PartnerLayout() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
               <MdVerifiedUser size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                {t('partnerLayout.kycCorrectionMsg', 'Documents require correction. Click to re-upload.')}
                 {user?.rejection_reason && (
                   <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
                     <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}

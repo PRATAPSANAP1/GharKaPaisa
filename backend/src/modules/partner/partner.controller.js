@@ -666,6 +666,16 @@ const listPartnerCustomers = async (req, res, next) => {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isTeamMember = userRole === 'TEAM_MEMBER';
+
+    // For team members, only show customers created by them
+    const whereClause = isTeamMember
+      ? `a.partner_id = $1 AND a.created_by = $2`
+      : `a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)`;
+
+    const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
+
     const { rows } = await query(`
       SELECT
         c.id,
@@ -697,13 +707,13 @@ const listPartnerCustomers = async (req, res, next) => {
           '[]'::json
         ) AS applications
       FROM customers c
-      LEFT JOIN applications a ON a.customer_id = c.id AND a.partner_id = $1
+      LEFT JOIN applications a ON a.customer_id = c.id
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = p.bank_id
-      WHERE a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)
+      WHERE ${whereClause}
       GROUP BY c.id
       ORDER BY COALESCE(MAX(a.created_at), c.created_at) DESC
-    `, [partnerId]);
+    `, queryParams);
 
     return success(res, rows);
   } catch (err) {

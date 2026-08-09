@@ -169,7 +169,7 @@ const viewDocument = async (req, res, next) => {
     const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
     let isOwner = false;
-    if (userRole === 'PARTNER') {
+    if (userRole === 'PARTNER' || userRole === 'TEAM_MEMBER') {
       const { rows: [partner] } = await query(
         `SELECT id FROM partner_profiles WHERE user_id = $1`,
         [user.id]

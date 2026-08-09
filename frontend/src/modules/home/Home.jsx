@@ -2660,14 +2660,14 @@ export default function Home({ onNavigate }) {
             onViewAll={() => navigate("/credit-cards")}
             C={C}
           >
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "16px" }}>
               {((() => {
                 if (popularProducts.length > 0) {
                   return popularProducts;
                 }
                 const dynamicPopular = dynamicProducts.filter(p => (p.is_active || p.status === 'Active') && (p.visibility?.is_popular || p.popular));
                 if (dynamicPopular.length > 0) {
-                  return dynamicPopular.slice(0, 6).map(p => ({
+                  return dynamicPopular.slice(0, 7).map(p => ({
                     name: p.name,
                     bank: p.bank_name || p.bank_code || 'Bank',
                     features: Array.isArray(p.features) ? p.features.slice(0, 3) : (p.short_description ? [p.short_description] : ['Premium Rewards']),

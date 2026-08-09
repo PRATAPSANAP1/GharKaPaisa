@@ -38,9 +38,11 @@ const getTransactions = async (req, res, next) => {
   try {
     const rawPartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     const userId = req.user?.id || null;
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isTeamMember = userRole === 'TEAM_MEMBER';
 
     let partnerId = rawPartnerId;
-    if (req.user && req.user.role === 'PARTNER') {
+    if (req.user && (req.user.role === 'PARTNER' || req.user.role === 'TEAM_MEMBER')) {
       const { rows: [partnerProfile] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (partnerProfile) {
         partnerId = partnerProfile.id;
@@ -50,9 +52,12 @@ const getTransactions = async (req, res, next) => {
     const { page, limit, offset } = getPaginationParams(req.query);
     const { type, status, from_date, to_date, search } = req.query;
 
-    let where = `WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid)`;
-    const values = [partnerId, userId];
-    let idx = 3;
+    // For team members, only show their own wallet transactions
+    let where = isTeamMember 
+      ? `WHERE wl.partner_id = $1`
+      : `WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid)`;
+    const values = isTeamMember ? [partnerId] : [partnerId, userId];
+    let idx = isTeamMember ? 2 : 3;
 
     if (type) { 
       where += ` AND wl.transaction_type = $${idx++}`; 
@@ -191,6 +196,15 @@ const getCommissionSummary = async (req, res, next) => {
     const PartnerId = req.partner?.id;
     if (!PartnerId) return error(res, 'Partner profile not found');
 
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isTeamMember = userRole === 'TEAM_MEMBER';
+
+    // For team members, only show commissions for their own applications
+    const whereClause = isTeamMember
+      ? `WHERE wl.partner_id = $1 AND a.submitted_by = $2`
+      : `WHERE wl.partner_id = $1`;
+    const queryParams = isTeamMember ? [PartnerId, req.user.id] : [PartnerId];
+
     const { rows } = await query(`
       SELECT
         p.name as product_name, b.short_code as bank_code,
@@ -202,10 +216,10 @@ const getCommissionSummary = async (req, res, next) => {
       JOIN applications a ON a.id = wl.application_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
-      WHERE wl.partner_id = $1
+      ${whereClause}
       GROUP BY p.id, p.name, b.short_code
       ORDER BY commission_earned DESC
-    `, [PartnerId]);
+    `, queryParams);
 
     return success(res, rows);
   } catch (err) {

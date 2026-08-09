@@ -417,7 +417,7 @@ export default function PartnerDashboardComponent({ partner }) {
                 </h4>
                 <p style={{ fontSize: '12px', color: isDark ? C.textLight : '#4B5563', margin: '2px 0 0 0' }}>
                   {kycStatus === 'rejected'
-                    ? 'Documents require correction. Click to re-upload.'
+                    ? ''
                     : kycStatus === 'under_review'
                     ? 'Submitted for admin review.'
                     : 'Complete KYC to unlock full referral earnings.'}
