@@ -31,12 +31,18 @@ const isOptionalFieldValid = (pattern, msg) => {
 const registerRules = [
   body('email')
     .trim()
-    .isEmail().withMessage('Valid email is required')
-    .normalizeEmail(),
+    .toLowerCase()
+    .isEmail().withMessage('Valid email is required'),
   body('mobile')
-    .trim()
+    .customSanitizer(val => String(val || '').replace(/\D/g, '').slice(-10))
     .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
-  body('first_name').trim().notEmpty().withMessage('First name required'),
+  body('first_name')
+    .customSanitizer((val, { req }) => {
+      if (val && String(val).trim()) return String(val).trim();
+      const fallback = req.body.fullName || req.body.full_name || req.body.name || '';
+      return String(fallback).trim().split(' ')[0] || '';
+    })
+    .notEmpty().withMessage('First name required'),
   body('last_name').optional({ checkFalsy: true }).trim(),
   body('aadhaar').custom(isOptionalFieldValid(/^\d{12}$/, 'Valid 12-digit Aadhaar number required')),
   body('pan').custom(isOptionalFieldValid(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Valid PAN number required')),
