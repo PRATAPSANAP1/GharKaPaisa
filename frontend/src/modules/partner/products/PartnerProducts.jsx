@@ -116,9 +116,19 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
+  // Normalize bank name string
+  const getNormalizedBank = (bankStr) => {
+    if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all') return 'All Banks';
+    const foundInBanks = BANKS.find(b => b.toLowerCase() === bankStr.toLowerCase());
+    if (foundInBanks) return foundInBanks;
+    const foundInActive = activeBanks.find(b => b.short_code?.toLowerCase() === bankStr.toLowerCase() || b.name?.toLowerCase().includes(bankStr.toLowerCase()));
+    if (foundInActive) return foundInActive.short_code || foundInActive.name;
+    return bankStr;
+  };
+
   const [search, setSearch] = useState(() => initialSearch || searchParams.get('q') || searchParams.get('search') || "");
   const [activeCategory, setActiveCategory] = useState(() => initialCategory || searchParams.get('category') || "all");
-  const [activeBank, setActiveBank] = useState(() => initialBank || searchParams.get('bank') || "All Banks");
+  const [activeBank, setActiveBank] = useState(() => getNormalizedBank(initialBank || searchParams.get('bank') || "All Banks"));
   const [featureFilter, setFeatureFilter] = useState("all"); // 'all', 'ltf', 'high_payout', 'high_approval'
   const [filterTab, setFilterTab] = useState("products"); // 'products' or 'banks'
   const [sortBy, setSortBy] = useState("featured");
@@ -129,8 +139,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
   // Sync initialBank, initialCategory, or initialSearch props
   useEffect(() => {
-    if (initialBank) setActiveBank(initialBank);
-  }, [initialBank]);
+    if (initialBank) setActiveBank(getNormalizedBank(initialBank));
+  }, [initialBank, activeBanks]);
 
   useEffect(() => {
     if (initialCategory) setActiveCategory(initialCategory);
@@ -298,10 +308,21 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
   // Reset bank filter when category changes and selected bank is no longer available
   useEffect(() => {
-    if (activeBank !== 'All Banks' && !banksForCategory.includes(activeBank)) {
-      setActiveBank('All Banks');
+    if (activeBank !== 'All Banks') {
+      const activeBankLower = activeBank.toLowerCase().trim();
+      const isAvailableInActive = banksForCategory.some(b => b.toLowerCase().trim() === activeBankLower);
+      if (!isAvailableInActive && banksForCategory.length > 1) {
+        const hasMatchingProduct = products.some(p => 
+          p.bank_code?.toLowerCase() === activeBankLower || 
+          p.bank_name?.toLowerCase().includes(activeBankLower) || 
+          p.name?.toLowerCase().includes(activeBankLower)
+        );
+        if (!hasMatchingProduct) {
+          setActiveBank('All Banks');
+        }
+      }
     }
-  }, [banksForCategory, activeBank]);
+  }, [banksForCategory, activeBank, products]);
 
   // Filter Logic
   const filteredProducts = products.filter(p => {

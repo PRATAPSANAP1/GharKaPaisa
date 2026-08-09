@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getBankApplyLink } from '../home/components/CreditCards/cardLinkHelper';
 
 export default function PartnerShareLanding() {
   const { trackingToken } = useParams();
@@ -18,9 +19,6 @@ export default function PartnerShareLanding() {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [redirectUrl, setRedirectUrl] = useState('');
-  const [countdown, setCountdown] = useState(5);
 
   // Responsive
   const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -59,17 +57,6 @@ export default function PartnerShareLanding() {
     if (trackingToken) fetchShareDetails();
   }, [trackingToken]);
 
-  // Countdown after submit
-  useEffect(() => {
-    if (!submitted || !redirectUrl) return;
-    if (countdown <= 0) {
-      window.location.href = redirectUrl;
-      return;
-    }
-    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [submitted, redirectUrl, countdown]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customerName.trim()) return alert('Please enter your name');
@@ -87,27 +74,53 @@ export default function PartnerShareLanding() {
           customerMobile: customerMobile.trim().replace(/\D/g, '').slice(-10)
         })
       });
-      console.log('Response status:', res.status);
+      
       const json = await res.json();
       console.log('Response data:', json);
       if (json && json.success) {
-        console.log('Redirect URL:', json.data?.redirect_url);
-        const redirectUrl = json.data?.redirect_url;
-        if (redirectUrl) {
-          setRedirectUrl(redirectUrl);
-          setSubmitted(true);
+        const targetUrl = json.data?.redirect_url || 
+          product?.partner_url || 
+          product?.public_url || 
+          product?.application_url || 
+          product?.apply_url || 
+          product?.redirect_url || 
+          getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
+
+        if (targetUrl) {
+          // DIRECTLY GO TO THIS CARD BANK LINK IMMEDIATELY!
+          console.log('Directly navigating to bank portal link:', targetUrl);
+          window.location.href = targetUrl;
+          return;
         } else {
-          // No redirect URL available - show manual link option
-          alert('Lead submitted successfully! However, the bank application link is not available. Please contact your partner for the direct application link.');
           setSubmitted(true);
           setRedirectUrl('https://gharkapaisa.in');
         }
       } else {
-        console.error('Submit failed:', json);
+        // Fallback directly to bank apply link if backend lead submit had an issue
+        const fallbackUrl = product?.partner_url || 
+          product?.public_url || 
+          product?.application_url || 
+          product?.apply_url || 
+          getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
+
+        if (fallbackUrl) {
+          window.location.href = fallbackUrl;
+          return;
+        }
         alert(json.message || 'Something went wrong. Please try again.');
       }
     } catch (err) {
-      console.error('Submit failed:', err);
+      console.error('Submit error:', err);
+      const fallbackUrl = product?.partner_url || 
+        product?.public_url || 
+        product?.application_url || 
+        product?.apply_url || 
+        getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
+
+      if (fallbackUrl) {
+        window.location.href = fallbackUrl;
+        return;
+      }
       alert('Network error. Please try again.');
     } finally {
       setSubmitting(false);
@@ -142,57 +155,6 @@ export default function PartnerShareLanding() {
         <a href="https://gharkapaisa.in" style={{ padding: '10px 24px', background: themeColor, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
           Visit GharKaPaisa
         </a>
-      </div>
-    );
-  }
-
-  // Success/redirect screen
-  if (submitted) {
-    const isBankRedirect = redirectUrl && redirectUrl !== 'https://gharkapaisa.in';
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'pulse 1.5s ease-in-out infinite' }}>
-          <span style={{ fontSize: '36px' }}>✅</span>
-        </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 8px' }}>
-          {isBankRedirect ? 'Application Initiated!' : 'Application Submitted!'}
-        </h2>
-        <p style={{ fontSize: '15px', color: textSecondary, margin: '0 0 24px', maxWidth: '420px', lineHeight: 1.6 }}>
-          {isBankRedirect ? (
-            <>
-              Thank you, <strong style={{ color: themeColor }}>{customerName}</strong>! Redirecting you to the official {product.bank_name || 'bank'} application portal in <strong style={{ color: themeColor }}>{countdown}</strong> seconds...
-            </>
-          ) : (
-            <>
-              Thank you, <strong style={{ color: themeColor }}>{customerName}</strong>! Your application has been submitted successfully. Your partner will contact you with the direct bank application link shortly.
-            </>
-          )}
-        </p>
-        {isBankRedirect ? (
-          <a
-            href={redirectUrl}
-            style={{
-              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`, color: '#fff',
-              border: 'none', borderRadius: '14px', fontWeight: 800, textDecoration: 'none', fontSize: '15px',
-              boxShadow: `0 8px 24px ${themeColor}40`, transition: 'all 0.2s'
-            }}
-          >
-            Apply Now on {product.bank_name || 'Bank'} Portal →
-          </a>
-        ) : (
-          <a
-            href="https://gharkapaisa.in"
-            style={{
-              padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`, color: '#fff',
-              border: 'none', borderRadius: '14px', fontWeight: 800, textDecoration: 'none', fontSize: '15px',
-              boxShadow: `0 8px 24px ${themeColor}40`, transition: 'all 0.2s'
-            }}
-          >
-            Visit GharKaPaisa →
-          </a>
-        )}
-        <p style={{ fontSize: '12px', color: textSecondary, marginTop: '16px' }}>Powered by <strong>GharKaPaisa</strong></p>
-        <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }

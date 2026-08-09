@@ -151,13 +151,15 @@ const submitShareLead = async (req, res, next) => {
 
       // Get product bank link
       const { rows: [product] } = await query(
-        `SELECT public_url, partner_url FROM products WHERE id = $1`,
+        `SELECT public_url, partner_url, application_url, apply_url, redirect_url, name FROM products WHERE id = $1`,
         [shareLinkData.product_id]
       );
 
+      const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || null;
+
       return success(res, {
         lead_id: updatedLead.id,
-        redirect_url: product?.partner_url || product?.public_url || null,
+        redirect_url: targetRedirectUrl,
         message: 'Lead updated successfully'
       });
     }
@@ -181,13 +183,15 @@ const submitShareLead = async (req, res, next) => {
 
     // Get product bank link for redirect
     const { rows: [product] } = await query(
-      `SELECT public_url, partner_url, name FROM products WHERE id = $1`,
+      `SELECT public_url, partner_url, application_url, apply_url, redirect_url, name FROM products WHERE id = $1`,
       [shareLinkData.product_id]
     );
 
+    const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || null;
+
     return created(res, {
       lead_id: lead.id,
-      redirect_url: product?.partner_url || product?.public_url || null,
+      redirect_url: targetRedirectUrl,
       product_name: product?.name,
       message: 'Lead created successfully'
     });
