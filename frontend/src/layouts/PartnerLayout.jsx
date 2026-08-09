@@ -59,11 +59,6 @@ const NAV_ITEMS = [
   },
   { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup, partnerOnly: true },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
-  { id: 'marketing', path: '/partner/marketing', label: 'Marketing', icon: MdCampaign },
-  { id: 'training', path: '/partner/training', label: 'Training', icon: MdSchool },
-  { id: 'wallet', path: '/partner/wallet', label: 'Wallet', icon: MdAccountBalanceWallet },
-  { id: 'referral', path: '/partner/referral', label: 'Referral', icon: MdGroup },
-  { id: 'notifications', path: '/partner/notifications', label: 'Notifications', icon: MdNotifications },
   { id: 'support', path: '/partner/support', label: 'Support', icon: MdSupportAgent },
   { id: 'settings', path: '/partner/settings', label: 'Settings', icon: MdSettings }
 ];
@@ -872,9 +867,13 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
   const profileMenuItems = [
     { id: 'profile', label: 'Profile Hub', path: '/partner/profile', icon: MdAccountCircle },
     { id: 'kyc-centre', label: 'KYC Centre', path: '/partner/kyc-centre', icon: MdVerifiedUser },
+    { id: 'marketing', label: 'Marketing Center', path: '/partner/marketing', icon: MdCampaign },
+    { id: 'training', label: 'Training Academy', path: '/partner/training', icon: MdSchool },
     { id: 'wallet', label: 'Wallet', path: '/partner/wallet', icon: MdAccountBalanceWallet },
+    { id: 'referral', label: 'Refers', path: '/partner/referral', icon: MdGroup },
+    { id: 'notifications', label: 'Notifications', path: '/partner/notifications', icon: MdNotifications },
     ...(isTeamMember 
-      ? [{ id: 'referral', label: 'Refer', path: '/partner/referral', icon: MdGroup }]
+      ? []
       : [{ id: 'team-network', label: 'Manage Team', path: '/partner/team', icon: MdGroup }]
     ),
     { id: 'support', label: 'Support Center', path: '/partner/support', icon: MdSupportAgent },
