@@ -589,13 +589,26 @@ const addTeamMember = async (req, res, next) => {
     // Generate unique partner code
     const partnerCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
 
-    // Create partner profile for team member
-    await client.query(`
+    // Create partner profile for team member immediately
+    const { rows: [insertedProfile] } = await client.query(`
       INSERT INTO partner_profiles (
         user_id, parent_partner_id, first_name, last_name, partner_code, partner_type, kyc_status
       )
       VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'pending')
+      RETURNING id
     `, [newUser.id, partnerId, memberFirstName, memberLastName, partnerCode]);
+
+    // Create immediate team relationship record
+    await client.query(`
+      INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
+      VALUES ($1, $2, 1)
+      ON CONFLICT DO NOTHING
+    `, [partnerId, insertedProfile.id]).catch(() => {});
+
+    // Update parent's team member count
+    await client.query(`
+      UPDATE partner_profiles SET children_count = children_count + 1 WHERE id = $1
+    `, [partnerId]).catch(() => {});
 
     // Save invitation record to invitation_history table
     await client.query(`
