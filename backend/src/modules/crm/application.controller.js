@@ -849,7 +849,7 @@ const listApplications = async (req, res, next) => {
           NULL as approved_at,
           NULL as commission_received_at,
           NULL as commission_paid_at,
-          l.created_by as submitted_by,
+          c.created_by as submitted_by,
           COALESCE(c.full_name, l.customer_name) as customer_name,
           COALESCE(c.mobile, l.mobile) as customer_mobile,
           c.email as customer_email,
@@ -897,7 +897,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile, l.created_by as submitted_by
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile, c.created_by as submitted_by
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
