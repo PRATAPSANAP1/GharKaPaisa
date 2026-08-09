@@ -559,8 +559,17 @@ const addTeamMember = async (req, res, next) => {
     if (parentPartner.allow_team_creation === false) {
       return error(res, 'Your profile does not allow team creation. Please contact support.', 403);
     }
-    if (parentPartner.team_status === 'INACTIVE') {
-      return error(res, 'Your team status is currently inactive. You cannot add team members.', 403);
+    // Check if user with email or mobile already exists
+    const { rows: existingUsers } = await client.query(`
+      SELECT id, email, mobile, status, role FROM users WHERE LOWER(email) = LOWER($1) OR mobile = $2
+    `, [email.trim(), mobile.trim()]);
+
+    if (existingUsers.length > 0) {
+      const isEmailMatch = existingUsers.some(u => u.email.toLowerCase() === email.trim().toLowerCase());
+      const msg = isEmailMatch
+        ? 'A user with this email address is already registered or invited.'
+        : 'A user with this mobile number is already registered or invited.';
+      return error(res, msg, 400);
     }
 
     await client.query('BEGIN');
