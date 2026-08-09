@@ -87,6 +87,5 @@ router.post('/support-tickets/:id/reply', requirePartner, supportCtrl.addReply);
 
 // Settings Routes (Profile, Password, Bank Details)
 router.put('/profile', requirePartner, partnerCtrl.updateProfile);
-router.post('/change-password', requirePartner, partnerCtrl.changePassword);
 
 module.exports = router;

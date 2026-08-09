@@ -679,7 +679,7 @@ const listPartnerCustomers = async (req, res, next) => {
 
     // For team members, only show customers created by them
     const whereClause = isTeamMember
-      ? `a.partner_id = $1 AND a.created_by = $2`
+      ? `a.partner_id = $1 AND c.created_by = $2`
       : `a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)`;
 
     const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
