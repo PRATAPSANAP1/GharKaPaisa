@@ -25,23 +25,23 @@ const registerRules = [
     .trim()
     .matches(/^[6-9]\d{9}$/).withMessage('Valid 10-digit mobile number is required'),
   body('first_name').trim().notEmpty().withMessage('First name required'),
-  body('last_name').trim().notEmpty().withMessage('Last name required'),
+  body('last_name').optional({ checkFalsy: true }).trim(),
   body('aadhaar').optional({ checkFalsy: true }).trim().matches(/^\d{12}$/).withMessage('Valid Aadhaar number required'),
-  body('pan').trim().toUpperCase().notEmpty()
+  body('pan').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).withMessage('Valid PAN number required'),
-  body('current_address').trim().notEmpty().withMessage('Address required'),
-  body('pincode').trim().notEmpty().matches(/^\d{6}$/).withMessage('Valid 6-digit Pincode required'),
-  body('bank_name').trim().notEmpty().withMessage('Bank name required'),
-  body('account_number').trim().notEmpty().withMessage('Account number required'),
-  body('ifsc_code').trim().toUpperCase()
+  body('current_address').optional({ checkFalsy: true }).trim(),
+  body('pincode').optional({ checkFalsy: true }).trim().matches(/^\d{6}$/).withMessage('Valid 6-digit Pincode required'),
+  body('bank_name').optional({ checkFalsy: true }).trim(),
+  body('account_number').optional({ checkFalsy: true }).trim(),
+  body('ifsc_code').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/).withMessage('Valid IFSC code required'),
-  body('account_holder_name').trim().notEmpty().withMessage('Account holder name required'),
-  body('company_name').trim().notEmpty().withMessage('Company name required'),
-  body('company_type').trim().notEmpty().withMessage('Company type required'),
+  body('account_holder_name').optional({ checkFalsy: true }).trim(),
+  body('company_name').optional({ checkFalsy: true }).trim(),
+  body('company_type').optional({ checkFalsy: true }).trim(),
   body('gst_number').optional({ checkFalsy: true }).trim().toUpperCase()
     .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
     .withMessage('Valid GST number required'),
-  body('business_location').trim().notEmpty().withMessage('Business location required'),
+  body('business_location').optional({ checkFalsy: true }).trim(),
 ];
 
 // ── Application validators ─────────────────────────────────────────────────
