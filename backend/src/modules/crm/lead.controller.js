@@ -121,7 +121,7 @@ const get360LeadDetails = async (req, res, next) => {
       LEFT JOIN products p ON p.id = l.product_id
       LEFT JOIN banks b ON b.id = p.bank_id
       LEFT JOIN partner_profiles pp ON pp.id = l.partner_id
-      LEFT JOIN customers c ON (c.mobile = l.mobile OR c.id = l.customer_id)
+      LEFT JOIN customers c ON c.mobile = l.mobile
       WHERE l.id = $1
     `, [id]);
 

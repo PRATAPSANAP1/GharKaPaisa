@@ -669,6 +669,14 @@ const addTeamMember = async (req, res, next) => {
     }, 'Invitation sent successfully. Invitee can complete registration using the invitation link.');
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err.code === '23505') {
+      if (err.constraint === 'users_email_key' || (err.detail && err.detail.includes('email'))) {
+        return error(res, 'A user with this email address is already registered or invited.', 400);
+      }
+      if (err.constraint === 'users_mobile_key' || (err.detail && err.detail.includes('mobile'))) {
+        return error(res, 'A user with this mobile number is already registered or invited.', 400);
+      }
+    }
     next(err);
   } finally {
     client.release();
