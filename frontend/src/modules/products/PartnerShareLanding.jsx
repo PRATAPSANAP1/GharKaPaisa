@@ -4,7 +4,6 @@ import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getBankApplyLink } from '../home/components/CreditCards/cardLinkHelper';
-import { getBankApplyLink } from '../home/components/CreditCards/cardLinkHelper';
 
 export default function PartnerShareLanding() {
   const { trackingToken } = useParams();
