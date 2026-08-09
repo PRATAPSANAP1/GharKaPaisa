@@ -48,45 +48,58 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
 
   if (!activeBanners.length) return null;
 
-  // Create array of 2 boxes that will show rotating banners
-  const boxBanners = [activeBanners[currentIndex], activeBanners[(currentIndex + 1) % activeBanners.length]];
-
   return (
     <div
       style={{
         width: '100%',
-        display: 'flex',
-        gap: '8px',
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '12px',
+        cursor: 'pointer',
         height: '100px',
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      onClick={() => handleBannerClick(activeBanners[currentIndex].link)}
     >
-      {boxBanners.map((banner, index) => (
+      <img
+        src={activeBanners[currentIndex].image}
+        alt={activeBanners[currentIndex].alt}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center',
+          display: 'block',
+        }}
+      />
+
+      {/* Dots indicator - only show if multiple banners */}
+      {activeBanners.length > 1 && (
         <div
-          key={`${banner.id}-${index}`}
           style={{
-            flex: 1,
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: '12px',
-            cursor: 'pointer',
+            position: 'absolute',
+            bottom: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '6px',
           }}
-          onClick={() => handleBannerClick(banner.link)}
         >
-          <img
-            src={banner.image}
-            alt={banner.alt}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center',
-              display: 'block',
-            }}
-          />
+          {activeBanners.map((_, index) => (
+            <div
+              key={index}
+              style={{
+                width: index === currentIndex ? '8px' : '6px',
+                height: index === currentIndex ? '8px' : '6px',
+                borderRadius: '50%',
+                backgroundColor: index === currentIndex ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)',
+                transition: 'all 0.3s ease',
+              }}
+            />
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
