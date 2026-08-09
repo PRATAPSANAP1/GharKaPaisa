@@ -34,6 +34,7 @@ router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 
 // ── Public Homepage & Catalog Content (No auth required) ────────
+router.use('/public/products',  productRoute);
 router.use('/products',         productRoute);
 router.use('/banners',          bannerRoute);
 router.use('/cms/sections',     cmsRouter);

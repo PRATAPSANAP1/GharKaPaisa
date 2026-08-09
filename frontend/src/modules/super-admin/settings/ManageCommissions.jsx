@@ -38,11 +38,18 @@ export default function ManageCommissions() {
   const [form, setForm] = useState({
     product_id: "",
     Partner_id: "", // empty or 'global' means Global Override
+    partner_ids: [], // for multiple selection
     commission_type: "fixed",
     commission_value: "",
     effective_from: new Date().toISOString().split("T")[0],
     effective_to: "",
   });
+
+  // Product search state
+  const [productSearch, setProductSearch] = useState("");
+  
+  // Partner filter state
+  const [partnerRoleFilter, setPartnerRoleFilter] = useState("all"); // all, partners, team_members
 
   const fetchData = async () => {
     setLoading(true);
@@ -106,11 +113,14 @@ export default function ManageCommissions() {
     setForm({
       product_id: products[0]?.id || "",
       Partner_id: targetPartnerId || "",
+      partner_ids: targetPartnerId ? [targetPartnerId] : [],
       commission_type: "fixed",
       commission_value: "",
       effective_from: new Date().toISOString().split("T")[0],
       effective_to: "",
     });
+    setProductSearch("");
+    setPartnerRoleFilter("all");
     setErrorMsg("");
     setSuccessMsg("");
     setModalOpen(true);
@@ -124,7 +134,7 @@ export default function ManageCommissions() {
 
     const payload = {
       product_ids: form.product_id || "all",
-      partner_ids: form.Partner_id || "global",
+      partner_ids: form.partner_ids.length > 0 ? form.partner_ids : (form.Partner_id || "global"),
       commission_type: form.commission_type,
       commission_value: parseFloat(form.commission_value || 0),
       effective_from: form.effective_from,
@@ -197,6 +207,33 @@ export default function ManageCommissions() {
     if (!cat) return "";
     return cat.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   };
+
+  // Consolidate rules - group by partner_id and show "All Cards" for multiple product overrides
+  const consolidatedRules = (() => {
+    const grouped = {};
+    rules.forEach(rule => {
+      const key = rule.Partner_id || rule.partner_id || 'global';
+      if (!grouped[key]) {
+        grouped[key] = {
+          ...rule,
+          product_ids: [rule.product_id],
+          product_names: [rule.product_name],
+        };
+      } else {
+        if (!grouped[key].product_ids.includes(rule.product_id)) {
+          grouped[key].product_ids.push(rule.product_id);
+          grouped[key].product_names.push(rule.product_name);
+        }
+      }
+    });
+    
+    // Convert to array and mark "All Cards" if multiple products
+    return Object.values(grouped).map(rule => ({
+      ...rule,
+      isAllCards: rule.product_ids.length > 1 || rule.product_ids.includes('all'),
+      displayProduct: rule.isAllCards ? 'All Cards & Products' : rule.product_name
+    }));
+  })();
 
   // Filtered partners/team members list
   const filteredPartners = partners.filter(p => {
@@ -686,7 +723,7 @@ export default function ManageCommissions() {
       ) : activeTab === "overrides" ? (
         /* TAB: OVERRIDES */
         <div style={S.card}>
-          {rules.length === 0 ? (
+          {consolidatedRules.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 24px" }}>
               <div style={{ fontSize: "40px", marginBottom: "12px" }}>⚙️</div>
               <h3 style={{ fontSize: "16px", fontWeight: 700, color: C.text }}>No Custom Override Rules</h3>
@@ -708,11 +745,18 @@ export default function ManageCommissions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rules.map((rule) => (
+                  {consolidatedRules.map((rule) => (
                     <tr key={rule.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = `${C.border}15`} onMouseLeave={e => e.currentTarget.style.background = "none"}>
                       <td style={{ padding: "14px 16px" }}>
-                        <div style={{ fontWeight: 700, color: C.text }}>{rule.product_name}</div>
-                        <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>{formatCategory(rule.product_category)}</div>
+                        <div style={{ fontWeight: 700, color: C.text }}>{rule.displayProduct}</div>
+                        {rule.isAllCards && (
+                          <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>
+                            {rule.product_names.length} products
+                          </div>
+                        )}
+                        {!rule.isAllCards && (
+                          <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>{formatCategory(rule.product_category)}</div>
+                        )}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
                         {rule.Partner_id || rule.partner_id ? (
@@ -851,40 +895,111 @@ export default function ManageCommissions() {
 
             <form onSubmit={handleCreateRule} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               
-              {/* Product */}
+              {/* Product with Search */}
               <div>
                 <label style={S.label}>Select Product or Cards *</label>
-                <select
-                  required
+                <input
+                  type="text"
+                  placeholder="Search cards by name..."
                   style={S.input}
-                  value={form.product_id}
-                  onChange={e => setForm({ ...form, product_id: e.target.value })}
-                >
-                  <option value="all">🌟 All Cards & Products (Apply same payout to all products)</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                />
+                <div style={{ marginTop: "8px", maxHeight: "150px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px" }}>
+                  <div
+                    style={{ padding: "10px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: form.product_id === "all" ? `${C.teal}15` : "transparent" }}
+                    onClick={() => setForm({ ...form, product_id: "all" })}
+                  >
+                    🌟 All Cards & Products (Apply same payout to all products)
+                  </div>
+                  {products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => (
+                    <div
+                      key={p.id}
+                      style={{ padding: "10px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: form.product_id === p.id ? `${C.teal}15` : "transparent" }}
+                      onClick={() => setForm({ ...form, product_id: p.id })}
+                    >
                       {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})
-                    </option>
+                    </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Partner Role Filter */}
+              <div>
+                <label style={S.label}>Filter by Role</label>
+                <select
+                  style={S.input}
+                  value={partnerRoleFilter}
+                  onChange={e => setPartnerRoleFilter(e.target.value)}
+                >
+                  <option value="all">All (Partners & Team Members)</option>
+                  <option value="partners">Partners Only</option>
+                  <option value="team_members">Team Members Only</option>
                 </select>
               </div>
 
-              {/* Target Partner / Team Member */}
+              {/* Target Partner / Team Member - Multiple Selection */}
               <div>
                 <label style={S.label}>Select Target Partner or Team Member</label>
-                <select
-                  style={S.input}
-                  value={form.Partner_id}
-                  onChange={e => setForm({ ...form, Partner_id: e.target.value })}
-                >
-                  <option value="global">🌐 Global Override (All Partners & Team Members)</option>
-                  <option value="all">👥 All Active Partners & Team Members</option>
-                  {partners.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code || 'N/A'}) - {p.parent_name ? `Downline of ${p.parent_name}` : (p.company_name || 'Primary Partner')}
-                    </option>
+                <div style={{ maxHeight: "200px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px" }}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.partner_ids.includes("global")}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setForm({ ...form, partner_ids: ["global"] });
+                          } else {
+                            setForm({ ...form, partner_ids: [] });
+                          }
+                        }}
+                      />
+                      🌐 Global Override (All Partners & Team Members)
+                    </label>
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.partner_ids.includes("all")}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setForm({ ...form, partner_ids: ["all"] });
+                          } else {
+                            setForm({ ...form, partner_ids: [] });
+                          }
+                        }}
+                      />
+                      👥 All Active Partners & Team Members
+                    </label>
+                  </div>
+                  {partners.filter(p => {
+                    if (partnerRoleFilter === "partners") return p.role === "PARTNER";
+                    if (partnerRoleFilter === "team_members") return p.role === "TEAM_MEMBER";
+                    return true;
+                  }).map(p => (
+                    <label key={p.id} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", padding: "4px 0" }}>
+                      <input
+                        type="checkbox"
+                        checked={form.partner_ids.includes(p.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setForm({ ...form, partner_ids: [...form.partner_ids.filter(id => !["global", "all"].includes(id)), p.id] });
+                          } else {
+                            setForm({ ...form, partner_ids: form.partner_ids.filter(id => id !== p.id) });
+                          }
+                        }}
+                      />
+                      {p.first_name} {p.last_name} ({p.Partner_code || p.partner_code || 'N/A'}) - {p.role === 'TEAM_MEMBER' ? 'Team Member' : 'Partner'}
+                    </label>
                   ))}
-                </select>
+                </div>
+                {form.partner_ids.length > 0 && (
+                  <div style={{ marginTop: "8px", fontSize: "12px", color: C.teal, fontWeight: 600 }}>
+                    {form.partner_ids.length} account(s) selected
+                  </div>
+                )}
               </div>
 
               {/* Commission Config (Split Row) */}

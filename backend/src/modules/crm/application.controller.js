@@ -784,6 +784,7 @@ const listApplications = async (req, res, next) => {
 
     // For team members, add submitted_by filter
     const submittedByFilter = isTeamMember && validUserId ? `AND combined.submitted_by = $9::uuid` : '';
+    const submittedByFilterCount = isTeamMember && validUserId ? `AND combined.submitted_by = $7::uuid` : '';
     const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId];
     if (isTeamMember && validUserId) {
       queryParams.push(validUserId);
@@ -906,7 +907,7 @@ const listApplications = async (req, res, next) => {
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
-        ${submittedByFilter}
+        ${submittedByFilterCount}
     `, countQueryParams);
 
     return paginate(res, rows, parseInt(count), page, limit);

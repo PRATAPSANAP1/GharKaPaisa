@@ -8,6 +8,7 @@ const walletCtrl = require('../wallet/controller.js');
 const appCtrl = require('../crm/application.controller.js');
 const notifCtrl = require('../notifications/controller.js');
 const productCtrl = require('../products/controller.js');
+const reportCtrl = require('../reports/controller.js');
 
 // Require authentication and super_admin authorization globally for this router
 router.use(jwtAuth);
@@ -96,5 +97,8 @@ router.post('/upgrade-requests/:id/reject', async (req, res, next) => {
     return res.json({ success: true, ...data });
   } catch (err) { next(err); }
 });
+
+// Reports
+router.get('/reports/payouts/export', reportCtrl.exportPayoutsReport);
 
 module.exports = router;
