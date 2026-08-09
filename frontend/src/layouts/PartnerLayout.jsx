@@ -123,6 +123,7 @@ export default function PartnerLayout() {
   }, []);
 
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [showForcePasswordModal, setShowForcePasswordModal] = useState(false);
 
   const fetchUnreadNotifs = async () => {
     try {
