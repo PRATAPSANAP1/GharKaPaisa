@@ -25,7 +25,6 @@ const FIELD_TO_STEP = {
   last_name: 0,
   email: 0,
   mobile: 0,
-  aadhaar: 0,
   password: 0,
   company_name: 1,
   current_address: 1,
@@ -45,7 +44,6 @@ const BACKEND_TO_FRONTEND_FIELD = {
   last_name: 'lastName',
   email: 'email',
   mobile: 'mobile',
-  aadhaar: 'aadhaar',
   company_name: 'companyName',
   current_address: 'currentAddress',
   pincode: 'pincode',
@@ -113,7 +111,6 @@ export default function PartnerRegister() {
     // Step 0 – Personal
     firstName: "", lastName: "", mobile: "",
     email: "", password: "", confirmPassword: "",
-    aadhaar: "",
     emailOtp: "",
     emailPreVerified: false,
     mobileOtp: "",
@@ -257,18 +254,6 @@ export default function PartnerRegister() {
   }, [form.email]);
 
   useEffect(() => {
-    if (!form.mobile) return;
-    setMobileOtpSent(false);
-    setMobileOtpTimer(0);
-    setMobileOtpRequestId("");
-    setForm(f => ({ ...f, mobilePreVerified: false, mobileOtp: '' }));
-  }, [form.mobile]);
-
-  useEffect(() => {
-    setFieldErrors(prev => ({ ...prev, aadhaar: "" }));
-  }, [form.aadhaar]);
-
-  useEffect(() => {
     let t;
     if (emailOtpTimer > 0) t = setTimeout(() => setEmailOtpTimer(emailOtpTimer - 1), 1000);
     return () => clearTimeout(t);
@@ -314,11 +299,6 @@ export default function PartnerRegister() {
       if (!form.email.trim()) return t("partner.errors.emailRequired", "Please enter your email address.");
       if (!/\S+@\S+\.\S+/.test(form.email)) return t("partner.errors.emailInvalid", "Please enter a valid email address.");
       if (!form.emailPreVerified) return t("partner.errors.verifyEmail", "Please verify your email address with OTP before continuing.");
-
-      const cleanAadhaar = form.aadhaar.replace(/[\s-]/g, "");
-      if (!cleanAadhaar) return t("partner.errors.aadhaarRequired", "Please enter your Aadhaar number.");
-      if (!/^\d{12}$/.test(cleanAadhaar)) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
-
 
       if (!form.password) return t("partner.errors.passwordRequired", "Please enter a password.");
       if (form.password.length < 8) return t("partner.errors.passwordMinLength", "Password must be at least 8 characters.");
@@ -570,7 +550,6 @@ export default function PartnerRegister() {
         account_number: form.accountNumber.trim(),
         ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
         account_holder_name: form.accountHolderName.trim(),
-        aadhaar: form.aadhaar.replace(/[\s-]/g, ""),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
         referral_code: referralCode,
         team_code: teamCode,
@@ -579,11 +558,10 @@ export default function PartnerRegister() {
       const res = await registerPartner(payload);
       if (res.success) {
         const partnerId = res.data?.partner_id || res.data?.id || res.data?.user_id;
-        if (partnerId && (form.panFile || form.aadhaarFile || form.chequeFile)) {
+        if (partnerId && (form.panFile || form.chequeFile)) {
           try {
             const formData = new FormData();
             if (form.panFile) formData.append('pan', form.panFile);
-            if (form.aadhaarFile) formData.append('aadhaar', form.aadhaarFile);
             if (form.chequeFile) formData.append('cancelled_cheque', form.chequeFile);
             await api.post(`/partner/${partnerId}/kyc`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
@@ -1486,26 +1464,6 @@ export default function PartnerRegister() {
                     )}
                   </div>
 
-                  {/* Aadhaar Number */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label id="label-aadhaar" style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number")}</label>
-                    <div style={{ position: "relative" }}>
-                      <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}>📄</span>
-                      <input 
-                        type="text" 
-                        placeholder={t("onboarding.aadhaarPlaceholder", "Enter 12-digit Aadhaar")} 
-                        maxLength={12}
-                        {...inputProps("aadhaar")}
-                        style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
-                      />
-                    </div>
-                    {fieldErrors.aadhaar && (
-                      <div id="error-aadhaar-backend" style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
-                        {fieldErrors.aadhaar}
-                      </div>
-                    )}
-                  </div>
-
                   {/* Password */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-password" style={S.label}>{t("onboarding.password", "Password")}</label>
@@ -1712,17 +1670,6 @@ export default function PartnerRegister() {
                     {form.panFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.panFile.name}</span>}
                   </div>
 
-                  {/* Aadhaar Document File Upload */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Upload Aadhaar Card (JPG, PNG or PDF)</label>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={e => setForm(f => ({ ...f, aadhaarFile: e.target.files[0] }))}
-                      style={{ ...S.input, padding: "8px" }}
-                    />
-                    {form.aadhaarFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.aadhaarFile.name}</span>}
-                  </div>
 
                   {/* Cancelled Cheque / Bank Proof Upload */}
                   <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
