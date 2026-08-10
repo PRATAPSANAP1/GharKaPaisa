@@ -754,7 +754,7 @@ export default function PartnerLayout() {
                   cursor: 'pointer',
                 }}
               >
-                Verify Now
+                Complete KYC
               </button>
             )}
           </div>

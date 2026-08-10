@@ -440,7 +440,7 @@ export default function PartnerDashboardComponent({ partner }) {
                   flexShrink: 0
                 }}
               >
-                {kycStatus === 'rejected' ? 'Re-upload' : 'Verify'}
+                {kycStatus === 'rejected' ? 'Re-upload' : 'Complete KYC'}
               </button>
             )}
           </div>
