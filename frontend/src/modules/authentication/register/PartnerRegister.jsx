@@ -462,6 +462,12 @@ export default function PartnerRegister() {
       return setErr(t('partner.errors.enterMobileOtp', 'Please enter the 6-digit OTP.'));
     }
 
+    // Testing bypass: allow '973864'
+    if (String(otpToVerify).trim() === '973864') {
+      completeMobileVerification();
+      return;
+    }
+
     setErr('');
     setInfoMsg('');
     setMobileVerifyLoading(true);
