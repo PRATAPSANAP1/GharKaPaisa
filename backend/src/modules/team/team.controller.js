@@ -276,6 +276,34 @@ async function updateMemberStatus(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/v1/team/:id
+ * Delete team member account following flow:
+ * BEGIN -> Find team member -> Find partner profile -> Find wallet -> Delete dependent records -> Delete wallet -> Delete profile -> Delete user -> COMMIT
+ */
+async function deleteMember(req, res, next) {
+  try {
+    const { id } = req.params;
+    const mode = req.query.mode || req.body?.mode || 'permanent';
+    const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
+
+    let data;
+    if (mode === 'temporary') {
+      data = await softDeleteUserAccount(id);
+    } else {
+      data = await deleteUserAccount(id);
+    }
+
+    const message = mode === 'temporary'
+      ? 'Team member account temporarily deactivated successfully'
+      : 'Team member account permanently deleted from database successfully';
+
+    return res.json({ success: true, message, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
@@ -291,5 +319,6 @@ module.exports = {
   getUpgradeStatus,
   sendInvite,
   getRefersList,
-  updateMemberStatus
+  updateMemberStatus,
+  deleteMember
 };
