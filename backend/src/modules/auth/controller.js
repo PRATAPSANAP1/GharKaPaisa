@@ -583,6 +583,7 @@ const register = async (req, res, next) => {
     let parentTeamLevel = 0;
     let invite = [];
     let Partner = null;
+    let emailVerified = false;
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     const userAgent = req.headers['user-agent'] || '';
@@ -764,7 +765,7 @@ const register = async (req, res, next) => {
         `SELECT id FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
         [email]
       );
-      const emailVerified = preVerifiedRows.length > 0 || req.body.email_verified === true || req.body.emailVerified === true;
+      emailVerified = preVerifiedRows.length > 0 || req.body.email_verified === true || req.body.emailVerified === true;
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
