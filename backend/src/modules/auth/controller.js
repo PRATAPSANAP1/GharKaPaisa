@@ -759,6 +759,13 @@ const register = async (req, res, next) => {
         }
       }
 
+      // Check if email was pre-verified via OTP
+      const { rows: preVerifiedRows } = await client.query(
+        `SELECT id FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
+        [email]
+      );
+      const emailVerified = preVerifiedRows.length > 0 || req.body.email_verified === true || req.body.emailVerified === true;
+
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
          VALUES ($1, $2, $3, $4::user_role, CASE WHEN $4 = 'PARTNER' THEN 'inactive'::user_status WHEN $7 THEN 'active'::user_status ELSE 'pending'::user_status END, $7, $5, $6) RETURNING id`,
