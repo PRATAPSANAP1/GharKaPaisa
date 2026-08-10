@@ -37,6 +37,8 @@ const FIELD_TO_STEP = {
   ifsc_code: 2,
   account_holder_name: 2,
   pan: 3,
+  aadhaar: 3,
+  aadhaar_number: 3,
 };
 
 const BACKEND_TO_FRONTEND_FIELD = {
@@ -55,6 +57,8 @@ const BACKEND_TO_FRONTEND_FIELD = {
   ifsc_code: 'ifsc',
   account_holder_name: 'accountHolderName',
   pan: 'pan',
+  aadhaar: 'aadhaar',
+  aadhaar_number: 'aadhaar',
 };
 
 const INDIA_BANKS = [
@@ -142,6 +146,7 @@ export default function PartnerRegister() {
     bankName: "", accountNumber: "", ifsc: "", accountHolderName: "",
     // Step 3 – KYC text
     pan: "",
+    aadhaar: "",
     termsAgreed: false,
     ...(savedDraft?.form || {})
   }));
@@ -368,6 +373,7 @@ export default function PartnerRegister() {
     if (step === 3) { // Step 4: KYC Details
       if (!form.pan.trim()) return t("partner.errors.panRequired", "Please enter your PAN number.");
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(form.pan.trim())) return t("partner.errors.panInvalid", "Please enter a valid 10-character PAN number.");
+      if (form.aadhaar && !/^\d{12}$/.test(form.aadhaar.trim())) return t("partner.errors.aadhaarInvalid", "Please enter a valid 12-digit Aadhaar number.");
       if (!form.termsAgreed) return t("partner.errors.acceptTerms", "You must agree to the Terms & Conditions and Privacy Policy to proceed.");
     }
     return null;
@@ -590,6 +596,7 @@ export default function PartnerRegister() {
         ifsc_code: form.ifsc ? form.ifsc.trim().toUpperCase() : "",
         account_holder_name: form.accountHolderName.trim(),
         pan: form.pan ? form.pan.trim().toUpperCase() : "",
+        aadhaar: form.aadhaar ? form.aadhaar.trim() : "",
         referral_code: referralCode,
         team_code: teamCode,
         role: "PARTNER",
@@ -1689,12 +1696,23 @@ export default function PartnerRegister() {
               {step === 3 && (
                 <div className="form-grid-layout">
                   {/* PAN Number */}
-                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-pan" style={S.label}>{t("onboarding.panNumber", "PAN Number *")}</label>
                     <input {...inputProps("pan")} placeholder={t("onboarding.panPlaceholder", "Enter 10-char PAN")} style={{ ...S.input, textTransform: "uppercase", paddingVertical: "10px" }} maxLength={10} />
                     {fieldErrors.pan && (
                       <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
                         {fieldErrors.pan}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Aadhaar Number */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <label id="label-aadhaar" style={S.label}>{t("onboarding.aadhaarNumber", "Aadhaar Number (Optional)")}</label>
+                    <input {...inputProps("aadhaar")} placeholder={t("onboarding.aadhaarPlaceholder", "Enter 12-digit Aadhaar number")} style={{ ...S.input, paddingVertical: "10px" }} maxLength={12} />
+                    {fieldErrors.aadhaar && (
+                      <div style={{ color: C.red || '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 600 }}>
+                        {fieldErrors.aadhaar}
                       </div>
                     )}
                   </div>
