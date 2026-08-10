@@ -8,6 +8,7 @@ const authCtrl = require('../auth/controller.js');
 const appCtrl = require('../crm/application.controller.js');
 const productCtrl = require('../products/controller.js');
 const walletCtrl = require('../wallet/controller.js');
+const superAdminCtrl = require('../super-admin/controller.js');
 
 const { validate, commissionRules } = require('../../middleware/validation/validation.middleware.js');
 
@@ -16,6 +17,8 @@ router.use(jwtAuth);
 
 // ── GET /admin/partners ──────────────────────────────────────────────────────
 router.get('/partners', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.listPartners);
+router.delete('/partners/:id', roleCheck('SUPER_ADMIN'), superAdminCtrl.deleteAdmin);
+router.delete('/users/:id', roleCheck('SUPER_ADMIN'), superAdminCtrl.deleteAdmin);
 
 // ── POST /admin/approve-kyc ──────────────────────────────────────────────────
 router.post('/approve-kyc', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.approvePartnerKYC);

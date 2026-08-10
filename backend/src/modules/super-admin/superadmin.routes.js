@@ -18,6 +18,7 @@ router.post('/create-admin', ctrl.createAdmin);
 router.get('/admins', ctrl.listAdmins);
 router.delete('/admins/:id', ctrl.deleteAdmin);
 router.delete('/users/:id', ctrl.deleteAdmin);
+router.delete('/partners/:id', ctrl.deleteAdmin);
 router.post('/block-user', ctrl.blockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
