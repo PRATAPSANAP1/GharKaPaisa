@@ -1717,31 +1717,6 @@ export default function PartnerRegister() {
                     )}
                   </div>
 
-                  {/* PAN Card Document File Upload */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Upload PAN Card (JPG, PNG or PDF)</label>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={e => setForm(f => ({ ...f, panFile: e.target.files[0] }))}
-                      style={{ ...S.input, padding: "8px" }}
-                    />
-                    {form.panFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.panFile.name}</span>}
-                  </div>
-
-
-                  {/* Cancelled Cheque / Bank Proof Upload */}
-                  <div className="form-full-width" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <label style={S.label}>Upload Cancelled Cheque / Bank Passbook Copy (Optional)</label>
-                    <input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={e => setForm(f => ({ ...f, chequeFile: e.target.files[0] }))}
-                      style={{ ...S.input, padding: "8px" }}
-                    />
-                    {form.chequeFile && <span style={{ fontSize: "11px", color: C.teal, fontWeight: 700 }}>✓ {form.chequeFile.name}</span>}
-                  </div>
-
                   {/* Info callout card */}
                   <div className="form-full-width" style={{
                     background: isDark ? "#112035" : "#F8FAFC",
