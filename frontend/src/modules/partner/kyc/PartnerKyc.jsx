@@ -270,9 +270,9 @@ export default function PartnerKyc() {
 
   // Upload handlers
   const handleUploadPan = async (selectedFile) => {
-    const fileToUpload = selectedFile || panFile;
-    if (!fileToUpload && !isDocApproved('pan')) return setErrorMsg('Please choose a file for PAN Card.');
-    if (!panNumber.trim()) return setErrorMsg('Please enter your PAN Card number.');
+    const fileToUpload = (selectedFile && typeof selectedFile !== 'object' ? null : selectedFile) || panFile;
+    if (!fileToUpload && !isDocApproved('pan')) return setErrorMsg('Please choose a PAN Card file first.');
+    if (!panNumber.trim()) return setErrorMsg('Please enter your 10-digit PAN Card number.');
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -298,8 +298,8 @@ export default function PartnerKyc() {
   };
 
   const handleUploadCheque = async (selectedFile) => {
-    const fileToUpload = selectedFile || chequeFile;
-    if (!fileToUpload) return setErrorMsg('Please choose a file for Cancelled Cheque.');
+    const fileToUpload = (selectedFile && typeof selectedFile !== 'object' ? null : selectedFile) || chequeFile;
+    if (!fileToUpload) return setErrorMsg('Please choose a Cancelled Cheque / Bank Proof file first.');
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -379,6 +379,19 @@ export default function PartnerKyc() {
   };
 
   const handleSubmitKyc = async () => {
+    // Validate that all 3 mandatory components are uploaded/recorded
+    const hasPan = kycData.documents?.some(d => d.doc_type === 'pan' && d.verification_status !== 'rejected');
+    const hasCheque = kycData.documents?.some(d => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
+    const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
+
+    if (!hasPan || !hasCheque || !hasVideo) {
+      const missing = [];
+      if (!hasPan) missing.push('PAN Card');
+      if (!hasCheque) missing.push('Bank Account Proof (Cancelled Cheque)');
+      if (!hasVideo) missing.push('Video Verification');
+      return setErrorMsg(`Cannot submit KYC. Please upload/record all mandatory items first: ${missing.join(', ')}.`);
+    }
+
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -577,11 +590,7 @@ export default function PartnerKyc() {
                     const file = e.target.files[0];
                     if (file) {
                       setPanFile(file);
-                      if (panNumber.trim()) {
-                        handleUploadPan(file);
-                      } else {
-                        setErrorMsg('Please enter your PAN Card number first.');
-                      }
+                      setErrorMsg('');
                     }
                   }}
                   style={{ display: 'none' }}
@@ -691,7 +700,7 @@ export default function PartnerKyc() {
                     const file = e.target.files[0];
                     if (file) {
                       setChequeFile(file);
-                      handleUploadCheque(file);
+                      setErrorMsg('');
                     }
                   }}
                   style={{ display: 'none' }}
@@ -1071,16 +1080,16 @@ export default function PartnerKyc() {
           </div>
           <button 
             onClick={handleSubmitKyc}
-            disabled={actionLoading || getProgress() < 100}
+            disabled={actionLoading}
             style={{
-              background: getProgress() < 100 ? '#64748B' : '#2563EB',
+              background: getProgress() < 100 ? '#94A3B8' : '#2563EB',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
               padding: isMobile ? '14px 20px' : '12px 28px',
               fontSize: isMobile ? '13px' : '14px',
               fontWeight: 800,
-              cursor: getProgress() < 100 ? 'not-allowed' : 'pointer',
+              cursor: actionLoading ? 'not-allowed' : 'pointer',
               boxShadow: getProgress() < 100 ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
               transition: 'all 0.2s',
               width: isMobile ? '100%' : 'auto',
