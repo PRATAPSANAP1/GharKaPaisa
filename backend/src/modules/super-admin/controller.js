@@ -255,12 +255,22 @@ const deleteAdmin = async (req, res, next) => {
     );
 
     if (!targetUser) {
-      return error(res, 'User account not found', 404);
+      const { rows: [partner] } = await query(
+        `SELECT user_id FROM partner_profiles WHERE id::text = $1`,
+        [id]
+      );
+      if (partner?.user_id) {
+        const { rows: [userByPartner] } = await query(
+          `SELECT id, email, role FROM users WHERE id::text = $1`,
+          [partner.user_id]
+        );
+        targetUser = userByPartner;
+      }
     }
 
     // Delete user
     const { deleteUserAccount } = require('../auth/user-deletion.service.js');
-    await deleteUserAccount(targetUser.id);
+    await deleteUserAccount(targetUser ? targetUser.id : id);
 
     // Record action in audit logs
     await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role });
