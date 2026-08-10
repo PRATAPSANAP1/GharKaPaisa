@@ -147,26 +147,11 @@ export default function PartnerLayout() {
     }
   };
 
-  // Real-time automatic data synchronization (on route change and 15s interval)
+  // Data synchronization on mount and navigation (no page-wide polling timer)
   useEffect(() => {
     if (!user?.id) return;
-
-    const syncRealtimeData = async () => {
-      try {
-        const freshUser = await getMe(true);
-        if (freshUser) {
-          useAuthStore.getState().updateUser(freshUser);
-        }
-        fetchWallet();
-        fetchUnreadNotifs();
-      } catch (e) {
-        /* silent catch */
-      }
-    };
-
-    syncRealtimeData();
-    const interval = setInterval(syncRealtimeData, 15000); // 15s real-time auto sync
-    return () => clearInterval(interval);
+    fetchWallet();
+    fetchUnreadNotifs();
   }, [user?.id, location.pathname]);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';
