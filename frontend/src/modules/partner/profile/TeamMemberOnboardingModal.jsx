@@ -753,7 +753,13 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
                 Your password, contact details, profile, and KYC information have been successfully updated. You can now access your partner team member dashboard.
               </p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={async () => {
+                  try {
+                    const freshUser = await getMe(true);
+                    updateUser({ ...freshUser, must_change_password: false, onboarding_required: false, status: 'active' });
+                  } catch (e) {}
+                  onClose();
+                }}
                 style={{
                   ...S.btn('primary'), padding: '14px 32px', borderRadius: '12px',
                   fontWeight: 900, fontSize: '15px', border: 'none', cursor: 'pointer'

@@ -147,25 +147,27 @@ export default function PartnerLayout() {
     }
   };
 
+  // Real-time automatic data synchronization (on route change and 15s interval)
   useEffect(() => {
-    if (user?.id) {
-      fetchWallet();
-      fetchUnreadNotifs();
-    }
-  }, [user?.id]);
+    if (!user?.id) return;
 
-  // Fetch latest profile on layout mount to sync with backend status changes
-  useEffect(() => {
-    const refreshProfile = async () => {
+    const syncRealtimeData = async () => {
       try {
         const freshUser = await getMe(true);
-        useAuthStore.getState().updateUser(freshUser);
-      } catch (err) {
-        console.error('Failed to auto-refresh user profile on layout mount:', err);
+        if (freshUser) {
+          useAuthStore.getState().updateUser(freshUser);
+        }
+        fetchWallet();
+        fetchUnreadNotifs();
+      } catch (e) {
+        /* silent catch */
       }
     };
-    refreshProfile();
-  }, []);
+
+    syncRealtimeData();
+    const interval = setInterval(syncRealtimeData, 15000); // 15s real-time auto sync
+    return () => clearInterval(interval);
+  }, [user?.id, location.pathname]);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';
   const isKycPage = location.pathname === '/partner/kyc-centre';

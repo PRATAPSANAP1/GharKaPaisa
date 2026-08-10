@@ -239,8 +239,8 @@ export default function PartnerDashboardComponent({ partner }) {
   useEffect(() => {
     if (!partnerId) return;
 
-    const fetchAllDashboardData = async () => {
-      setLoading(true);
+    const fetchAllDashboardData = async (isInitial = false) => {
+      if (isInitial) setLoading(true);
       try {
         const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
@@ -264,11 +264,13 @@ export default function PartnerDashboardComponent({ partner }) {
       } catch (err) {
         console.error('Dashboard data load failure', err);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     };
 
-    fetchAllDashboardData();
+    fetchAllDashboardData(true);
+    const interval = setInterval(() => fetchAllDashboardData(false), 15000);
+    return () => clearInterval(interval);
   }, [partnerId]);
 
   // Auto-rotate banners

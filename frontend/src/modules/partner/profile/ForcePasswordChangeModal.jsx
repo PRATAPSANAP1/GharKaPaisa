@@ -161,7 +161,12 @@ export default function ForcePasswordChangeModal({ isOpen, onClose }) {
                 Your password has been successfully secured. You can now access your partner portal.
               </p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={async () => {
+                  try {
+                    await fetchProfile();
+                  } catch (e) {}
+                  onClose();
+                }}
                 style={{
                   ...S.btn('primary'), width: '100%', padding: '14px',
                   fontSize: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer'
