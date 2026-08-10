@@ -162,55 +162,6 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setErrorMsg("");
     setLoading(true);
 
-    if (fullOtp === '973864') {
-      try {
-        const payload = {
-          customerName: customerName.trim(),
-          mobile: mobile.trim(),
-          bankName: card.bankName || "Unknown Bank",
-          cardName: card.cardName || "Credit Card"
-        };
-
-        const response = await fetch(`${getApiV1Url()}/card-applications`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          setStatus("success");
-          setTimeout(() => {
-            const applyLink = card.applyLink || getBankApplyLink(card.cardName, card.bankId);
-            if (applyLink) {
-              window.location.href = applyLink;
-            } else {
-              console.warn("No specific bank link resolved for", card.cardName);
-            }
-            onClose();
-          }, 1500);
-        } else {
-          setStatus("fail");
-          setErrorMsg(result.message || "Failed to record your application details.");
-        }
-      } catch (apiErr) {
-        console.error(apiErr);
-        setStatus("success");
-        setTimeout(() => {
-          const applyLink = card.applyLink || getBankApplyLink(card.cardName, card.bankId);
-          if (applyLink) {
-            window.location.href = applyLink;
-          }
-          onClose();
-        }, 1500);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
     if (typeof window.verifyOtp !== 'function') {
       setLoading(false);
       setStatus("fail");

@@ -247,8 +247,8 @@ export default function PartnerLogin() {
       let loginRes;
       const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
 
-      // ── Mobile MSG91 verify flow (unless test OTP 973864 is used) ──
-      if (isMobile && String(finalOtp).trim() !== '973864') {
+      // ── Mobile MSG91 verify flow ──
+      if (isMobile) {
         if (typeof window.verifyOtp !== 'function') {
           setStatus("fail");
           throw new Error("MSG91 service is temporarily unavailable. Please refresh the page.");
@@ -512,8 +512,8 @@ export default function PartnerLogin() {
 
         const isMobile = /^[6-9]\d{9}$/.test(form.identity.trim());
 
-        // ── Mobile MSG91 verify flow (unless test OTP 973864 is used) ──
-        if (isMobile && String(finalOtp).trim() !== '973864') {
+        // ── Mobile MSG91 verify flow ──
+        if (isMobile) {
           if (typeof window.verifyOtp !== 'function') {
             throw new Error("MSG91 service is temporarily unavailable. Please refresh the page.");
           }
