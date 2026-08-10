@@ -1289,9 +1289,9 @@ const submitPartnerApplication = async (req, res, next) => {
       }
 
       const salaryNum = parseFloat(monthly_salary || 0);
-      if (isNaN(salaryNum) || salaryNum <= 0) {
+      if (isNaN(salaryNum) || salaryNum < 0) {
         await client.query('ROLLBACK');
-        return error(res, 'Monthly salary must be a positive number', 400);
+        return error(res, 'Monthly salary must be a valid non-negative number', 400);
       }
 
       if (product.min_income && salaryNum < parseFloat(product.min_income)) {

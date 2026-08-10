@@ -33,7 +33,7 @@ const STATIC_CATALOG = [
   { id: 'demat-account', title: 'Demat & Trading Accounts', category: 'Investments', sub: 'Free stock trading accounts', icon: '📈', route: '/partner/products?category=demat', tags: ['demat', 'trading', 'stocks'] },
 
   // ── PARTNER NAVIGATION & TOOLS ──
-  { id: 'add-lead', title: 'Submit New Product Lead', category: 'Quick Action', sub: 'Apply product for customer', icon: '➕', route: '/partner/products', tags: ['lead', 'apply', 'submit', 'customer'] },
+  { id: 'add-lead', title: 'Submit New Product Lead', category: 'Quick Action', sub: 'Apply product for customer', icon: '➕', route: '/partner/leads/add', tags: ['lead', 'apply', 'submit', 'customer'] },
   { id: 'crm-customers', title: 'Customer Management (CRM)', category: 'Partner Portal', sub: 'View customer profiles & leads', icon: '👥', route: '/partner/customers', tags: ['customer', 'crm', 'client'] },
   { id: 'partner-wallet', title: 'Wallet & Payouts', category: 'Partner Portal', sub: 'Check balance & withdraw earnings', icon: '👛', route: '/partner/wallet', tags: ['wallet', 'payout', 'commission', 'balance'] },
   { id: 'kyc-centre', title: 'KYC Centre', category: 'Partner Portal', sub: 'Upload & verify PAN, Aadhaar, Bank', icon: '📑', route: '/partner/kyc-centre', tags: ['kyc', 'pan', 'aadhaar', 'verification'] },

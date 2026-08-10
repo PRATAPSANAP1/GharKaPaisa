@@ -69,6 +69,9 @@ export default function PartnerAddLead() {
     e.preventDefault();
     const newErrors = {};
 
+    if (!selectedProductId) {
+      newErrors.selectedProductId = 'Please select a product/card.';
+    }
     if (!customerName.trim() || customerName.trim().length < 2) {
       newErrors.customerName = 'Full name must be at least 2 characters.';
     }
