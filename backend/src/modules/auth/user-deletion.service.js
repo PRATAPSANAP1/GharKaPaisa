@@ -75,7 +75,7 @@ const softDeleteUserAccount = async (inputId) => {
 
 /**
  * Permanent Deletion (Hard Delete Account)
- * Deletes all records from foreign key child tables first, then deletes partner profile and user record.
+ * Clears foreign key references first, deletes child tables, partner profile, and user record cleanly.
  * @param {string} inputId - UUID of user or partner_profile to permanently delete
  * @returns {Promise<Object>} Deleted user record info
  */
@@ -137,7 +137,24 @@ const deleteUserAccount = async (inputId) => {
       throw new Error('User account or partner profile not found');
     }
 
-    // 2. Clean up foreign key dependencies (child tables first)
+    // 2. Unlink foreign key references in other records pointing to this user/partner
+    if (actualUserId) {
+      await safeDelete(`UPDATE users SET created_by = NULL WHERE created_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE partner_profiles SET approved_by = NULL WHERE approved_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE kyc_documents SET verified_by = NULL WHERE verified_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE wallet_transactions SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE withdrawal_requests SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE products SET created_by = NULL, updated_by = NULL WHERE created_by::text = $1 OR updated_by::text = $1`, [actualUserId]);
+    }
+
+    if (actualPartnerId) {
+      await safeDelete(
+        `UPDATE partner_profiles SET parent_partner_id = NULL, partner_id = NULL WHERE parent_partner_id::text = $1 OR partner_id::text = $1`,
+        [actualPartnerId]
+      );
+    }
+
+    // 3. Clean up foreign key dependencies (child tables first)
     if (actualPartnerId) {
       // Lead followups & leads
       await safeDelete(
@@ -208,7 +225,7 @@ const deleteUserAccount = async (inputId) => {
       );
     }
 
-    // 3. Clean up user core reference tables
+    // 4. Clean up user core reference tables
     if (actualUserId) {
       await safeDelete(`DELETE FROM customers WHERE created_by::text = $1`, [actualUserId]);
       await safeDelete(`DELETE FROM notifications WHERE user_id::text = $1`, [actualUserId]);
@@ -223,8 +240,8 @@ const deleteUserAccount = async (inputId) => {
         await safeDelete(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [userRecord.email]);
       }
 
-      // 4. Delete user record
-      await client.query(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
+      // 5. Delete user record safely
+      await safeDelete(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
     }
 
     await client.query('COMMIT');
