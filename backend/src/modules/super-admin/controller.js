@@ -269,8 +269,13 @@ const deleteAdmin = async (req, res, next) => {
     }
 
     // Delete user
-    const { deleteUserAccount } = require('../auth/user-deletion.service.js');
-    await deleteUserAccount(targetUser ? targetUser.id : id);
+    const mode = req.query.mode || req.body?.mode || 'permanent';
+    const { softDeleteUserAccount, deleteUserAccount } = require('../auth/user-deletion.service.js');
+    if (mode === 'temporary') {
+      await softDeleteUserAccount(targetUser ? targetUser.id : id);
+    } else {
+      await deleteUserAccount(targetUser ? targetUser.id : id);
+    }
 
     // Record action in audit logs
     await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role });

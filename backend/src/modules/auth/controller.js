@@ -1459,15 +1459,25 @@ const verifyIdentityChallenge = async (req, res, next, type) => {
 const changeEmail = (req, res, next) => verifyIdentityChallenge(req, res, next, 'email');
 const changeMobile = (req, res, next) => verifyIdentityChallenge(req, res, next, 'mobile');
 
-const { deleteUserAccount } = require('./user-deletion.service.js');
+const { softDeleteUserAccount, deleteUserAccount } = require('./user-deletion.service.js');
 
 const deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    await deleteUserAccount(userId);
+    const mode = req.query.mode || req.body?.mode || 'temporary';
+    
+    if (mode === 'permanent') {
+      await deleteUserAccount(userId);
+    } else {
+      await softDeleteUserAccount(userId);
+    }
+
     res.clearCookie('token');
     res.clearCookie('refreshToken');
-    return success(res, {}, 'Your account has been deleted permanently.');
+    const msg = mode === 'permanent' 
+      ? 'Your account and all associated data have been permanently deleted.' 
+      : 'Your account has been temporarily deactivated. Contact support to reactivate.';
+    return success(res, {}, msg);
   } catch (err) {
     next(err);
   }

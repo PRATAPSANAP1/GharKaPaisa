@@ -1051,40 +1051,77 @@ export default function ManagePartners() {
                         <option value="blocked">Blocked</option>
                       </select>
 
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
-                          if (window.confirm(`ARE YOU EXTREMELY SURE? Permanent deletion of partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}" (${profile.email || selectedPartner.email}) will remove all associated profiles, documents, and wallets. THIS CANNOT BE UNDONE!`)) {
-                            setActionLoading(true);
-                            try {
-                              const res = await api.delete(`/superadmin/users/${targetId}`);
-                              if (res.data?.success) {
-                                alert("Partner account deleted permanently.");
-                                setSelectedPartner(null);
-                                fetchPartners();
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
+                            if (window.confirm(`Deactivate (temporary delete) partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}"? All data will remain safely saved in the database.`)) {
+                              setActionLoading(true);
+                              try {
+                                const res = await api.delete(`/superadmin/users/${targetId}?mode=temporary`);
+                                if (res.data?.success) {
+                                  alert("Partner account temporarily deactivated.");
+                                  setSelectedPartner(null);
+                                  fetchPartners();
+                                }
+                              } catch (err) {
+                                alert(err.response?.data?.message || "Failed to deactivate partner account.");
+                              } finally {
+                                setActionLoading(false);
                               }
-                            } catch (err) {
-                              alert(err.response?.data?.message || "Failed to delete partner account.");
-                            } finally {
-                              setActionLoading(false);
                             }
-                          }
-                        }}
-                        disabled={actionLoading}
-                        style={{
-                          background: `${C.red}12`,
-                          color: C.red,
-                          border: `1.5px solid ${C.red}`,
-                          borderRadius: '8px',
-                          padding: '8px 16px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          cursor: actionLoading ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        🗑️ Delete Account
-                      </button>
+                          }}
+                          disabled={actionLoading}
+                          style={{
+                            background: 'rgba(234, 179, 8, 0.12)',
+                            color: '#CA8A04',
+                            border: '1.5px solid #CA8A04',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: actionLoading ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          🟡 Temporary Delete (Deactivate)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
+                            if (window.confirm(`ARE YOU EXTREMELY SURE? Permanent deletion of partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}" (${profile.email || selectedPartner.email}) will remove all foreign key records, profiles, documents, and wallets. THIS CANNOT BE UNDONE!`)) {
+                              setActionLoading(true);
+                              try {
+                                const res = await api.delete(`/superadmin/users/${targetId}?mode=permanent`);
+                                if (res.data?.success) {
+                                  alert("Partner account permanently deleted.");
+                                  setSelectedPartner(null);
+                                  fetchPartners();
+                                }
+                              } catch (err) {
+                                alert(err.response?.data?.message || "Failed to delete partner account.");
+                              } finally {
+                                setActionLoading(false);
+                              }
+                            }
+                          }}
+                          disabled={actionLoading}
+                          style={{
+                            background: `${C.red}12`,
+                            color: C.red,
+                            border: `1.5px solid ${C.red}`,
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: actionLoading ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          🗑️ Permanent Delete (Wipe Data)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

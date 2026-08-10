@@ -2,9 +2,82 @@ const { getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 
 /**
- * Permanently deletes a user account and all associated data across the system safely.
- * @param {string} inputId - UUID of user or partner_profile to delete
- * @returns {Promise<Object>} Deleted user record
+ * Temporary Deletion (Soft Delete / Deactivate / Suspend Account)
+ * Keeps all data intact in the database while disabling access.
+ * @param {string} inputId - UUID of user or partner_profile
+ * @returns {Promise<Object>} Updated user record
+ */
+const softDeleteUserAccount = async (inputId) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Resolve user and partner profile IDs
+    let actualUserId = null;
+    let actualPartnerId = null;
+
+    const { rows: [userDirect] } = await client.query(
+      `SELECT id, email, role, mobile FROM users WHERE id::text = $1`,
+      [inputId]
+    );
+
+    if (userDirect) {
+      actualUserId = userDirect.id;
+      const { rows: [partner] } = await client.query(
+        `SELECT id FROM partner_profiles WHERE user_id::text = $1 OR id::text = $1`,
+        [actualUserId]
+      );
+      actualPartnerId = partner?.id || null;
+    } else {
+      const { rows: [partner] } = await client.query(
+        `SELECT id, user_id FROM partner_profiles WHERE id::text = $1`,
+        [inputId]
+      );
+      if (partner) {
+        actualPartnerId = partner.id;
+        actualUserId = partner.user_id;
+      }
+    }
+
+    if (!actualUserId && !actualPartnerId) {
+      throw new Error('User account or partner profile not found');
+    }
+
+    // 2. Suspend user account (keep data in DB, disable active access)
+    if (actualUserId) {
+      await client.query(
+        `UPDATE users SET status = 'suspended', is_active = FALSE, updated_at = NOW() WHERE id::text = $1`,
+        [actualUserId]
+      );
+      // Revoke all active login sessions
+      await client.query(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]).catch(() => {});
+    }
+
+    // 3. Suspend partner profile if applicable
+    if (actualPartnerId) {
+      await client.query(
+        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE id::text = $1`,
+        [actualPartnerId]
+      ).catch(() => {});
+    }
+
+    await client.query('COMMIT');
+    logger.info(`Successfully soft-deleted (deactivated) account: ${inputId} (User: ${actualUserId})`);
+    return { id: actualUserId || inputId, mode: 'temporary', status: 'suspended' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error(`Error soft-deleting user account ${inputId}:`, err);
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Permanent Deletion (Hard Delete Account)
+ * Deletes all records from foreign key child tables first, then deletes partner profile and user record.
+ * @param {string} inputId - UUID of user or partner_profile to permanently delete
+ * @returns {Promise<Object>} Deleted user record info
  */
 const deleteUserAccount = async (inputId) => {
   const client = await getClient();
@@ -64,25 +137,82 @@ const deleteUserAccount = async (inputId) => {
       throw new Error('User account or partner profile not found');
     }
 
-    // 2. Clean up partner-specific resources safely
+    // 2. Clean up foreign key dependencies (child tables first)
     if (actualPartnerId) {
-      await safeDelete(`DELETE FROM wallet_ledger WHERE partner_id::text = $1 OR wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1)`, [actualPartnerId]);
+      // Lead followups & leads
+      await safeDelete(
+        `DELETE FROM lead_followups WHERE lead_id::text IN (SELECT id::text FROM leads WHERE partner_id::text = $1)`,
+        [actualPartnerId]
+      );
+      await safeDelete(`DELETE FROM leads WHERE partner_id::text = $1`, [actualPartnerId]);
+
+      // Wallet audit logs, transactions, ledger, withdrawals & wallets
+      await safeDelete(
+        `DELETE FROM wallet_audit_logs WHERE wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1)`,
+        [actualPartnerId]
+      );
+      await safeDelete(
+        `DELETE FROM wallet_ledger WHERE partner_id::text = $1 OR wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1)`,
+        [actualPartnerId]
+      );
       await safeDelete(`DELETE FROM wallet_withdrawals WHERE partner_id::text = $1`, [actualPartnerId]);
-      await safeDelete(`DELETE FROM wallet_transactions WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
+      await safeDelete(`DELETE FROM withdrawal_requests WHERE partner_id::text = $1`, [actualPartnerId]);
+      await safeDelete(
+        `DELETE FROM wallet_transactions WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+      await safeDelete(
+        `DELETE FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+      await safeDelete(
+        `DELETE FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+
+      // Media, KYC & Bank details
       await safeDelete(`DELETE FROM partner_videos WHERE partner_id::text = $1`, [actualPartnerId]);
-      await safeDelete(`DELETE FROM kyc_documents WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM partner_bank_details WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM bank_details WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM team_members WHERE partner_id::text = $1 OR user_id::text = $2 OR parent_partner_id::text = $1`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM applications WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
-      await safeDelete(`DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`, [actualPartnerId, actualUserId]);
+      await safeDelete(
+        `DELETE FROM kyc_documents WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+      await safeDelete(
+        `DELETE FROM partner_bank_details WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+      await safeDelete(
+        `DELETE FROM bank_details WHERE partner_id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+
+      // Team members & Commissions
+      await safeDelete(
+        `DELETE FROM team_members WHERE partner_id::text = $1 OR user_id::text = $2 OR parent_partner_id::text = $1`,
+        [actualPartnerId, actualUserId]
+      );
+      await safeDelete(
+        `DELETE FROM commission_structures WHERE partner_id::text = $1 OR created_by::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+
+      // Applications
+      await safeDelete(
+        `DELETE FROM applications WHERE partner_id::text = $1 OR submitted_by::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
+
+      // Partner profile record
+      await safeDelete(
+        `DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`,
+        [actualPartnerId, actualUserId]
+      );
     }
 
-    // 3. Clean up user core reference tables safely
+    // 3. Clean up user core reference tables
     if (actualUserId) {
+      await safeDelete(`DELETE FROM customers WHERE created_by::text = $1`, [actualUserId]);
       await safeDelete(`DELETE FROM notifications WHERE user_id::text = $1`, [actualUserId]);
+      await safeDelete(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]);
       await safeDelete(`DELETE FROM login_history WHERE user_id::text = $1`, [actualUserId]);
       await safeDelete(`DELETE FROM security_alerts WHERE user_id::text = $1`, [actualUserId]);
       await safeDelete(`DELETE FROM password_history WHERE user_id::text = $1`, [actualUserId]);
@@ -98,11 +228,11 @@ const deleteUserAccount = async (inputId) => {
     }
 
     await client.query('COMMIT');
-    logger.info(`Successfully deleted user account: ${inputId} (User: ${actualUserId}, Partner: ${actualPartnerId})`);
-    return userRecord || { id: actualUserId || inputId };
+    logger.info(`Successfully permanently deleted account: ${inputId} (User: ${actualUserId}, Partner: ${actualPartnerId})`);
+    return userRecord || { id: actualUserId || inputId, mode: 'permanent' };
   } catch (err) {
     await client.query('ROLLBACK');
-    logger.error(`Error deleting user account ${inputId}:`, err);
+    logger.error(`Error permanently deleting user account ${inputId}:`, err);
     throw err;
   } finally {
     client.release();
@@ -110,5 +240,6 @@ const deleteUserAccount = async (inputId) => {
 };
 
 module.exports = {
+  softDeleteUserAccount,
   deleteUserAccount
 };

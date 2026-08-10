@@ -186,6 +186,7 @@ export default function SettingsPage() {
 
   // Account Deletion State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteMode, setDeleteMode] = useState('temporary'); // 'temporary' | 'permanent'
   const [deleteReason, setDeleteReason] = useState('Found another alternative');
   const [deleteNotes, setDeleteNotes] = useState('');
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
@@ -309,15 +310,22 @@ export default function SettingsPage() {
   const handleAccountDeletionSubmit = async (e) => {
     e.preventDefault();
     if (!deleteAcknowledged) return alert('Please confirm that you understand the terms of account deletion.');
-    if (!window.confirm('ARE YOU EXTREMELY SURE? This will permanently delete your account and all associated profile data. THIS CANNOT BE UNDONE!')) return;
+    
+    const isPermanent = deleteMode === 'permanent';
+    const confirmMsg = isPermanent
+      ? 'ARE YOU EXTREMELY SURE? Permanent deletion will wipe your account and all associated documents, bank details, and wallet data from the database. THIS CANNOT BE UNDONE!'
+      : 'Are you sure you want to temporarily deactivate your account? Your profile data, wallet balance, and downline will remain safely saved in the database.';
+
+    if (!window.confirm(confirmMsg)) return;
+
     setDeleteLoading(true);
     try {
-      await api.delete('/auth/delete-account');
-      alert('Your account has been permanently deleted. You will now be redirected.');
+      const res = await api.delete(`/auth/delete-account?mode=${deleteMode}`);
+      alert(res.data?.message || 'Your request has been processed. You will now be redirected.');
       useAuthStore.getState().logout();
       window.location.href = '/login';
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete account. Please try again or contact support.');
+      alert(err.response?.data?.message || 'Failed to process account deletion request. Please try again.');
     } finally {
       setDeleteLoading(false);
       setShowDeleteModal(false);
@@ -856,6 +864,55 @@ export default function SettingsPage() {
             
             <form onSubmit={handleAccountDeletionSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
+                <label style={{ ...S.label, marginBottom: '8px', display: 'block' }}>Deletion Type</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px',
+                    borderRadius: '10px', border: `1.5px solid ${deleteMode === 'temporary' ? '#EAB308' : C.border}`,
+                    background: deleteMode === 'temporary' ? 'rgba(234, 179, 8, 0.08)' : 'transparent',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="radio"
+                      name="deleteMode"
+                      value="temporary"
+                      checked={deleteMode === 'temporary'}
+                      onChange={e => setDeleteMode(e.target.value)}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: C.textMain }}>🟡 Temporary Deactivation (Recommended)</div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                        Deactivates account access. Your profile details, wallet history, and downline remain safely stored in the database. Contact support to reactivate anytime.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label style={{
+                    display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px',
+                    borderRadius: '10px', border: `1.5px solid ${deleteMode === 'permanent' ? C.red : C.border}`,
+                    background: deleteMode === 'permanent' ? 'rgba(220, 38, 38, 0.08)' : 'transparent',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="radio"
+                      name="deleteMode"
+                      value="permanent"
+                      checked={deleteMode === 'permanent'}
+                      onChange={e => setDeleteMode(e.target.value)}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: C.red }}>🔴 Permanent Account Deletion</div>
+                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                        Permanently wipes your account and all associated documents, bank details, and transactions from the database. CANNOT BE UNDONE!
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
                 <label style={S.label}>Reason for Leaving</label>
                 <select style={S.input} value={deleteReason} onChange={e => setDeleteReason(e.target.value)}>
                   <option value="Found another alternative">Found another alternative platform</option>
@@ -867,16 +924,16 @@ export default function SettingsPage() {
 
               <div>
                 <label style={S.label}>Additional Comments / Feedback</label>
-                <textarea rows={3} placeholder="Provide details for support team review..." value={deleteNotes} onChange={e => setDeleteNotes(e.target.value)} style={{ ...S.input, resize: 'vertical' }} />
+                <textarea rows={2} placeholder="Provide details for support team review..." value={deleteNotes} onChange={e => setDeleteNotes(e.target.value)} style={{ ...S.input, resize: 'vertical' }} />
               </div>
 
               <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '12px', color: C.textMid }}>
                 <input type="checkbox" checked={deleteAcknowledged} onChange={e => setDeleteAcknowledged(e.target.checked)} style={{ marginTop: '2px' }} required />
-                <span>I understand that submitting this deletion request will undergo compliance review and permanently revoke my partner credentials & wallet balance after processing.</span>
+                <span>I understand the consequences of choosing {deleteMode === 'permanent' ? 'permanent account deletion' : 'temporary account deactivation'}.</span>
               </label>
 
-              <button type="submit" disabled={deleteLoading || !deleteAcknowledged} style={{ ...S.btn('primary'), background: `linear-gradient(135deg, ${C.red}, #C62828)`, borderRadius: '10px', marginTop: '4px', opacity: !deleteAcknowledged ? 0.5 : 1 }}>
-                {deleteLoading ? 'Submitting Request...' : 'Submit Deletion Request'}
+              <button type="submit" disabled={deleteLoading || !deleteAcknowledged} style={{ ...S.btn('primary'), background: deleteMode === 'permanent' ? `linear-gradient(135deg, ${C.red}, #C62828)` : 'linear-gradient(135deg, #EAB308, #CA8A04)', borderRadius: '10px', marginTop: '4px', opacity: !deleteAcknowledged ? 0.5 : 1 }}>
+                {deleteLoading ? 'Processing Request...' : deleteMode === 'permanent' ? 'Permanently Delete Account' : 'Temporarily Deactivate Account'}
               </button>
             </form>
           </div>
