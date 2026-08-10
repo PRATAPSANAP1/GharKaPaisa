@@ -1459,6 +1459,20 @@ const verifyIdentityChallenge = async (req, res, next, type) => {
 const changeEmail = (req, res, next) => verifyIdentityChallenge(req, res, next, 'email');
 const changeMobile = (req, res, next) => verifyIdentityChallenge(req, res, next, 'mobile');
 
+const { deleteUserAccount } = require('./user-deletion.service.js');
+
+const deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    await deleteUserAccount(userId);
+    res.clearCookie('token');
+    res.clearCookie('refreshToken');
+    return success(res, {}, 'Your account has been deleted permanently.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getMe,
   lookupUser,
@@ -1490,5 +1504,7 @@ module.exports = {
   changeEmailRequest,
   changeEmail,
   changeMobileRequest,
-  changeMobile
+  changeMobile,
+  deleteAccount
 };
+

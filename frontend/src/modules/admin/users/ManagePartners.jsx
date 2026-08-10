@@ -1015,10 +1015,10 @@ export default function ManagePartners() {
                 {/* Account Status management (Super Admin Only) */}
                 {user?.role === "SUPER_ADMIN" && (
                   <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", marginTop: "12px" }}>
-                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>Account Status Management</h4>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text, marginBottom: "8px" }}>Account Status & Danger Zone</h4>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                       <select
-                        style={{ ...S.input, width: "240px", margin: 0 }}
+                        style={{ ...S.input, width: "220px", margin: 0 }}
                         value={profile.status || selectedPartner.status || "pending"}
                         onChange={async (e) => {
                           const newStatus = e.target.value;
@@ -1050,6 +1050,41 @@ export default function ManagePartners() {
                         <option value="rejected">Rejected</option>
                         <option value="blocked">Blocked</option>
                       </select>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const targetId = profile.user_id || selectedPartner.user_id || selectedPartner.id;
+                          if (window.confirm(`ARE YOU EXTREMELY SURE? Permanent deletion of partner "${selectedPartner.first_name || profile.first_name} ${selectedPartner.last_name || profile.last_name}" (${profile.email || selectedPartner.email}) will remove all associated profiles, documents, and wallets. THIS CANNOT BE UNDONE!`)) {
+                            setActionLoading(true);
+                            try {
+                              const res = await api.delete(`/superadmin/users/${targetId}`);
+                              if (res.data?.success) {
+                                alert("Partner account deleted permanently.");
+                                setSelectedPartner(null);
+                                fetchPartners();
+                              }
+                            } catch (err) {
+                              alert(err.response?.data?.message || "Failed to delete partner account.");
+                            } finally {
+                              setActionLoading(false);
+                            }
+                          }
+                        }}
+                        disabled={actionLoading}
+                        style={{
+                          background: `${C.red}12`,
+                          color: C.red,
+                          border: `1.5px solid ${C.red}`,
+                          borderRadius: '8px',
+                          padding: '8px 16px',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        🗑️ Delete Account
+                      </button>
                     </div>
                   </div>
                 )}

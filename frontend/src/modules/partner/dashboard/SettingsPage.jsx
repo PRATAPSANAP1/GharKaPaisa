@@ -305,23 +305,22 @@ export default function SettingsPage() {
     }
   };
 
-  // Account Deletion Request
+  // Account Deletion Request & Instant Execution
   const handleAccountDeletionSubmit = async (e) => {
     e.preventDefault();
     if (!deleteAcknowledged) return alert('Please confirm that you understand the terms of account deletion.');
+    if (!window.confirm('ARE YOU EXTREMELY SURE? This will permanently delete your account and all associated profile data. THIS CANNOT BE UNDONE!')) return;
     setDeleteLoading(true);
     try {
-      await api.post('/partner/profile/delete-account-request', {
-        reason: deleteReason,
-        notes: deleteNotes
-      });
-      alert('Account deletion request submitted to Compliance & Admin team. Ticket ID: #DEL-' + Math.floor(100000 + Math.random() * 900000));
-      setShowDeleteModal(false);
-    } catch (_) {
-      alert('Account deletion request submitted to Compliance & Admin team. Ticket ID: #DEL-' + Math.floor(100000 + Math.random() * 900000));
-      setShowDeleteModal(false);
+      await api.delete('/auth/delete-account');
+      alert('Your account has been permanently deleted. You will now be redirected.');
+      useAuthStore.getState().logout();
+      window.location.href = '/login';
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete account. Please try again or contact support.');
     } finally {
       setDeleteLoading(false);
+      setShowDeleteModal(false);
     }
   };
 

@@ -254,6 +254,45 @@ export default function AdminProfilePage() {
                   {loading ? 'Resetting...' : 'Update Password'}
                 </button>
               </form>
+
+              {/* Danger Zone: Account Deletion */}
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: `1px solid ${C.red}30`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.red, margin: 0 }}>Danger Zone</h4>
+                <p style={{ fontSize: '12.5px', color: C.textLight, margin: 0 }}>
+                  Permanently delete your administrative account and terminate all active sessions. This action cannot be reversed.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.confirm("ARE YOU SURE? This will permanently delete your account. This action CANNOT be undone!")) return;
+                    setLoading(true);
+                    try {
+                      await api.delete('/auth/delete-account');
+                      alert('Your account has been permanently deleted.');
+                      useAuthStore.getState().logout();
+                      window.location.href = '/login';
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to delete account.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  style={{
+                    alignSelf: 'flex-start',
+                    padding: '10px 20px',
+                    background: `${C.red}12`,
+                    color: C.red,
+                    border: `1.5px solid ${C.red}`,
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: loading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {loading ? 'Processing...' : 'Delete My Account'}
+                </button>
+              </div>
             </div>
           )}
 

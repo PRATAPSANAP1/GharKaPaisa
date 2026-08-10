@@ -250,16 +250,17 @@ const deleteAdmin = async (req, res, next) => {
 
     // Check if user exists and is admin/employee
     const { rows: [targetUser] } = await query(
-      `SELECT id, email, role FROM users WHERE id::text = $1 AND role IN ('ADMIN', 'EMPLOYEE')`,
+      `SELECT id, email, role FROM users WHERE id::text = $1`,
       [id]
     );
 
     if (!targetUser) {
-      return error(res, 'Administrator not found', 404);
+      return error(res, 'User account not found', 404);
     }
 
     // Delete user
-    await query(`DELETE FROM users WHERE id = $1`, [targetUser.id]);
+    const { deleteUserAccount } = require('../auth/user-deletion.service.js');
+    await deleteUserAccount(targetUser.id);
 
     // Record action in audit logs
     await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role });

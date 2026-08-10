@@ -62,4 +62,8 @@ router.put('/profile', jwtAuth, ctrl.updateProfile);
 // User password change directly (Requires JWT Auth)
 router.post('/change-password', jwtAuth, ctrl.changePassword);
 
+// Self account deletion (Requires JWT Auth)
+router.delete('/delete-account', jwtAuth, ctrl.deleteAccount);
+
 module.exports = router;
+
