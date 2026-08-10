@@ -305,6 +305,21 @@ const verifyRegistrationOtp = async (req, res, next) => {
   }
 };
 
+const checkPreverified = async (req, res, next) => {
+  try {
+    const email = normalizeIdentity(req.query.email || req.body.email);
+    if (!email) return res.json({ verified: false });
+
+    const { rows } = await query(
+      `SELECT email FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
+      [email]
+    );
+    return res.json({ verified: rows.length > 0 });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── GET /auth/resolve-invite ──────────────────────────────────────────────────
 const resolveInviteToken = async (req, res, next) => {
   try {
@@ -762,7 +777,7 @@ const register = async (req, res, next) => {
 
       // Check if email was pre-verified via OTP
       const { rows: preVerifiedRows } = await client.query(
-        `SELECT id FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
+        `SELECT email FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
         [email]
       );
       emailVerified = preVerifiedRows.length > 0 || req.body.email_verified === true || req.body.emailVerified === true;
@@ -1450,6 +1465,7 @@ module.exports = {
   sendOtp,
   sendRegistrationOtp,
   verifyRegistrationOtp,
+  checkPreverified,
   resolveInviteToken,
   login,
   loginWithMsg91,

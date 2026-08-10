@@ -26,6 +26,7 @@ router.post('/send-otp',                 sendOtpLimiter,        ctrl.sendOtp);
 router.post('/send-registration-otp',    sendOtpLimiter,        ctrl.sendRegistrationOtp);
 router.post('/verify-otp',               verifyOtpLimiter,      ctrl.login);
 router.post('/verify-registration-otp',  verifyOtpLimiter,      ctrl.verifyRegistrationOtp);
+router.get('/check-preverified',                                   ctrl.checkPreverified);
 router.get('/resolve-invite',                                     ctrl.resolveInviteToken);
 router.post('/lookup',                   loginLimiter,          ctrl.lookupUser);
 router.post('/register',                 registerLimiter,       registerRules, validate, ctrl.register);

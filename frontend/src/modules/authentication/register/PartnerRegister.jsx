@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { useMsg91OTP } from "../../../hooks/useMsg91OTP";
-import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp } from "../../../services/auth.api.js";
+import { registerPartner, lookupUser, sendRegistrationOtp, verifyRegistrationOtp, checkPreverifiedEmail } from "../../../services/auth.api.js";
 import api from "../../../services/api";
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
 
@@ -247,6 +247,20 @@ export default function PartnerRegister() {
       setTeamCode(team);
     }
   }, []);
+
+  // Check if entered email is already pre-verified in database (e.g. on page reload or draft restore)
+  useEffect(() => {
+    const trimmedEmail = form.email.trim();
+    if (trimmedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      if (!form.emailPreVerified) {
+        checkPreverifiedEmail(trimmedEmail).then(isVerified => {
+          if (isVerified) {
+            setForm(f => ({ ...f, emailPreVerified: true }));
+          }
+        });
+      }
+    }
+  }, [form.email]);
 
   const getMsg91RequestId = (data) => {
     const candidates = [

@@ -150,6 +150,15 @@ export async function verifyRegistrationOtp(email, otp) {
   }
 }
 
+export async function checkPreverifiedEmail(email) {
+  try {
+    const res = await api.get('/auth/check-preverified', { params: { email } });
+    return res.data?.verified === true;
+  } catch (err) {
+    return false;
+  }
+}
+
 export async function resendVerificationEmail(email) {
   try {
     const res = await api.post('/auth/resend-verification', { email });
