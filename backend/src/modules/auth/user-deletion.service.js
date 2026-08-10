@@ -75,7 +75,7 @@ const softDeleteUserAccount = async (inputId) => {
 
 /**
  * Permanent Deletion (Hard Delete Account)
- * Clears foreign key references first, deletes child tables, partner profile, and user record cleanly.
+ * Clears foreign key references first, deletes child tables, partner profile, and user record cleanly from database.
  * @param {string} inputId - UUID of user or partner_profile to permanently delete
  * @returns {Promise<Object>} Deleted user record info
  */
@@ -91,6 +91,7 @@ const deleteUserAccount = async (inputId) => {
         await client.query(sql, params);
         await client.query('RELEASE SAVEPOINT sp_del');
       } catch (err) {
+        logger.warn(`Savepoint deletion statement skipped/rolled back: ${sql}`, err.message);
         await client.query('ROLLBACK TO SAVEPOINT sp_del');
       }
     };
@@ -145,6 +146,8 @@ const deleteUserAccount = async (inputId) => {
       await safeDelete(`UPDATE wallet_transactions SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE withdrawal_requests SET processed_by = NULL WHERE processed_by::text = $1`, [actualUserId]);
       await safeDelete(`UPDATE products SET created_by = NULL, updated_by = NULL WHERE created_by::text = $1 OR updated_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE banks SET created_by = NULL WHERE created_by::text = $1`, [actualUserId]);
+      await safeDelete(`UPDATE lead_followups SET scheduled_by = NULL WHERE scheduled_by::text = $1`, [actualUserId]);
     }
 
     if (actualPartnerId) {
@@ -165,17 +168,17 @@ const deleteUserAccount = async (inputId) => {
 
       // Wallet audit logs, transactions, ledger, withdrawals & wallets
       await safeDelete(
-        `DELETE FROM wallet_audit_logs WHERE wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1)`,
-        [actualPartnerId]
+        `DELETE FROM wallet_audit_logs WHERE wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2) OR wallet_id::text IN (SELECT id::text FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2)`,
+        [actualPartnerId, actualUserId]
       );
       await safeDelete(
-        `DELETE FROM wallet_ledger WHERE partner_id::text = $1 OR wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1)`,
-        [actualPartnerId]
+        `DELETE FROM wallet_ledger WHERE partner_id::text = $1 OR wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2) OR wallet_id::text IN (SELECT id::text FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2)`,
+        [actualPartnerId, actualUserId]
       );
       await safeDelete(`DELETE FROM wallet_withdrawals WHERE partner_id::text = $1`, [actualPartnerId]);
       await safeDelete(`DELETE FROM withdrawal_requests WHERE partner_id::text = $1`, [actualPartnerId]);
       await safeDelete(
-        `DELETE FROM wallet_transactions WHERE partner_id::text = $1 OR user_id::text = $2`,
+        `DELETE FROM wallet_transactions WHERE partner_id::text = $1 OR user_id::text = $2 OR wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2)`,
         [actualPartnerId, actualUserId]
       );
       await safeDelete(
@@ -219,10 +222,15 @@ const deleteUserAccount = async (inputId) => {
       );
 
       // Partner profile record
-      await safeDelete(
+      await client.query(
         `DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`,
         [actualPartnerId, actualUserId]
-      );
+      ).catch(async () => {
+        await safeDelete(
+          `DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`,
+          [actualPartnerId, actualUserId]
+        );
+      });
     }
 
     // 4. Clean up user core reference tables
@@ -240,12 +248,14 @@ const deleteUserAccount = async (inputId) => {
         await safeDelete(`DELETE FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`, [userRecord.email]);
       }
 
-      // 5. Delete user record safely
-      await safeDelete(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
+      // 5. Delete user record cleanly from database
+      await client.query(`DELETE FROM users WHERE id::text = $1`, [actualUserId]).catch(async () => {
+        await safeDelete(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
+      });
     }
 
     await client.query('COMMIT');
-    logger.info(`Successfully permanently deleted account: ${inputId} (User: ${actualUserId}, Partner: ${actualPartnerId})`);
+    logger.info(`Successfully permanently deleted account: ${inputId} (User: ${actualUserId}, Partner: ${actualPartnerId}) from database.`);
     return userRecord || { id: actualUserId || inputId, mode: 'permanent' };
   } catch (err) {
     await client.query('ROLLBACK');

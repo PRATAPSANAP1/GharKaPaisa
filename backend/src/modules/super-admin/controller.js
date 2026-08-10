@@ -249,7 +249,7 @@ const deleteAdmin = async (req, res, next) => {
     }
 
     // Check if user exists and is admin/employee
-    const { rows: [targetUser] } = await query(
+    let { rows: [targetUser] } = await query(
       `SELECT id, email, role FROM users WHERE id::text = $1`,
       [id]
     );
@@ -278,7 +278,9 @@ const deleteAdmin = async (req, res, next) => {
     }
 
     // Record action in audit logs
-    await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role });
+    if (targetUser) {
+      await logAction(req, 'DELETE_USER', targetUser.id, { email: targetUser.email, role: targetUser.role }).catch(() => {});
+    }
 
     return success(res, {}, 'Administrator account deleted successfully.');
   } catch (err) {
