@@ -1441,25 +1441,48 @@ const uploadPan = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'File is required', 400);
 
+    const file = req.file || (req.files && req.files[0]);
     const { pan_number } = req.body;
-    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+
+    const { rows: [existing] } = await query(
+      `SELECT * FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`,
+      [partnerId]
+    );
+
+    if (!file && !existing) {
+      return error(res, 'PAN Card file is required', 400);
+    }
+
+    let url = existing?.file_url || null;
+    let key = existing?.s3_key || null;
+
+    if (file) {
+      const uploadRes = await uploadToS3(file.buffer, file.originalname, `kyc/${partnerId}`);
+      url = uploadRes.url;
+      key = uploadRes.key;
+    }
+
+    const cleanPan = pan_number ? pan_number.trim().toUpperCase() : null;
 
     const { rows: [doc] } = await query(`
       INSERT INTO kyc_documents (partner_id, doc_type, doc_number, file_url, s3_key, verification_status, verified)
       VALUES ($1, 'pan', $2, $3, $4, 'pending', false)
       ON CONFLICT (partner_id, doc_type) DO UPDATE SET
         doc_number = COALESCE(EXCLUDED.doc_number, kyc_documents.doc_number),
-        file_url = EXCLUDED.file_url,
-        s3_key = EXCLUDED.s3_key,
+        file_url = COALESCE(EXCLUDED.file_url, kyc_documents.file_url),
+        s3_key = COALESCE(EXCLUDED.s3_key, kyc_documents.s3_key),
         verification_status = 'pending',
         verified = false,
         uploaded_at = NOW()
       RETURNING *
-    `, [partnerId, pan_number || null, url, key]);
+    `, [partnerId, cleanPan, url, key]);
 
-    return success(res, doc, 'PAN document uploaded successfully');
+    if (cleanPan) {
+      await query(`UPDATE partner_profiles SET pan_number = $1 WHERE id = $2`, [cleanPan, partnerId]).catch(() => {});
+    }
+
+    return success(res, doc, 'PAN document saved successfully');
   } catch (err) {
     next(err);
   }
@@ -1469,9 +1492,11 @@ const uploadCheque = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
-    if (!req.file) return error(res, 'File is required', 400);
 
-    const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `kyc/${partnerId}`);
+    const file = req.file || (req.files && req.files[0]);
+    if (!file) return error(res, 'File is required', 400);
+
+    const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${partnerId}`);
 
     const { rows: [doc] } = await query(`
       INSERT INTO kyc_documents (partner_id, doc_type, file_url, s3_key, verification_status, verified)

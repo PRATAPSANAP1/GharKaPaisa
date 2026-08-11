@@ -34,15 +34,20 @@ const sendEmail = async ({ to, subject, html, text }) => {
     throw new Error("A valid recipient email address is required");
   }
 
+  const body = {};
+  if (html) {
+    body.Html = { Data: html, Charset: "UTF-8" };
+  }
+  if (text || !html) {
+    body.Text = { Data: text || "GharKaPaisa Notification", Charset: "UTF-8" };
+  }
+
   const command = new SendEmailCommand({
     Source: FROM_EMAIL,
     Destination: { ToAddresses: [to] },
     Message: {
-      Subject: { Data: subject, Charset: "UTF-8" },
-      Body: {
-        Html: { Data: html, Charset: "UTF-8" },
-        ...(text ? { Text: { Data: text, Charset: "UTF-8" } } : {}),
-      },
+      Subject: { Data: subject || "GharKaPaisa Notification", Charset: "UTF-8" },
+      Body: body,
     },
   });
 
