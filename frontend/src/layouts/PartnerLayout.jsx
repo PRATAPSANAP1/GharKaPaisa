@@ -747,50 +747,7 @@ export default function PartnerLayout() {
           </div>
         )}
 
-        {kycStatus === 'rejected' && (
-          <div style={{
-            background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-            color: '#fff',
-            padding: '14px 20px',
-            boxShadow: '0 2px 8px rgba(245,158,11,0.25)',
-            display: 'flex',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: '12px',
-            flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
-              <MdVerifiedUser size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div style={{ fontWeight: 500, fontSize: '14px' }}>
-                {user?.rejection_reason && (
-                  <div style={{ marginTop: '6px', padding: '8px 12px', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '13px' }}>
-                    <strong>{t('partnerLayout.reason', 'Reason:')}</strong> {user.rejection_reason}
-                  </div>
-                )}
-              </div>
-            </div>
-            {!isKycPage && (
-              <button
-                onClick={() => navigate('/partner/kyc')}
-                style={{
-                  background: '#fff',
-                  color: '#D97706',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 800,
-                  border: 'none',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                }}
-              >
-                {t('partnerLayout.reuploadKyc', 'Re-upload Documents')}
-              </button>
-            )}
-          </div>
-        )}
+
 
         {/* Main Content Body */}
 
