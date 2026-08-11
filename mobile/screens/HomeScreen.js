@@ -89,12 +89,20 @@ export default function HomeScreen({ navigation }) {
           <Image source={require('../assets/icon.png')} style={styles.logo} />
           <Text style={styles.navTitle}>GharKaPaisa</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.loginBtn} 
-          onPress={() => navigation.navigate('Login', { role: 'Partner' })}
-        >
-          <Text style={styles.loginBtnText}>Log In</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity 
+            style={[styles.loginBtn, { backgroundColor: '#F1F5F9' }]} 
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={[styles.loginBtnText, { color: '#0d47a1' }]}>Register</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.loginBtn} 
+            onPress={() => navigation.navigate('Login', { role: 'Partner' })}
+          >
+            <Text style={styles.loginBtnText}>Log In</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
