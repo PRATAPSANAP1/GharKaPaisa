@@ -1765,9 +1765,19 @@ const migrate = async () => {
       DO $$
       DECLARE
         pw_count INTEGER;
+        wallets_exists BOOLEAN;
+        partner_wallets_exists BOOLEAN;
       BEGIN
-        IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallets') THEN
-          IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'partner_wallets') THEN
+        SELECT EXISTS (
+          SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'wallets'
+        ) INTO wallets_exists;
+
+        SELECT EXISTS (
+          SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'partner_wallets'
+        ) INTO partner_wallets_exists;
+
+        IF wallets_exists THEN
+          IF partner_wallets_exists THEN
             EXECUTE 'SELECT COUNT(*) FROM partner_wallets' INTO pw_count;
             IF pw_count = 0 THEN
               EXECUTE 'DROP TABLE partner_wallets CASCADE';
