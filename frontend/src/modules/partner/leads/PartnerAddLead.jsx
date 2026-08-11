@@ -3,7 +3,40 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
-import { MdArrowBack, MdSend, MdCheckCircle } from 'react-icons/md';
+import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance } from 'react-icons/md';
+
+const PROCESS_OPTIONS = [
+  {
+    id: 'lead_punching',
+    title: 'Lead Punching Only',
+    badge: '1. Lead Punching',
+    icon: <MdAssignment size={24} />,
+    color: '#3B82F6',
+    bgColor: '#EFF6FF',
+    darkBgColor: '#1E293B',
+    description: 'Record lead directly into Partner CRM & Applications queue for internal processing.'
+  },
+  {
+    id: 'linked_share',
+    title: 'Linked Share',
+    badge: '2. Tracked WhatsApp Share',
+    icon: <MdLink size={24} />,
+    color: '#10B981',
+    bgColor: '#ECFDF5',
+    darkBgColor: '#064E3B',
+    description: 'Generates a tracked application link and opens WhatsApp to send directly to customer.'
+  },
+  {
+    id: 'direct_bank',
+    title: 'Direct Bank Process',
+    badge: '3. Direct Bank Portal',
+    icon: <MdAccountBalance size={24} />,
+    color: '#8B5CF6',
+    bgColor: '#F5F3FF',
+    darkBgColor: '#2E1065',
+    description: 'Immediately opens official bank portal in a new tab for instant application completion.'
+  }
+];
 
 export default function PartnerAddLead() {
   const navigate = useNavigate();
@@ -23,11 +56,15 @@ export default function PartnerAddLead() {
   const [city, setCity] = useState('');
   const [stateName, setStateName] = useState('');
   const [businessType, setBusinessType] = useState('Micro-Enterprise');
-  const [processType, setProcessType] = useState('partner_cell');
+  const [processType, setProcessType] = useState('lead_punching');
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  
+  // Workflow result state
+  const [shareResult, setShareResult] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -78,12 +115,17 @@ export default function PartnerAddLead() {
     if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
       newErrors.mobile = 'Please enter a valid 10-digit Indian mobile number.';
     }
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      newErrors.email = 'Please enter a valid email address.';
+    
+    // Additional validations for Lead Punching process
+    if (processType === 'lead_punching') {
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        newErrors.email = 'Please enter a valid email address.';
+      }
+      if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
+        newErrors.pincode = 'Please enter a valid 6-digit postal pincode.';
+      }
     }
-    if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
-      newErrors.pincode = 'Please enter a valid 6-digit postal pincode.';
-    }
+
     if (!agreeTerms) {
       newErrors.agreeTerms = 'You must agree to the terms and conditions.';
     }
@@ -114,18 +156,43 @@ export default function PartnerAddLead() {
 
       const res = await api.post('/applications/partner-apply', payload);
       if (res.data?.success) {
-        alert('Application lead logged successfully! Confirmation emails sent.');
-        navigate('/partner/applications');
+        const data = res.data.data;
+        
+        if (processType === 'linked_share') {
+          setShareResult(data);
+          if (data?.whatsapp_url) {
+            window.open(data.whatsapp_url, '_blank');
+          }
+        } else if (processType === 'direct_bank') {
+          if (data?.bank_url) {
+            window.open(data.bank_url, '_blank');
+          }
+          alert(`Application APP#${data?.app_number || ''} logged! Official Bank portal opened in a new tab.`);
+          navigate('/partner/applications');
+        } else {
+          alert('Lead / Application logged successfully! Confirmation email sent.');
+          navigate('/partner/applications');
+        }
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to submit application lead. Please try again.');
+      if (err.response?.status === 409) {
+        alert(err.response?.data?.message || 'Duplicate application detected within 30 days.');
+      } else {
+        alert(err.response?.data?.message || 'Failed to submit application lead. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ maxWidth: '850px', margin: '0 auto', paddingBottom: '40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* HEADER BAR */}
       <div style={{
@@ -170,6 +237,106 @@ export default function PartnerAddLead() {
         </div>
       </div>
 
+      {/* SUCCESS SHARE MODAL FOR LINKED SHARE */}
+      {shareResult && (
+        <div style={{
+          background: isDark ? '#064E3B' : '#ECFDF5',
+          border: '1px solid #10B981',
+          borderRadius: '20px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10B981' }}>
+            <MdCheckCircle size={28} />
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: isDark ? '#6EE7B7' : '#065F46' }}>
+                Tracked Share Link Generated!
+              </h3>
+              <p style={{ fontSize: '13px', margin: '2px 0 0', color: isDark ? '#A7F3D0' : '#047857' }}>
+                Application #{shareResult.app_number} logged. Share this tracked link with {customerName}:
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            background: isDark ? '#022C22' : '#FFFFFF',
+            padding: '12px 16px',
+            borderRadius: '12px',
+            border: `1px solid ${isDark ? '#059669' : '#A7F3D0'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, wordBreak: 'break-all', color: isDark ? '#E6F4EA' : '#0F172A' }}>
+              {shareResult.share_url}
+            </span>
+            <button
+              onClick={() => copyToClipboard(shareResult.share_url)}
+              style={{
+                background: '#10B981',
+                color: '#FFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 14px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <MdContentCopy size={16} />
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {shareResult.whatsapp_url && (
+              <a
+                href={shareResult.whatsapp_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  background: '#25D366',
+                  color: '#FFF',
+                  textDecoration: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <MdShare size={18} />
+                Open WhatsApp & Send
+              </a>
+            )}
+            <button
+              onClick={() => navigate('/partner/applications')}
+              style={{
+                background: isDark ? C.bgSecondary : '#FFF',
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: '10px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Go to Applications
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* FORM CARD */}
       <div style={{
         background: C.card,
@@ -178,15 +345,75 @@ export default function PartnerAddLead() {
         border: `1px solid ${C.border}`,
         boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)'
       }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           
+          {/* PROCESS ASSIGNMENT - 3 CARDS SELECTION */}
+          <div>
+            <label style={{ ...S.label, marginBottom: '10px', display: 'block' }}>Select Process Workflow *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px' }}>
+              {PROCESS_OPTIONS.map((opt) => {
+                const isSelected = processType === opt.id;
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => setProcessType(opt.id)}
+                    style={{
+                      border: `2px solid ${isSelected ? opt.color : C.border}`,
+                      borderRadius: '16px',
+                      padding: '16px',
+                      background: isSelected 
+                        ? (isDark ? opt.darkBgColor : opt.bgColor)
+                        : (isDark ? C.bgSecondary : '#FAFAFA'),
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      position: 'relative'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: isSelected ? opt.color : (isDark ? '#334155' : '#E2E8F0'),
+                        color: isSelected ? '#FFFFFF' : C.textMid,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        {opt.icon}
+                      </div>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: isSelected ? opt.color : C.border,
+                        color: isSelected ? '#FFFFFF' : C.textMid
+                      }}>
+                        {opt.badge}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
+                        {opt.title}
+                      </h4>
+                      <p style={{ fontSize: '12px', color: C.textMid, margin: 0, lineHeight: '1.4' }}>
+                        {opt.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* PRODUCT SELECTION */}
           <div>
             <label style={S.label}>Select Product / Card *</label>
             <select
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
-              style={{ ...S.input, height: '44px', fontSize: '14px', fontWeight: 700, color: C.primary }}
+              style={{ ...S.input, height: '46px', fontSize: '14px', fontWeight: 700, color: C.primary }}
             >
               {products.map(p => (
                 <option key={p.id} value={p.id}>
@@ -235,9 +462,10 @@ export default function PartnerAddLead() {
             </div>
           </div>
 
+          {/* ADDITIONAL FIELDS FOR LEAD PUNCHING */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
-              <label style={S.label}>Email Address *</label>
+              <label style={S.label}>Email Address {processType === 'lead_punching' ? '*' : '(Optional)'}</label>
               <input
                 type="email"
                 placeholder="rahul@example.com"
@@ -260,90 +488,78 @@ export default function PartnerAddLead() {
             </div>
           </div>
 
-          {/* LOCATION & COMPANY */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={S.label}>Company / Employer Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Infosys Ltd"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px' }}
-              />
-            </div>
+          {/* LOCATION & COMPANY DETAILS */}
+          {processType === 'lead_punching' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={S.label}>Company / Employer Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Infosys Ltd"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    style={{ ...S.input, height: '42px', fontSize: '13px' }}
+                  />
+                </div>
 
-            <div>
-              <label style={S.label}>
-                Pincode *
-                {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching...</span>}
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="6-digit Pincode"
-                value={pincode}
-                onChange={(e) => handlePincodeChange(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: errors.pincode ? C.red : C.border }}
-              />
-              {errors.pincode && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pincode}</span>}
-            </div>
-          </div>
+                <div>
+                  <label style={S.label}>
+                    Pincode *
+                    {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching...</span>}
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="6-digit Pincode"
+                    value={pincode}
+                    onChange={(e) => handlePincodeChange(e.target.value)}
+                    style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: errors.pincode ? C.red : C.border }}
+                  />
+                  {errors.pincode && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pincode}</span>}
+                </div>
+              </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={S.label}>City</label>
-              <input
-                type="text"
-                placeholder="Auto-filled City"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
-              />
-            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={S.label}>City</label>
+                  <input
+                    type="text"
+                    placeholder="Auto-filled City"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
+                  />
+                </div>
 
-            <div>
-              <label style={S.label}>State</label>
-              <input
-                type="text"
-                placeholder="Auto-filled State"
-                value={stateName}
-                onChange={(e) => setStateName(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
-              />
-            </div>
-          </div>
+                <div>
+                  <label style={S.label}>State</label>
+                  <input
+                    type="text"
+                    placeholder="Auto-filled State"
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                    style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
+                  />
+                </div>
+              </div>
 
-          {/* PROCESS & CLASSIFICATION */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={S.label}>Business / Enterprise Type</label>
-              <select
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px' }}
-              >
-                <option value="Micro-Enterprise">Micro-Enterprise</option>
-                <option value="Small Business">Small Business</option>
-                <option value="Mid-Size Enterprise">Mid-Size Enterprise</option>
-                <option value="Large Corporation">Large Corporation</option>
-                <option value="Startup">Startup</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={S.label}>Process Assignment *</label>
-              <select
-                value={processType}
-                onChange={(e) => setProcessType(e.target.value)}
-                style={{ ...S.input, height: '42px', fontSize: '13px', fontWeight: 700, color: C.primary }}
-              >
-                <option value="partner_cell">1. Partner Cell Process</option>
-                <option value="customer_sell">2. Customer Sell Process</option>
-                <option value="punching_process">3. Punching Process</option>
-              </select>
-            </div>
-          </div>
+              <div>
+                <label style={S.label}>Business / Enterprise Type</label>
+                <select
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  style={{ ...S.input, height: '42px', fontSize: '13px' }}
+                >
+                  <option value="Micro-Enterprise">Micro-Enterprise</option>
+                  <option value="Small Business">Small Business</option>
+                  <option value="Mid-Size Enterprise">Mid-Size Enterprise</option>
+                  <option value="Large Corporation">Large Corporation</option>
+                  <option value="Startup">Startup</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* TERMS */}
           <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
@@ -372,7 +588,14 @@ export default function PartnerAddLead() {
             }}
           >
             <MdSend size={20} />
-            <span>{submitting ? 'Submitting Application Lead...' : 'Submit Application Lead'}</span>
+            <span>
+              {submitting 
+                ? 'Processing Workflow...' 
+                : (processType === 'linked_share' 
+                    ? 'Generate & Open Tracked WhatsApp Share' 
+                    : (processType === 'direct_bank' ? 'Log & Open Official Bank Portal' : 'Submit Lead Application'))
+              }
+            </span>
           </button>
 
         </form>

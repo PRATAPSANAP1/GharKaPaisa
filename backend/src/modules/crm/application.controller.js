@@ -1304,7 +1304,7 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, 'Please enter a valid 6-digit postal pincode', 400);
       }
 
-      const validProcesses = ['partner_cell', 'customer_sell', 'punching_process'];
+      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'partner_cell', 'customer_sell', 'punching_process'];
       if (!validProcesses.includes(process_type)) {
         await client.query('ROLLBACK');
         return error(res, 'Invalid Process Assignment selection', 400);
@@ -1319,6 +1319,24 @@ const submitPartnerApplication = async (req, res, next) => {
     const trimmedMobile = mobile ? String(mobile).trim() : null;
     const trimmedName = full_name ? String(full_name).trim() : 'Draft Customer';
     const trimmedEmail = email ? String(email).trim() : null;
+
+    // Check duplicate active lead / application (within 30 days)
+    if (!is_draft && trimmedMobile) {
+      const { rows: [dupApp] } = await client.query(`
+        SELECT a.id, a.app_number, a.status
+        FROM applications a
+        JOIN customers c ON c.id = a.customer_id
+        WHERE c.mobile = $1 AND a.product_id = $2
+          AND a.created_at >= NOW() - INTERVAL '30 days'
+          AND a.status NOT IN ('rejected', 'cancelled')
+        LIMIT 1
+      `, [trimmedMobile, product_id]);
+
+      if (dupApp) {
+        await client.query('ROLLBACK');
+        return error(res, `A lead or application for mobile ${trimmedMobile} and this product already exists (#${dupApp.app_number}, Status: ${dupApp.status.toUpperCase()}).`, 409);
+      }
+    }
 
     let customerId;
     if (trimmedMobile) {
@@ -1375,7 +1393,7 @@ const submitPartnerApplication = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    const appStatus = is_draft ? 'draft' : 'submitted';
+    const appStatus = is_draft ? 'draft' : (['direct_bank', 'punching_process'].includes(process_type) ? 'initiated' : 'submitted');
 
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
@@ -1396,10 +1414,32 @@ const submitPartnerApplication = async (req, res, next) => {
     `, [
       app.id,
       is_draft ? 'draft_saved' : 'applied',
-      is_draft ? 'Draft Application Saved' : 'Application Submitted',
-      is_draft ? 'Partner saved application draft' : `Application submitted via ${process_type.replace(/_/g, ' ')}`,
+      is_draft ? 'Draft Application Saved' : 'Application Initiated',
+      is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
       req.user.id
     ]);
+
+    // Process specific metadata generation
+    let shareUrl = null;
+    let whatsappUrl = null;
+    let bankUrl = null;
+
+    if (['linked_share', 'customer_sell'].includes(process_type)) {
+      const crypto = require('crypto');
+      const trackingToken = crypto.randomBytes(10).toString('hex');
+      shareUrl = `https://gharkapaisa.in/share/${trackingToken}`;
+      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+      whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+
+      await client.query(`
+        INSERT INTO partner_share_links (partner_id, product_id, tracking_token, created_by, expires_at)
+        VALUES ($1, $2, $3, $4, NOW() + INTERVAL '30 days')
+      `, [partnerId, product_id, trackingToken, req.user.id]).catch(() => {});
+    }
+
+    if (['direct_bank', 'punching_process'].includes(process_type)) {
+      bankUrl = product.application_url || product.redirect_url || `https://gharkapaisa.in/products/${product.id}/apply`;
+    }
 
     await client.query('COMMIT');
 
@@ -1414,7 +1454,7 @@ const submitPartnerApplication = async (req, res, next) => {
             <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
               <h2 style="color: #f97316;">Application Received - GharKaPaisa</h2>
               <p>Dear <strong>${trimmedName}</strong>,</p>
-              <p>Your application for <strong>${product.name}</strong> with <strong>${product.bank_name || 'Bank'}</strong> has been successfully submitted by your Partner.</p>
+              <p>Your application for <strong>${product.name}</strong> with <strong>${product.bank_name || 'Bank'}</strong> has been logged by your Partner.</p>
               <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0;">
                 <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Application Number</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">#${appNumber}</td></tr>
                 <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Product</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${product.name}</td></tr>
@@ -1449,7 +1489,12 @@ const submitPartnerApplication = async (req, res, next) => {
       }
     }
 
-    return success(res, app, is_draft ? 'Draft saved successfully' : 'Application submitted successfully');
+    return success(res, {
+      ...app,
+      share_url: shareUrl,
+      whatsapp_url: whatsappUrl,
+      bank_url: bankUrl
+    }, is_draft ? 'Draft saved successfully' : 'Application submitted successfully');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
