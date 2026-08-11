@@ -15,11 +15,12 @@ const softDeleteUserAccount = async (inputId) => {
     let actualUserId = null;
     let actualPartnerId = null;
 
-    // 1. Search team_members / user / partner_profile
-    const { rows: [tmDirect] } = await client.query(
-      `SELECT user_id, partner_id FROM team_members WHERE id::text = $1 OR user_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
+    // 1. Search partner_team_relationships / user / partner_profile
+    const { rows: tmRows } = await client.query(
+      `SELECT user_id, partner_id FROM partner_team_relationships WHERE id::text = $1 OR team_member_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
       [inputId]
-    );
+    ).catch(() => ({ rows: [] }));
+    const tmDirect = tmRows[0];
 
     if (tmDirect) {
       actualUserId = tmDirect.user_id;
@@ -58,8 +59,8 @@ const softDeleteUserAccount = async (inputId) => {
     // 2. Check and deactivate child/team members
     if (actualPartnerId || actualUserId) {
       await client.query(
-        `UPDATE team_members SET status = 'inactive', updated_at = NOW() WHERE partner_id::text = $1 OR user_id::text = $2 OR parent_partner_id::text = $1`,
-        [actualPartnerId || '', actualUserId || '']
+        `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE parent_partner_id::text = $1`,
+        [actualPartnerId || '']
       ).catch(() => {});
     }
 
@@ -142,10 +143,11 @@ const deleteUserAccount = async (inputId) => {
     let actualPartnerId = null;
     let userRecord = null;
 
-    const { rows: [tmDirect] } = await client.query(
-      `SELECT * FROM team_members WHERE id::text = $1 OR user_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
+    const { rows: tmRows } = await client.query(
+      `SELECT * FROM partner_team_relationships WHERE id::text = $1 OR team_member_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
       [inputId]
-    );
+    ).catch(() => ({ rows: [] }));
+    const tmDirect = tmRows[0];
 
     if (tmDirect) {
       teamMemberRecord = tmDirect;
@@ -195,14 +197,15 @@ const deleteUserAccount = async (inputId) => {
     // ── 3. CHECK CHILD / TEAM MEMBERS (REASSIGN OR CLEANUP) ──────────────────
     if (actualPartnerId) {
       await safeDelete(
-        `UPDATE partner_profiles SET parent_partner_id = NULL, partner_id = NULL WHERE parent_partner_id::text = $1 OR partner_id::text = $1`,
+        `UPDATE partner_profiles SET parent_partner_id = NULL WHERE parent_partner_id::text = $1`,
         [actualPartnerId]
       );
       await safeDelete(
-        `DELETE FROM team_members WHERE partner_id::text = $1 OR user_id::text = $2 OR parent_partner_id::text = $1 OR id::text = $3`,
-        [actualPartnerId, actualUserId || '', inputId]
+        `DELETE FROM partner_team_relationships WHERE partner_id::text = $1 OR team_member_id::text = $1 OR id::text = $2`,
+        [actualPartnerId, inputId]
       );
     }
+
 
     // ── 4. FIND PARTNER_WALLET ───────────────────────────────────────────────
     let walletIds = [];
