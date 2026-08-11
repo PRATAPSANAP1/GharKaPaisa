@@ -157,9 +157,8 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
       setMobileVerified(true);
       setSuccessMsg('Mobile number verified successfully!');
     } catch (err) {
-      // If development environment bypass or actual API check
-      setMobileVerified(true);
-      setSuccessMsg('Mobile number verified!');
+      setMobileVerified(false);
+      setError(err.response?.data?.message || 'Invalid mobile OTP');
     } finally {
       setLoading(false);
     }
@@ -190,8 +189,8 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
       setEmailVerified(true);
       setSuccessMsg('Email address verified successfully!');
     } catch (err) {
-      setEmailVerified(true);
-      setSuccessMsg('Email verified!');
+      setEmailVerified(false);
+      setError(err.response?.data?.message || 'Invalid email OTP');
     } finally {
       setLoading(false);
     }
@@ -247,25 +246,7 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
 
       const res = await api.post('/partner/team/complete-onboarding', payload);
 
-      // 2. Upload document files if attached
-      if (panFile) {
-        const panData = new FormData();
-        panData.append('document', panFile);
-        panData.append('pan_number', form.pan_number.toUpperCase());
-        await api.post('/partner/kyc/upload-pan', panData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }).catch(err => console.warn('PAN document upload warning:', err));
-      }
-
-      if (chequeFile) {
-        const chequeData = new FormData();
-        chequeData.append('document', chequeFile);
-        await api.post('/partner/kyc/upload-cheque', chequeData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        }).catch(err => console.warn('Cheque document upload warning:', err));
-      }
-
-      // 3. Clear draft
+      // 2. Clear local draft
       localStorage.removeItem(DRAFT_KEY);
 
       // 4. Refresh user in AuthStore

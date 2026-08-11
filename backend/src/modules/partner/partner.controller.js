@@ -593,6 +593,13 @@ const addTeamMember = async (req, res, next) => {
       RETURNING id
     `, [newUser.id, partnerId, memberFirstName, memberLastName, partnerCode]);
 
+    // Create wallet for team member
+    await client.query(`
+      INSERT INTO partner_wallets (partner_id, balance, hold_balance)
+      VALUES ($1, 0, 0)
+      ON CONFLICT (partner_id) DO NOTHING
+    `, [insertedProfile.id]);
+
     // Create immediate team relationship record
     await client.query(`
       INSERT INTO partner_team_relationships (parent_partner_id, child_partner_id, level)
