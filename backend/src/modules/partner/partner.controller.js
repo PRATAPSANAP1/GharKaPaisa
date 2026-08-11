@@ -190,10 +190,8 @@ const uploadKYCDocuments = async (req, res, next) => {
       }
     }
 
-    // Update KYC status to under_review
-    await query(`UPDATE partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
-
-    return success(res, { uploaded }, `${uploaded.length} document(s) uploaded. KYC under review.`);
+    // Bulk upload documents without automatically marking KYC under review
+    return success(res, { uploaded }, `${uploaded.length} document(s) uploaded successfully.`);
   } catch (err) {
     next(err);
   }
@@ -394,7 +392,7 @@ const approvePartner = async (req, res, next) => {
       await client.query(`
         UPDATE partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
-      await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [Partner.user_id]);
+      // await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
       await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);
@@ -505,13 +503,10 @@ const uploadSelfKYC = async (req, res, next) => {
       }
     }
 
-    // Update KYC status to under_review
-    await query(`UPDATE partner_profiles SET kyc_status = 'under_review' WHERE id = $1`, [PartnerId]);
-
     // Log the KYC upload to audit logs
     await logAction(req, 'UPLOAD_KYC', PartnerId, { uploaded });
 
-    return success(res, { uploaded }, `${uploaded.length} document(s) uploaded. KYC under review.`);
+    return success(res, { uploaded }, `${uploaded.length} document(s) uploaded successfully.`);
   } catch (err) {
     next(err);
   }
@@ -1552,7 +1547,7 @@ const submitKyc = async (req, res, next) => {
 
     await query(`
       UPDATE partner_profiles 
-      SET kyc_status = 'pending', 
+      SET kyc_status = 'under_review', 
           kyc_submitted_at = NOW(), 
           rejection_reason = NULL,
           kyc_rejection_reason = NULL
@@ -1860,7 +1855,7 @@ const completeTeamOnboarding = async (req, res, next) => {
 
     return success(res, {
       partner_id: partnerId,
-      kyc_status: 'pending',
+      kyc_status: 'draft',
       message: 'Team member onboarding and profile completed successfully'
     });
   } catch (err) {

@@ -224,12 +224,10 @@ export default function PartnerKyc() {
         }
       };
 
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         const blob = new Blob(videoChunksRef.current, { type: mimeType });
         setVideoBlob(blob);
         setVideoPreviewUrl(URL.createObjectURL(blob));
-        // Auto upload the video!
-        await autoUploadVideo(blob, elapsedRef.current);
       };
 
       recorder.start(10);
@@ -418,7 +416,7 @@ export default function PartnerKyc() {
 
   const status = kycData.kyc_status || 'draft';
   const isApproved = status === 'approved';
-  const isUnderReview = status === 'under_review' || status === 'pending';
+  const isUnderReview = status === 'under_review';
   const isRejected = status === 'rejected';
 
   return (

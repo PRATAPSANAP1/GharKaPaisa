@@ -46,12 +46,19 @@ const recalculatePartnerKycStatus = async (partnerId, adminUserId = null) => {
     SELECT doc_type, verification_status FROM kyc_documents WHERE partner_id = $1
   `, [partnerId]);
 
-  const requiredTypes = ['pan', 'aadhaar', 'cancel_cheque'];
-  
-  const hasRejected = docs.some(d => d.verification_status === 'rejected');
-  if (hasRejected) {
+  const { rows: [video] } = await query(`
+    SELECT verification_status FROM partner_videos WHERE partner_id = $1
+  `, [partnerId]);
+
+  const hasRejectedDoc = docs.some(d => d.verification_status === 'rejected');
+  const isVideoRejected = video && video.verification_status === 'rejected';
+
+  if (hasRejectedDoc || isVideoRejected) {
     const rejectedDoc = docs.find(d => d.verification_status === 'rejected');
-    const reasonMsg = `Document ${rejectedDoc.doc_type.replace('_', ' ').toUpperCase()} was marked as rejected.`;
+    const reasonMsg = rejectedDoc 
+      ? `Document ${rejectedDoc.doc_type.replace('_', ' ').toUpperCase()} was marked as rejected.` 
+      : 'Verification video was marked as rejected.';
+      
     await query(`
       UPDATE partner_profiles 
       SET kyc_status = 'rejected', 
@@ -60,17 +67,16 @@ const recalculatePartnerKycStatus = async (partnerId, adminUserId = null) => {
       WHERE id = $2
     `, [reasonMsg, partnerId]);
 
-    const { rows: [partner] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partnerId]);
-    if (partner) {
-      await query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
-    }
+    // Note: Account remains active so user can log in to re-upload documents
     return 'rejected';
   }
 
-  const approvedTypes = docs.filter(d => d.verification_status === 'approved').map(d => d.doc_type);
-  const allRequiredApproved = requiredTypes.every(reqType => approvedTypes.includes(reqType));
+  const approvedDocTypes = docs.filter(d => d.verification_status === 'approved' || d.verified === true).map(d => d.doc_type);
+  const hasPanApproved = approvedDocTypes.includes('pan');
+  const hasChequeApproved = approvedDocTypes.includes('cancelled_cheque') || approvedDocTypes.includes('cancel_cheque');
+  const hasVideoApproved = video && video.verification_status === 'approved';
 
-  if (allRequiredApproved) {
+  if (hasPanApproved && hasChequeApproved && hasVideoApproved) {
     await query(`
       UPDATE partner_profiles 
       SET kyc_status = 'approved',
@@ -89,9 +95,11 @@ const recalculatePartnerKycStatus = async (partnerId, adminUserId = null) => {
   }
 
   await query(`
-    UPDATE partner_profiles SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL WHERE id = $1
+    UPDATE partner_profiles 
+    SET kyc_status = 'under_review', rejection_reason = NULL, kyc_rejection_reason = NULL 
+    WHERE id = $1 AND kyc_status != 'draft'
   `, [partnerId]);
-  return 'pending';
+  return 'under_review';
 };
 
 const verifyKycDocument = async (docId, partnerId, isVerified, adminUserId) => {

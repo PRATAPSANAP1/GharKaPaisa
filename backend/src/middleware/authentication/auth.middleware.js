@@ -71,7 +71,7 @@ const syncUser = async (req, res, next) => {
         const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
         const { rows: [newP] } = await query(
           `INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status, partner_type)
-           VALUES ($1, $2, $3, $4, 'active', 'pending', $5)
+           VALUES ($1, $2, $3, $4, 'active', 'draft', $5)
            ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
            RETURNING id, kyc_status, first_name, last_name, partner_code`,
           [user.id, partnerCode, user.first_name || 'Partner', user.last_name || '', (user.role || '').toUpperCase()]

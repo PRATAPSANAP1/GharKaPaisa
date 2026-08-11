@@ -518,7 +518,7 @@ const rejectKYC = async (req, res, next) => {
     `, [req.user.id, rejection_reason, partnerId]);
 
     // 2. Update user status
-    await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
+    // await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
 
     // 3. Mark all unverified documents as rejected
     await client.query(`
@@ -588,7 +588,7 @@ const requestChangesKYC = async (req, res, next) => {
     `, [req.user.id, rejection_reason, partnerId]);
 
     // 2. Set user status to inactive so they correct documents
-    await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
+    // await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
 
     // 3. Mark selected documents as rejected
     for (const docType of rejected_documents) {
@@ -718,7 +718,7 @@ const verifyDocument = async (req, res, next) => {
 
     // Build the list of required docs from what was actually uploaded
     // Always require pan, aadhaar, cancelled_cheque if uploaded
-    const coreRequired = ['pan', 'aadhaar', 'cancelled_cheque'];
+    const coreRequired = ['pan', 'cancelled_cheque'];
     const uploadedRequired = coreRequired.filter(d => uploadedDocTypes.includes(d));
     if (hasVideo) uploadedRequired.push('video');
     if (partner.gst_number && partner.gst_number.trim() !== '' && uploadedDocTypes.includes('gst_cert')) {
@@ -726,7 +726,7 @@ const verifyDocument = async (req, res, next) => {
     }
 
     // Must have at least pan, aadhaar, cancelled_cheque and video to be approvable
-    const minimumRequired = ['pan', 'aadhaar', 'cancelled_cheque'];
+    const minimumRequired = ['pan', 'cancelled_cheque'];
     const hasMinimum = minimumRequired.every(d => uploadedDocTypes.includes(d)) && hasVideo;
 
     const docStatusMap = {};
@@ -765,7 +765,7 @@ const verifyDocument = async (req, res, next) => {
         WHERE id = $3
       `, [combinedRejectionReason, req.user.id, partnerId]);
 
-      await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
+      // await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [partner.user_id]);
 
     } else if (hasMinimum && approvedReqDocs.length === requiredDocs.length) {
       newKycStatus = 'approved';
@@ -788,11 +788,11 @@ const verifyDocument = async (req, res, next) => {
       await ensureWallet(partnerId, client);
 
     } else {
-      newKycStatus = 'pending';
+      newKycStatus = 'under_review';
 
       await client.query(`
         UPDATE partner_profiles 
-        SET kyc_status = 'pending', 
+        SET kyc_status = 'under_review', 
             rejection_reason = NULL,
             kyc_rejection_reason = NULL,
             approved_by = NULL,
@@ -802,7 +802,7 @@ const verifyDocument = async (req, res, next) => {
         WHERE id = $1
       `, [partnerId]);
 
-      await client.query(`UPDATE users SET status = 'pending' WHERE id = $1`, [partner.user_id]);
+      // await client.query(`UPDATE users SET status = 'pending' WHERE id = $1`, [partner.user_id]);
     }
 
     await client.query('COMMIT');
