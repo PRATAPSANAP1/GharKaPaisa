@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
-import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance } from 'react-icons/md';
+import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
 
 const PROCESS_OPTIONS = [
   {
@@ -61,6 +61,13 @@ export default function PartnerAddLead() {
   const [submitting, setSubmitting] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Lead Creation & OTP Verification state
+  const [pendingLead, setPendingLead] = useState(null);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
   
   // Workflow result state
   const [shareResult, setShareResult] = useState(null);
@@ -102,7 +109,8 @@ export default function PartnerAddLead() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // Step 1: Create Lead & Send OTP
+  const handleSubmitLead = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -116,7 +124,6 @@ export default function PartnerAddLead() {
       newErrors.mobile = 'Please enter a valid 10-digit Indian mobile number.';
     }
     
-    // Additional validations for Lead Punching process
     if (processType === 'lead_punching') {
       if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         newErrors.email = 'Please enter a valid email address.';
@@ -139,8 +146,7 @@ export default function PartnerAddLead() {
     try {
       const payload = {
         product_id: selectedProductId,
-        full_name: customerName.trim(),
-        country_code: countryCode,
+        customer_name: customerName.trim(),
         mobile: mobile.trim(),
         email: email.trim(),
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : 0,
@@ -150,38 +156,77 @@ export default function PartnerAddLead() {
         state: stateName.trim(),
         business_type: businessType,
         process_type: processType,
-        agree_terms: agreeTerms,
-        is_draft: false
+        source: 'partner'
       };
 
-      const res = await api.post('/applications/partner-apply', payload);
+      const res = await api.post('/leads', payload);
       if (res.data?.success) {
-        const data = res.data.data;
-        
+        const leadData = res.data.data;
+        setPendingLead(leadData);
+        setShowOtpModal(true);
+      }
+    } catch (err) {
+      if (err.response?.status === 409) {
+        alert(err.response?.data?.message || 'Duplicate lead/application detected within 30 days.');
+      } else {
+        alert(err.response?.data?.message || 'Failed to create lead. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Step 2: Verify OTP & Convert Lead to Application
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otpValue || otpValue.trim().length < 4) {
+      alert('Please enter the 6-digit OTP code sent to the customer.');
+      return;
+    }
+
+    setVerifyingOtp(true);
+    try {
+      const res = await api.post(`/leads/${pendingLead.lead_id}/verify-otp`, { otp: otpValue.trim() });
+      if (res.data?.success) {
+        const appData = res.data.data;
+        setShowOtpModal(false);
+        setOtpValue('');
+
         if (processType === 'linked_share') {
-          setShareResult(data);
-          if (data?.whatsapp_url) {
-            window.open(data.whatsapp_url, '_blank');
+          setShareResult(appData);
+          if (appData?.whatsapp_url) {
+            window.open(appData.whatsapp_url, '_blank');
           }
         } else if (processType === 'direct_bank') {
-          if (data?.bank_url) {
-            window.open(data.bank_url, '_blank');
+          if (appData?.bank_url) {
+            window.open(appData.bank_url, '_blank');
           }
-          alert(`Application APP#${data?.app_number || ''} logged! Official Bank portal opened in a new tab.`);
+          alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Official Bank portal opened.`);
           navigate('/partner/applications');
         } else {
-          alert('Lead / Application logged successfully! Confirmation email sent.');
+          alert(`Lead verified & Application APP#${appData?.app_number || ''} logged successfully!`);
           navigate('/partner/applications');
         }
       }
     } catch (err) {
-      if (err.response?.status === 409) {
-        alert(err.response?.data?.message || 'Duplicate application detected within 30 days.');
-      } else {
-        alert(err.response?.data?.message || 'Failed to submit application lead. Please try again.');
-      }
+      alert(err.response?.data?.message || 'OTP verification failed. Please try again.');
     } finally {
-      setSubmitting(false);
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!pendingLead?.lead_id) return;
+    setResendingOtp(true);
+    try {
+      const res = await api.post(`/leads/${pendingLead.lead_id}/send-otp`);
+      if (res.data?.success) {
+        alert('Verification OTP resent successfully!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to resend OTP.');
+    } finally {
+      setResendingOtp(false);
     }
   };
 
@@ -236,6 +281,121 @@ export default function PartnerAddLead() {
           </div>
         </div>
       </div>
+
+      {/* OTP VERIFICATION MODAL */}
+      {showOtpModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: C.card,
+            borderRadius: '24px',
+            padding: '32px',
+            maxWidth: '460px',
+            width: '100%',
+            border: `1px solid ${C.border}`,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '18px',
+                background: `${C.primary}15`, color: C.primary,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: '12px'
+              }}>
+                <MdVerifiedUser size={30} />
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 6px' }}>
+                Verify Customer OTP
+              </h3>
+              <p style={{ fontSize: '13px', color: C.textMid, margin: 0, lineHeight: '1.5' }}>
+                Enter the 6-digit verification code sent to customer mobile <strong>+91 {pendingLead?.mobile}</strong>
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="Enter 6-Digit OTP"
+                  value={otpValue}
+                  onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                  style={{
+                    ...S.input,
+                    height: '52px',
+                    fontSize: '22px',
+                    fontWeight: 800,
+                    textAlign: 'center',
+                    letterSpacing: '6px',
+                    borderColor: C.primary
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendingOtp}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: C.primary,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: resendingOtp ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <MdRefresh size={16} />
+                  {resendingOtp ? 'Resending...' : 'Resend OTP'}
+                </button>
+                <span style={{ fontSize: '12px', color: C.textMid }}>Lead #{pendingLead?.lead_number}</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowOtpModal(false)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '12px',
+                    border: `1px solid ${C.border}`, background: C.bgSecondary,
+                    color: C.text, fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifyingOtp}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                    background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+                    color: '#FFF', fontWeight: 800, cursor: verifyingOtp ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {verifyingOtp ? 'Verifying...' : 'Verify & Submit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* SUCCESS SHARE MODAL FOR LINKED SHARE */}
       {shareResult && (
@@ -345,7 +505,7 @@ export default function PartnerAddLead() {
         border: `1px solid ${C.border}`,
         boxShadow: isDark ? 'none' : '0 4px 20px rgba(15,23,42,0.04)'
       }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        <form onSubmit={handleSubmitLead} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           
           {/* PROCESS ASSIGNMENT - 3 CARDS SELECTION */}
           <div>
@@ -589,12 +749,7 @@ export default function PartnerAddLead() {
           >
             <MdSend size={20} />
             <span>
-              {submitting 
-                ? 'Processing Workflow...' 
-                : (processType === 'linked_share' 
-                    ? 'Generate & Open Tracked WhatsApp Share' 
-                    : (processType === 'direct_bank' ? 'Log & Open Official Bank Portal' : 'Submit Lead Application'))
-              }
+              {submitting ? 'Creating Lead & Generating OTP...' : 'Create Lead & Send Verification OTP'}
             </span>
           </button>
 

@@ -165,51 +165,294 @@ const get360LeadDetails = async (req, res, next) => {
   }
 };
 
-// POST /leads — Create Lead with Auto Pipeline Initialization
+// POST /leads — Create Lead with 30-Day Duplicate Check & OTP Generation
 const createLead = async (req, res, next) => {
   try {
-    const { productId, customerName, mobile, city, source, priority } = req.body;
-    if (!productId || !customerName || !mobile || !city) {
-      return error(res, 'Product ID, Customer Name, Mobile, and City are required', 400);
+    const {
+      product_id, productId,
+      customer_name, customerName, full_name,
+      mobile, email,
+      monthly_salary, monthly_income,
+      company_name, pincode, city, state,
+      business_type, process_type, source, priority
+    } = req.body;
+
+    const targetProductId = product_id || productId;
+    const targetName = customer_name || customerName || full_name;
+    const trimmedMobile = mobile ? String(mobile).trim() : '';
+    const trimmedEmail = email ? String(email).trim() : '';
+    const targetCity = city || '';
+    const targetProcess = process_type || 'lead_punching';
+
+    if (!targetProductId || !targetName || !trimmedMobile) {
+      return error(res, 'Product ID, Customer Name, and Mobile Number are required', 400);
     }
 
-    let { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+    // 1. Fetch Partner & Hierarchy Profile
+    let { rows: [partner] } = await query(`
+      SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
+      FROM partner_profiles p
+      JOIN users u ON u.id = p.user_id
+      WHERE p.user_id = $1
+    `, [req.user.id]);
+
     if (!partner) {
       const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
       const { rows: [newP] } = await query(`
         INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
-        VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
+        VALUES ($1, $2, $3, $4, 'active', 'draft') RETURNING id, parent_partner_id, kyc_status
       `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
       partner = newP;
     }
 
-    const trimmedMobile = String(mobile).trim();
-    const trimmedName = String(customerName).trim();
-    const trimmedCity = String(city).trim();
+    // 2. Validate Product
+    const { rows: [product] } = await query(`
+      SELECT id, name, is_active FROM products WHERE id = $1
+    `, [targetProductId]);
+    if (!product || !product.is_active) {
+      return error(res, 'Selected product is inactive or unavailable', 400);
+    }
 
-    // Auto-upsert into customers
+    // 3. 30-Day Duplicate Check (Applications & Confirmed Leads)
+    const { rows: duplicateApps } = await query(`
+      SELECT app_number, status, created_at
+      FROM applications
+      WHERE product_id = $1
+        AND customer_id IN (SELECT id FROM customers WHERE mobile = $2)
+        AND created_at >= NOW() - INTERVAL '30 days'
+        AND status NOT IN ('rejected', 'cancelled')
+      LIMIT 1
+    `, [targetProductId, trimmedMobile]);
+
+    if (duplicateApps.length > 0) {
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_APPLICATION',
+        message: `An active application (${duplicateApps[0].app_number}) already exists for this mobile number and product within the last 30 days.`
+      });
+    }
+
+    const { rows: duplicateLeads } = await query(`
+      SELECT lead_number, status, created_at
+      FROM leads
+      WHERE product_id = $1
+        AND mobile = $2
+        AND created_at >= NOW() - INTERVAL '30 days'
+        AND status NOT IN ('rejected', 'cancelled')
+      LIMIT 1
+    `, [targetProductId, trimmedMobile]);
+
+    if (duplicateLeads.length > 0) {
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_LEAD',
+        message: `An active lead (${duplicateLeads[0].lead_number || 'Lead'}) already exists for this mobile number and product within the last 30 days.`
+      });
+    }
+
+    // 4. Customer Upsert
+    const incomeVal = monthly_salary || monthly_income ? parseFloat(monthly_salary || monthly_income) : null;
     const { rows: [customer] } = await query(`
-      INSERT INTO customers (full_name, mobile, city, created_by)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO customers (
+        full_name, mobile, email, monthly_income, employer, pincode, city, state, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (mobile) DO UPDATE
-      SET full_name = EXCLUDED.full_name, city = COALESCE(customers.city, EXCLUDED.city), updated_at = NOW()
+      SET full_name = EXCLUDED.full_name,
+          email = COALESCE(EXCLUDED.email, customers.email),
+          monthly_income = COALESCE(EXCLUDED.monthly_income, customers.monthly_income),
+          employer = COALESCE(EXCLUDED.employer, customers.employer),
+          pincode = COALESCE(EXCLUDED.pincode, customers.pincode),
+          city = COALESCE(EXCLUDED.city, customers.city),
+          state = COALESCE(EXCLUDED.state, customers.state),
+          updated_at = NOW()
       RETURNING id
-    `, [trimmedName, trimmedMobile, trimmedCity, req.user.id]);
+    `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, req.user.id]);
+
+    // 5. Create Lead with OTP
+    const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     const { rows: [lead] } = await query(`
-      INSERT INTO leads (partner_id, product_id, customer_name, mobile, city, status, source, priority, pipeline_stage)
-      VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, 'created')
+      INSERT INTO leads (
+        lead_number, partner_id, parent_partner_id, created_by, customer_id,
+        product_id, customer_name, mobile, city, status, process_type,
+        otp_code, otp_expires_at, otp_verified, source, priority, pipeline_stage
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, FALSE, $13, $14, 'created')
       RETURNING *
-    `, [partner.id, productId, trimmedName, trimmedMobile, trimmedCity, source || 'partner', priority || 'medium']);
+    `, [
+      leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+      targetProductId, targetName.trim(), trimmedMobile, targetCity, targetProcess,
+      otpCode, otpExpires, source || 'partner', priority || 'medium'
+    ]);
 
-    // Initialize lead pipeline, timeline, SLA & checklist
     await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
-    return created(res, lead, 'Lead created successfully');
+    // Attempt to send email if customer email exists
+    if (trimmedEmail) {
+      try {
+        const { sendEmail } = require('../../services/email/email.service');
+        await sendEmail({
+          to: trimmedEmail,
+          subject: 'GharKaPaisa Lead Verification OTP',
+          html: `<p>Your verification OTP for lead ${leadNum} is <strong>${otpCode}</strong>. Valid for 15 minutes.</p>`
+        }).catch(e => logger.warn(`OTP email send failed: ${e.message}`));
+      } catch (err) {
+        logger.warn('Email service not configured for OTP notification');
+      }
+    }
+
+    return created(res, {
+      lead_id: lead.id,
+      lead_number: lead.lead_number,
+      customer_id: customer.id,
+      mobile: lead.mobile,
+      email: trimmedEmail,
+      process_type: lead.process_type,
+      otp_required: true,
+      expires_at: otpExpires
+    }, 'Lead created successfully. Verification OTP generated.');
   } catch (err) {
     next(err);
   }
 };
+
+// POST /leads/:id/send-otp — Resend Customer OTP
+const sendLeadOtp = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [lead] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
+    if (!lead) return notFound(res, 'Lead record not found');
+
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    const otpExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+    await query(`
+      UPDATE leads SET otp_code = $1, otp_expires_at = $2, updated_at = NOW() WHERE id = $3
+    `, [otpCode, otpExpires, id]);
+
+    return success(res, { lead_id: id, expires_at: otpExpires }, 'Verification OTP resent to customer.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /leads/:id/verify-otp — Verify OTP & Convert Lead to Application
+const verifyLeadOtp = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    if (!otp) return error(res, 'OTP is required for verification', 400);
+
+    const { rows: [lead] } = await client.query(`SELECT * FROM leads WHERE id = $1`, [id]);
+    if (!lead) return notFound(res, 'Lead record not found');
+
+    if (lead.otp_verified && lead.status === 'confirmed') {
+      // Find existing converted application
+      const { rows: [existingApp] } = await client.query(`SELECT * FROM applications WHERE lead_id = $1`, [id]);
+      if (existingApp) {
+        return success(res, existingApp, 'Lead was already verified and converted to application.');
+      }
+    }
+
+    if (lead.otp_code !== String(otp).trim()) {
+      return error(res, 'Invalid verification OTP. Please check and try again.', 400);
+    }
+
+    if (new Date(lead.otp_expires_at) < new Date()) {
+      return error(res, 'Verification OTP has expired. Please request a new OTP.', 400);
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Update Lead Status to Confirmed
+    await client.query(`
+      UPDATE leads 
+      SET status = 'confirmed', otp_verified = TRUE, otp_verified_at = NOW(), confirmed_at = NOW(), updated_at = NOW()
+      WHERE id = $1
+    `, [id]);
+
+    // 2. Generate Unique Application Number
+    const appSeq = Date.now().toString().slice(-8);
+    const appNumber = `APP${appSeq}`;
+
+    // 3. Resolve Product details & Commission
+    const { rows: [product] } = await client.query(`
+      SELECT id, name, bank_id, category, commission_value, public_url, partner_url
+      FROM products WHERE id = $1
+    `, [lead.product_id]);
+
+    const initialStatus = lead.process_type === 'direct_bank' ? 'initiated' : 'submitted';
+
+    // 4. Insert into Applications
+    const { rows: [app] } = await client.query(`
+      INSERT INTO applications (
+        app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id,
+        submitted_by, status, process_type, commission_amount, commission_status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+      RETURNING *
+    `, [
+      appNumber, lead.id, lead.customer_id, lead.product_id, lead.partner_id, lead.parent_partner_id,
+      lead.created_by, initialStatus, lead.process_type, product?.commission_value || 0
+    ]);
+
+    // 5. Generate Process-Specific Metadata Response
+    let shareUrl = null;
+    let whatsappUrl = null;
+    let bankUrl = null;
+
+    if (lead.process_type === 'linked_share') {
+      const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
+      const baseUrl = process.env.PUBLIC_APP_URL || 'https://gharkapaisa.in';
+      shareUrl = `${baseUrl}/share/${trackingToken}`;
+
+      const { rows: [partnerProfile] } = await client.query(`
+        SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id = $1
+      `, [lead.partner_id]);
+
+      const partnerName = `${partnerProfile?.first_name || ''} ${partnerProfile?.last_name || ''}`.trim() || 'Your Financial Partner';
+      const cleanMobile = lead.mobile.replace(/\D/g, '');
+      const waText = encodeURIComponent(`Hello ${lead.customer_name},\n\nApply for ${product?.name || 'Financial Product'} using your tracked application link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
+
+      await client.query(`
+        INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
+        VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
+      `, [lead.partner_id, lead.product_id, trackingToken]);
+
+      await client.query(`
+        UPDATE applications SET tracking_token = $1 WHERE id = $2
+      `, [trackingToken, app.id]);
+    } else if (lead.process_type === 'direct_bank') {
+      bankUrl = product?.partner_url || product?.public_url || 'https://gharkapaisa.in/partner/products';
+      await client.query(`
+        UPDATE applications SET bank_url = $1 WHERE id = $2
+      `, [bankUrl, app.id]);
+    }
+
+    await client.query('COMMIT');
+
+    await logLeadTimeline(null, id, 'Lead Confirmed', `Lead OTP verified and converted to Application ${appNumber}`, 'applications', app.id, req.user.id);
+
+    return success(res, {
+      ...app,
+      share_url: shareUrl,
+      whatsapp_url: whatsappUrl,
+      bank_url: bankUrl
+    }, 'Lead verified successfully and converted to application.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 
 // PATCH /leads/:id/status — Status & Stage Pipeline Transition
 const updateLeadStatus = async (req, res, next) => {
@@ -452,6 +695,8 @@ module.exports = {
   listLeads,
   get360LeadDetails,
   createLead,
+  sendLeadOtp,
+  verifyLeadOtp,
   updateLeadStatus,
   addLeadDocument,
   addLeadNote,
@@ -462,3 +707,4 @@ module.exports = {
   addLeadFollowUp,
   listPartnerShareLeads
 };
+

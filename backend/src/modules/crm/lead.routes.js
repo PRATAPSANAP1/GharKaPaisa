@@ -16,8 +16,13 @@ router.get('/', requireApprovedPartnerOrAdmin, ctrl.listLeads);
 router.post('/', requireApprovedPartner, ctrl.createLead);
 router.post('/bulk-assign', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.bulkAssignLeads);
 
+// OTP & Lead-to-Application Conversion Endpoints
+router.post('/:id/send-otp', requireApprovedPartnerOrAdmin, ctrl.sendLeadOtp);
+router.post('/:id/verify-otp', requireApprovedPartnerOrAdmin, ctrl.verifyLeadOtp);
+
 // 360 Lead Profile & Operations Details
 router.get('/:id', requireApprovedPartnerOrAdmin, ctrl.get360LeadDetails);
+
 router.patch('/:id/status', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateLeadStatus);
 
 // Sub-resource Endpoints

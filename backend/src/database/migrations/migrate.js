@@ -645,8 +645,25 @@ const migrate = async () => {
       updated_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS lead_number VARCHAR(50)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching'`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_code VARCHAR(10)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_verified BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_verified_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
+
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS tracking_token VARCHAR(100)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_url VARCHAR(500)`);
+
   // ── Lead Followups ─────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS lead_followups (
