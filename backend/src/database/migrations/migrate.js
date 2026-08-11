@@ -234,12 +234,12 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_profiles') THEN
-        INSERT INTO partner_profiles (id, user_id, partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
+        EXECUTE 'INSERT INTO partner_profiles (id, user_id, partner_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at)
         SELECT id, user_id, agent_code, first_name, last_name, profile_photo_url, current_address, business_location, company_name, company_type, gst_number, kyc_status, approved_by, approved_at, rejection_reason, created_at, updated_at
         FROM agent_profiles
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO NOTHING';
         
-        DROP TABLE agent_profiles CASCADE;
+        EXECUTE 'DROP TABLE agent_profiles CASCADE';
       END IF;
     END $$;
   `);
@@ -248,12 +248,12 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='agent_bank_details') THEN
-        INSERT INTO partner_bank_details (id, partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
+        EXECUTE 'INSERT INTO partner_bank_details (id, partner_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at)
         SELECT id, agent_id, bank_name, account_number, ifsc_code, account_holder_name, is_verified, verified_at, created_at, updated_at
         FROM agent_bank_details
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO NOTHING';
         
-        DROP TABLE agent_bank_details CASCADE;
+        EXECUTE 'DROP TABLE agent_bank_details CASCADE';
       END IF;
     END $$;
   `);
@@ -262,7 +262,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='applications' AND column_name='agent_id') THEN
-        ALTER TABLE applications RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE applications RENAME COLUMN agent_id TO partner_id';
       END IF;
     END $$;
   `);
@@ -271,7 +271,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='agent_id') THEN
-        ALTER TABLE withdrawal_requests RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE withdrawal_requests RENAME COLUMN agent_id TO partner_id';
       END IF;
     END $$;
   `);
@@ -280,10 +280,10 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='agent_id') THEN
-        ALTER TABLE wallets RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE wallets RENAME COLUMN agent_id TO partner_id';
       END IF;
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='partner_wallets' AND column_name='agent_id') THEN
-        ALTER TABLE partner_wallets RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE partner_wallets RENAME COLUMN agent_id TO partner_id';
       END IF;
     END $$;
   `);
@@ -292,7 +292,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='commission_structures' AND column_name='agent_id') THEN
-        ALTER TABLE commission_structures RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE commission_structures RENAME COLUMN agent_id TO partner_id';
       END IF;
     END $$;
   `);
@@ -301,7 +301,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='kyc_documents' AND column_name='agent_id') THEN
-        ALTER TABLE kyc_documents RENAME COLUMN agent_id TO partner_id;
+        EXECUTE 'ALTER TABLE kyc_documents RENAME COLUMN agent_id TO partner_id';
       END IF;
     END $$;
   `);
@@ -487,10 +487,10 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallets' AND column_name='pending_amount') THEN
-        ALTER TABLE wallets RENAME COLUMN pending_amount TO hold_balance;
+        EXECUTE 'ALTER TABLE wallets RENAME COLUMN pending_amount TO hold_balance';
       END IF;
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='partner_wallets' AND column_name='pending_amount') THEN
-        ALTER TABLE partner_wallets RENAME COLUMN pending_amount TO hold_balance;
+        EXECUTE 'ALTER TABLE partner_wallets RENAME COLUMN pending_amount TO hold_balance';
       END IF;
     END $$;
   `);
@@ -512,7 +512,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_transactions' AND column_name='txn_type') THEN
-        ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type;
+        EXECUTE 'ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type';
       END IF;
     END $$;
   `);
@@ -544,7 +544,7 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_transactions' AND column_name='txn_type') THEN
-        ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type;
+        EXECUTE 'ALTER TABLE wallet_transactions RENAME COLUMN txn_type TO type';
       END IF;
     END $$;
   `);
@@ -723,10 +723,10 @@ const migrate = async () => {
     DO $$
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_audit_logs' AND column_name='old_pending_amount') THEN
-        ALTER TABLE wallet_audit_logs RENAME COLUMN old_pending_amount TO old_hold_balance;
+        EXECUTE 'ALTER TABLE wallet_audit_logs RENAME COLUMN old_pending_amount TO old_hold_balance';
       END IF;
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wallet_audit_logs' AND column_name='new_pending_amount') THEN
-        ALTER TABLE wallet_audit_logs RENAME COLUMN new_pending_amount TO new_hold_balance;
+        EXECUTE 'ALTER TABLE wallet_audit_logs RENAME COLUMN new_pending_amount TO new_hold_balance';
       END IF;
     END $$;
   `);
@@ -1763,18 +1763,21 @@ const migrate = async () => {
     // 1. Rename wallets table to partner_wallets
     await query(`
       DO $$
+      DECLARE
+        pw_count INTEGER;
       BEGIN
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallets') THEN
           IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'partner_wallets') THEN
-            IF (SELECT COUNT(*) FROM partner_wallets) = 0 THEN
-              DROP TABLE partner_wallets CASCADE;
-              ALTER TABLE wallets RENAME TO partner_wallets;
+            EXECUTE 'SELECT COUNT(*) FROM partner_wallets' INTO pw_count;
+            IF pw_count = 0 THEN
+              EXECUTE 'DROP TABLE partner_wallets CASCADE';
+              EXECUTE 'ALTER TABLE wallets RENAME TO partner_wallets';
               RAISE NOTICE 'Dropped empty partner_wallets and renamed wallets to partner_wallets';
             ELSE
               RAISE NOTICE 'Both wallets and partner_wallets contain records. Manual merge needed.';
             END IF;
           ELSE
-            ALTER TABLE wallets RENAME TO partner_wallets;
+            EXECUTE 'ALTER TABLE wallets RENAME TO partner_wallets';
             RAISE NOTICE 'Renamed table wallets to partner_wallets';
           END IF;
         END IF;
@@ -1803,37 +1806,36 @@ const migrate = async () => {
 
         IF ref_table IS NOT NULL AND ref_table <> 'partner_wallets' THEN
           -- 1. Ensure partner_wallets exist for all partners in wallet_ledger
-          INSERT INTO partner_wallets (partner_id)
+          EXECUTE 'INSERT INTO partner_wallets (partner_id)
           SELECT DISTINCT wl.partner_id
           FROM wallet_ledger wl
           WHERE wl.partner_id IS NOT NULL 
             AND NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.partner_id = wl.partner_id)
             AND EXISTS (SELECT 1 FROM partner_profiles pp WHERE pp.id = wl.partner_id)
-          ON CONFLICT (partner_id) DO NOTHING;
+          ON CONFLICT (partner_id) DO NOTHING';
 
           -- 2. Remap wallet_id in wallet_ledger if it stored partner_profiles.id instead of partner_wallets.id
-          UPDATE wallet_ledger wl
+          EXECUTE 'UPDATE wallet_ledger wl
           SET wallet_id = pw.id
           FROM partner_wallets pw
           WHERE (wl.wallet_id = pw.partner_id OR (wl.wallet_id IS NOT NULL AND wl.partner_id = pw.partner_id))
-            AND NOT EXISTS (SELECT 1 FROM partner_wallets pw2 WHERE pw2.id = wl.wallet_id);
+            AND NOT EXISTS (SELECT 1 FROM partner_wallets pw2 WHERE pw2.id = wl.wallet_id)';
 
           -- 3. Create fallback partner_wallets records for any remaining orphan wallet_id in wallet_ledger
-          INSERT INTO partner_wallets (id, partner_id)
+          EXECUTE 'INSERT INTO partner_wallets (id, partner_id)
           SELECT DISTINCT wl.wallet_id, wl.partner_id
           FROM wallet_ledger wl
           WHERE wl.wallet_id IS NOT NULL 
             AND NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.id = wl.wallet_id)
             AND EXISTS (SELECT 1 FROM partner_profiles pp WHERE pp.id = wl.partner_id)
-          ON CONFLICT (id) DO NOTHING;
+          ON CONFLICT (id) DO NOTHING';
 
           -- 4. Clean up any remaining unresolvable orphan records from wallet_ledger
-          DELETE FROM wallet_ledger wl
-          WHERE NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.id = wl.wallet_id);
+          EXECUTE 'DELETE FROM wallet_ledger wl
+          WHERE NOT EXISTS (SELECT 1 FROM partner_wallets pw WHERE pw.id = wl.wallet_id)';
 
-          ALTER TABLE wallet_ledger DROP CONSTRAINT wallet_ledger_wallet_id_fkey;
-          ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_wallet_id_fkey
-            FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id);
+          EXECUTE 'ALTER TABLE wallet_ledger DROP CONSTRAINT wallet_ledger_wallet_id_fkey';
+          EXECUTE 'ALTER TABLE wallet_ledger ADD CONSTRAINT wallet_ledger_wallet_id_fkey FOREIGN KEY (wallet_id) REFERENCES partner_wallets(id)';
           RAISE NOTICE 'Fixed wallet_ledger FK to point to partner_wallets';
         END IF;
       END $$;
@@ -1844,7 +1846,7 @@ const migrate = async () => {
       DO $$
       BEGIN
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'withdrawal_requests') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'wallet_withdrawals') THEN
-          ALTER TABLE withdrawal_requests RENAME TO wallet_withdrawals;
+          EXECUTE 'ALTER TABLE withdrawal_requests RENAME TO wallet_withdrawals';
           RAISE NOTICE 'Renamed table withdrawal_requests to wallet_withdrawals';
         END IF;
       END $$;
@@ -2099,7 +2101,7 @@ const migrate = async () => {
           WHERE conname = 'partner_training_progress_partner_id_training_id_key' 
              OR conname = 'unique_partner_training'
         ) THEN
-          ALTER TABLE partner_training_progress ADD CONSTRAINT unique_partner_training UNIQUE (partner_id, training_id);
+          EXECUTE 'ALTER TABLE partner_training_progress ADD CONSTRAINT unique_partner_training UNIQUE (partner_id, training_id)';
         END IF;
       END $$;
     `);
@@ -3815,10 +3817,10 @@ const migrate = async () => {
       await query(`
         DO $$ BEGIN
           IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'banks' AND column_name = 'banner') THEN
-            UPDATE banks SET banner = REPLACE(banner, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner LIKE '%cloudfront.net/public/%';
+            EXECUTE 'UPDATE banks SET banner = REPLACE(banner, ''cloudfront.net/public/'', ''cloudfront.net/'') WHERE banner LIKE ''%cloudfront.net/public/%''';
           END IF;
           IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'banks' AND column_name = 'banner_url') THEN
-            UPDATE banks SET banner_url = REPLACE(banner_url, 'cloudfront.net/public/', 'cloudfront.net/') WHERE banner_url LIKE '%cloudfront.net/public/%';
+            EXECUTE 'UPDATE banks SET banner_url = REPLACE(banner_url, ''cloudfront.net/public/'', ''cloudfront.net/'') WHERE banner_url LIKE ''%cloudfront.net/public/%''';
           END IF;
         END $$;
       `);
