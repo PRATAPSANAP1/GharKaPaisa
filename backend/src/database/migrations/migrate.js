@@ -76,6 +76,7 @@ const migrate = async () => {
       CREATE TYPE kyc_status AS ENUM ('pending','under_review','approved','rejected');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  await addEnumValue('kyc_status', 'draft');
   await query(`
     DO $$ BEGIN
       CREATE TYPE application_status AS ENUM ('draft','submitted','under_review','approved','rejected','disbursed');
@@ -191,7 +192,7 @@ const migrate = async () => {
       company_type      VARCHAR(100),
       gst_number        VARCHAR(20),
       pincode           VARCHAR(10),
-      kyc_status        kyc_status DEFAULT 'pending',
+      kyc_status        kyc_status DEFAULT 'draft',
       approved_by       UUID REFERENCES users(id),
       approved_at       TIMESTAMPTZ,
       rejection_reason  TEXT,
@@ -209,6 +210,19 @@ const migrate = async () => {
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_type VARCHAR(50) DEFAULT 'PARTNER'`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`);
+  try { await query(`ALTER TABLE partner_profiles ALTER COLUMN kyc_status SET DEFAULT 'draft'`); } catch (e) {}
+
+  // Update existing partner profiles with pending status that lack complete document uploads to 'draft'
+  await query(`
+    UPDATE partner_profiles SET kyc_status = 'draft'
+    WHERE kyc_status = 'pending'
+      AND id NOT IN (
+        SELECT p.id FROM partner_profiles p
+        JOIN kyc_documents d1 ON d1.partner_id = p.id AND d1.doc_type = 'pan'
+        JOIN kyc_documents d2 ON d2.partner_id = p.id AND d2.doc_type = 'cancelled_cheque'
+        JOIN partner_videos v ON v.partner_id = p.id
+      )
+  `);
 
 
   // ── Partner Bank Details ────────────────────────────────────────

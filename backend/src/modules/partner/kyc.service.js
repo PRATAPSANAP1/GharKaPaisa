@@ -34,8 +34,8 @@ const uploadKycDocument = async (partnerId, docType, docNumber, fileUrl, s3Key) 
     RETURNING *
   `, [partnerId, docType, docNumber, fileUrl, s3Key]);
   
-  // Reset overall KYC status to pending so recalculation runs fresh
-  await query(`UPDATE partner_profiles SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL WHERE id = $1`, [partnerId]);
+  // Clear rejection reason if re-uploading document
+  await query(`UPDATE partner_profiles SET rejection_reason = NULL, kyc_rejection_reason = NULL WHERE id = $1`, [partnerId]);
   
   return doc;
 };

@@ -594,7 +594,7 @@ const addTeamMember = async (req, res, next) => {
       INSERT INTO partner_profiles (
         user_id, parent_partner_id, first_name, last_name, partner_code, partner_type, kyc_status
       )
-      VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'pending')
+      VALUES ($1, $2, $3, $4, $5, 'TEAM_MEMBER', 'draft')
       RETURNING id
     `, [newUser.id, partnerId, memberFirstName, memberLastName, partnerCode]);
 
@@ -1512,10 +1512,10 @@ const uploadVideo = async (req, res, next) => {
       RETURNING *
     `, [partnerId, url, parseInt(duration || 0), req.file.size, key]);
 
-    // Reset overall KYC to pending so recalculation runs fresh after re-upload
+    // Clear rejection reason if re-uploading video
     await query(`
       UPDATE partner_profiles 
-      SET kyc_status = 'pending', rejection_reason = NULL, kyc_rejection_reason = NULL 
+      SET rejection_reason = NULL, kyc_rejection_reason = NULL 
       WHERE id = $1
     `, [partnerId]);
 
@@ -1817,7 +1817,6 @@ const completeTeamOnboarding = async (req, res, next) => {
           business_location = COALESCE($7, business_location),
           gst_number = COALESCE($8, gst_number),
           pan_number = COALESCE(NULLIF($9, ''), pan_number),
-          kyc_status = 'pending',
           updated_at = NOW()
         WHERE id = $10
       `, [first_name, last_name, company_name, company_type, current_address, pincode, business_location, gst_number || null, cleanPan || null, partnerId]);
@@ -1830,7 +1829,7 @@ const completeTeamOnboarding = async (req, res, next) => {
         INSERT INTO partner_profiles (
           user_id, partner_code, first_name, last_name, company_name, company_type,
           current_address, pincode, business_location, gst_number, pan_number, partner_type, kyc_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'TEAM_MEMBER', 'pending')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'TEAM_MEMBER', 'draft')
         RETURNING id
       `, [userId, partnerCode, first_name, last_name, company_name, company_type, current_address, pincode, business_location, gst_number || null, cleanPan || null]);
       partnerId = newProf.id;

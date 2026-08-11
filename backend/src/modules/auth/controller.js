@@ -696,7 +696,7 @@ const register = async (req, res, next) => {
             const secureCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
             await client.query(`
               INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
-              VALUES ($1, $2, $3, $4, $5, 'pending')
+              VALUES ($1, $2, $3, $4, $5, 'draft')
             `, [u.id, first_name || '', last_name || '', secureCode, u.role || 'TEAM_MEMBER']);
           }
 
@@ -808,7 +808,7 @@ const register = async (req, res, next) => {
             parent_partner_id, referred_by_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number,
             allow_team_creation
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12::uuid, $13, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'pending', $14, $15, $16) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12::uuid, $13, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'draft', $14, $15, $16) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
           business_location || '', company_name, company_type, gst_number || null, pincode || null,
