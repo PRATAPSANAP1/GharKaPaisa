@@ -237,22 +237,34 @@ const getDashboardStats = async (req, res, next) => {
       query(`
         SELECT
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE status = 'approved' OR status = 'disbursed') as approved,
+          COUNT(*) FILTER (WHERE status IN ('approved','disbursed','confirmed')) as approved,
           COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-          COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending
-        FROM applications WHERE partner_id = $1 OR partner_id = $2
+          COUNT(*) FILTER (WHERE status IN ('submitted','under_review','pending')) as pending
+        FROM (
+          SELECT a.id, a.partner_id, a.status::text FROM applications a WHERE a.partner_id = $1 OR a.partner_id = $2
+          UNION ALL
+          SELECT l.id, l.partner_id, l.status::text FROM leads l WHERE (l.partner_id = $1 OR l.partner_id = $2) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
+        ) combined
       `, [finalPartnerId, finalUserId]),
       query(`SELECT * FROM partner_wallets WHERE partner_id = $1 OR partner_id = $2`, [finalPartnerId, finalUserId]),
       query(`
-        SELECT a.app_number, a.status, a.commission_amount, a.created_at,
-          COALESCE(c.full_name, 'Customer') as customer_name,
+        SELECT combined.app_number, combined.status, combined.commission_amount, combined.created_at,
+          COALESCE(c.full_name, combined.cust_name, 'Customer') as customer_name,
           COALESCE(p.name, 'Product') as product_name, COALESCE(b.short_code, b.name, 'GKP') as bank_code
-        FROM applications a
-        LEFT JOIN customers c ON c.id = a.customer_id
-        LEFT JOIN products p ON p.id = a.product_id
+        FROM (
+          SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.created_at, a.customer_id, a.product_id, a.partner_id, NULL as cust_name
+          FROM applications a
+          WHERE a.partner_id = $1 OR a.partner_id = $2
+          UNION ALL
+          SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p_lead.commission_value as commission_amount, l.created_at, l.customer_id, l.product_id, l.partner_id, l.customer_name as cust_name
+          FROM leads l
+          LEFT JOIN products p_lead ON p_lead.id = l.product_id
+          WHERE (l.partner_id = $1 OR l.partner_id = $2) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
+        ) combined
+        LEFT JOIN customers c ON (c.id = combined.customer_id)
+        LEFT JOIN products p ON p.id = combined.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE a.partner_id = $1 OR a.partner_id = $2
-        ORDER BY a.created_at DESC LIMIT 5
+        ORDER BY combined.created_at DESC LIMIT 5
       `, [finalPartnerId, finalUserId]),
       query(`
         SELECT p.id, p.name, p.image_url, COALESCE(MAX(b.short_code), MAX(b.name), 'GKP') as bank_code, COUNT(a.id) as sales_count
@@ -679,19 +691,16 @@ const addTeamMember = async (req, res, next) => {
 // GET /partner/customers — CRM customer list for logged-in partner
 const listPartnerCustomers = async (req, res, next) => {
   try {
-    if (req.kycUnapproved) {
-      return success(res, []);
-    }
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    // For team members, only show customers created by them
+    // For team members, show customers created by them; for partners, show all customers linked to their profile or leads/apps
     const whereClause = isTeamMember
-      ? `a.partner_id = $1 AND c.created_by = $2`
-      : `a.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1)`;
+      ? `(a.partner_id = $1 OR l.partner_id = $1) AND c.created_by = $2`
+      : `(a.partner_id = $1 OR l.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1)`;
 
     const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
 
@@ -708,30 +717,33 @@ const listPartnerCustomers = async (req, res, next) => {
         c.employment_type,
         c.monthly_income,
         c.employer,
-        MIN(a.created_at) AS first_application_at,
-        COUNT(a.id)::int AS application_count,
+        MIN(COALESCE(a.created_at, l.created_at, c.created_at)) AS first_application_at,
+        (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
         COALESCE(
           json_agg(
-            json_build_object(
-              'id', a.id,
-              'app_number', a.app_number,
-              'status', a.status,
-              'product_name', p.name,
-              'bank_name', b.name,
-              'bank_code', b.short_code,
-              'commission_amount', a.commission_amount,
-              'created_at', a.created_at
-            ) ORDER BY a.created_at DESC
-          ) FILTER (WHERE a.id IS NOT NULL),
+            DISTINCT jsonb_build_object(
+              'id', COALESCE(a.id, l.id),
+              'app_number', COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))),
+              'status', COALESCE(a.status, l.status),
+              'product_name', COALESCE(pa.name, pl.name),
+              'bank_name', COALESCE(ba.name, bl.name),
+              'bank_code', COALESCE(ba.short_code, bl.short_code),
+              'commission_amount', COALESCE(a.commission_amount, pl.commission_value, 0),
+              'created_at', COALESCE(a.created_at, l.created_at)
+            )
+          ) FILTER (WHERE a.id IS NOT NULL OR l.id IS NOT NULL),
           '[]'::json
         ) AS applications
       FROM customers c
       LEFT JOIN applications a ON a.customer_id = c.id
-      LEFT JOIN products p ON p.id = a.product_id
-      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN products pa ON pa.id = a.product_id
+      LEFT JOIN banks ba ON ba.id = pa.bank_id
+      LEFT JOIN leads l ON (l.customer_id = c.id OR l.mobile = c.mobile)
+      LEFT JOIN products pl ON pl.id = l.product_id
+      LEFT JOIN banks bl ON bl.id = pl.bank_id
       WHERE ${whereClause}
       GROUP BY c.id
-      ORDER BY COALESCE(MAX(a.created_at), c.created_at) DESC
+      ORDER BY COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) DESC
     `, queryParams);
 
     return success(res, rows);

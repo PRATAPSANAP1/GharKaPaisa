@@ -873,6 +873,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
+        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $8::uuid)
         AND ($2::text IS NULL OR combined.status = $2)
@@ -901,6 +902,7 @@ const listApplications = async (req, res, next) => {
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
+        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $6::uuid)
         AND ($2::text IS NULL OR combined.status = $2)

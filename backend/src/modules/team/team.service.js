@@ -1,6 +1,7 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 const qrcode = require('qrcode');
+const { generateInviteToken } = require('../../utils/helpers/inviteToken.js');
 
 let columnsEnsured = false;
 async function ensureTeamCommissionsColumns() {
@@ -1297,6 +1298,88 @@ async function updateTeamMemberStatus(parentPartnerId, memberId, status) {
   );
 
   return { id: targetMember.id, user_id: targetMember.user_id, status };
+}
+
+/**
+ * Send Team Member Invitation
+ */
+async function sendTeamInvitation(partnerId, payload) {
+  const { name, mobile, email } = payload || {};
+  if (!mobile && !email) {
+    throw new Error('Provide at least a mobile number or email address.');
+  }
+
+  // 1. Resolve parent partner details
+  const { rows: [parent] } = await query(
+    `SELECT p.id, p.partner_code, p.first_name, p.last_name, u.email, u.mobile
+     FROM partner_profiles p
+     JOIN users u ON u.id = p.user_id
+     WHERE p.id = $1 OR p.user_id = $1`,
+    [partnerId]
+  );
+
+  const pId = parent ? parent.id : partnerId;
+  const pCode = parent ? parent.partner_code : 'REF' + String(partnerId).substring(0, 6).toUpperCase();
+
+  // 2. Generate secure token & invite link
+  const token = generateInviteToken({ partnerCode: pCode, role: 'TEAM_MEMBER' });
+  const baseUrl = process.env.PUBLIC_APP_URL || 'https://gharkapaisa.in';
+  const inviteUrl = `${baseUrl}/register?ref=${pCode}&token=${token}`;
+
+  // 3. Persist invitation record
+  const { rows: [invite] } = await query(
+    `INSERT INTO invitation_history (partner_id, invitee_name, invitee_mobile, invitee_email, invite_code, status)
+     VALUES ($1, $2, $3, $4, $5, 'sent')
+     RETURNING *`,
+    [pId, name || 'Team Member', mobile || null, email || null, token]
+  ).catch(err => {
+    logger.warn('invitation_history insert fallback:', err.message);
+    return { rows: [{ id: Date.now(), partner_id: pId, invite_code: token }] };
+  });
+
+  // 4. Send email notification if email provided
+  if (email) {
+    try {
+      const { sendEmail } = require('../../services/email/email.service.js');
+      await sendEmail({
+        to: email,
+        subject: 'Invitation to Join GharKaPaisa Team',
+        html: `<p>Hello ${name || 'Partner'},</p>
+               <p>You have been invited by ${parent ? `${parent.first_name} ${parent.last_name}` : 'a GharKaPaisa Partner'} to join their team network.</p>
+               <p>Click here to accept invitation and create your account: <a href="${inviteUrl}">${inviteUrl}</a></p>`
+      });
+    } catch (mailErr) {
+      logger.warn('Failed to send team invitation email:', mailErr.message);
+    }
+  }
+
+  return {
+    id: invite?.id || token,
+    invite_code: token,
+    invite_url: inviteUrl,
+    invitee_name: name || 'Team Member',
+    invitee_mobile: mobile || null,
+    invitee_email: email || null,
+    status: 'sent'
+  };
+}
+
+/**
+ * Get Referred / Invited List
+ */
+async function getRefersList(partnerId) {
+  const pId = await getPartnerProfileIdByUserId(partnerId) || partnerId;
+  const { rows } = await query(
+    `SELECT ih.id, ih.invitee_name, ih.invitee_mobile, ih.invitee_email, ih.invite_code, ih.status, ih.created_at,
+            cp.partner_code, cp.first_name, cp.last_name, cp.kyc_status
+     FROM invitation_history ih
+     LEFT JOIN partner_profiles cp ON cp.id = ih.accepted_by_partner_id
+     WHERE ih.partner_id = $1
+     ORDER BY ih.created_at DESC`,
+    [pId]
+  ).catch(() => ({ rows: [] }));
+
+  return rows;
 }
 
 module.exports = {

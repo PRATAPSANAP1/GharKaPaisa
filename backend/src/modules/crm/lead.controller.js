@@ -189,12 +189,28 @@ const createLead = async (req, res, next) => {
     }
 
     // 1. Fetch Partner & Hierarchy Profile
-    let { rows: [partner] } = await query(`
-      SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
-      FROM partner_profiles p
-      JOIN users u ON u.id = p.user_id
-      WHERE p.user_id = $1
-    `, [req.user.id]);
+    const targetPartnerId = req.body.partner_id || req.body.partnerId;
+    let partner = null;
+
+    if (targetPartnerId) {
+      const { rows: [p] } = await query(`
+        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
+        FROM partner_profiles p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.id = $1 OR p.user_id = $1
+      `, [targetPartnerId]);
+      partner = p;
+    }
+
+    if (!partner) {
+      const { rows: [p] } = await query(`
+        SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
+        FROM partner_profiles p
+        JOIN users u ON u.id = p.user_id
+        WHERE p.user_id = $1
+      `, [req.user.id]);
+      partner = p;
+    }
 
     if (!partner) {
       const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
@@ -388,7 +404,22 @@ const verifyLeadOtp = async (req, res, next) => {
 
     const initialStatus = lead.process_type === 'direct_bank' ? 'initiated' : 'submitted';
 
-    // 4. Insert into Applications
+    // 4. Resolve customer_id and Insert into Applications
+    let targetCustomerId = lead.customer_id;
+    if (!targetCustomerId && lead.mobile) {
+      const { rows: [c] } = await client.query(`SELECT id FROM customers WHERE mobile = $1`, [lead.mobile]);
+      if (c) {
+        targetCustomerId = c.id;
+      } else {
+        const { rows: [newC] } = await client.query(`
+          INSERT INTO customers (full_name, mobile, city, created_by)
+          VALUES ($1, $2, $3, $4) RETURNING id
+        `, [lead.customer_name || 'Customer', lead.mobile, lead.city || null, lead.created_by]);
+        targetCustomerId = newC.id;
+      }
+      await client.query(`UPDATE leads SET customer_id = $1 WHERE id = $2`, [targetCustomerId, id]);
+    }
+
     const { rows: [app] } = await client.query(`
       INSERT INTO applications (
         app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id,
@@ -397,7 +428,7 @@ const verifyLeadOtp = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
       RETURNING *
     `, [
-      appNumber, lead.id, lead.customer_id, lead.product_id, lead.partner_id, lead.parent_partner_id,
+      appNumber, lead.id, targetCustomerId, lead.product_id, lead.partner_id, lead.parent_partner_id,
       lead.created_by, initialStatus, lead.process_type, product?.commission_value || 0
     ]);
 
