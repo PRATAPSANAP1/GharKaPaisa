@@ -233,6 +233,18 @@ const getDashboardStats = async (req, res, next) => {
     const finalPartnerId = targetPartnerId || fallbackId;
     const finalUserId = targetUserId || fallbackId;
 
+    const teamSubquery = `
+      SELECT $1::uuid
+      UNION
+      SELECT $2::uuid
+      UNION
+      SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+      UNION
+      SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+      UNION
+      SELECT id FROM partner_profiles WHERE user_id = $2::uuid
+    `;
+
     const [appStats, wallet, recentApps, topProducts] = await Promise.all([
       query(`
         SELECT
@@ -241,9 +253,9 @@ const getDashboardStats = async (req, res, next) => {
           COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
           COUNT(*) FILTER (WHERE status IN ('submitted','under_review','pending')) as pending
         FROM (
-          SELECT a.id, a.partner_id, a.status::text FROM applications a WHERE a.partner_id = $1 OR a.partner_id = $2
+          SELECT a.id, a.partner_id, a.status::text FROM applications a WHERE a.partner_id IN (${teamSubquery})
           UNION ALL
-          SELECT l.id, l.partner_id, l.status::text FROM leads l WHERE (l.partner_id = $1 OR l.partner_id = $2) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
+          SELECT l.id, l.partner_id, l.status::text FROM leads l WHERE l.partner_id IN (${teamSubquery}) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
         ) combined
       `, [finalPartnerId, finalUserId]),
       query(`SELECT * FROM partner_wallets WHERE partner_id = $1 OR partner_id = $2`, [finalPartnerId, finalUserId]),
@@ -254,12 +266,12 @@ const getDashboardStats = async (req, res, next) => {
         FROM (
           SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.created_at, a.customer_id, a.product_id, a.partner_id, NULL as cust_name
           FROM applications a
-          WHERE a.partner_id = $1 OR a.partner_id = $2
+          WHERE a.partner_id IN (${teamSubquery})
           UNION ALL
           SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p_lead.commission_value as commission_amount, l.created_at, l.customer_id, l.product_id, l.partner_id, l.customer_name as cust_name
           FROM leads l
           LEFT JOIN products p_lead ON p_lead.id = l.product_id
-          WHERE (l.partner_id = $1 OR l.partner_id = $2) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
+          WHERE l.partner_id IN (${teamSubquery}) AND l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
         ) combined
         LEFT JOIN customers c ON (c.id = combined.customer_id)
         LEFT JOIN products p ON p.id = combined.product_id
@@ -270,7 +282,7 @@ const getDashboardStats = async (req, res, next) => {
         SELECT p.id, p.name, p.image_url, COALESCE(MAX(b.short_code), MAX(b.name), 'GKP') as bank_code, COUNT(a.id) as sales_count
         FROM products p
         LEFT JOIN banks b ON b.id = p.bank_id
-        LEFT JOIN applications a ON a.product_id = p.id AND (a.partner_id = $1 OR a.partner_id = $2) AND a.status IN ('approved', 'disbursed')
+        LEFT JOIN applications a ON a.product_id = p.id AND a.partner_id IN (${teamSubquery}) AND a.status IN ('approved', 'disbursed')
         GROUP BY p.id, p.name, p.image_url
         ORDER BY sales_count DESC
         LIMIT 5
@@ -694,13 +706,28 @@ const listPartnerCustomers = async (req, res, next) => {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
+    const { view } = req.query;
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    // For team members, show customers created by them or linked to their created leads/apps; for partners, show all customers linked to their profile or leads/apps
-    const whereClause = isTeamMember
-      ? `(c.created_by = $2 OR l.created_by = $2 OR a.submitted_by = $2 OR a.partner_id = $1 OR l.partner_id = $1)`
-      : `(a.partner_id = $1 OR l.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1))`;
+    let whereClause;
+    if (isTeamMember) {
+      whereClause = `(c.created_by = $2 OR l.created_by = $2 OR a.submitted_by = $2 OR a.partner_id = $1 OR l.partner_id = $1)`;
+    } else if (view === 'my') {
+      whereClause = `(c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR a.submitted_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1))`;
+    } else if (view === 'team') {
+      whereClause = `(
+        a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+      )`;
+    } else {
+      whereClause = `(
+        a.partner_id = $1 OR l.partner_id = $1 
+        OR a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1
+      )`;
+    }
 
     const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
 

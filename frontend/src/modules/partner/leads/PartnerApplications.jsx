@@ -96,6 +96,7 @@ export default function PartnerApplications() {
           status: statusFilter || undefined,
           commission_status: commFilter || undefined,
           category: categoryFilter || undefined,
+          scope: searchParams.get('scope') || undefined,
           limit: 100
         }
       });
@@ -129,7 +130,7 @@ export default function PartnerApplications() {
     fetchDashboardStats();
     fetchApplicationsList();
     fetchTeamMembers();
-  }, [search, statusFilter, commFilter, categoryFilter]);
+  }, [search, statusFilter, commFilter, categoryFilter, searchParams]);
 
   const loadDetailData = async (appId) => {
     try {
@@ -394,26 +395,31 @@ export default function PartnerApplications() {
       </div>
 
       {/* ── Analytics Funnel Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
         {[
-          { label: 'Total Leads', val: dashboardStats?.total_applications || applications.length, color: accent, icon: FileText },
-          { label: 'Under Review', val: dashboardStats?.under_review || applications.filter(a => a.status === 'under_review').length, color: '#f59e0b', icon: Clock },
-          { label: 'Approved & Disbursed', val: dashboardStats?.approved || applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
-          { label: 'Rejected', val: dashboardStats?.rejected || applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
+          { label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
+          { label: 'Under Review', val: dashboardStats?.under_review ?? applications.filter(a => a.status === 'under_review').length, color: '#f59e0b', icon: Clock },
+          { label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
+          { label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
         ].map((stat) => {
           const Icon = stat.icon;
           return (
             <div key={stat.label} style={{
-              padding: '16px 18px', borderRadius: 16, background: cardBg, border: `1px solid ${border}`,
-              borderLeft: `4px solid ${stat.color}`, boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)'
+              padding: isMobile ? '8px 6px' : '16px 18px', borderRadius: isMobile ? 12 : 16, background: cardBg, border: `1px solid ${border}`,
+              borderLeft: `${isMobile ? 3 : 4}px solid ${stat.color}`, boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)',
+              textAlign: isMobile ? 'center' : 'left'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={14} color={stat.color} />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', marginBottom: isMobile ? 2 : 6 }}>
+                <span style={{ fontSize: isMobile ? 8.5 : 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: isMobile ? 0 : '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {isMobile && stat.label === 'Approved & Disbursed' ? 'Approved' : stat.label}
+                </span>
+                {!isMobile && (
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={14} color={stat.color} />
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: textPrimary }}>{stat.val}</div>
+              <div style={{ fontSize: isMobile ? 16 : 24, fontWeight: 900, color: textPrimary }}>{stat.val}</div>
             </div>
           );
         })}

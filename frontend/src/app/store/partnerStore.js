@@ -32,10 +32,10 @@ export const usePartnerStore = create((set) => ({
     }
   },
 
-  fetchCustomers: async () => {
+  fetchCustomers: async (params = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/partner/customers');
+      const response = await api.get('/partner/customers', { params });
       set({ customers: response.data.data, isLoading: false });
       return response.data.data;
     } catch (error) {

@@ -267,6 +267,13 @@ const getApplicationsDashboard = async (req, res, next) => {
       partnerId = partner ? partner.id : req.user.id;
     }
 
+    const teamPartnerFilter = `
+      SELECT $1::uuid UNION SELECT $2::uuid 
+      UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $2::uuid OR referred_by_id = $2::uuid
+      UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $2::uuid OR sponsor_id = $2::uuid
+      UNION SELECT id FROM partner_profiles WHERE user_id = $2::uuid
+    `;
+
     const { rows: [stats] } = await query(`
       SELECT 
         COUNT(*) as total,
@@ -286,7 +293,7 @@ const getApplicationsDashboard = async (req, res, next) => {
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2::uuid))
+      WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))
     `, [partnerId, userId]);
 
     const totalCount = parseInt(stats?.total || 0);
@@ -310,7 +317,7 @@ const getApplicationsDashboard = async (req, res, next) => {
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $2::uuid)
+      WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))
       ORDER BY combined.created_at DESC LIMIT 5
     `, [partnerId, userId]);
 
@@ -952,7 +959,12 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $8::uuid)
+      WHERE ($1::uuid IS NULL OR combined.partner_id IN (
+        SELECT $1::uuid UNION SELECT $8::uuid 
+        UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
+        UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+        UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
+      ))
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
@@ -981,7 +993,12 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = l.product_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id = $1 OR combined.partner_id = $6::uuid)
+      WHERE ($1::uuid IS NULL OR combined.partner_id IN (
+        SELECT $1::uuid UNION SELECT $6::uuid 
+        UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $6::uuid OR referred_by_id = $6::uuid
+        UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $6::uuid OR sponsor_id = $6::uuid
+        UNION SELECT id FROM partner_profiles WHERE user_id = $6::uuid
+      ))
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)

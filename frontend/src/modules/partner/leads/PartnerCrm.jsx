@@ -80,6 +80,14 @@ export default function PartnerCrm() {
   const [formLoading, setFormLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState('');
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const loadDashboardMetrics = async () => {
     try {
       const res = await api.get('/customers/dashboard/metrics');
@@ -92,9 +100,10 @@ export default function PartnerCrm() {
   };
 
   useEffect(() => {
-    fetchCustomers();
+    const viewParam = searchParams.get('view');
+    fetchCustomers(viewParam ? { view: viewParam } : {});
     loadDashboardMetrics();
-  }, [fetchCustomers]);
+  }, [fetchCustomers, searchParams]);
 
   // Duplicate Check on Mobile / PAN Input
   const handleFormInputChange = (field, val) => {
@@ -252,41 +261,41 @@ export default function PartnerCrm() {
       </div>
 
       {/* ── CUSTOMER DASHBOARD KPI SUMMARY MATRIX ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.totalCustomers", "Total Customers")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{(metrics.total_customers || customers.length || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '11px', color: C.primary, marginTop: '2px' }}>{t("crm.registeredInCrm", "Registered in CRM")}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: isMobile ? '8px' : '14px', marginBottom: '28px' }}>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.totalCustomers", "Total Customers")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{(metrics.total_customers || customers.length || 0).toLocaleString()}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.primary, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.registeredInCrm", "Registered in CRM")}</div>
         </div>
 
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.newLeads", "New Leads")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.blue, marginTop: '4px' }}>{metrics.new_customers || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.addedRecently", "Added recently")}</div>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.newLeads", "New Leads")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.blue, marginTop: '4px' }}>{metrics.new_customers || 0}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.textLight, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.addedRecently", "Added recently")}</div>
         </div>
 
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.interested", "Interested")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.purple, marginTop: '4px' }}>{metrics.interested_customers || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.productShortlisted", "Product shortlisted")}</div>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.interested", "Interested")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.purple, marginTop: '4px' }}>{metrics.interested_customers || 0}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.textLight, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.productShortlisted", "Shortlisted")}</div>
         </div>
 
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.applications", "Applications")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.teal, marginTop: '4px' }}>{metrics.total_applications || 0}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.inBankVerification", "In bank verification")}</div>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.applications", "Applications")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.teal, marginTop: '4px' }}>{metrics.total_applications || 0}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.textLight, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.inBankVerification", "In verification")}</div>
         </div>
 
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.approved", "Approved")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{metrics.approved_applications || 0}</div>
-          <div style={{ fontSize: '11px', color: C.green, marginTop: '2px' }}>{t("crm.successRate", "Success rate:")} {metrics.conversion_rate || 0}%</div>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.approved", "Approved")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>{metrics.approved_applications || 0}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.green, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{metrics.conversion_rate || 0}% rate</div>
         </div>
 
-        <div style={{ ...S.card, padding: '16px', borderRadius: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>{t("crm.revenueGenerated", "Revenue Generated")}</div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>₹{(metrics.revenue_generated || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{t("crm.totalPayouts", "Total payouts")}</div>
+        <div style={{ ...S.card, padding: isMobile ? '10px 6px' : '16px', borderRadius: '14px', textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.revenueGenerated", "Revenue")}</div>
+          <div style={{ fontSize: isMobile ? '17px' : '24px', fontWeight: 800, color: C.green, marginTop: '4px' }}>₹{(metrics.revenue_generated || 0).toLocaleString()}</div>
+          <div style={{ fontSize: isMobile ? '9px' : '11px', color: C.textLight, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t("crm.totalPayouts", "Total payouts")}</div>
         </div>
       </div>
 
