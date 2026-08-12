@@ -2849,8 +2849,10 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS invitee_name VARCHAR(255),
         ADD COLUMN IF NOT EXISTS invitee_mobile VARCHAR(50),
         ADD COLUMN IF NOT EXISTS invitee_email VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS invite_code VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS invite_code TEXT,
         ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE invitation_history ALTER COLUMN invite_code TYPE TEXT;
+      ALTER TABLE invitation_history ALTER COLUMN referral_code TYPE TEXT;
     `);
 
     // 4. Referral Campaigns Table

@@ -1244,15 +1244,31 @@ async function sendTeamInvitation(partnerId, payload) {
   const inviteUrl = `${baseUrl}/register?ref=${pCode}&token=${token}`;
 
   // 3. Persist invitation record
-  const { rows: [invite] } = await query(
-    `INSERT INTO invitation_history (partner_id, invitee_name, invitee_mobile, invitee_email, invite_code, status)
-     VALUES ($1, $2, $3, $4, $5, 'sent')
-     RETURNING *`,
-    [pId, name || 'Team Member', mobile || null, email || null, token]
-  ).catch(err => {
-    logger.warn('invitation_history insert fallback:', err.message);
-    return { rows: [{ id: Date.now(), partner_id: pId, invite_code: token }] };
-  });
+  let invite;
+  try {
+    const res = await query(
+      `INSERT INTO invitation_history (partner_id, invitee_name, invitee_mobile, invitee_email, invite_code, status)
+       VALUES ($1, $2, $3, $4, $5, 'sent')
+       RETURNING *`,
+      [pId, name || 'Team Member', mobile || null, email || null, token]
+    );
+    invite = res.rows[0];
+  } catch (err) {
+    if (err.code === '22001') { // value too long for type character varying(50)
+      await query(`ALTER TABLE invitation_history ALTER COLUMN invite_code TYPE TEXT; ALTER TABLE invitation_history ALTER COLUMN referral_code TYPE TEXT;`).catch(() => {});
+      const res = await query(
+        `INSERT INTO invitation_history (partner_id, invitee_name, invitee_mobile, invitee_email, invite_code, status)
+         VALUES ($1, $2, $3, $4, $5, 'sent')
+         RETURNING *`,
+        [pId, name || 'Team Member', mobile || null, email || null, token]
+      ).catch(() => null);
+      invite = res?.rows?.[0];
+    }
+    if (!invite) {
+      logger.warn('invitation_history insert fallback:', err.message);
+      invite = { id: Date.now(), partner_id: pId, invite_code: token };
+    }
+  }
 
   // 4. Send email notification if email provided
   if (email) {
