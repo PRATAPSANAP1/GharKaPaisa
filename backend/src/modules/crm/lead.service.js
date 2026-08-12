@@ -14,15 +14,20 @@ const logLeadTimeline = async (clientOrDb, leadId, title, description, reference
   `, [leadId, title, description, referenceType, referenceId, createdBy]);
 };
 
-// Helper to log lead activity
 const logLeadActivity = async (clientOrDb, leadId, activityType, performedBy, referenceType = null, referenceId = null, req = null) => {
   const db = clientOrDb || { query };
-  const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
-  const device = req ? req.headers['user-agent'] : null;
-  await db.query(`
-    INSERT INTO lead_activity_logs (lead_id, activity_type, performed_by, reference_type, reference_id, ip_address, device)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-  `, [leadId, activityType, performedBy, referenceType, referenceId, ip, device]);
+  const rawIp = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
+  const ip = rawIp ? String(rawIp).substring(0, 45) : null;
+  const rawDevice = req ? req.headers['user-agent'] : null;
+  const device = rawDevice ? String(rawDevice).substring(0, 95) : null;
+  try {
+    await db.query(`
+      INSERT INTO lead_activity_logs (lead_id, activity_type, performed_by, reference_type, reference_id, ip_address, device)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [leadId, activityType, performedBy, referenceType, referenceId, ip, device]);
+  } catch (err) {
+    logger.warn(`Failed to log lead activity for lead ${leadId}:`, err.message);
+  }
 };
 
 // Initialize default verification checklist & SLA tracker upon lead creation
