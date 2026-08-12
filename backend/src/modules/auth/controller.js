@@ -167,9 +167,7 @@ const sendOtp = async (req, res, next) => {
       return error(res, 'No account found with this email or mobile number', 404);
     }
 
-    if (!user.email_verified) {
-      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
-    }
+
 
     const emailIdentity = normalizeIdentity(user.email);
 
@@ -369,9 +367,7 @@ const login = async (req, res, next) => {
     if (!user) { await security.recordFailedLogin(null, req, 'unknown_account'); return error(res, 'No account found with this email or mobile', 401); }
     if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
 
-    if (!user.email_verified) {
-      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
-    }
+
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
@@ -780,7 +776,7 @@ const register = async (req, res, next) => {
         `SELECT email FROM pre_verified_emails WHERE LOWER(email) = LOWER($1)`,
         [email]
       );
-      emailVerified = preVerifiedRows.length > 0 || req.body.email_verified === true || req.body.emailVerified === true;
+      emailVerified = true;
 
       const { rows: [user] } = await client.query(
         `INSERT INTO users (email, mobile, password_hash, role, status, email_verified, verification_token, verification_token_expires_at)
@@ -984,9 +980,7 @@ const loginPassword = async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) { await security.recordFailedLogin(user, req, 'invalid_password'); return error(res, 'Invalid credentials', 401); }
 
-    if (!user.email_verified && user.role !== 'TEAM_MEMBER') {
-      return error(res, 'Please verify your email address before logging in. Check your inbox for the verification link.', 403);
-    }
+
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
