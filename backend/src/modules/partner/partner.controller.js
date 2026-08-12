@@ -697,10 +697,10 @@ const listPartnerCustomers = async (req, res, next) => {
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    // For team members, show customers created by them; for partners, show all customers linked to their profile or leads/apps
+    // For team members, show customers created by them or linked to their created leads/apps; for partners, show all customers linked to their profile or leads/apps
     const whereClause = isTeamMember
-      ? `(a.partner_id = $1 OR l.partner_id = $1) AND c.created_by = $2`
-      : `(a.partner_id = $1 OR l.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1)`;
+      ? `(c.created_by = $2 OR l.created_by = $2 OR a.submitted_by = $2 OR a.partner_id = $1 OR l.partner_id = $1)`
+      : `(a.partner_id = $1 OR l.partner_id = $1 OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1))`;
 
     const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
 
