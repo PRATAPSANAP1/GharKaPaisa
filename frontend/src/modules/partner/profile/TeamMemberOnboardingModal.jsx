@@ -8,6 +8,7 @@ import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { getMe } from '../../../services/auth.api';
+import { useMsg91OTP } from '../../../hooks/useMsg91OTP';
 
 const DRAFT_KEY = 'team_member_onboarding_draft_v1';
 
@@ -29,6 +30,8 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
     confirmPassword: ''
   });
 
+  const { sdkReady } = useMsg91OTP();
+
   // Step 2 State: OTP Verification
   const [mobileVerified, setMobileVerified] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -38,6 +41,7 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [mobileTimer, setMobileTimer] = useState(0);
   const [emailTimer, setEmailTimer] = useState(0);
+  const [mobileOtpRequestId, setMobileOtpRequestId] = useState(null);
 
   // Step 3 State: Full Registration & KYC Fields
   const [form, setForm] = useState({
@@ -131,13 +135,65 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
     setStep(2);
   };
 
-  // ── Step 2: OTP Handlers ────────────────────────────────────────────────
+  // ── Step 2: OTP Handlers (Using exact MSG91 Web SDK template as registration page) ──────────────
   const sendMobileOtp = async () => {
     if (!form.mobile) return setError('Mobile number required.');
+    const cleanDigits = form.mobile.trim().replace(/\D/g, '');
+    const tenDigitMobile = cleanDigits.length === 12 && cleanDigits.startsWith('91') ? cleanDigits.slice(2) : cleanDigits;
+
+    if (!/^[6-9]\d{9}$/.test(tenDigitMobile)) {
+      return setError('Please enter a valid 10-digit mobile number.');
+    }
+
     setLoading(true);
     setError('');
+    setSuccessMsg('');
+
+    // Try MSG91 Web SDK first (exact same DLT OTP template as Register page)
+    if (typeof window.sendOtp === 'function') {
+      const formattedMobile = '91' + tenDigitMobile;
+      console.log(`[MSG91] Calling window.sendOtp in TeamMemberOnboardingModal for: ${formattedMobile}`);
+      
+      let callbackDone = false;
+      const timeoutId = setTimeout(() => {
+        if (!callbackDone) {
+          callbackDone = true;
+          setLoading(false);
+          console.warn('[MSG91] Web SDK sendOtp timeout in onboarding modal, trying API fallback...');
+          sendMobileOtpBackend(tenDigitMobile);
+        }
+      }, 15000);
+
+      window.sendOtp(
+        formattedMobile,
+        (data) => {
+          if (callbackDone) return;
+          callbackDone = true;
+          clearTimeout(timeoutId);
+          const reqId = data?.message || data?.requestId || data?.request_id;
+          if (reqId) setMobileOtpRequestId(reqId);
+          setMobileOtpSent(true);
+          setMobileTimer(60);
+          setSuccessMsg('Verification code sent to your mobile phone via SMS.');
+          setLoading(false);
+        },
+        (errResp) => {
+          if (callbackDone) return;
+          callbackDone = true;
+          clearTimeout(timeoutId);
+          console.warn('[MSG91] Web SDK sendOtp failed, trying API fallback:', errResp);
+          sendMobileOtpBackend(tenDigitMobile);
+        }
+      );
+      return;
+    }
+
+    sendMobileOtpBackend(tenDigitMobile);
+  };
+
+  const sendMobileOtpBackend = async (mobileVal) => {
     try {
-      const res = await api.post('/auth/send-otp', { identity: form.mobile.trim() });
+      const res = await api.post('/auth/send-otp', { identity: mobileVal });
       setMobileOtpSent(true);
       setMobileTimer(60);
       setSuccessMsg(res.data?.message || 'OTP sent to mobile number.');
@@ -152,6 +208,29 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
     if (!mobileOtp || mobileOtp.length < 4) return setError('Enter valid mobile OTP.');
     setLoading(true);
     setError('');
+
+    if (typeof window.verifyOtp === 'function') {
+      const verifyArgs = [
+        Number(mobileOtp.trim()),
+        async (data) => {
+          setMobileVerified(true);
+          setSuccessMsg('Mobile number verified successfully!');
+          setLoading(false);
+        },
+        async (errResp) => {
+          console.warn('[MSG91] Web SDK verifyOtp failed, attempting backend fallback:', errResp);
+          verifyMobileOtpBackend();
+        }
+      ];
+      if (mobileOtpRequestId) verifyArgs.push(mobileOtpRequestId);
+      window.verifyOtp(...verifyArgs);
+      return;
+    }
+
+    verifyMobileOtpBackend();
+  };
+
+  const verifyMobileOtpBackend = async () => {
     try {
       await api.post('/auth/verify-otp', { identity: form.mobile.trim(), otp: mobileOtp });
       setMobileVerified(true);
