@@ -134,20 +134,24 @@ const submitShareLead = async (req, res, next) => {
       return error(res, 'Invalid or expired share link', 404);
     }
 
-    // Check if lead already exists for this tracking token
+    // Check if lead already exists for this tracking token OR active (product_id, mobile) pair
+    const cleanMobile = customerMobile.replace(/\D/g, '').slice(-10);
     const { rows: [existingLead] } = await query(
-      `SELECT id FROM leads WHERE tracking_token = $1`,
-      [trackingToken]
+      `SELECT id FROM leads 
+       WHERE (tracking_token = $1 OR (product_id = $2 AND (mobile = $3 OR customer_mobile = $3)))
+         AND status NOT IN ('rejected', 'cancelled')
+       ORDER BY created_at DESC LIMIT 1`,
+      [trackingToken, shareLinkData.product_id, cleanMobile]
     );
 
     if (existingLead) {
       // Update existing lead
       const { rows: [updatedLead] } = await query(`
         UPDATE leads 
-        SET customer_name = $1, customer_mobile = $2, mobile = $2, updated_at = NOW()
-        WHERE id = $3
+        SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3, updated_at = NOW()
+        WHERE id = $4
         RETURNING *
-      `, [customerName, customerMobile, existingLead.id]);
+      `, [customerName, cleanMobile, trackingToken, existingLead.id]);
 
       // Get product bank link
       const { rows: [product] } = await query(
@@ -164,22 +168,44 @@ const submitShareLead = async (req, res, next) => {
       });
     }
 
-    // Create new lead
-    const { rows: [lead] } = await query(`
-      INSERT INTO leads (
-        partner_id, product_id, customer_name, customer_mobile, mobile,
-        tracking_token, source, status, pipeline_stage
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'pending', 'created')
-      RETURNING *
-    `, [
-      shareLinkData.partner_id,
-      shareLinkData.product_id,
-      customerName,
-      customerMobile,
-      customerMobile,
-      trackingToken
-    ]);
+    // Create new lead with fallback if race condition triggers 23505
+    let lead;
+    try {
+      const { rows } = await query(`
+        INSERT INTO leads (
+          partner_id, product_id, customer_name, customer_mobile, mobile,
+          tracking_token, source, status, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'pending', 'created')
+        RETURNING *
+      `, [
+        shareLinkData.partner_id,
+        shareLinkData.product_id,
+        customerName,
+        cleanMobile,
+        cleanMobile,
+        trackingToken
+      ]);
+      lead = rows[0];
+    } catch (insertErr) {
+      if (insertErr.code === '23505') {
+        // Fallback for duplicate key error (idx_active_lead_product_mobile)
+        const { rows: [fallbackLead] } = await query(`
+          UPDATE leads
+          SET customer_name = $1, tracking_token = $2, updated_at = NOW()
+          WHERE product_id = $3 AND (mobile = $4 OR customer_mobile = $4) AND status NOT IN ('rejected', 'cancelled')
+          RETURNING *
+        `, [customerName, trackingToken, shareLinkData.product_id, cleanMobile]);
+
+        if (fallbackLead) {
+          lead = fallbackLead;
+        } else {
+          throw insertErr;
+        }
+      } else {
+        throw insertErr;
+      }
+    }
 
     // Get product bank link for redirect
     const { rows: [product] } = await query(
