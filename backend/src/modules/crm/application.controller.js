@@ -270,7 +270,7 @@ const getApplicationsDashboard = async (req, res, next) => {
     const teamPartnerFilter = `
       SELECT $1::uuid UNION SELECT $2::uuid 
       UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $2::uuid OR referred_by_id = $2::uuid
-      UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $2::uuid OR sponsor_id = $2::uuid
+      UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $2::uuid OR sponsor_id = $2::uuid
       UNION SELECT id FROM partner_profiles WHERE user_id = $2::uuid
     `;
 
@@ -973,7 +973,7 @@ const listApplications = async (req, res, next) => {
       WHERE ($1::uuid IS NULL OR combined.partner_id IN (
         SELECT $1::uuid UNION SELECT $8::uuid 
         UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-        UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+        UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
         UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
       ))
         AND ($2::text IS NULL OR combined.status = $2)
@@ -1011,7 +1011,7 @@ const listApplications = async (req, res, next) => {
       WHERE ($1::uuid IS NULL OR combined.partner_id IN (
         SELECT $1::uuid UNION SELECT $8::uuid 
         UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-        UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+        UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
         UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
       ))
         AND ($2::text IS NULL OR combined.status = $2)

@@ -240,7 +240,7 @@ const getDashboardStats = async (req, res, next) => {
       UNION
       SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
       UNION
-      SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
+      SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid
       UNION
       SELECT id FROM partner_profiles WHERE user_id = $2::uuid
     `;
@@ -717,14 +717,14 @@ const listPartnerCustomers = async (req, res, next) => {
       whereClause = `(c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR a.submitted_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1))`;
     } else if (view === 'team') {
       whereClause = `(
-        a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
-        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
       )`;
     } else {
       whereClause = `(
         a.partner_id = $1 OR l.partner_id = $1 
-        OR a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
-        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT member_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
         OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1
       )`;
     }

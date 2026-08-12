@@ -147,15 +147,15 @@ const getProduct = async (req, res, next) => {
     if (isUUID) {
       const { rows } = await query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1
       `, [idOrSlug]);
       product = rows[0];
     } else {
       // Direct lookup by slug first
       const { rows } = await query(`
         SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p JOIN banks b ON b.id = p.bank_id 
-        WHERE LOWER(p.slug) = LOWER($1) AND p.is_active = true
+        FROM products p LEFT JOIN banks b ON b.id = p.bank_id 
+        WHERE LOWER(p.slug) = LOWER($1)
         LIMIT 1
       `, [idOrSlug]);
       product = rows[0];
@@ -164,7 +164,7 @@ const getProduct = async (req, res, next) => {
       if (!product) {
         const { rows: allActive } = await query(`
           SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-          FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.is_active = true
+          FROM products p LEFT JOIN banks b ON b.id = p.bank_id
         `);
         product = allActive.find(p => {
           const nameClean = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -903,11 +903,11 @@ const resolveApplication = async (req, res, next) => {
 
     let product;
     if (isUUID) {
-      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON p.bank_id = b.id WHERE p.id = $1`, [idOrSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON p.bank_id = b.id WHERE p.id = $1`, [idOrSlug]);
       product = rows[0];
     } else {
       const cleanSlug = idOrSlug.replace(/-/g, ' ').trim();
-      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON p.bank_id = b.id WHERE p.name ILIKE $1 OR p.category::text = $1`, [cleanSlug]);
+      const { rows } = await query(`SELECT p.*, b.name as bank_name FROM products p LEFT JOIN banks b ON p.bank_id = b.id WHERE p.name ILIKE $1 OR p.category::text = $1`, [cleanSlug]);
       product = rows[0];
     }
 

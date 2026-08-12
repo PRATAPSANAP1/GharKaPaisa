@@ -22,7 +22,7 @@ const getProductLanding = async (req, res, next) => {
                b.logo_url as bank_logo_url, b.theme_color, b.secondary_color,
                b.gradient, b.button_color, b.accent_color
         FROM products p
-        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = p.bank_id
         WHERE p.id = $1 AND p.is_active = true
       `;
       productParams = [id];
@@ -32,7 +32,7 @@ const getProductLanding = async (req, res, next) => {
                b.logo_url as bank_logo_url, b.theme_color, b.secondary_color,
                b.gradient, b.button_color, b.accent_color
         FROM products p
-        JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN banks b ON b.id = p.bank_id
         WHERE (p.slug ILIKE $1 OR p.name ILIKE $1) AND p.is_active = true
         LIMIT 1
       `;
@@ -120,10 +120,10 @@ const applyProductLanding = async (req, res, next) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     let productQuery, productParams;
     if (isUUID) {
-      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1`;
+      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1`;
       productParams = [id];
     } else {
-      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p JOIN banks b ON b.id = p.bank_id WHERE (p.slug ILIKE $1 OR p.name ILIKE $1) LIMIT 1`;
+      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.slug ILIKE $1 OR p.name ILIKE $1) LIMIT 1`;
       productParams = [id.replace(/-/g, ' ')];
     }
 

@@ -490,6 +490,9 @@ const migrate = async () => {
     EXCEPTION WHEN OTHERS THEN NULL; END $$
   `);
 
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'partner_punch'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(100) DEFAULT 'lead_punching'`);
+
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)`);
@@ -2768,6 +2771,25 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS referral_enabled BOOLEAN DEFAULT TRUE,
         ADD COLUMN IF NOT EXISTS referral_message TEXT DEFAULT 'Join my team on GharKaPaisa and earn highest financial commission payouts!',
         ADD COLUMN IF NOT EXISTS referral_banner VARCHAR(500);
+    `);
+
+    // 1b. Partner Team Relationships Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_team_relationships (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        parent_partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        child_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        member_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        sponsor_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        level INT DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT partner_team_relationships_unique_pair UNIQUE (parent_partner_id, child_partner_id)
+      );
+      ALTER TABLE partner_team_relationships ADD COLUMN IF NOT EXISTS member_partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE;
+      ALTER TABLE partner_team_relationships ADD COLUMN IF NOT EXISTS sponsor_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL;
+      CREATE INDEX IF NOT EXISTS idx_partner_team_rel_parent ON partner_team_relationships(parent_partner_id);
+      CREATE INDEX IF NOT EXISTS idx_partner_team_rel_child ON partner_team_relationships(child_partner_id);
+      CREATE INDEX IF NOT EXISTS idx_partner_team_rel_member ON partner_team_relationships(member_partner_id);
     `);
 
     // 2. Referral Clicks Table
