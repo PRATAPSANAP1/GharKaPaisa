@@ -420,14 +420,16 @@ const updateStatus = async (req, res, next) => {
     }
 
     const historyEntry = JSON.stringify({ status, at: new Date(), by: req.user.id, remarks });
+    const isRejected = status === 'rejected' || status === 'cancelled';
     await client.query(`
       UPDATE applications SET
         status = $1,
         approved_at = $2,
+        commission_status = CASE WHEN $5::boolean THEN 'cancelled' ELSE commission_status END,
         status_history = status_history || $3::jsonb,
         updated_at = NOW()
       WHERE id = $4
-    `, [status, approvedAt, historyEntry, id]);
+    `, [status, approvedAt, historyEntry, id, isRejected]);
 
     await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
     // Click status updates omitted
@@ -580,11 +582,17 @@ const updateCommission = async (req, res, next) => {
       const commValue = amount || app.commission_amount || 0;
       await creditCommission(app.partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id);
 
-      // Create Entry in commission_ledger
-      await client.query(`
-        INSERT INTO commission_ledger (application_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
-        VALUES ($1, $2, $3, $4, $5, 'approved')
-      `, [id, app.partner_id, app.parent_partner_id, commValue, commValue * 0.15]);
+      // Create Entry in commission_ledger with Idempotency Guard
+      const { rows: existingComm } = await client.query(`
+        SELECT id FROM commission_ledger WHERE application_id = $1 OR (lead_id IS NOT NULL AND lead_id = $2)
+      `, [id, app.lead_id || id]);
+
+      if (existingComm.length === 0) {
+        await client.query(`
+          INSERT INTO commission_ledger (application_id, lead_id, partner_id, parent_partner_id, commission_amount, override_amount, status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'approved')
+        `, [id, app.lead_id || null, app.partner_id, app.parent_partner_id, commValue, commValue * 0.15]);
+      }
 
       // Set commission_released flag on the application itself
       await client.query(`

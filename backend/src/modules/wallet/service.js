@@ -813,14 +813,16 @@ const getWalletSummary = async (partnerId) => {
   return wallet;
 };
 
-// Release matured commissions scheduler check
+// Release matured commissions scheduler check (Product-based dynamic hold period)
 const releaseMaturedCommissions = async () => {
   try {
     const { rows } = await query(`
-      SELECT id, wallet_id, credit as amount, partner_id
-      FROM wallet_ledger
-      WHERE status = 'pending' AND (transaction_type = 'PERSONAL_COMMISSION' OR transaction_type = 'TEAM_COMMISSION') 
-      AND created_at <= NOW() - INTERVAL '48 hours'
+      SELECT l.id, l.wallet_id, l.credit as amount, l.partner_id
+      FROM wallet_ledger l
+      LEFT JOIN products p ON p.id = l.product_id
+      WHERE l.status = 'Pending Approval' 
+        AND (l.transaction_type = 'PERSONAL_COMMISSION' OR l.transaction_type = 'TEAM_COMMISSION' OR l.transaction_type = 'OVERRIDE_COMMISSION') 
+        AND l.created_at <= NOW() - (COALESCE(p.commission_release_days, 7) || ' days')::interval
     `);
     if (rows.length > 0) {
       logger.info(`Releasing ${rows.length} matured commission transaction(s)...`);
