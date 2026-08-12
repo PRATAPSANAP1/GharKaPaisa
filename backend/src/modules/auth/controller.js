@@ -154,42 +154,58 @@ const sendOtp = async (req, res, next) => {
     let reqRole = String(req.body.role || '').toUpperCase().trim();
     if (reqRole === 'SUPERADMIN') reqRole = 'SUPER_ADMIN';
 
-    // Look up the user to get their email address
-    let userQuery = `SELECT email, mobile, email_verified FROM users WHERE (LOWER(email) = LOWER($1) OR mobile = $2)`;
-    let queryParams = [identity, identity];
+    const rawDigits = identity.replace(/\D/g, '');
+    const cleanMobile = rawDigits.length === 12 && rawDigits.startsWith('91') ? rawDigits.slice(2) : rawDigits;
+
+    // Look up the user to get their email and mobile address
+    let userQuery = `
+      SELECT email, mobile, email_verified 
+      FROM users 
+      WHERE (LOWER(email) = LOWER($1) OR mobile = $1 OR mobile = $2 OR mobile = $3)
+    `;
+    let queryParams = [identity, cleanMobile, `+91${cleanMobile}`];
     if (reqRole) {
-      userQuery += ` AND role = $3`;
+      userQuery += ` AND role = $4`;
       queryParams.push(reqRole);
     }
     const { rows: [user] } = await query(userQuery, queryParams);
 
-    if (!user || !user.email) {
+    if (!user || (!user.email && !user.mobile)) {
       return error(res, 'No account found with this email or mobile number', 404);
     }
 
-
-
-    const emailIdentity = normalizeIdentity(user.email);
+    const emailIdentity = user.email ? normalizeIdentity(user.email) : null;
 
     // Generate random 6-digit OTP
     const otp = String(crypto.randomInt(100000, 1000000));
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
-    // Store OTP hash (keyed by email for email-based verification)
-    await query(`
-      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
-    `, [emailIdentity, otpHash, expiresAt]);
+    // Store OTP hash (keyed by email and mobile for verification)
+    if (emailIdentity) {
+      await query(`
+        INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+      `, [emailIdentity, otpHash, expiresAt]);
+    }
 
-    // Also store by mobile if identity was mobile (so login can verify by either)
-    if (user.mobile && user.mobile !== user.email) {
+    if (user.mobile) {
       await query(`
         INSERT INTO otp_verifications (identity, otp_hash, expires_at)
         VALUES ($1, $2, $3)
         ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
       `, [user.mobile, otpHash, expiresAt]);
+
+      const cleanUserMobile = user.mobile.replace(/\D/g, '');
+      const tenDigitUserMobile = cleanUserMobile.length === 12 && cleanUserMobile.startsWith('91') ? cleanUserMobile.slice(2) : cleanUserMobile;
+      if (tenDigitUserMobile !== user.mobile) {
+        await query(`
+          INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+        `, [tenDigitUserMobile, otpHash, expiresAt]);
+      }
     }
 
     // Send OTP via SMS or Email based on input identity
@@ -198,29 +214,46 @@ const sendOtp = async (req, res, next) => {
 
     try {
       if (isMobileInput && user.mobile) {
-        await sendSmsOtp(user.mobile, otp);
-        logger.info(`[OTP] SMS OTP sent to ${user.mobile}`);
-        targetMasked = '******' + user.mobile.slice(-4);
-      } else {
+        try {
+          await sendSmsOtp(user.mobile, otp);
+          logger.info(`[OTP] SMS OTP sent to ${user.mobile}`);
+          targetMasked = '******' + user.mobile.slice(-4);
+        } catch (smsErr) {
+          logger.warn(`[OTP] SMS OTP failed (${smsErr.message}). Attempting email fallback if available.`);
+          if (emailIdentity) {
+            await sendOtpEmail(emailIdentity, otp);
+            logger.info(`[OTP] Fallback Email OTP sent to ${emailIdentity}`);
+            targetMasked = maskEmail(emailIdentity);
+            return res.json({
+              success: true,
+              message: `OTP sent to your email (${targetMasked}) as SMS delivery is currently unavailable.`,
+              identity: targetMasked
+            });
+          }
+          throw smsErr;
+        }
+      } else if (emailIdentity) {
         await sendOtpEmail(emailIdentity, otp);
         logger.info(`[OTP] Email OTP sent to ${emailIdentity}`);
         targetMasked = maskEmail(emailIdentity);
+      } else {
+        throw new Error('No valid destination found for sending OTP');
       }
     } catch (sendErr) {
       logger.error(`[OTP] Failed to send OTP to ${identity}: ${sendErr.message}`);
-      // In development, log the OTP so developers can still test and return success
+      // In development or test, log OTP so workflow is never blocked
       if (process.env.NODE_ENV !== 'production') {
         logger.info(`[OTP-DEV] OTP for ${identity}: ${otp}`);
-        targetMasked = isMobileInput ? '******' + (user.mobile || '').slice(-4) : maskEmail(emailIdentity);
+        targetMasked = isMobileInput ? '******' + (user.mobile || identity).slice(-4) : maskEmail(emailIdentity || identity);
         return res.json({
           success: true,
-          message: `[DEV ONLY] OTP logged. OTP sent to ${targetMasked}`,
+          message: `[DEV MODE] OTP: ${otp}. Sent to ${targetMasked}`,
           identity: targetMasked
         });
       }
       await query(
         `DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`,
-        [emailIdentity, user.mobile || emailIdentity]
+        [emailIdentity || identity, user.mobile || identity]
       );
       return error(res, 'Failed to send OTP. Please try again later.', 500);
     }

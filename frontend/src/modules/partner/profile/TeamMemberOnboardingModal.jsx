@@ -137,10 +137,10 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
     setLoading(true);
     setError('');
     try {
-      await api.post('/auth/send-otp', { identity: form.mobile.trim() });
+      const res = await api.post('/auth/send-otp', { identity: form.mobile.trim() });
       setMobileOtpSent(true);
       setMobileTimer(60);
-      setSuccessMsg('OTP sent to mobile number.');
+      setSuccessMsg(res.data?.message || 'OTP sent to mobile number.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send mobile OTP');
     } finally {
@@ -169,10 +169,10 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
     setLoading(true);
     setError('');
     try {
-      await api.post('/auth/send-otp', { identity: form.email.trim() });
+      const res = await api.post('/auth/send-otp', { identity: form.email.trim() });
       setEmailOtpSent(true);
       setEmailTimer(60);
-      setSuccessMsg('OTP sent to email address.');
+      setSuccessMsg(res.data?.message || 'OTP sent to email address.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send email OTP');
     } finally {
