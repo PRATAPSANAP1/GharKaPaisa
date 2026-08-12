@@ -49,8 +49,7 @@ export default function ManageAnnouncements() {
   const loadAnnouncements = async () => {
     setLoading(true);
     try {
-      // Direct call backend GET
-      const res = await api.get('/notifications/announcements');
+      const res = await api.get('/superadmin/announcements');
       if (res.data?.success) {
         setAnnouncements(res.data.data);
       }
@@ -421,9 +420,10 @@ export default function ManageAnnouncements() {
                 <div>
                   <label style={S.label}>Target Audience</label>
                   <select style={S.input} value={annForm.target_role} onChange={e => setAnnForm({ ...annForm, target_role: e.target.value })}>
-                    <option value="all">All Audiences</option>
-                    <option value="partner">Partners only</option>
-                    <option value="admin">Admins only</option>
+                    <option value="all">All Users (Partners, Team & Admins)</option>
+                    <option value="partner">Partners Only</option>
+                    <option value="team">Team Members Only</option>
+                    <option value="admin">Admins Only</option>
                   </select>
                 </div>
                 <div>

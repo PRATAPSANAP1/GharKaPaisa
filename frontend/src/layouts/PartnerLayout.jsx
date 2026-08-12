@@ -21,6 +21,7 @@ import { getApiV1Url } from '../config/api';
 import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 import PartnerSearchBar from '../modules/partner/dashboard/PartnerSearchBar';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 const NAV_ITEMS = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
@@ -760,8 +761,7 @@ export default function PartnerLayout() {
           position: 'relative',
           boxSizing: 'border-box',
         }}>
-
-
+          <AnnouncementBanner />
           <Outlet />
         </div>
       </main>

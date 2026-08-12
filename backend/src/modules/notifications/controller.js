@@ -240,15 +240,36 @@ const saveSettings = async (req, res, next) => {
 // GET /announcements (list active matching user role)
 const getAnnouncements = async (req, res, next) => {
   try {
-    const role = req.user?.role || 'CUSTOMER';
+    const userRole = (req.user?.role || 'CUSTOMER').toLowerCase();
+
+    // If superadmin requesting all announcements for management
+    if (['super_admin', 'admin'].includes(userRole) && (req.query.admin === 'true' || req.originalUrl?.includes('/superadmin'))) {
+      const { rows } = await query(`
+        SELECT a.*, u.full_name as creator_name
+        FROM announcements a
+        LEFT JOIN users u ON u.id = a.created_by
+        ORDER BY a.created_at DESC
+      `);
+      return success(res, rows);
+    }
+
+    let roleConditions = `(target_role = 'all' OR LOWER(target_role) = 'all')`;
+    if (userRole === 'partner') {
+      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'partner', 'partners', 'all_partners'))`;
+    } else if (userRole === 'team_member' || userRole === 'team') {
+      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'team', 'team_member', 'all_team', 'partner', 'partners'))`;
+    } else if (['admin', 'super_admin'].includes(userRole)) {
+      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'admin', 'super_admin'))`;
+    }
+
     const { rows } = await query(`
       SELECT * FROM announcements 
       WHERE status = 'publish' 
-        AND (target_role = 'all' OR target_role = $1)
+        AND ${roleConditions}
         AND (start_date IS NULL OR start_date <= CURRENT_DATE)
         AND (end_date IS NULL OR end_date >= CURRENT_DATE)
       ORDER BY created_at DESC
-    `, [role.toLowerCase()]);
+    `);
 
     return success(res, rows);
   } catch (err) {

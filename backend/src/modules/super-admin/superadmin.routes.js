@@ -60,6 +60,7 @@ router.post('/application/reassign', appCtrl.reassignApplication);
 router.post('/application/manual-commission', appCtrl.manualCommission);
 
 // Announcements & Broadcast Notifications (Task 10)
+router.get('/announcements', notifCtrl.getAnnouncements);
 router.post('/announcement', notifCtrl.createAnnouncement);
 router.put('/announcement/:id', notifCtrl.updateAnnouncement);
 router.delete('/announcement/:id', notifCtrl.deleteAnnouncement);
