@@ -264,7 +264,14 @@ const getApplicationsDashboard = async (req, res, next) => {
     let userId = req.user?.id || null;
     if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      partnerId = partner ? partner.id : req.user.id;
+      partnerId = partner ? partner.id : null;
+      userId = req.user.id;
+    } else if (targetPartnerId && isUuid(targetPartnerId)) {
+      partnerId = targetPartnerId;
+    } else if (req.query.scope === 'my' && req.user?.id) {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      partnerId = partner ? partner.id : null;
+      userId = req.user.id;
     }
 
     const teamPartnerFilter = `
@@ -851,12 +858,16 @@ const listApplications = async (req, res, next) => {
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
+    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      partnerId = partner ? partner.id : req.user.id;
+      partnerId = partner ? partner.id : null;
       userId = req.user.id;
-    } else if (targetPartnerId) {
+    } else if (targetPartnerId && isUuid(targetPartnerId)) {
       partnerId = targetPartnerId;
+    } else if (req.query.scope === 'my' && req.user?.id) {
+      const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      partnerId = partner ? partner.id : null;
+      userId = req.user.id;
     }
 
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
@@ -870,12 +881,9 @@ const listApplications = async (req, res, next) => {
     const validUserId = isUuid(userId) ? userId : null;
 
     // For team members, add submitted_by filter
-    const submittedByFilter = isTeamMember && validUserId ? `AND combined.submitted_by = $10::uuid` : '';
+    const submittedByFilter = isTeamMember && validUserId ? `AND combined.submitted_by = $8::uuid` : '';
     const submittedByFilterCount = isTeamMember && validUserId ? `AND combined.submitted_by = $8::uuid` : '';
     const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId];
-    if (isTeamMember && validUserId) {
-      queryParams.push(validUserId);
-    }
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -989,9 +997,6 @@ const listApplications = async (req, res, next) => {
 
     // Count query with same filter
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId];
-    if (isTeamMember && validUserId) {
-      countQueryParams.push(validUserId);
-    }
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
