@@ -33,6 +33,8 @@ export default function ManageApplications() {
   const [commFilter, setCommFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
   const [processByFilter, setProcessByFilter] = useState('');
+  const [operationHeads, setOperationHeads] = useState([]);
+  const [opHeadFilter, setOpHeadFilter] = useState('');
 
   // Selected Application for detail/drawer modals
   const [selectedApp, setSelectedApp] = useState(null);
@@ -137,6 +139,7 @@ export default function ManageApplications() {
           commission_status: commFilter || undefined,
           Partner_id: partnerFilter || undefined,
           process_by: processByFilter || undefined,
+          operation_head_id: opHeadFilter || undefined,
           search: search.trim() || undefined
         }
       });
@@ -162,8 +165,20 @@ export default function ManageApplications() {
     }
   };
 
+  const fetchOperationHeads = async () => {
+    try {
+      const res = await api.get('/superadmin/operation-heads');
+      if (res.data?.success) {
+        setOperationHeads(res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load operation heads', e);
+    }
+  };
+
   useEffect(() => {
     fetchPartnersList();
+    fetchOperationHeads();
   }, []);
 
   useEffect(() => {
@@ -422,9 +437,24 @@ export default function ManageApplications() {
             </select>
           </div>
 
+          <div style={{ width: '190px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Operation Head</label>
+            <select style={S.input} value={opHeadFilter} onChange={e => setOpHeadFilter(e.target.value)}>
+              <option value="">All Operation Heads</option>
+              {operationHeads.map(oh => {
+                const bankNames = oh.assigned_banks?.map(b => b.name || b.short_code).join(', ') || 'No banks';
+                return (
+                  <option key={oh.id} value={oh.id}>
+                    {oh.full_name} ({bankNames})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="submit" style={S.btn('primary')}>Search</button>
-            <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setProcessByFilter(''); setPage(1); setTimeout(fetchApplications, 0); }} style={S.btn('outline')}>Reset</button>
+            <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setProcessByFilter(''); setOpHeadFilter(''); setPage(1); setTimeout(fetchApplications, 0); }} style={S.btn('outline')}>Reset</button>
           </div>
         </form>
       </div>
@@ -474,6 +504,11 @@ export default function ManageApplications() {
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ color: C.text }}>{app.product_name}</div>
                       <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>{app.bank_name} • {app.category}</div>
+                      {app.operation_head_name && (
+                        <div style={{ fontSize: '10.5px', fontWeight: 700, color: C.purple, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>👤 Op Head:</span> {app.operation_head_name}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{

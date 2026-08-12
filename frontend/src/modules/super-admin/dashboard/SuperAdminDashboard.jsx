@@ -59,14 +59,20 @@ export default function SuperAdminDashboard() {
   const [formErr, setFormErr] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
+  // ── Operation Head Bank Assignment State ──
+  const [selectedOpHead, setSelectedOpHead] = useState(null);
+  const [allBanks, setAllBanks] = useState([]);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [assignedBankIds, setAssignedBankIds] = useState([]);
+
   // Fetch Admins
   const fetchAdmins = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.get('/superadmin/admins');
+      const res = await api.get('/superadmin/operation-heads');
       if (res.data && res.data.success) {
-        setAdmins(res.data.data);
+        setAdmins(res.data.data.map(a => ({ ...a, _id: a.id, fullName: a.full_name, employeeId: a.employee_id })));
       } else {
         setErrorMsg('Failed to load admins list');
       }
@@ -75,6 +81,47 @@ export default function SuperAdminDashboard() {
       setErrorMsg(err.response?.data?.message || 'Error fetching administrative directory');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenBankModal = async (admin) => {
+    setSelectedOpHead(admin);
+    setBankModalOpen(true);
+    try {
+      const [bankRes, opHeadRes] = await Promise.all([
+        api.get('/banks'),
+        api.get('/superadmin/operation-heads')
+      ]);
+      if (bankRes.data?.success) {
+        setAllBanks(bankRes.data.data || []);
+      }
+      if (opHeadRes.data?.success) {
+        const currentHead = (opHeadRes.data.data || []).find(h => (h.id === admin._id || h.id === admin.id));
+        if (currentHead && currentHead.assigned_banks) {
+          setAssignedBankIds(currentHead.assigned_banks.map(b => b.id));
+        } else {
+          setAssignedBankIds([]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load bank assignments', e);
+    }
+  };
+
+  const handleToggleBankAssignment = async (bankId) => {
+    const isAssigned = assignedBankIds.includes(bankId);
+    const newOpHeadId = isAssigned ? null : (selectedOpHead._id || selectedOpHead.id);
+
+    setAssignedBankIds(prev => isAssigned ? prev.filter(id => id !== bankId) : [...prev, bankId]);
+
+    try {
+      await api.put('/superadmin/assign-bank-operation-head', {
+        bankId,
+        operationHeadId: newOpHeadId
+      });
+      fetchAdmins();
+    } catch (e) {
+      console.error('Failed to update bank assignment', e);
     }
   };
 
@@ -337,6 +384,7 @@ export default function SuperAdminDashboard() {
                     <th style={{ padding: "16px 24px" }}>Role & Emp ID</th>
                     <th style={{ padding: "16px 24px" }}>Contact Info</th>
                     <th style={{ padding: "16px 24px" }}>Department</th>
+                    <th style={{ padding: "16px 24px" }}>Assigned Banks</th>
                     <th style={{ padding: "16px 24px" }}>Designation</th>
                     <th style={{ padding: "16px 24px" }}>Status</th>
                     <th style={{ padding: "16px 24px", textAlign: "center" }}>Actions</th>
@@ -380,6 +428,31 @@ export default function SuperAdminDashboard() {
                         <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB" }}>
                           {admin.department}
                         </span>
+                      </td>
+                      <td style={{ padding: "16px 24px" }}>
+                        <button
+                          onClick={() => handleOpenBankModal(admin)}
+                          style={{
+                            background: admin.assigned_banks?.length ? "#ECFDF5" : "#F3F4F6",
+                            color: admin.assigned_banks?.length ? "#059669" : "#6B7280",
+                            border: `1px solid ${admin.assigned_banks?.length ? "#6EE7B7" : "#D1D5DB"}`,
+                            borderRadius: "6px",
+                            padding: "4px 10px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px"
+                          }}
+                        >
+                          🏦 {admin.assigned_banks?.length ? `${admin.assigned_banks.length} Banks` : 'Assign Banks'}
+                        </button>
+                        {admin.assigned_banks?.length > 0 && (
+                          <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "160px" }}>
+                            {admin.assigned_banks.map(b => b.name || b.short_code).join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "16px 24px", color: "#374151", fontWeight: 500 }}>
                         {admin.designation}
@@ -693,6 +766,88 @@ export default function SuperAdminDashboard() {
               </button>
             </div>
           </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Banks Modal */}
+      {bankModalOpen && selectedOpHead && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(4px)"
+        }}>
+          <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "24px", maxWidth: "550px", width: "100%", maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
+            <div style={{ borderBottom: `1px solid #F3F4F6`, paddingBottom: "14px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>Assign Banks & Products</h3>
+                <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0 0" }}>
+                  Operation Head: <strong style={{ color: "#2563EB" }}>{selectedOpHead.fullName || selectedOpHead.full_name}</strong> ({selectedOpHead.department})
+                </p>
+              </div>
+              <button onClick={() => setBankModalOpen(false)} style={{ background: "#F3F4F6", border: "none", color: "#4B5563", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#374151", marginBottom: "14px", fontWeight: 600 }}>
+              Select Banks managed by this Operation Head. All applications under selected banks will be routed to this Operation Head:
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {allBanks.length === 0 ? (
+                <div style={{ color: "#6B7280", padding: "20px", textAlign: "center" }}>Loading banks list...</div>
+              ) : (
+                allBanks.map(bank => {
+                  const isChecked = assignedBankIds.includes(bank.id);
+                  return (
+                    <div
+                      key={bank.id}
+                      onClick={() => handleToggleBankAssignment(bank.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        borderRadius: "10px",
+                        border: `1.5px solid ${isChecked ? "#2563EB" : "#E5E7EB"}`,
+                        background: isChecked ? "#EFF6FF" : "#F9FAFB",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        {bank.logo_url ? (
+                          <img src={bank.logo_url} alt={bank.name} style={{ width: "32px", height: "32px", objectFit: "contain", borderRadius: "6px" }} />
+                        ) : (
+                          <div style={{ width: "32px", height: "32px", background: "#DBEAFE", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "#1D4ED8", fontSize: "12px" }}>
+                            {bank.short_code?.substring(0, 3) || 'BNK'}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>{bank.name}</div>
+                          <div style={{ fontSize: "11px", color: "#6B7280" }}>Short code: {bank.short_code}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ width: "22px", height: "22px", borderRadius: "6px", border: `2px solid ${isChecked ? "#2563EB" : "#9CA3AF"}`, background: isChecked ? "#2563EB" : "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 800, fontSize: "13px" }}>
+                        {isChecked ? '✓' : ''}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px", paddingTop: "14px", borderTop: "1px solid #F3F4F6" }}>
+              <button
+                onClick={() => setBankModalOpen(false)}
+                style={{ background: "#2563EB", border: "none", color: "#FFFFFF", padding: "10px 24px", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+              >
+                Done / Save
+              </button>
+            </div>
           </div>
         </div>
       )}

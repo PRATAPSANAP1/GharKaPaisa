@@ -4054,6 +4054,9 @@ const migrate = async () => {
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS income DECIMAL(15,2);
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS employment VARCHAR(100);
+
+        ALTER TABLE banks ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL;
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL;
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');

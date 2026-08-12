@@ -826,7 +826,6 @@ const verifyDocument = async (req, res, next) => {
     } catch (notifErr) {
       logger.error('Failed to send KYC verification notifications:', notifErr.message);
     }
-
     await logAction(req, 'VERIFY_DOCUMENT', partnerId, { 
       docType, 
       status, 
@@ -844,12 +843,63 @@ const verifyDocument = async (req, res, next) => {
   }
 };
 
-// ── Referral & Team Analytics ──────────────────────────────────────
+// ── Referral & Team Analytics ──────────────────────────────────────────────────────────────────
 const getReferralAnalytics = async (req, res, next) => {
   try {
     const { getReferralAnalytics: fetchAnalytics } = require('../admin/analytics.service.js');
     const analytics = await fetchAnalytics();
     return success(res, analytics, 'Referral and team analytics retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
+const getOperationHeads = async (req, res, next) => {
+  try {
+    const { rows: users } = await query(`
+      SELECT 
+        u.id, u.email, u.mobile, u.role, u.status, u.full_name, u.employee_id, u.department, u.designation, u.is_active
+      FROM users u
+      WHERE u.role IN ('ADMIN', 'EMPLOYEE', 'SUPER_ADMIN')
+      ORDER BY u.full_name ASC
+    `);
+
+    const { rows: banks } = await query(`
+      SELECT b.id, b.name, b.short_code, b.logo_url, b.operation_head_id
+      FROM banks b
+      WHERE b.operation_head_id IS NOT NULL
+    `);
+
+    const bankMap = {};
+    banks.forEach(b => {
+      if (!bankMap[b.operation_head_id]) bankMap[b.operation_head_id] = [];
+      bankMap[b.operation_head_id].push(b);
+    });
+
+    const result = users.map(u => ({
+      ...u,
+      assigned_banks: bankMap[u.id] || []
+    }));
+
+    return success(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const assignBankOperationHead = async (req, res, next) => {
+  try {
+    const { bankId, operationHeadId } = req.body;
+    if (!bankId) return error(res, 'bankId is required', 400);
+
+    const validHeadId = isUuid(operationHeadId) ? operationHeadId : null;
+
+    await query(`UPDATE banks SET operation_head_id = $1, updated_at = NOW() WHERE id = $2`, [validHeadId, bankId]);
+    await query(`UPDATE products SET operation_head_id = $1, updated_at = NOW() WHERE bank_id = $2`, [validHeadId, bankId]);
+
+    return success(res, {}, 'Bank assigned to Operation Head successfully.');
   } catch (err) {
     next(err);
   }
@@ -868,5 +918,7 @@ module.exports = {
   rejectKYC,
   requestChangesKYC,
   verifyDocument,
-  getReferralAnalytics
+  getReferralAnalytics,
+  getOperationHeads,
+  assignBankOperationHead
 };
