@@ -38,6 +38,8 @@ const PROCESS_OPTIONS = [
   }
 ];
 
+import { useFormPersistence } from '../../../hooks/useFormPersistence';
+
 export default function PartnerAddLead() {
   const navigate = useNavigate();
   const { C, isDark } = useTheme();
@@ -61,6 +63,24 @@ export default function PartnerAddLead() {
   const [submitting, setSubmitting] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Persist form state across page reload
+  const { clearPersistedDraft } = useFormPersistence('partner_add_lead', {
+    selectedProductId, customerName, mobile, email, monthlySalary,
+    companyName, pincode, city, stateName, businessType, processType
+  }, {
+    selectedProductId: setSelectedProductId,
+    customerName: setCustomerName,
+    mobile: setMobile,
+    email: setEmail,
+    monthlySalary: setMonthlySalary,
+    companyName: setCompanyName,
+    pincode: setPincode,
+    city: setCity,
+    stateName: setStateName,
+    businessType: setBusinessType,
+    processType: setProcessType
+  });
 
   // Lead Creation & OTP Verification state
   const [pendingLead, setPendingLead] = useState(null);
@@ -201,9 +221,11 @@ export default function PartnerAddLead() {
           if (appData?.bank_url) {
             window.open(appData.bank_url, '_blank');
           }
+          clearPersistedDraft();
           alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Official Bank portal opened.`);
           navigate('/partner/applications');
         } else {
+          clearPersistedDraft();
           alert(`Lead verified & Application APP#${appData?.app_number || ''} logged successfully!`);
           navigate('/partner/applications');
         }

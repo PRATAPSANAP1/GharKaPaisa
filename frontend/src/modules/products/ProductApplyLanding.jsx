@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 
+import { useFormPersistence } from '../../hooks/useFormPersistence';
+
 export default function ProductApplyLanding() {
   const { partnerCode, productId } = useParams();
   const [searchParams] = useSearchParams();
@@ -19,6 +21,13 @@ export default function ProductApplyLanding() {
   const [submitted, setSubmitted] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState('');
   const [countdown, setCountdown] = useState(5);
+
+  const { clearPersistedDraft } = useFormPersistence(`product_landing_${productId || 'apply'}`, {
+    customerName, customerMobile
+  }, {
+    customerName: setCustomerName,
+    customerMobile: setCustomerMobile
+  });
 
   // Responsive
   const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -84,6 +93,7 @@ export default function ProductApplyLanding() {
       });
       const json = await res.json();
       if (json && json.success) {
+        clearPersistedDraft();
         setRedirectUrl(json.data?.redirect_url || '');
         setSubmitted(true);
       } else {

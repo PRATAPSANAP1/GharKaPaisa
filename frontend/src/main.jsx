@@ -87,9 +87,13 @@ import ReactDOM from 'react-dom/client'
 import App from './app/App.jsx'
 import './app/i18n';
 import { preloadMsg91SDK } from './app/msg91Init';
+import { initGlobalFormPersistence } from './utils/formPersist';
 
-// Load MSG91 SDK script once at app startup (no container needed yet)
+// Load MSG91 SDK script once at app startup
 preloadMsg91SDK();
+
+// Initialize automatic page reload form persistence for all input fields across the website
+initGlobalFormPersistence();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
