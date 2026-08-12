@@ -109,9 +109,17 @@ const insuranceRoleCards = [
   { title: "General Insurance", sub: "Insurance Type", count: "8,900", availableCards: "15 Motor & Asset Plans", slug: "general-insurance" }
 ];
 
-const getSubModuleTabs = (t) => [
+const getSubModuleTabs = (t, activeCategory = 'credit_card') => [
   { id: 'dashboard', label: t('partnerLayout.dashboard', 'Dashboard'), icon: MdDashboard },
-  { id: 'cards', label: t('sections.popularCards', 'Credit Cards'), icon: MdStorefront },
+  { 
+    id: 'cards', 
+    label: activeCategory === 'loans' 
+      ? t('sections.popularLoans', 'Loans Catalog') 
+      : (activeCategory === 'insurance' 
+          ? t('sections.popularInsurance', 'Insurance Catalog') 
+          : t('sections.popularCards', 'Credit Cards')), 
+    icon: MdStorefront 
+  },
   { id: 'customers', label: t('partnerLayout.customers', 'Customers'), icon: MdPeople },
   { id: 'applications', label: t('partnerLayout.applications', 'Applications'), icon: MdLeaderboard },
   { id: 'documents', label: t('partnerLayout.vault', 'Documents'), icon: MdFolder },
@@ -388,7 +396,11 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   // Compute dynamic header title based on active sub-module tab
   const headerTitle = useMemo(() => {
-    if (activeTab === 'cards' || activeTab === 'products') return t('categoryOverview.creditCardsCatalog', 'Credit Cards Catalog');
+    if (activeTab === 'cards' || activeTab === 'products') {
+      if (activeCategory === 'loans') return t('categoryOverview.loansCatalog', 'Loans Catalog');
+      if (activeCategory === 'insurance') return t('categoryOverview.insuranceCatalog', 'Insurance Catalog');
+      return t('categoryOverview.creditCardsCatalog', 'Credit Cards Catalog');
+    }
     if (activeTab === 'customers') return t('categoryOverview.customerManagement', 'Customer Management');
     if (activeTab === 'applications') return t('categoryOverview.applicationPipeline', 'Application Pipeline');
     if (activeTab === 'documents') return t('categoryOverview.documentVault', 'Document Vault');
@@ -418,7 +430,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
         WebkitOverflowScrolling: 'touch',
         boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        {getSubModuleTabs(t).map((tItem) => {
+        {getSubModuleTabs(t, activeCategory).map((tItem) => {
           const Icon = tItem.icon;
           const isActive = activeTab === tItem.id;
 
@@ -1072,7 +1084,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
         {/* TAB 2: CREDIT CARDS / PRODUCTS */}
         {(activeTab === 'cards' || activeTab === 'products') && (
-          <PartnerProducts initialSearch={searchQuery} />
+          <PartnerProducts initialSearch={searchQuery} initialCategory={activeCategory} />
         )}
 
         {/* TAB 3: CUSTOMERS */}
