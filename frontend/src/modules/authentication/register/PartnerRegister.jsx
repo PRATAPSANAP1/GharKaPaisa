@@ -87,13 +87,21 @@ const LANGUAGES = [
 ];
 
 const DRAFT_STORAGE_KEY = 'partner_registration_draft_v1';
+const DRAFT_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour maximum storage
 
 const loadSavedDraft = () => {
   try {
     const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object') return parsed;
+      if (parsed && typeof parsed === 'object') {
+        // Expire draft if saved more than 1 hour ago
+        if (parsed.timestamp && (Date.now() - parsed.timestamp > DRAFT_MAX_AGE_MS)) {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+          return null;
+        }
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Failed to load registration draft:", e);
@@ -151,7 +159,7 @@ export default function PartnerRegister() {
     ...(savedDraft?.form || {})
   }));
 
-  // Auto-save form draft to localStorage on change
+  // Auto-save form draft to localStorage on change (Max 1 hour TTL)
   useEffect(() => {
     if (success) {
       try {
@@ -166,6 +174,7 @@ export default function PartnerRegister() {
         step,
         fullName,
         form: formToSave,
+        timestamp: Date.now()
       }));
     } catch (e) {
       console.warn("Failed to persist registration draft:", e);

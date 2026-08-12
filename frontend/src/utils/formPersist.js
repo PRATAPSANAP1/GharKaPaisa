@@ -5,23 +5,28 @@
  */
 
 const STORAGE_PREFIX = 'gkp_form_draft_';
+const FORM_DRAFT_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour maximum storage
 
 /**
- * Save form state to sessionStorage
+ * Save form state to storage
  * @param {string} key - Form identifier
  * @param {object} data - Form key-value payload
  */
 export function saveFormDraft(key, data) {
   if (!key || !data) return;
   try {
-    sessionStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(data));
+    const payload = {
+      data,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(payload));
   } catch (err) {
     console.warn('[formPersist] Error saving draft:', err);
   }
 }
 
 /**
- * Load form draft from sessionStorage
+ * Load form draft from storage
  * @param {string} key - Form identifier
  * @returns {object|null}
  */
@@ -29,7 +34,18 @@ export function loadFormDraft(key) {
   if (!key) return null;
   try {
     const saved = sessionStorage.getItem(`${STORAGE_PREFIX}${key}`);
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+
+    // If saved with timestamp metadata, check 1-hour expiration
+    if (parsed && typeof parsed === 'object') {
+      if (parsed.timestamp && (Date.now() - parsed.timestamp > FORM_DRAFT_MAX_AGE_MS)) {
+        clearFormDraft(key);
+        return null;
+      }
+      return parsed.data !== undefined ? parsed.data : parsed;
+    }
+    return parsed;
   } catch (err) {
     console.warn('[formPersist] Error loading draft:', err);
     return null;
