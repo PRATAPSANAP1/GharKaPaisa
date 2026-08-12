@@ -405,7 +405,7 @@ export default function ManageApplications() {
             <select style={S.input} value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}>
               <option value="">All Partners</option>
               {partners.map(p => (
-                <option key={p.id} value={p.Partner_id}>{p.first_name} {p.last_name || ''} ({p.Partner_code})</option>
+                <option key={p.id || p.partner_id} value={p.partner_id || p.id}>{p.first_name} {p.last_name || ''} ({p.partner_code || p.code || 'PARTNER'})</option>
               ))}
             </select>
           </div>
@@ -448,8 +448,8 @@ export default function ManageApplications() {
                       <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.customer_mobile}</div>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 600 }}>{app.Partner_first_name} {app.Partner_last_name || ''}</div>
-                      <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.Partner_code}</div>
+                      <div style={{ fontWeight: 600 }}>{app.partner_first_name || app.Partner_first_name || 'Direct'} {app.partner_last_name || app.Partner_last_name || ''}</div>
+                      <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.partner_code || app.Partner_code || 'N/A'}</div>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ color: C.text }}>{app.product_name}</div>
@@ -714,7 +714,7 @@ export default function ManageApplications() {
                   >
                     <option value="">Choose partner...</option>
                     {partners.map(p => (
-                      <option key={p.id} value={p.Partner_id}>{p.first_name} {p.last_name || ''} ({p.Partner_code})</option>
+                      <option key={p.id || p.partner_id} value={p.partner_id || p.id}>{p.first_name} {p.last_name || ''} ({p.partner_code || p.code || 'PARTNER'})</option>
                     ))}
                   </select>
                 </div>

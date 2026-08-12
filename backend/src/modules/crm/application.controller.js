@@ -744,15 +744,45 @@ const reassignApplication = async (req, res, next) => {
     const { id, partner_id } = req.body;
     if (!id || !partner_id) return error(res, 'ID and Partner ID are required', 400);
 
-    const { rows: [partner] } = await client.query(`SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id=$1`, [partner_id]);
+    let targetPartnerId = partner_id;
+
+    if (!isUuid(targetPartnerId)) {
+      // Extract UUID if embedded inside string
+      const uuidMatch = String(targetPartnerId).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+      if (uuidMatch) {
+        targetPartnerId = uuidMatch[0];
+      } else {
+        // Try searching partner by partner_code, name, or email
+        const cleanStr = String(partner_id).replace(/\s*\([^)]*\)/g, '').trim();
+        const codeMatch = String(partner_id).match(/\(([^)]+)\)/);
+        const code = codeMatch ? codeMatch[1].trim() : cleanStr;
+
+        const { rows: [found] } = await client.query(`
+          SELECT id FROM partner_profiles 
+          WHERE (partner_code IS NOT NULL AND LOWER(partner_code) = LOWER($1))
+             OR (partner_code IS NOT NULL AND LOWER(partner_code) = LOWER($2))
+             OR LOWER(CONCAT(first_name, ' ', last_name)) = LOWER($1) 
+             OR LOWER(first_name) = LOWER($1)
+          LIMIT 1
+        `, [cleanStr, code]);
+
+        if (found) {
+          targetPartnerId = found.id;
+        } else {
+          return error(res, `Target Partner '${partner_id}' not found. Please select a valid partner.`, 400);
+        }
+      }
+    }
+
+    const { rows: [partner] } = await client.query(`SELECT id, first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`, [targetPartnerId]);
     if (!partner) return error(res, 'Target Partner not found', 404);
 
     await client.query(`
-      UPDATE applications SET partner_id=$1, updated_at=NOW() WHERE id=$2
-    `, [partner_id, id]);
+      UPDATE applications SET partner_id = $1, updated_at = NOW() WHERE id = $2
+    `, [partner.id, id]);
 
     await logTimeline(client, id, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
-    await logAction(req, 'REASSIGN_APPLICATION', id, { target_partner: partner_id });
+    await logAction(req, 'REASSIGN_APPLICATION', id, { target_partner: partner.id });
 
     await client.query('COMMIT');
     return success(res, {}, 'Application successfully reassigned.');
