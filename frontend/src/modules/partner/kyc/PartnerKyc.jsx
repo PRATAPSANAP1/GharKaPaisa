@@ -373,6 +373,7 @@ export default function PartnerKyc() {
       formData.append('duration', recordingTime);
 
       const res = await api.post('/partner/kyc/upload-video', formData, {
+        timeout: 180000,
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
