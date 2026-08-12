@@ -4020,6 +4020,15 @@ const migrate = async () => {
 
         ALTER TABLE commission_ledger ALTER COLUMN application_id DROP NOT NULL;
         CREATE INDEX IF NOT EXISTS idx_comm_ledger_lead ON commission_ledger(lead_id);
+
+        ALTER TABLE leads
+        ADD COLUMN IF NOT EXISTS otp_attempts INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS otp_sent_count INT DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS last_otp_sent_at TIMESTAMPTZ DEFAULT NOW();
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_active_lead_product_mobile 
+        ON leads(product_id, mobile) 
+        WHERE status NOT IN ('rejected', 'cancelled');
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');

@@ -288,10 +288,83 @@ const createLead = async (req, res, next) => {
       RETURNING id
     `, [targetName.trim(), trimmedMobile, trimmedEmail || null, incomeVal, company_name || null, pincode || null, targetCity || null, state || null, req.user.id]);
 
-    // 5. Create Lead with OTP
+    // 5. Handle Process-Specific Workflow
     const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+
+    if (targetProcess === 'linked_share') {
+      const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
+      const baseUrl = process.env.PUBLIC_APP_URL || 'https://gharkapaisa.in';
+      const shareUrl = `${baseUrl}/share/${trackingToken}`;
+
+      const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
+      const cleanMobile = trimmedMobile.replace(/\D/g, '');
+      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} using your tracked link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
+
+      const { rows: [lead] } = await query(`
+        INSERT INTO leads (
+          lead_number, partner_id, parent_partner_id, created_by, customer_id,
+          product_id, customer_name, mobile, city, status, process_type,
+          otp_verified, source, priority, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_sent', 'linked_share', TRUE, $10, $11, 'created')
+        RETURNING *
+      `, [
+        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+      ]);
+
+      await query(`
+        INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
+        VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
+      `, [partner.id, targetProductId, trackingToken]);
+
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+
+      return created(res, {
+        lead_id: lead.id,
+        lead_number: lead.lead_number,
+        customer_id: customer.id,
+        mobile: lead.mobile,
+        process_type: 'linked_share',
+        otp_required: false,
+        share_url: shareUrl,
+        whatsapp_url: whatsappUrl
+      }, 'Linked share link generated successfully.');
+    }
+
+    if (targetProcess === 'direct_bank') {
+      const bankUrl = product?.partner_url || product?.public_url || 'https://gharkapaisa.in/partner/products';
+
+      const { rows: [lead] } = await query(`
+        INSERT INTO leads (
+          lead_number, partner_id, parent_partner_id, created_by, customer_id,
+          product_id, customer_name, mobile, city, status, process_type,
+          otp_verified, source, priority, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', 'direct_bank', TRUE, $10, $11, 'bank_redirected')
+        RETURNING *
+      `, [
+        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+      ]);
+
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+
+      return created(res, {
+        lead_id: lead.id,
+        lead_number: lead.lead_number,
+        customer_id: customer.id,
+        mobile: lead.mobile,
+        process_type: 'direct_bank',
+        otp_required: false,
+        bank_url: bankUrl
+      }, 'Direct bank tracking initialized successfully.');
+    }
+
+    // Default: Lead Punching (Requires Customer OTP)
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    const otpExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     const { rows: [lead] } = await query(`
       INSERT INTO leads (
@@ -299,17 +372,26 @@ const createLead = async (req, res, next) => {
         product_id, customer_name, mobile, city, status, process_type,
         otp_code, otp_expires_at, otp_verified, source, priority, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, FALSE, $13, $14, 'created')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', $10, $11, FALSE, $12, $13, 'created')
       RETURNING *
     `, [
       leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-      targetProductId, targetName.trim(), trimmedMobile, targetCity, targetProcess,
+      targetProductId, targetName.trim(), trimmedMobile, targetCity,
       otpCode, otpExpires, source || 'partner', priority || 'medium'
     ]);
 
     await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
-    // Attempt to send email if customer email exists
+    // SMS & Email OTP Dispatch
+    if (trimmedMobile) {
+      try {
+        const { sendSms } = require('../../services/sms/sms.service');
+        await sendSms(trimmedMobile, `Your GharKaPaisa verification OTP for lead ${leadNum} is ${otpCode}. Valid for 15 minutes.`).catch(e => logger.warn(`OTP SMS send failed: ${e.message}`));
+      } catch (err) {
+        logger.warn('SMS service not configured');
+      }
+    }
+
     if (trimmedEmail) {
       try {
         const { sendEmail } = require('../../services/email/email.service');
@@ -329,10 +411,10 @@ const createLead = async (req, res, next) => {
       customer_id: customer.id,
       mobile: lead.mobile,
       email: trimmedEmail,
-      process_type: lead.process_type,
+      process_type: 'lead_punching',
       otp_required: true,
       expires_at: otpExpires
-    }, 'Lead created successfully. Verification OTP generated.');
+    }, 'Lead created successfully. Customer OTP generated.');
   } catch (err) {
     next(err);
   }
@@ -353,11 +435,30 @@ const sendLeadOtp = async (req, res, next) => {
       }
     }
 
+    // Rate Limiting: 60-second cooldown check
+    if (lead.last_otp_sent_at) {
+      const timeSinceLast = (new Date() - new Date(lead.last_otp_sent_at)) / 1000;
+      if (timeSinceLast < 60) {
+        return error(res, `Please wait ${Math.ceil(60 - timeSinceLast)} seconds before requesting another OTP`, 429);
+      }
+    }
+
+    // Maximum 5 OTP resends allowed per lead
+    if ((lead.otp_sent_count || 1) >= 5) {
+      return error(res, 'Maximum OTP resend attempts exceeded. Please try creating a new lead or contact support.', 429);
+    }
+
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
     const otpExpires = new Date(Date.now() + 15 * 60 * 1000);
 
     await query(`
-      UPDATE leads SET otp_code = $1, otp_expires_at = $2, updated_at = NOW() WHERE id = $3
+      UPDATE leads 
+      SET otp_code = $1, 
+          otp_expires_at = $2, 
+          otp_sent_count = COALESCE(otp_sent_count, 1) + 1,
+          last_otp_sent_at = NOW(),
+          updated_at = NOW() 
+      WHERE id = $3
     `, [otpCode, otpExpires, id]);
 
     // Send SMS Notification
@@ -404,7 +505,13 @@ const verifyLeadOtp = async (req, res, next) => {
       }
     }
 
+    // Maximum 5 invalid attempts limit
+    if ((lead.otp_attempts || 0) >= 5) {
+      return error(res, 'Maximum verification attempts exceeded. Please request a new OTP.', 429);
+    }
+
     if (lead.otp_code !== String(otp).trim()) {
+      await client.query(`UPDATE leads SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE id = $1`, [id]);
       return error(res, 'Invalid verification OTP. Please check and try again.', 400);
     }
 
