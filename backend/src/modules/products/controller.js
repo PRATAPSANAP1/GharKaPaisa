@@ -342,6 +342,7 @@ const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { 
+      bank_id, category, min_age, max_age, min_income, operation_head_id,
       name, description, commission_type, commission_value, is_active, display_order, 
       annual_fee, time_period, short_description, logo, banner, image, commission_enabled,
       commission_amount, override_percentage, featured, public_visible, partner_visible,
@@ -395,6 +396,9 @@ const updateProduct = async (req, res, next) => {
       }
     }
 
+    const validBankId = (bank_id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(bank_id)) ? bank_id : null;
+    const validOpHeadId = (operation_head_id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(operation_head_id)) ? operation_head_id : null;
+
     await query(`
       UPDATE products SET
         name = COALESCE($1, name),
@@ -441,6 +445,12 @@ const updateProduct = async (req, res, next) => {
         is_trending = COALESCE($43, is_trending),
         public_url = COALESCE($44, public_url),
         partner_url = COALESCE($45, partner_url),
+        bank_id = COALESCE($46, bank_id),
+        category = COALESCE($47, category),
+        min_age = COALESCE($48, min_age),
+        max_age = COALESCE($49, max_age),
+        min_income = COALESCE($50, min_income),
+        operation_head_id = COALESCE($51, operation_head_id),
         updated_at = NOW()
       WHERE id = $33
     `, [
@@ -488,10 +498,16 @@ const updateProduct = async (req, res, next) => {
       req.body.is_recommended !== undefined ? (req.body.is_recommended === 'true' || req.body.is_recommended === true) : null,
       req.body.is_trending !== undefined ? (req.body.is_trending === 'true' || req.body.is_trending === true) : null,
       public_url !== undefined ? public_url : null,
-      partner_url !== undefined ? partner_url : null
+      partner_url !== undefined ? partner_url : null,
+      validBankId,
+      category || null,
+      min_age ? parseInt(min_age) : null,
+      max_age ? parseInt(max_age) : null,
+      min_income ? parseFloat(min_income) : null,
+      validOpHeadId
     ]);
 
-    await logAction(req, 'UPDATE_PRODUCT', id, { name, commission_value, is_active });
+    await logAction(req, 'UPDATE_PRODUCT', id, { name, bank_id: validBankId, category, commission_value, is_active });
     return success(res, {}, 'Product updated');
   } catch (err) {
     next(err);
