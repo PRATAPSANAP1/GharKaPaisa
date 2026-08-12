@@ -62,7 +62,7 @@ const submitApplication = async (req, res, next) => {
       WHERE product_id = $1
         AND customer_id IN (SELECT id FROM customers WHERE mobile = $2)
         AND created_at >= NOW() - INTERVAL '30 days'
-        AND status NOT IN ('rejected', 'cancelled')
+        AND status::text NOT IN ('rejected', 'cancelled')
       LIMIT 1
     `, [product_id, customer.mobile]);
 
@@ -1369,7 +1369,7 @@ const submitPartnerApplication = async (req, res, next) => {
         JOIN customers c ON c.id = a.customer_id
         WHERE c.mobile = $1 AND a.product_id = $2
           AND a.created_at >= NOW() - INTERVAL '30 days'
-          AND a.status NOT IN ('rejected', 'cancelled')
+          AND a.status::text NOT IN ('rejected', 'cancelled')
         LIMIT 1
       `, [trimmedMobile, product_id]);
 

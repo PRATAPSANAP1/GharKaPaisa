@@ -20,7 +20,7 @@ const processCommissionHoldReleases = async () => {
       LEFT JOIN products p ON p.id = a.product_id
       WHERE l.status = 'Pending Approval'
         AND l.credit > 0
-        AND (a.id IS NULL OR a.status NOT IN ('rejected', 'cancelled'))
+        AND (a.id IS NULL OR a.status::text NOT IN ('rejected', 'cancelled'))
         AND (
           (COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
           OR (COALESCE(p.category::text, 'credit_card') NOT IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
