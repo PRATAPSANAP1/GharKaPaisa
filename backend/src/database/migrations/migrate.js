@@ -2842,7 +2842,14 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ DEFAULT NOW(),
         ADD COLUMN IF NOT EXISTS opened_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS registered_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS expired_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS expired_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS accepted_by_partner_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS invitee_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS invitee_mobile VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS invitee_email VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS invite_code VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 4. Referral Campaigns Table

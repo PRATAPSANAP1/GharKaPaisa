@@ -1287,14 +1287,27 @@ async function sendTeamInvitation(partnerId, payload) {
 async function getRefersList(partnerId) {
   const pId = await getPartnerProfileIdByUserId(partnerId) || partnerId;
   const { rows } = await query(
-    `SELECT ih.id, ih.invitee_name, ih.invitee_mobile, ih.invitee_email, ih.invite_code, ih.status, ih.created_at,
+    `SELECT ih.id,
+            COALESCE(ih.invitee_name, ih.recipient_name, 'Invitee') as invitee_name,
+            COALESCE(ih.invitee_mobile, ih.recipient_mobile) as invitee_mobile,
+            COALESCE(ih.invitee_email, ih.recipient_email) as invitee_email,
+            COALESCE(ih.invite_code, ih.referral_code) as invite_code,
+            ih.status,
+            COALESCE(ih.created_at, ih.sent_at, NOW()) as created_at,
             cp.partner_code, cp.first_name, cp.last_name, cp.kyc_status
      FROM invitation_history ih
-     LEFT JOIN partner_profiles cp ON cp.id = ih.accepted_by_partner_id
+     LEFT JOIN partner_profiles cp ON cp.id = COALESCE(ih.accepted_by_partner_id, NULL)
      WHERE ih.partner_id = $1
-     ORDER BY ih.created_at DESC`,
+     ORDER BY COALESCE(ih.created_at, ih.sent_at, NOW()) DESC`,
     [pId]
-  ).catch(() => ({ rows: [] }));
+  ).catch(err => {
+    logger.warn('[getRefersList] Fallback query executed:', err.message);
+    return query(
+      `SELECT id, COALESCE(recipient_name, 'Invitee') as invitee_name, recipient_mobile as invitee_mobile, recipient_email as invitee_email, referral_code as invite_code, status, sent_at as created_at
+       FROM invitation_history WHERE partner_id = $1 ORDER BY sent_at DESC`,
+      [pId]
+    ).catch(() => ({ rows: [] }));
+  });
 
   return rows;
 }
