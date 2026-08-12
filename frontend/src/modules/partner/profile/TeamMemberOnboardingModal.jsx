@@ -12,6 +12,17 @@ import { useMsg91OTP } from '../../../hooks/useMsg91OTP';
 
 const DRAFT_KEY = 'team_member_onboarding_draft_v1';
 
+const INDIA_BANKS = [
+  'State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank',
+  'Punjab National Bank', 'Bank of Baroda', 'Canara Bank', 'Union Bank of India', 'IDBI Bank',
+  'Indian Bank', 'Indian Overseas Bank', 'Yes Bank', 'IDFC First Bank', 'IndusInd Bank',
+  'Federal Bank', 'Central Bank of India', 'UCO Bank', 'Bank of India', 'Punjab & Sind Bank',
+  'AU Small Finance Bank', 'Bandhan Bank', 'RBL Bank', 'Karur Vysya Bank', 'Karnataka Bank',
+  'South Indian Bank', 'Tamilnad Mercantile Bank', 'City Union Bank', 'Jammu & Kashmir Bank',
+  'DCB Bank', 'Equitas Small Finance Bank', 'Suryoday Small Finance Bank', 'Ujjivan Small Finance Bank',
+  'Bank of Maharashtra', 'Paytm Payments Bank', 'Airtel Payments Bank', 'J&K Bank', 'Fincare Small Finance Bank'
+].sort();
+
 export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -66,17 +77,38 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
   const [panFile, setPanFile] = useState(null);
   const [chequeFile, setChequeFile] = useState(null);
 
-  // Pre-fill user data and restore local draft
+  const DRAFT_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour maximum draft storage
+
+  // Pre-fill user data and restore local draft across reloads
   useEffect(() => {
     if (user) {
       const names = (user.full_name || '').split(' ');
       const fname = user.first_name || names[0] || '';
       const lname = user.last_name || names.slice(1).join(' ') || '';
 
-      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      const savedDraftRaw = localStorage.getItem(DRAFT_KEY);
       let draftData = {};
-      if (savedDraft) {
-        try { draftData = JSON.parse(savedDraft); } catch (e) { /* ignore */ }
+      let savedStep = 1;
+      let savedPasswords = null;
+      let savedMobileVerified = false;
+      let savedEmailVerified = false;
+
+      if (savedDraftRaw) {
+        try {
+          const parsed = JSON.parse(savedDraftRaw);
+          if (parsed && typeof parsed === 'object') {
+            // Check 1-hour expiration
+            if (parsed.timestamp && (Date.now() - parsed.timestamp > DRAFT_MAX_AGE_MS)) {
+              localStorage.removeItem(DRAFT_KEY);
+            } else {
+              draftData = parsed.form || parsed;
+              if (parsed.step) savedStep = parsed.step;
+              if (parsed.passwords) savedPasswords = parsed.passwords;
+              if (parsed.mobileVerified) savedMobileVerified = parsed.mobileVerified;
+              if (parsed.emailVerified) savedEmailVerified = parsed.emailVerified;
+            }
+          }
+        } catch (e) { /* ignore */ }
       }
 
       setForm({
@@ -96,15 +128,33 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
         account_holder_name: draftData.account_holder_name || `${fname} ${lname}`.trim(),
         pan_number: draftData.pan_number || ''
       });
+
+      if (savedStep && savedStep >= 1 && savedStep < 4) {
+        setStep(savedStep);
+      }
+      if (savedPasswords && savedPasswords.newPassword) {
+        setPasswords(savedPasswords);
+      }
+      if (savedMobileVerified) setMobileVerified(true);
+      if (savedEmailVerified) setEmailVerified(true);
     }
   }, [user]);
 
-  // Save form draft across reloads
+  // Save form draft and active step across reloads
   useEffect(() => {
-    if (form.first_name || form.company_name || form.pan_number) {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+    const hasData = form.first_name || form.company_name || form.pan_number || form.bank_name || form.current_address || passwords.newPassword;
+    if (hasData) {
+      const payload = {
+        form,
+        step,
+        passwords,
+        mobileVerified,
+        emailVerified,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
     }
-  }, [form]);
+  }, [form, step, passwords, mobileVerified, emailVerified]);
 
   // Timers for OTP resend
   useEffect(() => {
@@ -725,11 +775,17 @@ export default function TeamMemberOnboardingModal({ isOpen, onClose }) {
                     <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Bank Name</label>
                     <input
                       type="text"
+                      list="onboarding-banks-list"
                       value={form.bank_name}
                       onChange={e => handleInputChange('bank_name', e.target.value)}
                       style={{ ...S.input, padding: '10px 12px', borderRadius: '10px' }}
-                      placeholder="e.g. HDFC Bank"
+                      placeholder="Select or type Bank Name (e.g. HDFC Bank, SBI)"
                     />
+                    <datalist id="onboarding-banks-list">
+                      {INDIA_BANKS.map((b, idx) => (
+                        <option key={idx} value={b} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>IFSC Code</label>

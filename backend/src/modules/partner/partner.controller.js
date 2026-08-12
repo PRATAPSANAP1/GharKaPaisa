@@ -1884,7 +1884,7 @@ const completeTeamOnboarding = async (req, res, next) => {
 
     // 4. Save bank details if provided
     if (account_number && bank_name && ifsc_code) {
-      const { encrypt } = require('../../utils/crypto/encryption');
+      const { encrypt } = require('../../utils/helpers/crypto');
       const encryptedAccountNumber = encrypt(account_number);
       await client.query(`
         INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name)
