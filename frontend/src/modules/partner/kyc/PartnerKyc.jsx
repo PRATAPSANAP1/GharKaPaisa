@@ -112,12 +112,14 @@ export default function PartnerKyc() {
     fetchProfile();
   }, []);
 
-  // Compute progress percentage
+  // Compute progress percentage & doc state flags
+  const hasPan = kycData.documents?.some(d => d.doc_type === 'pan' && d.verification_status !== 'rejected');
+  const hasCheque = kycData.documents?.some(d => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
+  const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
+  const isBothDocsUploaded = hasPan && hasCheque;
+  const isAllUploaded = hasPan && hasCheque && hasVideo;
+
   const getProgress = () => {
-    const hasPan = kycData.documents?.some(d => d.doc_type === 'pan' && d.verification_status !== 'rejected');
-    const hasCheque = kycData.documents?.some(d => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
-    const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
-    
     let count = 0;
     if (hasPan) count++;
     if (hasCheque) count++;
@@ -268,7 +270,7 @@ export default function PartnerKyc() {
 
   // Upload handlers
   const handleUploadPan = async (selectedFile) => {
-    const fileToUpload = (selectedFile && typeof selectedFile !== 'object' ? null : selectedFile) || panFile;
+    const fileToUpload = selectedFile instanceof File ? selectedFile : panFile;
     if (!fileToUpload && !isDocApproved('pan')) return setErrorMsg('Please choose a PAN Card file first.');
     if (!panNumber.trim()) return setErrorMsg('Please enter your 10-digit PAN Card number.');
     setActionLoading(true);
@@ -296,7 +298,7 @@ export default function PartnerKyc() {
   };
 
   const handleUploadCheque = async (selectedFile) => {
-    const fileToUpload = (selectedFile && typeof selectedFile !== 'object' ? null : selectedFile) || chequeFile;
+    const fileToUpload = selectedFile instanceof File ? selectedFile : chequeFile;
     if (!fileToUpload) return setErrorMsg('Please choose a Cancelled Cheque / Bank Proof file first.');
     setActionLoading(true);
     setErrorMsg('');
@@ -810,27 +812,49 @@ export default function PartnerKyc() {
           </div>
 
           <div style={{ marginTop: '16px' }}>
+            {!isBothDocsUploaded && !isVideoApproved() && !isUnderReview && (
+              <div style={{
+                background: isDark ? '#334155' : '#FFFBEB',
+                border: '1px solid #F59E0B',
+                borderRadius: '10px',
+                padding: '10px 12px',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: isDark ? '#FCD34D' : '#92400E',
+                fontSize: '12px',
+                fontWeight: 600
+              }}>
+                <MdLock size={18} style={{ flexShrink: 0 }} />
+                <span>Upload both 1. PAN Card and 2. Bank Proof first to unlock Video Verification.</span>
+              </div>
+            )}
+
             {!isVideoApproved() && !isUnderReview && (
               <button 
                 onClick={startCamera}
+                disabled={!isBothDocsUploaded}
                 style={{
                   width: '100%',
-                  background: '#2563EB',
+                  background: !isBothDocsUploaded ? '#94A3B8' : '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '10px',
                   fontSize: '13px',
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: !isBothDocsUploaded ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px'
                 }}
               >
-                <MdVideocam size={18} />
-                {kycData.video ? 'Re-record Video' : 'Record Video'}
+                {!isBothDocsUploaded ? <MdLock size={18} /> : <MdVideocam size={18} />}
+                {!isBothDocsUploaded 
+                  ? 'Video Locked (Upload PAN & Bank First)' 
+                  : kycData.video ? 'Re-record Video' : 'Record Video'}
               </button>
             )}
           </div>
@@ -988,45 +1012,63 @@ export default function PartnerKyc() {
                     </button>
                   )
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
-                    <button 
-                      onClick={() => { deleteRecording(); startCamera(); }}
-                      style={{
-                        background: 'transparent',
-                        border: `1px solid ${cardBorder}`,
-                        color: textPrimary,
-                        borderRadius: '12px',
-                        padding: isMobile ? '12px 20px' : '10px 20px',
-                        fontSize: isMobile ? '13px' : '14px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        width: isMobile ? '100%' : 'auto'
-                      }}
-                    >
-                      <MdRefresh size={18} /> Record Again
-                    </button>
-                    <button 
-                      onClick={handleUploadVideo}
-                      disabled={actionLoading}
-                      style={{
-                        background: '#10B981',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '12px',
-                        padding: isMobile ? '12px 20px' : '10px 24px',
-                        fontSize: isMobile ? '13px' : '14px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        width: isMobile ? '100%' : 'auto',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {actionLoading ? 'Uploading...' : 'Upload Video'}
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                    <div style={{
+                      background: isDark ? '#0F172A' : '#ECFDF5',
+                      border: '1px solid #10B981',
+                      borderRadius: '10px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: isDark ? '#34D399' : '#047857'
+                    }}>
+                      📹 Video recorded! Confirm your preview above before uploading.
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '8px', width: '100%' }}>
+                      <button 
+                        onClick={() => { deleteRecording(); startCamera(); }}
+                        style={{
+                          background: 'transparent',
+                          border: `1px solid ${cardBorder}`,
+                          color: textPrimary,
+                          borderRadius: '12px',
+                          padding: isMobile ? '12px 20px' : '10px 20px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          width: isMobile ? '100%' : 'auto'
+                        }}
+                      >
+                        <MdRefresh size={18} /> Re-take Video
+                      </button>
+                      <button 
+                        onClick={handleUploadVideo}
+                        disabled={actionLoading}
+                        style={{
+                          background: '#10B981',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: isMobile ? '12px 24px' : '10px 24px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: 800,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          width: isMobile ? '100%' : 'auto',
+                          textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <MdCheckCircle size={18} />
+                        {actionLoading ? 'Uploading...' : 'Confirm & Upload Video'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1073,28 +1115,32 @@ export default function PartnerKyc() {
           boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'
         }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC for Approval</h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: textSecondary, wordBreak: 'break-word' }}>Ensure all three sections show "Uploaded" or "Verified" before clicking submit.</p>
+            <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC Application for Review</h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: isAllUploaded ? '#10B981' : textSecondary, fontWeight: isAllUploaded ? 700 : 400, wordBreak: 'break-word' }}>
+              {isAllUploaded 
+                ? '✅ All 3 mandatory items (PAN, Bank Proof, Video) uploaded! Click submit for Super Admin & Admin review.'
+                : '⚠️ Upload PAN Card, Bank Account Proof, and Video Verification to enable submission.'}
+            </p>
           </div>
           <button 
             onClick={handleSubmitKyc}
-            disabled={actionLoading}
+            disabled={!isAllUploaded || actionLoading}
             style={{
-              background: getProgress() < 100 ? '#94A3B8' : '#2563EB',
+              background: !isAllUploaded ? '#94A3B8' : '#2563EB',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: '12px',
               padding: isMobile ? '14px 20px' : '12px 28px',
               fontSize: isMobile ? '13px' : '14px',
               fontWeight: 800,
-              cursor: actionLoading ? 'not-allowed' : 'pointer',
-              boxShadow: getProgress() < 100 ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
+              cursor: (!isAllUploaded || actionLoading) ? 'not-allowed' : 'pointer',
+              boxShadow: !isAllUploaded ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
               transition: 'all 0.2s',
               width: isMobile ? '100%' : 'auto',
               textAlign: 'center'
             }}
           >
-            {actionLoading ? 'Submitting...' : 'Submit Verification'}
+            {actionLoading ? 'Submitting...' : 'Submit KYC Application'}
           </button>
         </div>
       )}

@@ -243,7 +243,12 @@ export default function PartnerKycScreen({ route, navigation }) {
             </Text>
           </View>
           <Text style={styles.docSub}>Short video reading terms & compliance declaration</Text>
-          <Text style={{ fontSize: 12, color: '#64748B', marginVertical: 8 }}>
+          {!(getDoc('pan') && getDoc('cancelled_cheque')) && !isApproved && !isUnderReview && (
+            <Text style={{ fontSize: 12, color: '#D97706', fontWeight: '700', marginVertical: 6 }}>
+              🔒 Locked: Please upload both PAN Card and Bank Proof first to unlock Video Verification.
+            </Text>
+          )}
+          <Text style={{ fontSize: 12, color: '#64748B', marginVertical: 4 }}>
             Status: {kycData.video ? 'Video declaration recorded.' : 'Video not recorded yet.'}
           </Text>
         </View>

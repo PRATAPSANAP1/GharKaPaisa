@@ -1449,12 +1449,24 @@ const getWholeNetwork = async (req, res, next) => {
   }
 };
 
+const getUploadedFile = (req) => {
+  if (req.file) return req.file;
+  if (Array.isArray(req.files) && req.files.length > 0) return req.files[0];
+  if (req.files && typeof req.files === 'object') {
+    const keys = Object.keys(req.files);
+    for (const k of keys) {
+      if (Array.isArray(req.files[k]) && req.files[k].length > 0) return req.files[k][0];
+    }
+  }
+  return null;
+};
+
 const uploadPan = async (req, res, next) => {
   try {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    const file = req.file || (req.files && req.files[0]);
+    const file = getUploadedFile(req);
     const { pan_number } = req.body;
 
     const { rows: [existing] } = await query(
@@ -1505,7 +1517,7 @@ const uploadCheque = async (req, res, next) => {
     const partnerId = req.partner?.id || req.user.partner_id;
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
-    const file = req.file || (req.files && req.files[0]);
+    const file = getUploadedFile(req);
     if (!file) return error(res, 'File is required', 400);
 
     const { url, key } = await uploadToS3(file.buffer, file.originalname, `kyc/${partnerId}`);
