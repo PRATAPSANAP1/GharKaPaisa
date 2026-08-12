@@ -4037,6 +4037,12 @@ const migrate = async () => {
 
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_by VARCHAR(50) DEFAULT 'punching';
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching';
+
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS public_url VARCHAR(1000);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS partner_url VARCHAR(1000);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS application_url VARCHAR(1000);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS apply_url VARCHAR(1000);
+        ALTER TABLE products ADD COLUMN IF NOT EXISTS redirect_url VARCHAR(1000);
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');

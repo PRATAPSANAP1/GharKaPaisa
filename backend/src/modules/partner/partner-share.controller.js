@@ -151,7 +151,7 @@ const submitShareLead = async (req, res, next) => {
 
       // Get product bank link
       const { rows: [product] } = await query(
-        `SELECT public_url, partner_url, application_url, apply_url, redirect_url, name FROM products WHERE id = $1`,
+        `SELECT * FROM products WHERE id = $1`,
         [shareLinkData.product_id]
       );
 
@@ -183,7 +183,7 @@ const submitShareLead = async (req, res, next) => {
 
     // Get product bank link for redirect
     const { rows: [product] } = await query(
-      `SELECT public_url, partner_url, application_url, apply_url, redirect_url, name FROM products WHERE id = $1`,
+      `SELECT * FROM products WHERE id = $1`,
       [shareLinkData.product_id]
     );
 
