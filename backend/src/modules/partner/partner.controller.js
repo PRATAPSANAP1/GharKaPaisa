@@ -1911,9 +1911,16 @@ const completeTeamOnboarding = async (req, res, next) => {
     }
 
     // 5. Create wallet if missing
-    await client.query(`
-      INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING
-    `, [partnerId]);
+    const { rows: [existingWallet] } = await client.query(
+      `SELECT id FROM partner_wallets WHERE partner_id = $1 LIMIT 1`,
+      [partnerId]
+    );
+    if (!existingWallet) {
+      await client.query(
+        `INSERT INTO partner_wallets (partner_id) VALUES ($1)`,
+        [partnerId]
+      );
+    }
 
     await client.query('COMMIT');
 
