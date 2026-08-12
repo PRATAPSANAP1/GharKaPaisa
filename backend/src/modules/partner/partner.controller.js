@@ -1886,16 +1886,28 @@ const completeTeamOnboarding = async (req, res, next) => {
     if (account_number && bank_name && ifsc_code) {
       const { encrypt } = require('../../utils/helpers/crypto');
       const encryptedAccountNumber = encrypt(account_number);
-      await client.query(`
-        INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (partner_id) DO UPDATE SET
-          bank_name = EXCLUDED.bank_name,
-          account_number = EXCLUDED.account_number,
-          ifsc_code = EXCLUDED.ifsc_code,
-          account_holder_name = EXCLUDED.account_holder_name,
-          updated_at = NOW()
-      `, [partnerId, bank_name, encryptedAccountNumber, ifsc_code.toUpperCase(), account_holder_name || `${first_name} ${last_name}`]);
+      
+      const { rows: [existingBank] } = await client.query(
+        `SELECT id FROM partner_bank_details WHERE partner_id = $1 LIMIT 1`,
+        [partnerId]
+      );
+
+      if (existingBank) {
+        await client.query(`
+          UPDATE partner_bank_details SET
+            bank_name = $1,
+            account_number = $2,
+            ifsc_code = $3,
+            account_holder_name = $4,
+            updated_at = NOW()
+          WHERE id = $5
+        `, [bank_name, encryptedAccountNumber, ifsc_code.toUpperCase(), account_holder_name || `${first_name} ${last_name}`, existingBank.id]);
+      } else {
+        await client.query(`
+          INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [partnerId, bank_name, encryptedAccountNumber, ifsc_code.toUpperCase(), account_holder_name || `${first_name} ${last_name}`]);
+      }
     }
 
     // 5. Create wallet if missing

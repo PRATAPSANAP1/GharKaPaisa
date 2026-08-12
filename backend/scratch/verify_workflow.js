@@ -1,10 +1,10 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../../backend/.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const { query, getClient } = require('../../../backend/src/config/database');
-const { calculatePartnerCommission } = require('../../../backend/src/modules/partner/commission.service');
-const { creditHold, releaseHold, syncWalletBalance } = require('../../../backend/src/modules/wallet/service');
-const { processTeamOverrideCommission } = require('../../../backend/src/modules/team/team.service');
+const { query, getClient } = require('../src/config/database');
+const { calculatePartnerCommission } = require('../src/modules/partner/commission.service');
+const { creditHold, releaseHold, syncWalletBalance } = require('../src/modules/wallet/service');
+const { processTeamOverrideCommission } = require('../src/modules/team/team.service');
 
 const colors = {
   reset: "\x1b[0m",
@@ -246,9 +246,11 @@ async function runEndToEndVerification() {
     console.log(`${colors.bold}${colors.green} 🎉 VERIFICATION COMPLETE: ALL 5 FLOWCHART PHASES VERIFIED SUCCESSFULLY! 🎉 ${colors.reset}`);
     console.log(`${colors.bold}${colors.green}=========================================================================${colors.reset}\n`);
 
+    process.exit(0);
   } catch (err) {
     console.error(`\n${colors.red}❌ VERIFICATION ERROR: ${err.message}${colors.reset}`);
     console.error(err);
+    process.exit(1);
   }
 }
 
