@@ -722,9 +722,9 @@ const listPartnerCustomers = async (req, res, next) => {
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', COALESCE(a.id, l.id),
+              'id', COALESCE(a.id::text, l.id::text),
               'app_number', COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))),
-              'status', COALESCE(a.status, l.status),
+              'status', COALESCE(a.status::text, l.status::text),
               'product_name', COALESCE(pa.name, pl.name),
               'bank_name', COALESCE(ba.name, bl.name),
               'bank_code', COALESCE(ba.short_code, bl.short_code),
