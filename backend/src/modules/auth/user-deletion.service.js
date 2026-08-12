@@ -12,36 +12,61 @@ const softDeleteUserAccount = async (inputId) => {
   try {
     await client.query('BEGIN');
 
+    const safeQuery = async (sql, params = []) => {
+      try {
+        await client.query('SAVEPOINT sp_sq');
+        const res = await client.query(sql, params);
+        await client.query('RELEASE SAVEPOINT sp_sq');
+        return res;
+      } catch (err) {
+        logger.warn(`Savepoint query skipped: ${sql}`, err.message);
+        await client.query('ROLLBACK TO SAVEPOINT sp_sq');
+        return { rows: [] };
+      }
+    };
+
+    const safeExec = async (sql, params = []) => {
+      try {
+        await client.query('SAVEPOINT sp_se');
+        await client.query(sql, params);
+        await client.query('RELEASE SAVEPOINT sp_se');
+      } catch (err) {
+        logger.warn(`Savepoint statement skipped: ${sql}`, err.message);
+        await client.query('ROLLBACK TO SAVEPOINT sp_se');
+      }
+    };
+
     let actualUserId = null;
     let actualPartnerId = null;
 
     // 1. Search partner_team_relationships / user / partner_profile
-    const { rows: tmRows } = await client.query(
-      `SELECT user_id, partner_id FROM partner_team_relationships WHERE id::text = $1 OR team_member_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
+    const { rows: tmRows } = await safeQuery(
+      `SELECT child_partner_id, parent_partner_id FROM partner_team_relationships WHERE id::text = $1 OR child_partner_id::text = $1 OR parent_partner_id::text = $1 LIMIT 1`,
       [inputId]
-    ).catch(() => ({ rows: [] }));
+    );
     const tmDirect = tmRows[0];
 
     if (tmDirect) {
-      actualUserId = tmDirect.user_id;
-      actualPartnerId = tmDirect.partner_id;
+      actualPartnerId = tmDirect.child_partner_id || tmDirect.parent_partner_id;
+      const { rows: [p] } = await safeQuery(`SELECT user_id FROM partner_profiles WHERE id::text = $1`, [actualPartnerId]);
+      actualUserId = p?.user_id || null;
     }
 
     if (!actualUserId) {
-      const { rows: [userDirect] } = await client.query(
+      const { rows: [userDirect] } = await safeQuery(
         `SELECT id, email, role, mobile FROM users WHERE id::text = $1`,
         [inputId]
       );
 
       if (userDirect) {
         actualUserId = userDirect.id;
-        const { rows: [partner] } = await client.query(
+        const { rows: [partner] } = await safeQuery(
           `SELECT id FROM partner_profiles WHERE user_id::text = $1 OR id::text = $1 LIMIT 1`,
           [actualUserId]
         );
         actualPartnerId = partner?.id || null;
       } else {
-        const { rows: [partner] } = await client.query(
+        const { rows: [partner] } = await safeQuery(
           `SELECT id, user_id FROM partner_profiles WHERE id::text = $1 LIMIT 1`,
           [inputId]
         );
@@ -57,48 +82,52 @@ const softDeleteUserAccount = async (inputId) => {
     }
 
     // 2. Check and deactivate child/team members
-    if (actualPartnerId || actualUserId) {
-      await client.query(
+    if (actualPartnerId) {
+      await safeExec(
         `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE parent_partner_id::text = $1`,
-        [actualPartnerId || '']
-      ).catch(() => {});
+        [actualPartnerId]
+      );
     }
 
-    // 3. Freeze pending withdrawal requests for security
+    // 3. Freeze pending withdrawal requests
     if (actualPartnerId) {
-      await client.query(
+      await safeExec(
+        `UPDATE wallet_withdrawals SET status = 'rejected', admin_note = 'Account suspended', updated_at = NOW() WHERE partner_id::text = $1 AND status = 'pending'`,
+        [actualPartnerId]
+      );
+      await safeExec(
         `UPDATE withdrawal_requests SET status = 'rejected', admin_notes = 'Account suspended' WHERE partner_id::text = $1 AND status = 'pending'`,
         [actualPartnerId]
-      ).catch(() => {});
+      );
     }
 
     // 4. Deactivate wallets
     if (actualPartnerId || actualUserId) {
-      await client.query(
+      await safeExec(
         `UPDATE partner_wallets SET status = 'inactive', updated_at = NOW() WHERE partner_id::text = $1 OR user_id::text = $2`,
         [actualPartnerId || '', actualUserId || '']
-      ).catch(() => {});
-      await client.query(
+      );
+      await safeExec(
         `UPDATE wallets SET status = 'inactive', updated_at = NOW() WHERE partner_id::text = $1 OR user_id::text = $2`,
         [actualPartnerId || '', actualUserId || '']
-      ).catch(() => {});
+      );
     }
 
     // 5. Deactivate partner profile
     if (actualPartnerId) {
-      await client.query(
+      await safeExec(
         `UPDATE partner_profiles SET status = 'suspended', updated_at = NOW() WHERE id::text = $1`,
         [actualPartnerId]
-      ).catch(() => {});
+      );
     }
 
     // 6. Deactivate user account & terminate active tokens
     if (actualUserId) {
-      await client.query(
+      await safeExec(
         `UPDATE users SET status = 'suspended', is_active = FALSE, updated_at = NOW() WHERE id::text = $1`,
         [actualUserId]
       );
-      await client.query(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]).catch(() => {});
+      await safeExec(`DELETE FROM refresh_tokens WHERE user_id::text = $1`, [actualUserId]);
     }
 
     await client.query('COMMIT');
@@ -125,7 +154,19 @@ const deleteUserAccount = async (inputId) => {
   try {
     await client.query('BEGIN');
 
-    // Helper for executing safe queries using PostgreSQL SAVEPOINTs inside transaction
+    const safeQuery = async (sql, params = []) => {
+      try {
+        await client.query('SAVEPOINT sp_q');
+        const res = await client.query(sql, params);
+        await client.query('RELEASE SAVEPOINT sp_q');
+        return res;
+      } catch (err) {
+        logger.warn(`Savepoint query skipped: ${sql}`, err.message);
+        await client.query('ROLLBACK TO SAVEPOINT sp_q');
+        return { rows: [] };
+      }
+    };
+
     const safeDelete = async (sql, params = []) => {
       try {
         await client.query('SAVEPOINT sp_del');
@@ -143,21 +184,22 @@ const deleteUserAccount = async (inputId) => {
     let actualPartnerId = null;
     let userRecord = null;
 
-    const { rows: tmRows } = await client.query(
-      `SELECT * FROM partner_team_relationships WHERE id::text = $1 OR team_member_id::text = $1 OR partner_id::text = $1 LIMIT 1`,
+    const { rows: tmRows } = await safeQuery(
+      `SELECT * FROM partner_team_relationships WHERE id::text = $1 OR child_partner_id::text = $1 OR parent_partner_id::text = $1 LIMIT 1`,
       [inputId]
-    ).catch(() => ({ rows: [] }));
+    );
     const tmDirect = tmRows[0];
 
     if (tmDirect) {
       teamMemberRecord = tmDirect;
-      actualUserId = tmDirect.user_id || null;
-      actualPartnerId = tmDirect.partner_id || null;
+      actualPartnerId = tmDirect.child_partner_id || tmDirect.parent_partner_id;
+      const { rows: [p] } = await safeQuery(`SELECT user_id FROM partner_profiles WHERE id::text = $1`, [actualPartnerId]);
+      actualUserId = p?.user_id || null;
     }
 
     // ── 2. FIND PARTNER_PROFILE & USER ──────────────────────────────────────
     if (!actualUserId || !actualPartnerId) {
-      const { rows: [userDirect] } = await client.query(
+      const { rows: [userDirect] } = await safeQuery(
         `SELECT id, email, role, mobile FROM users WHERE id::text = $1`, 
         [inputId]
       );
@@ -165,13 +207,13 @@ const deleteUserAccount = async (inputId) => {
       if (userDirect) {
         userRecord = userDirect;
         actualUserId = userDirect.id;
-        const { rows: [partner] } = await client.query(
+        const { rows: [partner] } = await safeQuery(
           `SELECT id FROM partner_profiles WHERE user_id::text = $1 OR id::text = $1 LIMIT 1`,
           [actualUserId]
         );
         actualPartnerId = partner?.id || actualPartnerId;
       } else {
-        const { rows: [partner] } = await client.query(
+        const { rows: [partner] } = await safeQuery(
           `SELECT id, user_id FROM partner_profiles WHERE id::text = $1 OR user_id::text = $1 LIMIT 1`,
           [inputId]
         );
@@ -183,7 +225,7 @@ const deleteUserAccount = async (inputId) => {
     }
 
     if (actualUserId && !userRecord) {
-      const { rows: [u] } = await client.query(
+      const { rows: [u] } = await safeQuery(
         `SELECT id, email, role, mobile FROM users WHERE id::text = $1`,
         [actualUserId]
       );
@@ -201,27 +243,12 @@ const deleteUserAccount = async (inputId) => {
         [actualPartnerId]
       );
       await safeDelete(
-        `DELETE FROM partner_team_relationships WHERE partner_id::text = $1 OR team_member_id::text = $1 OR id::text = $2`,
+        `DELETE FROM partner_team_relationships WHERE parent_partner_id::text = $1 OR child_partner_id::text = $1 OR id::text = $2`,
         [actualPartnerId, inputId]
       );
     }
 
-
-    // ── 4. FIND PARTNER_WALLET ───────────────────────────────────────────────
-    let walletIds = [];
-    if (actualPartnerId || actualUserId) {
-      const { rows: pwRows } = await client.query(
-        `SELECT id FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2`,
-        [actualPartnerId || '', actualUserId || '']
-      );
-      const { rows: wRows } = await client.query(
-        `SELECT id FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2`,
-        [actualPartnerId || '', actualUserId || '']
-      );
-      walletIds = [...pwRows.map(r => r.id), ...wRows.map(r => r.id)];
-    }
-
-    // ── 5. HANDLE WITHDRAWALS & WALLET LEDGER ─────────────────────────────────
+    // ── 4. HANDLE WITHDRAWALS & WALLET LEDGER ─────────────────────────────────
     if (actualPartnerId || actualUserId) {
       await safeDelete(
         `DELETE FROM wallet_audit_logs WHERE wallet_id::text IN (SELECT id::text FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2) OR wallet_id::text IN (SELECT id::text FROM wallets WHERE partner_id::text = $1 OR user_id::text = $2)`,
@@ -254,7 +281,7 @@ const deleteUserAccount = async (inputId) => {
     // Clean up media, KYC, bank details, leads & applications
     if (actualPartnerId || actualUserId) {
       await safeDelete(`DELETE FROM lead_followups WHERE lead_id::text IN (SELECT id::text FROM leads WHERE partner_id::text = $1)`, [actualPartnerId || '']);
-      await safeDelete(`DELETE FROM leads WHERE partner_id::text = $1`, [actualPartnerId || '']);
+      await safeDelete(`DELETE FROM leads WHERE partner_id::text = $1 OR created_by::text = $2`, [actualPartnerId || '', actualUserId || '']);
       await safeDelete(`DELETE FROM partner_videos WHERE partner_id::text = $1`, [actualPartnerId || '']);
       await safeDelete(`DELETE FROM kyc_documents WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId || '', actualUserId || '']);
       await safeDelete(`DELETE FROM partner_bank_details WHERE partner_id::text = $1 OR user_id::text = $2`, [actualPartnerId || '', actualUserId || '']);
@@ -278,7 +305,7 @@ const deleteUserAccount = async (inputId) => {
       }
     }
 
-    // ── 6. DELETE WALLET ──────────────────────────────────────────────────────
+    // ── 5. DELETE WALLET ──────────────────────────────────────────────────────
     if (actualPartnerId || actualUserId) {
       await safeDelete(
         `DELETE FROM partner_wallets WHERE partner_id::text = $1 OR user_id::text = $2`,
@@ -290,24 +317,17 @@ const deleteUserAccount = async (inputId) => {
       );
     }
 
-    // ── 7. DELETE PARTNER_PROFILE ─────────────────────────────────────────────
+    // ── 6. DELETE PARTNER_PROFILE ─────────────────────────────────────────────
     if (actualPartnerId || actualUserId) {
-      await client.query(
+      await safeDelete(
         `DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`,
         [actualPartnerId || '', actualUserId || '']
-      ).catch(async () => {
-        await safeDelete(
-          `DELETE FROM partner_profiles WHERE id::text = $1 OR user_id::text = $2`,
-          [actualPartnerId || '', actualUserId || '']
-        );
-      });
+      );
     }
 
-    // ── 8. DELETE USERS ───────────────────────────────────────────────────────
+    // ── 7. DELETE USERS ───────────────────────────────────────────────────────
     if (actualUserId) {
-      await client.query(`DELETE FROM users WHERE id::text = $1`, [actualUserId]).catch(async () => {
-        await safeDelete(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
-      });
+      await safeDelete(`DELETE FROM users WHERE id::text = $1`, [actualUserId]);
     }
 
     await client.query('COMMIT');
