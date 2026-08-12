@@ -35,7 +35,59 @@ export default function PartnerKyc() {
   const { isMobile, isTablet } = useIsMobile();
 
   const user = useAuthStore((state) => state.user);
+  const profile = usePartnerStore((state) => state.profile);
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
+
+  const userName = profile?.first_name 
+    ? `${profile.first_name} ${profile.last_name || ''}`.trim()
+    : (user?.full_name || user?.name || 'Partner Member');
+
+  const userCode = profile?.partner_code || user?.partner_code || 'GKP-PARTNER';
+
+  const [selectedLanguage, setSelectedLanguage] = useState('hi');
+
+  const scriptTranslations = {
+    en: {
+      label: 'English',
+      flag: '🇬🇧',
+      text: (name, code) => `"I, ${name} (Partner Code: ${code}), declare that all documents and information submitted by me on GharKaPaisa are true and correct. I accept all terms and conditions."`
+    },
+    hi: {
+      label: 'हिंदी (Hindi)',
+      flag: '🇮🇳',
+      text: (name, code) => `"मैं, ${name} (पार्टनर कोड: ${code}), यह घोषणा करता/करती हूँ कि घर का पैसा पर मेरे द्वारा प्रस्तुत सभी दस्तावेज और जानकारी सत्य और सही हैं। मैं सभी नियमों और शर्तों को स्वीकार करता/करती हूँ।"`
+    },
+    mr: {
+      label: 'मराठी (Marathi)',
+      flag: '🚩',
+      text: (name, code) => `"मी, ${name} (पार्टनर कोड: ${code}), जाहीर करतो/करते की घर का पैसा वर माझ्याद्वारे सादर केलेले सर्व दस्तऐवज आणि माहिती खरी आणि अचूक आहे. मी सर्व अटी आणि शर्ती मान्य करतो/करते."`
+    },
+    gu: {
+      label: 'ગુજરાતી (Gujarati)',
+      flag: '🌾',
+      text: (name, code) => `"હું, ${name} (પાર્ટનર કોડ: ${code}), જાહેરાત કરું છું કે ઘર કા પૈસા પર મારા દ્વારા સબમિટ કરવામાં આવેલા તમામ દસ્તાવેજો અને માહિતી સાચી અને સાચી છે. હું તમામ નિયમો અને શરતો સ્વીકારું છું."`
+    },
+    ta: {
+      label: 'தமிழ் (Tamil)',
+      flag: '🏛️',
+      text: (name, code) => `"நான், ${name} (பார்ட்னர் கோட்: ${code}), GharKaPaisa இல் என்னால் சமர்ப்பிக்கப்பட்ட அனைத்து ஆவணங்களும் தகவல்களும் உண்மையானவை மற்றும் சரியானவை என்று அறிவிக்கிறேன்."`
+    },
+    te: {
+      label: 'తెలుగు (Telugu)',
+      flag: '🛕',
+      text: (name, code) => `"నేను, ${name} (పార్ట్నర్ కోడ్: ${code}), GharKaPaisa లో నేను సమర్పించిన అన్ని పత్రాలు మరియు సమాచారం నిజమైనవి మరియు సరైనవని ప్రకటిస్తున్నాను."`
+    },
+    kn: {
+      label: 'ಕನ್ನಡ (Kannada)',
+      flag: '🐘',
+      text: (name, code) => `"ನಾನು, ${name} (ಪಾಲುದಾರ ಕೋಡ್: ${code}), GharKaPaisa ನಲ್ಲಿ ನಾನು ಸಲ್ಲಿಸಿದ ಎಲ್ಲಾ ದಾಖಲೆಗಳು ಮತ್ತು ಮಾಹಿತಿಯು ಸತ್ಯ ಮತ್ತು ಸರಿಯಾಗಿದೆ ಎಂದು ಘೋಷಿಸುತ್ತೇನೆ."`
+    },
+    bn: {
+      label: 'বাংলা (Bengali)',
+      flag: '🎨',
+      text: (name, code) => `"আমি, ${name} (পার্টনার কোড: ${code}), ঘোষণা করছি যে ঘর কা পয়সায় আমার জমা দেওয়া সমস্ত নথি ও তথ্য সত্য এবং সঠিক।"`
+    }
+  };
 
   // KYC details fetched from our backend
   const [kycData, setKycData] = useState({
@@ -173,6 +225,44 @@ export default function PartnerKyc() {
   const stopCamera = () => {
     stopMediaStream();
     setCameraActive(false);
+  };
+
+  const startRecording = () => {
+    if (!streamRef.current) return;
+    videoChunksRef.current = [];
+    elapsedRef.current = 0;
+    const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
+    
+    try {
+      const recorder = new MediaRecorder(streamRef.current, { mimeType });
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          videoChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(videoChunksRef.current, { type: mimeType });
+        setVideoBlob(blob);
+        setVideoPreviewUrl(URL.createObjectURL(blob));
+      };
+
+      recorder.start(10);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        elapsedRef.current += 1;
+        setRecordingTime(elapsedRef.current);
+        if (elapsedRef.current >= 60) {
+          stopRecording();
+        }
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Failed to start MediaRecorder.');
+    }
   };
 
   const stopRecording = () => {
@@ -827,16 +917,43 @@ export default function PartnerKyc() {
               </button>
             </div>
 
-            {/* Declaration Script */}
+            {/* Declaration Script with Language Selector */}
             <div style={{
               background: isDark ? '#0F172A' : '#EFF6FF',
               borderLeft: '4px solid #2563EB',
               padding: isMobile ? '12px' : '16px',
               borderRadius: '8px'
             }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Please read this statement aloud:</span>
-              <p style={{ margin: 0, fontSize: isMobile ? '12.5px' : '14px', fontWeight: 600, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
-                "I confirm that I have read and understood all the Terms & Conditions of GharKaPaisa. I declare that all the information submitted by me is true and correct. I understand that providing false information may lead to account suspension."
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>
+                  📜 Statement to read aloud:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: textSecondary }}>Language:</span>
+                  <select 
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: `1px solid ${cardBorder}`,
+                      background: isDark ? '#1E293B' : '#FFFFFF',
+                      color: textPrimary,
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {Object.entries(scriptTranslations).map(([key, lang]) => (
+                      <option key={key} value={key}>
+                        {lang.flag} {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p style={{ margin: 0, fontSize: isMobile ? '13px' : '14.5px', fontWeight: 700, lineHeight: 1.6, color: textPrimary, wordBreak: 'break-word' }}>
+                {scriptTranslations[selectedLanguage].text(userName, userCode)}
               </p>
             </div>
 
