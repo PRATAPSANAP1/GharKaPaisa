@@ -307,20 +307,44 @@ const updateAnnouncement = async (req, res, next) => {
     const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1`, [id]);
     if (!existing) return notFound(res);
 
-    const { rows: [item] } = await query(`
-      UPDATE announcements SET
-        title = COALESCE($1, title),
-        description = COALESCE($2, description),
-        banner_image = COALESCE($3, banner_image),
-        target_role = COALESCE($4, target_role),
-        priority = COALESCE($5, priority),
-        start_date = COALESCE($6, start_date),
-        end_date = COALESCE($7, end_date),
-        redirect_url = COALESCE($8, redirect_url),
-        status = COALESCE($9, status),
-        updated_at = NOW()
-      WHERE id = $10 RETURNING *
-    `, [title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, id]);
+    let item;
+    try {
+      const { rows } = await query(`
+        UPDATE announcements SET
+          title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          banner_image = COALESCE($3, banner_image),
+          target_role = COALESCE($4, target_role),
+          priority = COALESCE($5, priority),
+          start_date = COALESCE($6, start_date),
+          end_date = COALESCE($7, end_date),
+          redirect_url = COALESCE($8, redirect_url),
+          status = COALESCE($9, status),
+          updated_at = NOW()
+        WHERE id = $10 RETURNING *
+      `, [title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, id]);
+      item = rows[0];
+    } catch (updateErr) {
+      if (updateErr.code === '42703') { // column updated_at does not exist
+        await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {});
+        const { rows } = await query(`
+          UPDATE announcements SET
+            title = COALESCE($1, title),
+            description = COALESCE($2, description),
+            banner_image = COALESCE($3, banner_image),
+            target_role = COALESCE($4, target_role),
+            priority = COALESCE($5, priority),
+            start_date = COALESCE($6, start_date),
+            end_date = COALESCE($7, end_date),
+            redirect_url = COALESCE($8, redirect_url),
+            status = COALESCE($9, status)
+          WHERE id = $10 RETURNING *
+        `, [title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, id]);
+        item = rows[0];
+      } else {
+        throw updateErr;
+      }
+    }
 
     if (status === 'publish') {
       broadcastLiveUpdate({ type: 'announcement', data: item });

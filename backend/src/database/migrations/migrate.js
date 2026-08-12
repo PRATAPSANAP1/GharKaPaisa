@@ -1646,10 +1646,11 @@ const migrate = async () => {
         start_date DATE NULL,
         end_date DATE NULL,
         redirect_url VARCHAR(500) NULL,
-        status VARCHAR(20) DEFAULT 'draft',
         created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 4. Templates
