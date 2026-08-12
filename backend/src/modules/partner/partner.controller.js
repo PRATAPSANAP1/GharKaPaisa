@@ -1571,22 +1571,30 @@ const submitKyc = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
 
     const { rows: [pan] } = await query(
-      `SELECT 1 FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan'`,
+      `SELECT verification_status FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'pan' ORDER BY uploaded_at DESC LIMIT 1`,
       [partnerId]
     );
 
     const { rows: [cheque] } = await query(
-      `SELECT 1 FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'cancelled_cheque'`,
+      `SELECT verification_status FROM kyc_documents WHERE partner_id = $1 AND doc_type = 'cancelled_cheque' ORDER BY uploaded_at DESC LIMIT 1`,
       [partnerId]
     );
 
     const { rows: [video] } = await query(
-      `SELECT 1 FROM partner_videos WHERE partner_id = $1`,
+      `SELECT verification_status FROM partner_videos WHERE partner_id = $1 ORDER BY uploaded_at DESC LIMIT 1`,
       [partnerId]
     );
 
     if (!pan || !cheque || !video) {
-      return error(res, 'Cannot submit KYC. Please upload all required documents: PAN Card, Cancelled Cheque, and Verification Video.', 400);
+      return error(res, 'Cannot submit KYC. Please upload all required documents: PAN Card, Bank Account Proof (Cancelled Cheque), and Verification Video.', 400);
+    }
+
+    if (pan.verification_status === 'rejected' || cheque.verification_status === 'rejected' || video.verification_status === 'rejected') {
+      const rejectedItems = [];
+      if (pan.verification_status === 'rejected') rejectedItems.push('PAN Card');
+      if (cheque.verification_status === 'rejected') rejectedItems.push('Bank Account Proof');
+      if (video.verification_status === 'rejected') rejectedItems.push('Verification Video');
+      return error(res, `Cannot submit KYC. The following item(s) are marked as rejected and must be re-uploaded: ${rejectedItems.join(', ')}.`, 400);
     }
 
     await query(`

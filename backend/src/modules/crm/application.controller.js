@@ -55,6 +55,26 @@ const submitApplication = async (req, res, next) => {
     `, [PartnerId]);
     const parentPartnerId = partnerProfile ? partnerProfile.parent_partner_id : null;
 
+    // 30-Day Duplicate Check
+    const { rows: duplicateApps } = await client.query(`
+      SELECT app_number, status, created_at
+      FROM applications
+      WHERE product_id = $1
+        AND customer_id IN (SELECT id FROM customers WHERE mobile = $2)
+        AND created_at >= NOW() - INTERVAL '30 days'
+        AND status NOT IN ('rejected', 'cancelled')
+      LIMIT 1
+    `, [product_id, customer.mobile]);
+
+    if (duplicateApps.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_APPLICATION',
+        message: `An active application (${duplicateApps[0].app_number}) already exists for this mobile number and product within the last 30 days.`
+      });
+    }
+
     // Upsert customer
     let customerId;
     const { rows: [existingCust] } = await client.query(
@@ -77,6 +97,22 @@ const submitApplication = async (req, res, next) => {
       customerId = newCust.id;
     }
 
+    // Create or link Lead record
+    let leadId = req.body.lead_id;
+    if (!leadId) {
+      const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+      const { rows: [newLead] } = await client.query(`
+        INSERT INTO leads (
+          lead_number, partner_id, parent_partner_id, created_by, customer_id,
+          product_id, customer_name, mobile, city, status, process_type,
+          otp_verified, source, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'confirmed', $10, TRUE, 'partner', 'submitted')
+        RETURNING id
+      `, [leadNum, PartnerId, parentPartnerId, req.user.id, customerId, product_id, customer.full_name, customer.mobile, customer.city || null, req.body.process_type || 'lead_punching']);
+      leadId = newLead.id;
+    }
+
     // Calculate expected commission
     const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
 
@@ -86,15 +122,18 @@ const submitApplication = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    // Create application
+    // Create application with lead_id link
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, submitted_at,
+        (app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, process_type, submitted_at,
          status_history)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'submitted',NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$11::text)))
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'submitted',$12,NOW(),
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)))
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, PartnerId, parentPartnerId, product.bank_id, req.user.id, loan_amount, commission, notes, req.user.id.toString()]);
+    `, [appNumber, leadId, customerId, product_id, PartnerId, parentPartnerId, product.bank_id, req.user.id, loan_amount, commission, notes, req.body.process_type || 'lead_punching', req.user.id.toString()]);
+
+    // Link application_id on lead record
+    await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, leadId]);
 
     // Initial timeline log
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Application created inside portal.', req.user.id);
