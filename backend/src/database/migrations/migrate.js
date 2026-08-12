@@ -4031,6 +4031,12 @@ const migrate = async () => {
         WHERE status NOT IN ('rejected', 'cancelled');
 
         ALTER TABLE banks ALTER COLUMN short_code TYPE VARCHAR(100);
+
+        ALTER TABLE leads ADD COLUMN IF NOT EXISTS process_by VARCHAR(50) DEFAULT 'punching';
+        ALTER TABLE leads ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching';
+
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_by VARCHAR(50) DEFAULT 'punching';
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching';
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');

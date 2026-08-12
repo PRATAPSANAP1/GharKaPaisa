@@ -304,10 +304,10 @@ const createLead = async (req, res, next) => {
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
           lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type,
+          product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_sent', 'linked_share', TRUE, $10, $11, 'created')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_sent', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -327,6 +327,7 @@ const createLead = async (req, res, next) => {
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'linked_share',
+        process_by: 'customer_self',
         otp_required: false,
         share_url: shareUrl,
         whatsapp_url: whatsappUrl
@@ -339,10 +340,10 @@ const createLead = async (req, res, next) => {
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
           lead_number, partner_id, parent_partner_id, created_by, customer_id,
-          product_id, customer_name, mobile, city, status, process_type,
+          product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', 'direct_bank', TRUE, $10, $11, 'bank_redirected')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -357,6 +358,7 @@ const createLead = async (req, res, next) => {
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'direct_bank',
+        process_by: 'partner_self',
         otp_required: false,
         bank_url: bankUrl
       }, 'Direct bank tracking initialized successfully.');
@@ -369,10 +371,10 @@ const createLead = async (req, res, next) => {
     const { rows: [lead] } = await query(`
       INSERT INTO leads (
         lead_number, partner_id, parent_partner_id, created_by, customer_id,
-        product_id, customer_name, mobile, city, status, process_type,
+        product_id, customer_name, mobile, city, status, process_type, process_by,
         otp_code, otp_expires_at, otp_verified, source, priority, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', $10, $11, FALSE, $12, $13, 'created')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', 'punching', $10, $11, FALSE, $12, $13, 'created')
       RETURNING *
     `, [
       leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -556,16 +558,18 @@ const verifyLeadOtp = async (req, res, next) => {
       await client.query(`UPDATE leads SET customer_id = $1 WHERE id = $2`, [targetCustomerId, id]);
     }
 
+    const processByRoute = lead.process_by || (lead.process_type === 'linked_share' ? 'customer_self' : (lead.process_type === 'direct_bank' ? 'partner_self' : 'punching'));
+
     const { rows: [app] } = await client.query(`
       INSERT INTO applications (
         app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id,
-        submitted_by, status, process_type, commission_amount, commission_status
+        submitted_by, status, process_type, process_by, commission_amount, commission_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
       RETURNING *
     `, [
       appNumber, lead.id, targetCustomerId, lead.product_id, lead.partner_id, lead.parent_partner_id,
-      lead.created_by, initialStatus, lead.process_type, product?.commission_value || 0
+      lead.created_by, initialStatus, lead.process_type || 'lead_punching', processByRoute, product?.commission_value || 0
     ]);
 
     // 5. Generate Process-Specific Metadata Response

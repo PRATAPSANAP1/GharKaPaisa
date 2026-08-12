@@ -297,27 +297,46 @@ export default function ManageWallet() {
                           </td>
                           {w.status === 'pending' && (
                             <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button
                                   disabled={actionLoading}
                                   onClick={async () => {
-                                    const utr = prompt('Enter UTR Number to finalize transfer:');
+                                    if (!window.confirm(`Initiate automated Razorpay bank transfer of ₹${w.amount} to ${w.first_name}?`)) return;
+                                    setActionLoading(true);
+                                    try {
+                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer' });
+                                      alert('Razorpay bank payout initiated successfully!');
+                                      loadWithdrawals();
+                                    } catch (e) {
+                                      alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
+                                    } finally {
+                                      setActionLoading(false);
+                                    }
+                                  }}
+                                  style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                >
+                                  ⚡ Pay via Razorpay
+                                </button>
+                                <button
+                                  disabled={actionLoading}
+                                  onClick={async () => {
+                                    const utr = prompt('Enter UTR Number to mark as manually paid:');
                                     if (utr === null) return;
                                     if (!utr.trim()) return alert('UTR number is required');
                                     setActionLoading(true);
                                     try {
                                       await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
-                                      alert('Withdrawal settled successfully!');
+                                      alert('Withdrawal settled manually!');
                                       loadWithdrawals();
                                     } catch (e) {
-                                      alert(e.response?.data?.message || 'Failed to process settlement');
+                                      alert(e.response?.data?.message || 'Failed to process manual settlement');
                                     } finally {
                                       setActionLoading(false);
                                     }
                                   }}
-                                  style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '11px', background: C.green }}
+                                  style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.green }}
                                 >
-                                  Settle
+                                  Mark Paid (UTR)
                                 </button>
                                 <button
                                   disabled={actionLoading}
@@ -336,7 +355,7 @@ export default function ManageWallet() {
                                       setActionLoading(false);
                                     }
                                   }}
-                                  style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '11px', borderColor: C.red, color: C.red }}
+                                  style={{ ...S.btn('outline'), padding: '6px 10px', fontSize: '11px', borderColor: C.red, color: C.red }}
                                 >
                                   Reject
                                 </button>

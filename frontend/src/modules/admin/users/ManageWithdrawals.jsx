@@ -212,10 +212,29 @@ export default function ManageWithdrawals() {
                           </button>
                           {status === 'pending' && (
                             <>
-                              <button onClick={() => handleOpenProcess(req, "approve")} style={{ ...S.btn('primary'), background: C.green, fontSize: "12px", padding: "6px 10px" }}>
-                                Approve
+                              <button 
+                                disabled={actionLoading}
+                                onClick={async () => {
+                                  if (!window.confirm(`Initiate automated Razorpay bank payout of ₹${net.toFixed(2)} to ${req.first_name}?`)) return;
+                                  setActionLoading(true);
+                                  try {
+                                    await api.patch(`/wallet/withdrawals/${req.id}/process`, { action: 'transfer' });
+                                    alert('Razorpay bank payout initiated successfully!');
+                                    fetchWithdrawals();
+                                  } catch (e) {
+                                    alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }} 
+                                style={{ ...S.btn('primary'), background: C.teal, fontSize: "11px", padding: "6px 8px" }}
+                              >
+                                ⚡ Razorpay
                               </button>
-                              <button onClick={() => handleOpenProcess(req, "reject")} style={{ background: "transparent", border: `1px solid ${C.red}`, color: C.red, borderRadius: "6px", fontSize: "12px", fontWeight: 700, padding: "6px 10px" }}>
+                              <button onClick={() => handleOpenProcess(req, "approve")} style={{ ...S.btn('primary'), background: C.green, fontSize: "11px", padding: "6px 8px" }}>
+                                Manual UTR
+                              </button>
+                              <button onClick={() => handleOpenProcess(req, "reject")} style={{ background: "transparent", border: `1px solid ${C.red}`, color: C.red, borderRadius: "6px", fontSize: "11px", fontWeight: 700, padding: "6px 8px" }}>
                                 Reject
                               </button>
                             </>
