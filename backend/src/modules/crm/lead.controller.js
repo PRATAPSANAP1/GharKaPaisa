@@ -143,7 +143,7 @@ const get360LeadDetails = async (req, res, next) => {
       query(`SELECT * FROM bank_assignments WHERE lead_id = $1 ORDER BY assigned_at DESC`, [id]),
       query(`SELECT lc.*, u.full_name as verifier_name FROM lead_checklist lc LEFT JOIN users u ON u.id = lc.verified_by WHERE lc.lead_id = $1 ORDER BY lc.item ASC`, [id]),
       query(`SELECT * FROM lead_sla WHERE lead_id = $1 ORDER BY started_at DESC`, [id]),
-      query(`SELECT * FROM commission_ledger WHERE application_id = $1`, [id]).catch(() => ({ rows: [] }))
+      query(`SELECT * FROM commission_ledger WHERE lead_id = $1 OR application_id = $1`, [id]).catch(() => ({ rows: [] }))
     ]);
 
     await logLeadActivity(null, id, 'view_360_lead', req.user.id, 'lead', id, req);

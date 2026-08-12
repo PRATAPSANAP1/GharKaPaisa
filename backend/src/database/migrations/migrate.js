@@ -4009,6 +4009,19 @@ const migrate = async () => {
         ADD COLUMN IF NOT EXISTS team_member_share_value DECIMAL(12,2) DEFAULT 0
       `);
 
+      // Task 20: Ensure commission_ledger supports both lead_id and application_id
+      await query(`
+        ALTER TABLE commission_ledger
+        ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+        ADD COLUMN IF NOT EXISTS product_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS transaction_amount DECIMAL(15,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS commission_rate DECIMAL(15,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS commission_earned DECIMAL(15,2) DEFAULT 0;
+
+        ALTER TABLE commission_ledger ALTER COLUMN application_id DROP NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_comm_ledger_lead ON commission_ledger(lead_id);
+      `);
+
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');
     } catch (v2Err) {
       logger.error('Failed to run Referral & Team Business Rules (v2) Schema Migration:', v2Err.message);
