@@ -1406,15 +1406,17 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, 'Please provide a valid email address', 400);
       }
 
-      const salaryNum = parseFloat(monthly_salary || 0);
-      if (isNaN(salaryNum) || salaryNum < 0) {
-        await client.query('ROLLBACK');
-        return error(res, 'Monthly salary must be a valid non-negative number', 400);
-      }
+      if (monthly_salary !== undefined && monthly_salary !== null && monthly_salary !== '') {
+        const salaryNum = parseFloat(monthly_salary);
+        if (isNaN(salaryNum) || salaryNum < 0) {
+          await client.query('ROLLBACK');
+          return error(res, 'Monthly salary must be a valid non-negative number', 400);
+        }
 
-      if (product.min_income && salaryNum < parseFloat(product.min_income)) {
-        await client.query('ROLLBACK');
-        return error(res, `Applicant monthly salary ₹${salaryNum.toLocaleString('en-IN')} is below product minimum required ₹${parseFloat(product.min_income).toLocaleString('en-IN')}`, 400);
+        if (product.min_income && salaryNum > 0 && salaryNum < parseFloat(product.min_income)) {
+          await client.query('ROLLBACK');
+          return error(res, `Applicant monthly salary ₹${salaryNum.toLocaleString('en-IN')} is below product minimum required ₹${parseFloat(product.min_income).toLocaleString('en-IN')}`, 400);
+        }
       }
 
       if (pincode && !/^\d{6}$/.test(String(pincode).trim())) {
