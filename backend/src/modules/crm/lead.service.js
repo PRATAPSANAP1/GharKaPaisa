@@ -88,6 +88,17 @@ const triggerAutomaticCommissionPayout = async (leadId, approvedAmount = null, c
 
     if (!lead) throw new Error(`Lead ${leadId} not found`);
 
+    // Idempotency Check: Don't create duplicate commission if one already exists for this lead
+    const { rows: [existingLedger] } = await client.query(`
+      SELECT id FROM commission_ledger WHERE lead_id = $1
+    `, [leadId]);
+
+    if (existingLedger) {
+      logger.info(`Commission ledger already exists for lead ${leadId}, skipping duplicate payout.`);
+      await client.query('COMMIT');
+      return existingLedger;
+    }
+
     // 2. Calculate Commission
     const commType = lead.commission_type || 'fixed';
     const commVal = parseFloat(lead.commission_value || 0);

@@ -188,10 +188,13 @@ const createLead = async (req, res, next) => {
       return error(res, 'Product ID, Customer Name, and Mobile Number are required', 400);
     }
 
-    // 1. Fetch Partner & Hierarchy Profile
-    const targetPartnerId = req.body.partner_id || req.body.partnerId;
-    let partner = null;
+    // 1. Fetch Partner & Hierarchy Profile (Enforce ownership for normal partners)
+    let targetPartnerId = null;
+    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+      targetPartnerId = req.body.partner_id || req.body.partnerId;
+    }
 
+    let partner = null;
     if (targetPartnerId) {
       const { rows: [p] } = await query(`
         SELECT p.id, p.parent_partner_id, p.kyc_status, u.role
@@ -342,6 +345,14 @@ const sendLeadOtp = async (req, res, next) => {
     const { rows: [lead] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
     if (!lead) return notFound(res, 'Lead record not found');
 
+    // Strict Partner Ownership Verification
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
+      const { rows: [userPartner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!userPartner || userPartner.id !== lead.partner_id) {
+        return error(res, 'Access denied: Lead does not belong to your partner account', 403);
+      }
+    }
+
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
     const otpExpires = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -349,7 +360,17 @@ const sendLeadOtp = async (req, res, next) => {
       UPDATE leads SET otp_code = $1, otp_expires_at = $2, updated_at = NOW() WHERE id = $3
     `, [otpCode, otpExpires, id]);
 
-    return success(res, { lead_id: id, expires_at: otpExpires }, 'Verification OTP resent to customer.');
+    // Send SMS Notification
+    if (lead.mobile) {
+      try {
+        const { sendSms } = require('../../services/sms/sms.service');
+        await sendSms(lead.mobile, `Your GharKaPaisa verification OTP for lead ${lead.lead_number} is ${otpCode}. Valid for 15 minutes.`).catch(e => logger.warn(`OTP SMS send failed: ${e.message}`));
+      } catch (err) {
+        logger.warn('SMS service not configured for OTP notification');
+      }
+    }
+
+    return success(res, { lead_id: id, expires_at: otpExpires }, 'Verification OTP resent to customer via SMS.');
   } catch (err) {
     next(err);
   }
@@ -366,6 +387,14 @@ const verifyLeadOtp = async (req, res, next) => {
 
     const { rows: [lead] } = await client.query(`SELECT * FROM leads WHERE id = $1`, [id]);
     if (!lead) return notFound(res, 'Lead record not found');
+
+    // Strict Partner Ownership Verification
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
+      const { rows: [userPartner] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (!userPartner || userPartner.id !== lead.partner_id) {
+        return error(res, 'Access denied: Lead does not belong to your partner account', 403);
+      }
+    }
 
     if (lead.otp_verified && lead.status === 'confirmed') {
       // Find existing converted application
