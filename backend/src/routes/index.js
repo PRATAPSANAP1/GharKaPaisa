@@ -43,9 +43,15 @@ router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/settings',         settingsRouter);
 router.use('/customer-portal',  customerPortalRoute);
 
-// ── Public Share Link Routes (No auth required) ─────────────────
+// ── Public Share Link & Self-Fulfillment Routes (No auth required) ──
 router.get('/public/share/:trackingToken', partnerShareCtrl.getShareLinkDetails);
 router.post('/public/share/submit', partnerShareCtrl.submitShareLead);
+
+router.get('/public/apply/:token', partnerShareCtrl.getApplyTokenDetails);
+router.patch('/public/apply/:token', partnerShareCtrl.updateApplyTokenDetails);
+
+router.get('/public/apply/:token/post-apply', partnerShareCtrl.getPostApplyDetails);
+router.patch('/public/apply/:token/post-apply', partnerShareCtrl.updatePostApplyDetails);
 
 // ── Redirects & Analytics ──────────────────────────────────────
 router.get('/redirect/:productId', redirectCtrl.handleRedirect);

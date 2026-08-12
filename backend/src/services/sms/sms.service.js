@@ -107,4 +107,73 @@ const sendSms = async (to, body) => {
   return false;
 };
 
-module.exports = { sendSms };
+/**
+ * Send Step 1 Application Link SMS to Customer
+ */
+const sendApplyStep1Sms = async (to, customerName, productName, token) => {
+  const applyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
+  const body = `Dear ${customerName || 'Customer'}, complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl}`;
+  
+  if (msg91AuthKey && process.env.MSG91_APPLY_STEP1_TEMPLATE_ID) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: process.env.MSG91_APPLY_STEP1_TEMPLATE_ID,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          name: customerName || 'Customer',
+          product: productName || 'Credit Card',
+          url: applyUrl
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Step 1 Apply SMS sent to ${formattedTo} via MSG91 Flow`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Step 1 Flow SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
+ * Send Step 2 Post-Apply Link SMS to Customer
+ */
+const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
+  const postApplyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
+  const body = `Dear ${customerName || 'Customer'}, please submit your bank application ref & documents for ${productName || 'Credit Card'}: ${postApplyUrl}`;
+  
+  if (msg91AuthKey && process.env.MSG91_APPLY_STEP2_TEMPLATE_ID) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: process.env.MSG91_APPLY_STEP2_TEMPLATE_ID,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          name: customerName || 'Customer',
+          product: productName || 'Credit Card',
+          url: postApplyUrl
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Step 2 Post-Apply SMS sent to ${formattedTo} via MSG91 Flow`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Step 2 Flow SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+module.exports = { 
+  sendSms,
+  sendApplyStep1Sms,
+  sendPostApplyStep2Sms
+};
+

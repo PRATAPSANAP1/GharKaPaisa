@@ -36,6 +36,8 @@ import ApplyForm from '../modules/products/ApplyForm';
 import CardBenefitsPage from '../modules/products/CardBenefitsPage';
 import ProductApplyLanding from '../modules/products/ProductApplyLanding';
 import PartnerShareLanding from '../modules/products/PartnerShareLanding';
+import CustomerApplyStep1 from '../modules/products/CustomerApplyStep1';
+import CustomerPostApplyStep2 from '../modules/products/CustomerPostApplyStep2';
 import DynamicCreditCardsPage from '../modules/home/components/CreditCards/DynamicCreditCardsPage';
 
 // Admin Pages
@@ -183,7 +185,9 @@ const AppRoutes = () => {
         <Route path="/share/:trackingToken" element={<PartnerShareLanding />} />
       </Route>
 
-      {/* Customer Secure Upload Portal (Standalone Public Route) */}
+      {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}
+      <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
+      <Route path="/apply/:token/post-apply" element={<CustomerPostApplyStep2 />} />
       <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />
       <Route path="/customer/application/:token" element={<CustomerUploadPortal />} />
 

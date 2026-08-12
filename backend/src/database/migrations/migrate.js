@@ -4043,6 +4043,17 @@ const migrate = async () => {
         ALTER TABLE products ADD COLUMN IF NOT EXISTS application_url VARCHAR(1000);
         ALTER TABLE products ADD COLUMN IF NOT EXISTS apply_url VARCHAR(1000);
         ALTER TABLE products ADD COLUMN IF NOT EXISTS redirect_url VARCHAR(1000);
+
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(1000);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url VARCHAR(1000);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url VARCHAR(1000);
+
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE;
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan VARCHAR(20);
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS income DECIMAL(15,2);
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
+        ALTER TABLE customers ADD COLUMN IF NOT EXISTS employment VARCHAR(100);
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');
