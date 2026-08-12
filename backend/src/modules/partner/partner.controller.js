@@ -588,8 +588,8 @@ const addTeamMember = async (req, res, next) => {
     const passwordHash = await bcrypt.hash(tempPassword, salt);
 
     const { rows: [newUser] } = await client.query(`
-      INSERT INTO users (email, mobile, password_hash, role, status, must_change_password, full_name)
-      VALUES ($1, $2, $3, 'TEAM_MEMBER', 'pending', true, $4)
+      INSERT INTO users (email, mobile, password_hash, role, status, must_change_password, full_name, email_verified)
+      VALUES ($1, $2, $3, 'TEAM_MEMBER', 'pending', true, $4, true)
       RETURNING id
     `, [email, mobile, passwordHash, `${memberFirstName} ${memberLastName}`.trim()]);
 
