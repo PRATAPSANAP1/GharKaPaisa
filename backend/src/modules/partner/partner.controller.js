@@ -607,7 +607,7 @@ const addTeamMember = async (req, res, next) => {
 
     // Create wallet for team member
     await client.query(`
-      INSERT INTO partner_wallets (partner_id, balance, hold_balance)
+      INSERT INTO partner_wallets (partner_id, available_balance, hold_balance)
       VALUES ($1, 0, 0)
       ON CONFLICT (partner_id) DO NOTHING
     `, [insertedProfile.id]);
