@@ -32,6 +32,7 @@ export default function ManageApplications() {
   const [statusFilter, setStatusFilter] = useState('');
   const [commFilter, setCommFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
+  const [processByFilter, setProcessByFilter] = useState('');
 
   // Selected Application for detail/drawer modals
   const [selectedApp, setSelectedApp] = useState(null);
@@ -135,6 +136,7 @@ export default function ManageApplications() {
           status: statusFilter || undefined,
           commission_status: commFilter || undefined,
           Partner_id: partnerFilter || undefined,
+          process_by: processByFilter || undefined,
           search: search.trim() || undefined
         }
       });
@@ -410,9 +412,19 @@ export default function ManageApplications() {
             </select>
           </div>
 
+          <div style={{ width: '170px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process By / Channel</label>
+            <select style={S.input} value={processByFilter} onChange={e => setProcessByFilter(e.target.value)}>
+              <option value="">All Process Types</option>
+              <option value="partner_punch">✍️ Partner Punch</option>
+              <option value="partner_share">🔗 Partner Share Link</option>
+              <option value="customer_direct">📱 Customer Direct Apply</option>
+            </select>
+          </div>
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="submit" style={S.btn('primary')}>Search</button>
-            <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setPage(1); setTimeout(fetchApplications, 0); }} style={S.btn('outline')}>Reset</button>
+            <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setProcessByFilter(''); setPage(1); setTimeout(fetchApplications, 0); }} style={S.btn('outline')}>Reset</button>
           </div>
         </form>
       </div>
@@ -430,7 +442,7 @@ export default function ManageApplications() {
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: '11px', textTransform: 'uppercase', color: C.textLight }}>
                   <th style={{ padding: '14px 16px' }}>App ID</th>
                   <th style={{ padding: '14px 16px' }}>Customer Details</th>
-                  <th style={{ padding: '14px 16px' }}>Partner Assigned</th>
+                  <th style={{ padding: '14px 16px' }}>Partner & Process By</th>
                   <th style={{ padding: '14px 16px' }}>Product & Bank</th>
                   <th style={{ padding: '14px 16px' }}>Status</th>
                   <th style={{ padding: '14px 16px' }}>Commission Status</th>
@@ -450,6 +462,14 @@ export default function ManageApplications() {
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: 600 }}>{app.partner_first_name || app.Partner_first_name || 'Direct'} {app.partner_last_name || app.Partner_last_name || ''}</div>
                       <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.partner_code || app.Partner_code || 'N/A'}</div>
+                      <div style={{
+                        marginTop: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block',
+                        padding: '2px 8px', borderRadius: '6px',
+                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link') ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct') ? `${C.blue}15` : `${C.purple}15`,
+                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link') ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct') ? C.blue : C.purple
+                      }}>
+                        {app.process_by === 'partner_share' || app.process_by === 'share_link' ? '🔗 Share Link' : app.process_by === 'customer_direct' || app.process_by === 'direct' ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                      </div>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ color: C.text }}>{app.product_name}</div>
