@@ -163,91 +163,16 @@ export default function PartnerKyc() {
     }
   };
 
-  const stopCamera = () => {
+  const stopMediaStream = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+  };
+
+  const stopCamera = () => {
+    stopMediaStream();
     setCameraActive(false);
-  };
-
-  const autoUploadVideo = async (blob, duration) => {
-    if (!blob) return;
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    setUploadProgress(0);
-
-    try {
-      const formData = new FormData();
-      const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
-      const fileExt = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      // Wrap blob in a File object to bypass iOS Safari FormData filename bug
-      const videoFile = new File([blob], `verification-video.${fileExt}`, { type: blob.type || mimeType });
-      formData.append('video', videoFile);
-      formData.append('duration', duration || 10);
-
-      const res = await api.post('/partner/kyc/upload-video', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-        }
-      });
-
-      if (res.data?.success) {
-        setSuccessMsg('Verification Video uploaded successfully!');
-        deleteRecording();
-        stopCamera();
-        // Wait a tiny bit and reload details
-        setTimeout(async () => {
-          await loadKycDetails();
-        }, 300);
-      }
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Verification Video upload failed.');
-    } finally {
-      setActionLoading(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const startRecording = () => {
-    if (!streamRef.current) return;
-    videoChunksRef.current = [];
-    elapsedRef.current = 0;
-    const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
-    
-    try {
-      const recorder = new MediaRecorder(streamRef.current, { mimeType });
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          videoChunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(videoChunksRef.current, { type: mimeType });
-        setVideoBlob(blob);
-        setVideoPreviewUrl(URL.createObjectURL(blob));
-      };
-
-      recorder.start(10);
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      setRecordingTime(0);
-
-      timerRef.current = setInterval(() => {
-        elapsedRef.current += 1;
-        setRecordingTime(elapsedRef.current);
-        if (elapsedRef.current >= 60) {
-          stopRecording();
-        }
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Failed to start MediaRecorder.');
-    }
   };
 
   const stopRecording = () => {
@@ -259,7 +184,7 @@ export default function PartnerKyc() {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
-    stopCamera();
+    stopMediaStream();
   };
 
   const deleteRecording = () => {
