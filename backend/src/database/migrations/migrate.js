@@ -342,7 +342,7 @@ const migrate = async () => {
     CREATE TABLE IF NOT EXISTS banks (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       name       VARCHAR(100) UNIQUE NOT NULL,
-      short_code VARCHAR(20) UNIQUE NOT NULL,
+      short_code VARCHAR(100) UNIQUE NOT NULL,
       logo_url   VARCHAR(500),
       is_active  BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMPTZ DEFAULT NOW()
@@ -4029,6 +4029,8 @@ const migrate = async () => {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_active_lead_product_mobile 
         ON leads(product_id, mobile) 
         WHERE status NOT IN ('rejected', 'cancelled');
+
+        ALTER TABLE banks ALTER COLUMN short_code TYPE VARCHAR(100);
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');
