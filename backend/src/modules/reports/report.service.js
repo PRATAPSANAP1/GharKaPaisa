@@ -92,9 +92,9 @@ const getApplicationsReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      a.id, a.app_number, a.status, a.payout_amount, a.created_at,
+      a.id, a.app_number, a.status, COALESCE(a.commission_amount, 0) as payout_amount, a.created_at,
       p.name as product_name, b.name as bank_name,
-      CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')) as customer_name
+      COALESCE(c.full_name, TRIM(CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')))) as customer_name
     FROM applications a
     LEFT JOIN products p ON p.id = a.product_id
     LEFT JOIN banks b ON b.id = p.bank_id
@@ -114,12 +114,12 @@ const getCustomersReport = async (partnerId, filters) => {
   const cached = await getCachedReport('customers', filters, partnerId);
   if (cached) return cached;
 
-  let where = partnerId ? `WHERE c.partner_id = $1` : `WHERE 1=1`;
+  let where = partnerId ? `WHERE (c.created_by IN (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.id IN (SELECT customer_id FROM applications WHERE partner_id = $1))` : `WHERE 1=1`;
   const values = partnerId ? [partnerId] : [];
 
   const { rows } = await query(`
     SELECT 
-      c.id, c.first_name, c.last_name, c.mobile, c.email, c.city, c.created_at,
+      c.id, COALESCE(c.full_name, TRIM(CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')))) as customer_name, c.mobile, c.email, c.city, c.created_at,
       COUNT(a.id) as total_applications
     FROM customers c
     LEFT JOIN applications a ON a.customer_id = c.id
