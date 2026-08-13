@@ -70,47 +70,48 @@ export default function PartnerEntityDetail() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '60px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', paddingBottom: isMobile ? '40px' : '60px' }}>
       
       {/* ── TOP BREADCRUMB / BANK HEADER ── */}
       <div style={{
         background: C.card,
-        borderRadius: '20px',
-        padding: '18px 24px',
+        borderRadius: isMobile ? '14px' : '20px',
+        padding: isMobile ? '12px 16px' : '18px 24px',
         border: `1px solid ${C.border}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '16px',
+        gap: '12px',
         boxShadow: isDark ? 'none' : '0 4px 18px rgba(15,23,42,0.03)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', width: '100%', justifyContent: 'space-between' }}>
           <button
             onClick={() => navigate(backPath)}
             style={{
               background: isDark ? C.bgSecondary : '#F1F5F9',
               border: `1px solid ${C.border}`,
-              borderRadius: '12px',
-              padding: '8px 16px',
+              borderRadius: '10px',
+              padding: isMobile ? '6px 12px' : '8px 16px',
               color: C.text,
-              fontSize: '13.5px',
+              fontSize: isMobile ? '12px' : '13.5px',
               fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              flexShrink: 0
             }}
           >
-            <MdArrowBack size={18} />
+            <MdArrowBack size={isMobile ? 16 : 18} />
             {backLabel}
           </button>
 
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: isMobile ? '9.5px' : '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               {badgeLabel}
             </span>
-            <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
+            <h2 style={{ fontSize: isMobile ? '17px' : '22px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
               {pageTitle}
             </h2>
           </div>
