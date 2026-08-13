@@ -311,21 +311,23 @@ export default function PartnerDashboardComponent({ partner }) {
 
   // Recent applications list
   const getRecentApplications = () => {
-    if (!allLeads || allLeads.length === 0) return [];
-    return allLeads.slice(0, 5).map(lead => {
-      const name = lead.customer_name || 'Customer';
-      const names = name.split(' ');
+    const list = dashboardData?.recent || (allLeads && allLeads.length > 0 ? allLeads : []);
+    if (!list || list.length === 0) return [];
+    return list.slice(0, 5).map(item => {
+      const name = item.customer_name || 'Customer';
+      const names = name.trim().split(' ');
       const initials = names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
-      const statusRaw = lead.status || 'Pending';
+      const statusRaw = item.status || 'Pending';
       let status = 'Under Review';
       if (statusRaw.toLowerCase() === 'approved') status = 'Approved';
-      if (statusRaw.toLowerCase() === 'rejected') status = 'Rejected';
-      const amount = lead.amount ? `₹${parseFloat(lead.amount).toLocaleString('en-IN')}` : '—';
+      if (statusRaw.toLowerCase() === 'rejected' || statusRaw.toLowerCase() === 'cancelled') status = 'Rejected';
+      const amountVal = item.approved_amount || item.loan_amount || item.commission_amount || item.amount;
+      const amount = amountVal ? `₹${parseFloat(amountVal).toLocaleString('en-IN')}` : '—';
 
       return {
         initials,
         name,
-        product: lead.product_name || 'Financial Product',
+        product: item.product_name || 'Financial Product',
         amount,
         status,
         color: status === 'Approved' ? '#10B981' : status === 'Rejected' ? '#EF4444' : '#3B82F6',

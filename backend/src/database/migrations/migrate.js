@@ -4179,6 +4179,22 @@ const migrate = async () => {
       logger.error('Failed to run Referral & Team Business Rules (v2) Schema Migration:', v2Err.message);
     }
 
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS admin_bank_assignments (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          UNIQUE(admin_id, bank_id)
+        );
+      `);
+      logger.info('admin_bank_assignments table verified/created successfully.');
+    } catch (abaErr) {
+      logger.error('Failed to create admin_bank_assignments table:', abaErr.message);
+    }
+
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
     throw task14Err;

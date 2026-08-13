@@ -260,9 +260,15 @@ const submitPublicApplication = async (req, res, next) => {
 // GET /applications/dashboard (Application metrics overview)
 const getApplicationsDashboard = async (req, res, next) => {
   try {
+    const { partner_id, partner_id: q_partner_id } = req.query;
+    const targetPartnerId = q_partner_id || partner_id;
+
     let partnerId = null;
     let userId = req.user?.id || null;
-    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole);
+
+    if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       partnerId = partner ? partner.id : null;
       userId = req.user.id;
@@ -281,6 +287,17 @@ const getApplicationsDashboard = async (req, res, next) => {
       UNION SELECT id FROM partner_profiles WHERE user_id = $2::uuid
     `;
 
+    const whereClause = isPartnerOrTeam
+      ? `WHERE (
+          combined.partner_id IN (${teamPartnerFilter})
+          OR combined.submitted_by = $2::uuid
+          OR combined.submitted_by IN (
+            SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $2::uuid OR u.parent_id = $2::uuid
+          )
+        )`
+      : `WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))`;
+
     const { rows: [stats] } = await query(`
       SELECT 
         COUNT(*) as total,
@@ -294,13 +311,14 @@ const getApplicationsDashboard = async (req, res, next) => {
         COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
         COALESCE(SUM(commission_amount) FILTER (WHERE commission_status = 'processed'), 0) as total_earnings
       FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.commission_status::text, a.commission_amount, a.created_at FROM applications a
+        SELECT a.id, a.partner_id, a.submitted_by, a.status::text, a.commission_status::text, a.commission_amount, a.created_at FROM applications a
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, 'pending'::text as commission_status, p.commission_value as commission_amount, l.created_at
+        SELECT l.id, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by, l.status::text, 'pending'::text as commission_status, p.commission_value as commission_amount, l.created_at
         FROM leads l
+        LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))
+      ${whereClause}
     `, [partnerId, userId]);
 
     const totalCount = parseInt(stats?.total || 0);
@@ -312,19 +330,19 @@ const getApplicationsDashboard = async (req, res, next) => {
       SELECT combined.id, combined.app_number, combined.status, combined.commission_amount, combined.commission_status, combined.created_at,
              combined.customer_name, combined.product_name
       FROM (
-        SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.commission_status::text, a.created_at, a.partner_id,
+        SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.commission_status::text, a.created_at, a.partner_id, a.submitted_by,
                COALESCE(c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM applications a
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id,
+        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by,
                COALESCE(c.full_name, l.customer_name) as customer_name, p.name as product_name
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))
+      ${whereClause}
       ORDER BY combined.created_at DESC LIMIT 5
     `, [partnerId, userId]);
 
@@ -856,9 +874,9 @@ const listApplications = async (req, res, next) => {
     let partnerId = null;
     let userId = null;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isTeamMember = userRole === 'TEAM_MEMBER';
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole);
 
-    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
+    if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       partnerId = partner ? partner.id : null;
       userId = req.user.id;
@@ -877,13 +895,33 @@ const listApplications = async (req, res, next) => {
     const validSearch = search && search.trim() ? `%${search.trim()}%` : null;
     const validProcessBy = process_by && process_by.trim() ? process_by.trim() : null;
     const validOpHeadId = targetOpHeadId;
-
     const validUserId = isUuid(userId) ? userId : null;
 
-    // For team members, add submitted_by filter
-    const submittedByFilter = isTeamMember && validUserId ? `AND combined.submitted_by = $8::uuid` : '';
-    const submittedByFilterCount = isTeamMember && validUserId ? `AND combined.submitted_by = $8::uuid` : '';
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId];
+    const partnerTeamScopeSQL = `
+      WHERE (
+        ($11::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
+          SELECT $1::uuid UNION SELECT $8::uuid 
+          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
+          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
+        )))
+        OR ($11::boolean = true AND (
+          combined.partner_id IN (
+            SELECT $1::uuid UNION SELECT $8::uuid 
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+            UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
+          )
+          OR combined.submitted_by = $8::uuid
+          OR combined.submitted_by IN (
+            SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid OR u.parent_id = $8::uuid
+          )
+        ))
+      )
+    `;
+
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam];
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -978,25 +1016,43 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id IN (
-        SELECT $1::uuid UNION SELECT $8::uuid 
-        UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-        UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-        UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-      ))
+      ${partnerTeamScopeSQL}
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
         AND ($9::text IS NULL OR combined.process_by = $9 OR combined.submitted_by::text = $9)
         AND ($10::uuid IS NULL OR combined.operation_head_id = $10::uuid)
-        ${submittedByFilter}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
 
     // Count query with same filter
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId];
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam];
+
+    const countScopeSQL = `
+      WHERE (
+        ($9::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
+          SELECT $1::uuid UNION SELECT $8::uuid 
+          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
+          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+          UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
+        )))
+        OR ($9::boolean = true AND (
+          combined.partner_id IN (
+            SELECT $1::uuid UNION SELECT $8::uuid 
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
+            UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
+          )
+          OR combined.submitted_by = $8::uuid
+          OR combined.submitted_by IN (
+            SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid OR u.parent_id = $8::uuid
+          )
+        ))
+      )
+    `;
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
@@ -1013,19 +1069,13 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN banks b ON b.id = p.bank_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      WHERE ($1::uuid IS NULL OR combined.partner_id IN (
-        SELECT $1::uuid UNION SELECT $8::uuid 
-        UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $8::uuid OR referred_by_id = $8::uuid
-        UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $8::uuid OR sponsor_id = $8::uuid
-        UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid
-      ))
+      ${countScopeSQL}
         AND ($2::text IS NULL OR combined.status = $2)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
         AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
         AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
-        ${submittedByFilterCount}
     `, countQueryParams);
 
     return paginate(res, rows, parseInt(count), page, limit);

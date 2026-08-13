@@ -24,11 +24,25 @@ const listLeads = async (req, res, next) => {
     const values = [];
     let idx = 1;
 
-    if (req.user.role === 'PARTNER') {
+    if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (!partner) return error(res, 'Partner profile not found', 404);
-      whereClause += ` AND l.partner_id = $${idx++}`;
-      values.push(partner.id);
+      const partnerId = partner ? partner.id : null;
+      whereClause += ` AND (
+        l.partner_id IN (
+          SELECT $${idx}::uuid
+          UNION SELECT $${idx + 1}::uuid
+          UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $${idx}::uuid OR referred_by_id = $${idx}::uuid OR parent_partner_id = $${idx + 1}::uuid OR referred_by_id = $${idx + 1}::uuid
+          UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $${idx}::uuid OR sponsor_id = $${idx}::uuid OR parent_partner_id = $${idx + 1}::uuid OR sponsor_id = $${idx + 1}::uuid
+          UNION SELECT id FROM partner_profiles WHERE user_id = $${idx + 1}::uuid
+        )
+        OR l.created_by = $${idx + 1}::uuid
+        OR l.created_by IN (
+          SELECT user_id FROM partner_profiles WHERE parent_partner_id = $${idx}::uuid OR referred_by_id = $${idx}::uuid
+          UNION SELECT u.id FROM users u WHERE u.created_by = $${idx + 1}::uuid OR u.parent_id = $${idx + 1}::uuid
+        )
+      )`;
+      values.push(partnerId, req.user.id);
+      idx += 2;
     }
 
     if (status) {

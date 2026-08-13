@@ -94,7 +94,7 @@ const getMe = async (req, res, next) => {
         FROM admin_bank_assignments aba
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
-      `, [user.id]);
+      `, [user.id]).catch(() => ({ rows: [] }));
       const permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
@@ -477,7 +477,7 @@ const login = async (req, res, next) => {
     if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       const { rows: assignedBanks } = await query(
         `SELECT b.id, b.name, b.short_code, b.code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
-      );
+      ).catch(() => ({ rows: [] }));
       permissions = {
         banks: assignedBanks.map(b => b.id),
         bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
