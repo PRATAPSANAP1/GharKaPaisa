@@ -1456,15 +1456,15 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       {/* ═══ STREAMLINED 3-OPTION PARTNER APPLY MODAL ═══ */}
       {selectedProduct && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: isMobile ? '10px 10px 85px 10px' : '16px'
         }}>
           <div style={{
-            background: C.card, width: '100%', maxWidth: '520px', maxHeight: '90vh',
-            borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
-            display: 'flex', flexDirection: 'column'
+            background: C.card, width: '100%', maxWidth: '520px', maxHeight: isMobile ? 'calc(100vh - 100px)' : '90vh',
+            borderRadius: '24px', border: `1px solid ${C.border}`,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.4)', position: 'relative',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden'
           }}>
             {/* Modal Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, position: 'sticky', top: 0, zIndex: 10 }}>
@@ -1498,131 +1498,139 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitLead} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              
-              {/* 1. Customer Name */}
-              <div>
-                <label style={S.label}>1. Customer Name *</label>
-                <input
-                  type="text"
-                  placeholder="Enter customer full name"
-                  value={customerName}
-                  onChange={(e) => { setCustomerName(e.target.value); setFormErrors(prev => ({ ...prev, customerName: null })); }}
-                  style={{ ...S.input, height: '44px', fontSize: '14px', borderColor: formErrors.customerName ? C.red : C.border }}
-                />
-                {formErrors.customerName && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.customerName}</span>}
-              </div>
-
-              {/* 2. Mobile Number */}
-              <div>
-                <label style={S.label}>2. Mobile Number *</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    style={{ ...S.input, width: '90px', height: '44px', fontSize: '13px', fontWeight: 700, padding: '0 8px' }}
-                  >
-                    <option value="+91">🇮🇳 +91</option>
-                    <option value="+1">🇺🇸 +1</option>
-                    <option value="+44">🇬🇧 +44</option>
-                  </select>
+            <form onSubmit={handleSubmitLead} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', margin: 0 }}>
+              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto', flex: 1 }}>
+                
+                {/* 1. Customer Name */}
+                <div>
+                  <label style={S.label}>1. Customer Name *</label>
                   <input
-                    type="tel"
-                    placeholder="Enter 10-digit mobile number"
-                    maxLength={10}
-                    value={mobile}
-                    onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({ ...prev, mobile: null })); }}
-                    style={{ ...S.input, flex: 1, height: '44px', fontSize: '14px', borderColor: formErrors.mobile ? C.red : C.border }}
+                    type="text"
+                    placeholder="Enter customer full name"
+                    value={customerName}
+                    onChange={(e) => { setCustomerName(e.target.value); setFormErrors(prev => ({ ...prev, customerName: null })); }}
+                    style={{ ...S.input, height: '44px', fontSize: '14px', borderColor: formErrors.customerName ? C.red : C.border }}
                   />
+                  {formErrors.customerName && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.customerName}</span>}
                 </div>
-                {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
+
+                {/* 2. Mobile Number */}
+                <div>
+                  <label style={S.label}>2. Mobile Number *</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      style={{ ...S.input, width: '90px', height: '44px', fontSize: '13px', fontWeight: 700, padding: '0 8px' }}
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                    </select>
+                    <input
+                      type="tel"
+                      placeholder="Enter 10-digit mobile number"
+                      maxLength={10}
+                      value={mobile}
+                      onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '')); setFormErrors(prev => ({ ...prev, mobile: null })); }}
+                      style={{ ...S.input, flex: 1, height: '44px', fontSize: '14px', borderColor: formErrors.mobile ? C.red : C.border }}
+                    />
+                  </div>
+                  {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
+                </div>
+
+                {/* 3. Process By (3 Modes) */}
+                <div>
+                  <label style={S.label}>3. Process By *</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                    
+                    {/* Mode 1: Lead punching only */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processType === 'lead_punching' ? C.primary : C.border}`,
+                      background: processType === 'lead_punching' ? `${C.primary}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processType"
+                        value="lead_punching"
+                        checked={processType === 'lead_punching'}
+                        onChange={(e) => setProcessType(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.primary }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          1. Lead punching only
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Records lead directly into your Partner CRM & Applications queue for internal processing.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Mode 2: Linked share */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processType === 'linked_share' ? C.primary : C.border}`,
+                      background: processType === 'linked_share' ? `${C.primary}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processType"
+                        value="linked_share"
+                        checked={processType === 'linked_share'}
+                        onChange={(e) => setProcessType(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.primary }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          2. Linked share
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Generates & opens a pre-filled WhatsApp share link embedded with the official bank URL.
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Mode 3: Direct bank process */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processType === 'direct_bank' ? C.primary : C.border}`,
+                      background: processType === 'direct_bank' ? `${C.primary}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processType"
+                        value="direct_bank"
+                        checked={processType === 'direct_bank'}
+                        onChange={(e) => setProcessType(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.primary }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          3. Direct bank process
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Immediately opens the official bank portal in a new tab for direct customer application.
+                        </div>
+                      </div>
+                    </label>
+
+                  </div>
+                </div>
+
               </div>
 
-              {/* 3. Process By (3 Modes) */}
-              <div>
-                <label style={S.label}>3. Process By *</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-                  
-                  {/* Mode 1: Lead punching only */}
-                  <label style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
-                    border: `2px solid ${processType === 'lead_punching' ? C.primary : C.border}`,
-                    background: processType === 'lead_punching' ? `${C.primary}0D` : C.card,
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="processType"
-                      value="lead_punching"
-                      checked={processType === 'lead_punching'}
-                      onChange={(e) => setProcessType(e.target.value)}
-                      style={{ marginTop: '2px', accentColor: C.primary }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                        1. Lead punching only
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                        Records lead directly into your Partner CRM & Applications queue for internal processing.
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Mode 2: Linked share */}
-                  <label style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
-                    border: `2px solid ${processType === 'linked_share' ? C.primary : C.border}`,
-                    background: processType === 'linked_share' ? `${C.primary}0D` : C.card,
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="processType"
-                      value="linked_share"
-                      checked={processType === 'linked_share'}
-                      onChange={(e) => setProcessType(e.target.value)}
-                      style={{ marginTop: '2px', accentColor: C.primary }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                        2. Linked share
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                        Generates & opens a pre-filled WhatsApp share link embedded with the official bank URL.
-                      </div>
-                    </div>
-                  </label>
-
-                  {/* Mode 3: Direct bank process */}
-                  <label style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
-                    border: `2px solid ${processType === 'direct_bank' ? C.primary : C.border}`,
-                    background: processType === 'direct_bank' ? `${C.primary}0D` : C.card,
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="processType"
-                      value="direct_bank"
-                      checked={processType === 'direct_bank'}
-                      onChange={(e) => setProcessType(e.target.value)}
-                      style={{ marginTop: '2px', accentColor: C.primary }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                        3. Direct bank process
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                        Immediately opens the official bank portal in a new tab for direct customer application.
-                      </div>
-                    </div>
-                  </label>
-
-                </div>
-              </div>
-
-              {/* Modal Buttons */}
-              <div style={{ display: 'flex', gap: '10px', paddingTop: '10px' }}>
+              {/* Modal Sticky Footer Buttons */}
+              <div style={{
+                position: 'sticky', bottom: 0, zIndex: 10,
+                background: C.card, padding: '14px 24px 18px 24px',
+                borderTop: `1px solid ${C.border}`, display: 'flex', gap: '10px',
+                boxShadow: '0 -4px 14px rgba(0,0,0,0.08)'
+              }}>
                 <button
                   type="button"
                   onClick={() => setSelectedProduct(null)}
