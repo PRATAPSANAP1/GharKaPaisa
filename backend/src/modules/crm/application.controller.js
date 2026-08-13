@@ -773,12 +773,20 @@ const reassignApplication = async (req, res, next) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    const { id, partner_id } = req.body;
-    if (!id || !partner_id) return error(res, 'ID and Partner ID are required', 400);
+    const id = req.params.id || req.body.id || req.body.application_id;
+    let partner_id = req.body.partner_id || req.body.partnerId;
+    if (!id || !partner_id) return error(res, 'Application ID and Partner ID are required', 400);
 
     let targetPartnerId = partner_id;
 
-    if (!isUuid(targetPartnerId)) {
+    if (targetPartnerId === 'self') {
+      const { rows: [selfPartner] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (selfPartner) {
+        targetPartnerId = selfPartner.id;
+      }
+    }
+
+    if (targetPartnerId !== 'self' && !isUuid(targetPartnerId)) {
       // Extract UUID if embedded inside string
       const uuidMatch = String(targetPartnerId).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
       if (uuidMatch) {
