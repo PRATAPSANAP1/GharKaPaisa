@@ -1558,17 +1558,23 @@ const submitPartnerApplication = async (req, res, next) => {
 
     // Sync into leads table so it appears in CRM leads queue
     if (trimmedMobile) {
-      await client.query(`
-        INSERT INTO leads (
-          partner_id, product_id, customer_name, customer_mobile, mobile,
-          customer_email, source, status, pipeline_stage, customer_id, created_by
-        )
-        VALUES ($1, $2, $3, $4, $4, $5, $6, 'pending', 'created', $7, $8)
-        ON CONFLICT DO NOTHING
-      `, [
-        partnerId, product_id, trimmedName, trimmedMobile,
-        trimmedEmail, `partner_${process_type}`, customerId, req.user.id
-      ]).catch(err => logger.warn('Lead table sync warning:', err.message));
+      try {
+        await client.query('SAVEPOINT lead_sync_sp');
+        await client.query(`
+          INSERT INTO leads (
+            partner_id, product_id, customer_name, customer_mobile, mobile,
+            customer_email, source, status, pipeline_stage, customer_id, created_by
+          )
+          VALUES ($1, $2, $3, $4, $4, $5, $6, 'pending', 'created', $7, $8)
+        `, [
+          partnerId, product_id, trimmedName, trimmedMobile,
+          trimmedEmail, `partner_${process_type}`, customerId, req.user.id
+        ]);
+        await client.query('RELEASE SAVEPOINT lead_sync_sp');
+      } catch (leadErr) {
+        await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(() => {});
+        logger.warn('Lead table sync warning:', leadErr.message);
+      }
     }
 
     const commission = await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
@@ -1594,6 +1600,7 @@ const submitPartnerApplication = async (req, res, next) => {
     ]);
 
     try {
+      await client.query('SAVEPOINT timeline_sp');
       await client.query(`
         INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
         VALUES ($1, $2, $3, $4, $5, $6, 'partner', $7)
@@ -1606,24 +1613,10 @@ const submitPartnerApplication = async (req, res, next) => {
         is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
         req.user.id
       ]);
+      await client.query('RELEASE SAVEPOINT timeline_sp');
     } catch (timelineErr) {
-      if (timelineErr.code === '23502') { // null value in column violates not-null constraint
-        await client.query(`ALTER TABLE application_timeline ALTER COLUMN status DROP NOT NULL; ALTER TABLE application_timeline ALTER COLUMN activity DROP NOT NULL;`).catch(() => {});
-        await client.query(`
-          INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
-          VALUES ($1, $2, $3, $4, $5, $6, 'partner', $7)
-        `, [
-          app.id,
-          appStatus,
-          is_draft ? 'Draft Saved' : 'Application Submitted',
-          is_draft ? 'draft_saved' : 'applied',
-          is_draft ? 'Draft Application Saved' : 'Application Initiated',
-          is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
-          req.user.id
-        ]).catch(err => logger.warn('Timeline insert fallback warn:', err.message));
-      } else {
-        logger.warn('Timeline insert non-fatal warn:', timelineErr.message);
-      }
+      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(() => {});
+      logger.warn('Timeline insert non-fatal warn:', timelineErr.message);
     }
 
     // Process specific metadata generation
@@ -1640,10 +1633,17 @@ const submitPartnerApplication = async (req, res, next) => {
       const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
       whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
 
-      await client.query(`
-        INSERT INTO partner_share_links (partner_id, product_id, tracking_token, created_by, expires_at)
-        VALUES ($1, $2, $3, $4, NOW() + INTERVAL '30 days')
-      `, [partnerId, product_id, trackingToken, req.user.id]).catch(() => {});
+      try {
+        await client.query('SAVEPOINT share_link_sp');
+        await client.query(`
+          INSERT INTO partner_share_links (partner_id, product_id, tracking_token, created_by, expires_at)
+          VALUES ($1, $2, $3, $4, NOW() + INTERVAL '30 days')
+        `, [partnerId, product_id, trackingToken, req.user.id]);
+        await client.query('RELEASE SAVEPOINT share_link_sp');
+      } catch (shareLinkErr) {
+        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});
+        logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
+      }
     }
 
     if (['direct_bank', 'punching_process'].includes(process_type)) {
