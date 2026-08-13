@@ -136,6 +136,9 @@ export default function PartnerShareLanding() {
   const accent = C.primary;
   const themeColor = product?.bank_code ? accent : accent;
 
+  // Active section for top buttons ('details' | 'apply')
+  const [activeSection, setActiveSection] = useState('apply');
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -165,25 +168,83 @@ export default function PartnerShareLanding() {
   return (
     <div style={{ minHeight: '100vh', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
       
-      {/* ── TOP BAR ── */}
+      {/* ── TOP ACTION BAR WITH 2 BUTTONS: Product Details & Apply ── */}
       <div style={{
-        background: `linear-gradient(135deg, ${themeColor} 0%, ${C.primaryDark} 100%)`,
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        display: 'flex',
+        justify: 'center',
+        alignItems: 'center',
+        padding: isMobile ? '10px 14px' : '14px 24px',
+        gap: '12px',
+        background: cardBg,
+        borderBottom: `1px solid ${border}`,
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '22px' }}>🏦</span>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>GharKaPaisa</span>
-        </div>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '20px' }}>
-          Partner Referral
-        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('details');
+            const el = document.getElementById('section-details');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{
+            flex: 1,
+            maxWidth: '220px',
+            padding: isMobile ? '10px 12px' : '12px 20px',
+            borderRadius: '12px',
+            border: activeSection === 'details' ? 'none' : `1.5px solid ${border}`,
+            background: activeSection === 'details' ? `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})` : (isDark ? '#1a1a1a' : '#f8faff'),
+            color: activeSection === 'details' ? '#fff' : textPrimary,
+            fontWeight: 800,
+            fontSize: isMobile ? '13px' : '14.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+            boxShadow: activeSection === 'details' ? `0 4px 14px ${themeColor}40` : 'none'
+          }}
+        >
+          <span>📄</span> Product Details
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('apply');
+            const el = document.getElementById('section-apply');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{
+            flex: 1,
+            maxWidth: '220px',
+            padding: isMobile ? '10px 12px' : '12px 20px',
+            borderRadius: '12px',
+            border: activeSection === 'apply' ? 'none' : `1.5px solid ${border}`,
+            background: activeSection === 'apply' ? `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})` : (isDark ? '#1a1a1a' : '#f8faff'),
+            color: activeSection === 'apply' ? '#fff' : textPrimary,
+            fontWeight: 800,
+            fontSize: isMobile ? '13px' : '14.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+            boxShadow: activeSection === 'apply' ? `0 4px 14px ${themeColor}40` : 'none'
+          }}
+        >
+          <span>✍️</span> Apply
+        </button>
       </div>
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '16px' : '32px 24px' }}>
 
         {/* ── PRODUCT HERO CARD ── */}
-        <div style={{
+        <div id="section-details" style={{
           background: cardBg, borderRadius: '24px', border: `1px solid ${border}`,
           padding: isMobile ? '20px' : '28px', marginBottom: '24px',
           boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.5)' : '0 8px 30px rgba(0,0,0,0.1)',
@@ -347,7 +408,7 @@ export default function PartnerShareLanding() {
           </div>
 
           {/* RIGHT: Apply Form */}
-          <div style={{
+          <div id="section-apply" style={{
             background: cardBg, borderRadius: '24px', border: `1px solid ${themeColor}40`,
             padding: isMobile ? '20px' : '28px',
             boxShadow: isDark ? 'none' : `0 8px 30px ${themeColor}15`,

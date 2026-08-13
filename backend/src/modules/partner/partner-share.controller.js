@@ -134,8 +134,43 @@ const submitShareLead = async (req, res, next) => {
       return error(res, 'Invalid or expired share link', 404);
     }
 
-    // Check if lead already exists for this tracking token OR active (product_id, mobile) pair
+    // Get partner user_id for customer record creation
+    const { rows: [partnerUser] } = await query(
+      `SELECT user_id FROM partner_profiles WHERE id = $1`,
+      [shareLinkData.partner_id]
+    );
+    const partnerUserId = partnerUser?.user_id || null;
+
     const cleanMobile = customerMobile.replace(/\D/g, '').slice(-10);
+
+    // Upsert customer in customers table so they appear under Partner CRM / Customers panel
+    let customerId = null;
+    try {
+      const { rows: [existingCust] } = await query(
+        `SELECT id FROM customers WHERE mobile = $1 LIMIT 1`,
+        [cleanMobile]
+      );
+
+      if (existingCust) {
+        customerId = existingCust.id;
+        await query(
+          `UPDATE customers SET full_name = COALESCE($1, full_name), updated_at = NOW() WHERE id = $2`,
+          [customerName, customerId]
+        );
+      } else {
+        const { rows: [newCust] } = await query(
+          `INSERT INTO customers (full_name, mobile, created_by, pipeline_status, source)
+           VALUES ($1, $2, $3, 'interested', 'partner_share')
+           RETURNING id`,
+          [customerName, cleanMobile, partnerUserId]
+        );
+        customerId = newCust?.id || null;
+      }
+    } catch (custErr) {
+      console.warn('Customer record creation fallback:', custErr.message);
+    }
+
+    // Check if lead already exists for this tracking token OR active (product_id, mobile) pair
     const { rows: [existingLead] } = await query(
       `SELECT id FROM leads 
        WHERE (tracking_token = $1 OR (product_id = $2 AND (mobile = $3 OR customer_mobile = $3)))
@@ -148,10 +183,10 @@ const submitShareLead = async (req, res, next) => {
       // Update existing lead
       const { rows: [updatedLead] } = await query(`
         UPDATE leads 
-        SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3, updated_at = NOW()
+        SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3, customer_id = COALESCE($5, customer_id), updated_at = NOW()
         WHERE id = $4
         RETURNING *
-      `, [customerName, cleanMobile, trackingToken, existingLead.id]);
+      `, [customerName, cleanMobile, trackingToken, existingLead.id, customerId]);
 
       // Get product bank link
       const { rows: [product] } = await query(
@@ -174,9 +209,9 @@ const submitShareLead = async (req, res, next) => {
       const { rows } = await query(`
         INSERT INTO leads (
           partner_id, product_id, customer_name, customer_mobile, mobile,
-          tracking_token, source, status, pipeline_stage
+          tracking_token, source, status, pipeline_stage, customer_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'pending', 'created')
+        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'pending', 'created', $7)
         RETURNING *
       `, [
         shareLinkData.partner_id,
@@ -184,7 +219,8 @@ const submitShareLead = async (req, res, next) => {
         customerName,
         cleanMobile,
         cleanMobile,
-        trackingToken
+        trackingToken,
+        customerId
       ]);
       lead = rows[0];
     } catch (insertErr) {
@@ -192,10 +228,10 @@ const submitShareLead = async (req, res, next) => {
         // Fallback for duplicate key error (idx_active_lead_product_mobile)
         const { rows: [fallbackLead] } = await query(`
           UPDATE leads
-          SET customer_name = $1, tracking_token = $2, updated_at = NOW()
+          SET customer_name = $1, tracking_token = $2, customer_id = COALESCE($5, customer_id), updated_at = NOW()
           WHERE product_id = $3 AND (mobile = $4 OR customer_mobile = $4) AND status NOT IN ('rejected', 'cancelled')
           RETURNING *
-        `, [customerName, trackingToken, shareLinkData.product_id, cleanMobile]);
+        `, [customerName, trackingToken, shareLinkData.product_id, cleanMobile, customerId]);
 
         if (fallbackLead) {
           lead = fallbackLead;
@@ -372,13 +408,24 @@ const updateApplyTokenDetails = async (req, res, next) => {
     const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [shareData.product_id]);
     const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in';
 
-    // Update customer record if exists
-    if (shareData.customer_id) {
+    // Update customer record if exists or resolved via lead
+    let targetCustomerId = shareData.customer_id;
+    if (!targetCustomerId && shareData.lead_id) {
+      const { rows: [leadRec] } = await query(`SELECT customer_id, mobile FROM leads WHERE id = $1`, [shareData.lead_id]);
+      if (leadRec?.customer_id) {
+        targetCustomerId = leadRec.customer_id;
+      } else if (leadRec?.mobile) {
+        const { rows: [custRec] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [leadRec.mobile]);
+        targetCustomerId = custRec?.id || null;
+      }
+    }
+
+    if (targetCustomerId) {
       await query(`
         UPDATE customers
-        SET dob = $1, pan = $2, income = $3, address = $4, employment = $5, updated_at = NOW()
+        SET dob = $1, pan_number = $2, monthly_income = $3, address = $4, employment_type = $5, updated_at = NOW()
         WHERE id = $6
-      `, [dob, pan.toUpperCase().trim(), parseFloat(income), address || null, employment || null, shareData.customer_id]);
+      `, [dob, pan.toUpperCase().trim(), parseFloat(income), address || null, employment || null, targetCustomerId]);
     }
 
     // Update lead stage
