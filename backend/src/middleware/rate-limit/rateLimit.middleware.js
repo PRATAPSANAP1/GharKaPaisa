@@ -1,9 +1,9 @@
 const rateLimit = require('express-rate-limit');
 
-// Key by identity (email/mobile) when present, fallback to IP.
+// Key by identity (user ID / email / mobile) when present, fallback to IP.
 // Prevents shared-IP environments (offices, colleges) from blocking each other.
 const userOrIpKey = (req) =>
-  req.body?.email || req.body?.mobile || req.body?.identity || req.ip;
+  req.user?.id || req.body?.email || req.body?.mobile || req.body?.identity || req.ip;
 
 // Global API rate limiter
 const globalLimiter = rateLimit({
@@ -67,12 +67,13 @@ const forgotPasswordLimiter = rateLimit({
   message: { success: false, message: 'Too many password reset requests. Please wait 30 minutes.' }
 });
 
-// Refresh token — 100 attempts per 15 min (independent of loginLimiter)
+// Refresh token — 1000 attempts per 15 min (independent of loginLimiter)
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
   message: { success: false, message: 'Too many refresh attempts. Please try again later.' }
 });
 
