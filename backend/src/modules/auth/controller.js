@@ -65,7 +65,7 @@ const clearRefreshTokenCookie = (res) => {
 // ── GET /auth/me ────────────────────────────────────────────────────────────
 const getMe = async (req, res, next) => {
   try {
-      const { rows: [user] } = await query(`
+    const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
           u.full_name, u.department, u.designation,
           ap.id as partner_id, ap.partner_code, ap.first_name, ap.last_name,
@@ -90,7 +90,7 @@ const getMe = async (req, res, next) => {
 
     if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       const { rows: assignedBanks } = await query(`
-        SELECT b.id, b.name, b.short_code, b.code
+        SELECT b.id, b.name, b.short_code, b.short_code as code
         FROM admin_bank_assignments aba
         JOIN banks b ON b.id = aba.bank_id
         WHERE aba.admin_id = $1
@@ -469,14 +469,14 @@ const login = async (req, res, next) => {
     }
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
-                        user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
-                        '/partner/dashboard';
+      user.role === 'ADMIN' ? '/admin/dashboard' :
+        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
+          '/partner/dashboard';
 
     let permissions = null;
     if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
       const { rows: assignedBanks } = await query(
-        `SELECT b.id, b.name, b.short_code, b.code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
+        `SELECT b.id, b.name, b.short_code, b.short_code as code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));
       permissions = {
         banks: assignedBanks.map(b => b.id),
@@ -581,9 +581,9 @@ const loginWithMsg91 = async (req, res, next) => {
     }
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
-                        user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
-                        '/partner/dashboard';
+      user.role === 'ADMIN' ? '/admin/dashboard' :
+        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
+          '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
@@ -930,7 +930,7 @@ const register = async (req, res, next) => {
         if (referredById) {
           await client.query(`
             UPDATE partner_referrals SET total_registered = total_registered + 1 WHERE partner_id = $1
-          `, [referredById]).catch(() => {});
+          `, [referredById]).catch(() => { });
         }
 
         // If PARTNER role, create default team entry in partner_teams
@@ -1093,9 +1093,9 @@ const loginPassword = async (req, res, next) => {
     }
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
-                        user.role === 'ADMIN' ? '/admin/dashboard' :
-                        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
-                        '/partner/dashboard';
+      user.role === 'ADMIN' ? '/admin/dashboard' :
+        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
+          '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     return res.json({
@@ -1103,18 +1103,18 @@ const loginPassword = async (req, res, next) => {
       token,
       redirect: redirectUrl,
       user: {
-        id:                   user.id,
-        email:                user.email,
-        mobile:               user.mobile,
-        role:                 user.role,
-        status:               user.status,
-        first_name:           user.first_name,
-        last_name:            user.last_name,
+        id: user.id,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        status: user.status,
+        first_name: user.first_name,
+        last_name: user.last_name,
         must_change_password: !!user.must_change_password,
-        onboarding_required:  user.role === 'TEAM_MEMBER' && (user.must_change_password || user.status === 'pending' || kycStatus === 'pending'),
+        onboarding_required: user.role === 'TEAM_MEMBER' && (user.must_change_password || user.status === 'pending' || kycStatus === 'pending'),
       },
       partner: kycStatus !== null ? {
-        kyc_status:       kycStatus,
+        kyc_status: kycStatus,
         rejection_reason: rejectionReason,
       } : null,
     });
@@ -1374,7 +1374,7 @@ const updatePasswordWithOtp = async (req, res, next) => {
 
     // Validate OTP
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
-    
+
     const { rows: [record] } = await query(`
       SELECT * FROM otp_verifications 
       WHERE (identity = $1 OR identity = $2) AND otp_hash = $3 AND expires_at > NOW()
@@ -1540,7 +1540,7 @@ const deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const mode = req.query.mode || req.body?.mode || 'temporary';
-    
+
     if (mode === 'permanent') {
       await deleteUserAccount(userId);
     } else {
@@ -1549,8 +1549,8 @@ const deleteAccount = async (req, res, next) => {
 
     res.clearCookie('token');
     res.clearCookie('refreshToken');
-    const msg = mode === 'permanent' 
-      ? 'Your account and all associated data have been permanently deleted.' 
+    const msg = mode === 'permanent'
+      ? 'Your account and all associated data have been permanently deleted.'
       : 'Your account has been temporarily deactivated. Contact support to reactivate.';
     return success(res, {}, msg);
   } catch (err) {

@@ -131,7 +131,7 @@ const listAdmins = async (req, res, next) => {
       WHERE role IN ('ADMIN', 'EMPLOYEE')
       ORDER BY created_at DESC
     `);
-    const { rows: assignments } = await query(`SELECT aba.admin_id, b.id as bank_id, b.name as bank_name, b.short_code, b.code, b.logo_url FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id`);
+    const { rows: assignments } = await query(`SELECT aba.admin_id, b.id as bank_id, b.name as bank_name, b.short_code, b.short_code as code, b.logo_url FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id`);
     const adminBankMap = {};
     const adminBankIdMap = {};
     assignments.forEach(a => {
@@ -969,7 +969,7 @@ const updateAdmin = async (req, res, next) => {
 const getAdminBanks = async (req, res, next) => {
   try {
     const adminId = req.params.id;
-    const { rows: banks } = await query(`SELECT b.id, b.name, b.short_code, b.code, b.logo_url, aba.created_at FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [adminId]);
+    const { rows: banks } = await query(`SELECT b.id, b.name, b.short_code, b.short_code as code, b.logo_url, aba.created_at FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [adminId]);
     return success(res, { bank_ids: banks.map(b => b.id), banks });
   } catch (err) { next(err); }
 };
