@@ -84,6 +84,15 @@ const migrate = async () => {
   `);
   await addEnumValue('application_status', 'confirmed');
   await addEnumValue('application_status', 'pending');
+  await addEnumValue('application_status', 'initiated');
+  await addEnumValue('application_status', 'lead_created');
+  await addEnumValue('application_status', 'in_process');
+  await addEnumValue('application_status', 'application_started');
+  await addEnumValue('application_status', 'application_submitted');
+  await addEnumValue('application_status', 'application_number_received');
+  await addEnumValue('application_status', 'vkyc_pending');
+  await addEnumValue('application_status', 'vkyc_completed');
+  await addEnumValue('application_status', 'cancelled');
   await query(`
     DO $$ BEGIN
       CREATE TYPE product_category AS ENUM ('credit_card','personal_loan','home_loan','business_loan',
@@ -4096,6 +4105,80 @@ const migrate = async () => {
 
         ALTER TABLE banks ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL;
         ALTER TABLE products ADD COLUMN IF NOT EXISTS operation_head_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
+        CREATE TABLE IF NOT EXISTS bank_product_requirements (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+          product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+          fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS application_audit_logs (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+          lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+          user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          role VARCHAR(50),
+          action VARCHAR(100) NOT NULL,
+          entity VARCHAR(50) DEFAULT 'application',
+          old_value JSONB,
+          new_value JSONB,
+          ip_address VARCHAR(45),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS application_links (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          token VARCHAR(255) UNIQUE NOT NULL,
+          lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+          application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+          product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+          created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          status VARCHAR(20) DEFAULT 'ACTIVE',
+          expires_at TIMESTAMPTZ NOT NULL,
+          used_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS admin_bank_assignments (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          UNIQUE(admin_id, bank_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS application_audit_logs (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          role VARCHAR(50),
+          action VARCHAR(100) NOT NULL,
+          entity VARCHAR(50) DEFAULT 'application',
+          entity_id UUID,
+          lead_id UUID,
+          old_value JSONB,
+          new_value JSONB,
+          remarks TEXT,
+          ip_address VARCHAR(100),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_entity ON application_audit_logs(entity, entity_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_user ON application_audit_logs(user_id);
+
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS customer_id UUID;
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS bank_id UUID;
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS product_id UUID;
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS team_member_id UUID;
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS commission_rule_id UUID;
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS total_commission DECIMAL(15,2);
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS partner_pct DECIMAL(5,2);
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS team_member_pct DECIMAL(5,2);
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS partner_amount DECIMAL(15,2);
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS team_member_amount DECIMAL(15,2);
+        ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
       `);
 
       logger.info('Referral & Team Business Rules (v2) Schema Migration completed successfully.');

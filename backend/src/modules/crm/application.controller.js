@@ -1893,6 +1893,127 @@ const updateApplicationDetails = async (req, res, next) => {
   }
 };
 
+const logApplicationAudit = async (req, applicationId, leadId, action, oldValue, newValue, remarks = '') => {
+  try {
+    const userId = req?.user?.id || null;
+    const role = req?.user?.role || 'SYSTEM';
+    const ipAddress = req?.ip || req?.headers?.['x-forwarded-for'] || null;
+
+    await query(`
+      INSERT INTO application_audit_logs (
+        user_id, role, action, entity, entity_id, lead_id, old_value, new_value, remarks, ip_address, created_at
+      ) VALUES ($1, $2, $3, 'application', $4, $5, $6::jsonb, $7::jsonb, $8, $9, NOW())
+    `, [
+      userId,
+      role,
+      action,
+      applicationId,
+      leadId || null,
+      oldValue ? JSON.stringify(oldValue) : null,
+      newValue ? JSON.stringify(newValue) : null,
+      remarks,
+      ipAddress
+    ]);
+  } catch (err) {
+    logger.error('Audit logging failed:', err.message);
+  }
+};
+
+// PATCH /applications/:id/process-type
+const updateProcessType = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { id } = req.params;
+    const { process_type, reason } = req.body;
+
+    if (!process_type || !reason) {
+      return error(res, 'New process_type and a valid reason for change are required', 400);
+    }
+
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only authorized administrators can request a change of process type.'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+
+    const oldProcessType = app.process_type;
+
+    // Operational Head bank check
+    if (req.user.role === 'ADMIN') {
+      const { rows: assignedBanks } = await client.query(
+        `SELECT bank_id as id FROM admin_bank_assignments WHERE admin_id = $1 UNION SELECT id FROM banks WHERE operation_head_id = $1`,
+        [req.user.id]
+      );
+      if (assignedBanks.length > 0) {
+        const allowedIds = assignedBanks.map(b => b.id);
+        if (app.bank_id && !allowedIds.includes(app.bank_id)) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ success: false, message: 'Forbidden: You are not authorized for this bank.' });
+        }
+      }
+    }
+
+    const { rows: [updatedApp] } = await client.query(`
+      UPDATE applications
+      SET process_type = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `, [process_type.trim(), id]);
+
+    if (app.lead_id) {
+      await client.query(`UPDATE leads SET process_type = $1, updated_at = NOW() WHERE id = $2`, [process_type.trim(), app.lead_id]);
+    }
+
+    await logTimeline(client, id, app.status, `Process Type Changed to ${process_type}`, `Reason: ${reason}. Previous: ${oldProcessType}`, req.user.id);
+    await client.query('COMMIT');
+
+    await logApplicationAudit(req, id, app.lead_id, 'PROCESS_TYPE_CHANGED', { process_type: oldProcessType }, { process_type: process_type.trim() }, reason);
+
+    return success(res, updatedApp, `Process type updated to ${process_type} successfully.`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// PATCH /applications/:id/vkyc
+const updateVkyc = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { vkyc_status, vkyc_url, vkyc_link, remarks } = req.body;
+
+    const targetUrl = vkyc_url || vkyc_link;
+
+    const { rows: [app] } = await query(`
+      UPDATE applications
+      SET vkyc_status = COALESCE(NULLIF($1, ''), vkyc_status),
+          vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `, [vkyc_status ? vkyc_status.trim() : null, targetUrl ? targetUrl.trim() : null, id]);
+
+    if (!app) return notFound(res, 'Application not found');
+
+    await logApplicationAudit(req, id, app.lead_id, 'VKYC_UPDATED', { vkyc_status: app.vkyc_status }, { vkyc_status, vkyc_url: targetUrl }, remarks);
+
+    return success(res, app, 'VKYC details updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -1918,6 +2039,9 @@ module.exports = {
   bulkUpdateStatus,
   importApplications,
   exportApplicationsCSV,
-  updateApplicationDetails
+  updateApplicationDetails,
+  logApplicationAudit,
+  updateProcessType,
+  updateVkyc
 };
 

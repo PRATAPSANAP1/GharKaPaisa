@@ -64,15 +64,17 @@ export default function SuperAdminDashboard() {
   const [allBanks, setAllBanks] = useState([]);
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [assignedBankIds, setAssignedBankIds] = useState([]);
+  const [selectedCreateBankIds, setSelectedCreateBankIds] = useState([]);
+  const [bankSearchQuery, setBankSearchQuery] = useState('');
 
   // Fetch Admins
   const fetchAdmins = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.get('/superadmin/operation-heads');
+      const res = await api.get('/superadmin/admins');
       if (res.data && res.data.success) {
-        setAdmins(res.data.data.map(a => ({ ...a, _id: a.id, fullName: a.full_name, employeeId: a.employee_id })));
+        setAdmins(res.data.data.map(a => ({ ...a, _id: a.id, fullName: a.fullName || a.full_name, employeeId: a.employeeId || a.employee_id })));
       } else {
         setErrorMsg('Failed to load admins list');
       }
@@ -88,40 +90,35 @@ export default function SuperAdminDashboard() {
     setSelectedOpHead(admin);
     setBankModalOpen(true);
     try {
-      const [bankRes, opHeadRes] = await Promise.all([
+      const [banksRes, assignedRes] = await Promise.all([
         api.get('/banks'),
-        api.get('/superadmin/operation-heads')
+        api.get(`/superadmin/admins/${admin.id}/banks`)
       ]);
-      if (bankRes.data?.success) {
-        setAllBanks(bankRes.data.data || []);
+      if (banksRes.data && banksRes.data.data) setAllBanks(banksRes.data.data);
+      if (assignedRes.data && assignedRes.data.data) {
+        setAssignedBankIds(assignedRes.data.data.map(b => b.id || b));
       }
-      if (opHeadRes.data?.success) {
-        const currentHead = (opHeadRes.data.data || []).find(h => (h.id === admin._id || h.id === admin.id));
-        if (currentHead && currentHead.assigned_banks) {
-          setAssignedBankIds(currentHead.assigned_banks.map(b => b.id));
-        } else {
-          setAssignedBankIds([]);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load bank assignments', e);
+    } catch (err) {
+      console.error('Failed to load bank assignment info:', err);
     }
   };
 
   const handleToggleBankAssignment = async (bankId) => {
-    const isAssigned = assignedBankIds.includes(bankId);
-    const newOpHeadId = isAssigned ? null : (selectedOpHead._id || selectedOpHead.id);
-
-    setAssignedBankIds(prev => isAssigned ? prev.filter(id => id !== bankId) : [...prev, bankId]);
+    let updated;
+    if (assignedBankIds.includes(bankId)) {
+      updated = assignedBankIds.filter(id => id !== bankId);
+    } else {
+      updated = [...assignedBankIds, bankId];
+    }
+    setAssignedBankIds(updated);
 
     try {
-      await api.put('/superadmin/assign-bank-operation-head', {
-        bankId,
-        operationHeadId: newOpHeadId
+      await api.put(`/superadmin/admins/${selectedOpHead.id}/banks`, {
+        bank_ids: updated
       });
       fetchAdmins();
-    } catch (e) {
-      console.error('Failed to update bank assignment', e);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update bank assignment');
     }
   };
 
@@ -165,9 +162,18 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
+    const isOpHead = form.designation === 'Operational Head' || form.designation === 'OPERATIONAL_HEAD';
+    if (isOpHead && selectedCreateBankIds.length === 0) {
+      return setFormErr('At least one bank must be selected for an Operational Head');
+    }
+
     setFormLoading(true);
     try {
-      const res = await api.post('/superadmin/create-admin', form);
+      const payload = {
+        ...form,
+        bank_ids: selectedCreateBankIds
+      };
+      const res = await api.post('/superadmin/create-admin', payload);
       if (res.data && res.data.success) {
         setFormSuccess('Admin created successfully.');
         setForm({
@@ -180,6 +186,7 @@ export default function SuperAdminDashboard() {
           department: 'Operations',
           designation: ''
         });
+        setSelectedCreateBankIds([]);
         fetchAdmins(); // Refresh
         setTimeout(() => setShowCreateModal(false), 1500);
       }
@@ -732,17 +739,119 @@ export default function SuperAdminDashboard() {
               {/* Designation */}
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Designation *</label>
-                <input
+                <select
                   name="designation"
                   value={form.designation}
-                  onChange={handleChange}
-                  placeholder="e.g. Credit Officer"
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", color: "#111827", outline: "none", transition: "border-color 0.2s", boxSizing: "border-box" }}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (e.target.value === 'Operational Head' && allBanks.length === 0) {
+                      api.get('/banks').then(res => {
+                        if (res.data && res.data.data) setAllBanks(res.data.data);
+                      }).catch(err => console.error(err));
+                    }
+                  }}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", color: "#111827", outline: "none", transition: "border-color 0.2s", boxSizing: "border-box", background: "#FFFFFF" }}
                   onFocus={e => e.currentTarget.style.borderColor = "#3B82F6"}
                   onBlur={e => e.currentTarget.style.borderColor = "#D1D5DB"}
                   required
-                />
+                >
+                  <option value="">Select Designation...</option>
+                  <option value="Operational Head">Operational Head</option>
+                  <option value="Super Admin">Super Admin</option>
+                  <option value="Credit Manager">Credit Manager</option>
+                  <option value="Operations Executive">Operations Executive</option>
+                  <option value="Support Lead">Support Lead</option>
+                  <option value="Accounts Admin">Accounts Admin</option>
+                  <option value="Other Admin">Other Admin</option>
+                </select>
               </div>
+
+              {/* Operational Head Bank Assignment Section */}
+              {(form.designation === 'Operational Head' || form.designation === 'OPERATIONAL_HEAD') && (
+                <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assign Banks *</label>
+                      <span style={{ fontSize: "12px", color: "#64748B" }}>Select one or multiple banks managed by this Operational Head</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCreateBankIds(allBanks.map(b => b.id))}
+                        style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCreateBankIds([])}
+                        style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Search Banks..."
+                    value={bankSearchQuery}
+                    onChange={(e) => setBankSearchQuery(e.target.value)}
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", outline: "none", boxSizing: "border-box" }}
+                  />
+
+                  <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
+                    {allBanks.filter(b => b.name.toLowerCase().includes((bankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((bankSearchQuery || '').toLowerCase())).map(bank => {
+                      const isChecked = selectedCreateBankIds.includes(bank.id);
+                      return (
+                        <div
+                          key={bank.id}
+                          onClick={() => {
+                            if (isChecked) {
+                              setSelectedCreateBankIds(selectedCreateBankIds.filter(id => id !== bank.id));
+                            } else {
+                              setSelectedCreateBankIds([...selectedCreateBankIds, bank.id]);
+                            }
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            borderRadius: "8px",
+                            border: `1px solid ${isChecked ? "#2563EB" : "#CBD5E1"}`,
+                            background: isChecked ? "#EFF6FF" : "#FFFFFF",
+                            cursor: "pointer",
+                            transition: "all 0.15s"
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {bank.logo_url ? (
+                              <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
+                            ) : (
+                              <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {bank.short_code?.substring(0, 2) || 'BK'}
+                              </div>
+                            )}
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}} // Handled by parent div
+                            style={{ cursor: "pointer" }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {selectedCreateBankIds.length === 0 && (
+                    <div style={{ fontSize: "12px", color: "#EF4444", marginTop: "6px", fontWeight: 500 }}>
+                      ⚠️ At least one bank must be selected for an Operational Head.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px", borderTop: `1px solid #F3F4F6`, paddingTop: "20px" }}>
@@ -769,6 +878,7 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
 
       {/* Assign Banks Modal */}
       {bankModalOpen && selectedOpHead && (

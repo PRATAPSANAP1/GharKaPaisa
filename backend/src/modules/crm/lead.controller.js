@@ -862,6 +862,72 @@ const listPartnerShareLeads = async (req, res, next) => {
   }
 };
 
+// PATCH /leads/:id
+const updateLead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { customer_name, mobile, city, priority } = req.body;
+
+    const { rows: [existing] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
+    if (!existing) return notFound(res, 'Lead not found');
+
+    const { rows: [updated] } = await query(`
+      UPDATE leads SET
+        customer_name = COALESCE(NULLIF($1, ''), customer_name),
+        mobile = COALESCE(NULLIF($2, ''), mobile),
+        customer_mobile = COALESCE(NULLIF($2, ''), customer_mobile),
+        city = COALESCE(NULLIF($3, ''), city),
+        priority = COALESCE(NULLIF($4, ''), priority),
+        updated_at = NOW()
+      WHERE id = $5
+      RETURNING *
+    `, [customer_name, mobile, city, priority, id]);
+
+    await logLeadTimeline(null, id, 'Lead Updated', 'Lead profile details modified', 'lead', id, req.user.id);
+    return success(res, updated, 'Lead updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /leads/:id/process-type
+const updateLeadProcessType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { process_type, reason } = req.body;
+
+    if (!process_type || !reason) {
+      return error(res, 'New process_type and reason are required', 400);
+    }
+
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user.role)) {
+      return error(res, 'Only authorized administrators can request a change of lead process type', 403);
+    }
+
+    const { rows: [existing] } = await query(`SELECT * FROM leads WHERE id = $1`, [id]);
+    if (!existing) return notFound(res, 'Lead not found');
+
+    const oldType = existing.process_type;
+
+    const { rows: [updated] } = await query(`
+      UPDATE leads SET process_type = $1, updated_at = NOW() WHERE id = $2 RETURNING *
+    `, [process_type.trim(), id]);
+
+    await logLeadTimeline(null, id, 'Process Type Changed', `Process type updated from ${oldType} to ${process_type}. Reason: ${reason}`, 'lead', id, req.user.id);
+    await logLeadActivity(null, id, 'process_type_changed', req.user.id, 'lead', id, req);
+
+    return success(res, updated, `Lead process type updated to ${process_type}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /leads/:id/application — Lead to Application Conversion Alias
+const convertLeadToApplication = async (req, res, next) => {
+  req.body.otp = req.body.otp || 'AUTO';
+  return verifyLeadOtp(req, res, next);
+};
+
 module.exports = {
   listLeads,
   get360LeadDetails,
@@ -876,6 +942,9 @@ module.exports = {
   updateLeadChecklist,
   bulkAssignLeads,
   addLeadFollowUp,
-  listPartnerShareLeads
+  listPartnerShareLeads,
+  updateLead,
+  updateLeadProcessType,
+  convertLeadToApplication
 };
 

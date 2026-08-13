@@ -88,6 +88,30 @@ export default function PartnerApplications() {
     remarks: ''
   });
 
+  // Customer Application Share Link Modal State
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState(null);
+  const [generatingShare, setGeneratingShare] = useState(false);
+
+  const handleGenerateShareLink = async (app) => {
+    setGeneratingShare(true);
+    try {
+      const res = await api.post('/applications/generate-share-link', { application_id: app.id, lead_id: app.lead_id });
+      if (res.data?.success) {
+        setShareData({
+          ...res.data.data,
+          app_number: app.app_number,
+          customer_name: app.customer_name || 'Customer'
+        });
+        setShowShareModal(true);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to generate customer share link');
+    } finally {
+      setGeneratingShare(false);
+    }
+  };
+
   const handleOpenEditModal = (app) => {
     setEditApp(app);
     setEditForm({
@@ -657,6 +681,10 @@ export default function PartnerApplications() {
                                 <UserPlus size={14} />
                               </button>
                             )}
+                            <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Share2 size={13} /> Link
+                            </button>
                             <button onClick={() => handleOpenEditModal(app)}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ✏️ Edit
@@ -856,6 +884,55 @@ export default function PartnerApplications() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 5: CUSTOMER SHARE LINK MODAL ═══ */}
+      {showShareModal && shareData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 480, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>🔗 Customer Application Link</h3>
+                <span style={{ fontSize: 11, color: textMuted }}>Send link to {shareData.customer_name} for self-fulfillment</span>
+              </div>
+              <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Share URL</div>
+                <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                  {shareData.share_url}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareData.share_url);
+                    alert('Link copied to clipboard!');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <Copy size={14} /> Copy Link
+                </button>
+                <button
+                  onClick={() => {
+                    const text = encodeURIComponent(`Hi ${shareData.customer_name}, please complete your application details using this secure link: ${shareData.share_url}`);
+                    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  💬 Share via WhatsApp
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'right', marginTop: 10 }}>
+                <button onClick={() => setShowShareModal(false)} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: textMuted, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

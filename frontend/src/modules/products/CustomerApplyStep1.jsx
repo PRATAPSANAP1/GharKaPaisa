@@ -26,10 +26,10 @@ export default function CustomerApplyStep1() {
     const fetchTokenDetails = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${getApiV1Url()}/public/apply/${token}`);
+        const res = await fetch(`${getApiV1Url()}/applications/apply-token/${token}`);
         const json = await res.json();
         if (json && json.success && json.data) {
-          setProduct(json.data.product);
+          setProduct({ name: json.data.product, bank_name: json.data.bank, logo: json.data.bank_logo });
           setCustomer(json.data.customer);
         } else {
           setError(json.message || 'Invalid or expired application link');
@@ -52,7 +52,7 @@ export default function CustomerApplyStep1() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${getApiV1Url()}/public/apply/${token}`, {
+      const res = await fetch(`${getApiV1Url()}/applications/apply-token/${token}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -67,6 +67,7 @@ const getMe = async (req, res, next) => {
   try {
       const { rows: [user] } = await query(`
         SELECT u.id, u.email, u.mobile, u.role, u.status, u.last_login, u.must_change_password,
+          u.full_name, u.department, u.designation,
           ap.id as partner_id, ap.partner_code, ap.first_name, ap.last_name,
           ap.kyc_status, ap.company_name, ap.profile_photo_url, ap.current_address,
           ap.business_location, ap.gst_number, ap.company_type, ap.pincode,
@@ -85,6 +86,22 @@ const getMe = async (req, res, next) => {
       const decrypted = decrypt(user.account_number);
       user.account_number_last4 = decrypted.slice(-4);
       user.account_number = 'XXXX' + decrypted.slice(-4);
+    }
+
+    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      const { rows: assignedBanks } = await query(`
+        SELECT b.id, b.name, b.short_code, b.code
+        FROM admin_bank_assignments aba
+        JOIN banks b ON b.id = aba.bank_id
+        WHERE aba.admin_id = $1
+      `, [user.id]);
+      const permissions = {
+        banks: assignedBanks.map(b => b.id),
+        bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
+        assigned_banks: assignedBanks
+      };
+      user.permissions = permissions;
+      user.assigned_banks = assignedBanks;
     }
 
     await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [req.user.id]);
@@ -456,8 +473,39 @@ const login = async (req, res, next) => {
                         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
                         '/partner/dashboard';
 
+    let permissions = null;
+    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      const { rows: assignedBanks } = await query(
+        `SELECT b.id, b.name, b.short_code, b.code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
+      );
+      permissions = {
+        banks: assignedBanks.map(b => b.id),
+        bank_codes: assignedBanks.map(b => b.code || b.short_code || b.name),
+        assigned_banks: assignedBanks
+      };
+    }
+
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
-    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({
+      success: true,
+      token,
+      role: user.role,
+      status: user.status,
+      user: {
+        id: user.id,
+        name: user.full_name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        department: user.department,
+        designation: user.designation,
+        status: user.status
+      },
+      permissions,
+      kyc_status: kycStatus,
+      rejection_reason: rejectionReason,
+      redirect: redirectUrl
+    });
   } catch (err) {
     next(err);
   }

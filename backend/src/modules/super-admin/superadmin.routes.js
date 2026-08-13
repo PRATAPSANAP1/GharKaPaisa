@@ -16,6 +16,10 @@ router.use(roleCheck('SUPER_ADMIN'));
 
 router.post('/create-admin', ctrl.createAdmin);
 router.get('/admins', ctrl.listAdmins);
+router.put('/admins/:id', ctrl.updateAdmin);
+router.patch('/admins/:id', ctrl.updateAdmin);
+router.get('/admins/:id/banks', ctrl.getAdminBanks);
+router.put('/admins/:id/banks', ctrl.updateAdminBanks);
 router.get('/operation-heads', ctrl.getOperationHeads);
 router.put('/assign-bank-operation-head', ctrl.assignBankOperationHead);
 router.delete('/admins/:id', ctrl.deleteAdmin);

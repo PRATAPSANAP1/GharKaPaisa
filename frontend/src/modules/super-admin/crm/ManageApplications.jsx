@@ -648,6 +648,20 @@ export default function ManageApplications() {
               <button onClick={() => handleOpenEditModal(selectedApp)} style={{ ...S.btn('primary'), background: C.primary, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
                 ✏️ Edit Application Details
               </button>
+              <button onClick={async () => {
+                try {
+                  const res = await api.post('/applications/generate-share-link', { application_id: selectedApp.id, lead_id: selectedApp.lead_id });
+                  if (res.data?.success) {
+                    const shareUrl = res.data.data.share_url;
+                    navigator.clipboard.writeText(shareUrl);
+                    alert(`Customer Application Link Generated & Copied to Clipboard!\n\nLink: ${shareUrl}`);
+                  }
+                } catch (err) {
+                  alert(err.response?.data?.message || 'Failed to generate customer share link');
+                }
+              }} style={{ ...S.btn('outline'), color: C.teal, borderColor: C.teal, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
+                <MdShare /> Send Customer Share Link
+              </button>
               <button onClick={() => triggerActionDialog('approve')} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
                 <MdCheckCircle /> Approve Lead
               </button>

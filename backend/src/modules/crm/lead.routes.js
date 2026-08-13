@@ -22,8 +22,10 @@ router.post('/:id/verify-otp', requireApprovedPartnerOrAdmin, ctrl.verifyLeadOtp
 
 // 360 Lead Profile & Operations Details
 router.get('/:id', requireApprovedPartnerOrAdmin, ctrl.get360LeadDetails);
-
+router.patch('/:id', requireApprovedPartnerOrAdmin, ctrl.updateLead);
+router.patch('/:id/process-type', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateLeadProcessType);
 router.patch('/:id/status', roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateLeadStatus);
+router.post('/:id/application', requireApprovedPartnerOrAdmin, ctrl.convertLeadToApplication);
 
 // Sub-resource Endpoints
 router.post('/:id/document', requireApprovedPartnerOrAdmin, ctrl.addLeadDocument);

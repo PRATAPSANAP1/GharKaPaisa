@@ -86,7 +86,19 @@ const createAdmin = async (req, res, next) => {
     logger.info(`Super admin ${req.user.email} created new user: ${email} with role: ${role}`);
 
     // Record the action in audit logs
-    await logAction(req, 'CREATE_USER', dbUser.id, { email, role: dbUser.role });
+    const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
+    const isOpHead = String(designation).toUpperCase() === 'OPERATIONAL_HEAD' || String(designation).toUpperCase() === 'OPERATIONAL HEAD';
+    if (isOpHead && bankIds.length === 0) {
+      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+    }
+    if (bankIds.length > 0) {
+      for (const bId of bankIds) {
+        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [dbUser.id, bId, req.user.id]);
+        await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [dbUser.id, bId]);
+        await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [dbUser.id, bId]);
+      }
+    }
+    await logAction(req, 'CREATE_USER', dbUser.id, { email, role: dbUser.role, bankIds });
 
     return created(res, {
       userId: dbUser.id,
@@ -119,7 +131,16 @@ const listAdmins = async (req, res, next) => {
       WHERE role IN ('ADMIN', 'EMPLOYEE')
       ORDER BY created_at DESC
     `);
-    return success(res, admins);
+    const { rows: assignments } = await query(`SELECT aba.admin_id, b.id as bank_id, b.name as bank_name, b.short_code, b.code, b.logo_url FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id`);
+    const adminBankMap = {};
+    const adminBankIdMap = {};
+    assignments.forEach(a => {
+      if (!adminBankMap[a.admin_id]) { adminBankMap[a.admin_id] = []; adminBankIdMap[a.admin_id] = []; }
+      adminBankMap[a.admin_id].push({ id: a.bank_id, name: a.bank_name, short_code: a.short_code || a.code, logo_url: a.logo_url });
+      adminBankIdMap[a.admin_id].push(a.bank_id);
+    });
+    const result = admins.map(a => ({ ...a, id: a._id, assigned_banks: adminBankMap[a._id] || [], bank_ids: adminBankIdMap[a._id] || [] }));
+    return success(res, result);
   } catch (err) {
     next(err);
   }
@@ -905,11 +926,81 @@ const assignBankOperationHead = async (req, res, next) => {
   }
 };
 
+const updateAdmin = async (req, res, next) => {
+  try {
+    const adminId = req.params.id;
+    const { fullName, email, mobile, department, designation, status, bank_ids, password } = req.body;
+    const isOpHead = String(designation || '').toUpperCase() === 'OPERATIONAL_HEAD' || String(designation || '').toUpperCase() === 'OPERATIONAL HEAD';
+    const bankIds = Array.isArray(bank_ids) ? bank_ids : [];
+    if (isOpHead && bankIds.length === 0) {
+      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+    }
+    const updates = [];
+    const values = [];
+    let idx = 1;
+    if (fullName) { updates.push(`full_name = $${idx++}`); values.push(fullName); }
+    if (email) { updates.push(`email = $${idx++}`); values.push(email); }
+    if (mobile) { updates.push(`mobile = $${idx++}`); values.push(mobile); }
+    if (department) { updates.push(`department = $${idx++}`); values.push(department); }
+    if (designation) { updates.push(`designation = $${idx++}`); values.push(designation); }
+    if (status) { updates.push(`status = $${idx++}::user_status`); values.push(status); }
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updates.push(`password_hash = $${idx++}`);
+      values.push(hashedPassword);
+    }
+    if (updates.length > 0) {
+      updates.push(`updated_at = NOW()`);
+      values.push(adminId);
+      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}`, values);
+    }
+    if (Array.isArray(bank_ids)) {
+      await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
+      for (const bId of bankIds) {
+        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [adminId, bId, req.user.id]);
+        await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [adminId, bId]);
+        await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [adminId, bId]);
+      }
+    }
+    return success(res, { adminId, bank_ids: bankIds }, 'Admin user updated successfully.');
+  } catch (err) { next(err); }
+};
+
+const getAdminBanks = async (req, res, next) => {
+  try {
+    const adminId = req.params.id;
+    const { rows: banks } = await query(`SELECT b.id, b.name, b.short_code, b.code, b.logo_url, aba.created_at FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [adminId]);
+    return success(res, { bank_ids: banks.map(b => b.id), banks });
+  } catch (err) { next(err); }
+};
+
+const updateAdminBanks = async (req, res, next) => {
+  try {
+    const adminId = req.params.id;
+    const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : [];
+    const { rows: [adminUser] } = await query(`SELECT designation FROM users WHERE id = $1`, [adminId]);
+    const isOpHead = String(adminUser?.designation || '').toUpperCase() === 'OPERATIONAL_HEAD' || String(adminUser?.designation || '').toUpperCase() === 'OPERATIONAL HEAD';
+    if (isOpHead && bankIds.length === 0) {
+      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+    }
+    await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
+    for (const bId of bankIds) {
+      await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [adminId, bId, req.user.id]);
+      await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [adminId, bId]);
+      await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [adminId, bId]);
+    }
+    return success(res, { adminId, bank_ids: bankIds }, 'Admin bank assignments updated successfully.');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   createCommissionRule,
   getCommissionRules,
   createAdmin,
   listAdmins,
+  updateAdmin,
+  getAdminBanks,
+  updateAdminBanks,
   blockUser,
   getAuditLogs,
   deleteAdmin,
