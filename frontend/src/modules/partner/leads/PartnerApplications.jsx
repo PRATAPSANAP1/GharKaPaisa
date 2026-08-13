@@ -8,7 +8,7 @@ import {
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
-  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy
 } from 'lucide-react';
 
 const STAGES = [
@@ -589,16 +589,26 @@ export default function PartnerApplications() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, borderTop: `1px solid ${border}`, paddingTop: 8 }}>
-                    {!isTeamMember && (
-                      <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }}
-                        style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <UserPlus size={12} /> Assign
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {!isTeamMember && (
+                        <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <UserPlus size={12} /> Assign
+                        </button>
+                      )}
+                      <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Share2 size={12} /> Link
                       </button>
-                    )}
+                      <button onClick={() => handleOpenEditModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        ✏️ Edit
+                      </button>
+                    </div>
                     <button onClick={() => handleToggleExpand(app)}
-                      style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
-                      {isExpanded ? 'Hide Details' : 'Details'}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
+                      {isExpanded ? 'Hide' : 'Details'}
                     </button>
                   </div>
 
