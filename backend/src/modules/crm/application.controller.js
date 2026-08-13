@@ -2014,10 +2014,106 @@ const updateVkyc = async (req, res, next) => {
   }
 };
 
-// Alias to Partner Share Controller apply token handlers
+// Configurable Bank Requirements & Share Link Handlers
+const getBankRequirements = async (req, res, next) => {
+  try {
+    const { bank_id, product_id } = req.query;
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_requirements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    let sql = `
+      SELECT br.*, b.name as bank_name, p.name as product_name
+      FROM bank_requirements br
+      LEFT JOIN banks b ON b.id = br.bank_id
+      LEFT JOIN products p ON p.id = br.product_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (bank_id) {
+      params.push(bank_id);
+      sql += ` AND br.bank_id = $${params.length}`;
+    }
+    if (product_id) {
+      params.push(product_id);
+      sql += ` AND br.product_id = $${params.length}`;
+    }
+
+    const { rows } = await query(sql, params);
+
+    if (rows.length === 0) {
+      const defaultReqs = [
+        {
+          bank: "SBI",
+          product: "Credit Card",
+          fields: [
+            { name: "bank_application_number", label: "Application Number", type: "text", required: true },
+            { name: "vkyc_url", label: "VKYC Link", type: "url", required: true },
+            { name: "salary_slip_url", label: "Salary Slip Document", type: "file", required: true },
+            { name: "pan_card_url", label: "PAN Card Document", type: "file", required: true }
+          ]
+        },
+        {
+          bank: "HDFC",
+          product: "Credit Card",
+          fields: [
+            { name: "bank_application_number", label: "Application Number", type: "text", required: true },
+            { name: "vkyc_url", label: "VKYC Link", type: "url", required: true }
+          ]
+        }
+      ];
+      return success(res, defaultReqs, 'Default bank requirements loaded');
+    }
+
+    return success(res, rows, 'Bank requirements retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const saveBankRequirements = async (req, res, next) => {
+  try {
+    const { bank_id, product_id, fields } = req.body;
+    if (!bank_id || !Array.isArray(fields)) {
+      return error(res, 'Bank ID and array of fields are required', 400);
+    }
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS bank_requirements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        bank_id UUID REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    const { rows: [reqRow] } = await query(`
+      INSERT INTO bank_requirements (bank_id, product_id, fields, updated_at)
+      VALUES ($1, $2, $3::jsonb, NOW())
+      RETURNING *
+    `, [bank_id, product_id || null, JSON.stringify(fields)]);
+
+    return success(res, reqRow, 'Bank requirements configured successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Alias to Partner Share Controller apply token & link handlers
 const partnerShareCtrl = require('../partner/partner-share.controller.js');
 const getPublicApplyToken = (req, res, next) => partnerShareCtrl.getApplyTokenDetails(req, res, next);
 const submitPublicApplyToken = (req, res, next) => partnerShareCtrl.updateApplyTokenDetails(req, res, next);
+const generateShareLink = (req, res, next) => partnerShareCtrl.generateShareLink(req, res, next);
 
 module.exports = {
   submitApplication,
@@ -2049,6 +2145,9 @@ module.exports = {
   updateProcessType,
   updateVkyc,
   getPublicApplyToken,
-  submitPublicApplyToken
+  submitPublicApplyToken,
+  getBankRequirements,
+  saveBankRequirements,
+  generateShareLink
 };
 
