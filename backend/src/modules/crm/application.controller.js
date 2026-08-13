@@ -1528,16 +1528,38 @@ const submitPartnerApplication = async (req, res, next) => {
       pincode || null, city || null, state || null, country_code, agree_terms,
     ]);
 
-    await client.query(`
-      INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
-      VALUES ($1, $2, $3, $4, 'partner', $5)
-    `, [
-      app.id,
-      is_draft ? 'draft_saved' : 'applied',
-      is_draft ? 'Draft Application Saved' : 'Application Initiated',
-      is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
-      req.user.id
-    ]);
+    try {
+      await client.query(`
+        INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
+        VALUES ($1, $2, $3, $4, $5, $6, 'partner', $7)
+      `, [
+        app.id,
+        appStatus,
+        is_draft ? 'Draft Saved' : 'Application Submitted',
+        is_draft ? 'draft_saved' : 'applied',
+        is_draft ? 'Draft Application Saved' : 'Application Initiated',
+        is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
+        req.user.id
+      ]);
+    } catch (timelineErr) {
+      if (timelineErr.code === '23502') { // null value in column violates not-null constraint
+        await client.query(`ALTER TABLE application_timeline ALTER COLUMN status DROP NOT NULL; ALTER TABLE application_timeline ALTER COLUMN activity DROP NOT NULL;`).catch(() => {});
+        await client.query(`
+          INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
+          VALUES ($1, $2, $3, $4, $5, $6, 'partner', $7)
+        `, [
+          app.id,
+          appStatus,
+          is_draft ? 'Draft Saved' : 'Application Submitted',
+          is_draft ? 'draft_saved' : 'applied',
+          is_draft ? 'Draft Application Saved' : 'Application Initiated',
+          is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
+          req.user.id
+        ]).catch(err => logger.warn('Timeline insert fallback warn:', err.message));
+      } else {
+        logger.warn('Timeline insert non-fatal warn:', timelineErr.message);
+      }
+    }
 
     // Process specific metadata generation
     let shareUrl = null;
