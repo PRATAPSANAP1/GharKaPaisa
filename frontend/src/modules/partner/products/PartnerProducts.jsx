@@ -1169,12 +1169,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     className="gkp-product-card"
                     style={{
                       ...S.card,
-                      padding: isMobile ? '12px 10px' : '20px',
+                      padding: isMobile ? '14px 12px' : '20px',
                       borderRadius: '18px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: isMobile ? '10px' : '14px',
+                      gap: isMobile ? '12px' : '14px',
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       border: isSelectedForCompare ? `2.5px solid ${C.primary}` : `1.5px solid ${C.border}`,
                       boxShadow: isSelectedForCompare ? `0 12px 28px ${C.primary}20` : (isDark ? 'none' : '0 4px 15px rgba(0,0,0,0.02)'),
@@ -1187,7 +1187,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{
                             ...S.tag(C.primary),
-                            fontSize: isMobile ? '9.5px' : '11px',
+                            fontSize: isMobile ? '10px' : '11px',
                             fontWeight: 750,
                             padding: isMobile ? '3px 8px' : '4px 10px',
                             borderRadius: '8px',
@@ -1198,7 +1198,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           </span>
                           {isSelectedForCompare && (
                             <span style={{
-                              fontSize: isMobile ? '9.5px' : '11px', fontWeight: 800, color: '#fff',
+                              fontSize: isMobile ? '10px' : '11px', fontWeight: 800, color: '#fff',
                               background: C.green, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: '8px'
                             }}>
                               ✓ Compare
@@ -1206,7 +1206,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           )}
                         </div>
                         <span style={{
-                          fontSize: isMobile ? '9.5px' : '11px', fontWeight: 700, color: C.textMid,
+                          fontSize: isMobile ? '10px' : '11px', fontWeight: 700, color: C.textMid,
                           background: C.bgSecondary, padding: isMobile ? '3px 8px' : '4px 10px', borderRadius: '8px',
                           textTransform: 'uppercase', letterSpacing: '0.5px',
                           border: `1px solid ${C.border}`
@@ -1218,8 +1218,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       {/* Product Logo & Info Header */}
                       <div style={{ display: 'flex', gap: isMobile ? '10px' : '12px', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{
-                          width: isMobile ? 40 : 52,
-                          height: isMobile ? 40 : 52,
+                          width: isMobile ? 44 : 52,
+                          height: isMobile ? 44 : 52,
                           flexShrink: 0,
                           background: C.bgSecondary,
                           borderRadius: '12px',
@@ -1238,7 +1238,17 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ fontSize: isMobile ? '14px' : '16.5px', fontWeight: 800, color: C.text, margin: '0 0 2px', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <h3 style={{
+                            fontSize: isMobile ? '14.5px' : '16.5px',
+                            fontWeight: 800,
+                            color: C.text,
+                            margin: '0 0 2px',
+                            lineHeight: 1.3,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
                             {product.name}
                           </h3>
                         </div>
@@ -1249,8 +1259,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         {keyFeatures.slice(0, 3).map((feat, idx) => {
                           const featStr = typeof feat === 'string' ? feat : (feat.title || feat.label || feat.description || '');
                           return featStr ? (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: isMobile ? '11px' : '12px', color: C.textMid, fontWeight: 550, lineHeight: 1.3 }}>
-                              <MdCheckCircle color={C.green} size={isMobile ? 12 : 14} style={{ flexShrink: 0 }} />
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: isMobile ? '11.5px' : '12px', color: C.textMid, fontWeight: 550, lineHeight: 1.3 }}>
+                              <MdCheckCircle color={C.green} size={isMobile ? 13 : 14} style={{ flexShrink: 0 }} />
                               <span style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {featStr}
                               </span>
@@ -1263,10 +1273,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     {/* Footer Action Bar */}
                     <div style={{
                       borderTop: `1px solid ${C.border}`,
-                      paddingTop: '14px',
+                      paddingTop: '12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '12px',
+                      gap: '10px',
                       marginTop: 'auto'
                     }}>
                       {/* Payout & Commission Row */}
@@ -1274,12 +1284,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           {t("Partner Payout")}
                         </span>
-                        <span style={{ fontSize: isMobile ? '20px' : '28px', fontWeight: 800, color: C.green }}>
+                        <span style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: 800, color: C.green }}>
                           ₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
 
-                      {/* Buttons Row */}
+                      {/* Buttons Row 1 */}
                       <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
                         <button
                           onClick={() => handleCopyLink(product)}
@@ -1287,8 +1297,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           style={{
                             ...S.btn('outline'),
                             flex: 1,
-                            padding: isMobile ? '8px 4px' : '10px 8px',
-                            fontSize: isMobile ? '11px' : '12.5px',
+                            padding: isMobile ? '9px 6px' : '10px 8px',
+                            fontSize: isMobile ? '12px' : '12.5px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -1298,7 +1308,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                             fontWeight: 700
                           }}
                         >
-                          <MdShare size={isMobile ? 12 : 14} /> {t("Share")}
+                          <MdShare size={isMobile ? 13 : 14} /> {t("Share")}
                         </button>
                         
                         <button
@@ -1307,8 +1317,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           style={{
                             ...S.btn(isSelectedForCompare ? 'primary' : 'outline'),
                             flex: 1,
-                            padding: isMobile ? '8px 4px' : '10px 8px',
-                            fontSize: isMobile ? '11px' : '12.5px',
+                            padding: isMobile ? '9px 6px' : '10px 8px',
+                            fontSize: isMobile ? '12px' : '12.5px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -1325,6 +1335,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         </button>
                       </div>
 
+                      {/* Buttons Row 2 */}
                       <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
                         <button
                           onClick={() => setShowBenefitsProduct(product)}
@@ -1334,8 +1345,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                             borderColor: C.border,
                             color: C.textMid,
                             flex: 1,
-                            padding: isMobile ? '8px 4px' : '11px 12px',
-                            fontSize: isMobile ? '11.5px' : '13px',
+                            padding: isMobile ? '9px 6px' : '11px 12px',
+                            fontSize: isMobile ? '12px' : '13px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -1356,8 +1367,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                             color: '#fff',
                             border: 'none',
                             flex: 1.5,
-                            padding: isMobile ? '8px 4px' : '11px 12px',
-                            fontSize: isMobile ? '11.5px' : '13px',
+                            padding: isMobile ? '9px 6px' : '11px 12px',
+                            fontSize: isMobile ? '12px' : '13px',
                             borderRadius: '10px',
                             cursor: 'pointer',
                             fontWeight: 800,
