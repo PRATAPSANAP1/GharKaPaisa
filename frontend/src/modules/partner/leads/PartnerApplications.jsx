@@ -8,7 +8,7 @@ import {
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
-  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2
 } from 'lucide-react';
 
 const STAGES = [
