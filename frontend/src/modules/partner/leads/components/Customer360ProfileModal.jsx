@@ -6,7 +6,7 @@ import {
   MdNote, MdAlarm, MdChat, MdHistory, MdAccountBalanceWallet,
   MdCheckCircle, MdPhone, MdEmail, MdLocationOn, MdWork, MdBadge,
   MdAttachMoney, MdPictureAsPdf, MdDownload, MdCloudUpload, MdSend,
-  MdCall, MdOutlineWhatsapp, MdPushPin, MdAdd
+  MdCall, MdOutlineWhatsapp, MdPushPin, MdAdd, MdEdit, MdSave
 } from 'react-icons/md';
 
 export default function Customer360ProfileModal({ customerId, onClose, onRefresh }) {
@@ -16,6 +16,12 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('overview'); // overview, applications, documents, timeline, notes, followups, communication, activities, commission
+
+  // Customer Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
   // Pipeline Status Update state
   const [pipelineStatus, setPipelineStatus] = useState('new');
@@ -58,6 +64,26 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
   }, [customerId]);
 
   if (!customerId) return null;
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm.full_name?.trim()) return setEditError('Full Name is required');
+    if (!editForm.mobile?.trim()) return setEditError('Mobile Number is required');
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      const res = await api.put(`/customers/${customerId}`, editForm);
+      if (res.data?.success) {
+        setIsEditing(false);
+        fetchProfileData();
+        if (onRefresh) onRefresh();
+      }
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update customer profile');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus) => {
     setUpdatingStatus(true);
@@ -195,7 +221,47 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Edit Profile Button */}
+            <button
+              onClick={() => {
+                setEditForm({
+                  full_name: overview.full_name || '',
+                  mobile: overview.mobile || '',
+                  email: overview.email || '',
+                  dob: overview.dob ? new Date(overview.dob).toISOString().split('T')[0] : '',
+                  pan_number: overview.pan_number || '',
+                  aadhaar_last4: overview.aadhaar_last4 || '',
+                  city: overview.city || '',
+                  state: overview.state || '',
+                  pincode: overview.pincode || '',
+                  monthly_income: overview.monthly_income || '',
+                  employer: overview.employer || '',
+                  employment_type: overview.employment_type || 'salaried',
+                  occupation: overview.occupation || ''
+                });
+                setEditError('');
+                setIsEditing(true);
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.18)',
+                color: '#FFFFFF',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '10px',
+                padding: '6px 14px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <MdEdit style={{ fontSize: '16px' }} />
+              <span>Edit Details</span>
+            </button>
+
             {/* Status Dropdown */}
             <select
               value={pipelineStatus}
@@ -516,6 +582,203 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
           )}
         </div>
       </div>
+
+      {/* EDIT CUSTOMER MODAL OVERLAY */}
+      {isEditing && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1200,
+          background: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            background: C.card,
+            borderRadius: '20px',
+            padding: '28px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            border: `1px solid ${C.border}`
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${C.primary}20`, color: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MdEdit style={{ fontSize: '20px' }} />
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Edit Customer Details</h3>
+              </div>
+              <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '22px' }}>✕</button>
+            </div>
+
+            {editError && (
+              <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid #EF4444', borderRadius: '10px', color: '#DC2626', fontSize: '13px', marginBottom: '16px' }}>
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={S.label}>Full Name *</label>
+                <input
+                  style={S.input}
+                  value={editForm.full_name || ''}
+                  onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Mobile Number *</label>
+                  <input
+                    style={S.input}
+                    value={editForm.mobile || ''}
+                    onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Email Address</label>
+                  <input
+                    type="email"
+                    style={S.input}
+                    value={editForm.email || ''}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Date of Birth</label>
+                  <input
+                    type="date"
+                    style={S.input}
+                    value={editForm.dob || ''}
+                    onChange={(e) => setEditForm({ ...editForm, dob: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>PAN Card Number</label>
+                  <input
+                    style={{ ...S.input, textTransform: 'uppercase' }}
+                    value={editForm.pan_number || ''}
+                    onChange={(e) => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })}
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>City</label>
+                  <input
+                    style={S.input}
+                    value={editForm.city || ''}
+                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>State</label>
+                  <input
+                    style={S.input}
+                    value={editForm.state || ''}
+                    onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Pincode</label>
+                  <input
+                    style={S.input}
+                    value={editForm.pincode || ''}
+                    onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                    maxLength={6}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Employment Type</label>
+                  <select
+                    style={S.input}
+                    value={editForm.employment_type || 'salaried'}
+                    onChange={(e) => setEditForm({ ...editForm, employment_type: e.target.value })}
+                  >
+                    <option value="salaried">Salaried</option>
+                    <option value="self-employed">Self-Employed</option>
+                    <option value="business">Business Owner</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>Monthly Income (₹)</label>
+                  <input
+                    type="number"
+                    style={S.input}
+                    value={editForm.monthly_income || ''}
+                    onChange={(e) => setEditForm({ ...editForm, monthly_income: e.target.value })}
+                    placeholder="e.g. 75000"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Employer Name</label>
+                  <input
+                    style={S.input}
+                    value={editForm.employer || ''}
+                    onChange={(e) => setEditForm({ ...editForm, employer: e.target.value })}
+                    placeholder="Company name"
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>Occupation</label>
+                  <input
+                    style={S.input}
+                    value={editForm.occupation || ''}
+                    onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                    placeholder="Designation / Role"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  style={{ ...S.btn('outline'), padding: '10px 20px', borderRadius: '12px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  style={{
+                    ...S.btn('primary'),
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <MdSave style={{ fontSize: '18px' }} />
+                  <span>{savingEdit ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
