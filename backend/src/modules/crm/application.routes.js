@@ -24,6 +24,8 @@ router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicati
 router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
 router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
 router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
+router.put('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.patch('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
 
 // Lifecycle states (support both PUT and PATCH for FE compatibility)
 router.put('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);

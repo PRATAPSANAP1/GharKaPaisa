@@ -1774,6 +1774,125 @@ const exportApplicationsCSV = async (req, res, next) => {
   }
 };
 
+// PUT /applications/:id — Edit & Update Lead/Application details (Admin, Operation Head, Partner)
+const updateApplicationDetails = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const {
+      bank_application_number,
+      bank_ref_number,
+      vkyc_status,
+      vkyc_url,
+      salary_slip_url,
+      pan_card_url,
+      monthly_salary,
+      pan_number,
+      status,
+      remarks,
+      metadata,
+      full_name,
+      mobile,
+      email,
+      pincode,
+      city,
+      state,
+      bank_id,
+      product_id,
+      loan_amount
+    } = req.body;
+
+    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+
+    const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
+
+    // 1. Update applications table
+    const { rows: [updatedApp] } = await client.query(`
+      UPDATE applications SET
+        bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
+        bank_ref_number = COALESCE(NULLIF($1, ''), bank_ref_number),
+        vkyc_status = COALESCE(NULLIF($2, ''), vkyc_status),
+        vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
+        salary_slip_url = COALESCE(NULLIF($4, ''), salary_slip_url),
+        pan_card_url = COALESCE(NULLIF($5, ''), pan_card_url),
+        status = COALESCE(NULLIF($6, ''), status),
+        remarks = COALESCE(NULLIF($7, ''), remarks),
+        bank_id = COALESCE($8, bank_id),
+        product_id = COALESCE($9, product_id),
+        loan_amount = COALESCE($10, loan_amount),
+        metadata = COALESCE($11::jsonb, metadata),
+        updated_at = NOW()
+      WHERE id = $12
+      RETURNING *
+    `, [
+      appNumToSave || null,
+      vkyc_status || null,
+      vkyc_url || null,
+      salary_slip_url || null,
+      pan_card_url || null,
+      status || null,
+      remarks || null,
+      bank_id || null,
+      product_id || null,
+      loan_amount ? parseFloat(loan_amount) : null,
+      metadata ? JSON.stringify(metadata) : null,
+      id
+    ]);
+
+    // 2. Update customer details if customer_id exists
+    if (app.customer_id) {
+      await client.query(`
+        UPDATE customers SET
+          full_name = COALESCE(NULLIF($1, ''), full_name),
+          email = COALESCE(NULLIF($2, ''), email),
+          pincode = COALESCE(NULLIF($3, ''), pincode),
+          city = COALESCE(NULLIF($4, ''), city),
+          state = COALESCE(NULLIF($5, ''), state),
+          pan_number = COALESCE(NULLIF($6, ''), pan_number),
+          pan = COALESCE(NULLIF($6, ''), pan),
+          monthly_income = COALESCE($7, monthly_income),
+          income = COALESCE($7, income),
+          updated_at = NOW()
+        WHERE id = $8
+      `, [
+        full_name || null,
+        email || null,
+        pincode || null,
+        city || null,
+        state || null,
+        pan_number || null,
+        monthly_salary ? parseFloat(monthly_salary) : null,
+        app.customer_id
+      ]);
+    }
+
+    // 3. Log to timeline
+    await client.query(`
+      INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
+      VALUES ($1, $2, 'Application Details Updated', 'application_updated', 'Application Edit & Updated', $3, $4, $5)
+    `, [
+      id,
+      status || app.status,
+      `Application updated. App No: ${appNumToSave || 'N/A'}, VKYC: ${vkyc_status || 'N/A'}, Status: ${status || app.status}`,
+      ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
+      req.user ? req.user.id : null
+    ]).catch(() => {});
+
+    await client.query('COMMIT');
+    return success(res, updatedApp, 'Application details updated successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -1798,6 +1917,7 @@ module.exports = {
   submitPartnerApplication,
   bulkUpdateStatus,
   importApplications,
-  exportApplicationsCSV
+  exportApplicationsCSV,
+  updateApplicationDetails
 };
 

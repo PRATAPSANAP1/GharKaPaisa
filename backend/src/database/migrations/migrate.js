@@ -4079,9 +4079,14 @@ const migrate = async () => {
         ALTER TABLE products ADD COLUMN IF NOT EXISTS redirect_url VARCHAR(1000);
 
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'Pending';
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(1000);
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url VARCHAR(1000);
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url VARCHAR(1000);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS monthly_salary NUMERIC(15,2);
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
 
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE;
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan VARCHAR(20);

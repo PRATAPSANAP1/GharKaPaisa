@@ -75,6 +75,49 @@ export default function PartnerApplications() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  // Edit Application Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editApp, setEditApp] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    bank_application_number: '',
+    vkyc_status: 'Pending',
+    vkyc_url: '',
+    pan_number: '',
+    monthly_salary: '',
+    remarks: ''
+  });
+
+  const handleOpenEditModal = (app) => {
+    setEditApp(app);
+    setEditForm({
+      bank_application_number: app.bank_application_number || app.bank_ref_number || '',
+      vkyc_status: app.vkyc_status || 'Pending',
+      vkyc_url: app.vkyc_url || '',
+      pan_number: app.pan_number || app.pan || '',
+      monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
+      remarks: app.remarks || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editApp?.id) return;
+    setEditing(true);
+    try {
+      const res = await api.put(`/applications/${editApp.id}`, editForm);
+      if (res.data?.success) {
+        setShowEditModal(false);
+        fetchApplicationsList();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update application details');
+    } finally {
+      setEditing(false);
+    }
+  };
+
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category');
 
@@ -614,6 +657,10 @@ export default function PartnerApplications() {
                                 <UserPlus size={14} />
                               </button>
                             )}
+                            <button onClick={() => handleOpenEditModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              ✏️ Edit
+                            </button>
                             <button onClick={() => handleToggleExpand(app)}
                               style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />} {isExpanded ? 'Hide' : 'Details'}
@@ -747,6 +794,67 @@ export default function PartnerApplications() {
                 style={{ padding: 11, borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: importing ? 0.6 : 1 }}>
                 {importing ? 'Importing...' : 'Upload & Import Leads'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 4: EDIT LEAD & APPLICATION DETAILS ═══ */}
+      {showEditModal && editApp && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 520, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>✏️ Update Lead #{editApp.app_number}</h3>
+                <span style={{ fontSize: 11, color: textMuted }}>Bank: {editApp.bank_name || editApp.bank_code || 'Partner Bank'}</span>
+              </div>
+              <button onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Bank Application / Reference Number *</label>
+                <input type="text" required placeholder="Enter bank reference number" value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })}
+                  style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Status</label>
+                  <select value={editForm.vkyc_status} onChange={e => setEditForm({ ...editForm, vkyc_status: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                    <option value="Pending">Pending</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Monthly Income (₹)</label>
+                  <input type="number" placeholder="e.g. 45000" value={editForm.monthly_salary} onChange={e => setEditForm({ ...editForm, monthly_salary: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Link / Video URL</label>
+                <input type="url" placeholder="https://vkyc..." value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>PAN Card Number</label>
+                <input type="text" maxLength={10} placeholder="ABCDE1234F" value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Remarks & Activity Notes</label>
+                <textarea rows={2} placeholder="Application details notes..." value={editForm.remarks} onChange={e => setEditForm({ ...editForm, remarks: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box', height: 'auto' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 6 }}>
+                <button type="button" onClick={() => setShowEditModal(false)} style={{ padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={editing} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                  {editing ? 'Saving...' : 'Update Lead'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

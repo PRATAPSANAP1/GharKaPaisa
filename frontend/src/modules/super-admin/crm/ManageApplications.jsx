@@ -61,6 +61,73 @@ export default function ManageApplications() {
   // Create Application / Lead Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
+  // Edit Lead / Application Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingApp, setEditingApp] = useState(null);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    mobile: '',
+    email: '',
+    pincode: '',
+    city: '',
+    state: '',
+    monthly_salary: '',
+    pan_number: '',
+    bank_name: '',
+    bank_application_number: '',
+    vkyc_status: 'Pending',
+    vkyc_url: '',
+    salary_slip_url: '',
+    pan_card_url: '',
+    status: 'submitted',
+    remarks: ''
+  });
+
+  const handleOpenEditModal = (app) => {
+    setEditingApp(app);
+    setEditForm({
+      full_name: app.customer_name || app.full_name || '',
+      mobile: app.customer_mobile || app.mobile || '',
+      email: app.customer_email || app.email || '',
+      pincode: app.pincode || '',
+      city: app.city || '',
+      state: app.state || '',
+      monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
+      pan_number: app.pan_number || app.pan || '',
+      bank_name: app.bank_name || '',
+      bank_application_number: app.bank_application_number || app.bank_ref_number || '',
+      vkyc_status: app.vkyc_status || 'Pending',
+      vkyc_url: app.vkyc_url || '',
+      salary_slip_url: app.salary_slip_url || '',
+      pan_card_url: app.pan_card_url || '',
+      status: app.status || 'submitted',
+      remarks: app.remarks || ''
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingApp?.id) return;
+    setSubmittingEdit(true);
+    try {
+      const res = await api.put(`/applications/${editingApp.id}`, editForm);
+      if (res.data?.success) {
+        alert('Application & Lead details updated successfully!');
+        setEditModalOpen(false);
+        fetchApplications();
+        if (selectedApp?.id === editingApp.id) {
+          handleOpenDetail({ ...selectedApp, ...res.data.data });
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update application details');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
   // ── Partner Share Tracking State ──
   const [shareLeads, setShareLeads] = useState([]);
   const [shareLoading, setShareLoading] = useState(false);
@@ -526,9 +593,14 @@ export default function ManageApplications() {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
-                        <MdVisibility /> Review
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                          <MdVisibility /> Review
+                        </button>
+                        <button onClick={() => handleOpenEditModal(app)} style={{ border: `1px solid ${C.primary}40`, background: `${C.primary}12`, color: C.primary, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          ✏️ Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -573,6 +645,9 @@ export default function ManageApplications() {
 
             {/* Action Bar Overrides */}
             <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '14px', borderRadius: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              <button onClick={() => handleOpenEditModal(selectedApp)} style={{ ...S.btn('primary'), background: C.primary, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
+                ✏️ Edit Application Details
+              </button>
               <button onClick={() => triggerActionDialog('approve')} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
                 <MdCheckCircle /> Approve Lead
               </button>
@@ -1100,6 +1175,139 @@ export default function ManageApplications() {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EDIT APPLICATION / LEAD MODAL ═══ */}
+      {editModalOpen && editingApp && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1150,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, width: '100%', maxWidth: '720px', maxHeight: '90vh',
+            borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.4)', padding: '24px'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                  {editingApp.app_number}
+                </span>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '4px 0 0' }}>✏️ Edit Lead / Application Details</h3>
+                <p style={{ fontSize: '12px', color: C.textLight, margin: '2px 0 0' }}>
+                  Update customer details, bank-specific requirements, and tracking information
+                </p>
+              </div>
+              <button 
+                onClick={() => setEditModalOpen(false)} 
+                style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Customer Profile Section */}
+              <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px' }}>👤 Customer Information</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={S.label}>Customer Full Name *</label>
+                    <input type="text" required style={S.input} value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Mobile Number *</label>
+                    <input type="tel" required style={S.input} value={editForm.mobile} onChange={e => setEditForm({ ...editForm, mobile: e.target.value })} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                  <div>
+                    <label style={S.label}>Email Address</label>
+                    <input type="email" style={S.input} value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Pincode</label>
+                    <input type="text" maxLength={6} style={S.input} value={editForm.pincode} onChange={e => setEditForm({ ...editForm, pincode: e.target.value })} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                  <div>
+                    <label style={S.label}>PAN Card Number</label>
+                    <input type="text" maxLength={10} placeholder="ABCDE1234F" style={S.input} value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Monthly Salary / Income (INR)</label>
+                    <input type="number" placeholder="e.g. 50000" style={S.input} value={editForm.monthly_salary} onChange={e => setEditForm({ ...editForm, monthly_salary: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Bank Specific Configuration Section */}
+              <div style={{ background: `${C.primary}08`, padding: '14px', borderRadius: '14px', border: `1px solid ${C.primary}25` }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px' }}>
+                  🏦 Bank-Specific Requirements ({editForm.bank_name || editingApp.bank_name || 'Standard Bank'})
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={S.label}>Bank Application / Reference Number *</label>
+                    <input type="text" required placeholder="e.g. SBI-2091820491 or Ref No." style={S.input} value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>VKYC Status</label>
+                    <select style={S.input} value={editForm.vkyc_status} onChange={e => setEditForm({ ...editForm, vkyc_status: e.target.value })}>
+                      <option value="Pending">Pending</option>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                  <div>
+                    <label style={S.label}>VKYC Link / URL</label>
+                    <input type="url" placeholder="https://vkyc..." style={S.input} value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Application Stage / Status</label>
+                    <select style={S.input} value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                      <option value="submitted">Applied / Submitted</option>
+                      <option value="under_review">Verification / Under Review</option>
+                      <option value="vkyc_pending">VKYC Pending</option>
+                      <option value="vkyc_completed">VKYC Completed</option>
+                      <option value="approved">Approved</option>
+                      <option value="disbursed">Disbursed</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Remarks / Tracking Notes */}
+              <div>
+                <label style={S.label}>Tracking Notes & Internal Remarks</label>
+                <textarea rows={2} placeholder="Add tracking details or update notes..." style={S.input} value={editForm.remarks} onChange={e => setEditForm({ ...editForm, remarks: e.target.value })} />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setEditModalOpen(false)} style={S.btn('outline')}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={submittingEdit} style={S.btn('primary')}>
+                  {submittingEdit ? 'Saving Updates...' : 'Save & Update Details'}
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}
