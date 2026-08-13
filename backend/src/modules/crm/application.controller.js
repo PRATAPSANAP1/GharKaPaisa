@@ -337,7 +337,7 @@ const getApplicationsDashboard = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
         SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by,
-               COALESCE(c.full_name, l.customer_name) as customer_name, p.name as product_name
+               COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
@@ -996,8 +996,8 @@ const listApplications = async (req, res, next) => {
           NULL as commission_paid_at,
           COALESCE(l.created_by, c.created_by) as submitted_by,
           COALESCE(l.source, 'partner_share') as process_by,
-          COALESCE(c.full_name, l.customer_name) as customer_name,
-          COALESCE(c.mobile, l.mobile) as customer_mobile,
+          COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
           c.pan_number,
           COALESCE(c.city, l.city) as city,
@@ -1070,7 +1070,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(c.full_name, l.customer_name) as customer_name, COALESCE(c.mobile, l.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.source, 'partner_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.source, 'partner_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
@@ -1526,7 +1526,7 @@ const submitPartnerApplication = async (req, res, next) => {
         customerId = existingCust.id;
         await client.query(`
           UPDATE customers SET 
-            full_name = COALESCE($1, full_name), 
+            full_name = CASE WHEN full_name IS NULL OR full_name = '' OR full_name = 'Draft Customer' THEN COALESCE($1, full_name) ELSE full_name END, 
             email = COALESCE($2, email), 
             monthly_income = COALESCE($3, monthly_income),
             company_name = COALESCE($4, company_name),
