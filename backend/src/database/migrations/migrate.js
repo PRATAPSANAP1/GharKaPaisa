@@ -4195,6 +4195,18 @@ const migrate = async () => {
       logger.error('Failed to create admin_bank_assignments table:', abaErr.message);
     }
 
+    try {
+      await query(`
+        ALTER TABLE customer_activity_logs ALTER COLUMN device TYPE TEXT;
+        ALTER TABLE customer_activity_logs ALTER COLUMN ip_address TYPE VARCHAR(100);
+        ALTER TABLE customer_activity_logs ALTER COLUMN activity_type TYPE VARCHAR(255);
+        ALTER TABLE customer_activity_logs ALTER COLUMN reference_type TYPE VARCHAR(100);
+      `);
+      logger.info('customer_activity_logs column sizes expanded successfully.');
+    } catch (calErr) {
+      logger.warn('customer_activity_logs column expansion notice:', calErr.message);
+    }
+
   } catch (task14Err) {
     logger.error('Failed to run Product Lifecycle Management Schema Migration (Task 14):', task14Err);
     throw task14Err;

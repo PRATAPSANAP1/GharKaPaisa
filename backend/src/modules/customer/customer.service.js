@@ -23,13 +23,19 @@ const logCustomerTimeline = async (clientOrDb, customerId, eventType, eventTitle
 const logCustomerActivity = async (clientOrDb, customerId, activityType, performedBy, referenceType = null, referenceId = null, req = null) => {
   try {
     const db = clientOrDb || { query };
-    const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
-    const device = req ? req.headers['user-agent'] : null;
+    const rawIp = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip) : null;
+    const rawDevice = req ? req.headers['user-agent'] : null;
+
+    const ip = rawIp ? String(rawIp).substring(0, 100) : null;
+    const device = rawDevice ? String(rawDevice).substring(0, 500) : null;
+    const actType = activityType ? String(activityType).substring(0, 255) : 'unknown';
+    const refType = referenceType ? String(referenceType).substring(0, 100) : null;
+
     await db.query(`
       INSERT INTO customer_activity_logs (
         customer_id, activity_type, performed_by, reference_type, reference_id, ip_address, device
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [customerId, activityType, performedBy || null, referenceType, referenceId, ip, device]);
+    `, [customerId, actType, performedBy || null, refType, referenceId, ip, device]);
   } catch (err) {
     logger.warn(`Failed to log customer activity for ${customerId}:`, err.message);
   }
