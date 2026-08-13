@@ -2190,6 +2190,115 @@ const getPublicApplyToken = (req, res, next) => partnerShareCtrl.getApplyTokenDe
 const submitPublicApplyToken = (req, res, next) => partnerShareCtrl.updateApplyTokenDetails(req, res, next);
 const generateShareLink = (req, res, next) => partnerShareCtrl.generateShareLink(req, res, next);
 
+const deleteApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { id } = req.params;
+    if (!id) return error(res, 'Application ID is required', 400);
+
+    const { rows: [app] } = await client.query(
+      `SELECT id, partner_id, app_number, status FROM applications WHERE id = $1`, 
+      [id]
+    );
+
+    if (!app) {
+      return error(res, 'Application record not found', 404);
+    }
+
+    // Check authorization for Partner or Team Member roles
+    const userRole = req.user?.role;
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
+      const { rows: [partner] } = await client.query(
+        `SELECT id FROM partner_profiles WHERE user_id = $1`, 
+        [req.user.id]
+      );
+      if (!partner || app.partner_id !== partner.id) {
+        return error(res, 'You are not authorized to delete this application', 403);
+      }
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Delete application_notes
+    try {
+      await client.query('SAVEPOINT sp_notes');
+      await client.query(`DELETE FROM application_notes WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_notes');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_notes').catch(() => {});
+    }
+
+    // 2. Delete application_timeline / application_timelines
+    try {
+      await client.query('SAVEPOINT sp_timeline1');
+      await client.query(`DELETE FROM application_timeline WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_timeline1');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_timeline1').catch(() => {});
+    }
+
+    try {
+      await client.query('SAVEPOINT sp_timeline2');
+      await client.query(`DELETE FROM application_timelines WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_timeline2');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_timeline2').catch(() => {});
+    }
+
+    // 3. Delete application_documents
+    try {
+      await client.query('SAVEPOINT sp_docs');
+      await client.query(`DELETE FROM application_documents WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_docs');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_docs').catch(() => {});
+    }
+
+    // 4. Delete application_history
+    try {
+      await client.query('SAVEPOINT sp_hist');
+      await client.query(`DELETE FROM application_history WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_hist');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_hist').catch(() => {});
+    }
+
+    // 5. Unlink wallet_transactions
+    try {
+      await client.query('SAVEPOINT sp_wallet');
+      await client.query(`UPDATE wallet_transactions SET application_id = NULL WHERE application_id = $1`, [id]);
+      await client.query('RELEASE SAVEPOINT sp_wallet');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_wallet').catch(() => {});
+    }
+
+    // 6. Delete synced leads
+    try {
+      await client.query('SAVEPOINT sp_leads');
+      await client.query(
+        `DELETE FROM leads WHERE id = $1 OR application_id = $1 OR (app_number IS NOT NULL AND app_number = $2)`, 
+        [id, app.app_number]
+      );
+      await client.query('RELEASE SAVEPOINT sp_leads');
+    } catch (_) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_leads').catch(() => {});
+    }
+
+    // 7. Delete main application record
+    await client.query(`DELETE FROM applications WHERE id = $1`, [id]);
+
+    await logAction(req, 'DELETE_APPLICATION', id, { app_number: app.app_number });
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Application and lead deleted successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -2223,6 +2332,7 @@ module.exports = {
   submitPublicApplyToken,
   getBankRequirements,
   saveBankRequirements,
-  generateShareLink
+  generateShareLink,
+  deleteApplication
 };
 

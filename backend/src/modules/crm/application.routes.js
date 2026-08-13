@@ -40,6 +40,7 @@ router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
 router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
 router.put('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
 router.patch('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.delete('/:id', requireApprovedPartnerOrAdmin, appCtrl.deleteApplication);
 
 // Lifecycle states (support both PUT and PATCH for FE compatibility)
 router.put('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);

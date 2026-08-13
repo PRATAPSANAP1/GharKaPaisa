@@ -8,7 +8,7 @@ import {
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
-  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2
 } from 'lucide-react';
 
 const STAGES = [
@@ -113,6 +113,19 @@ export default function PartnerApplications() {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
     } finally {
       setGeneratingShare(false);
+    }
+  };
+
+  const handleDeleteApplication = async (appId, appNumber) => {
+    if (!window.confirm(`Are you sure you want to delete application lead #${appNumber}? This action cannot be undone.`)) return;
+    try {
+      const res = await api.delete(`/applications/${appId}`);
+      if (res.data?.success) {
+        fetchApplicationsList();
+        fetchDashboardStats();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete application lead');
     }
   };
 
@@ -605,6 +618,10 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ✏️ Edit
                       </button>
+                      <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Trash2 size={12} /> Delete
+                      </button>
                     </div>
                     <button onClick={() => handleToggleExpand(app)}
                       style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
@@ -702,6 +719,10 @@ export default function PartnerApplications() {
                             <button onClick={() => handleOpenEditModal(app)}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ✏️ Edit
+                            </button>
+                            <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Trash2 size={13} /> Delete
                             </button>
                             <button onClick={() => handleToggleExpand(app)}
                               style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
