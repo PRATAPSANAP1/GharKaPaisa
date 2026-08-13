@@ -11,6 +11,7 @@ const globalLimiter = rateLimit({
   max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many requests. Please slow down.' }
 });
 
@@ -22,6 +23,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' }
 });
 
@@ -33,6 +35,7 @@ const sendOtpLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many OTP requests. Please wait 10 minutes and try again.' }
 });
 
@@ -44,6 +47,7 @@ const verifyOtpLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many OTP verification attempts. Please wait 10 minutes.' }
 });
 
@@ -53,6 +57,7 @@ const registerLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many registration attempts. Please wait 30 minutes.' }
 });
 
@@ -64,6 +69,7 @@ const forgotPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many password reset requests. Please wait 30 minutes.' }
 });
 
@@ -74,6 +80,7 @@ const refreshLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
   message: { success: false, message: 'Too many refresh attempts. Please try again later.' }
 });
 
