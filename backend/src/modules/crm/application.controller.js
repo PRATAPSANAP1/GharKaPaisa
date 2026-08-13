@@ -293,7 +293,7 @@ const getApplicationsDashboard = async (req, res, next) => {
           OR combined.submitted_by = $2::uuid
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
-            UNION SELECT u.id FROM users u WHERE u.created_by = $2::uuid OR u.parent_id = $2::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $2::uuid
           )
         )`
       : `WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))`;
@@ -915,7 +915,7 @@ const listApplications = async (req, res, next) => {
           OR combined.submitted_by = $8::uuid
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
-            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid OR u.parent_id = $8::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
           )
         ))
       )
@@ -1048,7 +1048,7 @@ const listApplications = async (req, res, next) => {
           OR combined.submitted_by = $8::uuid
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
-            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid OR u.parent_id = $8::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
           )
         ))
       )

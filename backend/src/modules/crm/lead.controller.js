@@ -38,7 +38,7 @@ const listLeads = async (req, res, next) => {
         OR l.created_by = $${idx + 1}::uuid
         OR l.created_by IN (
           SELECT user_id FROM partner_profiles WHERE parent_partner_id = $${idx}::uuid OR referred_by_id = $${idx}::uuid
-          UNION SELECT u.id FROM users u WHERE u.created_by = $${idx + 1}::uuid OR u.parent_id = $${idx + 1}::uuid
+          UNION SELECT u.id FROM users u WHERE u.created_by = $${idx + 1}::uuid
         )
       )`;
       values.push(partnerId, req.user.id);
