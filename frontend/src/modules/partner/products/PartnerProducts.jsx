@@ -271,18 +271,24 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         agree_terms: true
       };
 
-      await api.post('/applications/partner-apply', payload).catch(err => console.warn('API save note:', err));
+      const res = await api.post('/applications/partner-apply', payload);
+      const appData = res.data?.data;
+
+      // Refresh partner store for real-time CRM table/cards update
       usePartnerStore.getState().fetchCustomers().catch(() => {});
+      usePartnerStore.getState().fetchApplications().catch(() => {});
 
       if (processType === 'lead_punching') {
         alert(`✅ Lead punched successfully for ${customerName.trim()} (${mobile.trim()})!\nApplication recorded under your Partner account.`);
       } else if (processType === 'linked_share') {
-        const shareMsg = `Hi ${customerName.trim()}, apply for ${selectedProduct.name} directly on official bank portal: ${directBankUrl}`;
-        const waUrl = `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
+        const shareLink = appData?.share_url || directBankUrl;
+        const waUrl = appData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(`Hi ${customerName.trim()},\n\nYou can apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`)}`;
+        
         window.open(waUrl, '_blank');
-        alert(`✅ Share link generated & opened for ${customerName.trim()}!\nLink: ${directBankUrl}`);
+        alert(`✅ Share link generated & opened for ${customerName.trim()}!\nTracking Link: ${shareLink}`);
       } else if (processType === 'direct_bank') {
-        window.open(directBankUrl, '_blank');
+        const targetUrl = appData?.bank_url || directBankUrl;
+        window.open(targetUrl, '_blank');
         alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
       }
 

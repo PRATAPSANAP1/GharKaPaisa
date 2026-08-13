@@ -1491,7 +1491,7 @@ const submitPartnerApplication = async (req, res, next) => {
     const trimmedEmail = email ? String(email).trim() : null;
 
     // Check duplicate active lead / application (within 30 days)
-    if (!is_draft && trimmedMobile) {
+    if (!is_draft && trimmedMobile && process_type !== 'linked_share') {
       const { rows: [dupApp] } = await client.query(`
         SELECT a.id, a.app_number, a.status
         FROM applications a
@@ -1556,6 +1556,21 @@ const submitPartnerApplication = async (req, res, next) => {
       customerId = newCust.id;
     }
 
+    // Sync into leads table so it appears in CRM leads queue
+    if (trimmedMobile) {
+      await client.query(`
+        INSERT INTO leads (
+          partner_id, product_id, customer_name, customer_mobile, mobile,
+          customer_email, source, status, pipeline_stage, customer_id, created_by
+        )
+        VALUES ($1, $2, $3, $4, $4, $5, $6, 'pending', 'created', $7, $8)
+        ON CONFLICT DO NOTHING
+      `, [
+        partnerId, product_id, trimmedName, trimmedMobile,
+        trimmedEmail, `partner_${process_type}`, customerId, req.user.id
+      ]).catch(err => logger.warn('Lead table sync warning:', err.message));
+    }
+
     const commission = await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
 
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
@@ -1616,10 +1631,12 @@ const submitPartnerApplication = async (req, res, next) => {
     let whatsappUrl = null;
     let bankUrl = null;
 
+    const baseUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+
     if (['linked_share', 'customer_sell'].includes(process_type)) {
       const crypto = require('crypto');
       const trackingToken = crypto.randomBytes(10).toString('hex');
-      shareUrl = `https://gharkapaisa.in/share/${trackingToken}`;
+      shareUrl = `${baseUrl}/share/${trackingToken}`;
       const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
       whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
 
@@ -1630,7 +1647,7 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     if (['direct_bank', 'punching_process'].includes(process_type)) {
-      bankUrl = product.application_url || product.redirect_url || `https://gharkapaisa.in/products/${product.id}/apply`;
+      bankUrl = product.application_url || product.redirect_url || `${baseUrl}/products/${product.id}/apply`;
     }
 
     await client.query('COMMIT');
