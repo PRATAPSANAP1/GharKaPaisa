@@ -4118,6 +4118,7 @@ const migrate = async () => {
         CREATE TABLE IF NOT EXISTS application_audit_logs (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
           application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+          entity_id UUID,
           lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
           user_id UUID REFERENCES users(id) ON DELETE SET NULL,
           role VARCHAR(50),
@@ -4125,9 +4126,18 @@ const migrate = async () => {
           entity VARCHAR(50) DEFAULT 'application',
           old_value JSONB,
           new_value JSONB,
-          ip_address VARCHAR(45),
+          remarks TEXT,
+          ip_address VARCHAR(100),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        ALTER TABLE application_audit_logs ADD COLUMN IF NOT EXISTS entity_id UUID;
+        ALTER TABLE application_audit_logs ADD COLUMN IF NOT EXISTS remarks TEXT;
+        ALTER TABLE application_audit_logs ADD COLUMN IF NOT EXISTS lead_id UUID;
+        ALTER TABLE application_audit_logs ADD COLUMN IF NOT EXISTS application_id UUID;
+
+        CREATE INDEX IF NOT EXISTS idx_audit_entity ON application_audit_logs(entity, entity_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_user ON application_audit_logs(user_id);
 
         CREATE TABLE IF NOT EXISTS application_links (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -4150,23 +4160,6 @@ const migrate = async () => {
           created_by UUID REFERENCES users(id) ON DELETE SET NULL,
           UNIQUE(admin_id, bank_id)
         );
-
-        CREATE TABLE IF NOT EXISTS application_audit_logs (
-          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-          user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-          role VARCHAR(50),
-          action VARCHAR(100) NOT NULL,
-          entity VARCHAR(50) DEFAULT 'application',
-          entity_id UUID,
-          lead_id UUID,
-          old_value JSONB,
-          new_value JSONB,
-          remarks TEXT,
-          ip_address VARCHAR(100),
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        CREATE INDEX IF NOT EXISTS idx_audit_entity ON application_audit_logs(entity, entity_id);
-        CREATE INDEX IF NOT EXISTS idx_audit_user ON application_audit_logs(user_id);
 
         ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS customer_id UUID;
         ALTER TABLE commission_ledger ADD COLUMN IF NOT EXISTS bank_id UUID;
