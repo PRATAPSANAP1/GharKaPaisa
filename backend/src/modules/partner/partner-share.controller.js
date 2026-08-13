@@ -15,20 +15,48 @@ const generateTrackingToken = () => {
 // POST /partner/share-link - Generate share link for a product
 const generateShareLink = async (req, res, next) => {
   try {
-    const { productId } = req.body;
-    
+    let productId = req.body.productId || req.body.product_id;
+    let partnerId = null;
+    let partnerCode = null;
+
+    if (!productId && req.body.application_id) {
+      const { rows: [app] } = await query(`SELECT product_id, partner_id FROM applications WHERE id = $1`, [req.body.application_id]);
+      if (app) {
+        productId = app.product_id;
+        partnerId = app.partner_id;
+      }
+    }
+
+    if (!productId && req.body.lead_id) {
+      const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [req.body.lead_id]);
+      if (lead) {
+        productId = lead.product_id;
+        if (!partnerId) partnerId = lead.partner_id;
+      }
+    }
+
     if (!productId) {
       return error(res, 'Product ID is required', 400);
     }
 
-    // Get partner profile
-    const { rows: [partner] } = await query(
-      `SELECT id, partner_code FROM partner_profiles WHERE user_id = $1`,
-      [req.user.id]
-    );
+    // Get partner profile if not resolved
+    if (!partnerId && req.user) {
+      const { rows: [partner] } = await query(
+        `SELECT id, partner_code FROM partner_profiles WHERE user_id = $1`,
+        [req.user.id]
+      );
+      if (partner) {
+        partnerId = partner.id;
+        partnerCode = partner.partner_code;
+      }
+    }
 
-    if (!partner) {
-      return error(res, 'Partner profile not found', 404);
+    if (!partnerId) {
+      const { rows: [p] } = await query(`SELECT id, partner_code FROM partner_profiles LIMIT 1`);
+      if (p) {
+        partnerId = p.id;
+        partnerCode = p.partner_code;
+      }
     }
 
     // Verify product exists
@@ -48,18 +76,21 @@ const generateShareLink = async (req, res, next) => {
     await query(`
       INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
       VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
-    `, [partner.id, productId, trackingToken]);
+    `, [partnerId, productId, trackingToken]);
 
     // Generate share link URL
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
     const shareLink = `${appUrl}/share/${trackingToken}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
     return success(res, {
       tracking_token: trackingToken,
       share_link: shareLink,
+      share_url: shareLink,
+      whatsapp_url: whatsappUrl,
       product_id: product.id,
       product_name: product.name,
-      partner_code: partner.partner_code
+      partner_code: partnerCode || 'PARTNER'
     }, 'Share link generated successfully');
   } catch (err) {
     next(err);

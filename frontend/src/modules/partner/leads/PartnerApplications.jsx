@@ -96,7 +96,11 @@ export default function PartnerApplications() {
   const handleGenerateShareLink = async (app) => {
     setGeneratingShare(true);
     try {
-      const res = await api.post('/applications/generate-share-link', { application_id: app.id, lead_id: app.lead_id });
+      const res = await api.post('/applications/generate-share-link', {
+        application_id: app.id,
+        lead_id: app.lead_id,
+        product_id: app.product_id || app.productId
+      });
       if (res.data?.success) {
         setShareData({
           ...res.data.data,

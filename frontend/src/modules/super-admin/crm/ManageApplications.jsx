@@ -650,7 +650,11 @@ export default function ManageApplications() {
               </button>
               <button onClick={async () => {
                 try {
-                  const res = await api.post('/applications/generate-share-link', { application_id: selectedApp.id, lead_id: selectedApp.lead_id });
+                  const res = await api.post('/applications/generate-share-link', {
+                    application_id: selectedApp.id,
+                    lead_id: selectedApp.lead_id,
+                    product_id: selectedApp.product_id || selectedApp.productId
+                  });
                   if (res.data?.success) {
                     const shareUrl = res.data.data.share_url;
                     navigator.clipboard.writeText(shareUrl);
