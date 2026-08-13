@@ -107,25 +107,28 @@ const AppRoutes = () => {
     return (
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: '#ffffff',
-        color: '#0f172a',
-        fontFamily: 'Inter, system-ui, sans-serif'
+        background: '#ffffff'
       }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #f1f5f9',
-          borderTopColor: '#3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '16px'
-        }} />
-        <span style={{ fontSize: '14px', fontWeight: 600 }}>Loading GharKaPaisa...</span>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <img 
+          src={logo} 
+          alt="GharKaPaisa" 
+          style={{
+            width: '64px',
+            height: '64px',
+            objectFit: 'contain',
+            animation: 'rotateLogo 1.5s linear infinite'
+          }} 
+        />
+        <style>{`
+          @keyframes rotateLogo {
+            0% { transform: rotate(0deg) scale(0.95); }
+            50% { transform: rotate(180deg) scale(1.05); }
+            100% { transform: rotate(360deg) scale(0.95); }
+          }
+        `}</style>
       </div>
     );
   }
