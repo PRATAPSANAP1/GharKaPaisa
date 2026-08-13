@@ -2014,6 +2014,11 @@ const updateVkyc = async (req, res, next) => {
   }
 };
 
+// Alias to Partner Share Controller apply token handlers
+const partnerShareCtrl = require('../partner/partner-share.controller.js');
+const getPublicApplyToken = (req, res, next) => partnerShareCtrl.getApplyTokenDetails(req, res, next);
+const submitPublicApplyToken = (req, res, next) => partnerShareCtrl.updateApplyTokenDetails(req, res, next);
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -2042,6 +2047,8 @@ module.exports = {
   updateApplicationDetails,
   logApplicationAudit,
   updateProcessType,
-  updateVkyc
+  updateVkyc,
+  getPublicApplyToken,
+  submitPublicApplyToken
 };
 
