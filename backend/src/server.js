@@ -31,6 +31,7 @@ const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
 const app = express();
+app.set('trust proxy', true);
 
 // ── Security Middleware ────────────────────────────────────────
 app.use(helmet({
