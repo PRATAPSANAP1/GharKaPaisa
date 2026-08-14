@@ -296,6 +296,8 @@ const getApplicationsDashboard = async (req, res, next) => {
       userId = req.user.id;
     }
 
+    const validScope = req.query.scope && req.query.scope.trim() ? req.query.scope.trim() : null;
+
     const teamPartnerFilter = `
       SELECT $1::uuid UNION SELECT $2::uuid 
       UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $2::uuid OR referred_by_id = $2::uuid
@@ -313,6 +315,15 @@ const getApplicationsDashboard = async (req, res, next) => {
           )
         )`
       : `WHERE ($1::uuid IS NULL OR combined.partner_id IN (${teamPartnerFilter}))`;
+
+    const scopeWhere = `
+      ${whereClause}
+      AND (
+        $3::text IS NULL OR $3::text = ''
+        OR ($3::text = 'my' AND (combined.submitted_by = $2::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $2::uuid))))
+        OR ($3::text = 'team' AND NOT (combined.submitted_by = $2::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $2::uuid))))
+      )
+    `;
 
     const { rows: [stats] } = await query(`
       SELECT 
@@ -335,8 +346,8 @@ const getApplicationsDashboard = async (req, res, next) => {
         LEFT JOIN products p ON p.id = l.product_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      ${whereClause}
-    `, [partnerId, userId]);
+      ${scopeWhere}
+    `, [partnerId, userId, validScope]);
 
     const totalCount = parseInt(stats?.total || 0);
     const approvedCount = parseInt(stats?.approved || 0);
@@ -360,9 +371,9 @@ const getApplicationsDashboard = async (req, res, next) => {
         LEFT JOIN products p ON p.id = l.product_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
-      ${whereClause}
+      ${scopeWhere}
       ORDER BY combined.created_at DESC LIMIT 5
-    `, [partnerId, userId]);
+    `, [partnerId, userId, validScope]);
 
     return success(res, {
       stats: {
@@ -948,6 +959,7 @@ const listApplications = async (req, res, next) => {
     const validProcessBy = process_by && process_by.trim() ? process_by.trim() : null;
     const validOpHeadId = targetOpHeadId;
     const validUserId = isUuid(userId) ? userId : null;
+    const validScope = req.query.scope && req.query.scope.trim() ? req.query.scope.trim() : null;
 
     const partnerTeamScopeSQL = `
       WHERE (
@@ -973,7 +985,7 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam];
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope];
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -1084,12 +1096,17 @@ const listApplications = async (req, res, next) => {
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
         AND ($9::text IS NULL OR combined.process_by = $9 OR combined.submitted_by::text = $9)
         AND ($10::uuid IS NULL OR combined.operation_head_id = $10::uuid)
+        AND (
+          $12::text IS NULL OR $12::text = ''
+          OR ($12::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          OR ($12::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+        )
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
 
     // Count query with same filter
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam];
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope];
 
     const countScopeSQL = `
       WHERE (
@@ -1146,6 +1163,11 @@ const listApplications = async (req, res, next) => {
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
         AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
         AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
+        AND (
+          $10::text IS NULL OR $10::text = ''
+          OR ($10::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+        )
     `, countQueryParams);
 
     return paginate(res, rows, parseInt(count), page, limit);

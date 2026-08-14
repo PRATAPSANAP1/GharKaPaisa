@@ -225,7 +225,11 @@ export default function PartnerApplications() {
 
   const fetchDashboardStats = async () => {
     try {
-      const res = await api.get('/applications/dashboard');
+      const res = await api.get('/applications/dashboard', {
+        params: {
+          scope: searchParams.get('scope') || undefined
+        }
+      });
       if (res.data?.success) setDashboardStats(res.data.data.stats);
     } catch (e) {
       /* silent */
