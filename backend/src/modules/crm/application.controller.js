@@ -873,7 +873,8 @@ const reassignApplication = async (req, res, next) => {
     `, [partner.id, id]);
 
     await client.query(`
-      UPDATE leads SET partner_id = $1, updated_at = NOW() WHERE id = $2 OR application_id = $2
+      UPDATE leads SET partner_id = $1, updated_at = NOW()
+      WHERE id = $2 OR id IN (SELECT lead_id FROM applications WHERE id = $2 AND lead_id IS NOT NULL)
     `, [partner.id, id]);
 
     await logTimeline(client, id, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
