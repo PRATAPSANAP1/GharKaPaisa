@@ -153,8 +153,10 @@ const getShareLinkDetails = async (req, res, next) => {
       if (app) existingApplication = app;
     } else if (shareLinkData.lead_id) {
       const { rows: [lead] } = await query(`
-        SELECT l.id, l.lead_number as app_number, l.customer_name, l.mobile as customer_mobile, l.monthly_income as monthly_salary, l.notes
+        SELECT l.id, l.lead_number as app_number, l.customer_name, l.mobile as customer_mobile,
+               c.monthly_income as monthly_salary, c.pan_number
         FROM leads l
+        LEFT JOIN customers c ON (c.id = l.customer_id OR c.mobile = l.mobile)
         WHERE l.id = $1
       `, [shareLinkData.lead_id]);
       if (lead) existingApplication = lead;

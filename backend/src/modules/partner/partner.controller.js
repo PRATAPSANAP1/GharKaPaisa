@@ -760,8 +760,8 @@ const listPartnerCustomers = async (req, res, next) => {
           COALESCE(NULLIF(c.city, ''), MAX(l.city)) AS city,
           c.state,
           COALESCE(NULLIF(c.employment_type, ''), 'salaried') AS employment_type,
-          COALESCE(c.monthly_income, MAX(l.monthly_income)) AS monthly_income,
-          COALESCE(NULLIF(c.employer, ''), MAX(l.company_name)) AS employer,
+          c.monthly_income AS monthly_income,
+          c.employer AS employer,
           COALESCE(NULLIF(c.pipeline_status, ''), MAX(a.status::text), MAX(l.status::text), 'new') AS pipeline_status,
           COALESCE(
             (
@@ -817,8 +817,8 @@ const listPartnerCustomers = async (req, res, next) => {
           l.city AS city,
           NULL AS state,
           'salaried' AS employment_type,
-          l.monthly_income AS monthly_income,
-          l.company_name AS employer,
+          NULL::numeric AS monthly_income,
+          NULL AS employer,
           COALESCE(NULLIF(l.status::text, ''), 'new') AS pipeline_status,
           CASE WHEN pl.name IS NOT NULL THEN json_build_array(pl.name) ELSE '[]'::json END AS product_interests,
           lap.first_name AS partner_first_name,
