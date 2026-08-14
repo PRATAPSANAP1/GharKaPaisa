@@ -37,6 +37,8 @@ export default function PartnerApplications() {
   const [applications, setApplications] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFilter = searchParams.get('category');
   
   // Filters & State
   const [search, setSearch] = useState('');
