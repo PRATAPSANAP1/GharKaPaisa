@@ -412,13 +412,14 @@ export default function PartnerApplications() {
   const handleExportCSV = () => {
     if (applications.length === 0) return;
     let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Application ID,Customer Name,Customer Mobile,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
+    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Submitted By / Member,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
 
     applications.forEach(a => {
       const row = [
         `"${a.app_number}"`,
         `"${a.customer_name}"`,
         `"${a.customer_mobile}"`,
+        `"${a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')}"`,
         `"${a.product_name}"`,
         `"${a.category}"`,
         `"${a.bank_name}"`,
@@ -433,7 +434,7 @@ export default function PartnerApplications() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `GKP_My_Applications_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `GKP_Applications_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

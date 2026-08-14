@@ -1910,27 +1910,99 @@ const importApplications = async (req, res, next) => {
 };
 
 // ── GET /applications/export/csv — Export applications as CSV ──────
+// ── GET /applications/export/csv — Export applications as CSV ──────
 const exportApplicationsCSV = async (req, res, next) => {
   try {
-    const PartnerId = req.partner?.id;
     const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
-
-    let queryStr = `SELECT a.app_number, a.customer_name, a.customer_mobile, a.product_name, a.status, 
-                    a.bank_status, a.source, a.created_at, a.updated_at
-                    FROM applications a`;
-    const params = [];
-
-    if (userRole === 'PARTNER' && PartnerId) {
-      queryStr += ` WHERE a.partner_id = $1`;
-      params.push(PartnerId);
+    const userId = req.user?.id;
+    
+    let partnerId = req.partner?.id;
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !partnerId && userId) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [userId]);
+      partnerId = p?.id;
     }
 
-    queryStr += ` ORDER BY a.created_at DESC LIMIT 10000`;
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole);
+    const validPartnerId = isUuid(partnerId) ? partnerId : null;
+    const validUserId = isUuid(userId) ? userId : null;
 
-    const { rows } = await query(queryStr, params);
+    let whereClause = '';
+    const params = [validPartnerId, validUserId];
 
-    // Build CSV
-    const csvHeaders = ['App Number', 'Customer Name', 'Mobile', 'Product', 'Status', 'Bank Status', 'Source', 'Created At', 'Updated At'];
+    if (isPartnerOrTeam) {
+      whereClause = `
+        WHERE (
+          combined.partner_id IN (
+            SELECT $1::uuid UNION SELECT $2::uuid 
+            UNION SELECT id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid OR parent_partner_id = $2::uuid OR referred_by_id = $2::uuid
+            UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1::uuid OR sponsor_id = $1::uuid OR parent_partner_id = $2::uuid OR sponsor_id = $2::uuid
+            UNION SELECT id FROM partner_profiles WHERE user_id = $2::uuid OR user_id = $1::uuid
+          )
+          OR combined.submitted_by = $2::uuid
+          OR combined.submitted_by IN (
+            SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
+            UNION SELECT u.id FROM users u WHERE u.created_by = $2::uuid
+          )
+        )
+      `;
+    }
+
+    const { rows } = await query(`
+      SELECT * FROM (
+        SELECT 
+          a.app_number,
+          COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+          COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
+          p.name as product_name,
+          p.category,
+          b.name as bank_name,
+          a.status::text,
+          a.commission_status::text,
+          a.commission_amount,
+          COALESCE(a.source, 'partner_punch') as process_by,
+          a.created_at,
+          a.partner_id,
+          a.submitted_by
+        FROM applications a
+        LEFT JOIN leads l ON l.id = a.lead_id
+        LEFT JOIN customers c ON c.id = a.customer_id
+        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
+        LEFT JOIN users su ON su.id = a.submitted_by
+
+        UNION ALL
+
+        SELECT 
+          COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
+          COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+          COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
+          p.name as product_name,
+          p.category,
+          COALESCE(b.name, 'Bank Partner') as bank_name,
+          l.status::text,
+          'pending'::text as commission_status,
+          p.commission_value as commission_amount,
+          COALESCE(l.source, 'partner_share') as process_by,
+          l.created_at,
+          l.partner_id,
+          COALESCE(l.created_by, c.created_by) as submitted_by
+        FROM leads l
+        LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
+        LEFT JOIN products p ON p.id = l.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
+        LEFT JOIN users su ON su.id = COALESCE(l.created_by, c.created_by)
+        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
+      ) combined
+      ${whereClause}
+      ORDER BY combined.created_at DESC
+      LIMIT 10000
+    `, params);
+
+    const csvHeaders = ['App / Lead Number', 'Customer Name', 'Mobile', 'Submitted By / Member', 'Product', 'Category', 'Bank', 'Status', 'Commission Status', 'Commission Amount', 'Source', 'Date'];
     const csvLines = [csvHeaders.join(',')];
 
     for (const row of rows) {
@@ -1938,12 +2010,15 @@ const exportApplicationsCSV = async (req, res, next) => {
         row.app_number || '',
         `"${(row.customer_name || '').replace(/"/g, '""')}"`,
         row.customer_mobile || '',
+        `"${(row.submitted_by_name || '').replace(/"/g, '""')}"`,
         `"${(row.product_name || '').replace(/"/g, '""')}"`,
+        `"${(row.category || '').replace(/"/g, '""')}"`,
+        `"${(row.bank_name || '').replace(/"/g, '""')}"`,
         row.status || '',
-        row.bank_status || '',
-        row.source || '',
-        row.created_at ? new Date(row.created_at).toISOString() : '',
-        row.updated_at ? new Date(row.updated_at).toISOString() : ''
+        row.commission_status || '',
+        `"₹${row.commission_amount || 0}"`,
+        row.process_by || '',
+        row.created_at ? new Date(row.created_at).toISOString() : ''
       ].join(','));
     }
 
