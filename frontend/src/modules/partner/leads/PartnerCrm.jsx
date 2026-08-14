@@ -251,7 +251,14 @@ export default function PartnerCrm() {
           )}
 
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setSearchParams(prev => {
+                const p = new URLSearchParams(prev);
+                p.set('action', 'add');
+                return p;
+              });
+              setShowAddModal(true);
+            }}
             style={{ ...S.btn('primary'), display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)', padding: '10px 20px', borderRadius: '12px', fontSize: '13px', fontWeight: 800, boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)' }}
           >
             <MdAddBox style={{ fontSize: '20px' }} />

@@ -36,27 +36,10 @@ const NAV_ITEMS = [
     subItems: [
       { id: 'app_my', label: 'My Applications', path: '/partner/applications?scope=my', icon: MdLeaderboard },
       { id: 'app_team', label: 'Team Applications', path: '/partner/applications?scope=team', icon: MdGroup, partnerOnly: true },
-      { id: 'app_pending', label: 'Pending', path: '/partner/applications?status=under_review', icon: MdPendingActions },
-      { id: 'app_approved', label: 'Approved', path: '/partner/applications?status=approved', icon: MdCheckCircle },
-      { id: 'app_rejected', label: 'Rejected', path: '/partner/applications?status=rejected', icon: MdCancel },
       { id: 'app_export', label: 'Export Applications', path: '/partner/applications?action=export', icon: MdFileDownload, partnerOnly: true }
     ]
   },
-  {
-    id: 'customers',
-    label: 'Customers',
-    icon: MdPeople,
-    isModule: true,
-    subItems: [
-      { id: 'cust_all', label: 'All Customers', path: '/partner/customers?view=all', icon: MdPeople, partnerOnly: true },
-      { id: 'cust_my', label: 'My Customers', path: '/partner/customers?view=my', icon: MdPerson },
-      { id: 'cust_add', label: 'Add Customer', path: '/partner/customers?action=add', icon: MdAdd },
-      { id: 'cust_assign', label: 'Assign Lead', path: '/partner/customers?view=assign', icon: MdAssignmentInd, partnerOnly: true },
-      { id: 'cust_team', label: 'View Team Customers', path: '/partner/customers?view=team', icon: MdGroup, partnerOnly: true },
-      { id: 'cust_analytics', label: 'Customer Analytics', path: '/partner/customers?view=analytics', icon: MdAnalytics, partnerOnly: true },
-      { id: 'cust_export', label: 'Export Customers', path: '/partner/customers?action=export', icon: MdFileDownload, partnerOnly: true }
-    ]
-  },
+  { id: 'customers', path: '/partner/customers?view=my', label: 'Customers', icon: MdPeople },
   { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup, partnerOnly: true },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
   { id: 'support', path: '/partner/support', label: 'Support', icon: MdSupportAgent },
@@ -243,6 +226,40 @@ export default function PartnerLayout() {
     const currentPathAndQuery = location.pathname + location.search;
 
     if (item.isModule) {
+      if (isTeamMember && item.id === 'applications') {
+        const isActive = location.pathname.startsWith('/partner/applications');
+        return (
+          <NavLink
+            key={item.id}
+            id={isMobileNav ? `partner-mobile-nav-${item.id}` : `partner-nav-${item.id}`}
+            to="/partner/applications?scope=my"
+            onClick={() => {
+              if (isMobileNav) setMobileMenuOpen(false);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              fontSize: isMobileNav ? '15px' : '14px',
+              fontWeight: 600,
+              color: isActive ? '#fff' : C.text,
+              background: isActive
+                ? `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`
+                : 'transparent',
+              boxShadow: isActive ? `0 4px 14px ${C.primary}35` : 'none',
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+              marginBottom: '4px',
+            }}
+          >
+            <Icon size={isMobileNav ? 22 : 20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
+            Applications
+          </NavLink>
+        );
+      }
+
       const isExpanded = !!openModules[item.id];
       const isChildActive = item.subItems.some((sub) =>
         sub.path.includes('?')
@@ -337,9 +354,11 @@ export default function PartnerLayout() {
       );
     }
 
-    const isActive = item.path.includes('?')
-      ? currentPathAndQuery === item.path
-      : location.pathname === item.path || (item.path === '/partner/team' && location.pathname === '/partner/team-network');
+    const isActive = item.id === 'customers'
+      ? location.pathname.startsWith('/partner/customers')
+      : item.path.includes('?')
+        ? currentPathAndQuery === item.path
+        : location.pathname === item.path || (item.path === '/partner/team' && location.pathname === '/partner/team-network');
 
     return (
       <NavLink
