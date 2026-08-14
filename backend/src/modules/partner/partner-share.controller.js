@@ -166,6 +166,9 @@ const getShareLinkDetails = async (req, res, next) => {
       product,
       partner: partner || null,
       tracking_token: trackingToken,
+      has_application: !!(shareLinkData.application_id || shareLinkData.lead_id),
+      application_id: shareLinkData.application_id || null,
+      lead_id: shareLinkData.lead_id || null,
       existing_application: existingApplication
     });
   } catch (err) {

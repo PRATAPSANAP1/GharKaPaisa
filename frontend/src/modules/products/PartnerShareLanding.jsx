@@ -24,6 +24,7 @@ export default function PartnerShareLanding() {
   const [vkycStatus, setVkycStatus] = useState('Pending');
   const [vkycUrl, setVkycUrl] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [hasApplicationContext, setHasApplicationContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -51,6 +52,11 @@ export default function PartnerShareLanding() {
         if (json && json.success && json.data) {
           setProduct(json.data.product);
           setPartner(json.data.partner);
+          if (json.data.has_application || json.data.existing_application || json.data.application_id || json.data.lead_id) {
+            setHasApplicationContext(true);
+          } else {
+            setHasApplicationContext(false);
+          }
           if (json.data.existing_application) {
             const ex = json.data.existing_application;
             if (ex.customer_name) setCustomerName(ex.customer_name);
@@ -426,9 +432,13 @@ export default function PartnerShareLanding() {
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#10B98120', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '28px' }}>
                   ✓
                 </div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: textPrimary }}>Application Details Saved!</h3>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: textPrimary }}>
+                  {hasApplicationContext ? 'Application Details Saved!' : 'Application Submitted!'}
+                </h3>
                 <p style={{ fontSize: '13px', color: textSecondary, marginBottom: '16px', lineHeight: 1.5 }}>
-                  Your application details have been recorded and attached to your application record. Redirecting to official portal...
+                  {hasApplicationContext
+                    ? 'Your application details have been recorded and attached to your application record. Redirecting to official portal...'
+                    : `Redirecting to official ${product.bank_name || 'bank'} application portal...`}
                 </p>
               </div>
             ) : (
@@ -468,101 +478,105 @@ export default function PartnerShareLanding() {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
-                  <input
-                    type="text"
-                    value={panNumber}
-                    onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
-                    placeholder="e.g. ABCDE1234F"
-                    maxLength={10}
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none', textTransform: 'uppercase'
-                    }}
-                  />
-                </div>
+                {hasApplicationContext && (
+                  <>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
+                      <input
+                        type="text"
+                        value={panNumber}
+                        onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                        placeholder="e.g. ABCDE1234F"
+                        maxLength={10}
+                        style={{
+                          width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                          background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                          color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none', textTransform: 'uppercase'
+                        }}
+                      />
+                    </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Monthly Income (₹)</label>
-                  <input
-                    type="number"
-                    value={monthlyIncome}
-                    onChange={(e) => setMonthlyIncome(e.target.value)}
-                    placeholder="e.g. 45000"
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
-                    }}
-                  />
-                </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Monthly Income (₹)</label>
+                      <input
+                        type="number"
+                        value={monthlyIncome}
+                        onChange={(e) => setMonthlyIncome(e.target.value)}
+                        placeholder="e.g. 45000"
+                        style={{
+                          width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                          background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                          color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
+                        }}
+                      />
+                    </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Bank Application / Reference Number *</label>
-                  <input
-                    type="text"
-                    value={bankAppNumber}
-                    onChange={(e) => setBankAppNumber(e.target.value)}
-                    placeholder="Enter bank reference number"
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
-                    }}
-                  />
-                </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Bank Application / Reference Number *</label>
+                      <input
+                        type="text"
+                        value={bankAppNumber}
+                        onChange={(e) => setBankAppNumber(e.target.value)}
+                        placeholder="Enter bank reference number"
+                        style={{
+                          width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                          background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                          color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
+                        }}
+                      />
+                    </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Status</label>
-                    <select
-                      value={vkycStatus}
-                      onChange={(e) => setVkycStatus(e.target.value)}
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '12px 10px',
-                        background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                        color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
-                      }}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Failed">Failed</option>
-                    </select>
-                  </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Status</label>
+                        <select
+                          value={vkycStatus}
+                          onChange={(e) => setVkycStatus(e.target.value)}
+                          style={{
+                            width: '100%', boxSizing: 'border-box', padding: '12px 10px',
+                            background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                            color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
+                          }}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Scheduled">Scheduled</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Failed">Failed</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Video / Link</label>
-                    <input
-                      type="url"
-                      value={vkycUrl}
-                      onChange={(e) => setVkycUrl(e.target.value)}
-                      placeholder="https://vkyc..."
-                      style={{
-                        width: '100%', boxSizing: 'border-box', padding: '12px 10px',
-                        background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                        color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Video / Link</label>
+                        <input
+                          type="url"
+                          value={vkycUrl}
+                          onChange={(e) => setVkycUrl(e.target.value)}
+                          placeholder="https://vkyc..."
+                          style={{
+                            width: '100%', boxSizing: 'border-box', padding: '12px 10px',
+                            background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                            color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Remarks & Activity Notes</label>
-                  <textarea
-                    rows={2}
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="Application details notes..."
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '10px 12px',
-                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                      color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none', resize: 'vertical'
-                    }}
-                  />
-                </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Remarks & Activity Notes</label>
+                      <textarea
+                        rows={2}
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        placeholder="Application details notes..."
+                        style={{
+                          width: '100%', boxSizing: 'border-box', padding: '10px 12px',
+                          background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                          color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none', resize: 'vertical'
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <button
                   type="submit"
@@ -575,11 +589,17 @@ export default function PartnerShareLanding() {
                     transition: 'all 0.2s', marginTop: '4px'
                   }}
                 >
-                  {submitting ? 'Submitting Details...' : `Submit Application Details →`}
+                  {submitting
+                    ? 'Processing...'
+                    : hasApplicationContext
+                    ? 'Submit Application Details →'
+                    : 'Apply Now →'}
                 </button>
 
                 <p style={{ fontSize: '11px', color: textSecondary, textAlign: 'center', margin: '4px 0 0', lineHeight: 1.5 }}>
-                  Submitting will save these details to your tracked application profile and redirect to the official bank application portal.
+                  {hasApplicationContext
+                    ? 'Submitting will save these details to your tracked application profile and redirect to the official bank application portal.'
+                    : `By clicking Apply, you agree to our Terms & Conditions. You will be redirected to the official ${product.bank_name || 'bank'} application portal.`}
                 </p>
               </form>
             )}
