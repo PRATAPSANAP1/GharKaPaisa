@@ -304,6 +304,41 @@ async function deleteMember(req, res, next) {
   }
 }
 
+/**
+ * PATCH /api/v1/team/:id/commission-rate
+ */
+async function updateMemberCommissionRate(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { commission_rate } = req.body;
+
+    const rate = parseFloat(commission_rate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      return res.status(400).json({ success: false, message: 'Commission rate must be between 0 and 100%' });
+    }
+
+    const isElevated = ['ADMIN', 'SUPER_ADMIN'].includes((req.user?.role || '').toUpperCase());
+    if (!isElevated) {
+      const partnerId = await resolvePartnerId(req);
+      const allowed = await teamService.isPartnerInDownline(partnerId, id);
+      if (!allowed) {
+        return res.status(403).json({ success: false, message: 'Access denied: Target member is not in your downline team.' });
+      }
+    }
+
+    const { query } = require('../../config/database');
+    await query(`
+      UPDATE partner_profiles 
+      SET commission_rate = $1, updated_at = NOW() 
+      WHERE id::text = $2::text OR user_id::text = $2::text
+    `, [rate, String(id)]);
+
+    return res.json({ success: true, message: `Member commission rate updated to ${rate}% successfully` });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getTree,
@@ -320,5 +355,6 @@ module.exports = {
   sendInvite,
   getRefersList,
   updateMemberStatus,
-  deleteMember
+  deleteMember,
+  updateMemberCommissionRate
 };

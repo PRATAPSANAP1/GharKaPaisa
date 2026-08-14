@@ -219,6 +219,7 @@ const migrate = async () => {
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS partner_type VARCHAR(50) DEFAULT 'PARTNER'`);
   await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'`);
+  await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS commission_rate DECIMAL(5,2) DEFAULT 90.00`);
   try { await query(`ALTER TABLE partner_profiles ALTER COLUMN kyc_status SET DEFAULT 'draft'`); } catch (e) {}
 
   // Update existing partner profiles with pending status that lack complete document uploads to 'draft'

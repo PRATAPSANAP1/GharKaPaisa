@@ -355,7 +355,15 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     let childPct = 90;
     let parentPct = 10;
     
-    if (rule) {
+    // Check if team member has custom commission rate set by parent partner
+    const { rows: [memberProfile] } = await query(`
+      SELECT commission_rate FROM partner_profiles WHERE id = $1 OR user_id = $1
+    `, [partnerId]);
+
+    if (memberProfile && memberProfile.commission_rate !== null && memberProfile.commission_rate !== undefined) {
+      childPct = parseFloat(memberProfile.commission_rate);
+      parentPct = parseFloat((100 - childPct).toFixed(2));
+    } else if (rule) {
       childPct = parseFloat(rule.partner_percentage);
       parentPct = parseFloat(rule.parent_percentage);
     } else {

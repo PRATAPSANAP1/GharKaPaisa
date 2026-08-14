@@ -43,6 +43,7 @@ router.post('/kyc/verify-document', ctrl.verifyDocument);
 
 router.post('/commission-rules', ctrl.createCommissionRule);
 router.get('/commission-rules', ctrl.getCommissionRules);
+router.get('/partners-commission-overview', ctrl.getPartnersCommissionOverview);
 
 // Wallet Management & Settlements
 router.get('/wallet/overview', walletCtrl.getWalletOverview);

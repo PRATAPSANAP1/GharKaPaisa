@@ -27,6 +27,27 @@ export default function TeamMembersTab({ onSelectMember, onOpenInvite }) {
   const [deletedMembers, setDeletedMembers] = useState([]);
   const [loadingDeleted, setLoadingDeleted] = useState(false);
 
+  // Commission Rate Editing State
+  const [editingCommId, setEditingCommId] = useState(null);
+  const [commInput, setCommInput] = useState('');
+
+  const handleUpdateCommRate = async (memberId) => {
+    const rateNum = parseFloat(commInput);
+    if (isNaN(rateNum) || rateNum < 0 || rateNum > 100) {
+      alert('Commission rate must be between 0% and 100%');
+      return;
+    }
+    try {
+      const res = await api.patch(`/team/${memberId}/commission-rate`, { commission_rate: rateNum });
+      if (res.data?.success) {
+        setEditingCommId(null);
+        fetchMembers(pagination.page);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update commission rate');
+    }
+  };
+
   useEffect(() => { fetchMembers(1); }, [search, statusFilter, rankFilter, kycFilter]);
   useEffect(() => { if (view === 'deleted') fetchDeletedMembers(); }, [view]);
 
@@ -243,7 +264,7 @@ export default function TeamMembersTab({ onSelectMember, onOpenInvite }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: isDark ? '#111' : '#f8faff', borderBottom: `1px solid ${border}` }}>
-                {['Member Info', 'Code / Level', 'Rank', 'Status', 'KYC', 'Business', 'Commission', 'Action'].map(h => (
+                {['Member Info', 'Code / Level', 'Rank', 'Status', 'Comm Split %', 'Business', 'Commission', 'Action'].map(h => (
                   <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Business' || h === 'Commission' ? 'right' : h === 'Action' ? 'center' : 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: textMuted, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -282,9 +303,24 @@ export default function TeamMembersTab({ onSelectMember, onOpenInvite }) {
                       <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, textTransform: 'uppercase', background: m.status === 'active' ? '#10b98115' : '#ef444415', color: m.status === 'active' ? '#10b981' : '#ef4444', border: `1px solid ${m.status === 'active' ? '#10b98130' : '#ef444430'}` }}>{m.status}</span>
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, fontWeight: 700, background: m.kyc_status === 'approved' ? '#10b98115' : '#f59e0b15', color: m.kyc_status === 'approved' ? '#10b981' : '#f59e0b' }}>
-                        {m.kyc_status === 'approved' ? 'Verified' : 'Pending'}
-                      </span>
+                      {editingCommId === m.id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input 
+                            type="number" min="0" max="100" 
+                            value={commInput} 
+                            onChange={e => setCommInput(e.target.value)}
+                            style={{ width: 55, padding: '4px 6px', borderRadius: 6, border: `1px solid ${border}`, fontSize: 11, background: inputBg, color: textPrimary }}
+                          />
+                          <button onClick={() => handleUpdateCommRate(m.id)} style={{ padding: '4px 6px', borderRadius: 6, background: '#10b981', color: '#fff', border: 'none', cursor: 'pointer' }}><Check size={12} /></button>
+                          <button onClick={() => setEditingCommId(null)} style={{ padding: '4px 6px', borderRadius: 6, background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer' }}><X size={12} /></button>
+                        </div>
+                      ) : (
+                        <div onClick={() => { setEditingCommId(m.id); setCommInput(m.commission_rate || 90); }} style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, fontWeight: 700, background: '#3b82f615', color: '#3b82f6', border: '1px solid #3b82f630' }}>
+                            {m.commission_rate || 90}% Member / {100 - (m.commission_rate || 90)}% You
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#10b981' }}>{fmt(m.total_business)}</td>
                     <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>{fmt(m.total_commission)}</td>

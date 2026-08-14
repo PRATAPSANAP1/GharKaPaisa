@@ -44,6 +44,7 @@ export default function PartnerApplications() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [commFilter, setCommFilter] = useState('');
+  const [memberFilter, setMemberFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);

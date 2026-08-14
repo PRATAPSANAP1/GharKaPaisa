@@ -27,6 +27,8 @@ router.post('/invite', ctrl.sendInvite);
 router.get('/refers', ctrl.getRefersList);
 
 router.patch('/:id/status', ctrl.updateMemberStatus);
+router.patch('/:id/commission-rate', ctrl.updateMemberCommissionRate);
+router.put('/:id/commission-rate', ctrl.updateMemberCommissionRate);
 router.post('/:id/reactivate', (req, res, next) => { req.body.status = 'active'; ctrl.updateMemberStatus(req, res, next); });
 router.delete('/:id', ctrl.deleteMember);
 

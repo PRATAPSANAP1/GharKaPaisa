@@ -394,7 +394,7 @@ async function getTeamMembersList(partnerId, options = {}) {
   const queryStr = `
     SELECT 
       cp.id, cp.user_id, cp.partner_code, cp.first_name, cp.last_name, cp.profile_photo_url,
-      cp.rank, cp.kyc_status, u.status AS user_status, u.mobile, u.email, cp.created_at,
+      cp.rank, cp.kyc_status, COALESCE(cp.commission_rate, 90.00) AS commission_rate, u.status AS user_status, u.mobile, u.email, cp.created_at,
       r.level,
       parent.first_name AS parent_first_name, parent.last_name AS parent_last_name, parent.partner_code AS parent_partner_code,
       (SELECT COUNT(*)::int FROM partner_team_relationships WHERE parent_partner_id = cp.id AND level = 1) AS children_count,
@@ -428,6 +428,7 @@ async function getTeamMembersList(partnerId, options = {}) {
     rank: m.rank || 'Partner',
     status: m.user_status,
     kyc_status: m.kyc_status,
+    commission_rate: parseFloat(m.commission_rate || 90.00),
     level: m.level,
     parent_name: m.parent_first_name ? `${m.parent_first_name} ${m.parent_last_name || ''}`.trim() : 'N/A',
     parent_code: m.parent_partner_code || 'N/A',

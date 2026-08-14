@@ -993,9 +993,72 @@ const updateAdminBanks = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const getPartnersCommissionOverview = async (req, res, next) => {
+  try {
+    const { rows: partners } = await query(`
+      SELECT 
+        p.id, p.user_id, p.partner_code, p.first_name, p.last_name, p.profile_photo_url, p.rank,
+        u.email, u.mobile, u.status,
+        (SELECT COUNT(*)::int FROM partner_team_relationships WHERE parent_partner_id = p.id AND level = 1) AS team_count
+      FROM partner_profiles p
+      JOIN users u ON u.id = p.user_id
+      ORDER BY p.created_at DESC
+    `);
+
+    const { rows: teamMembers } = await query(`
+      SELECT 
+        cp.id, cp.user_id, cp.parent_partner_id, cp.partner_code, cp.first_name, cp.last_name, 
+        COALESCE(cp.commission_rate, 90.00) AS commission_rate,
+        u.email, u.mobile, u.status, r.level
+      FROM partner_team_relationships r
+      JOIN partner_profiles cp ON cp.id = r.child_partner_id
+      JOIN users u ON u.id = cp.user_id
+      WHERE r.level = 1
+      ORDER BY cp.created_at DESC
+    `);
+
+    const teamMap = {};
+    teamMembers.forEach(m => {
+      if (!teamMap[m.parent_partner_id]) {
+        teamMap[m.parent_partner_id] = [];
+      }
+      teamMap[m.parent_partner_id].push({
+        id: m.id,
+        user_id: m.user_id,
+        partner_code: m.partner_code,
+        full_name: `${m.first_name || ''} ${m.last_name || ''}`.trim(),
+        email: m.email,
+        mobile: m.mobile,
+        status: m.status,
+        level: m.level,
+        commission_rate: parseFloat(m.commission_rate || 90.00),
+        parent_share: parseFloat((100 - parseFloat(m.commission_rate || 90.00)).toFixed(2))
+      });
+    });
+
+    const result = partners.map(p => ({
+      id: p.id,
+      user_id: p.user_id,
+      partner_code: p.partner_code,
+      full_name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+      email: p.email,
+      mobile: p.mobile,
+      rank: p.rank || 'Partner',
+      status: p.status,
+      team_count: parseInt(p.team_count) || 0,
+      team_members: teamMap[p.id] || []
+    }));
+
+    return success(res, result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   createCommissionRule,
   getCommissionRules,
+  getPartnersCommissionOverview,
   createAdmin,
   listAdmins,
   updateAdmin,
