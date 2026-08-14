@@ -18,7 +18,14 @@ export default function PartnerShareLanding() {
   // Form
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
+  const [panNumber, setPanNumber] = useState('');
+  const [monthlyIncome, setMonthlyIncome] = useState('');
+  const [bankAppNumber, setBankAppNumber] = useState('');
+  const [vkycStatus, setVkycStatus] = useState('Pending');
+  const [vkycUrl, setVkycUrl] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   // Responsive
   const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -44,6 +51,17 @@ export default function PartnerShareLanding() {
         if (json && json.success && json.data) {
           setProduct(json.data.product);
           setPartner(json.data.partner);
+          if (json.data.existing_application) {
+            const ex = json.data.existing_application;
+            if (ex.customer_name) setCustomerName(ex.customer_name);
+            if (ex.customer_mobile) setCustomerMobile(ex.customer_mobile);
+            if (ex.pan_number) setPanNumber(ex.pan_number);
+            if (ex.monthly_salary) setMonthlyIncome(String(ex.monthly_salary));
+            if (ex.bank_application_number) setBankAppNumber(ex.bank_application_number);
+            if (ex.vkyc_status) setVkycStatus(ex.vkyc_status);
+            if (ex.vkyc_url) setVkycUrl(ex.vkyc_url);
+            if (ex.notes) setRemarks(ex.notes);
+          }
         } else {
           setError(json.message || 'Invalid or expired share link');
         }
@@ -59,25 +77,30 @@ export default function PartnerShareLanding() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!customerName.trim()) return alert('Please enter your name');
+    if (!customerName.trim()) return alert('Please enter your full name');
     if (!customerMobile.trim() || customerMobile.trim().length < 10) return alert('Please enter a valid 10-digit mobile number');
 
     setSubmitting(true);
     try {
-      console.log('Submitting lead:', { trackingToken, customerName, customerMobile });
       const res = await fetch(`${getApiV1Url()}/public/share/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           trackingToken,
           customerName: customerName.trim(),
-          customerMobile: customerMobile.trim().replace(/\D/g, '').slice(-10)
+          customerMobile: customerMobile.trim().replace(/\D/g, '').slice(-10),
+          panNumber: panNumber.trim(),
+          monthlyIncome,
+          bankAppNumber: bankAppNumber.trim(),
+          vkycStatus,
+          vkycUrl: vkycUrl.trim(),
+          remarks: remarks.trim()
         })
       });
       
       const json = await res.json();
-      console.log('Response data:', json);
       if (json && json.success) {
+        setSubmitted(true);
         const targetUrl = json.data?.redirect_url || 
           product?.partner_url || 
           product?.public_url || 
@@ -87,40 +110,15 @@ export default function PartnerShareLanding() {
           getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
 
         if (targetUrl) {
-          // DIRECTLY GO TO THIS CARD BANK LINK IMMEDIATELY!
-          console.log('Directly navigating to bank portal link:', targetUrl);
-          window.location.href = targetUrl;
-          return;
-        } else {
-          setSubmitted(true);
-          setRedirectUrl('https://gharkapaisa.in');
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 1500);
         }
       } else {
-        // Fallback directly to bank apply link if backend lead submit had an issue
-        const fallbackUrl = product?.partner_url || 
-          product?.public_url || 
-          product?.application_url || 
-          product?.apply_url || 
-          getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
-
-        if (fallbackUrl) {
-          window.location.href = fallbackUrl;
-          return;
-        }
         alert(json.message || 'Something went wrong. Please try again.');
       }
     } catch (err) {
       console.error('Submit error:', err);
-      const fallbackUrl = product?.partner_url || 
-        product?.public_url || 
-        product?.application_url || 
-        product?.apply_url || 
-        getBankApplyLink(product?.name, product?.bank_code || product?.bank_name);
-
-      if (fallbackUrl) {
-        window.location.href = fallbackUrl;
-        return;
-      }
       alert('Network error. Please try again.');
     } finally {
       setSubmitting(false);
@@ -423,63 +421,168 @@ export default function PartnerShareLanding() {
               <p style={{ fontSize: '12.5px', color: textSecondary, margin: 0 }}>Fill the details below to proceed to the official application</p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Full Name *</label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Enter your full name"
-                  required
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                    background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
-                    color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none',
-                    transition: 'border-color 0.2s'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = themeColor}
-                  onBlur={(e) => e.target.style.borderColor = border}
-                />
+            {submitted ? (
+              <div style={{ textAlign: 'center', padding: '20px 10px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#10B98120', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '28px' }}>
+                  ✓
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 8px', color: textPrimary }}>Application Details Saved!</h3>
+                <p style={{ fontSize: '13px', color: textSecondary, marginBottom: '16px', lineHeight: 1.5 }}>
+                  Your application details have been recorded and attached to your application record. Redirecting to official portal...
+                </p>
               </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Mobile Number *</label>
-                <div style={{ display: 'flex', alignItems: 'center', background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                  <span style={{ padding: '12px 10px 12px 14px', fontSize: '14px', fontWeight: 700, color: textSecondary, borderRight: `1px solid ${border}` }}>+91</span>
+            ) : (
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Full Name *</label>
                   <input
-                    type="tel"
-                    value={customerMobile}
-                    onChange={(e) => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="Enter 10-digit mobile"
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter full name"
                     required
-                    maxLength={10}
                     style={{
-                      flex: 1, padding: '12px 14px', background: 'transparent', border: 'none',
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
                       color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
                     }}
                   />
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  width: '100%', padding: '14px', border: 'none', borderRadius: '14px',
-                  background: submitting ? '#475569' : `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`,
-                  color: '#fff', fontSize: '15px', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer',
-                  boxShadow: submitting ? 'none' : `0 8px 24px ${themeColor}40`,
-                  transition: 'all 0.2s', marginTop: '4px'
-                }}
-              >
-                {submitting ? 'Processing...' : `Apply Now →`}
-              </button>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Mobile Number *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px', overflow: 'hidden' }}>
+                    <span style={{ padding: '12px 10px 12px 14px', fontSize: '14px', fontWeight: 700, color: textSecondary, borderRight: `1px solid ${border}` }}>+91</span>
+                    <input
+                      type="tel"
+                      value={customerMobile}
+                      onChange={(e) => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="Enter 10-digit mobile"
+                      required
+                      maxLength={10}
+                      style={{
+                        flex: 1, padding: '12px 14px', background: 'transparent', border: 'none',
+                        color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
 
-              <p style={{ fontSize: '11px', color: textSecondary, textAlign: 'center', margin: '4px 0 0', lineHeight: 1.5 }}>
-                By clicking Apply, you agree to our Terms & Conditions. You will be redirected to the official {product.bank_name || 'bank'} application portal.
-              </p>
-            </form>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number</label>
+                  <input
+                    type="text"
+                    value={panNumber}
+                    onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. ABCDE1234F"
+                    maxLength={10}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none', textTransform: 'uppercase'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Monthly Income (₹)</label>
+                  <input
+                    type="number"
+                    value={monthlyIncome}
+                    onChange={(e) => setMonthlyIncome(e.target.value)}
+                    placeholder="e.g. 45000"
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Bank Application / Reference Number *</label>
+                  <input
+                    type="text"
+                    value={bankAppNumber}
+                    onChange={(e) => setBankAppNumber(e.target.value)}
+                    placeholder="Enter bank reference number"
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                      color: textPrimary, fontSize: '14px', fontWeight: 600, outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Status</label>
+                    <select
+                      value={vkycStatus}
+                      onChange={(e) => setVkycStatus(e.target.value)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '12px 10px',
+                        background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                        color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
+                      }}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>VKYC Video / Link</label>
+                    <input
+                      type="url"
+                      value={vkycUrl}
+                      onChange={(e) => setVkycUrl(e.target.value)}
+                      placeholder="https://vkyc..."
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '12px 10px',
+                        background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                        color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Remarks & Activity Notes</label>
+                  <textarea
+                    rows={2}
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Application details notes..."
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '10px 12px',
+                      background: isDark ? '#1a1a1a' : '#f8faff', border: `1.5px solid ${border}`, borderRadius: '12px',
+                      color: textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none', resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    width: '100%', padding: '14px', border: 'none', borderRadius: '14px',
+                    background: submitting ? '#475569' : `linear-gradient(135deg, ${themeColor}, ${C.primaryDark})`,
+                    color: '#fff', fontSize: '15px', fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer',
+                    boxShadow: submitting ? 'none' : `0 8px 24px ${themeColor}40`,
+                    transition: 'all 0.2s', marginTop: '4px'
+                  }}
+                >
+                  {submitting ? 'Submitting Details...' : `Submit Application Details →`}
+                </button>
+
+                <p style={{ fontSize: '11px', color: textSecondary, textAlign: 'center', margin: '4px 0 0', lineHeight: 1.5 }}>
+                  Submitting will save these details to your tracked application profile and redirect to the official bank application portal.
+                </p>
+              </form>
+            )}
 
             {/* Trust Badges */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${border}` }}>

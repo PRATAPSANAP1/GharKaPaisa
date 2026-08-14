@@ -16,25 +16,29 @@ const generateTrackingToken = () => {
 const generateShareLink = async (req, res, next) => {
   try {
     let productId = req.body.productId || req.body.product_id;
+    let applicationId = req.body.application_id || req.body.applicationId || null;
+    let leadId = req.body.lead_id || req.body.leadId || null;
     let partnerId = null;
     let partnerCode = null;
 
-    if (!productId && req.body.application_id) {
-      const { rows: [app] } = await query(`SELECT product_id, partner_id FROM applications WHERE id = $1`, [req.body.application_id]);
+    if (!productId && applicationId) {
+      const { rows: [app] } = await query(`SELECT product_id, partner_id FROM applications WHERE id = $1`, [applicationId]);
       if (app) {
         productId = app.product_id;
         partnerId = app.partner_id;
       } else {
-        const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [req.body.application_id]);
+        const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [applicationId]);
         if (lead) {
           productId = lead.product_id;
           if (!partnerId) partnerId = lead.partner_id;
+          leadId = lead.id;
+          applicationId = null;
         }
       }
     }
 
-    if (!productId && req.body.lead_id) {
-      const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [req.body.lead_id]);
+    if (!productId && leadId) {
+      const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [leadId]);
       if (lead) {
         productId = lead.product_id;
         if (!partnerId) partnerId = lead.partner_id;
@@ -80,9 +84,9 @@ const generateShareLink = async (req, res, next) => {
 
     // Store in partner_share_links table
     await query(`
-      INSERT INTO partner_share_links (partner_id, product_id, tracking_token, expires_at)
-      VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
-    `, [partnerId, productId, trackingToken]);
+      INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at)
+      VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+    `, [partnerId, productId, trackingToken, applicationId, leadId]);
 
     // Generate share link URL
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
@@ -96,6 +100,8 @@ const generateShareLink = async (req, res, next) => {
       whatsapp_url: whatsappUrl,
       product_id: product.id,
       product_name: product.name,
+      application_id: applicationId,
+      lead_id: leadId,
       partner_code: partnerCode || 'PARTNER'
     }, 'Share link generated successfully');
   } catch (err) {
@@ -108,15 +114,8 @@ const getShareLinkDetails = async (req, res, next) => {
   try {
     const { trackingToken } = req.params;
 
-    // Find lead by tracking token (if already submitted) or get product info from token
-    // For now, we'll decode the token to get product and partner info
-    // In production, you might want to store this in a separate table
-    
-    // For this implementation, we'll store the mapping in a temporary table or use the token itself
-    // Let's create a simple approach: the token is stored when the link is generated
-    
     const { rows: [shareLinkData] } = await query(
-      `SELECT product_id, partner_id, created_at FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
+      `SELECT product_id, partner_id, application_id, lead_id, created_at FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
       [trackingToken]
     );
 
@@ -142,10 +141,30 @@ const getShareLinkDetails = async (req, res, next) => {
       [shareLinkData.partner_id]
     );
 
+    let existingApplication = null;
+    if (shareLinkData.application_id) {
+      const { rows: [app] } = await query(`
+        SELECT a.id, a.app_number, a.bank_application_number, a.vkyc_status, a.vkyc_url, a.monthly_salary, a.pan_number, a.notes,
+               c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email
+        FROM applications a
+        JOIN customers c ON c.id = a.customer_id
+        WHERE a.id = $1
+      `, [shareLinkData.application_id]);
+      if (app) existingApplication = app;
+    } else if (shareLinkData.lead_id) {
+      const { rows: [lead] } = await query(`
+        SELECT l.id, l.lead_number as app_number, l.customer_name, l.mobile as customer_mobile, l.monthly_income as monthly_salary, l.notes
+        FROM leads l
+        WHERE l.id = $1
+      `, [shareLinkData.lead_id]);
+      if (lead) existingApplication = lead;
+    }
+
     return success(res, {
       product,
       partner: partner || null,
-      tracking_token: trackingToken
+      tracking_token: trackingToken,
+      existing_application: existingApplication
     });
   } catch (err) {
     next(err);
@@ -155,7 +174,10 @@ const getShareLinkDetails = async (req, res, next) => {
 // POST /public/share/submit - Public endpoint to submit customer info from landing page
 const submitShareLead = async (req, res, next) => {
   try {
-    const { trackingToken, customerName, customerMobile } = req.body;
+    const {
+      trackingToken, customerName, customerMobile,
+      panNumber, monthlyIncome, bankAppNumber, vkycStatus, vkycUrl, remarks
+    } = req.body;
 
     if (!trackingToken || !customerName || !customerMobile) {
       return error(res, 'Tracking token, customer name, and mobile are required', 400);
@@ -163,7 +185,7 @@ const submitShareLead = async (req, res, next) => {
 
     // Get share link details
     const { rows: [shareLinkData] } = await query(
-      `SELECT product_id, partner_id FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
+      `SELECT product_id, partner_id, application_id, lead_id FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
       [trackingToken]
     );
 
@@ -179,6 +201,8 @@ const submitShareLead = async (req, res, next) => {
     const partnerUserId = partnerUser?.user_id || null;
 
     const cleanMobile = customerMobile.replace(/\D/g, '').slice(-10);
+    const numIncome = monthlyIncome ? Number(monthlyIncome) : null;
+    const cleanPan = panNumber ? panNumber.trim().toUpperCase() : null;
 
     // Upsert customer in customers table so they appear under Partner CRM / Customers panel
     let customerId = null;
@@ -191,15 +215,20 @@ const submitShareLead = async (req, res, next) => {
       if (existingCust) {
         customerId = existingCust.id;
         await query(
-          `UPDATE customers SET full_name = COALESCE(NULLIF(full_name, ''), $1), updated_at = NOW() WHERE id = $2`,
-          [customerName, customerId]
+          `UPDATE customers
+           SET full_name = COALESCE(NULLIF(full_name, ''), $1),
+               pan_number = COALESCE(NULLIF($2, ''), pan_number),
+               monthly_income = COALESCE($3, monthly_income),
+               updated_at = NOW()
+           WHERE id = $4`,
+          [customerName.trim(), cleanPan, numIncome, customerId]
         );
       } else {
         const { rows: [newCust] } = await query(
-          `INSERT INTO customers (full_name, mobile, created_by)
-           VALUES ($1, $2, $3)
+          `INSERT INTO customers (full_name, mobile, pan_number, monthly_income, created_by)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING id`,
-          [customerName, cleanMobile, partnerUserId]
+          [customerName.trim(), cleanMobile, cleanPan, numIncome, partnerUserId]
         );
         customerId = newCust?.id || null;
       }
@@ -207,23 +236,52 @@ const submitShareLead = async (req, res, next) => {
       console.warn('Customer record creation fallback:', custErr.message);
     }
 
+    // If an application_id was attached to this share link, update that specific application record!
+    if (shareLinkData.application_id) {
+      await query(`
+        UPDATE applications
+        SET 
+          bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
+          bank_ref_number = COALESCE(NULLIF($1, ''), bank_ref_number),
+          vkyc_status = COALESCE(NULLIF($2, ''), vkyc_status),
+          monthly_salary = COALESCE($3, monthly_salary),
+          vkyc_url = COALESCE(NULLIF($4, ''), vkyc_url),
+          pan_number = COALESCE(NULLIF($5, ''), pan_number),
+          notes = COALESCE(NULLIF($6, ''), notes),
+          updated_at = NOW()
+        WHERE id = $7
+      `, [
+        bankAppNumber?.trim() || null,
+        vkycStatus?.trim() || null,
+        numIncome,
+        vkycUrl?.trim() || null,
+        cleanPan,
+        remarks?.trim() || null,
+        shareLinkData.application_id
+      ]);
+    }
+
     // Check if lead already exists for this tracking token OR active (product_id, mobile) pair
     const { rows: [existingLead] } = await query(
       `SELECT id FROM leads 
-       WHERE (tracking_token = $1 OR (product_id = $2 AND (mobile = $3 OR customer_mobile = $3)))
+       WHERE (tracking_token = $1 OR id = $4 OR (product_id = $2 AND (mobile = $3 OR customer_mobile = $3)))
          AND status NOT IN ('rejected', 'cancelled')
        ORDER BY created_at DESC LIMIT 1`,
-      [trackingToken, shareLinkData.product_id, cleanMobile]
+      [trackingToken, shareLinkData.product_id, cleanMobile, shareLinkData.lead_id || null]
     );
 
     if (existingLead) {
       // Update existing lead
       const { rows: [updatedLead] } = await query(`
         UPDATE leads 
-        SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3, customer_id = COALESCE($5, customer_id), updated_at = NOW()
+        SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3,
+            customer_id = COALESCE($5, customer_id),
+            monthly_income = COALESCE($6, monthly_income),
+            notes = COALESCE(NULLIF($7, ''), notes),
+            updated_at = NOW()
         WHERE id = $4
         RETURNING *
-      `, [customerName, cleanMobile, trackingToken, existingLead.id, customerId]);
+      `, [customerName.trim(), cleanMobile, trackingToken, existingLead.id, customerId, numIncome, remarks?.trim() || null]);
 
       // Get product bank link
       const { rows: [product] } = await query(
@@ -235,8 +293,9 @@ const submitShareLead = async (req, res, next) => {
 
       return success(res, {
         lead_id: updatedLead.id,
+        application_id: shareLinkData.application_id || null,
         redirect_url: targetRedirectUrl,
-        message: 'Lead updated successfully'
+        message: 'Application details submitted and saved successfully'
       });
     }
 
@@ -246,29 +305,31 @@ const submitShareLead = async (req, res, next) => {
       const { rows } = await query(`
         INSERT INTO leads (
           partner_id, product_id, customer_name, customer_mobile, mobile,
-          tracking_token, source, status, pipeline_stage, customer_id
+          tracking_token, source, status, pipeline_stage, customer_id, monthly_income, notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'pending', 'created', $7)
+        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'under_review', 'created', $7, $8, $9)
         RETURNING *
       `, [
         shareLinkData.partner_id,
         shareLinkData.product_id,
-        customerName,
+        customerName.trim(),
         cleanMobile,
         cleanMobile,
         trackingToken,
-        customerId
+        customerId,
+        numIncome,
+        remarks?.trim() || null
       ]);
       lead = rows[0];
     } catch (insertErr) {
       if (insertErr.code === '23505') {
-        // Fallback for duplicate key error (idx_active_lead_product_mobile)
         const { rows: [fallbackLead] } = await query(`
           UPDATE leads
-          SET customer_name = $1, tracking_token = $2, customer_id = COALESCE($5, customer_id), updated_at = NOW()
+          SET customer_name = $1, tracking_token = $2, customer_id = COALESCE($5, customer_id),
+              monthly_income = COALESCE($6, monthly_income), notes = COALESCE(NULLIF($7, ''), notes), updated_at = NOW()
           WHERE product_id = $3 AND (mobile = $4 OR customer_mobile = $4) AND status NOT IN ('rejected', 'cancelled')
           RETURNING *
-        `, [customerName, trackingToken, shareLinkData.product_id, cleanMobile, customerId]);
+        `, [customerName.trim(), trackingToken, shareLinkData.product_id, cleanMobile, customerId, numIncome, remarks?.trim() || null]);
 
         if (fallbackLead) {
           lead = fallbackLead;

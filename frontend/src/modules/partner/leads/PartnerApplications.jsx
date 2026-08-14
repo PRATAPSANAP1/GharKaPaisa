@@ -430,17 +430,17 @@ export default function PartnerApplications() {
   };
 
   const getStatusBadge = (status) => {
-    switch(status) {
-      case 'approved':
-      case 'disbursed':
-        return { label: status === 'disbursed' ? 'Disbursed' : 'Approved', bg: '#10b98115', color: '#10b981', border: '#10b98130', icon: CheckCircle2 };
-      case 'rejected':
-        return { label: 'Rejected', bg: '#ef444415', color: '#ef4444', border: '#ef444430', icon: XCircle };
-      case 'under_review':
-        return { label: 'Under Review', bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b30', icon: Clock };
-      default:
-        return { label: 'Submitted', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: AlertCircle };
+    const s = (status || '').toLowerCase();
+    if (s === 'approved' || s === 'disbursed') {
+      return { label: s === 'disbursed' ? 'Disbursed' : 'Approved', bg: '#10b98115', color: '#10b981', border: '#10b98130', icon: CheckCircle2 };
     }
+    if (s === 'rejected' || s === 'cancelled') {
+      return { label: 'Rejected', bg: '#ef444415', color: '#ef4444', border: '#ef444430', icon: XCircle };
+    }
+    if (s === 'under_review' || s === 'under review' || s === 'verification' || s === 'in_progress') {
+      return { label: 'Under Review', bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b30', icon: Clock };
+    }
+    return { label: 'Under Review', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
   };
 
   const getStepProgress = (status) => {
