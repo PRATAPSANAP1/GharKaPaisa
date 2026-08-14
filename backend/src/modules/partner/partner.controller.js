@@ -710,67 +710,143 @@ const listPartnerCustomers = async (req, res, next) => {
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    let whereClause;
+    let custWhere;
+    let leadWhere;
+
     if (isTeamMember) {
-      whereClause = `(c.created_by = $2 OR l.created_by = $2 OR a.submitted_by = $2 OR a.partner_id = $1 OR l.partner_id = $1)`;
+      custWhere = `(c.created_by = $2 OR l.created_by = $2 OR a.submitted_by = $2 OR a.partner_id = $1 OR l.partner_id = $1)`;
+      leadWhere = `(l.created_by = $2 OR l.partner_id = $1)`;
     } else if (view === 'my') {
-      whereClause = `(c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR a.submitted_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1))`;
+      custWhere = `(c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1 OR a.submitted_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR a.partner_id = $1 OR l.partner_id = $1)`;
+      leadWhere = `(l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = $1 OR l.partner_id = $1)`;
     } else if (view === 'team') {
-      whereClause = `(
+      custWhere = `(
         a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
         OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR c.created_by IN (SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT user_id FROM partner_profiles WHERE id IN (SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1))
+      )`;
+      leadWhere = `(
+        l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.created_by IN (SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT user_id FROM partner_profiles WHERE id IN (SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1))
       )`;
     } else {
-      whereClause = `(
+      // view === 'all' or default
+      custWhere = `(
         a.partner_id = $1 OR l.partner_id = $1 
         OR a.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
         OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
         OR c.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR c.created_by = $1
+        OR c.created_by IN (SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT user_id FROM partner_profiles WHERE id IN (SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1))
+      )`;
+      leadWhere = `(
+        l.partner_id = $1 
+        OR l.partner_id IN (SELECT id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1)
+        OR l.created_by = (SELECT user_id FROM partner_profiles WHERE id = $1) OR l.created_by = $1
+        OR l.created_by IN (SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1 OR referred_by_id = $1 UNION SELECT user_id FROM partner_profiles WHERE id IN (SELECT child_partner_id FROM partner_team_relationships WHERE parent_partner_id = $1 OR sponsor_id = $1))
       )`;
     }
 
     const queryParams = isTeamMember ? [partnerId, req.user.id] : [partnerId];
 
     const { rows } = await query(`
-      SELECT
-        c.id,
-        c.full_name,
-        c.mobile,
-        c.email,
-        c.pan_number,
-        c.aadhaar_last4,
-        c.city,
-        c.state,
-        c.employment_type,
-        c.monthly_income,
-        c.employer,
-        MIN(COALESCE(a.created_at, l.created_at, c.created_at)) AS first_application_at,
-        (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
-        COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'id', COALESCE(a.id::text, l.id::text),
-              'app_number', COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))),
-              'status', COALESCE(a.status::text, l.status::text),
-              'product_name', COALESCE(pa.name, pl.name),
-              'bank_name', COALESCE(ba.name, bl.name),
-              'bank_code', COALESCE(ba.short_code, bl.short_code),
-              'commission_amount', COALESCE(a.commission_amount, pl.commission_value, 0),
-              'created_at', COALESCE(a.created_at, l.created_at)
+      SELECT * FROM (
+        SELECT
+          c.id,
+          COALESCE(NULLIF(c.full_name, ''), NULLIF(MAX(l.customer_name), ''), 'Customer') AS full_name,
+          COALESCE(NULLIF(c.mobile, ''), MAX(l.mobile)) AS mobile,
+          COALESCE(NULLIF(c.email, ''), MAX(l.email)) AS email,
+          COALESCE(NULLIF(c.pan_number, ''), MAX(l.pan_card_number)) AS pan_number,
+          c.aadhaar_last4,
+          COALESCE(NULLIF(c.city, ''), MAX(l.city)) AS city,
+          c.state,
+          COALESCE(NULLIF(c.employment_type, ''), MAX(l.employment_type), 'salaried') AS employment_type,
+          COALESCE(c.monthly_income, MAX(l.monthly_income)) AS monthly_income,
+          COALESCE(NULLIF(c.employer, ''), MAX(l.company_name)) AS employer,
+          COALESCE(NULLIF(c.pipeline_status, ''), MAX(a.status::text), MAX(l.status::text), 'new') AS pipeline_status,
+          COALESCE(
+            (
+              SELECT json_agg(DISTINCT p_name) FROM (
+                SELECT pa2.name as p_name FROM applications a2 JOIN products pa2 ON pa2.id = a2.product_id WHERE a2.customer_id = c.id
+                UNION
+                SELECT pl2.name as p_name FROM leads l2 JOIN products pl2 ON pl2.id = l2.product_id WHERE l2.customer_id = c.id OR l2.mobile = c.mobile
+              ) sub
+            ),
+            '[]'::json
+          ) AS product_interests,
+          COALESCE(MAX(ap.first_name), MAX(lap.first_name)) AS partner_first_name,
+          COALESCE(MAX(ap.last_name), MAX(lap.last_name)) AS partner_last_name,
+          MIN(COALESCE(a.created_at, l.created_at, c.created_at)) AS first_application_at,
+          COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) AS created_at,
+          (COUNT(DISTINCT a.id) + COUNT(DISTINCT l.id))::int AS application_count,
+          COALESCE(
+            json_agg(
+              DISTINCT jsonb_build_object(
+                'id', COALESCE(a.id::text, l.id::text),
+                'app_number', COALESCE(a.app_number, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))),
+                'status', COALESCE(a.status::text, l.status::text),
+                'product_name', COALESCE(pa.name, pl.name),
+                'bank_name', COALESCE(ba.name, bl.name),
+                'bank_code', COALESCE(ba.short_code, bl.short_code),
+                'commission_amount', COALESCE(a.commission_amount, pl.commission_value, 0),
+                'created_at', COALESCE(a.created_at, l.created_at)
+              )
+            ) FILTER (WHERE a.id IS NOT NULL OR l.id IS NOT NULL),
+            '[]'::json
+          ) AS applications
+        FROM customers c
+        LEFT JOIN applications a ON a.customer_id = c.id
+        LEFT JOIN products pa ON pa.id = a.product_id
+        LEFT JOIN banks ba ON ba.id = pa.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
+        LEFT JOIN leads l ON (l.customer_id = c.id OR l.mobile = c.mobile)
+        LEFT JOIN products pl ON pl.id = l.product_id
+        LEFT JOIN banks bl ON bl.id = pl.bank_id
+        LEFT JOIN partner_profiles lap ON lap.id = l.partner_id
+        WHERE ${custWhere}
+        GROUP BY c.id
+
+        UNION ALL
+
+        SELECT
+          l.id AS id,
+          COALESCE(NULLIF(l.customer_name, ''), 'Customer') AS full_name,
+          l.mobile AS mobile,
+          l.email AS email,
+          l.pan_card_number AS pan_number,
+          NULL AS aadhaar_last4,
+          l.city AS city,
+          NULL AS state,
+          COALESCE(NULLIF(l.employment_type, ''), 'salaried') AS employment_type,
+          l.monthly_income AS monthly_income,
+          l.company_name AS employer,
+          COALESCE(NULLIF(l.status::text, ''), 'new') AS pipeline_status,
+          CASE WHEN pl.name IS NOT NULL THEN json_build_array(pl.name) ELSE '[]'::json END AS product_interests,
+          lap.first_name AS partner_first_name,
+          lap.last_name AS partner_last_name,
+          l.created_at AS first_application_at,
+          l.created_at AS created_at,
+          1 AS application_count,
+          json_build_array(
+            jsonb_build_object(
+              'id', l.id::text,
+              'app_number', COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))),
+              'status', l.status::text,
+              'product_name', pl.name,
+              'bank_name', COALESCE(bl.name, 'Bank Partner'),
+              'bank_code', COALESCE(bl.short_code, 'LEAD'),
+              'commission_amount', COALESCE(pl.commission_value, 0),
+              'created_at', l.created_at
             )
-          ) FILTER (WHERE a.id IS NOT NULL OR l.id IS NOT NULL),
-          '[]'::json
-        ) AS applications
-      FROM customers c
-      LEFT JOIN applications a ON a.customer_id = c.id
-      LEFT JOIN products pa ON pa.id = a.product_id
-      LEFT JOIN banks ba ON ba.id = pa.bank_id
-      LEFT JOIN leads l ON (l.customer_id = c.id OR l.mobile = c.mobile)
-      LEFT JOIN products pl ON pl.id = l.product_id
-      LEFT JOIN banks bl ON bl.id = pl.bank_id
-      WHERE ${whereClause}
-      GROUP BY c.id
-      ORDER BY COALESCE(MAX(a.created_at), MAX(l.created_at), c.created_at) DESC
+          ) AS applications
+        FROM leads l
+        LEFT JOIN products pl ON pl.id = l.product_id
+        LEFT JOIN banks bl ON bl.id = pl.bank_id
+        LEFT JOIN partner_profiles lap ON lap.id = l.partner_id
+        WHERE l.customer_id IS NULL 
+          AND NOT EXISTS (SELECT 1 FROM customers c2 WHERE c2.mobile = l.mobile)
+          AND ${leadWhere}
+      ) combined_customers
+      ORDER BY created_at DESC
     `, queryParams);
 
     return success(res, rows);
