@@ -7,26 +7,11 @@ import GkpLoader from '../components/Loader/GkpLoader';
 import './App.css';
 
 function App() {
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const handleLoader = (e) => {
-      setLoading(e.detail);
-    };
-
-    window.addEventListener('loader', handleLoader);
-
-    return () => {
-      window.removeEventListener('loader', handleLoader);
-    };
-  }, []);
-
   return (
     <ThemeProvider>
       <BanksProvider>
         <BrowserRouter>
-          {loading && <GkpLoader />}
-          <Suspense fallback={<GkpLoader />}>
+          <Suspense fallback={null}>
             <AppRoutes />
           </Suspense>
         </BrowserRouter>

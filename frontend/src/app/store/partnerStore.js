@@ -57,5 +57,18 @@ export const usePartnerStore = create((set) => ({
     }
   },
 
+  updateCustomer: async (id, customerData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.put(`/customers/${id}`, customerData);
+      const updatedCustomers = await api.get('/partner/customers');
+      set({ customers: updatedCustomers.data.data, isLoading: false });
+      return response.data.data;
+    } catch (error) {
+      set({ error: error.response?.data?.message || 'Failed to update customer', isLoading: false });
+      throw error;
+    }
+  },
+
   clearData: () => set({ profile: null, applications: [], customers: [], error: null })
 }));

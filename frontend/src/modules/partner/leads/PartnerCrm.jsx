@@ -39,6 +39,7 @@ export default function PartnerCrm() {
   const customers = usePartnerStore((state) => state.customers);
   const isLoading = usePartnerStore((state) => state.isLoading);
   const createCustomer = usePartnerStore((state) => state.createCustomer);
+  const updateCustomer = usePartnerStore((state) => state.updateCustomer);
 
   // Dashboard Metrics state
   const [metrics, setMetrics] = useState({
@@ -62,6 +63,71 @@ export default function PartnerCrm() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [active360CustomerId, setActive360CustomerId] = useState(null);
+
+  // Edit Customer Modal State
+  const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
+  const [editCustomerObj, setEditCustomerObj] = useState(null);
+  const [editCustForm, setEditCustForm] = useState({
+    fullName: '',
+    mobile: '',
+    email: '',
+    panNumber: '',
+    city: '',
+    state: '',
+    pincode: '',
+    employmentType: 'Salaried',
+    monthlyIncome: '',
+    pipelineStatus: 'new'
+  });
+  const [editCustError, setEditCustError] = useState('');
+  const [editCustLoading, setEditCustLoading] = useState(false);
+
+  const handleOpenEditCustomerModal = (cust) => {
+    setEditCustomerObj(cust);
+    setEditCustForm({
+      fullName: cust.full_name || '',
+      mobile: cust.mobile || '',
+      email: cust.email || '',
+      panNumber: cust.pan_number || '',
+      city: cust.city || '',
+      state: cust.state || '',
+      pincode: cust.pincode || '',
+      employmentType: cust.employment_type || 'Salaried',
+      monthlyIncome: cust.monthly_income || '',
+      pipelineStatus: cust.pipeline_status || 'new'
+    });
+    setEditCustError('');
+    setShowEditCustomerModal(true);
+  };
+
+  const handleEditCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!editCustomerObj?.id) return;
+    setEditCustError('');
+    setEditCustLoading(true);
+    try {
+      await updateCustomer(editCustomerObj.id, {
+        full_name: editCustForm.fullName,
+        mobile: editCustForm.mobile,
+        email: editCustForm.email || undefined,
+        pan_number: editCustForm.panNumber || undefined,
+        city: editCustForm.city || undefined,
+        state: editCustForm.state || undefined,
+        pincode: editCustForm.pincode || undefined,
+        employment_type: editCustForm.employmentType ? editCustForm.employmentType.toLowerCase() : undefined,
+        monthly_income: editCustForm.monthlyIncome ? parseFloat(editCustForm.monthlyIncome) : undefined,
+        pipeline_status: editCustForm.pipelineStatus
+      });
+      alert('Customer Profile Updated Successfully!');
+      setShowEditCustomerModal(false);
+      fetchCustomers();
+      loadDashboardMetrics();
+    } catch (err) {
+      setEditCustError(err.response?.data?.message || err.message || 'Failed to update customer');
+    } finally {
+      setEditCustLoading(false);
+    }
+  };
 
   // Add Customer Form
   const [custForm, setCustForm] = useState({
@@ -403,6 +469,7 @@ export default function PartnerCrm() {
               key={cust.id}
               customer={cust}
               onOpenProfile={(c) => setActive360CustomerId(c.id)}
+              onEditCustomer={handleOpenEditCustomerModal}
               C={C}
               S={S}
             />
@@ -438,12 +505,20 @@ export default function PartnerCrm() {
                   </td>
                   {!isTeamMember && <td style={{ padding: '12px 16px' }}>{cust.partner_first_name ? `${cust.partner_first_name} ${cust.partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</td>}
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => setActive360CustomerId(cust.id)}
-                      style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
-                    >
-                      {t("crm.open360Profile", "Open 360° Profile")}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleOpenEditCustomerModal(cust)}
+                        style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => setActive360CustomerId(cust.id)}
+                        style={{ ...S.btn('primary'), padding: '6px 12px', fontSize: '12px', borderRadius: '8px' }}
+                      >
+                        {t("crm.open360Profile", "Open 360° Profile")}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -538,6 +613,99 @@ export default function PartnerCrm() {
                 <button type="button" onClick={() => setShowAddModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>{t("common.cancel", "Cancel")}</button>
                 <button type="submit" disabled={formLoading} style={{ ...S.btn('primary'), padding: '10px 20px' }}>
                   {formLoading ? t("crm.form.creatingProfile", "Creating Profile...") : t("crm.form.saveProfile", "Save Customer Profile")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT CUSTOMER MODAL */}
+      {showEditCustomerModal && editCustomerObj && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>✏️ Edit Customer Profile #{editCustomerObj.id?.substring(0, 8)}</h3>
+              <button onClick={() => setShowEditCustomerModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, fontSize: '20px' }}>✕</button>
+            </div>
+
+            {editCustError && (
+              <div style={{ padding: '12px', background: 'rgba(239,68,68,0.1)', border: '1px solid #EF4444', borderRadius: '10px', color: '#DC2626', fontSize: '12.5px', marginBottom: '14px' }}>
+                {editCustError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditCustomerSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={S.label}>Full Name *</label>
+                <input style={S.input} required value={editCustForm.fullName} onChange={(e) => setEditCustForm({ ...editCustForm, fullName: e.target.value })} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Mobile Number *</label>
+                  <input style={S.input} required value={editCustForm.mobile} onChange={(e) => setEditCustForm({ ...editCustForm, mobile: e.target.value })} />
+                </div>
+                <div>
+                  <label style={S.label}>Email Address</label>
+                  <input style={S.input} type="email" value={editCustForm.email} onChange={(e) => setEditCustForm({ ...editCustForm, email: e.target.value })} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>PAN Card Number</label>
+                  <input style={S.input} maxLength={10} placeholder="ABCDE1234F" value={editCustForm.panNumber} onChange={(e) => setEditCustForm({ ...editCustForm, panNumber: e.target.value.toUpperCase() })} />
+                </div>
+                <div>
+                  <label style={S.label}>Pipeline Status</label>
+                  <select style={S.input} value={editCustForm.pipelineStatus} onChange={(e) => setEditCustForm({ ...editCustForm, pipelineStatus: e.target.value })}>
+                    <option value="new">New Lead</option>
+                    <option value="interested">Interested</option>
+                    <option value="documents_pending">Docs Pending</option>
+                    <option value="lead_created">Lead Created</option>
+                    <option value="application_submitted">Application Submitted</option>
+                    <option value="bank_verification">Bank Verification</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={S.label}>City</label>
+                  <input style={S.input} placeholder="City" value={editCustForm.city} onChange={(e) => setEditCustForm({ ...editCustForm, city: e.target.value })} />
+                </div>
+                <div>
+                  <label style={S.label}>State</label>
+                  <input style={S.input} placeholder="State" value={editCustForm.state} onChange={(e) => setEditCustForm({ ...editCustForm, state: e.target.value })} />
+                </div>
+                <div>
+                  <label style={S.label}>Pincode</label>
+                  <input style={S.input} maxLength={6} placeholder="Pincode" value={editCustForm.pincode} onChange={(e) => setEditCustForm({ ...editCustForm, pincode: e.target.value })} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={S.label}>Employment Type</label>
+                  <select style={S.input} value={editCustForm.employmentType} onChange={(e) => setEditCustForm({ ...editCustForm, employmentType: e.target.value })}>
+                    <option value="salaried">Salaried</option>
+                    <option value="self_employed">Self Employed</option>
+                    <option value="business">Business Owner</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>Monthly Income (₹)</label>
+                  <input style={S.input} type="number" placeholder="45000" value={editCustForm.monthlyIncome} onChange={(e) => setEditCustForm({ ...editCustForm, monthlyIncome: e.target.value })} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowEditCustomerModal(false)} style={{ ...S.btn('outline'), padding: '10px 18px' }}>Cancel</button>
+                <button type="submit" disabled={editCustLoading} style={{ ...S.btn('primary'), padding: '10px 20px' }}>
+                  {editCustLoading ? 'Saving...' : 'Save Customer Changes'}
                 </button>
               </div>
             </form>

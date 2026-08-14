@@ -1037,20 +1037,20 @@ export default function PartnerApplications() {
               <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
 
-            {/* Share Link Banner */}
-            <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 14, marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Share URL</div>
-              <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace', marginBottom: 10 }}>
+            {/* Share Link Banner & Actions Only */}
+            <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 16 }}>
+              <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Application Share URL</div>
+              <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace', marginBottom: 14, padding: 10, borderRadius: 10, background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${border}` }}>
                 {shareData.share_url}
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(shareData.share_url);
                     alert('Link copied to clipboard!');
                   }}
-                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  style={{ flex: 1, minWidth: 120, padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
                   <Copy size={14} /> Copy Link
                 </button>
@@ -1060,61 +1060,31 @@ export default function PartnerApplications() {
                     const text = encodeURIComponent(`Hi ${shareData.customer_name}, please complete your application details using this secure link: ${shareData.share_url}`);
                     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
                   }}
-                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  style={{ flex: 1, minWidth: 140, padding: '10px 14px', borderRadius: 12, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
                   💬 Share via WhatsApp
                 </button>
+                {navigator.share && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.share({
+                        title: `Application for ${shareData.customer_name}`,
+                        text: `Complete your application details using this link:`,
+                        url: shareData.share_url
+                      }).catch(() => {});
+                    }}
+                    style={{ flex: 1, minWidth: 130, padding: '10px 14px', borderRadius: 12, border: `1px solid ${accent}40`, background: accent + '15', color: accent, fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Share2 size={14} /> Share to App
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Customer Application Details Form */}
-            <form onSubmit={handleSaveShareFormDetails} style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: `1px solid ${border}`, paddingTop: 16 }}>
-              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: textPrimary }}>📋 Take / Update Application Details</h4>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Bank Application / Reference Number *</label>
-                <input type="text" required placeholder="Enter bank reference number" value={shareForm.bank_application_number} onChange={e => setShareForm({ ...shareForm, bank_application_number: e.target.value })}
-                  style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Status</label>
-                  <select value={shareForm.vkyc_status} onChange={e => setShareForm({ ...shareForm, vkyc_status: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
-                    <option value="Pending">Pending</option>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Failed">Failed</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Monthly Income (₹)</label>
-                  <input type="number" placeholder="e.g. 45000" value={shareForm.monthly_salary} onChange={e => setShareForm({ ...shareForm, monthly_salary: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Link / Video URL</label>
-                <input type="url" placeholder="https://vkyc..." value={shareForm.vkyc_url} onChange={e => setShareForm({ ...shareForm, vkyc_url: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>PAN Card Number</label>
-                <input type="text" maxLength={10} placeholder="ABCDE1234F" value={shareForm.pan_number} onChange={e => setShareForm({ ...shareForm, pan_number: e.target.value.toUpperCase() })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Remarks & Activity Notes</label>
-                <textarea rows={2} placeholder="Application details notes..." value={shareForm.remarks} onChange={e => setShareForm({ ...shareForm, remarks: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box', height: 'auto' }} />
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 6 }}>
-                <button type="button" onClick={() => setShowShareModal(false)} style={{ padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
-                <button type="submit" disabled={savingShareForm} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-                  {savingShareForm ? 'Saving...' : 'Save Application Details'}
-                </button>
-              </div>
-            </form>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button type="button" onClick={() => setShowShareModal(false)} style={{ padding: '9px 20px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
+            </div>
           </div>
         </div>
       )}

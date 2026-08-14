@@ -1,15 +1,5 @@
 import React from "react";
-import logo from "../../assets/logos/logo.png";
-import "./LoadingLogo.css";
 
 export default function LoadingLogo() {
-  return (
-    <div className="loading-overlay">
-      <img
-        src={logo}
-        alt="Loading"
-        className="loading-logo"
-      />
-    </div>
-  );
+  return null;
 }

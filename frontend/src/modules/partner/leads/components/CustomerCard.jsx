@@ -2,10 +2,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   MdPerson, MdPhone, MdEmail, MdLocationOn, 
-  MdAccessTime, MdWork, MdOpenInNew, MdTag 
+  MdAccessTime, MdWork, MdOpenInNew, MdTag, MdEdit 
 } from 'react-icons/md';
 
-export default function CustomerCard({ customer, onOpenProfile, C, S }) {
+export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, C, S }) {
   const { t } = useTranslation();
   if (!customer) return null;
 
@@ -215,29 +215,55 @@ export default function CustomerCard({ customer, onOpenProfile, C, S }) {
           {t("crm.partner", "Partner")}: <strong style={{ color: C.text }}>{partner_first_name ? `${partner_first_name} ${partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</strong>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenProfile && onOpenProfile(customer);
-          }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: C.bgSecondary,
-            color: C.teal,
-            border: `1px solid ${C.teal}40`,
-            borderRadius: '8px',
-            padding: '6px 12px',
-            fontSize: '12px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <span>{t("crm.open360Profile", "Open 360° Profile")}</span>
-          <MdOpenInNew style={{ fontSize: '14px' }} />
-        </button>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditCustomer && onEditCustomer(customer);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: C.bgSecondary,
+              color: C.primary,
+              border: `1px solid ${C.primary}40`,
+              borderRadius: '8px',
+              padding: '6px 10px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <MdEdit style={{ fontSize: '13px' }} />
+            <span>Edit</span>
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenProfile && onOpenProfile(customer);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: C.bgSecondary,
+              color: C.teal,
+              border: `1px solid ${C.teal}40`,
+              borderRadius: '8px',
+              padding: '6px 10px',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span>360° Profile</span>
+            <MdOpenInNew style={{ fontSize: '13px' }} />
+          </button>
+        </div>
       </div>
     </div>
   );
