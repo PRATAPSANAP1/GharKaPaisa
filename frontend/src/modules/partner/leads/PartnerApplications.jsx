@@ -220,9 +220,6 @@ export default function PartnerApplications() {
     }
   };
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const categoryFilter = searchParams.get('category');
-
   const fetchDashboardStats = async () => {
     try {
       const res = await api.get('/applications/dashboard', {
@@ -246,6 +243,7 @@ export default function PartnerApplications() {
           commission_status: commFilter || undefined,
           category: categoryFilter || undefined,
           scope: searchParams.get('scope') || undefined,
+          member_id: memberFilter || undefined,
           limit: 100
         }
       });
@@ -270,16 +268,14 @@ export default function PartnerApplications() {
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
-    const actionParam = searchParams.get('action');
     if (statusParam && statusParam !== statusFilter) setStatusFilter(statusParam);
-    if (actionParam === 'export') handleExportCSV();
   }, [searchParams]);
 
   useEffect(() => {
     fetchDashboardStats();
     fetchApplicationsList();
     fetchTeamMembers();
-  }, [search, statusFilter, commFilter, categoryFilter, searchParams]);
+  }, [search, statusFilter, commFilter, categoryFilter, memberFilter, searchParams]);
 
   const loadDetailData = async (appId) => {
     try {
@@ -600,7 +596,18 @@ export default function PartnerApplications() {
             style={{ ...selectStyle, paddingLeft: 36, width: '100%', boxSizing: 'border-box' }} />
         </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {teamMembers.length > 0 && (
+            <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 150 }}>
+              <option value="">All Team Members</option>
+              {teamMembers.map(m => (
+                <option key={m.id || m.user_id} value={m.user_id || m.id}>
+                  {m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email} ({m.partner_code || 'Member'})
+                </option>
+              ))}
+            </select>
+          )}
+
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
             <option value="">All Statuses</option>
             <option value="submitted">Applied</option>
@@ -663,6 +670,12 @@ export default function PartnerApplications() {
                       <span style={{ color: textMuted }}>Customer:</span>
                       <span style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</span>
                     </div>
+                    {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: textMuted }}>Submitted By:</span>
+                        <span style={{ fontWeight: 700, color: '#3b82f6' }}>{app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}</span>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: textMuted }}>Mobile:</span>
                       <span style={{ color: textMuted }}>{app.customer_mobile}</span>
@@ -736,6 +749,11 @@ export default function PartnerApplications() {
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
                           <div style={{ fontSize: 11, color: textMuted }}>{new Date(app.created_at).toLocaleDateString()}</div>
+                          {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
+                            <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '1px 6px', borderRadius: 4 }}>
+                              👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
