@@ -1,16 +1,20 @@
+/* 3D Horizontal Rotation Loader */
+
 .loader-container {
   position: fixed;
   inset: 0;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 99999;
+  perspective: 1000px;
 }
 
 .dark-theme .loader-container,
 .dark .loader-container {
-  background: #000000;
+  background: rgba(0, 0, 0, 0.85);
 }
 
 .loader-logo {
@@ -18,25 +22,58 @@
   height: 120px;
   object-fit: contain;
 
-  animation: logoPulseRotate 1.5s ease-in-out infinite;
+  animation: logoHorizontal3D 1.5s linear infinite;
 
   transform-style: preserve-3d;
   backface-visibility: hidden;
+  transform-origin: center center;
+  will-change: transform;
 
   filter: drop-shadow(
     0 0 15px rgba(13, 92, 171, 0.35)
   );
 }
 
-@keyframes logoPulseRotate {
+/* 
+   0°   → Front visible
+   25°  → Starts turning
+   45°  → Halfway
+   70°  → Almost sideways
+   90°  → Front completely hidden
+   RESET → Immediately back to 0°
+*/
+@keyframes logoHorizontal3D {
+  /* FRONT */
   0% {
     transform: rotateY(0deg);
   }
 
-  50% {
-    transform: rotateY(75deg);
+  /* START ROTATION */
+  20% {
+    transform: rotateY(25deg);
   }
 
+  /* HALF ROTATION */
+  40% {
+    transform: rotateY(45deg);
+  }
+
+  /* ALMOST SIDE */
+  60% {
+    transform: rotateY(70deg);
+  }
+
+  /* SIDE - FRONT HIDDEN */
+  80% {
+    transform: rotateY(90deg);
+  }
+
+  /* INSTANT RESET */
+  80.01% {
+    transform: rotateY(0deg);
+  }
+
+  /* FRONT AGAIN */
   100% {
     transform: rotateY(0deg);
   }
