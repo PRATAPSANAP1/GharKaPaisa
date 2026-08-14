@@ -681,24 +681,7 @@ export default function PartnerApplications() {
                         <Trash2 size={12} /> Delete
                       </button>
                     </div>
-                    <button onClick={() => handleToggleExpand(app)}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: 'auto' }}>
-                      {isExpanded ? 'Hide' : 'Details'}
-                    </button>
                   </div>
-
-                  {isExpanded && (
-                    <div style={{ background: isDark ? '#1a1a1a' : '#f8faff', padding: 12, borderRadius: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase' }}>Interactive Tracker</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                        {STAGES.map(st => (
-                          <div key={st.id} style={{ padding: 6, borderRadius: 6, background: stepNum >= st.step ? accent : isDark ? '#111' : '#fff', color: stepNum >= st.step ? '#fff' : textMuted, textAlign: 'center', fontSize: 11, fontWeight: 700 }}>
-                            {st.step}. {st.label}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -782,56 +765,9 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <Trash2 size={13} /> Delete
                             </button>
-                            <button onClick={() => handleToggleExpand(app)}
-                              style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${accent}30`, background: accent + '15', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />} {isExpanded ? 'Hide' : 'Details'}
-                            </button>
                           </div>
                         </td>
                       </tr>
-
-                      {/* Expandable Workspace Sub-panel */}
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={7} style={{ background: isDark ? '#121212' : '#f8faff', padding: '18px 22px', borderBottom: `1px solid ${border}` }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                              <div>
-                                <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Interactive Lead Stage Tracker</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
-                                  {STAGES.map(st => (
-                                    <div key={st.id} style={{ padding: 8, borderRadius: 8, background: stepNum >= st.step ? accent : cardBg, color: stepNum >= st.step ? '#fff' : textMuted, border: `1px solid ${border}`, textAlign: 'center', fontSize: 11, fontWeight: 700 }}>
-                                      Step {st.step}: {st.label}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-                                <div>
-                                  <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Application Documents</h4>
-                                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                    {['income_proof', 'pan_card', 'bank_statement'].map(doc => (
-                                      <label key={doc} style={{ padding: '7px 12px', background: cardBg, border: `1px solid ${border}`, borderRadius: 8, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: textPrimary, fontWeight: 600 }}>
-                                        <Upload size={13} color={accent} /> Upload {doc.replace('_', ' ')}
-                                        <input type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, app.id, doc)} />
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <h4 style={{ fontSize: 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', marginBottom: 8 }}>Add Activity Note</h4>
-                                  <form onSubmit={(e) => handleAddNote(e, app.id)} style={{ display: 'flex', gap: 6 }}>
-                                    <input type="text" placeholder="Add remark..." value={newNote} onChange={(e) => setNewNote(e.target.value)}
-                                      style={{ flex: 1, padding: '7px 12px', borderRadius: 8, fontSize: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, outline: 'none' }} />
-                                    <button type="submit" style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: accent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
-                                  </form>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </React.Fragment>
                   );
                 })}
